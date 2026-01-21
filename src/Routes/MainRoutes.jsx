@@ -6,121 +6,40 @@ import Leaves from '../Pages/leaves';
 import Payroll from '../Pages/Payroll';
 import Teachers from '../Pages/Teachers/Teachers';
 import Settings from '../Pages/Settings';
-import Login_2 from '../Pages/Login_2';
-import AddTeacher from '../Pages/Teachers/Teachers';
 import DetailsView from '../Pages/Teachers/DetailsView';
 import AddNewTeacher from '../Pages/Teachers/AddNewTeacher';
+import EditTeachersDetails from '../Pages/Teachers/EditTeachersDetails'
+import AssignDetails from '../Pages/Teachers/AssignDetails';
 import TeacherSalaryConfig from '../Pages/Teachers/TeacherSalaryConfig';
-import EditTeachersDetaills from '../Pages/Teachers/EditTeachersDetaills';
-
-const ProtectedRoute = ({ children }) => {
-  const token = localStorage.getItem('token');
-  if (!token) {
-    // If no token, redirect to login
-    return <Navigate to="/login" replace />;
-  }
-  return children;
-};
 
 const MainRoutes = () => {
   return (
     <Routes>
-      {/* Login route */}
-      <Route path="/login" element={<Login_2 />} />
 
-      {/* Redirect root to dashboard */}
-      <Route
-        path="/"
-        element={
-          <ProtectedRoute>
-            <Navigate to="/dashboard" />
-          </ProtectedRoute>
-        }
-      />
+      {/* Default Redirect */}
+      <Route path="/" element={<Navigate to="/dashboard" />} />
 
-      {/* Protected Routes */}
-      <Route
-        path="/dashboard"
-        element={
-          <ProtectedRoute>
-            <Dashboard />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/attendance"
-        element={
-          <ProtectedRoute>
-            <Attendance />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/leaves"
-        element={
-          <ProtectedRoute>
-            <Leaves />
-          </ProtectedRoute>
-        }
+      {/* Pages */}
+      <Route path="/dashboard" element={<Dashboard />} />
+      <Route path="/attendance" element={<Attendance />} />
+      <Route path="/leaves" element={<Leaves />} />
+      <Route path="/payroll" element={<Payroll />} />
+
+      {/* Teachers */}
+      <Route path="/teachers" element={<Teachers />} />
+      <Route path="/teachers/addTeacher" element={<AddNewTeacher />} />
       <Route path="/teachers/assign/:id" element={<AssignDetails/>} /> 
-      />
-      <Route
-        path="/payroll"
-        element={
-          <ProtectedRoute>
-            <Payroll />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/teachers"
-        element={
-          <ProtectedRoute>
-            <Teachers />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/teachers/:id"
-        element={
-          <ProtectedRoute>
-            <DetailsView />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path='/teachers/addTeacher'
-        element={
-          <ProtectedRoute>
-            <AddNewTeacher />
-          </ProtectedRoute>
-        }
-      />
-       <Route
-        path='/teachers/TeacherSalary'
-        element={
-          <ProtectedRoute>
-            <TeacherSalaryConfig />
-          </ProtectedRoute>
-        }
-      />
-        <Route
-        path='/teachers/EditTeachersDetaills'
-        element={
-          <ProtectedRoute>
-            <EditTeachersDetaills />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/settings"
-        element={
-          <ProtectedRoute>
-            <Settings />
-          </ProtectedRoute>
-        }
-      />
+      <Route path="/teachers/:id" element={<DetailsView />} />
+      <Route path="/teachers/editTeacher/:id" element={<EditTeachersDetails/>} />
+      
+       <Route path="/teachers/teacherSalary" element={<TeacherSalaryConfig />} />
+        <Route path="/teachers/teacherSalary" element={<EditTeachersDetails />} />
+
+      <Route path="/settings" element={<Settings />} />
+
+      {/* Fallback */}
       <Route path="*" element={<Navigate to="/dashboard" />} />
+
     </Routes>
   );
 };
