@@ -403,7 +403,7 @@ const Teachers = () => {
                     <Eye className="w-4 h-4 text-gray-600" />
                     <span className="text-sm font-medium text-gray-700">View</span>
                   </button>
-                  <button className="flex-1 px-3 py-2 bg-blue-50 hover:bg-blue-100 rounded-lg flex items-center justify-center gap-2 transition-all">
+                  <button onClick={()=>navigate(`/teachers/editTeacher/${teacher.id}`)} className="flex-1 px-3 py-2 bg-blue-50 hover:bg-blue-100 rounded-lg flex items-center justify-center gap-2 transition-all">
                     <Edit className="w-4 h-4 text-blue-600" />
                     <span className="text-sm font-medium text-blue-700">Edit</span>
                   </button>
@@ -465,9 +465,7 @@ const Teachers = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-3">
-                          <div className={`w-10 h-10 rounded-full ${getAvatarColor(teacher.name)} flex items-center justify-center text-white font-semibold text-sm`}>
-                            {teacher.avatar}
-                          </div>
+                          <img src={teacher.image} className={`w-10 h-10 rounded-full`} alt="" />
                           <div>
                             <div className="text-sm font-medium text-gray-900">{teacher.name}</div>
                             <div className="text-xs text-gray-500">{teacher.role}</div>
@@ -538,7 +536,7 @@ const Teachers = () => {
                     <Eye className="w-4 h-4 text-gray-600" />
                     <span className="text-sm font-medium text-gray-700">View</span>
                   </button>
-                  <button className="flex-1 px-3 py-2 bg-blue-50 hover:bg-blue-100 rounded-lg flex items-center justify-center gap-2 transition-all">
+                  <button onClick={()=>navigate(`/teachers/editTeacher/${teacher.id}`)} className="flex-1 px-3 py-2 bg-blue-50 hover:bg-blue-100 rounded-lg flex items-center justify-center gap-2 transition-all">
                     <Edit className="w-4 h-4 text-blue-600" />
                     <span className="text-sm font-medium text-blue-700">Edit</span>
                   </button>
