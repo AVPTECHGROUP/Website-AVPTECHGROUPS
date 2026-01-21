@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react';
-import { allTeachers } from '../../assets/allTeachers';
+import { useEffect, useMemo, useState } from 'react';
+import { getTeachers } from '../../utils/allTeachers';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Search,
   Bell,
@@ -17,9 +18,6 @@ import {
   Power,
   UserCheck2
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-
-
 
 const Teachers = () => {
 
@@ -43,15 +41,26 @@ const Teachers = () => {
 
   // Controls mobile search bar visibility (true = open, false = closed)
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+
+  const [teachers, setTeachers] = useState([])
   
   const navigate = useNavigate();
 
+ const location = useLocation();   
+
+  useEffect(() => {
+  const data = getTeachers();
+  setTeachers(data);
+  setpage(1); // Reset to page 1 when data reloads
+}, [location.pathname]);
+
+
   const stats = useMemo(() => {
-    const total = allTeachers.length;
-    const active = allTeachers.filter(t => t.status === 'Active').length;
-    const inActive = allTeachers.filter(t => t.status === 'Inactive').length;
-    const payrollIncluded = allTeachers.filter(t => t.payroll === 'Included').length;
-    const attendanceBlocked = allTeachers.filter(t => t.attendance === 'Blocked').length;
+    const total = teachers.length;
+    const active = teachers.filter(t => t.status === 'Active').length;
+    const inActive = teachers.filter(t => t.status === 'Inactive').length;
+    const payrollIncluded = teachers.filter(t => t.payroll === 'Included').length;
+    const attendanceBlocked = teachers.filter(t => t.attendance === 'Blocked').length;
 
     return {
       total,
@@ -62,25 +71,31 @@ const Teachers = () => {
       payrollIncluded,
       attendanceBlocked
     };
-  }, []);
+  }, [teachers]);
 
   const filteredTeachers = useMemo(() => {
-    return allTeachers.filter(teacher => {
-      const matchesSearch = teacher.name.toLowerCase().includes(search.toLowerCase()) ||
-        teacher.id.toLowerCase().includes(search.toLowerCase()) ||
-        teacher.role.toLowerCase().includes(search.toLowerCase());
-      const matchesStatus = statusFilter === 'All Status' || teacher.status === statusFilter;
-      const matchesClass = classFilter === 'All Classes' || teacher.classes.some(c => c === classFilter);
-      const matchesSalary = salaryFilter === 'All Salary Types' || teacher.salaryType === salaryFilter;
+  // If no teachers loaded yet, return empty array
+  if (!teachers || teachers.length === 0) {
+    return [];
+  }
+  
+  return teachers.filter(teacher => {
+    const matchesSearch = teacher.name.toLowerCase().includes(search.toLowerCase()) ||
+      teacher.id.toLowerCase().includes(search.toLowerCase()) ||
+      teacher.role.toLowerCase().includes(search.toLowerCase());
+    const matchesStatus = statusFilter === 'All Status' || teacher.status === statusFilter;
+    const matchesClass = classFilter === 'All Classes' || teacher.classes.some(c => c === classFilter);
+    const matchesSalary = salaryFilter === 'All Salary Types' || teacher.salaryType === salaryFilter;
 
-      return matchesSearch && matchesStatus && matchesClass && matchesSalary;
-    });
-  }, [search, statusFilter, classFilter, salaryFilter]);
+    return matchesSearch && matchesStatus && matchesClass && matchesSalary;
+  });
+}, [teachers, search, statusFilter, classFilter, salaryFilter]);
 
   const totalPages = Math.ceil(filteredTeachers.length / rowsPerpage);
   const startIndex = (page - 1) * rowsPerpage;
   const endIndex = startIndex + rowsPerpage;
   const currentTeachers = filteredTeachers.slice(startIndex, endIndex);
+console.log(currentTeachers);
 
   const getAvatarColor = (name) => {
     const colors = [
@@ -342,7 +357,7 @@ const Teachers = () => {
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-500">Classes:</span>
                     <div className="flex flex-wrap gap-1 justify-end">
-                      {teacher.classes.map((cls, idx) => (
+                      {(teacher.classes || []).map((cls, idx) => (
                         <span key={idx} className="inline-block px-2 py-0.5 text-xs bg-blue-50 text-blue-600 rounded">
                           {cls}
                         </span>
@@ -353,7 +368,7 @@ const Teachers = () => {
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-500">Subjects:</span>
                     <div className="flex flex-wrap gap-1 justify-end">
-                      {teacher.subjects.map((subject, idx) => (
+                      {(teacher.subjects || []).map((subject, idx) => (
                         <span key={idx} className="inline-block px-2 py-0.5 text-xs bg-purple-50 text-purple-600 rounded">
                           {subject}
                         </span>
@@ -477,7 +492,7 @@ const Teachers = () => {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex flex-wrap gap-1">
-                          {teacher.classes.map((cls, idx) => (
+                          {(teacher.classes || []).map((cls, idx) => (
                             <span key={idx} className="inline-block px-2 py-1 text-xs bg-blue-50 text-blue-600 rounded">
                               {cls}
                             </span>
@@ -486,7 +501,7 @@ const Teachers = () => {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex flex-wrap gap-1">
-                          {teacher.subjects.map((subject, idx) => (
+                          {(teacher.subjects || []).map((subject, idx) => (
                             <span key={idx} className="inline-block px-2 py-1 text-xs bg-purple-50 text-purple-600 rounded">
                               {subject}
                             </span>
