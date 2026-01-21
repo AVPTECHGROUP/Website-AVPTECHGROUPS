@@ -74,13 +74,13 @@ function AddNewTeacher() {
       <div className="grid lg:grid-cols-4 md:grid-cols-3 sm:grid-cols-1 border-b-2 border-l-2 border-r-2 border-gray-200 bg-white rounded-b-xl">
         <div className="input1 p-3 px-4 sm:text-sm md:text-base lg-text-xl">
           <label htmlFor="empCode" className='font-semibold text-gray-600 text-sm'>Employee Code  </label>
-          <input type="text" placeholder='Employee Code' className='bg-gray-100  font-normal  text-gray-800 border-gray-400 p-1 px-4 w-full rounded-md focus:outline-none appearance-none' />
+          <input type="text" name='employeeCode' placeholder='Employee Code' className='bg-gray-100  font-normal  text-gray-800 border-gray-400 p-1 px-4 w-full rounded-md focus:outline-none appearance-none' />
         </div>
 
 
         <div className="input3 p-3 px-4 sm:text-sm md:text-base lg-text-xl col-span-2">
           <label htmlFor="qualification" className='font-semibold text-gray-600 text-sm'>Hightest Qualification </label>
-          <input type="text" placeholder='Highest Qualification' className='bg-gray-100 font-normal  text-gray-800 border-gray-400 p-1 px-4 w-full rounded-md focus:outline-none appearance-none' />
+          <input type="text" name='hightestQualification' placeholder='Highest Qualification' className='bg-gray-100 font-normal  text-gray-800 border-gray-400 p-1 px-4 w-full rounded-md focus:outline-none appearance-none' />
         </div>
 
         <div className="input4 p-3 px-4 sm:text-sm md:text-base lg-text-xl">
