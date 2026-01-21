@@ -2,6 +2,7 @@ import { Eye, EyeOff, LockKeyhole, Mail, ShieldCheck, Space, Moon, Sun } from 'l
 import React, { useState } from 'react'
 import worker_1 from '../assets/Images/worker_1.jpg'
 import {useNavigate } from 'react-router-dom'
+import { loginAPI } from '../api/authApi'
 const Login_2 = ({ onLoginSuccess }) => {
 
     const [email, setemail] = useState('')
