@@ -32,6 +32,7 @@ const App = () => {
     return <Login_2  onLoginSuccess={handleLoginSuccess} />;
   }
 
+  
   // If logged in, show sidebar + main routes
   return (
     <div className="flex h-screen overflow-hidden bg-[#edf0f3]">
@@ -54,6 +55,7 @@ const App = () => {
           setSidebarOpen={setSidebarOpen}
           setMobileSidebarOpen={setMobileSidebarOpen}
           onLogout={handleLogout} 
+
         />
       </div>
 

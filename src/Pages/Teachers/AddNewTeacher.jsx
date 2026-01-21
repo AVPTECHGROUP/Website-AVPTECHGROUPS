@@ -133,4 +133,4 @@ function AddNewTeacher() {
   )
 }
 
-export default AddNewTeacher
+export default AddNewTeacher;
