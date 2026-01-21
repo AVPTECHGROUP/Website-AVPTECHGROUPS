@@ -1,15 +1,26 @@
 import { User, Mail, Phone, ChevronLeft, GraduationCap, DollarSign, UserCheck, Briefcase, LogIn, Clock } from 'lucide-react';
 import { allTeachers } from '../../assets/allTeachers';
 import {useNavigate, useParams } from 'react-router-dom';
+import {useNavigate, useParams } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { getTeacherById } from '../../utils/allTeachers';
 
 const DetailsView = () => {
 
    const { id } = useParams(); // teacher id from URL
+  
+  const [teacher, setTeacher] = useState(null);
 
-  // Find teacher by ID
-  const teacher = allTeachers.find(t => t.id === id);
+useEffect(() => {
+  const data = getTeacherById(id);
+  setTeacher(data);
+}, [id]);
 
   const navigate= useNavigate()
+
+if (!teacher) {
+  return <div className="p-10 text-center">Loading teacher...</div>;
+}
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">
@@ -214,8 +225,8 @@ const DetailsView = () => {
                       className="px-4 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-100 transition-colors flex items-center gap-2"
                     >
                       {subject === 'Mathematics' && ''}
-                      {subject === 'Physics' && '⚛'}
-                      {subject === 'Logic' && '◉'}
+                      {subject === 'Physics' && ''}
+                      {subject === 'Logic' && ''}
                       {subject}
                     </span>
                   ))}

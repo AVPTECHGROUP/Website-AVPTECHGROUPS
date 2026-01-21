@@ -62,6 +62,7 @@ const MainRoutes = () => {
             <Leaves />
           </ProtectedRoute>
         }
+      <Route path="/teachers/assign/:id" element={<AssignDetails/>} /> 
       />
       <Route
         path="/payroll"
