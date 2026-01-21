@@ -2,11 +2,12 @@ import React from 'react'
 import { useState } from 'react';
 
 function AddNewTeacher() {
-  
+
   const [enabled, setEnabled] = useState(false);
 
-  function handle_Submit(){
-   console.log('hii');
+  function handle_Submit(e){
+      e.preventDefault();
+
   }
 
   return (
@@ -29,12 +30,12 @@ function AddNewTeacher() {
       <div className="grid lg:grid-cols-2 sm:grid-cols-1 border-b-2 border-l-2 border-r-2 border-gray-200 bg-white rounded-b-xl">
         <div className="input1 p-3 px-4 sm:text-sm md:text-base lg-text-xl">
           <label htmlFor="name" className='font-semibold text-gray-600 text-sm'>Full Name<span className="text-red-600 ml-1">*</span> </label>
-          <input type="text" placeholder='Enter full name' className='bg-gray-100  font-normal  text-gray-800 border-gray-400 p-1 px-4 w-full rounded-md focus:outline-none appearance-none' />
+          <input required name='fullname' type="text" placeholder='Enter full name' className='bg-gray-100  font-normal  text-gray-800 border-gray-400 p-1 px-4 w-full rounded-md focus:outline-none appearance-none' />
         </div>
 
         <div className="input2 p-3 px-4 sm:text-sm md:text-base lg-text-xl">
           <label htmlFor="Gender" className='font-semibold text-gray-600 text-sm'>Gender<span className="text-red-600 ml-1">*</span> </label>
-          <select name="select" className='bg-gray-100  font-normal  text-gray-800 border-gray-400 p-1 px-4 w-full rounded-md  focus:outline-none appearance-none '>
+          <select name="selectGender" className='bg-gray-100  font-normal  text-gray-800 border-gray-400 p-1 px-4 w-full rounded-md  focus:outline-none appearance-none '>
             <option value="admin">Select Gender</option>
             <option value="admin">Male</option>
             <option value="teacher">Female</option>
@@ -43,23 +44,23 @@ function AddNewTeacher() {
 
         <div className="input3 p-3 px-4 sm:text-sm md:text-base lg-text-xl">
           <label htmlFor="mobile" className='font-semibold text-gray-600 text-sm'>Mobile Number {`(unique)`}<span className="text-red-600 ml-1">*</span> </label>
-          <input type="phone" placeholder='Mobile number' className='bg-gray-100 font-normal  text-gray-800 border-gray-400 p-1 px-4 w-full rounded-md focus:outline-none appearance-none' />
+          <input type="phone" name='phone_number' placeholder='Mobile number' className='bg-gray-100 font-normal  text-gray-800 border-gray-400 p-1 px-4 w-full rounded-md focus:outline-none appearance-none' />
         </div>
 
         <div className="input4 p-3 px-4 sm:text-sm md:text-base lg-text-xl">
           <label htmlFor="email" className='font-semibold text-gray-600 text-sm'>Email Address {`(optional)`}</label>
-          <input type="email" placeholder='Enter email address' className='bg-gray-100  font-normal  text-gray-800 border-gray-400 p-1 px-4 w-full rounded-md focus:outline-none appearance-none' />
+          <input type="email" name='email_id' placeholder='Enter email address' className='bg-gray-100  font-normal  text-gray-800 border-gray-400 p-1 px-4 w-full rounded-md focus:outline-none appearance-none' />
         </div>
 
         <div className="input5 p-3 px-4 sm:text-sm md:text-base lg-text-xl">
           <label htmlFor="dob" className='font-semibold text-gray-600 text-sm'>Date of Birth<span className="text-red-600 ml-1">*</span> </label>
-          <input type="date" className='bg-gray-100  font-normal  text-gray-800 border-gray-400 p-1 px-4 w-full rounded-md focus:outline-none appearance-none' />
+          <input type="date" name='_dob' className='bg-gray-100  font-normal  text-gray-800 border-gray-400 p-1 px-4 w-full rounded-md focus:outline-none appearance-none' />
         </div>
         <br />
 
         <div className="input6 p-3 px-4 sm:text-sm md:text-base lg-text-xl align-text-top md:col-span-2">
           <label htmlFor="address" className='font-semibold text-gray-600 text-sm'>Current Address </label>
-          <textarea rows={5} type="text" placeholder='Enter residential address' className='bg-gray-100 align-text-top  font-normal  text-gray-800 border-gray-400 p-1 px-4 w-full rounded-md focus:outline-none appearance-none' />
+          <textarea rows={5}  name='_address' type="text" placeholder='Enter residential address' className='bg-gray-100 align-text-top  font-normal  text-gray-800 border-gray-400 p-1 px-4 w-full rounded-md focus:outline-none appearance-none' />
         </div>
 
 
@@ -125,9 +126,8 @@ function AddNewTeacher() {
 
       <div className="buttons flex gap-2 justify-between lg:justify-end align-middle text-xs lg:text-base">
         <button className='text-blue-500 hover:bg-blue-500 hover:text-white px-3 py-1 my-2 mr-4 rounded-sm font-medium border-blue-500 border-2 cursor-pointer'>Save & Assign Details </button>
-        <button className='bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 my-2 ml-4 rounded-sm font-medium border-blue-500 border-2 cursor-pointer '>Save Teacher</button>
+        <button type='submit' className='bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 my-2 ml-4 rounded-sm font-medium border-blue-500 border-2 cursor-pointer '>Save Teacher</button>
       </div>
-    
     </form>
       </div>
   )

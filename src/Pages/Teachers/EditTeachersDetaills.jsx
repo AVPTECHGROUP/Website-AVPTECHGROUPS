@@ -59,8 +59,6 @@ function EditTeachersDetaills() {
                         <label htmlFor="address" className='font-semibold text-gray-600 text-sm'>Current Address </label>
                         <textarea rows={5} type="text" placeholder='Enter residential address' className='bg-gray-100 align-text-top  font-normal  text-gray-800 border-gray-400 p-1 px-4 w-full rounded-md focus:outline-none appearance-none' />
                     </div>
-
-
                 </div>
                 <div className="Professinal_Details">
                     <div className="divheading flex justify-start align-end mt-8 bg-white border-2 border-gray-200 rounded-t-xl  md:p-2 md:pt-3">

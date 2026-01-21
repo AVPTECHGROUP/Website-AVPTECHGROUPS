@@ -10,6 +10,8 @@ import Login_2 from '../Pages/Login_2';
 import AddTeacher from '../Pages/Teachers/Teachers';
 import DetailsView from '../Pages/Teachers/DetailsView';
 import AddNewTeacher from '../Pages/Teachers/AddNewTeacher';
+import TeacherSalaryConfig from '../Pages/Teachers/TeacherSalaryConfig';
+import EditTeachersDetaills from '../Pages/Teachers/EditTeachersDetaills';
 
 const ProtectedRoute = ({ children }) => {
   const token = localStorage.getItem('token');
@@ -81,17 +83,33 @@ const MainRoutes = () => {
         path="/teachers/:id"
         element={
           <ProtectedRoute>
-            <DetailsView/>
+            <DetailsView />
           </ProtectedRoute>
         }
       />
       <Route
-      path='/teachers/addTeacher'
-      element={
-        <ProtectedRoute>
-          <AddNewTeacher/>
-        </ProtectedRoute>
-      }
+        path='/teachers/addTeacher'
+        element={
+          <ProtectedRoute>
+            <AddNewTeacher />
+          </ProtectedRoute>
+        }
+      />
+       <Route
+        path='/teachers/TeacherSalary'
+        element={
+          <ProtectedRoute>
+            <TeacherSalaryConfig />
+          </ProtectedRoute>
+        }
+      />
+        <Route
+        path='/teachers/EditTeachersDetaills'
+        element={
+          <ProtectedRoute>
+            <EditTeachersDetaills />
+          </ProtectedRoute>
+        }
       />
       <Route
         path="/settings"
