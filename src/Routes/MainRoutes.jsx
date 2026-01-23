@@ -1,0 +1,43 @@
+import React from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import Dashboard from '../Pages/Dashboard';
+import Attendance from '../Pages/Attendance';
+import Leaves from '../Pages/leaves';
+import Payroll from '../Pages/Payroll';
+import Teachers from '../Pages/Teachers/Teachers';
+import Settings from '../Pages/Settings';
+import DetailsView from '../Pages/Teachers/DetailsView';
+import AddNewTeacher from '../Pages/Teachers/AddNewTeacher';
+import EditTeachersDetails from '../Pages/Teachers/EditTeachersDetaills'
+import AssignDetails from '../Pages/Teachers/AssignDetails'
+
+const MainRoutes = () => {
+  return (
+    <Routes>
+
+      {/* Default Redirect */}
+      <Route path="/" element={<Navigate to="/dashboard" />} />
+
+      {/* Pages */}
+      <Route path="/dashboard" element={<Dashboard />} />
+      <Route path="/attendance" element={<Attendance />} />
+      <Route path="/leaves" element={<Leaves />} />
+      <Route path="/payroll" element={<Payroll />} />
+
+      {/* Teachers */}
+      <Route path="/teachers" element={<Teachers />} />
+      <Route path="/teachers/addTeacher" element={<AddNewTeacher />} />
+      <Route path="/teachers/assign/:id" element={<AssignDetails/>} /> 
+      <Route path="/teachers/:id" element={<DetailsView />} />
+      <Route path="/teachers/editTeacher/:id" element={<EditTeachersDetails/>} />
+
+      <Route path="/settings" element={<Settings />} />
+
+      {/* Fallback */}
+      <Route path="*" element={<Navigate to="/dashboard" />} />
+
+    </Routes>
+  );
+};
+
+export default MainRoutes;
