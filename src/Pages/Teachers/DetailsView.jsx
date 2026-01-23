@@ -1,5 +1,4 @@
 import { User, Mail, Phone, ChevronLeft, GraduationCap, DollarSign, UserCheck, Briefcase, LogIn, Clock } from 'lucide-react';
-import { allTeachers } from '../../assets/allTeachers';
 import {useNavigate, useParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { getTeacherById } from '../../utils/allTeachers';
