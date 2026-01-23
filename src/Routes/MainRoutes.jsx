@@ -8,8 +8,9 @@ import Teachers from '../Pages/Teachers/Teachers';
 import Settings from '../Pages/Settings';
 import DetailsView from '../Pages/Teachers/DetailsView';
 import AddNewTeacher from '../Pages/Teachers/AddNewTeacher';
-import EditTeachersDetails from '../Pages/Teachers/EditTeachersDetaills'
-import AssignDetails from '../Pages/Teachers/AssignDetails'
+import EditTeachersDetails from '../Pages/Teachers/EditTeachersDetails'
+import AssignDetails from '../Pages/Teachers/AssignDetails';
+import TeacherSalaryConfig from '../Pages/Teachers/TeacherSalaryConfig';
 
 const MainRoutes = () => {
   return (
@@ -30,6 +31,9 @@ const MainRoutes = () => {
       <Route path="/teachers/assign/:id" element={<AssignDetails/>} /> 
       <Route path="/teachers/:id" element={<DetailsView />} />
       <Route path="/teachers/editTeacher/:id" element={<EditTeachersDetails/>} />
+      
+       <Route path="/teachers/teacherSalary" element={<TeacherSalaryConfig />} />
+        <Route path="/teachers/teacherSalary" element={<EditTeachersDetails />} />
 
       <Route path="/settings" element={<Settings />} />
 
