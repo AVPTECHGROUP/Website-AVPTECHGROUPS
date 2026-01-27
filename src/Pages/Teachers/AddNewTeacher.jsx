@@ -1,27 +1,29 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 import { getTeachers, createTeachers } from '../../Api/TeachersAPI';
 
 function AddNewTeacher() {
   const navigate = useNavigate();
 
   const [enabled, setEnabled] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Form state
- const [formData, setFormData] = useState({
-  name: "",
-  gender: "",
-  email: "",
-  loginEmail: "",
-  mobile: "",
-  address: "",
-  dob: "",
-  employeeCode: "",
-  highestQualification: "",
-  experience: 0,
-  joiningDate: ""
-});
-
+  const [formData, setFormData] = useState({
+    name: "",
+    gender: "",
+    email: "",
+    loginEmail: "",
+    mobile: "",
+    address: "",
+    dob: "",
+    employeeCode: "",
+    highestQualification: "",
+    experience: 0,
+    joiningDate: "",
+    payrollStatus: "ACTIVE" 
+  });
 
   // Handle input changes
   const handleInputChange = (e) => {
@@ -32,78 +34,86 @@ function AddNewTeacher() {
     }));
   };
 
-  // Generate unique teacher ID
-   const generateTeacherId = async() => {
-    const teachers = await getTeachers(0, 100, "id");
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
-  if (!teachers.length) return "TCH001";
+    if (!formData.name || !formData.gender || !formData.mobile) {
+      toast.error("Please fill all required fields!");
+      return;
+    }
 
-  const ids = teachers.map(t =>
-    parseInt(t.id.replace("TCH", ""))
-  );
+    // Check if account status is disabled
+    if (!enabled) {
+      toast.error("Please enable account status to add teacher!", {
+        duration: 3000,
+        icon: "⚠️"
+      });
+      return;
+    }
 
-  const maxId = Math.max(...ids);
-  return `TCH${String(maxId + 1).padStart(3, "0")}`;
-  };
+    setIsSubmitting(true);
+    const loadingToast = toast.loading("Adding teacher...");
 
-  // // Get initials from name
-  // const getInitials = (name) => {
-  //   const names = name.trim().split(' ');
-  //   if (names.length === 1) return names[0].substring(0, 2).toUpperCase();
-  //   return (names[0][0] + names[names.length - 1][0]).toUpperCase();
-  // };
-
-   const handleSubmit = async (e) => {
-   e.preventDefault();
-
-  if (!formData.name || !formData.gender || !formData.mobile) {
-    alert("Please fill required fields");
-    return;
-  }
-
-  const teacherId =
-    formData.employeeCode || (await generateTeacherId());
-
-  const apiPayload = {
-  personalDetails: {
-    fullName: formData.name,
-    mobile: formData.mobile,
-    email: formData.email || "test.teacher@school.com",
-    gender: formData.gender.toUpperCase(),
-    dateOfBirth: formData.dob,
-    address: formData.address || "NA",
-    emergencyContact: "9999999999",
-    emergencyContactName: "NA",
-    emergencyContactRelation: "NA"
-  },
-  professionalDetails: {
-    employeeCode: `EMP${Date.now()}`,
-    qualification: formData.highestQualification || "NA",
-    experienceYears: Number(formData.experience || 1),
-    joiningDate: formData.joiningDate,
-    department: "GENERAL",
-    designation: "TEACHER"
-  },
- bankDetails: {
-  accountHolderName: "NA",
-  accountNumber: "000000000000",
-  bankName: "NA",
-  ifscCode: "HDFC0123456",
-  branchName: "NA"
-},
-  remarks: "Created from UI"
+    try {
+      const generateEmployeeCode = () => {
+  return "EMP" + Math.floor(100 + Math.random() * 900); // EMP123
 };
 
-  try {
-    const response = await createTeachers(apiPayload);
-    console.log("Teacher created:", response);
+      const apiPayload = {
+        personalDetails: {
+          fullName: formData.name,
+          mobile: formData.mobile,
+          email: formData.email || "test.teacher@school.com",
+          gender: formData.gender.toUpperCase(),
+          dateOfBirth: formData.dob,
+          address: formData.address || "NA",
+          emergencyContact: "9999999999",
+          emergencyContactName: "NA",
+          emergencyContactRelation: "NA"
+        },
+        professionalDetails: {
+          employeeCode: formData.employeeCode || generateEmployeeCode(),
+          qualification: formData.highestQualification || "NA",
+          experienceYears: Number(formData.experience || 1),
+          joiningDate: formData.joiningDate,
+          department: "GENERAL",
+          designation: "TEACHER"
+        },
+        bankDetails: {
+          accountHolderName: "NA",
+          accountNumber: "000000000000",
+          bankName: "NA",
+          ifscCode: "HDFC0123456",
+          branchName: "NA"
+        },
+        accountStatus: "ACTIVE",
+        payrollStatus: "INCLUDED",
+        remarks: "Created from UI"
+      };
 
-    alert("Teacher added successfully ✅");
-    navigate(`/teachers/assign/${teacherId}`);
-  } catch (error) {
-    console.error(error);
-    alert("Failed to add teacher ❌");
-  }
+      const response = await createTeachers(apiPayload);
+      
+      toast.dismiss(loadingToast);
+      toast.success("Teacher added successfully!", {
+        duration: 3000,
+        icon: "✅"
+      });
+      
+      // Navigate after a short delay to show the toast
+      setTimeout(() => {
+        navigate('/teachers');
+      }, 500);
+      
+    } catch (err) {
+      toast.dismiss(loadingToast);
+      toast.error(err.message || "Failed to add teacher. Please try again.", {
+        duration: 4000,
+        icon: "❌"
+      });
+      console.error(err);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -159,7 +169,7 @@ function AddNewTeacher() {
           </div>
 
           <div className="input3 p-3 px-4 sm:text-sm md:text-base lg-text-xl">
-            <label htmlFor="mobile" className='font-semibold text-gray-600 text-sm'>Mobile Number {`(unique)`}<span className="text-red-600 ml-1">*</span></label>
+            <label htmlFor="mobile" className='font-semibold text-gray-600 text-sm'>Mobile Number<span className="text-red-600 ml-1">*</span></label>
             <input 
               type="tel" 
               name="mobile"
@@ -172,7 +182,7 @@ function AddNewTeacher() {
           </div>
 
           <div className="input4 p-3 px-4 sm:text-sm md:text-base lg-text-xl">
-            <label htmlFor="email" className='font-semibold text-gray-600 text-sm'>Email Address {`(optional)`}</label>
+            <label htmlFor="email" className='font-semibold text-gray-600 text-sm'>Email Address</label>
             <input 
               type="email" 
               name="email"
@@ -315,13 +325,9 @@ function AddNewTeacher() {
         <div className="buttons flex gap-2 justify-between lg:justify-end align-middle text-xs lg:text-base">
           <button 
             type="submit"
-            className='text-black hover:bg-blue-500 hover:text-white px-3 py-1 my-2 mr-4 rounded-sm font-medium border-blue-500 border-2 cursor-pointer'>
-            Save & Assign Details
-          </button>
-          <button 
-            type="submit" onClick={() => handleSubmit(new Event("submit"))}
-            className='bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 my-2 ml-4 rounded-sm font-medium border-blue-500 border-2 cursor-pointer'>
-            Save Teacher
+            disabled={isSubmitting}
+            className={`${isSubmitting ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600'} text-white px-4 py-2 my-2 ml-4 rounded-xl font-medium border-blue-500 border-2 cursor-pointer`}>
+            {isSubmitting ? 'Adding...' : 'Save Details'}
           </button>
         </div>
       </form>

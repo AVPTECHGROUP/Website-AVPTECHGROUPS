@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Menu } from 'lucide-react';
 import Sidebar from './Components/Sidebar';
 import MainRoutes from './Routes/MainRoutes';
+import { ToastContainer } from 'react-toastify';
 
 const App = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -51,6 +52,7 @@ const App = () => {
           <MainRoutes />
         </main>
       </div>
+      <ToastContainer />
     </div>
   );
 };

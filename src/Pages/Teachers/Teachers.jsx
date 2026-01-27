@@ -16,7 +16,10 @@ import {
   Funnel,
   Eye,
   Power,
-  UserCheck2
+  UserCheck2,
+  Plus,
+  Minus,
+  Calendar
 } from 'lucide-react';
 
 const Teachers = () => {
@@ -53,9 +56,13 @@ const Teachers = () => {
 
   const [loading, setLoading] = useState(false);
 
+  const [isAction, setisAction] = useState('add');
+
+  const date = new Date().toLocaleDateString();
+
   const navigate = useNavigate();
 
-    useEffect(() => {
+  useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(search);
     }, 500);
@@ -77,84 +84,65 @@ const Teachers = () => {
     const fetchTeachers = async () => {
       setLoading(true);
       setError(null);
+
       try {
         let res;
 
         if (hasActiveFilters) {
-          // Build filter object for search API
           const filters = {};
+          if (debouncedSearch.trim()) filters.searchTerm = debouncedSearch.trim();
+          if (statusFilter !== 'All Status') filters.status = statusFilter.toUpperCase();
+          if (classFilter !== 'All Classes') filters.assignedClasses = classFilter;
+          if (salaryFilter !== 'All Salary Types') filters.salaryType = salaryFilter === 'Monthly' ? 'MONTHLY' : 'PER_DAY';
 
-          // Add search term (searches across name, employee code, role)
-          if (debouncedSearch.trim()) {
-            filters.searchTerm = debouncedSearch.trim();
-            // You can also add other fields if your API supports them
-            // filters.employeeCode = search.trim();
-          }
-
-          // Add status filter
-          if (statusFilter !== 'All Status') {
-            filters.status = statusFilter.toUpperCase();
-          }
-
-          // Add class filter
-          if (classFilter !== 'All Classes') {
-            filters.assignedClasses = classFilter;
-          }
-
-          // Add salary type filter
-          if (salaryFilter !== 'All Salary Types') {
-            filters.salaryType = salaryFilter === 'Monthly' ? 'MONTHLY' : 'PER_DAY';
-          }
-
-          // Call search API
           res = await searchTeachers(filters, page - 1, rowsPerpage);
         } else {
-          // Call regular getTeachers API when no filters
           res = await getTeachers(page - 1, rowsPerpage);
         }
 
-        const data = res.content || res.data || [];
+        const teacherArray = res.data || [];
 
-        const mappedTeachers = data.map((teacher) => {
-          const fullName = teacher.fullName || 'Unknown';
+        const mappedTeachers = teacherArray.map((teacher) => ({
+          id: teacher.id,
+          employeeCode: teacher.employeeCode || 'N/A',
+          name: teacher.fullName || 'Unknown',
+          avatar: (teacher.fullName || 'U')[0].toUpperCase(),
+          image: teacher.imageUrl || teacher.profileImage || `https://ui-avatars.com/api/?name=${encodeURIComponent(teacher.fullName)}&background=random`,
+          role: teacher.designation || 'Teacher',
+          mobile: teacher.mobile || 'N/A',
+          classes: teacher.assignedClasses
+            ? teacher.assignedClasses.split(',').map(c => c.trim())
+            : [],
+          subjects: teacher.assignedSubjects
+            ? teacher.assignedSubjects.split(',').map(s => s.trim())
+            : [],
+          salaryType: teacher.salaryType || 'MONTHLY',
+          status: teacher.status || 'ACTIVE',
+          attendance: teacher.attendanceAccessStatus || 'ALLOWED',
+          payroll: teacher.payrollStatus || 'INCLUDED',
+          joiningDate: teacher.joiningDate || 'N/A'
+        }));
 
-          return {
-            id: teacher.id,
-            employeeCode: teacher.employeeCode || 'N/A',
-            name: fullName,
-            avatar: fullName.charAt(0).toUpperCase(),
-            image:
-              teacher.imageUrl ||
-              teacher.profileImage ||
-              `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&background=random`,
-            role: teacher.designation || 'Teacher',
-            mobile: teacher.mobile || teacher.mobileNumber || 'N/A',
-            classes: teacher.assignedClasses
-              ? teacher.assignedClasses.split(',').map(c => c.trim())
-              : [],
-            subjects: teacher.assignedSubjects
-              ? teacher.assignedSubjects.split(',').map(s => s.trim())
-              : [],
-            salaryType: teacher.salaryType || 'MONTHLY',
-            status: teacher.status || 'ACTIVE',
-            attendance: teacher.attendanceStatus || 'ALLOWED',
-            payroll: teacher.payrollStatus || 'INCLUDED',
-            joiningDate: teacher.joiningDate || 'N/A'
-          };
-        });
+        const filteredTeachers = classFilter !== 'All Classes'
+          ? mappedTeachers.filter(t => t.classes.includes(classFilter))
+          : mappedTeachers;
 
-        setTeachers(mappedTeachers);
+        setTeachers(filteredTeachers);
+
+        // Pagination
         setTotalElements(res.pagination?.totalElements || 0);
         setTotalPages(res.pagination?.totalPages || 0);
 
-      } catch (error) {
-        console.error("Error fetching teachers:", error);
-        setError(error.message);
+      } catch (err) {
+        console.error("Error fetching teachers:", err);
+        setError(err.message || "Something went wrong");
         setTeachers([]);
       } finally {
         setLoading(false);
       }
     };
+
+
 
     fetchTeachers();
   }, [page, rowsPerpage, debouncedSearch, statusFilter, classFilter, salaryFilter, hasActiveFilters]);
@@ -189,40 +177,6 @@ const Teachers = () => {
     const index = name?.charCodeAt(0) % colors.length || 0;
     return colors[index];
   };
-
-  // Loading State
-  if (loading) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600 font-medium">Loading teachers...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Error State
-  if (error) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-gray-50">
-        <div className="text-center max-w-md">
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <UserRoundXIcon className="w-8 h-8 text-red-600" />
-          </div>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">Error Loading Teachers</h2>
-          <p className="text-gray-600 mb-4">{error}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            Retry
-          </button>
-        </div>
-      </div>
-    );
-  }
-
 
   return (
     <div className="flex h-screen overflow-hidden bg-linear-to-b from-sky-50 to-sky-100">
@@ -300,10 +254,13 @@ const Teachers = () => {
               <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Manage Teachers</h2>
               <p className="text-gray-500 mt-1 font-medium text-sm sm:text-base">Oversee and manage your academic staff directory.</p>
             </div>
-            <button onClick={() => navigate('/teachers/addTeacher')} className="px-4 sm:px-6 py-2.5 w-full sm:w-fit bg-blue-600 text-white rounded-lg font-medium flex items-center justify-center gap-2 hover:bg-blue-700 transition-all">
-              <UserPlusIcon className="w-5 h-5" />
-              <span className="text-sm sm:text-base">Add New Teacher</span>
-            </button>
+            <div className="flex gap-3 w-fit bg-gray-50">
+              <button className="px-4 py-2 border bg-white border-gray-200 rounded-lg flex items-center gap-2 hover:bg-gray-50 transition-all text-sm shadow-md">
+                <Calendar className="w-4 h-4" />               
+                <span className="hidden sm:inline">{date}</span>
+                <span className="sm:hidden">{date}</span>
+              </button>
+            </div>
           </div>
 
           {/* Stats Cards */}
@@ -371,6 +328,39 @@ const Teachers = () => {
             </div>
           </div>
 
+          {/* Quick Actions */}
+          <div className='p-3'>
+            <h1 className='text-lg sm:text-xl font-bold mb-5'>Quick Actions</h1>
+
+            <div className='flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-5 lg:w-fit sm:w-fit w-65'>
+
+              <button
+                onClick={() => navigate('/teachers/addTeacher')}
+                className={`px-4 sm:px-5 py-2.5 w-full cursor-pointer sm:w-fit rounded-lg font-medium flex items-center justify-center gap-2 transition-all
+  ${isAction === "add"
+                    ? "bg-blue-600 text-white"
+                    : "bg-gray-50 text-black hover:bg-gray-50"
+                  }`}
+              >
+                <UserPlusIcon className="w-5 h-5" />
+                <span className="text-sm sm:text-base">Add New Teacher</span>
+              </button>
+
+              <button
+                onClick={() => navigate('/teachers/assign')}
+                className={`flex p-3 px-4 rounded-xl w-full cursor-pointer sm:w-fit flex-row gap-2 text-[13px] sm:text-[14px] font-bold justify-center transition-all
+  ${isAction === "remove"
+                    ? "bg-blue-600 text-white"
+                    : "bg-gray-50 text-black hover:bg-gray-50"
+                  }`}
+              >
+                <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+                <span>Assign Subjects</span>
+              </button>
+
+            </div>
+          </div>
+
           {/* Filters */}
           <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 mb-6">
             <div className="flex flex-col lg:flex-row lg:items-center gap-4">
@@ -401,22 +391,15 @@ const Teachers = () => {
                   }}
                   className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                 >
-                  <option>All Classes</option>
-                  <option>Class 5A</option>
-                  <option>Class 6A</option>
-                  <option>Class 6B</option>
-                  <option>Class 7A</option>
-                  <option>Class 7B</option>
-                  <option>Class 8A</option>
-                  <option>Class 8B</option>
-                  <option>Class 9A</option>
-                  <option>Class 9B</option>
-                  <option>Class 10A</option>
-                  <option>Class 10B</option>
-                  <option>Class 11A</option>
-                  <option>Class 11B</option>
-                  <option>Class 12A</option>
-                  <option>Class 12B</option>
+                  <option >All Classes</option>
+                  <option value="Class-5">Class-5</option>
+                  <option value="Class-6">Class-6</option>
+                  <option value="Class-7">Class-7</option>
+                  <option value="Class-8">Class-8</option>
+                  <option value="Class-9">Class-9</option>
+                  <option value="Class-10">Class-10</option>
+                  <option value="Class-11">Class-11</option>
+                  <option value="Class-12">Class-12</option>
                 </select>
 
                 <select
@@ -437,7 +420,28 @@ const Teachers = () => {
 
           {/* MOBILE/TABLET CARDS VIEW (visible below 1024px) */}
           <div className="lg:hidden space-y-4 mb-6">
-            {teachers.map((teacher) => (
+            {loading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="text-center">
+                  <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                  <p className="text-gray-600 font-medium">Loading teachers...</p>
+                </div>
+              </div>
+            ) : error ? (
+              <div className="text-center py-8">
+                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <UserRoundXIcon className="w-6 h-6 text-red-600" />
+                </div>
+                <h3 className="text-lg font-bold text-gray-900 mb-2">Error Loading Teachers</h3>
+                <p className="text-gray-600 mb-4">{error}</p>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  Retry
+                </button>
+              </div>
+            ) : (teachers.map((teacher) => (
               <div key={teacher.id} className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm hover:shadow-md transition-all">
                 {/* Header */}
                 <div className="flex items-start justify-between mb-4">
@@ -540,7 +544,7 @@ const Teachers = () => {
                   </button>
                 </div>
               </div>
-            ))}
+            )))}
           </div>
 
           {/* DESKTOP TABLE (visible 1024px and above) */}
@@ -585,7 +589,32 @@ const Teachers = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {teachers.map((teacher) => (
+                  {loading ? (
+                    <tr>
+                      <td colSpan="11" className="px-6 py-8 text-center">
+                        <div className="flex items-center justify-center flex-col">
+                          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                          <p className="text-gray-600 font-medium ml-4">Loading teachers...</p>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : error ? (
+                    <tr>
+                      <td colSpan="11" className="px-6 py-8 text-center">
+                        <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <UserRoundXIcon className="w-6 h-6 text-red-600" />
+                        </div>
+                        <h3 className="text-lg font-bold text-gray-900 mb-2">Error Loading Teachers</h3>
+                        <p className="text-gray-600 mb-4">{error}</p>
+                        <button
+                          onClick={() => window.location.reload()}
+                          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                        >
+                          Retry
+                        </button>
+                      </td>
+                    </tr>
+                  ) : (teachers.map((teacher) => (
                     <tr key={teacher.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {teacher.employeeCode}
@@ -674,7 +703,8 @@ const Teachers = () => {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                  )))
+                  }
                 </tbody>
               </table>
             </div>
@@ -716,7 +746,7 @@ const Teachers = () => {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setpage(prev => Math.max(1, prev - 1))}
-                  disabled={page === 1}
+                  disabled={page === 1 || loading || error}
                   className="px-3 py-1 text-gray-600 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                 >
                   <ChevronLeft className="w-4 h-4" />
@@ -736,7 +766,7 @@ const Teachers = () => {
                 <button
                   type='button'
                   onClick={() => setpage(prev => Math.min(totalPages, prev + 1))}
-                  disabled={page === totalPages}
+                  disabled={page === 1 || loading || error}
                   className="px-3 py-1 text-gray-600 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                 >
                   <ChevronRight className="w-4 h-4" />
@@ -782,7 +812,7 @@ const Teachers = () => {
               <div className="flex items-center justify-center gap-2">
                 <button
                   onClick={() => setpage(prev => Math.max(1, prev - 1))}
-                  disabled={page === 1}
+                  disabled={page === 1 || loading || error}
                   className="px-4 py-2 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                 >
                   <ChevronLeft className="w-4 h-4" />
@@ -839,7 +869,7 @@ const Teachers = () => {
                 <button
                   type="button"
                   onClick={() => setpage(prev => Math.min(totalPages, prev + 1))}
-                  disabled={page === totalPages}
+                  disabled={page === 1 || loading || error}
                   className="px-4 py-2 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                 >
                   <ChevronRight className="w-4 h-4" />
