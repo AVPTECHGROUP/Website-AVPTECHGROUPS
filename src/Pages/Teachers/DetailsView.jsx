@@ -1,25 +1,70 @@
 import { User, Mail, Phone, ChevronLeft, GraduationCap, DollarSign, UserCheck, Briefcase, LogIn, Clock } from 'lucide-react';
-import { allTeachers } from '../../assets/allTeachers';
-import {useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import { getTeacherById } from '../../utils/allTeachers';
+import { getTeacherById } from '../../Api/TeachersAPI';
 
 const DetailsView = () => {
 
-   const { id } = useParams(); // teacher id from URL
-  
-  const [teacher, setTeacher] = useState(null);
+  const { id } = useParams();
 
-useEffect(() => {
-  const data = getTeacherById(id);
-  setTeacher(data);
+  const [teacher, setTeacher] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+
+  useEffect(() => {
+  const fetchTeacher = async () => {
+    try {
+      const res = await getTeacherById(id);
+      console.log("API response:", res);
+
+      const t = res; 
+      if (!t) {
+        console.error("Teacher data not found!");
+        return;
+      }
+
+      const filteredTeacher = {
+        id: t.id,
+        name: t.fullName,
+        email: t.email,
+        mobile: t.mobile,
+        gender: t.gender,
+        dob: t.dateOfBirth,
+        address: t.address,
+        highestQualification: t.qualification,
+        experience: t.experienceYears,
+        joiningDate: t.joiningDate,
+        salaryType: t.salaryStructure?.salaryType,
+        baseSalary: t.salaryStructure?.baseSalary,
+        totalAllowances: t.salaryStructure ? t.salaryStructure.grossSalary - t.salaryStructure.baseSalary : 0,
+        payroll: t.payrollStatus,
+        status: t.status,
+        loginAccess: t.attendanceAccessStatus === "ALLOWED",
+        attendanceAccess: t.attendanceAccessStatus === "ALLOWED",
+        classes: t.assignments?.map(a => `Class ${a.classId}`) || [],
+        subjects: t.assignments?.map(a => a.subjectName || "Unknown") || [],
+      };
+
+      setTeacher(filteredTeacher);
+    } catch (error) {
+      console.error("Failed to fetch teacher:", error);
+    }
+  };
+
+  if (id) fetchTeacher();
 }, [id]);
 
-  const navigate= useNavigate()
 
-if (!teacher) {
-  return <div className="p-10 text-center">Loading teacher...</div>;
-}
+  const navigate = useNavigate()
+
+  if (!teacher) {
+    return   <div className="flex items-center justify-center py-8 relative">
+                <div className="flex items-center justify-center absolute lg:top-80">
+                  <div className="w-7 h-7 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                  <p className="text-gray-600 lg:text-xl font-medium">Loading teachers...</p>
+                </div>
+              </div>
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">
@@ -27,7 +72,7 @@ if (!teacher) {
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Teacher Profile</h1>
-          <button onClick={()=>navigate(-1)} className="flex items-center cursor-pointer bg-gray-600 p-2 rounded-xl text-white gap-2 hover:bg-gray-900 transition-colors">
+          <button onClick={() => navigate(-1)} className="flex items-center cursor-pointer bg-gray-600 p-2 rounded-xl text-white gap-2 hover:bg-gray-900 transition-colors">
             <ChevronLeft className="w-5 h-5" />
             <span className="hidden sm:inline">Back to List</span>
           </button>
@@ -37,12 +82,12 @@ if (!teacher) {
         <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6 mb-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
             <div className="relative">
-              <img 
-                src={teacher.image} 
+              {/* <img 
+                src={teacher.avtar} 
                 alt={teacher.name}
                 className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg object-cover"
-              />
-              <div className="absolute bottom-0 right-0 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
+              /> */}
+              {/* <div className="absolute bottom-0 right-0 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div> */}
             </div>
             <div className="flex-1">
               <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-2">
@@ -64,7 +109,7 @@ if (!teacher) {
               </div>
             </div>
           </div>
-    
+
         </div>
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -199,13 +244,13 @@ if (!teacher) {
               <Briefcase className="w-5 h-5 text-blue-600" />
               <h3 className="text-lg font-bold text-gray-900">Academic Assignment</h3>
             </div>
-            
+
             <div className="space-y-4">
               <div>
                 <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Assigned Classes</h4>
                 <div className="flex flex-wrap gap-2">
                   {teacher.classes.map((className, index) => (
-                    <span 
+                    <span
                       key={index}
                       className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
                     >
@@ -219,7 +264,7 @@ if (!teacher) {
                 <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Subjects Specialized</h4>
                 <div className="flex flex-wrap gap-2">
                   {teacher.subjects.map((subject, index) => (
-                    <span 
+                    <span
                       key={index}
                       className="px-4 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-100 transition-colors flex items-center gap-2"
                     >

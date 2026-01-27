@@ -127,7 +127,7 @@ const Login_2 = ({ onLoginSuccess }) => {
 
                         <button type='submit' disabled={isLoading} className={`w-full mt-1 cursor-pointer py-3 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-lg transition ${isLoading ? 'bg-blue-300 cursor-not-allowed' : 'bg-blue-400 hover:bg-blue-600 text-white'}`}>
                             {isLoading ? (<span className='flex items-center justify-center gap-2'>
-                                <span className='w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin'></span>
+                                <span className='w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin'></span>1
                                 Verifying...
                             </span>
                             ) : (

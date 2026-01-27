@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { getTeachers } from '../../utils/allTeachers';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { getTeachers, searchTeachers } from '../../Api/TeachersAPI'
+import { useNavigate } from 'react-router-dom';
 import {
   Search,
   Bell,
@@ -16,13 +16,18 @@ import {
   Funnel,
   Eye,
   Power,
-  UserCheck2
+  UserCheck2,
+  Plus,
+  Minus,
+  Calendar
 } from 'lucide-react';
 
 const Teachers = () => {
 
   // Stores text typed in search input (teacher name / id / role)
   const [search, setsearch] = useState('');
+
+  const [debouncedSearch, setDebouncedSearch] = useState('');
 
   // Stores selected teacher status filter (Active / Inactive / All)
   const [statusFilter, setStatusFilter] = useState('All Status');
@@ -42,60 +47,123 @@ const Teachers = () => {
   // Controls mobile search bar visibility (true = open, false = closed)
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
 
+  const [error, setError] = useState(null);
+
+  const [totalElements, setTotalElements] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+
   const [teachers, setTeachers] = useState([])
-  
+
+  const [loading, setLoading] = useState(false);
+
+  const [isAction, setisAction] = useState('add');
+
+  const date = new Date().toLocaleDateString();
+
   const navigate = useNavigate();
 
- const location = useLocation();   
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [search]);
+
+
+  const hasActiveFilters = useMemo(() => {
+    return (
+      debouncedSearch.trim() !== '' ||
+      statusFilter !== 'All Status' ||
+      classFilter !== 'All Classes' ||
+      salaryFilter !== 'All Salary Types'
+    );
+  }, [debouncedSearch, statusFilter, classFilter, salaryFilter]);
 
   useEffect(() => {
-  const data = getTeachers();
-  setTeachers(data);
-  setpage(1); // Reset to page 1 when data reloads
-}, [location.pathname]);
+    const fetchTeachers = async () => {
+      setLoading(true);
+      setError(null);
 
+      try {
+        let res;
+
+        if (hasActiveFilters) {
+          const filters = {};
+          if (debouncedSearch.trim()) filters.searchTerm = debouncedSearch.trim();
+          if (statusFilter !== 'All Status') filters.status = statusFilter.toUpperCase();
+          if (classFilter !== 'All Classes') filters.assignedClasses = classFilter;
+          if (salaryFilter !== 'All Salary Types') filters.salaryType = salaryFilter === 'Monthly' ? 'MONTHLY' : 'PER_DAY';
+
+          res = await searchTeachers(filters, page - 1, rowsPerpage);
+        } else {
+          res = await getTeachers(page - 1, rowsPerpage);
+        }
+
+        const teacherArray = res.data || [];
+
+        const mappedTeachers = teacherArray.map((teacher) => ({
+          id: teacher.id,
+          employeeCode: teacher.employeeCode || 'N/A',
+          name: teacher.fullName || 'Unknown',
+          avatar: (teacher.fullName || 'U')[0].toUpperCase(),
+          image: teacher.imageUrl || teacher.profileImage || `https://ui-avatars.com/api/?name=${encodeURIComponent(teacher.fullName)}&background=random`,
+          role: teacher.designation || 'Teacher',
+          mobile: teacher.mobile || 'N/A',
+          classes: teacher.assignedClasses
+            ? teacher.assignedClasses.split(',').map(c => c.trim())
+            : [],
+          subjects: teacher.assignedSubjects
+            ? teacher.assignedSubjects.split(',').map(s => s.trim())
+            : [],
+          salaryType: teacher.salaryType || 'MONTHLY',
+          status: teacher.status || 'ACTIVE',
+          attendance: teacher.attendanceAccessStatus || 'ALLOWED',
+          payroll: teacher.payrollStatus || 'INCLUDED',
+          joiningDate: teacher.joiningDate || 'N/A'
+        }));
+
+        const filteredTeachers = classFilter !== 'All Classes'
+          ? mappedTeachers.filter(t => t.classes.includes(classFilter))
+          : mappedTeachers;
+
+        setTeachers(filteredTeachers);
+
+        // Pagination
+        setTotalElements(res.pagination?.totalElements || 0);
+        setTotalPages(res.pagination?.totalPages || 0);
+
+      } catch (err) {
+        console.error("Error fetching teachers:", err);
+        setError(err.message || "Something went wrong");
+        setTeachers([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+
+
+    fetchTeachers();
+  }, [page, rowsPerpage, debouncedSearch, statusFilter, classFilter, salaryFilter, hasActiveFilters]);
 
   const stats = useMemo(() => {
     const total = teachers.length;
-    const active = teachers.filter(t => t.status === 'Active').length;
-    const inActive = teachers.filter(t => t.status === 'Inactive').length;
-    const payrollIncluded = teachers.filter(t => t.payroll === 'Included').length;
-    const attendanceBlocked = teachers.filter(t => t.attendance === 'Blocked').length;
+    const active = teachers.filter(t => t.status === 'ACTIVE').length;
+    const inActive = teachers.filter(t => t.status === 'INACTIVE').length;
+    const payrollIncluded = teachers.filter(t => t.payroll === 'INCLUDED').length;
+    const attendanceBlocked = teachers.filter(t => t.attendance === 'BLOCKED').length;
 
     return {
       total,
       active,
-      activePercent: Math.round((active / total) * 100),
+      activePercent: total > 0 ? Math.round((active / total) * 100) : 0,
       inActive,
-      inActivePercent: Math.round((inActive / total) * 100),
+      inActivePercent: total > 0 ? Math.round((inActive / total) * 100) : 0,
       payrollIncluded,
       attendanceBlocked
     };
   }, [teachers]);
-
-  const filteredTeachers = useMemo(() => {
-  // If no teachers loaded yet, return empty array
-  if (!teachers || teachers.length === 0) {
-    return [];
-  }
-  
-  return teachers.filter(teacher => {
-    const matchesSearch = teacher.name.toLowerCase().includes(search.toLowerCase()) ||
-      teacher.id.toLowerCase().includes(search.toLowerCase()) ||
-      teacher.role.toLowerCase().includes(search.toLowerCase());
-    const matchesStatus = statusFilter === 'All Status' || teacher.status === statusFilter;
-    const matchesClass = classFilter === 'All Classes' || teacher.classes.some(c => c === classFilter);
-    const matchesSalary = salaryFilter === 'All Salary Types' || teacher.salaryType === salaryFilter;
-
-    return matchesSearch && matchesStatus && matchesClass && matchesSalary;
-  });
-}, [teachers, search, statusFilter, classFilter, salaryFilter]);
-
-  const totalPages = Math.ceil(filteredTeachers.length / rowsPerpage);
-  const startIndex = (page - 1) * rowsPerpage;
-  const endIndex = startIndex + rowsPerpage;
-  const currentTeachers = filteredTeachers.slice(startIndex, endIndex);
-console.log(currentTeachers);
 
   const getAvatarColor = (name) => {
     const colors = [
@@ -106,7 +174,7 @@ console.log(currentTeachers);
       'bg-indigo-500',
       'bg-yellow-500'
     ];
-    const index = name.charCodeAt(0) % colors.length;
+    const index = name?.charCodeAt(0) % colors.length || 0;
     return colors[index];
   };
 
@@ -186,10 +254,13 @@ console.log(currentTeachers);
               <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Manage Teachers</h2>
               <p className="text-gray-500 mt-1 font-medium text-sm sm:text-base">Oversee and manage your academic staff directory.</p>
             </div>
-            <button onClick={()=>navigate('/teachers/addTeacher')} className="px-4 sm:px-6 py-2.5 w-full sm:w-fit bg-blue-600 text-white rounded-lg font-medium flex items-center justify-center gap-2 hover:bg-blue-700 transition-all">
-              <UserPlusIcon className="w-5 h-5" />
-              <span className="text-sm sm:text-base">Add New Teacher</span>
-            </button>
+            <div className="flex gap-3 w-fit bg-gray-50">
+              <button className="px-4 py-2 border bg-white border-gray-200 rounded-lg flex items-center gap-2 hover:bg-gray-50 transition-all text-sm shadow-md">
+                <Calendar className="w-4 h-4" />               
+                <span className="hidden sm:inline">{date}</span>
+                <span className="sm:hidden">{date}</span>
+              </button>
+            </div>
           </div>
 
           {/* Stats Cards */}
@@ -257,6 +328,39 @@ console.log(currentTeachers);
             </div>
           </div>
 
+          {/* Quick Actions */}
+          <div className='p-3'>
+            <h1 className='text-lg sm:text-xl font-bold mb-5'>Quick Actions</h1>
+
+            <div className='flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-5 lg:w-fit sm:w-fit w-65'>
+
+              <button
+                onClick={() => navigate('/teachers/addTeacher')}
+                className={`px-4 sm:px-5 py-2.5 w-full cursor-pointer sm:w-fit rounded-lg font-medium flex items-center justify-center gap-2 transition-all
+  ${isAction === "add"
+                    ? "bg-blue-600 text-white"
+                    : "bg-gray-50 text-black hover:bg-gray-50"
+                  }`}
+              >
+                <UserPlusIcon className="w-5 h-5" />
+                <span className="text-sm sm:text-base">Add New Teacher</span>
+              </button>
+
+              <button
+                onClick={() => navigate('/teachers/assign')}
+                className={`flex p-3 px-4 rounded-xl w-full cursor-pointer sm:w-fit flex-row gap-2 text-[13px] sm:text-[14px] font-bold justify-center transition-all
+  ${isAction === "remove"
+                    ? "bg-blue-600 text-white"
+                    : "bg-gray-50 text-black hover:bg-gray-50"
+                  }`}
+              >
+                <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+                <span>Assign Subjects</span>
+              </button>
+
+            </div>
+          </div>
+
           {/* Filters */}
           <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 mb-6">
             <div className="flex flex-col lg:flex-row lg:items-center gap-4">
@@ -287,22 +391,15 @@ console.log(currentTeachers);
                   }}
                   className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                 >
-                  <option>All Classes</option>
-                  <option>Class 5A</option>
-                  <option>Class 6A</option>
-                  <option>Class 6B</option>
-                  <option>Class 7A</option>
-                  <option>Class 7B</option>
-                  <option>Class 8A</option>
-                  <option>Class 8B</option>
-                  <option>Class 9A</option>
-                  <option>Class 9B</option>
-                  <option>Class 10A</option>
-                  <option>Class 10B</option>
-                  <option>Class 11A</option>
-                  <option>Class 11B</option>
-                  <option>Class 12A</option>
-                  <option>Class 12B</option>
+                  <option >All Classes</option>
+                  <option value="Class-5">Class-5</option>
+                  <option value="Class-6">Class-6</option>
+                  <option value="Class-7">Class-7</option>
+                  <option value="Class-8">Class-8</option>
+                  <option value="Class-9">Class-9</option>
+                  <option value="Class-10">Class-10</option>
+                  <option value="Class-11">Class-11</option>
+                  <option value="Class-12">Class-12</option>
                 </select>
 
                 <select
@@ -323,7 +420,28 @@ console.log(currentTeachers);
 
           {/* MOBILE/TABLET CARDS VIEW (visible below 1024px) */}
           <div className="lg:hidden space-y-4 mb-6">
-            {currentTeachers.map((teacher) => (
+            {loading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="text-center">
+                  <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                  <p className="text-gray-600 font-medium">Loading teachers...</p>
+                </div>
+              </div>
+            ) : error ? (
+              <div className="text-center py-8">
+                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <UserRoundXIcon className="w-6 h-6 text-red-600" />
+                </div>
+                <h3 className="text-lg font-bold text-gray-900 mb-2">Error Loading Teachers</h3>
+                <p className="text-gray-600 mb-4">{error}</p>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  Retry
+                </button>
+              </div>
+            ) : (teachers.map((teacher) => (
               <div key={teacher.id} className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm hover:shadow-md transition-all">
                 {/* Header */}
                 <div className="flex items-start justify-between mb-4">
@@ -337,11 +455,11 @@ console.log(currentTeachers);
                       <p className="text-xs text-gray-400 mt-1">{teacher.id}</p>
                     </div>
                   </div>
-                  <span className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs rounded-full ${teacher.status === 'Active'
-                      ? 'bg-green-50 text-green-700'
-                      : 'bg-red-50 text-red-700'
+                  <span className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs rounded-full ${teacher.status === 'ACTIVE'
+                    ? 'bg-green-50 text-green-700'
+                    : 'bg-red-50 text-red-700'
                     }`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${teacher.status === 'Active' ? 'bg-green-500' : 'bg-red-500'
+                    <span className={`w-1.5 h-1.5 rounded-full ${teacher.status === 'ACTIVE' ? 'bg-green-500' : 'bg-red-500'
                       }`}></span>
                     {teacher.status}
                   </span>
@@ -363,10 +481,8 @@ console.log(currentTeachers);
                         </span>
                       ))}
                     </div>
-                  </div>
 
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-500">Subjects:</span>
+                    {/* Subjects */}
                     <div className="flex flex-wrap gap-1 justify-end">
                       {(teacher.subjects || []).map((subject, idx) => (
                         <span key={idx} className="inline-block px-2 py-0.5 text-xs bg-purple-50 text-purple-600 rounded">
@@ -378,9 +494,9 @@ console.log(currentTeachers);
 
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-500">Salary Type:</span>
-                    <span className={`inline-block px-2.5 py-1 text-xs rounded-full ${teacher.salaryType === 'Monthly'
-                        ? 'bg-teal-50 text-teal-700'
-                        : 'bg-yellow-50 text-yellow-700'
+                    <span className={`inline-block px-2.5 py-1 text-xs rounded-full ${teacher.salaryType === 'MONTHLY'
+                      ? 'bg-teal-50 text-teal-700'
+                      : 'bg-yellow-50 text-yellow-700'
                       }`}>
                       {teacher.salaryType}
                     </span>
@@ -388,9 +504,9 @@ console.log(currentTeachers);
 
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-500">Attendance:</span>
-                    <span className={`inline-block px-2.5 py-1 text-xs rounded ${teacher.attendance === 'Allowed'
-                        ? 'bg-blue-50 text-blue-700'
-                        : 'bg-gray-100 text-gray-700'
+                    <span className={`inline-block px-2.5 py-1 text-xs rounded ${teacher.attendance === 'ALLOWED'
+                      ? 'bg-blue-50 text-blue-700'
+                      : 'bg-gray-100 text-gray-700'
                       }`}>
                       {teacher.attendance}
                     </span>
@@ -398,9 +514,9 @@ console.log(currentTeachers);
 
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-500">Payroll:</span>
-                    <span className={`inline-block px-2.5 py-1 text-xs rounded ${teacher.payroll === 'Included'
-                        ? 'bg-teal-50 text-teal-700'
-                        : 'bg-gray-100 text-gray-700'
+                    <span className={`inline-block px-2.5 py-1 text-xs rounded ${teacher.payroll === 'INCLUDED'
+                      ? 'bg-teal-50 text-teal-700'
+                      : 'bg-gray-100 text-gray-700'
                       }`}>
                       {teacher.payroll}
                     </span>
@@ -414,11 +530,11 @@ console.log(currentTeachers);
 
                 {/* Actions */}
                 <div className="flex items-center gap-2 pt-3 border-t border-gray-100">
-                  <button onClick={()=>navigate(`/teachers/${teacher.id}`)} className="flex-1 px-3 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg flex items-center justify-center gap-2 transition-all">
+                  <button onClick={() => navigate(`/teachers/${teacher.id}`)} className="flex-1 px-3 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg flex items-center justify-center gap-2 transition-all">
                     <Eye className="w-4 h-4 text-gray-600" />
                     <span className="text-sm font-medium text-gray-700">View</span>
                   </button>
-                  <button onClick={()=>navigate(`/teachers/editTeacher/${teacher.id}`)} className="flex-1 px-3 py-2 bg-blue-50 hover:bg-blue-100 rounded-lg flex items-center justify-center gap-2 transition-all">
+                  <button onClick={() => navigate(`/teachers/editTeacher/${teacher.id}`)} className="flex-1 px-3 py-2 bg-blue-50 hover:bg-blue-100 rounded-lg flex items-center justify-center gap-2 transition-all">
                     <Edit className="w-4 h-4 text-blue-600" />
                     <span className="text-sm font-medium text-blue-700">Edit</span>
                   </button>
@@ -428,7 +544,7 @@ console.log(currentTeachers);
                   </button>
                 </div>
               </div>
-            ))}
+            )))}
           </div>
 
           {/* DESKTOP TABLE (visible 1024px and above) */}
@@ -473,10 +589,35 @@ console.log(currentTeachers);
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {currentTeachers.map((teacher) => (
+                  {loading ? (
+                    <tr>
+                      <td colSpan="11" className="px-6 py-8 text-center">
+                        <div className="flex items-center justify-center flex-col">
+                          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                          <p className="text-gray-600 font-medium ml-4">Loading teachers...</p>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : error ? (
+                    <tr>
+                      <td colSpan="11" className="px-6 py-8 text-center">
+                        <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <UserRoundXIcon className="w-6 h-6 text-red-600" />
+                        </div>
+                        <h3 className="text-lg font-bold text-gray-900 mb-2">Error Loading Teachers</h3>
+                        <p className="text-gray-600 mb-4">{error}</p>
+                        <button
+                          onClick={() => window.location.reload()}
+                          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                        >
+                          Retry
+                        </button>
+                      </td>
+                    </tr>
+                  ) : (teachers.map((teacher) => (
                     <tr key={teacher.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {teacher.id}
+                        {teacher.employeeCode}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-3">
@@ -509,35 +650,35 @@ console.log(currentTeachers);
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-block px-3 py-1 text-xs rounded-full ${teacher.salaryType === 'Monthly'
-                            ? 'bg-teal-50 text-teal-700'
-                            : 'bg-yellow-50 text-yellow-700'
+                        <span className={`inline-block px-3 py-1 text-xs rounded-full ${teacher.salaryType === 'MONTHLY'
+                          ? 'bg-teal-50 text-teal-700'
+                          : 'bg-yellow-50 text-yellow-700'
                           }`}>
                           {teacher.salaryType}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center gap-1 px-3 py-1 text-xs rounded-full ${teacher.status === 'Active'
-                            ? 'bg-green-50 text-green-700'
-                            : 'bg-red-50 text-red-700'
+                        <span className={`inline-flex items-center gap-1 px-3 py-1 text-xs rounded-full ${teacher.status === 'ACTIVE'
+                          ? 'bg-green-50 text-green-700'
+                          : 'bg-red-50 text-red-700'
                           }`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${teacher.status === 'Active' ? 'bg-green-500' : 'bg-red-500'
+                          <span className={`w-1.5 h-1.5 rounded-full ${teacher.status === 'ACTIVE' ? 'bg-green-500' : 'bg-red-500'
                             }`}></span>
                           {teacher.status}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-block px-3 py-1 text-xs rounded ${teacher.attendance === 'Allowed'
-                            ? 'bg-blue-50 text-blue-700'
-                            : 'bg-gray-100 text-gray-700'
+                        <span className={`inline-block px-3 py-1 text-xs rounded ${teacher.attendance === 'ALLOWED'
+                          ? 'bg-blue-50 text-blue-700'
+                          : 'bg-gray-100 text-gray-700'
                           }`}>
                           {teacher.attendance}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-block px-3 py-1 text-xs rounded ${teacher.payroll === 'Included'
-                            ? 'bg-teal-50 text-teal-700'
-                            : 'bg-gray-100 text-gray-700'
+                        <span className={`inline-block px-3 py-1 text-xs rounded ${teacher.payroll === 'INCLUDED'
+                          ? 'bg-teal-50 text-teal-700'
+                          : 'bg-gray-100 text-gray-700'
                           }`}>
                           {teacher.payroll}
                         </span>
@@ -546,23 +687,24 @@ console.log(currentTeachers);
                         {teacher.joiningDate}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                         <div className="flex items-center gap-2 pt-3 border-t border-gray-100">
-                  <button onClick={()=>navigate(`/teachers/${teacher.id}`)} className="flex-1 px-3 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg flex items-center justify-center gap-2 transition-all">
-                    <Eye className="w-4 h-4 text-gray-600" />
-                    <span className="text-sm font-medium text-gray-700">View</span>
-                  </button>
-                  <button onClick={()=>navigate(`/teachers/editTeacher/${teacher.id}`)} className="flex-1 px-3 py-2 bg-blue-50 hover:bg-blue-100 rounded-lg flex items-center justify-center gap-2 transition-all">
-                    <Edit className="w-4 h-4 text-blue-600" />
-                    <span className="text-sm font-medium text-blue-700">Edit</span>
-                  </button>
-                  <button className="flex-1 px-3 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg flex items-center justify-center gap-2 transition-all">
-                    <Power className="w-4 h-4 text-gray-600" />
-                    <span className="text-sm font-medium text-gray-700">Toggle</span>
-                  </button>
-                </div>
+                        <div className="flex items-center gap-2 pt-3 border-t border-gray-100">
+                          <button onClick={() => navigate(`/teachers/${teacher.id}`)} className="flex-1 px-3 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg flex items-center justify-center gap-2 transition-all">
+                            <Eye className="w-4 h-4 text-gray-600" />
+                            <span className="text-sm font-medium text-gray-700">View</span>
+                          </button>
+                          <button onClick={() => navigate(`/teachers/editTeacher/${teacher.id}`)} className="flex-1 px-3 py-2 bg-blue-50 hover:bg-blue-100 rounded-lg flex items-center justify-center gap-2 transition-all">
+                            <Edit className="w-4 h-4 text-blue-600" />
+                            <span className="text-sm font-medium text-blue-700">Edit</span>
+                          </button>
+                          <button className="flex-1 px-3 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg flex items-center justify-center gap-2 transition-all">
+                            <Power className="w-4 h-4 text-gray-600" />
+                            <span className="text-sm font-medium text-gray-700">Toggle</span>
+                          </button>
+                        </div>
                       </td>
                     </tr>
-                  ))}
+                  )))
+                  }
                 </tbody>
               </table>
             </div>
@@ -571,7 +713,19 @@ console.log(currentTeachers);
             <div className="px-6 py-4 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="flex flex-col sm:flex-row items-center gap-4">
                 <span className="text-sm text-gray-700">
-                  Showing {startIndex + 1} to {Math.min(endIndex, filteredTeachers.length)} of {filteredTeachers.length} results
+                  {(() => {
+                    const safeTotalElements = Number(totalElements) || 0;
+                    const safeRowsPerPage = Number(rowsPerpage) || 10;
+                    const safePage = Number(page) || 1;
+
+                    return (
+                      <>
+                        Showing {(safePage - 1) * safeRowsPerPage + 1} to{' '}
+                        {Math.min(safePage * safeRowsPerPage, safeTotalElements)} of {safeTotalElements}
+                      </>
+                    );
+                  })()}
+
                 </span>
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-gray-700">Rows per page:</span>
@@ -592,7 +746,7 @@ console.log(currentTeachers);
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setpage(prev => Math.max(1, prev - 1))}
-                  disabled={page === 1}
+                  disabled={page === 1 || loading || error}
                   className="px-3 py-1 text-gray-600 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                 >
                   <ChevronLeft className="w-4 h-4" />
@@ -602,16 +756,17 @@ console.log(currentTeachers);
                     key={idx + 1}
                     onClick={() => setpage(idx + 1)}
                     className={`px-3 py-1 rounded transition-all ${page === idx + 1
-                        ? 'bg-blue-500 text-white'
-                        : 'text-gray-600 hover:bg-gray-100'
+                      ? 'bg-blue-500 text-white'
+                      : 'text-gray-600 hover:bg-gray-100'
                       }`}
                   >
                     {idx + 1}
                   </button>
                 ))}
                 <button
+                  type='button'
                   onClick={() => setpage(prev => Math.min(totalPages, prev + 1))}
-                  disabled={page === totalPages}
+                  disabled={page === 1 || loading || error}
                   className="px-3 py-1 text-gray-600 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                 >
                   <ChevronRight className="w-4 h-4" />
@@ -624,9 +779,18 @@ console.log(currentTeachers);
           <div className="lg:hidden bg-white rounded-xl border border-gray-200 p-4">
             <div className="flex flex-col gap-4">
               <div className="text-center">
-                <span className="text-sm text-gray-700">
-                  Showing {startIndex + 1} to {Math.min(endIndex, filteredTeachers.length)} of {filteredTeachers.length} results
-                </span>
+                {(() => {
+                  const safeTotalElements = Number(totalElements) || 0;
+                  const safeRowsPerPage = Number(rowsPerpage) || 10;
+                  const safePage = Number(page) || 1;
+
+                  return (
+                    <>
+                      Showing {(safePage - 1) * safeRowsPerPage + 1} to{' '}
+                      {Math.min(safePage * safeRowsPerPage, safeTotalElements)} of {safeTotalElements}
+                    </>
+                  );
+                })()}
               </div>
 
               <div className="flex items-center justify-center gap-2">
@@ -648,7 +812,7 @@ console.log(currentTeachers);
               <div className="flex items-center justify-center gap-2">
                 <button
                   onClick={() => setpage(prev => Math.max(1, prev - 1))}
-                  disabled={page === 1}
+                  disabled={page === 1 || loading || error}
                   className="px-4 py-2 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                 >
                   <ChevronLeft className="w-4 h-4" />
@@ -661,8 +825,8 @@ console.log(currentTeachers);
                         key={idx + 1}
                         onClick={() => setpage(idx + 1)}
                         className={`px-3 py-1 rounded transition-all ${page === idx + 1
-                            ? 'bg-blue-500 text-white'
-                            : 'text-gray-600 hover:bg-gray-100'
+                          ? 'bg-blue-500 text-white'
+                          : 'text-gray-600 hover:bg-gray-100'
                           }`}
                       >
                         {idx + 1}
@@ -673,8 +837,8 @@ console.log(currentTeachers);
                       <button
                         onClick={() => setpage(1)}
                         className={`px-3 py-1 rounded transition-all ${page === 1
-                            ? 'bg-blue-500 text-white'
-                            : 'text-gray-600 hover:bg-gray-100'
+                          ? 'bg-blue-500 text-white'
+                          : 'text-gray-600 hover:bg-gray-100'
                           }`}
                       >
                         1
@@ -692,8 +856,8 @@ console.log(currentTeachers);
                       <button
                         onClick={() => setpage(totalPages)}
                         className={`px-3 py-1 rounded transition-all ${page === totalPages
-                            ? 'bg-blue-500 text-white'
-                            : 'text-gray-600 hover:bg-gray-100'
+                          ? 'bg-blue-500 text-white'
+                          : 'text-gray-600 hover:bg-gray-100'
                           }`}
                       >
                         {totalPages}
@@ -703,8 +867,9 @@ console.log(currentTeachers);
                 </div>
 
                 <button
+                  type="button"
                   onClick={() => setpage(prev => Math.min(totalPages, prev + 1))}
-                  disabled={page === totalPages}
+                  disabled={page === 1 || loading || error}
                   className="px-4 py-2 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                 >
                   <ChevronRight className="w-4 h-4" />

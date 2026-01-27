@@ -2,36 +2,11 @@ import { useState, useEffect } from 'react';
 import { Menu } from 'lucide-react';
 import Sidebar from './Components/Sidebar';
 import MainRoutes from './Routes/MainRoutes';
-import Login_2 from './Pages/Login_2'; // Make sure path is correct
+import { ToastContainer } from 'react-toastify';
 
 const App = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-
-  // Check if token exists in localStorage on mount
-  useEffect(() => {
-    const token = localStorage.getItem('token'); // Assuming you save token as 'token'
-    if (token) setIsLoggedIn(true);
-  }, []);
-
-  // Handler for login success
-  const handleLoginSuccess = (token) => {
-    localStorage.setItem('token', token);
-    setIsLoggedIn(true);
-  };
-
-  // Handler for logout (optional for future use)
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    setIsLoggedIn(false);
-  };
-
-  // If not logged in, show login page only
-  if (!isLoggedIn) {
-    return <Login_2  onLoginSuccess={handleLoginSuccess} />;
-  }
-
   
   // If logged in, show sidebar + main routes
   return (
@@ -54,7 +29,6 @@ const App = () => {
           sidebarOpen={sidebarOpen}
           setSidebarOpen={setSidebarOpen}
           setMobileSidebarOpen={setMobileSidebarOpen}
-          onLogout={handleLogout} 
 
         />
       </div>
@@ -78,6 +52,7 @@ const App = () => {
           <MainRoutes />
         </main>
       </div>
+      <ToastContainer />
     </div>
   );
 };
