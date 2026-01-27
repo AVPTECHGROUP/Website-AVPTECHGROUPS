@@ -1,3 +1,4 @@
+
 const BASE_URL= "https://ssdev-btgphuazhza9edcu.canadacentral-01.azurewebsites.net/api/v1";
 
 // List All Teacher with pagination 
@@ -96,6 +97,49 @@ export const searchTeachers=async(filters={}, page, size=10, sort='id')=>{
     throw error;
   }
 }
+
+// Get Teacher Salary===>
+  
+  export const getTeacherSalary=async(id)=>{
+    try {
+      const res= await fetch(`${BASE_URL}/teachers/${id}/salary-structure`,{headers:{
+        accept:'application/json'
+      }})
+      
+      if(!res.ok) {throw new Error( 'Failed to get the teachers salary.')} 
+        
+        const result = await res.json();
+        return result.data; 
+        
+      } catch (error) {
+        console.error('searchTeachers error:', error.message);
+        throw error;
+      }
+  }
+
+  // Update Teacher Salary--->
+
+  export const updateSalary=async(id, updatedSalary)=>{
+    try {
+      const res=await fetch(`${BASE_URL}/teachers/${id}/salary-structure`,{
+        method:'POST',
+        headers:{
+          'Content-Type': 'application/json',
+        accept: 'application/json'
+        },
+        body:JSON.stringify(updatedSalary)
+      });
+
+      if(!res.ok){throw new Error('Failed to update the Teachers Salary.')}
+      
+      const data=await res.json()
+      return data
+
+    } catch (error) {
+      console.error('updateSalary error:', error.message);
+        throw error;
+    }
+  }
 
 // Get Teacher Assignment===>
 
