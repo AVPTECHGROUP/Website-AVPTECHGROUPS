@@ -58,13 +58,13 @@ function AddnewSystemUser() {
                 </div>
             </>
         } else if (inp == 'principal') {
-
+            console.log("hii");
         }
     }
 
 
     return (
-        <>
+        <> 
             <div className="outer p-6">
                 <div className="one flex flex-col">
                     <div className="flex justify-between text-black items-center">
