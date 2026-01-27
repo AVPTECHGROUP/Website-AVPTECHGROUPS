@@ -1,27 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getTeacherById, updateTeacher } from '../../utils/allTeachers';
+import { getTeacherById } from '../../utils/allTeachers';
 import { ChevronLeft } from 'lucide-react';
 
 function EditTeachersDetails() {
     const { id } = useParams();
     const navigate = useNavigate();
     const [enabled, setEnabled] = useState(false);
-    
-   const [teacher, setTeacher] = useState(null)
+    const [teacher, setTeacher] = useState(null)
 
-    useEffect(()=>{
-    const data = getTeacherById(id)
-    setTeacher(data)
-    },[id])
+    useEffect(() => {
+        const data = getTeacherById(id)
+        setTeacher(data)
+    }, [id])
 
 
     function formatToInputDate(dateStr) {
-    if (!dateStr) return '';
-     const date = new Date(dateStr);
-    return date.toISOString().split('T')[0];
-}
-    
+        if (!dateStr) return '';
+        const date = new Date(dateStr);
+        return date.toISOString().split('T')[0];
+    }
+
     // Form state
     const [formData, setFormData] = useState({
         name: '',
@@ -70,39 +69,107 @@ function EditTeachersDetails() {
         }));
     };
 
-    function handle_updateDetails(e) {
-  e.preventDefault();
-
-  const updatedTeacher = {
-    ...formData,
-    status: enabled ? 'Active' : 'Inactive'
-  };
-
-  updateTeacher(updatedTeacher);
-  navigate('/teachers');
-}
-
-
     // If teacher not found, redirect
     if (!teacher) {
         return (
             <div className='outer flex flex-col bg-gray-100 h-full p-11 lg:p-16'>
                 <p>Teacher not found</p>
-                <button onClick={()=>navigate(-1)} className="flex items-center cursor-pointer bg-gray-600 p-2 rounded-xl text-white gap-2 hover:bg-gray-900 transition-colors">
-            <ChevronLeft className="w-5 h-5" />
-            <span className="hidden sm:inline">Back to List</span>
-          </button>
+                <button onClick={() => navigate(-1)} className="flex items-center cursor-pointer bg-gray-600 p-2 rounded-xl text-white gap-2 hover:bg-gray-900 transition-colors">
+                    <ChevronLeft className="w-5 h-5" />
+                    <span className="hidden sm:inline">Back to List</span>
+                </button>
             </div>
         );
     }
 
+    async function handleDetails_submit(e) {
+        e.preventDefault();
+
+        try {
+            const id = formData.id;
+            const updatedFormData = {
+                personalDetails: {
+                    fullName: formData.name,
+                    mobile: formData.mobile,
+                    email: formData.email,
+                    gender: formData.gender.toUpperCase(),
+                    dateOfBirth: formData.dob,
+                    address: formData.address,
+                    emergencyContact: null,
+                    emergencyContactName: "",
+                    emergencyContactRelation: ""
+
+                },
+                professionalDetails: {
+                    employeeCode: "string",
+                    qualification: formData.highestQualification,
+                    experienceYears: parseInt(formData.experience),
+                    joiningDate: formData.joiningDate,
+                    department: "",
+                    designation: "",
+                    additionalNotes: ""
+                },
+                // bankDetails: {
+                //     accountHolderName: "",
+                //     accountNumber: "",
+                //     bankName: "",
+                //     ifscCode: "",
+                //     branchName: "",
+                //     branchAddress: "",
+                //     iban: "",
+                //     swiftCode: ""
+                // },
+                profileImageUrl: "",
+                remarks: ""
+            };
+
+            console.log("Sending ID:", id);
+            console.log("Sending Data:", JSON.stringify(updatedFormData, null, 2));
+
+            const response = await fetch(`https://ssdev-btgphuazhza9edcu.canadacentral-01.azurewebsites.net/api/v1/teachers/${id}`, {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(updatedFormData),
+            });
+
+            const responseText = await response.text();
+            console.log("Raw Response:", responseText);
+
+            let responseData;
+            try {
+                responseData = JSON.parse(responseText);
+            } catch (e) {
+                console.error("Failed to parse response:", responseText);
+                throw new Error("Server returned invalid JSON");
+            }
+
+            console.log("Parsed Response:", responseData);
+
+            if (!response.ok) {
+                console.error("Update failed:", responseData);
+                // alert(`Error: ${responseData.message || "Update failed"}`);
+                throw new Error(responseData.message || "Update failed");
+            }
+
+            console.log("Update success:", responseData);
+            // alert("Teacher updated successfully!");
+            navigate('/teachers');
+        }
+        catch (e) {
+            console.error("Error:", e.message);
+            alert(`Error: ${e.message}`);
+        }
+    }
+
     return (
-        <div className='outer flex flex-col bg-gray-100 h-full p-11 lg:p-16'>
-            <form onSubmit={handle_updateDetails}>
-                <button onClick={()=>navigate(-1)} className="flex items-center cursor-pointer bg-gray-600 p-2 rounded-xl text-white gap-2 hover:bg-gray-900 transition-colors">
-            <ChevronLeft className="w-5 h-5" />
-            <span className="hidden sm:inline">Back to List</span>
-          </button>
+        <div className='outer flex flex-col bg-gray-100 h-full p-11 pt-0 lg:p-16'>
+            <form onSubmit={handleDetails_submit}>
+                <button onClick={() => navigate(-1)} className="flex items-center cursor-pointer bg-gray-600 p-2 rounded-xl text-white gap-2 hover:bg-gray-900 transition-colors mb-3">
+                    <ChevronLeft className="w-5 h-5" />
+                    <span className="hidden sm:inline">Back to List</span>
+                </button>
                 <div className="one flex flex-col">
                     <div className="one_one flex justify-between text-black">
                         <h1 className='lg:text-3xl sm:text-2xl font-bold'>Edit Teacher Details</h1>
@@ -118,19 +185,19 @@ function EditTeachersDetails() {
                 <div className="grid lg:grid-cols-2 sm:grid-cols-1 border-b-2 border-l-2 border-r-2 border-gray-200 bg-white rounded-b-xl">
                     <div className="input1 p-3 px-4 sm:text-sm md:text-base lg-text-xl">
                         <label htmlFor="name" className='font-semibold text-gray-600 text-sm'>Full Name<span className="text-red-600 ml-1">*</span></label>
-                        <input 
-                            type="text" 
+                        <input
+                            type="text"
                             name="name"
                             value={formData.name}
                             onChange={handleInputChange}
-                            placeholder='Enter full name' 
-                            className='bg-gray-100 font-normal text-gray-800 border-gray-400 p-1 px-4 w-full rounded-md focus:outline-none appearance-none' 
+                            placeholder='Enter full name'
+                            className='bg-gray-100 font-normal text-gray-800 border-gray-400 p-1 px-4 w-full rounded-md focus:outline-none appearance-none'
                         />
                     </div>
 
                     <div className="input2 p-3 px-4 sm:text-sm md:text-base lg-text-xl">
                         <label htmlFor="gender" className='font-semibold text-gray-600 text-sm'>Gender<span className="text-red-600 ml-1">*</span></label>
-                        <select 
+                        <select
                             name="gender"
                             value={formData.gender}
                             onChange={handleInputChange}
@@ -143,54 +210,54 @@ function EditTeachersDetails() {
 
                     <div className="input3 p-3 px-4 sm:text-sm md:text-base lg-text-xl">
                         <label htmlFor="mobile" className='font-semibold text-gray-600 text-sm'>Mobile Number {`(unique)`}<span className="text-red-600 ml-1">*</span></label>
-                        <input 
-                            type="tel" 
+                        <input
+                            type="tel"
                             name="mobile"
                             value={formData.mobile}
                             onChange={handleInputChange}
-                            placeholder='Mobile number' 
-                            className='bg-gray-100 font-normal text-gray-800 border-gray-400 p-1 px-4 w-full rounded-md focus:outline-none appearance-none' 
+                            placeholder='Mobile number'
+                            className='bg-gray-100 font-normal text-gray-800 border-gray-400 p-1 px-4 w-full rounded-md focus:outline-none appearance-none'
                         />
                     </div>
 
                     <div className="input4 p-3 px-4 sm:text-sm md:text-base lg-text-xl">
                         <label htmlFor="email" className='font-semibold text-gray-600 text-sm'>Email Address {`(optional)`}</label>
-                        <input 
-                            type="email" 
+                        <input
+                            type="email"
                             name="email"
                             value={formData.email}
                             onChange={handleInputChange}
-                            placeholder='Enter email address' 
-                            className='bg-gray-100 font-normal text-gray-800 border-gray-400 p-1 px-4 w-full rounded-md focus:outline-none appearance-none' 
+                            placeholder='Enter email address'
+                            className='bg-gray-100 font-normal text-gray-800 border-gray-400 p-1 px-4 w-full rounded-md focus:outline-none appearance-none'
                         />
                     </div>
 
                     <div className="input5 p-3 px-4 sm:text-sm md:text-base lg-text-xl">
                         <label htmlFor="dob" className='font-semibold text-gray-600 text-sm'>Date of Birth<span className="text-red-600 ml-1">*</span></label>
-                        <input 
-                            type="date" 
+                        <input
+                            type="date"
                             readOnly
                             name="dob"
                             value={formData.dob}
                             onChange={handleInputChange}
-                            className='bg-gray-100 font-normal text-gray-800 border-gray-400 p-1 px-4 w-full rounded-md focus:outline-none appearance-none' 
+                            className='bg-gray-100 font-normal text-gray-800 border-gray-400 p-1 px-4 w-full rounded-md focus:outline-none appearance-none'
                         />
                     </div>
                     <br />
 
                     <div className="input6 p-3 px-4 sm:text-sm md:text-base lg-text-xl align-text-top md:col-span-2">
                         <label htmlFor="address" className='font-semibold text-gray-600 text-sm'>Current Address</label>
-                        <textarea 
-                            rows={5} 
+                        <textarea
+                            rows={5}
                             name="address"
                             value={formData.address}
                             onChange={handleInputChange}
-                            placeholder='Enter residential address' 
-                            className='bg-gray-100 align-text-top font-normal text-gray-800 border-gray-400 p-1 px-4 w-full rounded-md focus:outline-none appearance-none' 
+                            placeholder='Enter residential address'
+                            className='bg-gray-100 align-text-top font-normal text-gray-800 border-gray-400 p-1 px-4 w-full rounded-md focus:outline-none appearance-none'
                         />
                     </div>
                 </div>
-                
+
                 <div className="Professinal_Details">
                     <div className="divheading flex justify-start align-end mt-8 bg-white border-2 border-gray-200 rounded-t-xl md:p-2 md:pt-3">
                         <i className="fa-solid fa-briefcase text-xl lg:text-2xl text-blue-500 p-2"></i>
@@ -200,56 +267,56 @@ function EditTeachersDetails() {
                 <div className="grid lg:grid-cols-4 md:grid-cols-3 sm:grid-cols-1 border-b-2 border-l-2 border-r-2 border-gray-200 bg-white rounded-b-xl">
                     <div className="input1 p-3 px-4 sm:text-sm md:text-base lg-text-xl">
                         <label htmlFor="empCode" className='font-semibold text-gray-600 text-sm'>Employee Code</label>
-                        <input 
-                            type="text" 
+                        <input
+                            type="text"
                             name="id"
                             value={formData.id}
-                            readOnly 
-                            placeholder='Employee Code' 
-                            className='bg-gray-100 font-normal text-gray-800 border-gray-400 p-1 px-4 w-full rounded-md focus:outline-none appearance-none' 
+                            readOnly
+                            placeholder='Employee Code'
+                            className='bg-gray-100 font-normal text-gray-800 border-gray-400 p-1 px-4 w-full rounded-md focus:outline-none appearance-none'
                         />
                     </div>
 
                     <div className="input3 p-3 px-4 sm:text-sm md:text-base lg-text-xl col-span-2">
                         <label htmlFor="qualification" className='font-semibold text-gray-600 text-sm'>Highest Qualification</label>
-                        <input 
-                            type="text" 
+                        <input
+                            type="text"
                             name="highestQualification"
                             value={formData.highestQualification}
                             onChange={handleInputChange}
-                            placeholder='Highest Qualification' 
-                            className='bg-gray-100 font-normal text-gray-800 border-gray-400 p-1 px-4 w-full rounded-md focus:outline-none appearance-none' 
+                            placeholder='Highest Qualification'
+                            className='bg-gray-100 font-normal text-gray-800 border-gray-400 p-1 px-4 w-full rounded-md focus:outline-none appearance-none'
                         />
                     </div>
 
                     <div className="input4 p-3 px-4 sm:text-sm md:text-base lg-text-xl">
                         <label htmlFor="experience" className='font-semibold text-gray-600 text-sm'>Experience{`(Years)`}</label>
-                        <input 
-                            type="number" 
+                        <input
+                            type="number"
                             name="experience"
                             value={formData.experience}
                             onChange={(e) => {
                                 const value = Math.max(0, parseInt(e.target.value) || 0);
                                 setFormData(prev => ({ ...prev, experience: value }));
                             }}
-                            placeholder='0' 
-                            className='bg-gray-100 font-normal text-gray-800 border-gray-400 p-1 px-4 w-full rounded-md focus:outline-none appearance-none' 
+                            placeholder='0'
+                            className='bg-gray-100 font-normal text-gray-800 border-gray-400 p-1 px-4 w-full rounded-md focus:outline-none appearance-none'
                         />
                     </div>
 
                     <div className="input5 p-3 px-4 sm:text-sm md:text-base lg-text-xl col-span-2">
                         <label htmlFor="joiningDate" className='font-semibold text-gray-600 text-sm'>Date of Joining<span className="text-red-600 ml-1">*</span></label>
-                        <input 
-                            type="date" 
+                        <input
+                            type="date"
                             name="joiningDate"
                             readOnly
                             value={formData.joiningDate}
                             onChange={handleInputChange}
-                            className='bg-gray-100 font-normal text-gray-800 border-gray-400 p-1 px-4 w-full rounded-md focus:outline-none appearance-none' 
+                            className='bg-gray-100 font-normal text-gray-800 border-gray-400 p-1 px-4 w-full rounded-md focus:outline-none appearance-none'
                         />
                     </div>
                 </div>
-                
+
                 <div className="System_Access">
                     <div className="divheading flex justify-start align-end mt-8 bg-white border-2 border-gray-200 rounded-t-xl md:p-2 md:pt-3">
                         <i className="fa-solid fa-gear text-xl lg:text-2xl text-blue-500 p-2"></i>
@@ -259,25 +326,25 @@ function EditTeachersDetails() {
                 <div className="grid lg-grid-col-4 md:grid-cols-3 sm:grid-cols-2 border-b-2 border-l-2 border-r-2 border-gray-200 bg-white rounded-b-xl">
                     <div className="input1 p-3 px-4 sm:text-sm md:text-base lg-text-xl">
                         <label htmlFor="loginEmail" className='font-semibold text-gray-600 text-sm'>Login Email/Username</label>
-                        <input 
-                            type="email" 
+                        <input
+                            type="email"
                             name="loginEmail"
                             value={formData.loginEmail}
                             onChange={handleInputChange}
-                            placeholder='Email / username' 
-                            className='bg-gray-100 font-normal text-gray-800 border-gray-400 p-1 px-4 w-full rounded-md focus:outline-none appearance-none' 
+                            placeholder='Email / username'
+                            className='bg-gray-100 font-normal text-gray-800 border-gray-400 p-1 px-4 w-full rounded-md focus:outline-none appearance-none'
                         />
                     </div>
 
                     <div className="input3 p-3 px-4 sm:text-sm md:text-base lg-text-xl">
                         <label htmlFor="role" className='font-semibold text-gray-600 text-sm'>Role</label>
-                        <input 
-                            type="text" 
+                        <input
+                            type="text"
                             name="role"
                             value={formData.role}
                             onChange={handleInputChange}
-                            placeholder='Teacher' 
-                            className='bg-gray-100 font-normal text-gray-800 border-gray-400 p-1 px-4 w-full rounded-md focus:outline-none appearance-none' 
+                            placeholder='Teacher'
+                            className='bg-gray-100 font-normal text-gray-800 border-gray-400 p-1 px-4 w-full rounded-md focus:outline-none appearance-none'
                         />
                     </div>
 
@@ -296,7 +363,7 @@ function EditTeachersDetails() {
                     <button type="submit" className='text-blue-500 hover:bg-blue-500 hover:text-white px-3 py-1 my-2 mr-4 rounded-sm font-medium border-blue-500 border-2 cursor-pointer'>
                         Update Details
                     </button>
-                    <button type="button" onClick={()=>navigate(-1)} className='hover:bg-gray-50 bg-white text-gray-600 px-3 py-1 my-2 ml-4 rounded-sm font-medium border-gray-200 border-2 cursor-pointer'>
+                    <button type="button" onClick={() => navigate(-1)} className='hover:bg-gray-50 bg-white text-gray-600 px-3 py-1 my-2 ml-4 rounded-sm font-medium border-gray-200 border-2 cursor-pointer'>
                         Cancel
                     </button>
                 </div>
