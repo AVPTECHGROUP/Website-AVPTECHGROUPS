@@ -9,27 +9,32 @@ import {
     SearchIcon,
     User,
     UserCheck2,
+    UserPenIcon,
+    UserRoundPlus,
+    UserRoundPlusIcon,
     UserRoundSearchIcon,
     UsersIcon,
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 function ManageAllUsers() {
+    const navigate = useNavigate(); // for navigation
     let cardsArray = [{ IconName: UsersIcon, keyName: "Total Users", val: "1028" },
     { IconName: UserCheck2, keyName: "Teachers", val: "28" },
     { IconName: Banknote, keyName: "Accountants", val: "18" },
     { IconName: UserRoundSearchIcon, keyName: "Students", val: "2891" },]
 
-    let roleOptions = [{ roleKey: "admin", roleVal: "Admin" },
+    let roleOptions = [{ roleKey: "admin", roleVal: "admin" },
     { roleKey: "teacher", roleVal: "teacher" },
     { roleKey: "accountant", roleVal: "accountant" },
     { roleKey: "students", roleVal: "students" }
 
     ];
 
-    const tableHeadItems = ['User Name', 'Contact', 'Role', 'Status', 'Actions'];
-    let tableheadItemsStyle = 'px-6 py-3 text-left text-sm font-medium text-gray-900 bg-gray-100 uppercase tracking-wider';
-    let tabledataItemsStyle = 'px-6 py-3 text-left';
+    const tableHeadItems = ['User Name', 'Contact', 'Status', 'Actions'];
+    let tableheadItemsStyle = 'px-6 py-3 text-left text-sm font-medium text-gray-900 bg-gray-100 uppercase tracking-wider whitespace-nowrap';
+    let tabledataItemsStyle = 'px-6 py-3 text-left whitespace-nowrap font-medium text-gray-700';
 
-    
+
 
 
     function HeaderCard({ IconName, keyName, val }) {
@@ -74,8 +79,8 @@ function ManageAllUsers() {
             id: 4,
             userName: "Sanya Singh",
             contact: "sanya.singh@gmail.com",
-            role: "Student",
-            status: "Active"
+            role: "Accountant",
+            status: "Inactive"
         },
         {
             id: 5,
@@ -130,13 +135,12 @@ function ManageAllUsers() {
                 <p className='text-gray-400 lg:text-xl font-normal text-xs'>Efficiently manage system roles, permissions and account statuses.</p>
             </div>
             <button
+                onClick={() => navigate('/dashboard/addUser')}
                 type="button"
-                className='bg-blue-600 text-xs lg:text-sm text-white shadow border border-gray-200 rounded-lg lg:px-2 px-2 lg:py-2 py-1 my-0 hover:bg-blue-700 font-medium cursor-pointer'>
-                Add New User
+                className='bg-blue-600 text-xs lg:text-sm text-white shadow border border-gray-200 rounded-lg lg:px-2 px-2 lg:py-2 py-1 my-0 hover:bg-blue-700 font-medium cursor-pointer flex'>
+                <UserRoundPlus size={21} className='mx-1' />  Add New User
             </button>
         </div>
-
-
 
         {/* cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-5 mb-8 pt-6">
@@ -185,7 +189,6 @@ function ManageAllUsers() {
 
 
         {/* for list of users  */}
-
         {/* MOBILE & TABLET – CARD VIEW */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:hidden">
             {users.map((user) => (
@@ -196,15 +199,15 @@ function ManageAllUsers() {
                     {/* Header */}
                     <div className="outerHeadCard flex justify-between ">
                         <div className="flex items-center gap-3 mb-3">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white">
-                            <User size={22} />
+                            <div className="w-10 h-10 rounded-full bg-linear-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white">
+                                <User size={22} />
+                            </div>
+                            <div>
+                                <p className="font-medium text-gray-900">{user.userName}</p>
+                                <p className="text-xs text-gray-500 font-medium">Role: {user.role}</p>
+                            </div>
                         </div>
                         <div>
-                            <p className="font-medium text-gray-900">{user.userName}</p>
-                            <p className="text-xs text-gray-500">ID: {user.id}</p>
-                        </div>
-                    </div>
-                    <div>
                             <span
                                 className={`inline-flex items-center gap-1 px-3 py-1 rounded-sm text-xs font-medium ${user.status === "Active"
                                     ? "bg-green-50 text-green-700"
@@ -227,17 +230,17 @@ function ManageAllUsers() {
                             <span className="font-medium text-gray-600">Contact:</span>{" "}
                             {user.contact}
                         </p>
-                        <p>
+                        {/* <p>
                             <span className="font-medium text-gray-600">Role:</span>{" "}
                             {user.role}
-                        </p>
+                        </p> */}
 
-                        
+
                     </div>
 
                     {/* Actions */}
                     <div className="flex gap-2 mt-4">
-                        <button className="flex-1 py-2  rounded-md text-xs flex items-center justify-center gap-1 bg-gray-100">
+                        <button onClick={() => navigate(`/dashboard/editUser`)} className="flex-1 py-2  rounded-md text-xs flex items-center justify-center gap-1 bg-gray-100">
                             <Edit size={14} /> Edit
                         </button>
                         <button className="flex-1 py-2  rounded-md text-xs flex items-center justify-center gap-1 text-blue-600 bg-blue-50">
@@ -252,7 +255,7 @@ function ManageAllUsers() {
         </div>
 
         {/* DESKTOP – TABLE VIEW */}
-        <div className="hidden lg:block bg-white rounded-lg border border-gray-200">
+        <div className="hidden lg:block bg-white rounded-lg border border-gray-200 ">
             <table className="w-full">
                 <thead className="shadow-sm shadow-blue-100 rouded-t-lg">
                     <tr>
@@ -269,19 +272,30 @@ function ManageAllUsers() {
                         <tr key={user.id} className="shadow-xs shadow-blue-100 hover:bg-gray-50">
                             <td className={tabledataItemsStyle}>
                                 <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white">
+                                    <div className="w-10 h-10 rounded-full bg-linear-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white">
                                         <User size={20} />
                                     </div>
                                     <div>
                                         <p className="font-medium">{user.userName}</p>
-                                        <p className="text-xs text-gray-500">{user.id}</p>
+                                        <p
+                                            className={`text-xs ${user.role.toLowerCase() === 'principal' ||
+                                                    user.role.toLowerCase() === 'admin'
+                                                    ? 'bg-purple-50 text-purple-600'
+                                                    : user.role.toLowerCase() === 'teacher'
+                                                        ? 'bg-blue-50 text-blue-600'
+                                                        : user.role.toLowerCase() === 'accountant'
+                                                            ? 'bg-yellow-50 text-yellow-600'
+                                                            : 'bg-gray-100 text-gray-600'
+                                                } rounded-lg w-fit py-0.5 px-2 font-medium`}
+                                        >
+                                            {user.role}
+                                        </p>
+
                                     </div>
                                 </div>
                             </td>
 
                             <td className={tabledataItemsStyle}>{user.contact}</td>
-                            <td className={tabledataItemsStyle}>{user.role}</td>
-
                             <td className={tabledataItemsStyle}>
                                 <span
                                     className={`px-3 py-1 rounded-sm text-xs font-medium ${user.status === "Active"
@@ -295,9 +309,9 @@ function ManageAllUsers() {
 
                             <td className={tabledataItemsStyle}>
                                 <div className="flex gap-2">
-                                    <Edit size={36} className="rounded-sm cursor-pointer text-blue-500 m-1 p-1 shadow-sm shadow-blue-200" />
-                                    <RotateCcwKey size={36} className="rounded-sm text-green-500 cursor-pointer m-1 p-1 shadow-sm shadow-green-200" />
-                                    <LogOut size={36} className="rounded-sm cursor-pointer text-gray-600 m-1 p-1 shadow-sm shadow-gray-200" />
+                                    <UserPenIcon size={36} onClick={() => navigate(`/dashboard/editUser`)} className="rounded-sm cursor-pointer text-blue-500 p-1" />
+                                    <RotateCcwKey size={36} className="rounded-sm text-green-500 cursor-pointer  p-1 " />
+                                    <LogOut size={36} className="rounded-sm cursor-pointer text-gray-600  p-1 " />
                                 </div>
                             </td>
                         </tr>
