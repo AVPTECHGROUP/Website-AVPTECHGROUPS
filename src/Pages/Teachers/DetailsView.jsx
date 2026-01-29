@@ -8,9 +8,6 @@ const DetailsView = () => {
   const { id } = useParams();
 
   const [teacher, setTeacher] = useState(null);
-  const [loading, setLoading] = useState(false);
-
-
   useEffect(() => {
   const fetchTeacher = async () => {
     try {
