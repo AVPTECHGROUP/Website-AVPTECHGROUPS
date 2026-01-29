@@ -1,3 +1,4 @@
+import { BriefcaseBusiness, User2 } from "lucide-react";
 import { useState } from "react";
 
 
@@ -17,7 +18,30 @@ function AddnewSystemUser() {
     ];
 
     function dynamicInputFields(inp) {
-        if (inp == 'teacher') {
+        if (inp === 'parent') {
+            return <>
+                <div className=" p-3 px-4 sm:text-sm md:text-base lg-text-xl">
+                    <label htmlFor="highestQualification" className='font-semibold text-gray-600 text-sm'>Highest Qualification</label>
+                    <input
+                        type="text"
+                        name="highestQualification"
+                        placeholder='Highest Qualification'
+                        className={inputStyle}
+                    />
+                </div>
+
+                 <div className=" p-3 px-4 sm:text-sm md:text-base lg-text-xl">
+                    <label htmlFor="profession" className='font-semibold text-gray-600 text-sm'>Profession</label>
+                    <input
+                        type="text"
+                        name="Profession"
+                        placeholder='Profession'
+                        className={inputStyle}
+                    />
+                </div>
+            </>
+        }
+        else {
             return <> <div className="p-3 px-4 sm:text-sm md:text-base lg-text-xl">
                 <label htmlFor="employeeCode" className='font-semibold text-gray-600 text-sm'>Employee Code</label>
                 <input
@@ -27,7 +51,7 @@ function AddnewSystemUser() {
                     className={inputStyle}
                 />
             </div>
-                <div className="input3 p-3 px-4 sm:text-sm md:text-base lg-text-xl col-span-2">
+                <div className="input3 p-3 px-4 sm:text-sm md:text-base lg-text-xl ">
                     <label htmlFor="highestQualification" className='font-semibold text-gray-600 text-sm'>Highest Qualification</label>
                     <input
                         type="text"
@@ -43,12 +67,12 @@ function AddnewSystemUser() {
                         type="number"
                         name="experience"
                         placeholder='0'
-                        className='bg-gray-100 font-normal text-gray-800 border-gray-400 p-1 px-4 w-full rounded-md focus:outline-none appearance-none'
+                        className={inputStyle}
                     />
                 </div>
 
-                <div className="input5 p-3 px-4 sm:text-sm md:text-base lg-text-xl col-span-2">
-                    <label htmlFor="joiningDate" className='font-semibold text-gray-600 text-sm'>Date of Joining<span className="text-red-600 ml-1">*</span></label>
+                <div className="input5 p-3 px-4 sm:text-sm md:text-base lg-text-xl ">
+                    <label htmlFor="joiningDate" className='font-semibold text-gray-600 text-sm'>Date of Joining{impMark} </label>
                     <input
                         type="date"
                         name="joiningDate"
@@ -57,14 +81,12 @@ function AddnewSystemUser() {
                     />
                 </div>
             </>
-        } else if (inp == 'principal') {
-            console.log("hii");
         }
     }
 
 
     return (
-        <> 
+        <>
             <div className="outer p-6">
                 <div className="one flex flex-col">
                     <div className="flex justify-between text-black items-center">
@@ -81,7 +103,7 @@ function AddnewSystemUser() {
                     </div>
                     <div className="two mb-0">
                         <div className="divheading flex justify-start align-end mt-8 bg-white border-2 border-gray-200 rounded-t-xl md:p-2 md:pt-3">
-                            <i className="fa-solid fa-user text-xl lg:text-2xl p-2 text-blue-500"></i>
+                           <User2 size={32} className=" text-blue-500" />
                             <h2 className='pl-3 lg:text-xl md:text-base font-medium text-gray-700 pt-1'>Personal Details</h2>
                         </div>
                     </div>
@@ -150,7 +172,7 @@ function AddnewSystemUser() {
 
                     <div className="two mb-0">
                         <div className="divheading flex justify-start align-end mt-8 bg-white border-2 border-gray-200 rounded-t-xl md:p-2 md:pt-3">
-                            <i className="fa-solid fa-briefcase text-xl lg:text-2xl p-2 text-blue-500"></i>
+                            <BriefcaseBusiness size={32} className=" text-blue-500" />
                             <h2 className='pl-3 lg:text-xl md:text-base font-medium text-gray-700 pt-1'>Professional Details</h2>
                         </div>
                     </div>
@@ -163,7 +185,7 @@ function AddnewSystemUser() {
                                 value={selectedRole}
                                 onChange={(e) => setSelectedRole(e.target.value)}
                                 required>
-                                <option value="">Select System Role</option>
+                                <option value="" disabled>Select System Role</option>
                                 {
                                     roleSelection.map((ele) => (
                                         <option value={ele.value} key={ele.key}> {ele.value.toUpperCase()} </option>

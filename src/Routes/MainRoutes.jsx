@@ -11,6 +11,8 @@ import AddNewTeacher from '../Pages/Teachers/AddNewTeacher';
 import TeacherSalaryConfig from '../Pages/Teachers/TeacherSalaryConfig';
 import AddnewSystemUser from '../Pages/SuperAdmin/AddnewSystemUser';
 import EditTeachersDetails from '../Pages/Teachers/EditTeachersDetaills';
+import ManageAllUsers from '../Pages/SuperAdmin/ManageAllUsers';
+import EditSysUser from '../Pages/SuperAdmin/EditSysUser';
 
 const MainRoutes = () => {
   return (
@@ -25,17 +27,18 @@ const MainRoutes = () => {
       <Route path="/leaves" element={<Leaves />} />
       <Route path="/payroll" element={<Payroll />} />
 
+      {/* Super Admin  */}
+      <Route path='/dashboard/addUser' element={<AddnewSystemUser/>} />
+      <Route path='/dashboard/editUser' element={<EditSysUser/>} />
+      <Route path='/dashboard/manageUsers' element={<ManageAllUsers/>} />
+
+      
       {/* Teachers */}
       <Route path="/teachers" element={<Teachers />} />
       <Route path="/teachers/addTeacher" element={<AddNewTeacher />} />
       <Route path="/teachers/:id" element={<DetailsView />} />
       <Route path="/teachers/editTeacher/:id" element={<EditTeachersDetails/>} />
-      
-       <Route path="/teachers/teacherSalary" element={<TeacherSalaryConfig />} />
-
-       {/* for testing purpose */}
-       <Route path='dashboard/addSystemUser' element={<AddnewSystemUser/>} />
-
+      <Route path="/teachers/teacherSalary" element={<TeacherSalaryConfig />} />
       <Route path="/settings" element={<Settings />} />
 
       {/* Fallback */}
