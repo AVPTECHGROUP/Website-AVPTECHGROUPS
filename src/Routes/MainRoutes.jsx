@@ -12,6 +12,8 @@ import EditTeachersDetails from '../Pages/Teachers/EditTeachersDetaills'
 import ClassAssignment from '../Pages/Teachers/ClassAssignment';
 import TeacherSalaryConfig from '../Pages/Teachers/TeacherSalaryConfig';
 import AddnewSystemUser from '../Pages/SuperAdmin/AddnewSystemUser';
+import ManageAllUsers from '../Pages/SuperAdmin/ManageAllUsers';
+import EditSysUser from '../Pages/SuperAdmin/EditSysUser';
 
 const MainRoutes = () => {
   return (
@@ -26,6 +28,12 @@ const MainRoutes = () => {
       <Route path="/leaves" element={<Leaves />} />
       <Route path="/payroll" element={<Payroll />} />
 
+      {/* Super Admin  */}
+      <Route path='/dashboard/addUser' element={<AddnewSystemUser/>} />
+      <Route path='/dashboard/editUser' element={<EditSysUser/>} />
+      <Route path='/dashboard/manageUsers' element={<ManageAllUsers/>} />
+
+      
       {/* Teachers */}
       <Route path="/teachers" element={<Teachers />} />
       <Route path="/teachers/addTeacher" element={<AddNewTeacher />} />
