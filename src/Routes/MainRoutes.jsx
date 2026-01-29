@@ -8,9 +8,10 @@ import Teachers from '../Pages/Teachers/Teachers';
 import Settings from '../Pages/Settings';
 import DetailsView from '../Pages/Teachers/DetailsView';
 import AddNewTeacher from '../Pages/Teachers/AddNewTeacher';
+import EditTeachersDetails from '../Pages/Teachers/EditTeachersDetaills'
+import ClassAssignment from '../Pages/Teachers/ClassAssignment';
 import TeacherSalaryConfig from '../Pages/Teachers/TeacherSalaryConfig';
 import AddnewSystemUser from '../Pages/SuperAdmin/AddnewSystemUser';
-import EditTeachersDetails from '../Pages/Teachers/EditTeachersDetaills';
 
 const MainRoutes = () => {
   return (
@@ -30,11 +31,6 @@ const MainRoutes = () => {
       <Route path="/teachers/addTeacher" element={<AddNewTeacher />} />
       <Route path="/teachers/:id" element={<DetailsView />} />
       <Route path="/teachers/editTeacher/:id" element={<EditTeachersDetails/>} />
-      
-       <Route path="/teachers/teacherSalary" element={<TeacherSalaryConfig />} />
-
-       {/* for testing purpose */}
-       <Route path='dashboard/addSystemUser' element={<AddnewSystemUser/>} />
 
       <Route path="/settings" element={<Settings />} />
 

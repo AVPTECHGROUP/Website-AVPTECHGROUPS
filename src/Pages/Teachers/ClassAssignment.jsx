@@ -1,56 +1,67 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Search, Edit2, Plus } from 'lucide-react';
+import { getTeachers, getTeacherAssignments, addTeacherAssignment, updateTeacherAssignment } from '../../Api/TeachersAPI';
+import { useNavigate } from 'react-router-dom';
 
 function ClassAssignment() {
-  const [teachers] = useState([
-    {
-      id: 1,
-      name: 'Sarah Jenkins',
-      role: 'Full-time • Math Dept',
-      grade: 'Grade 10',
-      sections: ['A', 'B'],
-      subject: 'Mathematics',
-      avatar: '👩‍🏫'
-    },
-    {
-      id: 2,
-      name: 'Michael Chen',
-      role: 'Full-time Teacher • Science',
-      grade: 'Grade 9',
-      sections: ['C'],
-      subject: 'Physics',
-      avatar: '👨‍🏫'
-    },
-    {
-      id: 3,
-      name: 'Robert Fox',
-      role: 'Full-time • History',
-      grade: 'Grade 11',
-      sections: ['A', 'B', 'C'],
-      subject: 'World History',
-      avatar: '👨‍💼'
-    },
-    {
-      id: 4,
-      name: 'Eleanor Pena',
-      role: 'Contract • Arts',
-      grade: 'Grade 8',
-      sections: ['A'],
-      subject: 'Visual Arts',
-      avatar: '👩‍🎨'
-    }
-  ]);
-  
+  const [teachers, setTeachers] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 7;
+  const navigate = useNavigate()
 
-  const filteredTeacher = teachers.filter((teacher) =>
-    teacher.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    String(teacher.id).toLowerCase().includes(searchTerm.toLowerCase()) ||
-    teacher.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    teacher.grade.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    teacher.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    teacher.sections.join(", ").toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  useEffect(() => {
+    fetchAllTeachersAssignments();
+  }, []);
+
+  const fetchAllTeachersAssignments = async () => {
+    try {
+      const teacherRes = await getTeachers(0, 10);
+      const teacherList = teacherRes.content || teacherRes.data || [];
+
+      const merged = await Promise.all(
+        teacherList.map(async (teacher) => {
+          const assignments = await getTeacherAssignments(teacher.id)
+
+          return {
+            id: teacher.id,
+            name: teacher.fullName,
+            role: teacher.designation || "Teacher",
+            classes: teacher.assignedClasses
+              ? teacher.assignedClasses.split(',').map(c => c.trim())
+              : [],
+            subjects: teacher.assignedSubjects
+              ? teacher.assignedSubjects.split(',').map(s => s.trim())
+              : [],
+            sections: assignments.map(a => `Sec-${a.sectionId}`),
+            rawAssignments: assignments
+          };
+
+        })
+      );
+      setTeachers(merged)
+    } catch (error) {
+      console.error("Failed to load teacher assignments", error);
+    }
+
+  }
+
+
+  const filteredTeacher = teachers.filter((teacher) => {
+    const search = searchTerm?.toLowerCase() || '';
+
+    return (
+      teacher.name?.toLowerCase().includes(search) ||
+      teacher.role?.toLowerCase().includes(search) ||
+      teacher.classes.join(", ").toLowerCase().includes(search) ||
+      teacher.subjects.join(", ").toLowerCase().includes(search) ||
+      teacher.sections.join(", ").toLowerCase().includes(search)
+    );
+  });
+
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentTeachers = filteredTeacher.slice(indexOfFirstItem, indexOfLastItem);
 
   const subjects = [
     "Mathematics",
@@ -63,24 +74,24 @@ function ClassAssignment() {
     "Computer Science",
     "Humanities"
   ];
-  const classes=[
+  const classes = [
     "Play Group",
     "Lower Kinder Garden ",
     "Upper Kinder Garden",
-    "Standard 1",
-    "Standard 2",
-    "Standard 3",
-    "Standard 4",
-    "Standard 5",
-    "Standard 6",
-    "Standard 7",
-    "Standard 8",
-    "Standard 9",
-    "Standard 10",
-    "Standard 11",
-    "Standard 12"
-
+    "Class 1",
+    "Class 2",
+    "Class 3",
+    "Class 4",
+    "Class 5",
+    "Class 6",
+    "Class 7",
+    "Class 8",
+    "Class 9",
+    "Class 10",
+    "Class 11",
+    "Class 12"
   ];
+
 
   return (
     <div className="min-h-screen bg-linear-to-br from-blue-50 to-indigo-50 p-4 md:p-6 lg:p-8">
@@ -92,7 +103,7 @@ function ClassAssignment() {
             <p className="text-sm text-gray-600 mt-1">Assign Specific class & sections to Teachers.</p>
           </div>
           <div className="flex gap-2 self-start sm:self-auto">
-            <button className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-blue-700 cursor-pointer">
+            <button onClick={()=>navigate(-1)} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-blue-700 cursor-pointer">
               Cancel
             </button>
             <button className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-blue-700 flex items-center gap-2 cursor-pointer">
@@ -112,8 +123,13 @@ function ClassAssignment() {
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-2">SELECT TEACHER</label>
               <select className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option>Enter teacher id...</option>
+                {teachers.map(t => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
               </select>
+
             </div>
 
             <div>
@@ -121,11 +137,11 @@ function ClassAssignment() {
               <select className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                 <option>Select Grade...</option>
                 {
-                    classes.map(cls => (
-                      <option key={cls} value={cls}>
-                        {cls}
-                      </option>
-                    ))
+                  classes.map(cls => (
+                    <option key={cls} value={cls}>
+                      {cls}
+                    </option>
+                  ))
                 }
               </select>
             </div>
@@ -138,11 +154,10 @@ function ClassAssignment() {
                 {['A', 'B', 'C', 'D'].map(section => (
                   <button
                     key={section}
-                    className={`w-10 h-10 rounded-lg font-medium text-sm ${
-                      section === 'A'
-                        ? 'bg-white text-gray-700 cursor-pointer hover:bg-blue-500'
-                        : 'bg-white text-gray-700 border border-gray-300 hover:bg-blue-500 cursor-pointer'
-                    }`}
+                    className={`w-10 h-10 rounded-lg font-medium text-sm ${section === 'A'
+                      ? 'bg-white text-gray-700 cursor-pointer hover:bg-blue-500'
+                      : 'bg-white text-gray-700 border border-gray-300 hover:bg-blue-500 cursor-pointer'
+                      }`}
                   >
                     {section}
                   </button>
@@ -203,14 +218,14 @@ function ClassAssignment() {
               </thead>
 
               <tbody>
-                {filteredTeacher.map(teacher => (
+                {currentTeachers.map(teacher => (
                   <tr key={teacher.id} className="border-b border-gray-100 hover:bg-gray-50">
                     {/* Teacher */}
                     <td className="py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-xl">
+                        {/* <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-xl">
                           {teacher.avatar}
-                        </div>
+                        </div> */}
                         <div>
                           <div className="font-medium text-gray-900">{teacher.name}</div>
                           <div className="text-xs text-gray-600">{teacher.role}</div>
@@ -219,7 +234,19 @@ function ClassAssignment() {
                     </td>
 
                     {/* Grade */}
-                    <td className="py-4 text-gray-700">{teacher.grade}</td>
+                    <td className="py-4">
+                      <div className="flex flex-wrap gap-2">
+                        {teacher.classes.map(cls => (
+                          <span
+                            key={cls}
+                            className="px-3 py-1 text-xs rounded bg-blue-50 text-blue-600"
+                          >
+                            {cls}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+
 
                     {/* Sections */}
                     <td className="py-4">
@@ -227,7 +254,7 @@ function ClassAssignment() {
                         {teacher.sections.map(section => (
                           <span
                             key={section}
-                            className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center text-sm font-medium"
+                            className="w-12 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center text-sm font-medium"
                           >
                             {section}
                           </span>
@@ -236,8 +263,17 @@ function ClassAssignment() {
                     </td>
 
                     {/* Subject (hidden on small screens) */}
-                    <td className="py-4 text-gray-700 hidden sm:table-cell">
-                      {teacher.subject}
+                    <td className="py-4 hidden sm:table-cell">
+                      <div className="flex flex-wrap gap-2">
+                        {teacher.subjects.map(sub => (
+                          <span
+                            key={sub}
+                            className="px-3 py-1 text-xs rounded bg-purple-50 text-purple-600"
+                          >
+                            {sub}
+                          </span>
+                        ))}
+                      </div>
                     </td>
 
                     {/* Actions */}
@@ -256,13 +292,29 @@ function ClassAssignment() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mt-6 pt-4 border-t border-gray-200">
             <div className="text-sm text-gray-600">Showing 1 to 4 of 12 results</div>
             <div className="flex gap-2">
-              <button className="px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-700">
+              <button
+                className="px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-700"
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+              >
                 Previous
               </button>
-              <button className="px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-700">
+
+              <span className="px-3 py-2 text-sm text-gray-700">
+                Page {currentPage} of {Math.ceil(filteredTeacher.length / itemsPerPage)}
+              </span>
+
+              <button
+                className="px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-700"
+                onClick={() =>
+                  setCurrentPage(prev => Math.min(prev + 1, Math.ceil(filteredTeacher.length / itemsPerPage)))
+                }
+                disabled={currentPage === Math.ceil(filteredTeacher.length / itemsPerPage)}
+              >
                 Next
               </button>
             </div>
+
           </div>
         </div>
       </div>

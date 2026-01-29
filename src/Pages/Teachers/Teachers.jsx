@@ -336,10 +336,10 @@ const Teachers = () => {
 
               <button
                 onClick={() => navigate('/teachers/addTeacher')}
-                className={`px-4 sm:px-5 py-2.5 w-full cursor-pointer sm:w-fit rounded-lg font-medium flex items-center justify-center gap-2 transition-all
+                className={`px-4 sm:px-5 py-2.5 w-full border-gray-100 cursor-pointer sm:w-fit rounded-lg font-medium flex items-center justify-center gap-2 transition-all
   ${isAction === "add"
                     ? "bg-blue-600 text-white"
-                    : "bg-gray-50 text-black hover:bg-gray-50"
+                    : "bg-white text-black hover:bg-gray-50"
                   }`}
               >
                 <UserPlusIcon className="w-5 h-5" />
@@ -348,10 +348,10 @@ const Teachers = () => {
 
               <button
                 onClick={() => navigate('/teachers/assign')}
-                className={`flex p-3 px-4 rounded-xl w-full cursor-pointer sm:w-fit flex-row gap-2 text-[13px] sm:text-[14px] font-bold justify-center transition-all
+                className={`flex sm:px-5 py-2.5 rounded-xl w-full border-2 border-gray-500 cursor-pointer sm:w-fit flex-row gap-2 text-[13px] sm:text-[14px] font-bold justify-center transition-all
   ${isAction === "remove"
                     ? "bg-blue-600 text-white"
-                    : "bg-gray-50 text-black hover:bg-gray-50"
+                    : "bg-white text-black hover:bg-gray-50"
                   }`}
               >
                 <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
