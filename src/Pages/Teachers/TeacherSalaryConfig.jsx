@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Plus } from 'lucide-react';
+import { use } from 'react';
 
 // Icon components mapping
 const ICONS = {
@@ -11,6 +12,22 @@ const ICONS = {
     warning: 'fa-solid fa-triangle-exclamation'
 };
 
+const DEDUCTION_OPTIONS = [
+    'Professional Tax',
+    'Income Tax',
+    'Other Deductions'
+];
+
+const ALLOWANCE_OPTIONS = [
+    "houseRentAllowance",
+    "travelAllowance",
+    "dearnessAllowance",
+    "specialAllowance",
+    "otherAllowances",
+    "providentFund"
+];
+
+
 export default function TeacherSalaryConfig() {
     const [salaryType, setSalaryType] = useState('monthly');
     const [baseSalary, setBaseSalary] = useState('15000');
@@ -20,13 +37,15 @@ export default function TeacherSalaryConfig() {
     const [showAddAllowanceForm, setShowAddAllowanceForm] = useState(false);
     const [showAddPenaltyForm, setShowAddPenaltyForm] = useState(false);
 
+    const [apiError, setApiError] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
+
     const [allowances, setAllowances] = useState([
-        { id: 1, name: 'HRA Allowance', category: 'Fixed Monthly', amount: 8000, iconClass: ICONS.allowance },
-        { id: 2, name: 'Transport Stipend', category: 'Fuel & Transit', amount: 2000, iconClass: ICONS.transport }
+
     ]);
 
     const [penalties, setPenalties] = useState([
-        { id: 1, name: 'Late Mark', occurrences: '3 occurrences/mo', amount: -750, iconClass: ICONS.penalty }
+        { id: 1, name: 'Professional Tax', amount: -750, iconClass: ICONS.penalty }
     ]);
 
     const calculateNet = () => {
@@ -41,9 +60,8 @@ export default function TeacherSalaryConfig() {
         setAllowances([
             ...allowances,
             {
-                id: allowances.length + 1,
+                id: Date.now(),
                 name: e.target.name.value,
-                category: e.target.category.value,
                 amount: parseFloat(e.target.amount.value) || 0,
                 iconClass: ICONS.allowance
             }
@@ -59,7 +77,6 @@ export default function TeacherSalaryConfig() {
             {
                 id: Math.max(...penalties.map(p => p.id), 0) + 1,
                 name: e.target.name.value,
-                occurrences: e.target.occurrences.value,
                 amount: -Math.abs(parseFloat(e.target.amount.value) || 0),
                 iconClass: ICONS.penalty
             }
@@ -75,6 +92,101 @@ export default function TeacherSalaryConfig() {
     const handleDeletePenalty = (id) => {
         setPenalties(penalties.filter(p => p.id !== id));
     };
+
+    const getAvailableDeductions = () => {
+        const selectedNames = penalties.map(p => p.name);
+        return DEDUCTION_OPTIONS.filter(option => !selectedNames.includes(option));
+    };
+
+    const getAvailableAllowances = () => {
+        const addedNames = allowances.map(a => a.name);
+        return ALLOWANCE_OPTIONS.filter(option => !addedNames.includes(option));
+    };
+
+    const ALLOWANCE_LABELS = {
+        houseRentAllowance: "House Rent Allowance",
+        travelAllowance: "Travel Allowance",
+        dearnessAllowance: "Dearness Allowance",
+        specialAllowance: "Special Allowance",
+        otherAllowances: "Other Allowances",
+        providentFund: "Provident Fund"
+    };
+
+
+    useEffect(() => {
+    const fetchSalaryStructure = async () => {
+        const id = '11'; // Will be dynamic
+        setIsLoading(true);
+        setApiError(null);
+        
+        try {
+            const response = await fetch(
+                `https://ssdev-btgphuazhza9edcu.canadacentral-01.azurewebsites.net/api/v1/teachers/${id}/salary-structure`,
+                {
+                    method: "GET",
+                    headers: {
+                        "Accept": "application/json",
+                        "Content-Type": "application/json"
+                    }
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            console.log("API Response:", data);
+
+            if (data.allowances && Array.isArray(data.allowances)) {
+                setAllowances(data.allowances.map((a, idx) => ({
+                    id: idx + 1,
+                    name: a.name || 'Allowance',
+                    amount: parseFloat(a.amount) || 0,
+                    iconClass: ICONS.allowance
+                })));
+            }
+
+            if (data.penalties && Array.isArray(data.penalties)) {
+                setPenalties(data.penalties.map((p, idx) => ({
+                    id: idx + 1,
+                    name: p.name || 'Penalty',
+                    amount: -Math.abs(parseFloat(p.amount) || 0),
+                    iconClass: ICONS.penalty
+                })));
+            }
+
+            setBaseSalary(String(data.baseSalary || data.base_salary || '0.00'));
+            setUnpaidLeave(String(data.unpaidLeave || data.unpaid_leave || '0.00'));
+            setLateArrivalPenalty(String(data.lateArrivalPenalty || data.late_arrival_penalty || '0.00'));
+
+        } catch (error) {
+            console.error("Failed to fetch salary structure:", error);
+            setApiError(error.message);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    fetchSalaryStructure();
+}, []);
+
+if (apiError) {
+    return (
+        <div className="min-h-screen bg-gray-50 p-6">
+            <div className="max-w-2xl mx-auto bg-red-50 border border-red-200 rounded-lg p-6 text-red-800">
+                <h2 className="font-bold mb-2">Error Loading Salary Structure</h2>
+                <p>{apiError}</p>
+                <button 
+                    onClick={() => window.location.reload()}
+                    className="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                >
+                    Retry
+                </button>
+            </div>
+        </div>
+    );
+}
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -217,65 +329,95 @@ export default function TeacherSalaryConfig() {
                             <div className="space-y-3">
                                 {showAddAllowanceForm && (
                                     <form onSubmit={handleAddAllowance} className="bg-white p-3 sm:p-4 rounded-md shadow-sm space-y-3 border border-blue-200">
-                                        <input
-                                            name="name"
-                                            required
-                                            placeholder="Allowance name"
-                                            className="w-full border-b-2 border-gray-300 px-2 py-1 text-sm outline-none focus:border-blue-500"
-                                        />
-                                        <div className="flex sm:flex-row gap-2">
-                                            
-                                                <span className=" text-gray-500 text-xl">₹</span>
-                                                 <input
-                                                name="amount"
-                                                type="number"
-                                                step="0.01"
-                                                min="0"
-                                                required
-                                                placeholder="0.00"
-                                                className="w-full sm:w-1/2 border-2 border-gray-300 px-2 py-1 text-sm outline-none rounded-sm focus:border-blue-500 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                                                />
+                                        {getAvailableAllowances().length > 0 ? (
+                                            <>
+                                                {/* Dropdown for available allowances */}
+                                                <select
+                                                    name="name"
+                                                    required
+                                                    defaultValue=""
+                                                    className="w-full border-2 border-gray-300 px-2 py-2 text-sm outline-none rounded-sm focus:border-blue-500"
+                                                >
+                                                    <option value="" disabled>
+                                                        Select allowance
+                                                    </option>
+                                                    {getAvailableAllowances().map(option => (
+                                                        <option key={option} value={option}>
+                                                            {ALLOWANCE_LABELS[option]}
+                                                        </option>
+                                                    ))}
+                                                </select>
 
-                                            <input
-                                                name="category"
-                                                required
-                                                placeholder="Category"
-                                                className="w-full border-b-2 border-gray-300 px-2 py-1 text-sm outline-none focus:border-blue-500"
-                                            />
-                                        </div>
-                                        <div className="flex gap-2">
-                                            <button type="submit" className="flex-1 sm:flex-none bg-blue-500 text-white px-4 py-2 text-sm rounded hover:bg-blue-600 transition">
-                                                Add
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => setShowAddAllowanceForm(false)}
-                                                className="flex-1 sm:flex-none bg-gray-300 text-gray-700 px-4 py-2 text-sm rounded hover:bg-gray-400 transition"
-                                            >
-                                                Cancel
-                                            </button>
-                                        </div>
+                                                {/* Amount input */}
+                                                <div className="flex sm:flex-row gap-2 border-2 border-gray-300 px-2 py-1">
+                                                    <span className="text-gray-500 text-xl">₹</span>
+                                                    <input
+                                                        name="amount"
+                                                        type="number"
+                                                        step="0.01"
+                                                        min="0"
+                                                        required
+                                                        placeholder="0.00"
+                                                        className="w-full text-sm outline-none rounded-sm focus:border-blue-500 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                                                    />
+                                                </div>
+
+                                                {/* Buttons */}
+                                                <div className="flex gap-2">
+                                                    <button type="submit" className="flex-1 sm:flex-none bg-blue-500 text-white px-4 py-2 text-sm rounded hover:bg-blue-600 transition">
+                                                        Add
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setShowAddAllowanceForm(false)}
+                                                        className="flex-1 sm:flex-none bg-gray-300 text-gray-700 px-4 py-2 text-sm rounded hover:bg-gray-400 transition"
+                                                    >
+                                                        Cancel
+                                                    </button>
+                                                </div>
+                                            </>
+                                        ) : (
+                                            // Message when all allowances are added
+                                            <div className="text-center text-sm text-gray-500 py-4">
+                                                All allowances have been added
+                                            </div>
+                                        )}
                                     </form>
                                 )}
+
                                 {allowances.map((allowance) => (
-                                    <div key={allowance.id} className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50">
-                                        <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center shrink-0">
-                                            <span className="text-xl"><i className={allowance.iconClass}></i></span>
+                                    <div
+                                        key={allowance.id}
+                                        className="flex items-center justify-between gap-4 p-3 rounded-md border border-gray-200 bg-white hover:bg-gray-50 transition"
+                                    >
+                                        {/* Icon */}
+                                        <div className="w-9 h-9 bg-blue-100 text-blue-600 rounded-md flex items-center justify-center shrink-0">
+                                            <i className={`${allowance.iconClass} text-base`}></i>
                                         </div>
+
+                                        {/* Name */}
                                         <div className="flex-1 min-w-0">
-                                            <div className="font-medium text-gray-900 text-sm">{allowance.name}</div>
-                                            <div className="text-xs text-gray-500">{allowance.category}</div>
+                                            <p className="font-medium text-gray-900 text-sm truncate">
+                                                {allowance.name}
+                                            </p>
                                         </div>
+
+                                        {/* Amount & Delete */}
                                         <div className="flex items-center gap-3 shrink-0">
-                                            <div className="font-semibold text-gray-900">₹{allowance.amount.toLocaleString()}</div>
+                                            <span className="font-semibold text-gray-900 text-sm">
+                                                ₹{allowance.amount.toLocaleString()}
+                                            </span>
+
                                             <button
                                                 onClick={() => handleDeleteAllowance(allowance.id)}
-                                                className="text-red-500 hover:text-red-700 text-sm"
+                                                className="w-7 h-7 flex items-center justify-center rounded-md bg-gray-200 text-gray-600 hover:bg-gray-300 hover:text-gray-800 transition"
+                                                aria-label="Remove allowance"
                                             >
                                                 ✕
                                             </button>
                                         </div>
                                     </div>
+
                                 ))}
                             </div>
                         </div>
@@ -293,30 +435,32 @@ export default function TeacherSalaryConfig() {
                             </div>
 
                             <div className="space-y-3">
-                                {showAddPenaltyForm && (
+                                {showAddPenaltyForm && getAvailableDeductions().length > 0 && (
                                     <form onSubmit={handleAddPenalty} className="bg-white p-3 sm:p-4 rounded-md shadow-sm space-y-3 border border-red-200">
-                                        <input
+                                        <select
                                             name="name"
                                             required
-                                            placeholder="Penalty name"
-                                            className="w-full border-b-2 border-gray-300 px-2 py-1 text-sm outline-none focus:border-red-500"
-                                        />
-                                        <div className="flex sm:flex-row gap-2">
+                                            defaultValue=""
+                                            className="w-full border-2 border-gray-300 px-2 py-2 text-sm outline-none rounded-sm focus:border-red-500"
+                                        >
+                                            <option value="" disabled>
+                                                Select deduction
+                                            </option>
+                                            {getAvailableDeductions().map((option) => (
+                                                <option key={option} value={option}>{option}</option>
+                                            ))}
+                                        </select>
+
+                                        <div className="flex sm:flex-row gap-2 border-2 border-gray-300 px-2 py-1">
                                             <span className=" text-gray-500 text-xl">₹</span>
-                                                 <input
+                                            <input
                                                 name="amount"
                                                 type="number"
                                                 step="0.01"
                                                 min="0"
                                                 required
                                                 placeholder="0.00"
-                                                className="w-full sm:w-1/2 border-2 border-gray-300 px-2 py-1 text-sm outline-none rounded-sm focus:border-blue-500 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                                                />
-                                            <input
-                                                name="occurrences"
-                                                required
-                                                placeholder="Occurrences"
-                                                className="w-full border-b-2 border-gray-300 px-2 py-1 text-sm outline-none focus:border-red-500"
+                                                className="w-full  text-sm outline-none rounded-sm focus:border-red-500 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                                             />
                                         </div>
                                         <div className="flex gap-2">
@@ -333,6 +477,11 @@ export default function TeacherSalaryConfig() {
                                         </div>
                                     </form>
                                 )}
+                                {getAvailableDeductions().length === 0 && showAddPenaltyForm && (
+                                    <div className="bg-gray-50 p-3 sm:p-4 rounded-md border border-gray-200 text-center text-sm text-gray-600">
+                                        All deductions have been added
+                                    </div>
+                                )}
                                 {penalties.map((penalty) => (
                                     <div key={penalty.id} className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50">
                                         <div className="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center shrink-0">
@@ -340,7 +489,6 @@ export default function TeacherSalaryConfig() {
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <div className="font-medium text-gray-900 text-sm">{penalty.name}</div>
-                                            <div className="text-xs text-gray-500">{penalty.occurrences}</div>
                                         </div>
                                         <div className="flex items-center gap-3 shrink-0">
                                             <div className="font-semibold text-red-600">-₹{Math.abs(penalty.amount).toLocaleString()}</div>
@@ -356,17 +504,17 @@ export default function TeacherSalaryConfig() {
                             </div>
                         </div>
 
-                    {/* Total Estimated Net */}
-                    <div className="bg-blue-50 rounded-xl border border-blue-200 p-6 my-6">
-                        <div className="text-sm font-medium text-blue-700 mb-2">TOTAL ESTIMATED NET</div>
-                        <div className="text-3xl font-bold text-black-900 mb-1">
-                            ₹{calculateNet().toLocaleString()}
-                            <span className="text-lg font-normal text-gray-700">/mo</span>
+                        {/* Total Estimated Net */}
+                        <div className="bg-blue-50 rounded-xl border border-blue-200 p-6 my-6">
+                            <div className="text-sm font-medium text-blue-700 mb-2">TOTAL ESTIMATED NET</div>
+                            <div className="text-3xl font-bold text-black-900 mb-1">
+                                ₹{calculateNet().toLocaleString()}
+                                <span className="text-lg font-normal text-gray-700">/mo</span>
+                            </div>
+                            <p className="text-xs text-gray-600">After all active allowances and average penalties are applied</p>
                         </div>
-                        <p className="text-xs text-gray-600">After all active allowances and average penalties are applied</p>
                     </div>
-                    </div>
-                   
+
 
                 </div>
                 {/* Warning Banner */}
@@ -378,8 +526,8 @@ export default function TeacherSalaryConfig() {
                 </div>
                 {/* Bottom Actions */}
                 <div className="flex justify-end gap-4 mt-6">
-                    <button onClick={()=>{
-                        setAllowances([]);setPenalties([]);setBaseSalary('0.00');setUnpaidLeave('0.00');setLateArrivalPenalty('0.00');
+                    <button onClick={() => {
+                        setAllowances([]); setPenalties([]); setBaseSalary('0.00'); setUnpaidLeave('0.00'); setLateArrivalPenalty('0.00');
                     }} className="px-6 py-3 text-xs lg:text-base border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors cursor-pointer">
                         Reset
                     </button>
