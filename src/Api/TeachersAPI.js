@@ -1,3 +1,4 @@
+import { data } from "react-router-dom";
 
 const BASE_URL= "https://ssdev-btgphuazhza9edcu.canadacentral-01.azurewebsites.net/api/v1";
 
@@ -141,19 +142,62 @@ export const searchTeachers=async(filters={}, page, size=10, sort='id')=>{
     }
   }
 
-// Get Teacher Assignment===>
+// Add Teacher Assignment===>
 
-export const getTeacherAssignment=async(id)=>{
+export const addTeacherAssignment = async (id, assignments) => {
+  try {
+    const res = await fetch(`${BASE_URL}/teachers/${id}/assignments`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify(assignments) 
+    });
 
-    try {
-        const res=await fetch(`${BASE_URL}/teachers/${id}/assignments`);
-        if(!res.ok) throw new Error('Failed to fetch assignments')
-            const data=await res.json()
-        return data.data || data;
-        
-    } catch (error) {
-        console.error("getTeachersAssignments error:", error.message);
-        throw error;
-    }
+    if (!res.ok) throw new Error('Failed to add assignments');
 
+    const data = await res.json();
+    return data.data || data;
+
+  } catch (error) {
+    console.error("addTeacherAssignment error:", error.message);
+    throw error;
+  }
+};
+
+// Update Teacher Assignment--->
+
+export const updateTeacherAssignment = async (id, updateAssignment)=>{
+
+  try {
+    const res= await fetch(`${BASE_URL}/teachers/assignments/${id}`,{
+      method:'PUT', headers:{"Content-Type":"application/json", Accept:"application/json"},body:JSON.stringify(updateAssignment)})
+      if(!res.ok) throw new Error('Failed to Update Teacher Assignment')
+    const data = await res.json();
+    return data.data;
+  } catch (error) {
+    console.log("Update Assignment Error", error);
+    throw error;
+  }
 }
+
+// Get Teacher Assignments--->
+export const getTeacherAssignments = async (id) => {
+  try {
+    const res = await fetch(`${BASE_URL}/teachers/${id}/assignments`, {
+      headers: {
+        'Accept': 'application/json'
+      }
+    });
+
+    if (!res.ok) throw new Error('Failed to get teacher assignments');
+
+    const result = await res.json();
+    return result.data; 
+
+  } catch (error) {
+    console.log("Get Teacher Assignments Error:", error.message);
+    throw error;
+  }
+};

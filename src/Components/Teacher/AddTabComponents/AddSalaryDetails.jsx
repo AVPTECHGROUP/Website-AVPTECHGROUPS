@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
     Plus,
     Wallet,
@@ -7,9 +7,8 @@ import {
     RotateCcw,
     IndianRupee
 } from 'lucide-react';
-import { getTeacherSalary } from '../../../Api/TeachersAPI';
 
-const SalaryStructureTab = ({ formData, setFormData, handleInputChange, teacherId }) => {
+const AddSalaryDetails = ({ formData, setFormData, handleInputChange }) => {
 
     const [allowances, setAllowances] = useState([]);
     const [penalties, setPenalties] = useState([]);
@@ -19,7 +18,6 @@ const SalaryStructureTab = ({ formData, setFormData, handleInputChange, teacherI
     const [showAddPenaltyForm, setShowAddPenaltyForm] = useState(false);
     const [newAllowance, setNewAllowance] = useState({ name: '', amount: '' });
     const [newPenalty, setNewPenalty] = useState({ name: '', amount: '' });
-    const hasFetched = React.useRef(false);
 
     const ALLOWANCE_OPTIONS = [
         'houseRentAllowance',
@@ -41,75 +39,10 @@ const SalaryStructureTab = ({ formData, setFormData, handleInputChange, teacherI
 
     const DEDUCTION_OPTIONS = ['Income Tax', 'Other Deductions'];
 
-    const [salary, setSalary] = useState(null)
-
-    // Load initial allowances and penalties from teacher data
-    useEffect(() => {
-        if (!teacherId || hasFetched.current) return;
-
-        const fetchSalary = async () => {
-            try {
-                const data = await getTeacherSalary(teacherId);
-                setSalary(data);
-
-                // Store salaryId and populate formData
-                setFormData(prev => ({
-                    ...prev,
-                    salaryId: data.id, 
-                    salaryType: data.salaryType || '',
-                    baseSalary: data.baseSalary || '',
-                    houseRentAllowance: data.houseRentAllowance || '',
-                    travelAllowance: data.travelAllowance || '',
-                    dearnessAllowance: data.dearnessAllowance || '',
-                    specialAllowance: data.specialAllowance || '',
-                    otherAllowances: data.otherAllowances || '',
-                    providentFund: data.providentFund || '',
-                    professionalTax: data.professionalTax || '',
-                    incomeTax: data.incomeTax || '',
-                    otherDeductions: data.otherDeductions || '',
-                    leaveDeductionPerDay: data.leaveDeductionPerDay || '',
-                }));
-
-                // Populate allowances array if needed
-                const loadedAllowances = [];
-                ALLOWANCE_OPTIONS.forEach(key => {
-                    if (data[key]) {
-                        loadedAllowances.push({
-                            id: Date.now() + key,
-                            name: key,
-                            amount: parseFloat(data[key])
-                        });
-                    }
-                });
-                setAllowances(loadedAllowances);
-
-                const loadedPenalties = [];
-                ['professionalTax', 'incomeTax', 'otherDeductions'].forEach(key => {
-                    if (data[key]) {
-                        loadedPenalties.push({
-                            id: Date.now() + key,
-                            name: key,
-                            amount: -Math.abs(parseFloat(data[key]))
-                        });
-                    }
-                });
-                setPenalties(loadedPenalties);
-
-                hasFetched.current = true;
-            } catch (error) {
-                console.error("Failed to load salary", error);
-            }
-        };
-
-        fetchSalary();
-    }, [teacherId]);
-
-
     const calculateNet = () => {
         const base = parseFloat(formData.baseSalary) || 0;
         const allowanceTotal = allowances.reduce((sum, a) => sum + parseFloat(a.amount || 0), 0);
         const penaltyTotal = penalties.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
-
 
         return base + allowanceTotal + penaltyTotal;
     };
@@ -126,42 +59,41 @@ const SalaryStructureTab = ({ formData, setFormData, handleInputChange, teacherI
 
     const handleAddAllowance = (e) => {
         e.preventDefault();
-         if (!newAllowance.name || !newAllowance.amount) return;
+        if (!newAllowance.name || !newAllowance.amount) return;
 
-    setAllowances([...allowances,{ id: Date.now(), name: newAllowance.name, amount: parseFloat(newAllowance.amount)}
-    ]);
+        setAllowances([...allowances, { id: Date.now(), name: newAllowance.name, amount: parseFloat(newAllowance.amount) }
+        ]);
 
-    setFormData(prev => ({...prev, [newAllowance.name]: parseFloat(newAllowance.amount)
-    }));
+        setFormData(prev => ({
+            ...prev, [newAllowance.name]: parseFloat(newAllowance.amount)
+        }));
 
-    // Reset form
-    setNewAllowance({ name: '', amount: '' });
-    setShowAddAllowanceForm(false);
+        // Reset form
+        setNewAllowance({ name: '', amount: '' });
+        setShowAddAllowanceForm(false);
     };
 
     const handleAddPenalty = (e) => {
-
         e.preventDefault();
-          if (!newPenalty.name || !newPenalty.amount) return;
+        if (!newPenalty.name || !newPenalty.amount) return;
 
-    setPenalties([
-        ...penalties,
-        {
-            id: Date.now(),
-            name: newPenalty.name,
-            amount: -Math.abs(parseFloat(newPenalty.amount))
-        }
-    ]);
+        setPenalties([
+            ...penalties,
+            {
+                id: Date.now(),
+                name: newPenalty.name,
+                amount: -Math.abs(parseFloat(newPenalty.amount))
+            }
+        ]);
 
-    setFormData(prev => ({
-        ...prev,
-        [newPenalty.name]: -Math.abs(parseFloat(newPenalty.amount))
-    }));
+        setFormData(prev => ({
+            ...prev,
+            [newPenalty.name]: -Math.abs(parseFloat(newPenalty.amount))
+        }));
 
-    // Reset form
-    setNewPenalty({ name: '', amount: '' });
-    setShowAddPenaltyForm(false);
-
+        // Reset form
+        setNewPenalty({ name: '', amount: '' });
+        setShowAddPenaltyForm(false);
     };
 
     const handleDeleteAllowance = (id) => {
@@ -171,10 +103,6 @@ const SalaryStructureTab = ({ formData, setFormData, handleInputChange, teacherI
     const handleDeletePenalty = (id) => {
         setPenalties(penalties.filter(p => p.id !== id));
     };
-
-    useEffect(() => {
-        setFormData(prev => ({ ...prev, lateArrivalPenalty: parseFloat(lateArrivalPenalty) || 0 }));
-    }, [lateArrivalPenalty]);
 
     const handleReset = () => {
         setAllowances([]);
@@ -200,7 +128,6 @@ const SalaryStructureTab = ({ formData, setFormData, handleInputChange, teacherI
         setShowAddAllowanceForm(false);
         setShowAddPenaltyForm(false);
     };
-
 
     return (
         <div className="max-w-6xl mx-auto p-4 sm:p-6">
@@ -552,4 +479,4 @@ const SalaryStructureTab = ({ formData, setFormData, handleInputChange, teacherI
     );
 };
 
-export default SalaryStructureTab;
+export default AddSalaryDetails;

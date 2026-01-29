@@ -8,9 +8,10 @@ import Teachers from '../Pages/Teachers/Teachers';
 import Settings from '../Pages/Settings';
 import DetailsView from '../Pages/Teachers/DetailsView';
 import AddNewTeacher from '../Pages/Teachers/AddNewTeacher';
+import EditTeachersDetails from '../Pages/Teachers/EditTeachersDetaills'
+import ClassAssignment from '../Pages/Teachers/ClassAssignment';
 import TeacherSalaryConfig from '../Pages/Teachers/TeacherSalaryConfig';
 import AddnewSystemUser from '../Pages/SuperAdmin/AddnewSystemUser';
-import EditTeachersDetails from '../Pages/Teachers/EditTeachersDetaills';
 import ManageAllUsers from '../Pages/SuperAdmin/ManageAllUsers';
 import EditSysUser from '../Pages/SuperAdmin/EditSysUser';
 
@@ -38,7 +39,7 @@ const MainRoutes = () => {
       <Route path="/teachers/addTeacher" element={<AddNewTeacher />} />
       <Route path="/teachers/:id" element={<DetailsView />} />
       <Route path="/teachers/editTeacher/:id" element={<EditTeachersDetails/>} />
-      <Route path="/teachers/teacherSalary" element={<TeacherSalaryConfig />} />
+
       <Route path="/settings" element={<Settings />} />
 
       {/* Fallback */}
