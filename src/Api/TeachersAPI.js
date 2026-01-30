@@ -265,13 +265,6 @@ export const getClasses = async () => {
       console.error('updateSalary error:', error.message);
         throw error;
     }
-
-    const data = await res.json();
-    return data.data || data;
-  } catch (error) {
-    console.error('createClass error:', error.message);
-    throw error;
-  }
 };
 
 // activate teacher status--->
