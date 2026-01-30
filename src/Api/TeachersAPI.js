@@ -130,17 +130,51 @@ export const searchTeachers=async(filters={}, page, size=10, sort='id')=>{
         },
         body:JSON.stringify(updatedSalary)
       });
-
-      if(!res.ok){throw new Error('Failed to update the Teachers Salary.')}
-      
+      if(!res.ok){throw new Error('Failed to update the Teachers Salary.')}    
       const data=await res.json()
       return data
-
     } catch (error) {
       console.error('updateSalary error:', error.message);
         throw error;
     }
   }
+
+// activate teacher status--->
+export const activateStatus=async(id)=>{
+  try {
+    const res=await fetch(`${BASE_URL}/teachers/${id}/activate`,{
+      method:'PATCH',
+      headers:{
+        Accept:'application/json'
+      }})
+      if(!res.ok) throw new Error('Failed to Activate Teacher')
+      const data=await res.json()
+      return data;
+  } catch (error) {
+      console.error('Activate Status error:', error.message);
+      throw error;
+  }}
+
+// Deactivate teacher status--->
+
+export const deactivateStatus=async(id)=>{
+
+  try {
+    const res=await fetch(`${BASE_URL}/teachers/${id}/deactivate`,{
+      method:'PATCH',
+      headers:{
+        Accept:'application/json'
+      }})
+      if(!res.ok) throw new Error('Failed to Deactivate Teacher')
+      const data=await res.json()
+      return data;
+  } catch (error) {
+      console.error('Deactivate error:', error.message);
+      throw error;
+  }
+
+}
+
 
 // Add Teacher Assignment===>
 

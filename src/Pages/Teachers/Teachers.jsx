@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { getTeachers, searchTeachers } from '../../Api/TeachersAPI'
+import { activateStatus, deactivateStatus, getTeachers, searchTeachers } from '../../Api/TeachersAPI'
 import { useNavigate } from 'react-router-dom';
 import {
   Search,
@@ -18,9 +18,9 @@ import {
   Power,
   UserCheck2,
   Plus,
-  Minus,
   Calendar
 } from 'lucide-react';
+import { toast } from 'react-toastify';
 
 const Teachers = () => {
 
@@ -50,6 +50,7 @@ const Teachers = () => {
   const [error, setError] = useState(null);
 
   const [totalElements, setTotalElements] = useState(0);
+
   const [totalPages, setTotalPages] = useState(0);
 
   const [teachers, setTeachers] = useState([])
@@ -69,7 +70,6 @@ const Teachers = () => {
 
     return () => clearTimeout(timer);
   }, [search]);
-
 
   const hasActiveFilters = useMemo(() => {
     return (
@@ -142,12 +142,11 @@ const Teachers = () => {
       }
     };
 
-
-
     fetchTeachers();
   }, [page, rowsPerpage, debouncedSearch, statusFilter, classFilter, salaryFilter, hasActiveFilters]);
 
   const stats = useMemo(() => {
+
     const total = teachers.length;
     const active = teachers.filter(t => t.status === 'ACTIVE').length;
     const inActive = teachers.filter(t => t.status === 'INACTIVE').length;
@@ -178,12 +177,34 @@ const Teachers = () => {
     return colors[index];
   };
 
+  const handleToggleStatus = async (teacher) => {
+    try {
+      setLoading(true)
+      if (teacher.status === 'ACTIVE') {
+        await deactivateStatus(teacher.id)
+        toast.success(`${teacher.name} deactivated`)
+      }
+      else {
+        await activateStatus(teacher.id)
+        toast.success(`${teacher.name} activated`)
+      }
+      setTeachers(prevTeachers =>
+      prevTeachers.map(t =>
+        t.id === teacher.id
+          ? {...t, status: t.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE'} : t));
+    } catch (error) {
+      toast.error(error.message || 'Status update failed');
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <div className="flex h-screen overflow-hidden bg-linear-to-b from-sky-50 to-sky-100">
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden w-0">
         {/* Header */}
-        <header className="bg-white border-b border-gray-200 px-4 sm:px-6 lg:px-8 py-4">
+        <header className="bg-white border-b border-gray-200 px-4 sm:px-6 lg:px-5 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 sm:gap-3">
               <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#F8FAFC] rounded-lg flex items-center justify-center border border-gray-300">
@@ -247,7 +268,7 @@ const Teachers = () => {
         </header>
 
         {/* Page Content */}
-        <div className="flex-1 overflow-auto p-4 sm:p-6 lg:p-8">
+        <div className="flex-1 overflow-auto p-4 sm:p-5 lg:p-4">
           {/* Page Title */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
             <div>
@@ -256,7 +277,7 @@ const Teachers = () => {
             </div>
             <div className="flex gap-3 w-fit bg-gray-50">
               <button className="px-4 py-2 border bg-white border-gray-200 rounded-lg flex items-center gap-2 hover:bg-gray-50 transition-all text-sm shadow-md">
-                <Calendar className="w-4 h-4" />               
+                <Calendar className="w-4 h-4" />
                 <span className="hidden sm:inline">{date}</span>
                 <span className="sm:hidden">{date}</span>
               </button>
@@ -538,10 +559,20 @@ const Teachers = () => {
                     <Edit className="w-4 h-4 text-blue-600" />
                     <span className="text-sm font-medium text-blue-700">Edit</span>
                   </button>
-                  <button className="flex-1 px-3 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg flex items-center justify-center gap-2 transition-all">
-                    <Power className="w-4 h-4 text-gray-600" />
-                    <span className="text-sm font-medium text-gray-700">Toggle</span>
+                  <button
+                    onClick={() => handleToggleStatus(teacher)}
+                    disabled={loading}
+                    className={`flex-1 px-3 py-2 rounded-lg flex items-center justify-center gap-2 transition-all ${teacher.status === 'ACTIVE'
+                      ? 'bg-red-50 hover:bg-red-100'
+                      : 'bg-green-50 hover:bg-green-100'
+                      }`}
+                  >
+                    <Power className={`w-4 h-4 ${teacher.status === 'ACTIVE' ? 'text-red-600' : 'text-green-600'}`} />
+                    <span className="text-sm font-medium">
+                      {teacher.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
+                    </span>
                   </button>
+
                 </div>
               </div>
             )))}
@@ -696,10 +727,20 @@ const Teachers = () => {
                             <Edit className="w-4 h-4 text-blue-600" />
                             <span className="text-sm font-medium text-blue-700">Edit</span>
                           </button>
-                          <button className="flex-1 px-3 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg flex items-center justify-center gap-2 transition-all">
-                            <Power className="w-4 h-4 text-gray-600" />
-                            <span className="text-sm font-medium text-gray-700">Toggle</span>
+                          <button
+                            onClick={() => handleToggleStatus(teacher)}
+                            disabled={loading}
+                            className={`flex-1 px-3 py-2 rounded-lg flex items-center justify-center gap-2 transition-all ${teacher.status === 'ACTIVE'
+                                ? 'bg-red-50 hover:bg-red-100'
+                                : 'bg-green-50 hover:bg-green-100'
+                              }`}
+                          >
+                            <Power className={`w-4 h-4 ${teacher.status === 'ACTIVE' ? 'text-red-600' : 'text-green-600'}`} />
+                            <span className="text-sm font-medium">
+                              {teacher.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
+                            </span>
                           </button>
+
                         </div>
                       </td>
                     </tr>

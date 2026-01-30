@@ -220,7 +220,7 @@ function AddNewTeacher() {
                 {/* Back Button */}
                 <button
                     onClick={() => navigate(-1)}
-                    className="flex items-center cursor-pointer bg-gray-600 p-2 rounded-xl text-white gap-2 hover:bg-gray-900 transition-colors mb-4"
+                    className="flexq items-center cursor-pointer bg-gray-600 p-2 rounded-xl text-white gap-2 hover:bg-gray-900 transition-colors mb-4"
                 >
                     <ChevronLeft className="w-5 h-5" />
                     <span className="hidden sm:inline">Back to List</span>
