@@ -149,7 +149,7 @@ function ManageAllUsers() {
                 <p className='text-gray-400 lg:text-xl font-normal text-xs'>Efficiently manage system roles, permissions and account statuses.</p>
             </div>
             <button
-                onClick={() => navigate('/dashboard/addUser')}
+                onClick={() => navigate('/superadmin/addNewUser')}
                 type="button"
                 className='bg-blue-600 text-xs lg:text-sm text-white shadow border border-gray-200 rounded-lg lg:px-2 px-2 lg:py-2 py-1 my-0 hover:bg-blue-700 font-medium cursor-pointer flex'>
                 <UserRoundPlus size={21} className='mx-1' />  Add New User
@@ -266,7 +266,7 @@ function ManageAllUsers() {
 
                     {/* Actions */}
                     <div className="flex gap-2 mt-4">
-                        <button onClick={() => navigate(`/dashboard/editUser`)} className="flex-1 py-2  rounded-md text-xs flex items-center justify-center gap-1 bg-gray-100">
+                        <button onClick={() => navigate(`/superadmin/editUser/${user.id}`)} className="flex-1 py-2  rounded-md text-xs flex items-center justify-center gap-1 bg-gray-100">
                             <Edit size={14} /> Edit
                         </button>
                         <button className="flex-1 py-2  rounded-md text-xs flex items-center justify-center gap-1 text-blue-600 bg-blue-50">
@@ -356,7 +356,7 @@ function ManageAllUsers() {
 
                             <td className={tabledataItemsStyle}>
                                 <div className="flex gap-2">
-                                    <UserPenIcon size={36} onClick={() => navigate(`/dashboard/editUser`)} className="rounded-sm cursor-pointer text-blue-500 p-1" />
+                                    <UserPenIcon size={36} onClick={() => navigate(`/superadmin/editUser/${user.id}`)} className="rounded-sm cursor-pointer text-blue-500 p-1" />
                                     <RotateCcwKey size={36} className="rounded-sm text-green-500 cursor-pointer  p-1 " />
                                     <LogOut size={36} className="rounded-sm cursor-pointer text-gray-600  p-1 " />
                                 </div>
