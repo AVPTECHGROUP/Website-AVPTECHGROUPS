@@ -11,7 +11,7 @@ import AddNewTeacher from '../Pages/Teachers/AddNewTeacher';
 import TeacherSalaryConfig from '../Pages/Teachers/TeacherSalaryConfig';
 import AddnewSystemUser from '../Pages/SuperAdmin/AddnewSystemUser';
 import EditTeachersDetails from '../Pages/Teachers/EditTeachersDetaills';
-
+import ClassAssignment from '../Pages/Teachers/ClassAssignment';
 const MainRoutes = () => {
   return (
     <Routes>
@@ -32,7 +32,7 @@ const MainRoutes = () => {
       <Route path="/teachers/editTeacher/:id" element={<EditTeachersDetails/>} />
       
        <Route path="/teachers/teacherSalary" element={<TeacherSalaryConfig />} />
-
+        <Route path="/teachers/classAssignment" element={<ClassAssignment />} />
        {/* for testing purpose */}
        <Route path='dashboard/addSystemUser' element={<AddnewSystemUser/>} />
 
