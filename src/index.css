@@ -1,6 +1,4 @@
-@import "tailwindcss";
-
-
+@import "tailwindcss";  
 h1{
     font-family: sans-serif;
 }
