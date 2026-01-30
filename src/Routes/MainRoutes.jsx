@@ -30,6 +30,11 @@ const MainRoutes = () => {
       <Route path="/teachers/assign" element={<ClassAssignment />} />
       <Route path="/teachers/:id" element={<DetailsView />} />
       <Route path="/teachers/editTeacher/:id" element={<EditTeachersDetails/>} />
+      
+       <Route path="/teachers/teacherSalary" element={<TeacherSalaryConfig />} />
+        <Route path="/teachers/classAssignment" element={<ClassAssignment />} />
+       {/* for testing purpose */}
+       <Route path='dashboard/addSystemUser' element={<AddnewSystemUser/>} />
 
       <Route path="/settings" element={<Settings />} />
 

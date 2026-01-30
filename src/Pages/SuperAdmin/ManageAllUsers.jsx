@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import {
     Banknote,
     ChevronLeft,
@@ -35,8 +35,6 @@ function ManageAllUsers() {
     let tabledataItemsStyle = 'px-6 py-3 text-left whitespace-nowrap font-medium text-gray-700';
 
 
-
-
     function HeaderCard({ IconName, keyName, val }) {
         return (
             <div className="bg-white shadow-md shadow-gray-300 border h-auto  cursor-pointer rounded-xl px-2 py-4 flex items-center border-blue-50 hover:shadow-md hover:shadow-blue-100 transition-all">
@@ -52,7 +50,7 @@ function ManageAllUsers() {
             </div>
         );
     }
-
+    // for testing purpose only 
     const users = [
         {
             id: 1,
@@ -125,6 +123,22 @@ function ManageAllUsers() {
             status: "Active"
         }
     ];
+    const [toogleStatus, setToogleStatus] = useState(users);
+
+    // using usd state for toogle
+
+    const toggleUserStatus = (id) => {
+        setToogleStatus(prevState =>
+            prevState.map(user =>
+                user.id === id
+                    ? {
+                        ...user,
+                        status: user.status === 'Active' ? 'Inactive' : 'Active'
+                    }
+                    : user
+            )
+        );
+    };
 
 
 
@@ -153,15 +167,15 @@ function ManageAllUsers() {
 
         {/* filters */}
 
-        <div className="bg-white flex flex-col lg:flex-row lg:items-center gap-4 lg:justify-between px-4 py-2 rounded-xl border border-gray-200 mb-4">
-            <div className="flex items-center gap-2 border rounded-lg border-gray-200 px-2 py-1 focus-within:shadow-sm focus-within:shadow-blue-200">
+        <div className="bg-white grid  lg:grid-cols-3 gap-2 px-4 py-2 rounded-xl border border-gray-200 mb-4">
+            <div className="flex col-span-2 items-center gap-2 border rounded-lg border-gray-200 bg-gray-100 px-2 py-1 focus-within:shadow-sm focus-within:shadow-blue-200">
                 <SearchIcon className="w-5 h-5 text-gray-500" />
-                <input placeholder='Search by name, email or ID..' className="text-base sm:text-sm font-normal focus:outline-none  appearance-none text-gray-600 lg:min-w-62" />
+                <input placeholder='Search by name, email or ID..' className="text-base sm:text-sm font-normal focus:outline-none  appearance-none text-gray-600 w-full" />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <select
-                    className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:shadow-sm focus:shadow-blue-200 text-sm"
+                    className="px-4 py-2 border border-gray-200 bg-gray-100 rounded-lg focus:outline-none focus:shadow-sm focus:shadow-blue-200 text-sm"
                 >
                     <option>All Status</option>
                     <option>Active</option>
@@ -169,7 +183,7 @@ function ManageAllUsers() {
                 </select>
 
                 <select
-                    className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:shadow-sm focus:shadow-blue-200 text-sm"
+                    className="px-4 py-2 border border-gray-200 bg-gray-100 rounded-lg focus:outline-none focus:shadow-sm focus:shadow-blue-200 text-sm"
                 >
                     <option defaultValue={"all_roles"}>All Roles</option>
                     {
@@ -191,7 +205,7 @@ function ManageAllUsers() {
         {/* for list of users  */}
         {/* MOBILE & TABLET – CARD VIEW */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:hidden">
-            {users.map((user) => (
+            {toogleStatus.map((user) => (
                 <div
                     key={user.id}
                     className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm"
@@ -207,9 +221,20 @@ function ManageAllUsers() {
                                 <p className="text-xs text-gray-500 font-medium">Role: {user.role}</p>
                             </div>
                         </div>
-                        <div>
+                        <div className="flex gap-1">
+                            <button
+                                type="button"
+                                onClick={() => toggleUserStatus(user.id)}
+                                className={`w-10 h-5 flex items-center rounded-full p-1 transition-colors duration-300 ${user.status === 'Active' ? "bg-blue-500" : "bg-gray-300"
+                                    } cursor-pointer`}
+                            >
+                                <div
+                                    className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-300 ${user.status === 'Active' ? "translate-x-4" : "translate-x-0"
+                                        }`}
+                                />
+                            </button>
                             <span
-                                className={`inline-flex items-center gap-1 px-3 py-1 rounded-sm text-xs font-medium ${user.status === "Active"
+                                className={`inline-flex size-fit items-center gap-1 px-3 py-1 rounded-sm text-xs font-medium ${user.status === "Active"
                                     ? "bg-green-50 text-green-700"
                                     : "bg-red-50 text-red-700"
                                     }`}
@@ -222,6 +247,7 @@ function ManageAllUsers() {
                                 />
                                 {user.status}
                             </span>
+
                         </div>
                     </div>
                     {/* Details */}
@@ -268,7 +294,7 @@ function ManageAllUsers() {
                 </thead>
 
                 <tbody>
-                    {users.map((user) => (
+                    {toogleStatus.map((user) => (
                         <tr key={user.id} className="shadow-xs shadow-blue-100 hover:bg-gray-50">
                             <td className={tabledataItemsStyle}>
                                 <div className="flex items-center gap-3">
@@ -279,13 +305,13 @@ function ManageAllUsers() {
                                         <p className="font-medium">{user.userName}</p>
                                         <p
                                             className={`text-xs ${user.role.toLowerCase() === 'principal' ||
-                                                    user.role.toLowerCase() === 'admin'
-                                                    ? 'bg-purple-50 text-purple-600'
-                                                    : user.role.toLowerCase() === 'teacher'
-                                                        ? 'bg-blue-50 text-blue-600'
-                                                        : user.role.toLowerCase() === 'accountant'
-                                                            ? 'bg-yellow-50 text-yellow-600'
-                                                            : 'bg-gray-100 text-gray-600'
+                                                user.role.toLowerCase() === 'admin'
+                                                ? 'bg-purple-50 text-purple-600'
+                                                : user.role.toLowerCase() === 'teacher'
+                                                    ? 'bg-blue-50 text-blue-600'
+                                                    : user.role.toLowerCase() === 'accountant'
+                                                        ? 'bg-yellow-50 text-yellow-600'
+                                                        : 'bg-gray-100 text-gray-600'
                                                 } rounded-lg w-fit py-0.5 px-2 font-medium`}
                                         >
                                             {user.role}
@@ -297,14 +323,35 @@ function ManageAllUsers() {
 
                             <td className={tabledataItemsStyle}>{user.contact}</td>
                             <td className={tabledataItemsStyle}>
-                                <span
-                                    className={`px-3 py-1 rounded-sm text-xs font-medium ${user.status === "Active"
-                                        ? "bg-green-100 text-green-700"
-                                        : "bg-red-100 text-red-700"
+                                <div className="flex gap-1">
+                            <button
+                                type="button"
+                                onClick={() => toggleUserStatus(user.id)}
+                                className={`w-10 h-5 flex items-center rounded-full p-1 transition-colors duration-300 ${user.status === 'Active' ? "bg-blue-500" : "bg-gray-300"
+                                    } cursor-pointer`}
+                            >
+                                <div
+                                    className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-300 ${user.status === 'Active' ? "translate-x-4" : "translate-x-0"
                                         }`}
-                                >
-                                    {user.status}
-                                </span>
+                                />
+                            </button>
+                            <span
+                                className={`inline-flex size-fit items-center gap-1 px-3 py-1 rounded-sm text-xs font-medium ${user.status === "Active"
+                                    ? "bg-green-50 text-green-700"
+                                    : "bg-red-50 text-red-700"
+                                    }`}
+                            >
+                                <span
+                                    className={`w-1.5 h-1.5 rounded-full ${user.status === "Active"
+                                        ? "bg-green-700"
+                                        : "bg-red-700"
+                                        }`}
+                                />
+                                {user.status}
+                            </span>
+
+                        </div>
+
                             </td>
 
                             <td className={tabledataItemsStyle}>
@@ -351,8 +398,6 @@ function ManageAllUsers() {
 
             </table>
         </div>
-
-
     </div>
 }
 
