@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getTeacherById, updateTeacher, updateSalary } from '../../Api/TeachersAPI';
 import { ChevronLeft, GraduationCap, IndianRupee, User } from 'lucide-react';
-import PersonalDetailsTab from '../../Components/Teacher/TabComponents/PersonalDetailsTab';
-import SalaryStructureTab from '../../Components/Teacher/TabComponents/SalaryStructureTab';
-import ClassesSubjectsTab from '../../Components/Teacher/TabComponents/ClassesSubjectsTab';
+import PersonalDetailsTab from '../../Components/Teacher/EditTabComponents/PersonalDetailsTab';
+import SalaryStructureTab from '../../Components/Teacher/EditTabComponents/SalaryStructureTab';
+import ClassesSubjectsTab from '../../Components/Teacher/EditTabComponents/ClassesSubjectsTab';
 import { toast } from 'react-toastify';
 
 function EditTeachersDetails() {

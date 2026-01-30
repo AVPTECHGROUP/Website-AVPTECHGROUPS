@@ -706,6 +706,7 @@ function ClassAssignment() {
 
   // ==================== RENDER ====================
 
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-4 md:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto bg-white rounded-lg shadow-xl overflow-hidden">
