@@ -25,6 +25,7 @@ function AddnewSystemUser() {
         joiningDate: "",
         payrollStatus: "ACTIVE",
         accountStatus: false,
+        userRole: '',
         // Salary fields
         salaryType: '',
         baseSalary: '',
@@ -112,16 +113,16 @@ function AddnewSystemUser() {
             };
 
             const response = await createTeachers(apiPayload);
-            
+
             console.log("Create Teacher Response:", response);
 
             // Only update salary if baseSalary AND salaryType are present
             if (response && formData.salaryType && formData.baseSalary) {
                 // Extract teacher ID from response - adjust based on actual response structure
                 const teacherId = response.data?.id || response.id;
-                
+
                 console.log("Teacher ID for salary update:", teacherId);
-                
+
                 if (!teacherId) {
                     console.error("No teacher ID found in response:", response);
                     toast.warn("Teacher created but salary update skipped - no teacher ID");
@@ -215,7 +216,7 @@ function AddnewSystemUser() {
     };
 
     //for system User Changes 
-    const [selectedRole, setSelectedRole] = useState('');
+    // const [selectedRole, setSelectedRole] = useState('');
 
     return (
         <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-4">
@@ -232,10 +233,10 @@ function AddnewSystemUser() {
                 {/* Header */}
                 <div className="mb-6">
                     <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
-                        Add New Teacher
+                        Add New User
                     </h1>
                     <p className="text-sm sm:text-base text-gray-500">
-                        Enter the details below to onboard a new teacher into the payroll system.
+                        Enter the details below to onboard a new user into system.
                     </p>
                 </div>
 
@@ -247,11 +248,10 @@ function AddnewSystemUser() {
                                 <button
                                     type="button"
                                     onClick={() => setActiveTab('personal')}
-                                    className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${
-                                        activeTab === 'personal'
+                                    className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'personal'
                                             ? 'border-blue-600 text-blue-600'
                                             : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                                    }`}
+                                        }`}
                                 >
                                     <User size={20} />
                                     <span className="hidden sm:inline">Personal Details</span>
@@ -260,11 +260,10 @@ function AddnewSystemUser() {
                                 <button
                                     type="button"
                                     onClick={() => setActiveTab('salary')}
-                                    className={`${selectedRole === '' ? 'hidden':'flex'} items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${
-                                        activeTab === 'salary'
+                                    className={`${formData.userRole === 'parent' || formData.userRole == "" ? 'hidden' : 'flex'} items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'salary'
                                             ? 'border-blue-600 text-blue-600'
                                             : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                                    }`}
+                                        }`}
                                 >
                                     <IndianRupee size={18} />
                                     <span className="hidden sm:inline">Salary Details</span>
@@ -272,12 +271,11 @@ function AddnewSystemUser() {
                                 </button>
                                 <button
                                     type="button"
-                                    onClick={() => setActiveTab('classes')}
-                                    className={`${selectedRole === '' ? 'hidden':'flex'} items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${
-                                        activeTab === 'classes'
+                                    onClick={() => { setActiveTab('classes') }}
+                                    className={`${formData.userRole === 'parent' || formData.userRole == "" ? 'hidden' : formData.userRole === 'teacher' ? 'flex' : 'hidden'}  items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'classes'
                                             ? 'border-blue-600 text-blue-600'
                                             : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                                    }`}
+                                        }`}
                                 >
                                     <GraduationCap />
                                     <span className="hidden sm:inline">Class Assignment</span>
@@ -326,11 +324,10 @@ function AddnewSystemUser() {
                                 <button
                                     disabled={isSubmitting}
                                     type="submit"
-                                    className={`px-6 py-2.5 text-sm font-medium rounded-lg transition-all ${
-                                        isSubmitting
+                                    className={`px-6 py-2.5 text-sm font-medium rounded-lg transition-all ${isSubmitting
                                             ? 'bg-blue-300 cursor-not-allowed text-white'
                                             : 'bg-blue-500 hover:bg-blue-600 cursor-pointer text-white'
-                                    }`}
+                                        }`}
                                 >
                                     {isSubmitting ? (
                                         <span className="flex items-center justify-center gap-2">

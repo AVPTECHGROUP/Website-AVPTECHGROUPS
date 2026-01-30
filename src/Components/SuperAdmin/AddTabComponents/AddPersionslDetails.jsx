@@ -2,7 +2,15 @@ import React, { useState } from 'react';
 
 const AddPersonalDetails = ({ formData, setFormData, handleInputChange }) => {
     const [enabled, setEnabled] = useState(false);
-    const roleSelection = [''];
+     const roleSelection = [
+        { key: 'Principal', value: 'principal' },
+        { key: 'Accountant', value: 'accountant' },
+        { key: 'Teacher', value: 'teacher' },
+        { key: 'Registrar', value: 'registrar' },
+        { key: 'Parent', value: 'parent' }
+    ];
+    const [selectedRole, setSelectedRole] = useState('');
+
 
     return (
         <div className="space-y-6">
@@ -128,28 +136,21 @@ const AddPersonalDetails = ({ formData, setFormData, handleInputChange }) => {
                         </div>
 
                         <div>
-                            <label htmlFor="role" className='block font-semibold text-gray-600 text-sm mb-2'>
-                                Role
+                            <label htmlFor="userRole" className='block font-semibold text-gray-600 text-sm mb-2'>
+                              Select Role<span className="text-red-600 ml-1">*</span>
                             </label>
-                            <input
-                                readOnly
-                                type="text"
-                                name="role"
-                                placeholder='Teacher'
-                                value='Teacher'
-                                className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none cursor-not-allowed'
-                            />
                             <select
-                                name="role"
+                                name="userRole"
+                                value={formData.userRole}
                                 className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none'
-                                value={selectedRole}
-                                onChange={(e) => setSelectedRole(e.target.value)}
+                                onChange={(e) => {handleInputChange(e); setSelectedRole(e.target.value) }}
                                 required>
                                 <option value="" disabled>Select System Role</option>
                                 {
                                     roleSelection.map((ele) => (
                                         <option value={ele.value} key={ele.key}> {ele.value.toUpperCase()} </option>
-                                    ))}
+                                    ))
+                                    }
                             </select>
                         </div>
 
@@ -177,7 +178,7 @@ const AddPersonalDetails = ({ formData, setFormData, handleInputChange }) => {
 
 
                 {/* Professional Details Section */}
-                <div>
+                <div className={`${selectedRole === '' || selectedRole === 'parent'?'hidden':'professionalDetails'}`}>
                     <div className="flex justify-start items-center mb-4 pb-3 border-b border-gray-200">
                         <i className="fa-solid fa-briefcase text-xl lg:text-2xl text-blue-500 mr-3"></i>
                         <h2 className='text-xl font-medium text-gray-700'>Professional Details</h2>
@@ -239,7 +240,7 @@ const AddPersonalDetails = ({ formData, setFormData, handleInputChange }) => {
                                 value={formData.joiningDate}
                                 onChange={handleInputChange}
                                 className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-                                required
+                                required={selectedRole !== 'parent'}
                             />
                         </div>
                     </div>
