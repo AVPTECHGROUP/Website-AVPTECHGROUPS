@@ -5,7 +5,6 @@ import { toast } from 'react-toastify';
 import { createTeachers, updateSalary } from '../../Api/TeachersAPI';
 import PersonalDetailsTab from '../../Components/Teacher/AddTabComponents/AddPersonalInfo';
 import SalaryDetailsTab from '../../Components/Teacher/AddTabComponents/AddSalaryDetails';
-import ClassAssignmentTab from '../../Components/Teacher/AddTabComponents/AddClassDetails';
 
 function AddNewTeacher() {
     const navigate = useNavigate();
@@ -267,19 +266,7 @@ function AddNewTeacher() {
                                     <span className="hidden sm:inline">Salary Details</span>
                                     <span className="sm:hidden">Salary</span>
                                 </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setActiveTab('classes')}
-                                    className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${
-                                        activeTab === 'classes'
-                                            ? 'border-blue-600 text-blue-600'
-                                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                                    }`}
-                                >
-                                    <GraduationCap />
-                                    <span className="hidden sm:inline">Class Assignment</span>
-                                    <span className="sm:hidden">Classes</span>
-                                </button>
+
                             </nav>
                         </div>
 
@@ -301,13 +288,6 @@ function AddNewTeacher() {
                                 />
                             )}
 
-                            {activeTab === 'classes' && (
-                                <ClassAssignmentTab
-                                    formData={formData}
-                                    setFormData={setFormData}
-                                    handleInputChange={handleInputChange}
-                                />
-                            )}
                         </div>
 
                         {/* Footer Buttons */}
