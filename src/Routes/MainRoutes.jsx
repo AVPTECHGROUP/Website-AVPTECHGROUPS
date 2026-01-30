@@ -10,10 +10,7 @@ import DetailsView from '../Pages/Teachers/DetailsView';
 import AddNewTeacher from '../Pages/Teachers/AddNewTeacher';
 import EditTeachersDetails from '../Pages/Teachers/EditTeachersDetaills'
 import ClassAssignment from '../Pages/Teachers/ClassAssignment';
-import TeacherSalaryConfig from '../Pages/Teachers/TeacherSalaryConfig';
-import AddnewSystemUser from '../Pages/SuperAdmin/AddnewSystemUser';
-import EditTeachersDetails from '../Pages/Teachers/EditTeachersDetaills';
-import ClassAssignment from '../Pages/Teachers/ClassAssignment';
+
 const MainRoutes = () => {
   return (
     <Routes>
@@ -27,15 +24,10 @@ const MainRoutes = () => {
       <Route path="/leaves" element={<Leaves />} />
       <Route path="/payroll" element={<Payroll />} />
 
-      {/* Super Admin  */}
-      <Route path='/dashboard/addUser' element={<AddnewSystemUser/>} />
-      <Route path='/dashboard/editUser' element={<EditSysUser/>} />
-      <Route path='/dashboard/manageUsers' element={<ManageAllUsers/>} />
-
-      
       {/* Teachers */}
       <Route path="/teachers" element={<Teachers />} />
       <Route path="/teachers/addTeacher" element={<AddNewTeacher />} />
+      <Route path="/teachers/assign" element={<ClassAssignment />} />
       <Route path="/teachers/:id" element={<DetailsView />} />
       <Route path="/teachers/editTeacher/:id" element={<EditTeachersDetails/>} />
       

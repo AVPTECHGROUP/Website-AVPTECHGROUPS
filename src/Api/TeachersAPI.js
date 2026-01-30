@@ -255,70 +255,15 @@ export const getClasses = async () => {
     const res = await fetch(`${BASE_URL}/classes`, {
       headers: {
         accept: 'application/json'
-      }
-    });
-
-    if (!res.ok) {
-      throw new Error('Failed to fetch classes');
-    }
-
-    const data = await res.json();
-    console.log("Classes API response:", data);
-    
-    // Handle response structure: { success, message, data: [...] }
-    if (data.data && Array.isArray(data.data)) {
-      console.log("Returning classes from data.data:", data.data);
-      return data.data;
-    } else if (Array.isArray(data)) {
-      console.log("Returning classes as direct array:", data);
-      return data;
-    } else {
-      console.warn("Unexpected classes response format:", data);
-      return [];
-    }
-  } catch (error) {
-    console.error('getClasses error:', error.message);
-    throw error;
-  }
-};
-
-// Get Class by ID
-// GET /v1/classes/{classId}
-export const getClassById = async (classId) => {
-  try {
-    const res = await fetch(`${BASE_URL}/classes/${classId}`, {
-      headers: {
-        accept: 'application/json'
-      }
-    });
-
-    if (!res.ok) {
-      throw new Error('Failed to fetch class');
-    }
-
-    const data = await res.json();
-    return data.data || data;
-  } catch (error) {
-    console.error('getClassById error:', error.message);
-    throw error;
-  }
-};
-
-// Create Class (Admin only)
-// POST /v1/classes
-export const createClass = async (classData) => {
-  try {
-    const res = await fetch(`${BASE_URL}/classes`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        accept: 'application/json'
-      },
-      body: JSON.stringify(classData)
-    });
-
-    if (!res.ok) {
-      throw new Error('Failed to create class');
+        },
+        body:JSON.stringify(updatedSalary)
+      });
+      if(!res.ok){throw new Error('Failed to update the Teachers Salary.')}    
+      const data=await res.json()
+      return data
+    } catch (error) {
+      console.error('updateSalary error:', error.message);
+        throw error;
     }
 
     const data = await res.json();
@@ -329,30 +274,44 @@ export const createClass = async (classData) => {
   }
 };
 
-// Update Class
-// PUT /v1/classes/{classId}
-export const updateClass = async (classId, classData) => {
+// activate teacher status--->
+export const activateStatus=async(id)=>{
   try {
-    const res = await fetch(`${BASE_URL}/classes/${classId}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        accept: 'application/json'
-      },
-      body: JSON.stringify(classData)
-    });
-
-    if (!res.ok) {
-      throw new Error('Failed to update class');
-    }
-
-    const data = await res.json();
-    return data.data || data;
+    const res=await fetch(`${BASE_URL}/teachers/${id}/activate`,{
+      method:'PATCH',
+      headers:{
+        Accept:'application/json'
+      }})
+      if(!res.ok) throw new Error('Failed to Activate Teacher')
+      const data=await res.json()
+      return data;
   } catch (error) {
-    console.error('updateClass error:', error.message);
-    throw error;
+      console.error('Activate Status error:', error.message);
+      throw error;
+  }}
+
+// Deactivate teacher status--->
+
+export const deactivateStatus=async(id)=>{
+
+  try {
+    const res=await fetch(`${BASE_URL}/teachers/${id}/deactivate`,{
+      method:'PATCH',
+      headers:{
+        Accept:'application/json'
+      }})
+      if(!res.ok) throw new Error('Failed to Deactivate Teacher')
+      const data=await res.json()
+      return data;
+  } catch (error) {
+      console.error('Deactivate error:', error.message);
+      throw error;
   }
-};
+
+}
+
+
+// Add Teacher Assignment===>
 
 // ==================== SECTIONS API ====================
 
