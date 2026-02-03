@@ -10,7 +10,6 @@ import DetailsView from '../Pages/Teachers/DetailsView';
 import AddNewTeacher from '../Pages/Teachers/AddNewTeacher';
 import AddnewSystemUser from '../Pages/SuperAdmin/AddnewSystemUser';
 import EditTeachersDetails from '../Pages/Teachers/EditTeachersDetaills'
-import AddnewSystemUser from '../Pages/SuperAdmin/AddnewSystemUser';
 import ClassAssignment from '../Pages/Teachers/ClassAssignment';
 import EditSysUser from '../Pages/SuperAdmin/EditSysUser';
 import ManageAllUsers from '../Pages/SuperAdmin/ManageAllUsers';

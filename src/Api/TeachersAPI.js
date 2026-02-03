@@ -357,6 +357,10 @@ export const createClass = async (classData) => {
     if (!res.ok) {
       throw new Error('Failed to create class');
     }
+  } catch (error) {
+    console.error('Error creating class:', error);
+    throw error;
+  }
 };
 
 // Update Class
