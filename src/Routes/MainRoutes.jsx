@@ -13,7 +13,13 @@ import EditTeachersDetails from '../Pages/Teachers/EditTeachersDetaills'
 import AddnewSystemUser from '../Pages/SuperAdmin/AddnewSystemUser';
 import ClassAssignment from '../Pages/Teachers/ClassAssignment';
 import EditSysUser from '../Pages/SuperAdmin/EditSysUser';
-import ManageAllUsers from '../Pages/SuperAdmin/ManageAllUsers';
+import ManageAllUsers from '../Pages/SuperAdmin/ManageAllUsers';  
+import WarningVerificationFailed from '../Components/Teacher/UserAttendance/WarningVerificationFailed';
+import ManualAttendance from '../Components/Teacher/UserAttendance/ManualAttendance';
+import ApprovedManualAttendance from '../Components/Teacher/UserAttendance/ApprovedManualAttendance';
+import UsersAttendance from '../Pages/Attendance/UsersAttendance';
+import AttendanceImgReg from '../Pages/Attendance/AttendanceImgReg';
+import MarkUserAttendance from '../Pages/Attendance/MarkUserAttendance';
 
 const MainRoutes = () => {
   return (
@@ -32,6 +38,9 @@ const MainRoutes = () => {
       <Route path='/dashboard/addUser' element={<AddnewSystemUser/>} />
       <Route path='/dashboard/editUser' element={<EditSysUser/>} />
       <Route path='/dashboard/manageUsers' element={<ManageAllUsers/>} />
+      <Route path='/dashboard/usersAttendance' element={<UsersAttendance/>}/>
+      <Route path='/dashboard/attendanceImgReg' element={<AttendanceImgReg/>}/>
+      <Route path='/dashboard/markUserAttendance' element={<MarkUserAttendance/>}/>
 
       {/* Teachers */}
       <Route path="/teachers" element={<Teachers />} />
@@ -43,6 +52,11 @@ const MainRoutes = () => {
         <Route path="/teachers/classAssignment" element={<ClassAssignment />} />
        {/* for testing purpose */}
        <Route path='dashboard/addSystemUser' element={<AddnewSystemUser/>} />
+
+      <Route path='/teachers/usersAttendance/warning' element={<WarningVerificationFailed/>}/>
+      <Route path='/teachers/usersAttendance/manual' element={<ManualAttendance/>}/>
+      <Route path='/teachers/usersAttendance/approved' element={<ApprovedManualAttendance/>}/>
+      
 
       <Route path="/settings" element={<Settings />} />
 

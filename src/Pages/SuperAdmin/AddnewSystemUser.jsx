@@ -4,7 +4,6 @@ import { ChevronLeft, GraduationCap, IndianRupee, User } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { createTeachers, updateSalary } from '../../Api/TeachersAPI';
 import SalaryDetailsTab from '../../Components/Teacher/AddTabComponents/AddSalaryDetails';
-import ClassAssignmentTab from '../../Components/Teacher/AddTabComponents/AddClassDetails';
 import AddPersonalDetails from '../../Components/SuperAdmin/AddTabComponents/AddPersionslDetails';
 
 function AddnewSystemUser() {
@@ -269,18 +268,7 @@ function AddnewSystemUser() {
                                     <span className="hidden sm:inline">Salary Details</span>
                                     <span className="sm:hidden">Salary</span>
                                 </button>
-                                <button
-                                    type="button"
-                                    onClick={() => { setActiveTab('classes') }}
-                                    className={`${formData.userRole === 'parent' || formData.userRole == "" ? 'hidden' : formData.userRole === 'teacher' ? 'flex' : 'hidden'}  items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'classes'
-                                            ? 'border-blue-600 text-blue-600'
-                                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                                        }`}
-                                >
-                                    <GraduationCap />
-                                    <span className="hidden sm:inline">Class Assignment</span>
-                                    <span className="sm:hidden">Classes</span>
-                                </button>
+
                             </nav>
                         </div>
 
@@ -302,13 +290,6 @@ function AddnewSystemUser() {
                                 />
                             )}
 
-                            {activeTab === 'classes' && (
-                                <ClassAssignmentTab
-                                    formData={formData}
-                                    setFormData={setFormData}
-                                    handleInputChange={handleInputChange}
-                                />
-                            )}
                         </div>
 
                         {/* Footer Buttons */}
@@ -339,9 +320,9 @@ function AddnewSystemUser() {
                                     )}
                                 </button>
                             </div>
-                        </div>
+                        </div>  
                     </div>
-                </form>
+                </form> 
             </div>
         </div>
     );

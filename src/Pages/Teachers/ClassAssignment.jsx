@@ -708,7 +708,7 @@ function ClassAssignment() {
 
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-4 md:p-6 lg:p-8">
+    <div className="min-h-screen bg-linear-to-br from-blue-50 to-indigo-50 p-4 md:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto bg-white rounded-lg shadow-xl overflow-hidden">
         {/* Header */}
         <div className="border-b border-gray-200 p-4 md:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -969,7 +969,7 @@ function ClassAssignment() {
           ) : (
             <>
               {/* Teacher Details Header */}
-              <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
+              <div className="mb-6 p-4 bg-linear-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
                 <div className="flex items-start gap-4">
                   <div className="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-lg">
                     {(formData.teacherName || 'N')
