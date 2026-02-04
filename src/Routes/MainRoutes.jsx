@@ -35,7 +35,7 @@ const MainRoutes = () => {
       
       
       <Route element={<Protectedroutes/>}>  
-        <Route element={<AppLayout/>}>  
+        <Route element={<AppLayout/>}/>  
 
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/attendance" element={<Attendance />} />
@@ -75,7 +75,7 @@ const MainRoutes = () => {
             {/* Fallback */}
                 <Route path="*" element={<Navigate to="/login" />} />
         </Route>
-      </Route>
+    
     </Routes>
   );
 };
