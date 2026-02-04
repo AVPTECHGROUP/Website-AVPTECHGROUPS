@@ -437,3 +437,21 @@ export const allTeachers = [
     joiningDate: 'Jan 30, 2020'
   }
 ];
+
+export const teachersData = [
+  { id: 1, name: "Dr. Anjali Sharma", employeeId: "ID-10293", department: "Mathematics", status: "Not Marked", initials: "AS", color: "bg-blue-100 text-blue-700" },
+  { id: 2, name: "Prof. Rohan Mehta", employeeId: "ID-10294", department: "Science", status: "Not Marked", initials: "RM", color: "bg-green-100 text-green-700" },
+  { id: 3, name: "Ms. Neha Verma", employeeId: "ID-10295", department: "History", status: "Not Marked", initials: "NV", color: "bg-purple-100 text-purple-700" },
+  { id: 4, name: "Mr. Amit Singh", employeeId: "ID-10296", department: "Physical Education", status: "Not Marked", initials: "AS", color: "bg-orange-100 text-orange-700" },
+  { id: 5, name: "Mrs. Pooja Malhotra", employeeId: "ID-10297", department: "English Literature", status: "Not Marked", initials: "PM", color: "bg-pink-100 text-pink-700" },
+  { id: 6, name: "Dr. Vikram Iyer", employeeId: "ID-10298", department: "Chemistry", status: "Not Marked", initials: "VI", color: "bg-indigo-100 text-indigo-700" },
+  { id: 7, name: "Prof. Kavita Nair", employeeId: "ID-10299", department: "Biology", status: "Not Marked", initials: "KN", color: "bg-teal-100 text-teal-700" },
+  { id: 8, name: "Mr. Suresh Rao", employeeId: "ID-10300", department: "Geography", status: "Not Marked", initials: "SR", color: "bg-cyan-100 text-cyan-700" },
+  { id: 9, name: "Ms. Ritu Chawla", employeeId: "ID-10301", department: "Art & Design", status: "Not Marked", initials: "RC", color: "bg-rose-100 text-rose-700" },
+  { id: 10, name: "Dr. Arjun Kapoor", employeeId: "ID-10302", department: "Physics", status: "Not Marked", initials: "AK", color: "bg-amber-100 text-amber-700" },
+  { id: 11, name: "Mrs. Sunita Fernandez", employeeId: "ID-10303", department: "Spanish", status: "Not Marked", initials: "SF", color: "bg-lime-100 text-lime-700" },
+  { id: 12, name: "Mr. Rahul Banerjee", employeeId: "ID-10304", department: "Computer Science", status: "Not Marked", initials: "RB", color: "bg-sky-100 text-sky-700" },
+  { id: 13, name: "Dr. Meera Kulkarni", employeeId: "ID-10305", department: "Psychology", status: "Not Marked", initials: "MK", color: "bg-violet-100 text-violet-700" },
+  { id: 14, name: "Prof. Sanjay Gupta", employeeId: "ID-10306", department: "Economics", status: "Not Marked", initials: "SG", color: "bg-fuchsia-100 text-fuchsia-700" },
+  { id: 15, name: "Ms. Nisha Patel", employeeId: "ID-10307", department: "Music", status: "Not Marked", initials: "NP", color: "bg-emerald-100 text-emerald-700" }
+]

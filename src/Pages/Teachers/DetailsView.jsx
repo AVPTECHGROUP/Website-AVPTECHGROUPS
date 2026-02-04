@@ -39,7 +39,7 @@ const DetailsView = () => {
         loginAccess: t.attendanceAccessStatus === "ALLOWED",
         attendanceAccess: t.attendanceAccessStatus === "ALLOWED",
         classes: t.assignments?.map(a => `Class ${a.classId}`) || [],
-        subjects: t.assignments?.map(a => a.subjectName || "Unknown") || [],
+        subjects: t.assignments?.map(a => a.subjectName || "") || [],
       };
 
       setTeacher(filteredTeacher);
@@ -47,7 +47,6 @@ const DetailsView = () => {
       console.error("Failed to fetch teacher:", error);
     }
   };
-
   if (id) fetchTeacher();
 }, [id]);
 
@@ -56,7 +55,7 @@ const DetailsView = () => {
 
   if (!teacher) {
     return   <div className="flex items-center justify-center py-8 relative">
-                <div className="flex items-center justify-center absolute lg:top-80">
+                <div className="flex flex-col items-center justify-center absolute lg:top-80">
                   <div className="w-7 h-7 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
                   <p className="text-gray-600 lg:text-xl font-medium">Loading teachers...</p>
                 </div>
