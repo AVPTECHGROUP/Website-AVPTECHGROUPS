@@ -10,7 +10,6 @@ import DetailsView from '../Pages/Teachers/DetailsView';
 import AddNewTeacher from '../Pages/Teachers/AddNewTeacher';
 import AddnewSystemUser from '../Pages/SuperAdmin/AddnewSystemUser';
 import EditTeachersDetails from '../Pages/Teachers/EditTeachersDetaills'
-import AddnewSystemUser from '../Pages/SuperAdmin/AddnewSystemUser';
 import ClassAssignment from '../Pages/Teachers/ClassAssignment';
 import EditSysUser from '../Pages/SuperAdmin/EditSysUser';
 import ManageAllUsers from '../Pages/SuperAdmin/ManageAllUsers';
@@ -30,7 +29,7 @@ const MainRoutes = () => {
 
       {/* Super Admin  */}
       <Route path='/dashboard/addUser' element={<AddnewSystemUser/>} />
-      <Route path='/dashboard/editUser' element={<EditSysUser/>} />
+      <Route path='/dashboard/editUser/:id' element={<EditSysUser/>} />
       <Route path='/dashboard/manageUsers' element={<ManageAllUsers/>} />
 
       {/* Teachers */}
@@ -39,9 +38,7 @@ const MainRoutes = () => {
       <Route path="/teachers/:id" element={<DetailsView />} />
       <Route path="/teachers/editTeacher/:id" element={<EditTeachersDetails/>} />
       
-        <Route path="/teachers/classAssignment" element={<ClassAssignment />} />
-       {/* for testing purpose */}
-       <Route path='dashboard/addSystemUser' element={<AddnewSystemUser/>} />
+      <Route path="/teachers/assign" element={<ClassAssignment />} />
 
       <Route path="/settings" element={<Settings />} />
 
