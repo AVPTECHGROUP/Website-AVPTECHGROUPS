@@ -357,7 +357,8 @@ export const createClass = async (classData) => {
     if (!res.ok) {
       throw new Error('Failed to create class');
     }
-       const data = await res.json();
+
+    const data = await res.json();
     return data.data || data;
   } catch (error) {
     console.error('createClass error:', error.message);

@@ -213,13 +213,17 @@ function AddNewTeacher() {
         navigate('/teachers');
     };
 
+    const handleNext=()=>{
+        setActiveTab('salary')
+    }
+
     return (
         <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-4">
             <div className="mx-auto">
                 {/* Back Button */}
                 <button
                     onClick={() => navigate(-1)}
-                    className="flexq items-center cursor-pointer bg-gray-600 p-2 rounded-xl text-white gap-2 hover:bg-gray-900 transition-colors mb-4"
+                    className="flex items-center cursor-pointer bg-gray-600 p-2 rounded-xl text-white gap-2 hover:bg-gray-900 transition-colors mb-4"
                 >
                     <ChevronLeft className="w-5 h-5" />
                     <span className="hidden sm:inline">Back to List</span>
@@ -300,6 +304,12 @@ function AddNewTeacher() {
                                 >
                                     Discard Changes
                                 </button>
+                                {/* Showing next button */}
+                                {activeTab==='personal' &&(
+                                    <button type='submit' onClick={handleNext} className="px-6 py-2.5 text-sm font-medium rounded-lg bg-blue-500 hover:bg-blue-600 text-white">Next</button>
+                                )} 
+                                {/* Show save button after reaching salaryTab...*/}
+                                {activeTab==='salary' &&(
                                 <button
                                     disabled={isSubmitting}
                                     type="submit"
@@ -318,6 +328,7 @@ function AddNewTeacher() {
                                         'Save Details'
                                     )}
                                 </button>
+                                )}
                             </div>
                         </div>
                     </div>

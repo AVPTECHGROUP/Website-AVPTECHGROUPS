@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getTeacherById, updateTeacher, updateSalary } from '../../Api/TeachersAPI';
-import { ChevronLeft, GraduationCap, IndianRupee, User } from 'lucide-react';
+import { ChevronLeft, IndianRupee, User } from 'lucide-react';
 import PersonalDetailsTab from '../../Components/Teacher/EditTabComponents/PersonalDetailsTab';
 import SalaryStructureTab from '../../Components/Teacher/EditTabComponents/SalaryStructureTab';
 import { toast } from 'react-toastify';
@@ -188,7 +188,7 @@ function EditTeachersDetails() {
                     <span className="hidden sm:inline">Back to List</span>
                 </button>
                 <div className="flex items-center justify-center py-8 relative">
-                    <div className="flex items-center justify-center absolute lg:top-80">
+                    <div className="flex flex-col items-center justify-center absolute lg:top-75">
                         <div className="w-7 h-7 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
                         <p className="text-gray-600 lg:text-xl font-medium">Loading teachers...</p>
                     </div>
