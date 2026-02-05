@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     ChevronRight,
@@ -116,25 +116,26 @@ const ManageAllUsers = () => {
                 let res;
                 set_noUserFound(false); // for reset no user found
                 if (hasActiveFilters) {
-                    // if (debouncedSearch.trim() !== '') {
-                    //     const searchTerm = debouncedSearch.trim();
-                    //     console.log(searchTerm);
-                    //     res = await searchUsers(searchTerm, page - 1, rowsPerpage);
-                    // } else if (statusFilter !== 'All Status' && statusFilter !== undefined) {
-                    //     res = await filterUserByStatus(statusFilter, page - 1, rowsPerpage);
+                    if (debouncedSearch.trim() !== '') {
+                        const searchTerm = debouncedSearch.trim();
+                        console.log(searchTerm);
+                        res = await searchUsers(searchTerm, page - 1, rowsPerpage);
+                    } else if (statusFilter !== 'All Status' && statusFilter !== undefined) {
+                        res = await filterUserByStatus(statusFilter, page - 1, rowsPerpage);
 
-                    // } else if (roleFilter !== 'All Roles' && roleFilter !== undefined) {
-                    //     res = await filterUserByRole(roleFilter, page - 1, rowsPerpage);
-                    // }else{
-                    //     res = await getAllUsers(page - 1, rowsPerpage);
-                    // }
+                    } else if (roleFilter !== 'All Roles' && roleFilter !== undefined) {
+                        res = await filterUserByRole(roleFilter, page - 1, rowsPerpage);
+                         console.log(roleFilter,"------------->",res);
+                    }else{
+                        res = await getAllUsers(page - 1, rowsPerpage);
+                    }
 
-                    const filters = { searchTerm: "", status: "", role: "", department: "", emailVerified: true };
-                    if (debouncedSearch.trim()) filters.searchTerm = debouncedSearch.trim();
-                    if (statusFilter !== 'All Status') filters.status = statusFilter.toUpperCase();
-                    if (roleFilter !== 'All Roles') filters.role = roleFilter;
-                    console.log(filters);
-                    res = await allUserFilter(filters, page - 1, rowsPerpage);
+                    // const filters = { searchTerm: "", status: "", role: "", department: "", emailVerified: true };
+                    // if (debouncedSearch.trim()) filters.searchTerm = debouncedSearch.trim();
+                    // if (statusFilter !== 'All Status') filters.status = statusFilter.toUpperCase();
+                    // if (roleFilter !== 'All Roles') filters.role = roleFilter;
+                    //console.log(filters);
+                   // res = await allUserFilter(filters, page - 1, rowsPerpage);
                 }
                 else {
                     res = await getAllUsers(page - 1, rowsPerpage);
@@ -177,7 +178,7 @@ const ManageAllUsers = () => {
         };
 
         fetchsysUsers();
-    }, [page, rowsPerpage, debouncedSearch, roleFilter]);
+    }, [page, rowsPerpage, debouncedSearch, roleFilter, statusFilter]);
 
     const getAvatarColor = (name) => {
         const colors = [

@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getTeacherById, updateTeacher, updateSalary } from '../../Api/TeachersAPI';
 import { ChevronLeft, GraduationCap, IndianRupee, User } from 'lucide-react';
 import { toast } from 'react-toastify';
 import UserPersonalDetailsTab from '../../Components/SuperAdmin/EditTabComponents/UserPersonalDetailsTab';

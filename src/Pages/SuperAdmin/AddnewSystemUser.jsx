@@ -2,9 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, GraduationCap, IndianRupee, User } from 'lucide-react';
 import { toast } from 'react-toastify';
-import SalaryDetailsTab from '../../Components/Teacher/AddTabComponents/AddSalaryDetails';
 import AddPersonalDetails from '../../Components/SuperAdmin/AddTabComponents/AddPersionslDetails';
-import ClassesTab from '../../Components/SuperAdmin/AddTabComponents/ClassesTab';
 import { createUser } from '../../Api/userManagementAPI';
 
 function AddnewSystemUser() {
