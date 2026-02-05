@@ -23,10 +23,13 @@ import {
   ChevronLeft,
   Edit,
   Plus,
-  Minus
+  Minus,
+  UserRoundCogIcon
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const Dashboard = () => {
+  const navigate = useNavigate();
   const [isAction, setisAction] = useState('verify');
   const [selectedMonth, setSelectedMonth] = useState(25000);
   const date = new Date().toLocaleDateString();
@@ -226,7 +229,12 @@ const Dashboard = () => {
             <h1 className='text-lg sm:text-xl font-bold mb-5'>Quick Actions</h1>
 
             <div className='flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-5 lg:w-fit sm:w-fit w-65'>
-              <button onClick={()=>setisAction('verify')} className={`cursor-pointer flex bg-white p-3 px-4 rounded-xl w-full sm:w-fit flex-row gap-2 text-[13px] sm:text-[14px] font-bold justify-center ${isAction === "verify" ? 'border-2 text-blue-500' :'border-gray-300 text-black'}`}>
+                 <button onClick={()=>{ navigate('/dashboard/manageUsers')}} className={`cursor-pointer flex bg-white p-3 px-4 rounded-xl w-full sm:w-fit flex-row gap-2 text-[13px] sm:text-[14px] font-bold justify-center ${isAction === "verify" ? 'border-2 text-blue-500' :'border-gray-300 text-black'}`}>
+                <UserRoundCogIcon className="w-4 h-4 sm:w-5 sm:h-5"/>
+                <span>Manage Users</span>
+              </button>
+              
+              <button className={`cursor-pointer flex bg-white p-3 px-4 rounded-xl w-full sm:w-fit flex-row gap-2 text-[13px] sm:text-[14px] font-bold justify-center`}>
                 <ShieldCheck className="w-4 h-4 sm:w-5 sm:h-5"/>
                 <span>Verify Attendance</span>
               </button>
