@@ -2,15 +2,15 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, GraduationCap, IndianRupee, User } from 'lucide-react';
 import { toast } from 'react-toastify';
-import { createTeachers, updateSalary } from '../../Api/TeachersAPI';
-import SalaryDetailsTab from '../../Components/Teacher/AddTabComponents/AddSalaryDetails';
-import ClassAssignmentTab from '../../Components/Teacher/AddTabComponents/AddClassDetails';
 import AddPersonalDetails from '../../Components/SuperAdmin/AddTabComponents/AddPersionslDetails';
+import { createUser } from '../../Api/userManagementAPI';
 
 function AddnewSystemUser() {
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('personal');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [saveNext, setSaveNext] = useState(false);
+    const [submitVisible, setSubmitVisible] = useState(true);
     const [formData, setFormData] = useState({
         name: "",
         gender: "",
@@ -55,6 +55,14 @@ function AddnewSystemUser() {
         }));
     };
 
+    const checkEmptySaveNext = () => {
+        if (!formData.name || !formData.gender || !formData.mobile) {
+            toast.error("Please fill all required fields!");
+            return;
+        }
+
+    }
+
     const handleSubmit = async (e) => {
         e.preventDefault();
 
@@ -65,7 +73,7 @@ function AddnewSystemUser() {
 
         // Check if account status is disabled
         if (!formData.accountStatus) {
-            toast.error("Please enable account status to add teacher!", {
+            toast.error("Please enable account status to add user!", {
                 duration: 3000,
                 icon: "⚠️"
             });
@@ -73,130 +81,96 @@ function AddnewSystemUser() {
         }
 
         setIsSubmitting(true);
-        const loadingToast = toast.loading("Adding teacher...");
+        const loadingToast = toast.loading("Adding user...");
 
         try {
             const generateEmployeeCode = () => {
                 return "EMP" + Math.floor(100 + Math.random() * 900); // EMP123
             };
-
-            const apiPayload = {
-                personalDetails: {
-                    fullName: formData.name,
-                    mobile: formData.mobile,
-                    email: formData.email || "test.teacher@school.com",
-                    gender: formData.gender.toUpperCase(),
-                    dateOfBirth: formData.dob,
-                    address: formData.address || "NA",
-                    emergencyContact: "9999999999",
-                    emergencyContactName: "NA",
-                    emergencyContactRelation: "NA"
-                },
-                professionalDetails: {
-                    employeeCode: formData.employeeCode || generateEmployeeCode(),
-                    qualification: formData.highestQualification || "NA",
-                    experienceYears: Number(formData.experience || 1),
-                    joiningDate: formData.joiningDate,
-                    department: "GENERAL",
-                    designation: "TEACHER"
-                },
-                bankDetails: {
-                    accountHolderName: "NA",
-                    accountNumber: "000000000000",
-                    bankName: "NA",
-                    ifscCode: "HDFC0123456",
-                    branchName: "NA"
-                },
-                accountStatus: "ACTIVE",
-                payrollStatus: "INCLUDED",
-                remarks: "Created from UI"
-            };
-
-            const response = await createTeachers(apiPayload);
-
-            console.log("Create Teacher Response:", response);
-
-            // Only update salary if baseSalary AND salaryType are present
-            if (response && formData.salaryType && formData.baseSalary) {
-                // Extract teacher ID from response - adjust based on actual response structure
-                const teacherId = response.data?.id || response.id;
-
-                console.log("Teacher ID for salary update:", teacherId);
-
-                if (!teacherId) {
-                    console.error("No teacher ID found in response:", response);
-                    toast.warn("Teacher created but salary update skipped - no teacher ID");
-                } else {
-                    const baseSalary = Number(formData.baseSalary) || 0;
-                    const allowanceTotal =
-                        (Number(formData.houseRentAllowance) || 0) +
-                        (Number(formData.travelAllowance) || 0) +
-                        (Number(formData.dearnessAllowance) || 0) +
-                        (Number(formData.specialAllowance) || 0) +
-                        (Number(formData.otherAllowances) || 0) +
-                        (Number(formData.providentFund) || 0);
-
-                    const deductionTotal =
-                        (Number(formData.professionalTax) || 0) +
-                        (Number(formData.incomeTax) || 0) +
-                        (Number(formData.otherDeductions) || 0) +
-                        (Number(formData.leaveDeductionPerDay) || 0);
-
-                    const grossSalary = baseSalary + allowanceTotal;
-                    const totalDeductions = deductionTotal;
-                    const netSalary = grossSalary - totalDeductions;
-
-                    const salaryPayload = {
-                        // Remove id field for new salary creation
-                        salaryType: formData.salaryType,
-                        baseSalary,
-                        houseRentAllowance: Number(formData.houseRentAllowance) || 0,
-                        travelAllowance: Number(formData.travelAllowance) || 0,
-                        dearnessAllowance: Number(formData.dearnessAllowance) || 0,
-                        specialAllowance: Number(formData.specialAllowance) || 0,
-                        otherAllowances: Number(formData.otherAllowances) || 0,
-                        providentFund: Number(formData.providentFund) || 0,
-                        professionalTax: Number(formData.professionalTax) || 0,
-                        incomeTax: Number(formData.incomeTax) || 0,
-                        otherDeductions: Number(formData.otherDeductions) || 0,
-                        leaveDeductionPerDay: Number(formData.leaveDeductionPerDay) || 0,
-                        effectiveFrom: new Date().toISOString().split('T')[0],
-                        effectiveTo: new Date().toISOString().split('T')[0],
-                        payrollEligible: true,
-                        remarks: "Created via AddNewTeacher",
-                        grossSalary,
-                        totalDeductions,
-                        netSalary
-                    };
-
-                    console.log("Salary Payload:", salaryPayload);
-                    console.log("Calling updateSalary with teacherId:", teacherId);
-
-                    try {
-                        const salaryResponse = await updateSalary(teacherId, salaryPayload);
-                        console.log("Salary Update Response:", salaryResponse);
-                    } catch (salaryError) {
-                        console.error("Salary update failed:", salaryError);
-                        toast.warn("Teacher created but salary update failed");
-                    }
-                }
+            let apiPayload = {};
+            if (formData.userRole === 'PARENT') {
+                apiPayload = {
+                    email: formData.email,
+                    roleNames: [formData.userRole],
+                    personalDetails: {
+                        fullName: formData.name,
+                        mobile: formData.mobile,
+                        email: formData.email || "test.user@school.com",
+                        gender: formData.gender.toUpperCase(),
+                        dateOfBirth: formData.dob,
+                        address: formData.address || "NA",
+                        emergencyContact: "9999999999",
+                        emergencyContactName: "NA",
+                        emergencyContactRelation: "NA"
+                    },
+                    // professionalDetails: {
+                    //     employeeCode: formData.employeeCode || generateEmployeeCode(),
+                    //     qualification: formData.highestQualification || "NA",
+                    //     experienceYears: Number(formData.experience || 1),
+                    //     joiningDate: formData.joiningDate,
+                    //     department: "GENERAL",
+                    //     designation: "USER"
+                    // },
+                    // bankDetails: {
+                    //     accountHolderName: "NA",
+                    //     accountNumber: "000000000000",
+                    //     bankName: "NA",
+                    //     ifscCode: "HDFC0123456",
+                    //     branchName: "NA"
+                    // },
+                    accountStatus: "ACTIVE",
+                    // payrollStatus: "INCLUDED",
+                    remarks: "Created from UI"
+                };
             } else {
-                console.log("Skipping salary update - missing data:", {
-                    hasResponse: !!response,
-                    hasSalaryType: !!formData.salaryType,
-                    hasBaseSalary: !!formData.baseSalary
-                });
+                apiPayload = {
+                    email: formData.email,
+                    roleNames: [formData.userRole],
+                    personalDetails: {
+                        fullName: formData.name,
+                        mobile: formData.mobile,
+                        email: formData.email || "test.user@school.com",
+                        gender: formData.gender.toUpperCase(),
+                        dateOfBirth: formData.dob,
+                        address: formData.address || "NA",
+                        emergencyContact: "9999999999",
+                        emergencyContactName: "NA",
+                        emergencyContactRelation: "NA"
+                    },
+                    professionalDetails: {
+                        employeeCode: formData.employeeCode || generateEmployeeCode(),
+                        qualification: formData.highestQualification || "NA",
+                        experienceYears: Number(formData.experience || 1),
+                        joiningDate: formData.joiningDate,
+                        department: "GENERAL",
+                        designation: "USER"
+                    },
+                    bankDetails: {
+                        accountHolderName: "NA",
+                        accountNumber: "000000000000",
+                        bankName: "NA",
+                        ifscCode: "HDFC0123456",
+                        branchName: "NA"
+                    },
+                    accountStatus: "ACTIVE",
+                    payrollStatus: "INCLUDED",
+                    remarks: "Created from UI"
+                };
             }
 
+            const response = await createUser(apiPayload);
+            console.log("Create User Response:", response);
+
             toast.dismiss(loadingToast);
-            toast.success("Teacher added successfully!", {
+
+            toast.success( `New user ${formData.name} added successfully!`, {
                 duration: 3000,
                 icon: "✅"
             });
 
             // Navigate after a short delay to show the toast
             setTimeout(() => {
-                navigate('/teachers');
+                navigate('/dashboard/manageUsers');
             }, 500);
 
         } catch (err) {
@@ -212,11 +186,8 @@ function AddnewSystemUser() {
     };
 
     const handleDiscard = () => {
-        navigate('/teachers');
+        navigate('/dashboard/manageUsers');
     };
-
-    //for system User Changes 
-    // const [selectedRole, setSelectedRole] = useState('');
 
     return (
         <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-4">
@@ -249,20 +220,20 @@ function AddnewSystemUser() {
                                     type="button"
                                     onClick={() => setActiveTab('personal')}
                                     className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'personal'
-                                            ? 'border-blue-600 text-blue-600'
-                                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                        ? 'border-blue-600 text-blue-600'
+                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                                         }`}
                                 >
                                     <User size={20} />
                                     <span className="hidden sm:inline">Personal Details</span>
                                     <span className="sm:hidden">Personal</span>
                                 </button>
-                                <button
+                                {/* <button
                                     type="button"
                                     onClick={() => setActiveTab('salary')}
-                                    className={`${formData.userRole === 'parent' || formData.userRole == "" ? 'hidden' : 'flex'} items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'salary'
-                                            ? 'border-blue-600 text-blue-600'
-                                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                    className={`${formData.userRole === 'PARENT' || formData.userRole == "" ? 'hidden' : 'flex'} items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'salary'
+                                        ? 'border-blue-600 text-blue-600'
+                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                                         }`}
                                 >
                                     <IndianRupee size={18} />
@@ -272,15 +243,15 @@ function AddnewSystemUser() {
                                 <button
                                     type="button"
                                     onClick={() => { setActiveTab('classes') }}
-                                    className={`${formData.userRole === 'parent' || formData.userRole == "" ? 'hidden' : formData.userRole === 'teacher' ? 'flex' : 'hidden'}  items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'classes'
-                                            ? 'border-blue-600 text-blue-600'
-                                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                    className={`${formData.userRole === 'PARENT' || formData.userRole == "" ? 'hidden' : formData.userRole === 'teacher' ? 'flex' : 'hidden'}  items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'classes'
+                                        ? 'border-blue-600 text-blue-600'
+                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                                         }`}
                                 >
                                     <GraduationCap />
                                     <span className="hidden sm:inline">Class Assignment</span>
                                     <span className="sm:hidden">Classes</span>
-                                </button>
+                                </button> */}
                             </nav>
                         </div>
 
@@ -294,7 +265,7 @@ function AddnewSystemUser() {
                                 />
                             )}
 
-                            {activeTab === 'salary' && (
+                            {/* {activeTab === 'salary' && (
                                 <SalaryDetailsTab
                                     formData={formData}
                                     setFormData={setFormData}
@@ -303,14 +274,10 @@ function AddnewSystemUser() {
                             )}
 
                             {activeTab === 'classes' && (
-                                <ClassAssignmentTab
-                                    formData={formData}
-                                    setFormData={setFormData}
-                                    handleInputChange={handleInputChange}
-                                />
-                            )}
-                        </div>
+                                <ClassesTab />
+                            )} */}
 
+                        </div>
                         {/* Footer Buttons */}
                         <div className="border-t border-gray-200 px-4 sm:px-6 lg:px-8 py-4 bg-gray-50 rounded-b-lg">
                             <div className="flex flex-col sm:flex-row justify-end gap-3">
@@ -325,8 +292,8 @@ function AddnewSystemUser() {
                                     disabled={isSubmitting}
                                     type="submit"
                                     className={`px-6 py-2.5 text-sm font-medium rounded-lg transition-all ${isSubmitting
-                                            ? 'bg-blue-300 cursor-not-allowed text-white'
-                                            : 'bg-blue-500 hover:bg-blue-600 cursor-pointer text-white'
+                                        ? 'bg-blue-300 cursor-not-allowed text-white'
+                                        : 'bg-blue-500 hover:bg-blue-600 cursor-pointer text-white'
                                         }`}
                                 >
                                     {isSubmitting ? (
@@ -338,10 +305,27 @@ function AddnewSystemUser() {
                                         'Save Details'
                                     )}
                                 </button>
+                                {/* <button
+                                    type="button"
+                                    disabled={isSubmitting}
+                                    className={`${saveNext || formData.userRole === 'PARENT' || formData.userRole === '' ? 'hidden' : ''} px-6 py-2.5 text-sm font-medium rounded-lg transition-all ${isSubmitting
+                                        ? 'bg-blue-300 cursor-not-allowed text-white'
+                                        : 'bg-blue-500 hover:bg-blue-600 cursor-pointer text-white'} `}
+                                    onClick={() => checkSave_Next()}
+                                >
+                                    {isSubmitting ? (
+                                        <span className="flex items-center justify-center gap-2">
+                                            <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                                            Saving...
+                                        </span>
+                                    ) : (
+                                        'Save Details & Next'
+                                    )}
+                                </button> */}
                             </div>
-                        </div>
+                        </div>  
                     </div>
-                </form>
+                </form> 
             </div>
         </div>
     );
