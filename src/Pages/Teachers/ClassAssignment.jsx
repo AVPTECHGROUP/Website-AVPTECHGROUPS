@@ -9,8 +9,10 @@ import {
   getSectionsByClass,
   getSubjectsBySection
 } from "../../Api/TeachersAPI";
+import { useNavigate } from 'react-router-dom';
 
 function ClassAssignment() {
+  const navigate=useNavigate()
   const [teachers, setTeachers] = useState([]);
   const [createdAssignments, setCreatedAssignments] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -664,6 +666,7 @@ function ClassAssignment() {
     // Clear localStorage when canceling
     localStorage.removeItem('classAssignmentFormData');
     localStorage.removeItem('classAssignmentCreatedAssignments');
+    navigate('/teachers')
   };
 
   // ==================== RENDER HELPERS ====================

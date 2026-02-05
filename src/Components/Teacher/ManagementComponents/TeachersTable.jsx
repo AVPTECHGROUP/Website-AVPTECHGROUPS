@@ -58,12 +58,9 @@ const TeachersTable = ({
         : t
     )
   );
-
-  // 2️⃣ Debounced API call
   if (toggleDebounceRef.current) {
     clearTimeout(toggleDebounceRef.current);
   }
-
   toggleDebounceRef.current = setTimeout(async () => {
     try {
       if (teacher.status === 'ACTIVE') {

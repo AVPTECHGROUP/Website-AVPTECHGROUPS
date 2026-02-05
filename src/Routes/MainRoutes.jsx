@@ -21,6 +21,7 @@ import ApprovedManualAttendance from '../Components/Teacher/UserAttendance/Appro
 import UsersAttendance from '../Pages/Attendance/UsersAttendance';
 import AttendanceImgReg from '../Pages/Attendance/AttendanceImgReg';
 import MarkUserAttendance from '../Pages/Attendance/MarkUserAttendance';
+import AppLayout from '../Layout/AppLayout';
 
 const MainRoutes = () => {
   return (

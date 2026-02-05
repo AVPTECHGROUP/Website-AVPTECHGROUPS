@@ -44,10 +44,11 @@ const Sidebar = ({
   }
 
   return (
-    <div
-      className={`bg-[#F8FAFC] border-r border-gray-200 flex flex-col transition-all duration-300 h-screen
-      ${sidebarOpen ? 'w-64' : 'w-20'}`}
-    >
+<div
+  className={`bg-[#F8FAFC] border-r border-gray-200 flex flex-col transition-all duration-300 h-full
+  ${sidebarOpen ? 'w-64' : 'w-20'}`}
+>
+
       {/* Logo */}
       <div className="p-5 border border-gray-200">
         <div className="flex items-center gap-3">

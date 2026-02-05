@@ -31,7 +31,7 @@ const QuickActions = () => {
         <button
           onClick={() => {
             setIsAction('assign');
-            navigate('/teachers/assign');
+            navigate('/teachers/classAssignment');
           }}
           className={`flex sm:px-5 py-2.5 rounded-xl w-full border-2 border-gray-500 cursor-pointer sm:w-fit flex-row gap-2 text-[13px] sm:text-[14px] font-bold justify-center transition-all
             ${isAction === 'assign'
