@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { getTeachers, searchTeachers } from '../../Api/TeachersAPI';
+import { getTeachers, getTeacherStatistics, searchTeachers } from '../../Api/TeachersAPI';
 import TeachersHeader from '../../Components/Teacher/ManagementComponents/TeachersHeader';
 import QuickActions from '../../Components/Teacher/ManagementComponents/QuickActions';
 import TeachersFilters from '../../Components/Teacher/ManagementComponents/TeachersFilters';
@@ -134,14 +134,20 @@ const hasActiveFilters = useMemo(() => {
     fetchTeachers();
   }, [page, rowsPerPage, debouncedSearch, statusFilter, classFilter, salaryFilter, hasActiveFilters]);
 
-  // CALCULATE STATISTICS
+  // // CALCULATE STATISTICS
+  const [statistics, setstatistics] = useState(
+           {   totalTeachers : 0,
+              activeTeachers : 0,
+              inactiveTeachers : 0,
+              attendanceBlockedTeachers : 0}
+  );
 
   const stats = useMemo(() => {
-    const total = teachers.length;
-    const active = teachers.filter(t => t.status === 'ACTIVE').length;
-    const inActive = teachers.filter(t => t.status === 'INACTIVE').length;
-    const payrollIncluded = teachers.filter(t => t.payroll === 'INCLUDED').length;
-    const attendanceBlocked = teachers.filter(t => t.attendance === 'BLOCKED').length;
+    const total = statistics.totalTeachers || 0;
+    const active = statistics.activeTeachers || 0;
+    const inActive = statistics.inactiveTeachers || 0;
+    const payrollIncluded = teachers.filter(t => t.payroll === 'INCLUDED').length || 0;
+    const attendanceBlocked = statistics.attendanceBlockedTeachers || 0;
 
     return {
       total,
@@ -153,6 +159,23 @@ const hasActiveFilters = useMemo(() => {
       attendanceBlocked
     };
   }, [teachers]);
+
+   useEffect(() => {
+          let fetchStatistics = async () => {
+              try {
+                  const statistics_res = await getTeacherStatistics(); // for total statistics
+                  const res = statistics_res.data;
+                  setstatistics(res);
+              }
+              catch (e) {
+                  console.error("get statistics error:", e.message);
+                  throw error;
+              }
+          }
+          fetchStatistics();
+      }, [page, rowsPerPage])
+
+
 
   return (
     <div className="flex h-screen overflow-hidden bg-linear-to-b from-sky-50 to-sky-100">

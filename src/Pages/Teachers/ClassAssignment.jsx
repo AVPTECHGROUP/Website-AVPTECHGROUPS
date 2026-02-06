@@ -9,7 +9,7 @@ import {
   getSectionsByClass,
   getSubjectsBySection
 } from "../../Api/TeachersAPI";
-import { Navigate } from 'react-router-dom';
+import {useNavigate } from 'react-router-dom';
 
 function ClassAssignment() {
   const [teachers, setTeachers] = useState([]);

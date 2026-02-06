@@ -268,9 +268,9 @@ const TeachersTable = ({
       {/* DESKTOP TABLE VIEW (visible 1024px+) */}
 
       <div className="hidden lg:block bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="max-h-[calc(100vh-210px)] overflow-y-auto">
           <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
+            <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Employee Code
