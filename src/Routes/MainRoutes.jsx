@@ -3,7 +3,7 @@ import Protectedroutes from '../utils/Protectedroutes';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Dashboard from '../Pages/Dashboard';
 import Attendance from '../Pages/Attendance';
-import Leaves from '../Pages/leaves';
+import Leaves from '../Pages/Leaves';
 import Payroll from '../Pages/Payroll';
 import Teachers from '../Pages/Teachers/Teachers';
 import Settings from '../Pages/Settings';
