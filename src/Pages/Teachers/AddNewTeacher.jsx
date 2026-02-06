@@ -192,10 +192,10 @@ function AddNewTeacher() {
                 icon: "✅"
             });
 
-            // Navigate after a short delay to show the toast
-            setTimeout(() => {
-                navigate('/teachers');
-            }, 500);
+            // // Navigate after a short delay to show the toast
+            // setTimeout(() => {
+            //     navigate('/teachers');
+            // }, 500);
 
         } catch (err) {
             toast.dismiss(loadingToast);
