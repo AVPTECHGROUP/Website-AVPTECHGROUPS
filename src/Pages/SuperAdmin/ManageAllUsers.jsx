@@ -17,10 +17,16 @@ import {
     RotateCcwKey,
     LogOut,
     User,
-    UserSearch
+    UserSearch,
+    ShieldAlertIcon,
+    ShieldBanIcon,
+    KeyIcon,
+    LogOutIcon
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { activateUserStatus, allUserFilter, deactivateUserStatus, filterUserByRole, filterUserByStatus, getAllUserRoles, getAllUsers, getUsersStatistics, resetUserPassword, searchUsers } from '../../Api/userManagementAPI';
+import ActionDropDownComp from '../../Components/CommonComp/ActionDropDownComp';
+import CardComponent from '../../Components/CommonComp/CardComponent';
 
 const ManageAllUsers = () => {
     // Stores text typed in search input (sys_user name / id / role)
@@ -36,7 +42,11 @@ const ManageAllUsers = () => {
     const [rowsPerpage, setrowsPerpage] = useState(10);
     //for store statistics
     const [statistics, setstatistics] = useState({
-        totalUsers: 0
+        totalUsers: 0,
+        activeUsers: 0,
+        inactiveUsers: 0,
+        suspendedUsers: 0,
+        pendingUsers: 0
     });
     // Controls mobile search bar visibility (true = open, false = closed)
     const [error, setError] = useState(null);
@@ -63,11 +73,11 @@ const ManageAllUsers = () => {
                 roleOpt = fetchedRoles.map((val) => (
                     {
                         roleKey: val.id,
-                        roleVal: val.name
+                        roleVal: val.name,
+                        roleDisplay: val.displayName
                     }
                 ))
                 setRoleOptions(roleOpt);
-                console.log(roleOpt);
             }
             catch (e) {
                 console.error('Fetch roles error:', e.message);
@@ -76,7 +86,7 @@ const ManageAllUsers = () => {
         };
         fetchUserRoles();
     }, []);
-
+    //debounce search
     useEffect(() => {
         const timer = setTimeout(() => {
             setDebouncedSearch(search);
@@ -92,7 +102,7 @@ const ManageAllUsers = () => {
         );
     }, [debouncedSearch, statusFilter, roleFilter]);
 
-    //useEffect only for once dependency as runs or adding user 
+    //useEffect only for once dependency as runs or adding user statistics
     useEffect(() => {
         let fetchStatistics = async () => {
             try {
@@ -106,7 +116,7 @@ const ManageAllUsers = () => {
             }
         }
         fetchStatistics();
-    }, [page, rowsPerpage])
+    }, [page, rowsPerpage, sysUsers])
 
     useEffect(() => {
         const fetchsysUsers = async () => {
@@ -125,8 +135,8 @@ const ManageAllUsers = () => {
 
                     } else if (roleFilter !== 'All Roles' && roleFilter !== undefined) {
                         res = await filterUserByRole(roleFilter, page - 1, rowsPerpage);
-                         console.log(roleFilter,"------------->",res);
-                    }else{
+                        console.log(roleFilter, "------------->", res);
+                    } else {
                         res = await getAllUsers(page - 1, rowsPerpage);
                     }
 
@@ -135,7 +145,7 @@ const ManageAllUsers = () => {
                     // if (statusFilter !== 'All Status') filters.status = statusFilter.toUpperCase();
                     // if (roleFilter !== 'All Roles') filters.role = roleFilter;
                     //console.log(filters);
-                   // res = await allUserFilter(filters, page - 1, rowsPerpage);
+                    // res = await allUserFilter(filters, page - 1, rowsPerpage);
                 }
                 else {
                     res = await getAllUsers(page - 1, rowsPerpage);
@@ -205,42 +215,63 @@ const ManageAllUsers = () => {
     }
     //activate & deactivate user
     const handleToggleStatus = async (id, name, isStatus) => {
-            try {
-                // Here you would call your API to toggle status (activate/deactivate)
-                const isActive = isStatus;
-                console.log(isActive)
-                const messageStatus = await (isActive === 'ACTIVE' ? deactivateUserStatus(id) : activateUserStatus(id));
-                // Update local state to reflect the change
-                const newStatus = isActive === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
-                setsysUsers(prev => prev.map(user => user.id === id ? {...user, status: newStatus} : user));
-                //  status === 'Active' ? 'Inactive' : 'Active';
-                toast.success(`${messageStatus.message} : ${name}`);
-            } catch (error) {
-                toast.error(error.message || 'Status update failed');
-            }
+        try {
+            // Here you would call your API to toggle status (activate/deactivate)
+            const isActive = isStatus;
+            console.log(isActive)
+            const messageStatus = await (isActive === 'ACTIVE' ? deactivateUserStatus(id) : activateUserStatus(id));
+            //  status === 'Active' ? 'Inactive' : 'Active';
+            toast.success(`${messageStatus.message} : ${name}`);
+            // Update local state to reflect the change
+            const newStatus = isActive === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+            setsysUsers(prev => prev.map(user => user.id === id ? { ...user, status: newStatus } : user));
+        } catch (error) {
+            toast.error(error.message || 'Status update failed');
+        }
     }
 
     //for optimize code 
-    let cardsArray = [{ IconName: UsersIcon, keyName: "Total Users", val: statistics.totalUsers },
-    { IconName: UserCheck2, keyName: "Teachers", val: '21' },
-    { IconName: Banknote, keyName: "Accountants", val: '21' },
-    { IconName: UserRoundSearchIcon, keyName: "Students", val: '21' },]
-    const tableHeadItems = ['User Name', 'Mobile Number', 'Status', 'Actions'];
+    const cardsArray = [{ IconName: UsersIcon, keyName: "Total Users", val: statistics.totalUsers, iconTxColor: "text-blue-600", iconBgColor: "bg-blue-50" },
+    { IconName: UserCheck2, keyName: "Active Users", val: statistics.activeUsers, iconTxColor: "text-green-600", iconBgColor: "bg-green-50" },
+    { IconName: UserRoundXIcon, keyName: "Inactive Users", val: statistics.inactiveUsers, iconTxColor: "text-red-600", iconBgColor: "bg-red-50" },
+    { IconName: ShieldBanIcon, keyName: "Suspended Users", val: statistics.suspendedUsers, iconTxColor: "text-orange-600", iconBgColor: "bg-orange-50" },
+    { IconName: ShieldAlertIcon, keyName: "Pending Users", val: statistics.pendingUsers, iconTxColor: "text-yellow-600", iconBgColor: "bg-yellow-50" }]
+
+    const tableHeadItems = ['User Name', 'Mobile Number', 'Status'];
     let tabledataItemsStyle = 'px-6 py-3 text-left text-gray-700 text-sm';
-    function HeaderCard({ IconName, keyName, val }) {
-        return (
-            <div className="bg-white shadow-md shadow-gray-300 border h-auto  cursor-pointer rounded-xl px-2 py-4 flex items-center border-blue-50 hover:shadow-md hover:shadow-blue-100 transition-all">
-                <div className="flex items-start gap-2 pl-2">
-                    <div className=" sm:w-1/5 sm:h-14 flex items-center justify-center">
-                        <IconName size={25} className="w-6 h-8 sm:w-10 sm:h-9 text-blue-600" />
-                    </div>
-                    <div className='font-semibold  text-lg items-center align-middle text-staet  pl-2'>
-                        <h1 className='text-gray-400 text-xs lg:text-base' >{keyName} </h1>
-                        <p className='font-bold lg:text-2xl text-base '>{val}</p>
-                    </div>
-                </div>
-            </div>
-        );
+    const displayIcons = <> <UserPenIcon size={28} className='rounded-sm px-1 py-0.5  text-blue-300'/> 
+    <KeyIcon size={28} className='rounded-sm px-1 py-0.5  text-green-300'/>
+    <Power size={28} className='rounded-sm px-1 py-0.5  text-orange-300'/></>
+    const actionOptions = [
+        {
+            value: "editUser",
+            label: "Edit User",
+            icon: UserPenIcon,
+            text: "text-blue-600",
+            bg: "bg-blue-50",
+            hover: "hover:bg-blue-100",
+        },
+        {
+            value: "resetPassword",
+            label: "Reset Password",
+            icon: KeyIcon,
+            text: "text-green-600",
+            bg: "bg-green-50",
+            hover: "hover:bg-green-100",
+        },
+        {
+            value: "toogleStatus",
+            label: "Toggle Status",
+            icon: Power,
+            text: "text-yellow-600",
+            bg: "bg-yellow-50",
+            hover: "hover:bg-yellow-100",
+        },
+    ];
+    const callAllActions = async (optVal, user) => {
+        if (optVal === 'editUser') navigate(`/dashboard/editUser/${user.id}`);
+        else if (optVal === 'resetPassword') resetPassword(user.id, user.name);
+        else if (optVal === 'toogleStatus') handleToggleStatus(user.id, user.name, user.status);
     }
 
     return (
@@ -250,7 +281,7 @@ const ManageAllUsers = () => {
                 {/* Page Content */}
                 <div className="flex-1 overflow-auto p-4 sm:p-5 lg:p-4">
                     {/* Page Title */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div>
                             <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Manage All Users</h2>
                             <p className="text-gray-500 mt-1 font-medium text-sm sm:text-base">Efficiently manage system roles, permissions and account statuses.</p>
@@ -277,7 +308,7 @@ const ManageAllUsers = () => {
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-5 mb-8 pt-6">
                         {
                             cardsArray.map((card) => (
-                                <HeaderCard key={card.keyName} IconName={card.IconName} keyName={card.keyName.toUpperCase()} val={card.val} />
+                                <CardComponent key={card.keyName} IconName={card.IconName} keyName={card.keyName.toUpperCase()} val={card.val} iconTxColor={card.iconTxColor} iconBgColor={card.iconBgColor} />
                             ))
                         }
                     </div>
@@ -320,7 +351,7 @@ const ManageAllUsers = () => {
                                 <option value={'All Roles'}>All Roles</option>
                                 {
                                     roleOptions.map((item) => (
-                                        <option key={item.roleKey} value={item.roleVal}>{item.roleVal}</option>
+                                        <option key={item.roleKey} value={item.roleVal}>{item.roleDisplay}</option>
                                     ))
                                 }
                             </select>
@@ -373,7 +404,7 @@ const ManageAllUsers = () => {
                                             </p>
                                         </div>
                                     </div>
-                                    <div className="flex gap-1">
+                                    {/* <div className="flex gap-1">
                                         <button
                                             type="button"
                                             onClick={() => handleToggleStatus(sys_user.id, sys_user.name, sys_user.status)}
@@ -386,14 +417,13 @@ const ManageAllUsers = () => {
                                             />
                                         </button>
 
-                                    </div>
+                                    </div> */}
                                 </div>
                                 {/* Details */}
                                 <div className="space-y-2 text-sm">
                                     <p>
                                         <span className="font-medium text-gray-600">Contact:</span>
                                         <span className="text-gray-800 ml-4">{sys_user.mobile}</span>
-
                                     </p>
                                     <p>
                                         <span className="font-medium text-gray-600">Status:</span>
@@ -412,18 +442,12 @@ const ManageAllUsers = () => {
                                             {sys_user.status}
                                         </span>
                                     </p>
-                                </div>
-                                {/* Actions */}
-                                <div className="flex gap-2 mt-4">
-                                    <button onClick={() => navigate(`/dashboard/editUser/${sys_user.id}`)} className="flex-1 py-2  rounded-md text-xs flex items-center justify-center gap-1 bg-gray-100">
-                                        <Edit size={14} /> Edit
-                                    </button>
-                                    <button type='btn' key='resetPass' onClick={() => resetPassword(sys_user.id, sys_user.name)} className="flex-1 py-2  rounded-md text-xs flex items-center justify-center gap-1 text-blue-600 bg-blue-50">
-                                        <RotateCcwKey size={14} /> Reset
-                                    </button>
-                                    <button className="flex-1 py-2  rounded-md text-xs flex items-center justify-center gap-1 text-red-600 bg-red-50">
-                                        <LogOut size={14} /> Logout
-                                    </button>
+                                    <div className='flex justify-start items-center align-middle'> 
+                                        <span className="font-medium text-gray-600">Actions: </span>
+                                        <span className="text-gray-800 ml-4">
+                                            <ActionDropDownComp actionOptions={actionOptions} onAction={(optVal) => callAllActions(optVal, sys_user)} />
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
                         )))}
@@ -431,7 +455,7 @@ const ManageAllUsers = () => {
 
                     {/* DESKTOP TABLE (visible 1024px and above) */}
                     <div className="hidden lg:block bg-white rounded-xl border border-gray-200 ">
-                        <div className="overflow-x-auto max-h-[calc(100vh-410px)] overflow-y-auto">
+                        <div className="overflow-x-auto min-h-[calc(250px)] max-h-[calc(100vh-510px)] overflow-y-auto">
                             <table className="w-full ">
                                 <thead className="border-b border-gray-200">
                                     <tr>
@@ -440,6 +464,9 @@ const ManageAllUsers = () => {
                                                 {headings}
                                             </th>
                                         ))}
+                                        <th key='ACTIONS' className="px-6 py-3 text-start text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-50">
+                                            ACTIONS
+                                        </th>
                                     </tr>
                                 </thead>
                                 <tbody className="bg-white divide-y divide-gray-200 font-normal">
@@ -492,40 +519,23 @@ const ManageAllUsers = () => {
                                                     </div>
                                                 </div>
                                             </td>
-
                                             <td className={tabledataItemsStyle}>{sys_user.mobile}</td>
                                             <td className={tabledataItemsStyle}>
-                                                <div className="flex gap-1">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => handleToggleStatus(sys_user.id, sys_user.name, sys_user.status)}
-                                                        className={`w-10 h-5 flex items-center rounded-full p-1 transition-colors duration-300 ${sys_user.status === 'ACTIVE' ? "bg-blue-500" : "bg-gray-300"
-                                                            } cursor-pointer`}
+                                                <p>
+                                                    <span
+                                                        className={`inline-flex size-fit items-center gap-1 px-3 py-1 rounded-sm text-xs font-medium ${sys_user.status === "ACTIVE"
+                                                            ? "bg-green-50 text-green-700"
+                                                            : "bg-red-50 text-red-700"
+                                                            }`}
                                                     >
-                                                        <div
-                                                            className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-300 ${sys_user.status === 'ACTIVE' ? "translate-x-4" : "translate-x-0"
-                                                                }`}
-                                                        />
-                                                    </button>
-
-                                                </div>
+                                                        {sys_user.status}
+                                                    </span>
+                                                </p>
 
                                             </td>
-
                                             <td className={tabledataItemsStyle}>
-                                                <div className="flex gap-2">
-                                                    <button type='btn' key='EditUser' onClick={() => navigate(`/dashboard/editUser/${sys_user.id}`)} className="flex-1 py-2  rounded-md text-xs flex items-center justify-center gap-1 bg-gray-100 hover:bg-gray-200 cursor-pointer">
-                                                        <Edit size={14} /> Edit
-                                                    </button>
-                                                    <button type='btn' key='resetPass' onClick={() => resetPassword(sys_user.id, sys_user.name)} className="flex-1 py-2  rounded-md text-xs flex items-center justify-center gap-1 text-blue-600 bg-blue-50 hover:bg-blue-100 cursor-pointer">
-                                                        <RotateCcwKey size={14} /> Reset
-                                                    </button>
-                                                    <button type='btn' key='logOut' className="flex-1 py-2  rounded-md text-xs flex items-center justify-center gap-1 text-black bg-red-50 hover:bg-red-100 cursor-pointer">
-                                                        <LogOut className='text-red-600' size={14} /> Logout
-                                                    </button>
-                                                </div>
+                                                <ActionDropDownComp displayIcons={displayIcons} actionOptions={actionOptions} onAction={(optVal) => callAllActions(optVal, sys_user)} />
                                             </td>
-
                                         </tr>
                                     )))
                                     }

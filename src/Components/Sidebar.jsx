@@ -9,7 +9,8 @@ import {
   LogOut,
   IndianRupee,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  UserCog
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 
@@ -29,22 +30,23 @@ const Sidebar = ({
       icon: LayoutDashboard, 
       label: 'Dashboard', 
       route: '/dashboard',
-      subItems: [
-        { label: 'Overview', route: '/dashboard/overview' },
-        { label: 'Analytics', route: '/dashboard/analytics' }
-      ]
+      // subItems: [
+      //   { label: 'Overview', route: '/dashboard/overview' },
+      //   { label: 'Analytics', route: '/dashboard/analytics' }
+      // ]
     },
     { 
       id: 'attendance', 
       icon: Calendar, 
       label: 'Attendance', 
       route: '/attendance',
-      subItems: [
-        { label: 'Mark Attendance', route: '/attendance/mark' },
-        { label: 'View Records', route: '/attendance/records' },
-        { label: 'Reports', route: '/attendance/reports' }
-      ]
+      // subItems: [
+      //   { label: 'Mark Attendance', route: '/attendance/mark' },
+      //   { label: 'View Records', route: '/attendance/records' },
+      //   { label: 'Reports', route: '/attendance/reports' }
+      // ]
     },
+    { id: 'manageUsers', icon: UserCog, label: 'Manage Users', route: '/dashboard/manageUsers' },
     { id: 'leaves', icon: FileText, label: 'Leaves', route: '/leaves' },
     { id: 'payroll', icon: IndianRupee, label: 'Payroll', route: '/payroll' },
     { id: 'teachers', icon: Users, label: 'Teachers', route: '/teachers' },

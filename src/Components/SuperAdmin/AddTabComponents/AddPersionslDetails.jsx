@@ -13,11 +13,11 @@ const AddPersonalDetails = ({ formData, setFormData, handleInputChange }) => {
                roleOpt = fetchedRoles.map((val) => (
                         {
                             key: val.id,
-                            value: val.name
+                            value: val.name,
+                            displayRole : val.displayName
                         }
                 ))
                 setRoleSelection(roleOpt);
-                console.log(roleOpt);
             }
             catch (e) {
                 console.error('Fetch roles error:', e.message);
@@ -162,10 +162,10 @@ const AddPersonalDetails = ({ formData, setFormData, handleInputChange }) => {
                             className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none'
                             onChange={(e) => { handleInputChange(e); setSelectedRole(e.target.value) }}
                             required>
-                            <option value="" disabled>Select System Role</option>
+                            <option value="" disabled>Select User Role</option>
                             {
                                 roleSelection.map((ele) => (
-                                    <option value={ele.value} key={ele.key}> {ele.value} </option>
+                                    <option value={ele.value} key={ele.key}> {ele.displayRole} </option>
                                 ))
                             }
                         </select>

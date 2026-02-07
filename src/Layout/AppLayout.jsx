@@ -46,8 +46,7 @@ const AppLayout = () => {
             Delhi Public International School
           </h1>
         </header>
-
-        <main className="flex-1 overflow-auto p-4">
+        <main className='overflow-auto'>
           <Outlet />
         </main>
       </div>
