@@ -19,7 +19,6 @@ function ClassAssignment() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState("");
-  
   // Dropdown data
   const [classes, setClasses] = useState([]);
   const [sections, setSections] = useState([]);
