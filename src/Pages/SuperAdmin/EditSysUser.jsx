@@ -190,7 +190,7 @@ function EditSysUser() {
             // Personal/professional details update
             await updateUserById(id, sysUserPayload);
             toast.success(`${formData.name}'s details updated successfully!`);
-            navigate("/dashboard/manageUsers");
+            // navigate("/dashboard/manageUsers");
         } catch (err) {
             console.error(err);
             toast.error("Failed to update user, Please try again.");

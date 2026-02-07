@@ -168,10 +168,10 @@ function AddnewSystemUser() {
                 icon: "✅"
             });
 
-            // Navigate after a short delay to show the toast
-            setTimeout(() => {
-                navigate('/dashboard/manageUsers');
-            }, 500);
+            // // Navigate after a short delay to show the toast
+            // setTimeout(() => {
+            //     navigate('/dashboard/manageUsers');
+            // }, 500);
 
         } catch (err) {
             toast.dismiss(loadingToast);
