@@ -9,7 +9,6 @@ import {
   getSectionsByClass,
   getSubjectsBySection
 } from "../../Api/TeachersAPI";
-import {useNavigate } from 'react-router-dom';
 
 function ClassAssignment() {
   const [teachers, setTeachers] = useState([]);
@@ -18,7 +17,7 @@ function ClassAssignment() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState("");
-  const navigate = useNavigate();
+  
   // Dropdown data
   const [classes, setClasses] = useState([]);
   const [sections, setSections] = useState([]);
@@ -665,7 +664,6 @@ function ClassAssignment() {
     // Clear localStorage when canceling
     localStorage.removeItem('classAssignmentFormData');
     localStorage.removeItem('classAssignmentCreatedAssignments');
-    navigate('/teachers'); // Navigate back to main teachers page
   };
 
   // ==================== RENDER HELPERS ====================

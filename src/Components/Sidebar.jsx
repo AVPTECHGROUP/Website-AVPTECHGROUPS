@@ -9,8 +9,7 @@ import {
   LogOut,
   IndianRupee,
   ChevronDown,
-  ChevronRight,
-  UserCog
+  ChevronRight
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 
@@ -30,23 +29,40 @@ const Sidebar = ({
       icon: LayoutDashboard, 
       label: 'Dashboard', 
       route: '/dashboard',
-      // subItems: [
-      //   { label: 'Overview', route: '/dashboard/overview' },
-      //   { label: 'Analytics', route: '/dashboard/analytics' }
-      // ]
     },
-    { 
-      id: 'attendance', 
-      icon: Calendar, 
-      label: 'Attendance', 
-      route: '/attendance',
-      // subItems: [
-      //   { label: 'Mark Attendance', route: '/attendance/mark' },
-      //   { label: 'View Records', route: '/attendance/records' },
-      //   { label: 'Reports', route: '/attendance/reports' }
-      // ]
+   {
+  id: 'attendance',
+  icon: Calendar,
+  label: (
+    <span className="t font-semibold">Attendance</span>),
+  route: '/attendance',
+  subItems: [
+    {
+      label: (
+        <span className="text-sm text-gray-600 hover:text-blue-600">
+          Mark Attendance
+        </span>
+      ),
+      route: '/attendance/markUserAttendance'
     },
-    { id: 'manageUsers', icon: UserCog, label: 'Manage Users', route: '/dashboard/manageUsers' },
+    {
+      label: (
+        <span className="text-sm text-gray-600 hover:text-blue-600">
+          Attendance Registration
+        </span>
+      ),
+      route: '/attendance/attendanceImgReg'
+    },
+    {
+      label: (
+        <span className="text-sm text-gray-600 hover:text-blue-600">
+          Pending Approvals
+        </span>
+      ),
+      route: '/attendance/usersAttendance'
+    }
+  ]
+},
     { id: 'leaves', icon: FileText, label: 'Leaves', route: '/leaves' },
     { id: 'payroll', icon: IndianRupee, label: 'Payroll', route: '/payroll' },
     { id: 'teachers', icon: Users, label: 'Teachers', route: '/teachers' },

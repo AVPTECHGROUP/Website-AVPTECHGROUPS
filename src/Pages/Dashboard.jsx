@@ -23,13 +23,10 @@ import {
   ChevronLeft,
   Edit,
   Plus,
-  Minus,
-  UserRoundCogIcon
+  Minus
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 
 const Dashboard = () => {
-  const navigate = useNavigate();
   const [isAction, setisAction] = useState('verify');
   const [selectedMonth, setSelectedMonth] = useState(25000);
   const date = new Date().toLocaleDateString();
@@ -79,37 +76,6 @@ const Dashboard = () => {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden w-full">
-        {/* Header */}
-        <header className="bg-white border-b border-gray-200 px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              
-              <div className="w-10 h-14 bg-[#F8FAFC] rounded-lg flex items-center justify-center border border-gray-300">
-                <NotebookPen size={25} className="w-7 h-10 text-blue-700" />
-              </div>
-              <h1 className="text-lg sm:text-xl font-bold text-gray-900">Dashboard</h1>
-            </div>
-
-            <div className="flex items-center gap-2 sm:gap-4">
-              <div className="relative hidden md:block">
-                <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
-                <input
-                  type="text"
-                  placeholder="Search teacher or ID..."
-                  className="pl-10 pr-4 py-2 border border-gray-200 rounded-lg w-48 lg:w-64 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <button className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-all relative">
-                <Bell className="w-5 h-5 text-gray-700" />
-                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-              </button>
-              <button className="w-10 h-10 rounded-lg bg-gray-900 flex items-center justify-center hover:bg-gray-800 transition-all">
-                <User className="w-5 h-5 text-white" />
-              </button>
-            </div>
-          </div>
-        </header>
-
         {/* Page Content */}
         <div className="flex-1 bg-linear-to-b from-sky-50 to-sky-100 overflow-auto p-4 sm:p-6 lg:p-8">
           {/* Page Title */}
@@ -229,12 +195,7 @@ const Dashboard = () => {
             <h1 className='text-lg sm:text-xl font-bold mb-5'>Quick Actions</h1>
 
             <div className='flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-5 lg:w-fit sm:w-fit w-65'>
-                 <button onClick={()=>{ navigate('/dashboard/manageUsers')}} className={`cursor-pointer flex bg-white p-3 px-4 rounded-xl w-full sm:w-fit flex-row gap-2 text-[13px] sm:text-[14px] font-bold justify-center ${isAction === "verify" ? 'border-2 text-blue-500' :'border-gray-300 text-black'}`}>
-                <UserRoundCogIcon className="w-4 h-4 sm:w-5 sm:h-5"/>
-                <span>Manage Users</span>
-              </button>
-              
-              <button className={`cursor-pointer flex bg-white p-3 px-4 rounded-xl w-full sm:w-fit flex-row gap-2 text-[13px] sm:text-[14px] font-bold justify-center`}>
+              <button onClick={()=>setisAction('verify')} className={`cursor-pointer flex bg-white p-3 px-4 rounded-xl w-full sm:w-fit flex-row gap-2 text-[13px] sm:text-[14px] font-bold justify-center ${isAction === "verify" ? 'border-2 text-blue-500' :'border-gray-300 text-black'}`}>
                 <ShieldCheck className="w-4 h-4 sm:w-5 sm:h-5"/>
                 <span>Verify Attendance</span>
               </button>

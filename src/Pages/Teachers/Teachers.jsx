@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { getTeachers, getTeacherStatistics, searchTeachers } from '../../Api/TeachersAPI';
+import { useEffect, useMemo, useState } from 'react';
+import { getTeachers, searchTeachers } from '../../Api/TeachersAPI';
 import TeachersHeader from '../../Components/Teacher/ManagementComponents/TeachersHeader';
 import QuickActions from '../../Components/Teacher/ManagementComponents/QuickActions';
 import TeachersFilters from '../../Components/Teacher/ManagementComponents/TeachersFilters';
@@ -134,20 +134,14 @@ const hasActiveFilters = useMemo(() => {
     fetchTeachers();
   }, [page, rowsPerPage, debouncedSearch, statusFilter, classFilter, salaryFilter, hasActiveFilters]);
 
-  // // CALCULATE STATISTICS
-  const [statistics, setstatistics] = useState(
-           {   totalTeachers : 0,
-              activeTeachers : 0,
-              inactiveTeachers : 0,
-              attendanceBlockedTeachers : 0}
-  );
+  // CALCULATE STATISTICS
 
   const stats = useMemo(() => {
-    const total = statistics.totalTeachers || 0;
-    const active = statistics.activeTeachers || 0;
-    const inActive = statistics.inactiveTeachers || 0;
-    const payrollIncluded = teachers.filter(t => t.payroll === 'INCLUDED').length || 0;
-    const attendanceBlocked = statistics.attendanceBlockedTeachers || 0;
+    const total = teachers.length;
+    const active = teachers.filter(t => t.status === 'ACTIVE').length;
+    const inActive = teachers.filter(t => t.status === 'INACTIVE').length;
+    const payrollIncluded = teachers.filter(t => t.payroll === 'INCLUDED').length;
+    const attendanceBlocked = teachers.filter(t => t.attendance === 'BLOCKED').length;
 
     return {
       total,
@@ -160,69 +154,47 @@ const hasActiveFilters = useMemo(() => {
     };
   }, [teachers]);
 
-   useEffect(() => {
-          let fetchStatistics = async () => {
-              try {
-                  const statistics_res = await getTeacherStatistics(); // for total statistics
-                  const res = statistics_res.data;
-                  setstatistics(res);
-              }
-              catch (e) {
-                  console.error("get statistics error:", e.message);
-                  throw error;
-              }
-          }
-          fetchStatistics();
-      }, [page, rowsPerPage])
-
-
-
   return (
     <div className="flex h-screen overflow-hidden bg-linear-to-b from-sky-50 to-sky-100">
       <div className="flex-1 overflow-auto w-0">
         
-        {/* COMPONENT 1: Header with Stats */}
-        <TeachersHeader
-          search={search}
-          setSearch={setSearch}
-          setPage={setPage}
-          mobileSearchOpen={mobileSearchOpen}
-          setMobileSearchOpen={setMobileSearchOpen}
-          stats={stats}
-        />
+       {/* COMPONENT 1: Header with Stats */}
+<TeachersHeader stats={stats} />
 
-        {/* Page Content */}
-        <div className="flex-1 overflow-auto p-4 sm:p-5 lg:p-4">
-          
-          {/* COMPONENT 2: Quick Actions */}
-          <QuickActions />
+{/* Page Content */}
+<div className="flex-1 overflow-auto p-4 sm:p-5 lg:p-4">
+  
+  {/* COMPONENT 2: Quick Actions */}
+  <QuickActions />
 
-          {/* COMPONENT 3: Filters */}
-          <TeachersFilters
-            statusFilter={statusFilter}
-            setStatusFilter={setStatusFilter}
-            classFilter={classFilter}
-            setClassFilter={setClassFilter}
-            salaryFilter={salaryFilter} 
-            setSalaryFilter={setSalaryFilter}
-            setPage={setPage}
-          />
+  {/* COMPONENT 3: Filters with Search */}
+  <TeachersFilters
+    search={search}
+    setSearch={setSearch}
+    statusFilter={statusFilter}
+    setStatusFilter={setStatusFilter}
+    classFilter={classFilter}
+    setClassFilter={setClassFilter}
+    salaryFilter={salaryFilter} 
+    setSalaryFilter={setSalaryFilter}
+    setPage={setPage}
+  />
 
-          {/* COMPONENT 4: Table and Pagination */}
-          <TeachersTable
-            teachers={teachers}
-            setTeachers={setTeachers}
-            loading={loading}
-            error={error}
-            page={page}
-            setPage={setPage}
-            rowsPerPage={rowsPerPage}
-            setRowsPerPage={setRowsPerPage}
-            totalElements={totalElements}
-            totalPages={totalPages}
-            fetchTeachers={fetchTeachers}
-          />
-        </div>
+  {/* COMPONENT 4: Table and Pagination */}
+  <TeachersTable
+    teachers={teachers}
+    setTeachers={setTeachers}
+    loading={loading}
+    error={error}
+    page={page}
+    setPage={setPage}
+    rowsPerPage={rowsPerPage}
+    setRowsPerPage={setRowsPerPage}
+    totalElements={totalElements}
+    totalPages={totalPages}
+    fetchTeachers={fetchTeachers}
+  />
+</div>
       </div>
     </div>
   );
