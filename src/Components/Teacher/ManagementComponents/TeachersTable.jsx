@@ -1,4 +1,3 @@
-import { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ChevronRight,
@@ -6,6 +5,7 @@ import {
   Edit,
   UserRoundXIcon,
   Eye,
+  Inbox,
   Power
 } from 'lucide-react';
 import { toast } from 'react-toastify';
@@ -25,7 +25,6 @@ const TeachersTable = ({
   fetchTeachers
 }) => {
   const navigate = useNavigate();
-  const toggleDebounceRef = useRef(null);
 
   // ============================================
   // HELPER FUNCTIONS
@@ -46,25 +45,18 @@ const TeachersTable = ({
   };
 
   // Toggle teacher active/inactive status
-  const handleToggleStatus = (teacher) => {
+  const handleToggleStatus = async (teacher) => {
 
-  setTeachers(prev =>
-    prev.map(t =>
-      t.id === teacher.id
-        ? {
+    setTeachers(prev =>
+      prev.map(t =>
+        t.id === teacher.id
+          ? {
             ...t,
             status: t.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE'
           }
-        : t
-    )
-  );
-
-  // 2️⃣ Debounced API call
-  if (toggleDebounceRef.current) {
-    clearTimeout(toggleDebounceRef.current);
-  }
-
-  toggleDebounceRef.current = setTimeout(async () => {
+          : t
+      )
+    );
     try {
       if (teacher.status === 'ACTIVE') {
         await deactivateStatus(teacher.id);
@@ -77,8 +69,21 @@ const TeachersTable = ({
       toast.error('Status update failed');
       fetchTeachers(); // rollback from server
     }
-  }, 500);
-};
+
+  };
+
+  const NoDataFound = ({ message = "No data found" }) => (
+    <div className="flex flex-col items-center justify-center py-12 text-center">
+      <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+        <Inbox className="w-7 h-7 text-gray-500" />
+      </div>
+      <h3 className="text-lg font-semibold text-gray-800">{message}</h3>
+      <p className="text-sm text-gray-500 mt-1">
+        Try adjusting filters or add new records
+      </p>
+    </div>
+  );
+
 
   // MOBILE/TABLET CARDS VIEW 
 
@@ -107,6 +112,8 @@ const TeachersTable = ({
               Retry
             </button>
           </div>
+        ) : teachers.length === 0 ? (
+          <NoDataFound message="No teachers found" />
         ) : (
           teachers.map((teacher) => (
             <div
@@ -130,16 +137,14 @@ const TeachersTable = ({
                   </div>
                 </div>
                 <span
-                  className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs rounded-full ${
-                    teacher.status === 'ACTIVE'
-                      ? 'bg-green-50 text-green-700'
-                      : 'bg-red-50 text-red-700'
-                  }`}
+                  className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs rounded-full ${teacher.status === 'ACTIVE'
+                    ? 'bg-green-50 text-green-700'
+                    : 'bg-red-50 text-red-700'
+                    }`}
                 >
                   <span
-                    className={`w-1.5 h-1.5 rounded-full ${
-                      teacher.status === 'ACTIVE' ? 'bg-green-500' : 'bg-red-500'
-                    }`}
+                    className={`w-1.5 h-1.5 rounded-full ${teacher.status === 'ACTIVE' ? 'bg-green-500' : 'bg-red-500'
+                      }`}
                   ></span>
                   {teacher.status}
                 </span>
@@ -183,11 +188,10 @@ const TeachersTable = ({
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-500">Salary Type:</span>
                   <span
-                    className={`inline-block px-2.5 py-1 text-xs rounded-full ${
-                      teacher.salaryType === 'MONTHLY'
-                        ? 'bg-teal-50 text-teal-700'
-                        : 'bg-yellow-50 text-yellow-700'
-                    }`}
+                    className={`inline-block px-2.5 py-1 text-xs rounded-full ${teacher.salaryType === 'MONTHLY'
+                      ? 'bg-teal-50 text-teal-700'
+                      : 'bg-yellow-50 text-yellow-700'
+                      }`}
                   >
                     {teacher.salaryType}
                   </span>
@@ -196,11 +200,10 @@ const TeachersTable = ({
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-500">Attendance:</span>
                   <span
-                    className={`inline-block px-2.5 py-1 text-xs rounded ${
-                      teacher.attendance === 'ALLOWED'
-                        ? 'bg-blue-50 text-blue-700'
-                        : 'bg-gray-100 text-gray-700'
-                    }`}
+                    className={`inline-block px-2.5 py-1 text-xs rounded ${teacher.attendance === 'ALLOWED'
+                      ? 'bg-blue-50 text-blue-700'
+                      : 'bg-gray-100 text-gray-700'
+                      }`}
                   >
                     {teacher.attendance}
                   </span>
@@ -209,11 +212,10 @@ const TeachersTable = ({
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-500">Payroll:</span>
                   <span
-                    className={`inline-block px-2.5 py-1 text-xs rounded ${
-                      teacher.payroll === 'INCLUDED'
-                        ? 'bg-teal-50 text-teal-700'
-                        : 'bg-gray-100 text-gray-700'
-                    }`}
+                    className={`inline-block px-2.5 py-1 text-xs rounded ${teacher.payroll === 'INCLUDED'
+                      ? 'bg-teal-50 text-teal-700'
+                      : 'bg-gray-100 text-gray-700'
+                      }`}
                   >
                     {teacher.payroll}
                   </span>
@@ -244,16 +246,14 @@ const TeachersTable = ({
                 <button
                   onClick={() => handleToggleStatus(teacher)}
                   disabled={loading}
-                  className={`flex-1 px-3 py-2 rounded-lg flex items-center justify-center gap-2 transition-all ${
-                    teacher.status === 'ACTIVE'
-                      ? 'bg-red-50 hover:bg-red-100'
-                      : 'bg-green-50 hover:bg-green-100'
-                  }`}
+                  className={`flex-1 px-3 py-2 rounded-lg flex items-center justify-center gap-2 transition-all ${teacher.status === 'ACTIVE'
+                    ? 'bg-red-50 hover:bg-red-100'
+                    : 'bg-green-50 hover:bg-green-100'
+                    }`}
                 >
                   <Power
-                    className={`w-4 h-4 ${
-                      teacher.status === 'ACTIVE' ? 'text-red-600' : 'text-green-600'
-                    }`}
+                    className={`w-4 h-4 ${teacher.status === 'ACTIVE' ? 'text-red-600' : 'text-green-600'
+                      }`}
                   />
                   <span className="text-sm font-medium">
                     {teacher.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
@@ -268,9 +268,9 @@ const TeachersTable = ({
       {/* DESKTOP TABLE VIEW (visible 1024px+) */}
 
       <div className="hidden lg:block bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <div className="max-h-[calc(100vh-210px)] overflow-y-auto">
+        <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
+            <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Employee Code
@@ -283,9 +283,6 @@ const TeachersTable = ({
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Assigned Classes
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Assigned Subjects
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Salary Type
@@ -333,134 +330,124 @@ const TeachersTable = ({
                     </button>
                   </td>
                 </tr>
-              ) : (
-                teachers.map((teacher) => (
-                  <tr key={teacher.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {teacher.employeeCode}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-3">
-                        <img src={teacher.image} className="w-10 h-10 rounded-full" alt="" />
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">{teacher.name}</div>
-                          <div className="text-xs text-gray-500">{teacher.role}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {teacher.mobile}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-wrap gap-1">
-                        {(teacher.classes || []).map((cls, idx) => (
-                          <span
-                            key={idx}
-                            className="inline-block px-2 py-1 text-xs bg-blue-50 text-blue-600 rounded"
-                          >
-                            {cls}
-                          </span>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-wrap gap-1">
-                        {(teacher.subjects || []).map((subject, idx) => (
-                          <span
-                            key={idx}
-                            className="inline-block px-2 py-1 text-xs bg-purple-50 text-purple-600 rounded"
-                          >
-                            {subject}
-                          </span>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`inline-block px-3 py-1 text-xs rounded-full ${
-                          teacher.salaryType === 'MONTHLY'
-                            ? 'bg-teal-50 text-teal-700'
-                            : 'bg-yellow-50 text-yellow-700'
-                        }`}
-                      >
-                        {teacher.salaryType}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`inline-flex items-center gap-1 px-3 py-1 text-xs rounded-full ${
-                          teacher.status === 'ACTIVE'
-                            ? 'bg-green-50 text-green-700'
-                            : 'bg-red-50 text-red-700'
-                        }`}
-                      >
-                        <span
-                          className={`w-1.5 h-1.5 rounded-full ${
-                            teacher.status === 'ACTIVE' ? 'bg-green-500' : 'bg-red-500'
-                          }`}
-                        ></span>
-                        {teacher.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`inline-block px-3 py-1 text-xs rounded ${
-                          teacher.attendance === 'ALLOWED'
-                            ? 'bg-blue-50 text-blue-700'
-                            : 'bg-gray-100 text-gray-700'
-                        }`}
-                      >
-                        {teacher.attendance}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`inline-block px-3 py-1 text-xs rounded ${
-                          teacher.payroll === 'INCLUDED'
-                            ? 'bg-teal-50 text-teal-700'
-                            : 'bg-gray-100 text-gray-700'
-                        }`}
-                      >
-                        {teacher.payroll}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {teacher.joiningDate}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-2 pt-3 border-t border-gray-100">
-                        <button
-                          onClick={() => navigate(`/teachers/${teacher.id}`)}
-                          className="flex-1 px-3 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg flex items-center justify-center gap-2 transition-all"
-                        >
-                          <Eye className="w-4 h-4 text-gray-600" />
-                          <span className="text-sm font-medium text-gray-700">View</span>
-                        </button>
-                        <button
-                          onClick={() => navigate(`/teachers/editTeacher/${teacher.id}`)}
-                          className="flex-1 px-3 py-2 bg-blue-50 hover:bg-blue-100 rounded-lg flex items-center justify-center gap-2 transition-all"
-                        >
-                          <Edit className="w-4 h-4 text-blue-600" />
-                          <span className="text-sm font-medium text-blue-700">Edit</span>
-                        </button>
-                        <button
-                          onClick={() => handleToggleStatus(teacher)}
-                          disabled={loading}
-                          className={`w-10 h-5 flex items-center rounded-full p-1 transition-colors duration-300 ${
-                            teacher.status === 'ACTIVE' ? 'bg-blue-500' : 'bg-gray-300'
-                          }`}
-                        >
-                          <div
-                            className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-300 ${
-                              teacher.status === 'ACTIVE' ? 'translate-x-4' : 'translate-x-0'
-                            }`}
-                          ></div>
-                        </button>
-                      </div>
+              )
+                : teachers.length === 0 ? (
+                  <tr>
+                    <td colSpan="11">
+                      <NoDataFound message="No teachers found" />
                     </td>
                   </tr>
-                ))
-              )}
+                )
+                  : (
+                    teachers.map((teacher) => (
+                      <tr key={teacher.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {teacher.employeeCode}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center gap-3">
+                            <img src={teacher.image} className="w-10 h-10 rounded-full" alt="" />
+                            <div>
+                              <div className="text-sm font-medium text-gray-900">{teacher.name}</div>
+                              <div className="text-xs text-gray-500">{teacher.role}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {teacher.mobile}
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex flex-wrap gap-1">
+                            {(teacher.classes || []).map((cls, idx) => (
+                              <span
+                                key={idx}
+                                className="inline-block px-2 py-1 text-xs bg-blue-50 text-blue-600 rounded"
+                              >
+                                {cls}
+                              </span>
+                            ))}
+                          </div>
+                        </td>
+
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span
+                            className={`inline-block px-3 py-1 text-xs rounded-full ${teacher.salaryType === 'MONTHLY'
+                              ? 'bg-teal-50 text-teal-700'
+                              : 'bg-yellow-50 text-yellow-700'
+                              }`}
+                          >
+                            {teacher.salaryType}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span
+                            className={`inline-flex items-center gap-1 px-3 py-1 text-xs rounded-full ${teacher.status === 'ACTIVE'
+                              ? 'bg-green-50 text-green-700'
+                              : 'bg-red-50 text-red-700'
+                              }`}
+                          >
+                            <span
+                              className={`w-1.5 h-1.5 rounded-full ${teacher.status === 'ACTIVE' ? 'bg-green-500' : 'bg-red-500'
+                                }`}
+                            ></span>
+                            {teacher.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span
+                            className={`inline-block px-3 py-1 text-xs rounded ${teacher.attendance === 'ALLOWED'
+                              ? 'bg-blue-50 text-blue-700'
+                              : 'bg-gray-100 text-gray-700'
+                              }`}
+                          >
+                            {teacher.attendance}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span
+                            className={`inline-block px-3 py-1 text-xs rounded ${teacher.payroll === 'INCLUDED'
+                              ? 'bg-teal-50 text-teal-700'
+                              : 'bg-gray-100 text-gray-700'
+                              }`}
+                          >
+                            {teacher.payroll}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {teacher.joiningDate}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center gap-2 pt-3 border-t border-gray-100">
+                            <button
+                              onClick={() => navigate(`/teachers/${teacher.id}`)}
+                              className="flex-1 px-3 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg flex items-center justify-center gap-2 transition-all"
+                            >
+                              <Eye className="w-4 h-4 text-gray-600" />
+                              <span className="text-sm font-medium text-gray-700">View</span>
+                            </button>
+                            <button
+                              onClick={() => navigate(`/teachers/editTeacher/${teacher.id}`)}
+                              className="flex-1 px-3 py-2 bg-blue-50 hover:bg-blue-100 rounded-lg flex items-center justify-center gap-2 transition-all"
+                            >
+                              <Edit className="w-4 h-4 text-blue-600" />
+                              <span className="text-sm font-medium text-blue-700">Edit</span>
+                            </button>
+                            <button
+                              onClick={() => handleToggleStatus(teacher)}
+                              disabled={loading}
+                              className={`w-10 h-5 flex items-center rounded-full p-1 transition-colors duration-300 ${teacher.status === 'ACTIVE' ? 'bg-blue-500' : 'bg-gray-300'
+                                }`}
+                            >
+                              <div
+                                className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-300 ${teacher.status === 'ACTIVE' ? 'translate-x-4' : 'translate-x-0'
+                                  }`}
+                              ></div>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
             </tbody>
           </table>
         </div>
@@ -512,9 +499,8 @@ const TeachersTable = ({
               <button
                 key={idx + 1}
                 onClick={() => setPage(idx + 1)}
-                className={`px-3 py-1 rounded transition-all ${
-                  page === idx + 1 ? 'bg-blue-500 text-white' : 'text-gray-600 hover:bg-gray-100'
-                }`}
+                className={`px-3 py-1 rounded transition-all ${page === idx + 1 ? 'bg-blue-500 text-white' : 'text-gray-600 hover:bg-gray-100'
+                  }`}
               >
                 {idx + 1}
               </button>
@@ -583,11 +569,10 @@ const TeachersTable = ({
                   <button
                     key={idx + 1}
                     onClick={() => setPage(idx + 1)}
-                    className={`px-3 py-1 rounded transition-all ${
-                      page === idx + 1
-                        ? 'bg-blue-500 text-white'
-                        : 'text-gray-600 hover:bg-gray-100'
-                    }`}
+                    className={`px-3 py-1 rounded transition-all ${page === idx + 1
+                      ? 'bg-blue-500 text-white'
+                      : 'text-gray-600 hover:bg-gray-100'
+                      }`}
                   >
                     {idx + 1}
                   </button>
@@ -596,9 +581,8 @@ const TeachersTable = ({
                 <>
                   <button
                     onClick={() => setPage(1)}
-                    className={`px-3 py-1 rounded transition-all ${
-                      page === 1 ? 'bg-blue-500 text-white' : 'text-gray-600 hover:bg-gray-100'
-                    }`}
+                    className={`px-3 py-1 rounded transition-all ${page === 1 ? 'bg-blue-500 text-white' : 'text-gray-600 hover:bg-gray-100'
+                      }`}
                   >
                     1
                   </button>
@@ -614,11 +598,10 @@ const TeachersTable = ({
                   {page < totalPages - 2 && <span className="px-2 text-gray-400">...</span>}
                   <button
                     onClick={() => setPage(totalPages)}
-                    className={`px-3 py-1 rounded transition-all ${
-                      page === totalPages
-                        ? 'bg-blue-500 text-white'
-                        : 'text-gray-600 hover:bg-gray-100'
-                    }`}
+                    className={`px-3 py-1 rounded transition-all ${page === totalPages
+                      ? 'bg-blue-500 text-white'
+                      : 'text-gray-600 hover:bg-gray-100'
+                      }`}
                   >
                     {totalPages}
                   </button>
