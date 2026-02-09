@@ -1,7 +1,7 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Dashboard from '../Pages/Dashboard';
-import Attendance from '../Pages/Attendance';
+import Attendance from '../Pages/Attendance/Attendance';
 import Leaves from '../Pages/leaves';
 import Payroll from '../Pages/Payroll';
 import Teachers from '../Pages/Teachers/Teachers';
