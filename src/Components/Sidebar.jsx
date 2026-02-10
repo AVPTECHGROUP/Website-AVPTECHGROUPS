@@ -18,53 +18,57 @@ const Sidebar = ({
   sidebarOpen,
   setSidebarOpen,
   setMobileSidebarOpen,
-  onLogout
 }) => {
   const navigate = useNavigate()
   const location = useLocation()
   const [openDropdowns, setOpenDropdowns] = useState({})
 
+  const onLogout = () => {
+    localStorage.removeItem('token')
+    navigate('/login', { replace: true })
+  } 
+
   const menuItems = [
-    { 
-      id: 'dashboard', 
-      icon: LayoutDashboard, 
-      label: 'Dashboard', 
+    {
+      id: 'dashboard',
+      icon: LayoutDashboard,
+      label: 'Dashboard',
       route: '/dashboard',
     },
     { id: 'manageUsers', icon: UserCog, label: 'Manage Users', route: '/dashboard/manageUsers' },
-   {
-  id: 'attendance',
-  icon: Calendar,
-  label: (
-    <span className="t font-semibold">Attendance</span>),
-  route: '/attendance',
-  subItems: [
     {
+      id: 'attendance',
+      icon: Calendar,
       label: (
-        <span className="text-sm text-gray-600 hover:text-blue-600">
-          Mark Attendance
-        </span>
-      ),
-      route: '/attendance/markUserAttendance'
+        <span className="t font-semibold">Attendance</span>),
+      route: '/attendance',
+      subItems: [
+        {
+          label: (
+            <span className="text-sm text-gray-600 hover:text-blue-600">
+              Mark Attendance
+            </span>
+          ),
+          route: '/attendance/markUserAttendance'
+        },
+        {
+          label: (
+            <span className="text-sm text-gray-600 hover:text-blue-600">
+              Attendance Registration
+            </span>
+          ),
+          route: '/attendance/attendanceImgReg'
+        },
+        {
+          label: (
+            <span className="text-sm text-gray-600 hover:text-blue-600">
+              Pending Approvals
+            </span>
+          ),
+          route: '/attendance/usersAttendance'
+        }
+      ]
     },
-    {
-      label: (
-        <span className="text-sm text-gray-600 hover:text-blue-600">
-          Attendance Registration
-        </span>
-      ),
-      route: '/attendance/attendanceImgReg'
-    },
-    {
-      label: (
-        <span className="text-sm text-gray-600 hover:text-blue-600">
-          Pending Approvals
-        </span>
-      ),
-      route: '/attendance/usersAttendance'
-    }
-  ]
-},
     { id: 'teachers', icon: Users, label: 'Teachers', route: '/teachers' },
     { id: 'leaves', icon: FileText, label: 'Leaves', route: '/leaves' },
     { id: 'payroll', icon: IndianRupee, label: 'Payroll', route: '/payroll' },
@@ -75,11 +79,11 @@ const Sidebar = ({
   useEffect(() => {
     menuItems.forEach(item => {
       if (item.subItems) {
-        const isSubItemActive = item.subItems.some(subItem => 
+        const isSubItemActive = item.subItems.some(subItem =>
           location.pathname.startsWith(subItem.route)
         )
         const isMainRouteActive = location.pathname === item.route
-        
+
         if (isSubItemActive || isMainRouteActive) {
           setOpenDropdowns(prev => ({
             ...prev,
@@ -100,12 +104,12 @@ const Sidebar = ({
   const handleMenuClick = (route, hasSubItems, itemId) => {
     // Navigate to the route first
     navigate(route)
-    
+
     // Then toggle dropdown if it has sub-items and sidebar is open
     if (hasSubItems && sidebarOpen) {
       toggleDropdown(itemId)
     }
-    
+
     // Close mobile sidebar
     if (window.innerWidth < 1024) {
       setMobileSidebarOpen(false)
@@ -130,7 +134,7 @@ const Sidebar = ({
   const isRouteActive = (route, subItems) => {
     // Check if main route is active
     if (location.pathname === route) return true
-    
+
     // Check if any sub-item route is active
     if (subItems) {
       return subItems.some(subItem => location.pathname.startsWith(subItem.route))
@@ -153,7 +157,7 @@ const Sidebar = ({
           {sidebarOpen && (
             <div>
               <h2 className="font-semibold text-gray-900 text-sm text-nowrap">
-                Delhi Public International <br/> School
+                Delhi Public International <br /> School
               </h2>
               <p className="text-xs text-gray-500">Management System</p>
             </div>
@@ -183,8 +187,8 @@ const Sidebar = ({
                   {sidebarOpen && <span className="font-medium">{item.label}</span>}
                 </div>
                 {sidebarOpen && hasSubItems && (
-                  isOpen ? 
-                    <ChevronDown className="w-4 h-4" /> : 
+                  isOpen ?
+                    <ChevronDown className="w-4 h-4" /> :
                     <ChevronRight className="w-4 h-4" />
                 )}
               </button>
@@ -198,8 +202,8 @@ const Sidebar = ({
                       onClick={() => handleSubItemClick(subItem.route)}
                       className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm transition-all
                       ${location.pathname.startsWith(subItem.route)
-                        ? 'bg-blue-50 text-blue-600 font-medium' 
-                        : 'text-gray-600 hover:bg-gray-100'}`}
+                          ? 'bg-blue-50 text-blue-600 font-medium'
+                          : 'text-gray-600 hover:bg-gray-100'}`}
                     >
                       <span>{subItem.label}</span>
                     </button>
@@ -213,8 +217,8 @@ const Sidebar = ({
 
       {/* Logout */}
       <div className="p-4">
-        <button 
-          onClick={()=>{onLogout; localStorage.setItem('token','')}}
+        <button
+          onClick={() => onLogout()}
           className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 hover:bg-gray-100
           ${!sidebarOpen ? 'justify-center' : ''}`}
         >

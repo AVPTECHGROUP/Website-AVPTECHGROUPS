@@ -402,18 +402,7 @@ const TeachersTable = ({
                         ))}
                       </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-wrap gap-1">
-                        {(teacher.subjects || []).map((subject, idx) => (
-                          <span
-                            key={idx}
-                            className="inline-block px-2 py-1 text-xs bg-purple-50 text-purple-600 rounded"
-                          >
-                            {subject}
-                          </span>
-                        ))}
-                      </div>
-                    </td>
+                  
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
                         className={`inline-block px-3 py-1 text-xs rounded-full ${

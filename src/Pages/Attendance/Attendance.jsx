@@ -182,6 +182,7 @@ const Attendance = () => {
                     <option value="ALL">All Status</option>
                     <option value="PRESENT">Present</option>
                     <option value="ABSENT">Absent</option>
+                    <option value="LATE">Late</option>
                   </select>
                 </div>
               </div>
@@ -202,7 +203,7 @@ const Attendance = () => {
                     <th className="px-4 lg:px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">STATUS</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">  
+                <tbody className="divide-y divide-gray-100">
                   {/* Loading */}
                   {listLoading && (
                     <tr>
@@ -248,13 +249,17 @@ const Attendance = () => {
 
                       <td className="px-4 lg:px-6 py-4">
                         <span
-                          className={`px-2.5 py-1 rounded text-xs font-semibold ${item.status === 'PRESENT'
+                          className={`px-2.5 py-1 rounded text-xs font-semibold
+    ${item.status === 'PRESENT'
                               ? 'bg-green-50 text-green-700'
-                              : 'bg-red-50 text-red-700'
+                              : item.status === 'LATE'
+                                ? 'bg-yellow-50 text-yellow-700'
+                                : 'bg-red-50 text-red-700'
                             }`}
                         >
                           {item.status}
                         </span>
+
                       </td>
                     </tr>
                   ))}
@@ -302,13 +307,17 @@ const Attendance = () => {
                       </p>
                     </div>
                     <span
-                      className={`px-2.5 py-1 rounded text-xs font-semibold shrink-0 ${item.status === 'PRESENT'
+                      className={`px-2.5 py-1 rounded text-xs font-semibold
+    ${item.status === 'PRESENT'
                           ? 'bg-green-50 text-green-700'
-                          : 'bg-red-50 text-red-700'
+                          : item.status === 'LATE'
+                            ? 'bg-yellow-50 text-yellow-700'
+                            : 'bg-red-50 text-red-700'
                         }`}
                     >
                       {item.status}
                     </span>
+
                   </div>
 
                   {/* Additional Details */}
