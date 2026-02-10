@@ -7,8 +7,8 @@ export default function CardComponent({ IconName, keyName, val, iconTxColor, ico
                 <IconName className={`w-6 h-6 ${iconTxColor} `} />
             </div>
             <div className="min-w-0">
-                <p className="text-gray-600 font-semibold text-sm">{keyName}</p>
-                <p className="text-2xl font-bold text-gray-900">{val}</p>
+                <p className="text-gray-600 font-semibold sm:text-lg text-sm">{keyName}</p>
+                <p className="sm:text-2xl font-bold text-gray-900">{val}</p>
             </div>
         </div>
     </div>
