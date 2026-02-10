@@ -167,7 +167,6 @@ export const approveManualAttendance = async ({
     if (!res.ok) {
       throw new Error(data?.message || "Manual attendance failed");
     }
-
     return data;
   } catch (error) {
     console.error("Manual Attendance Error:", error);
@@ -175,3 +174,66 @@ export const approveManualAttendance = async ({
   }
 };
 
+// Attendance Statistics
+
+export const attendanceStatistics = async (date) => {
+  try {
+    const res = await fetch(
+      `${BASE_URL}/attendance/admin/statistics?date=${date}`,
+      {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+        },
+      }
+    );
+    if (!res.ok) {
+      throw new Error("Failed to fetch Attendance Statistics");
+    }
+    const response = await res.json();
+    return response.data; 
+  } catch (error) {
+    console.error("Attendance Statistics Error:", error);
+    throw error;
+  }
+};
+
+//All Attendance details list
+
+export const allAttendanceDetails = async ({
+  attendanceDate,
+  role,
+  status,
+  page = 0,
+  size = 10,
+  sort = 'id'
+} = {}) => {
+  try {
+    const params = new URLSearchParams()
+
+    if (attendanceDate) params.append('attendance_date', attendanceDate)
+    if (role && role !== 'ALL') params.append('user_type', role)
+    if (status && status !== 'ALL') params.append('status', status)
+      
+    params.append('page', page)
+    params.append('size', size)
+    params.append('sort', sort)
+
+    const res = await fetch(
+      `${BASE_URL}/attendance/admin/all?${params.toString()}`,
+      {
+        method: 'GET',
+        headers: { Accept: 'application/json' }
+      }
+    )
+
+    if (!res.ok) {
+      throw new Error('Failed to load attendance details')
+    }
+
+    return await res.json()
+  } catch (error) {
+    console.error('Attendance Details Error:', error)
+    throw error
+  }
+}

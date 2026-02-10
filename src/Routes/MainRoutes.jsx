@@ -1,68 +1,84 @@
-import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
+
+// Layout & Protection
+import AppLayout from '../Layout/AppLayout';
+import ProtectedRoutes from '../utils/Protectedroutes';
+
+// Pages
+import Login from '../Pages/Login_2';
 import Dashboard from '../Pages/Dashboard';
-import Attendance from '../Pages/Attendance';
+import Attendance from '../Pages/Attendance/Attendance';
 import Leaves from '../Pages/leaves';
 import Payroll from '../Pages/Payroll';
 import Teachers from '../Pages/Teachers/Teachers';
 import Settings from '../Pages/Settings';
-import DetailsView from '../Pages/Teachers/DetailsView';
-import AddNewTeacher from '../Pages/Teachers/AddNewTeacher';
-import AddnewSystemUser from '../Pages/SuperAdmin/AddnewSystemUser';
-import EditTeachersDetails from '../Pages/Teachers/EditTeachersDetaills'
-import ClassAssignment from '../Pages/Teachers/ClassAssignment';
-import EditSysUser from '../Pages/SuperAdmin/EditSysUser';
-import ManageAllUsers from '../Pages/SuperAdmin/ManageAllUsers';  
-import WarningVerificationFailed from '../Components/UserAttendance/WarningVerificationFailed';
-import ManualAttendance from '../Components/UserAttendance/ManualAttendanceRequest';
-import ApprovedManualAttendance from '../Components/UserAttendance/ApprovedManualAttendance';
+
+// Attendance
 import UsersAttendance from '../Pages/Attendance/UsersAttendance';
 import AttendanceImgReg from '../Pages/Attendance/AttendanceImgReg';
 import MarkUserAttendance from '../Pages/Attendance/MarkUserAttendance';
+import WarningVerificationFailed from '../Components/UserAttendance/WarningVerificationFailed';
+import ManualAttendance from '../Components/UserAttendance/ManualAttendanceRequest';
+
+// Teachers
+import DetailsView from '../Pages/Teachers/DetailsView';
+import AddNewTeacher from '../Pages/Teachers/AddNewTeacher';
+import EditTeachersDetails from '../Pages/Teachers/EditTeachersDetaills';
+import ClassAssignment from '../Pages/Teachers/ClassAssignment';
+
+// Super Admin
+import AddnewSystemUser from '../Pages/SuperAdmin/AddnewSystemUser';
+import EditSysUser from '../Pages/SuperAdmin/EditSysUser';
+import ManageAllUsers from '../Pages/SuperAdmin/ManageAllUsers';
 
 const MainRoutes = () => {
   return (
     <Routes>
 
-      {/* Default Redirect */}
-      <Route path="/" element={<Navigate to="/dashboard" />} />
+      {/* Default */}
+      {/* <Route path="/" element={<Navigate to="/login" />} /> */}
 
-      {/* Pages */}
-      <Route path="/dashboard" element={<Dashboard />} />
-      <Route path="/attendance" element={<Attendance />} />
-      {/* Attendance routes */}
-      <Route path="/attendance/attendanceImgReg" element={<AttendanceImgReg/>}/>
-      <Route path='/attendance/markUserAttendance' element={<MarkUserAttendance/>}/>
-      <Route path='/attendance/usersAttendance' element={<UsersAttendance/>}/>
-      <Route path='/attendance/usersAttendance/warning' element={<WarningVerificationFailed/>}/>
-      <Route path='/attendance/usersAttendance/manual' element={<ManualAttendance/>}/>
-      <Route path='/attendance/usersAttendance/approved' element={<ApprovedManualAttendance/>}/>
-      {/*  */}
-      <Route path="/leaves" element={<Leaves />} />
-      <Route path="/payroll" element={<Payroll />} />
+      {/* 🔓 PUBLIC ROUTE (NO SIDEBAR) */}
+      <Route path="/login" element={<Login />} />
 
-      {/* Super Admin  */}
-      <Route path='/dashboard/addUser' element={<AddnewSystemUser/>} />
-      <Route path='/dashboard/editUser' element={<EditSysUser/>} />
-      <Route path='/dashboard/manageUsers' element={<ManageAllUsers/>} />
+      {/* 🔐 PROTECTED ROUTES */}
+      <Route element={<ProtectedRoutes />}>
+        <Route element={<AppLayout />}>
 
-      {/* Teachers */}
-      <Route path="/teachers" element={<Teachers />} />
-      <Route path="/teachers/addTeacher" element={<AddNewTeacher />} />
-      <Route path="/teachers/assign" element={<ClassAssignment />} />
-      <Route path="/teachers/:id" element={<DetailsView />} />
-      <Route path="/teachers/editTeacher/:id" element={<EditTeachersDetails/>} />
-      
-        <Route path="/teachers/classAssignment" element={<ClassAssignment />} />
-       {/* for testing purpose */}
-       <Route path='dashboard/addSystemUser' element={<AddnewSystemUser/>} />
+          <Route path="/dashboard" element={<Dashboard />} />
 
-      
+          {/* Attendance */}
+          <Route path="/attendance" element={<Attendance />} />
+          <Route path="/attendance/attendanceImgReg" element={<AttendanceImgReg />} />
+          <Route path="/attendance/markUserAttendance" element={<MarkUserAttendance />} />
+          <Route path="/attendance/usersAttendance" element={<UsersAttendance />} />
+          <Route path="/attendance/usersAttendance/warning" element={<WarningVerificationFailed />} />
+          <Route path="/attendance/usersAttendance/manual" element={<ManualAttendance />} />
 
-      <Route path="/settings" element={<Settings />} />
+          {/* Others */}
+          <Route path="/leaves" element={<Leaves />} />
+          <Route path="/payroll" element={<Payroll />} />
 
-      {/* Fallback */}
-      <Route path="*" element={<Navigate to="/dashboard" />} />
+          {/* Teachers */}
+          <Route path="/teachers" element={<Teachers />} />
+          <Route path="/teachers/addTeacher" element={<AddNewTeacher />} />
+          <Route path="/teachers/:id" element={<DetailsView />} />
+          <Route path="/teachers/editTeacher/:id" element={<EditTeachersDetails />} />
+          <Route path="/teachers/classAssignment" element={<ClassAssignment />} />
+
+          {/* Super Admin */}
+          <Route path="/dashboard/addUser" element={<AddnewSystemUser />} />
+          <Route path="/dashboard/editUser/:id" element={<EditSysUser />} />
+          <Route path="/dashboard/manageUsers" element={<ManageAllUsers />} />
+
+          {/* Settings */}
+          <Route path="/settings" element={<Settings />} />
+
+          {/* Fallback */}
+          <Route path="*" element={<Navigate to="/dashboard" />} />
+
+        </Route>
+      </Route>
 
     </Routes>
   );
