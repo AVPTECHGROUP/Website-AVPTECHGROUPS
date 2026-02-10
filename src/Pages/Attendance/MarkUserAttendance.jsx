@@ -11,7 +11,7 @@ const MarkUserAttendance = () => {
   const [successName, setSuccessName] = useState("");
   const [showAlreadyPopup, setShowAlreadyPopup] = useState(false);
   const [alreadyName, setAlreadyName] = useState("");
-  const [isCapturing, setIsCapturing] = useState(false);
+
 
   const webcamRef = useRef(null);
   const navigate = useNavigate()
@@ -32,60 +32,73 @@ const MarkUserAttendance = () => {
   };
 
   // Capture image
-  const captureImage = async () => {
-    if (!webcamRef.current || isCapturing) return;
+ const captureImage = async () => {
+  if (!webcamRef.current) return;
 
-    setIsCapturing(true); // 🔒 button lock
+  const imageSrc = webcamRef.current.getScreenshot();
+  if (!imageSrc) {
+    toast.error("Failed to capture image");
+    return;
+  }
 
-    const imageSrc = webcamRef.current.getScreenshot();
-    if (!imageSrc) {
-      toast.error("Failed to capture image");
-      setIsCapturing(false);
+  try {
+    const imageFile = base64ToFile(imageSrc, "attendance.jpg");
+
+    const response = await markAttendanceByFace({
+      imageFile,
+      gpsLatitude: "28.6139",
+      gpsLongitude: "77.209",
+    });
+
+    // ❌ Face not verified
+    if (!response?.success || !response?.data?.verified) {
+      toast.error("Face not recognized");
+      navigate("/attendance/usersAttendance/warning");
       return;
     }
 
-    try {
-      const imageFile = base64ToFile(imageSrc, "attendance.jpg");
+    const userName = response.data.userName || "User";
 
-      const response = await markAttendanceByFace({
-        imageFile,
-        gpsLatitude: "28.6139",
-        gpsLongitude: "77.209",
+    // 🔥 MESSAGE (backend driven)
+    const backendMessage =
+      response.data.message || response.message || "";
+
+    // ⚠️ ALREADY MARKED CASE
+    if (backendMessage.toLowerCase().includes("already")) {
+      toast.warning(`${userName} — ${backendMessage}`, {
+        autoClose: 3000,
       });
 
-      if (!response?.success || !response?.data?.verified) {
-        toast.error("Face not recognized");
-        navigate("/attendance/usersAttendance/warning");
-        return;
-      }
+      setAlreadyName(userName);
+      setShowAlreadyPopup(true);
 
-      const userName = response.data.userName || "User";
-      const backendMessage =
-        response.data.message || response.message || "";
+      setTimeout(() => {
+        setShowAlreadyPopup(false);
+      }, 3000);
 
-      if (backendMessage.toLowerCase().includes("already")) {
-        toast.warning(`${userName} — ${backendMessage}`);
-        setAlreadyName(userName);
-        setShowAlreadyPopup(true);
-        setTimeout(() => setShowAlreadyPopup(false), 3000);
-        return;
-      }
-
-      toast.success(`${userName} — ${backendMessage}`);
-      setSuccessName(userName);
-      setShowSuccessPopup(true);
-      setTimeout(() => setShowSuccessPopup(false), 3000);
-
-    } catch (error) {
-      console.error("Attendance error:", error);
-      toast.error("Something went wrong. Please try again.");
-      navigate("/attendance/usersAttendance/warning");
-    } finally {
-      setIsCapturing(false); // 🔓 button unlock
-      setActive(false);
+      return;
     }
-  };
 
+    // ✅ FIRST TIME SUCCESS
+    toast.success(`${userName} — ${backendMessage}`, {
+      autoClose: 3000,
+    });
+
+    setSuccessName(userName);
+    setShowSuccessPopup(true);
+
+    setTimeout(() => {
+      setShowSuccessPopup(false);
+    }, 3000);
+
+  } catch (error) {
+    console.error("Attendance error:", error);
+    toast.error("Something went wrong. Please try again.");
+    navigate("/attendance/usersAttendance/warning");
+  } finally {
+    setActive(false);
+  }
+};
   // Handle webcam errors
   const handleWebcamError = (error) => {
     console.error('Webcam error:', error);
@@ -173,12 +186,7 @@ const MarkUserAttendance = () => {
         </div>
         {/* Camera Section */}
         <div className="bg-gray-50 rounded-xl p-6 md:p-5 mb-6">
-          <div 
-            className="relative w-full max-w-xl mx-auto bg-white rounded-lg border-2 border-dashed border-blue-200 flex items-center justify-center overflow-hidden"
-            style={{
-              aspectRatio: active && window.innerWidth < 420 ? '9/16' : '3/2'
-            }}
-          >
+          <div className="relative w-full max-w-xl mx-auto aspect-3/2 bg-white rounded-lg border-2 border-dashed border-blue-200 flex items-center justify-center overflow-hidden">
             {!active ? (
               /* Placeholder */
               <div className="flex flex-col items-center justify-center text-center p-4">
@@ -203,9 +211,7 @@ const MarkUserAttendance = () => {
                   mirrored={true}
                   onUserMediaError={handleWebcamError}
                   videoConstraints={{
-                    facingMode: 'user',
-                    width: { ideal: 1280 },
-                    height: { ideal: 720 }
+                    facingMode: 'user'
                   }}
                 />
 
@@ -230,24 +236,23 @@ const MarkUserAttendance = () => {
             {!active ? (
               <button
                 onClick={handleMarkAttendance}
-                className="flex items-center text-xl gap-2 cursor-pointer bg-blue-600 hover:bg-blue-700 text-white font-semibold px-9 py-3 rounded-lg transition-colors duration-200 shadow-md hover:shadow-lg max-[420px]:text-base max-[420px]:px-6 max-[420px]:py-2.5"
+                className="flex items-center text-xl gap-2 cursor-pointer bg-blue-600 hover:bg-blue-700 text-white font-semibold px-9 py-3 rounded-lg transition-colors duration-200 shadow-md hover:shadow-lg"
               >
-                <Camera className="w-5 h-5 max-[420px]:w-4 max-[420px]:h-4" />
+                <Camera className="w-5 h-5" />
                 Mark Attendance
               </button>
             ) : (
-              <div className="flex gap-3 max-[420px]:gap-2">
+              <div className="flex gap-3">
                 <button
                   onClick={captureImage}
-                  disabled={isCapturing}
-                  className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold shadow-md transition max-[420px]:px-4 max-[420px]:py-2 max-[420px]:text-sm ${isCapturing ? " bg-green-400 cursor-not-allowed " : " bg-green-600 hover:bg-green-700 cursor-pointer "} text-white`}>
-                  <Camera className="w-5 h-5 max-[420px]:w-4 max-[420px]:h-4" />
-                  {isCapturing ? "Captured..." : "Capture"}
+                  className="flex items-center gap-2 cursor-pointer bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-3 rounded-lg transition-colors duration-200 shadow-md hover:shadow-lg"
+                >
+                  <Camera className="w-5 h-5" />
+                  Capture
                 </button>
-
                 <button
                   onClick={() => setActive(false)}
-                  className="flex items-center gap-2 cursor-pointer bg-gray-600 hover:bg-gray-700 text-white font-semibold px-6 py-3 rounded-lg transition-colors duration-200 shadow-md hover:shadow-lg max-[420px]:px-4 max-[420px]:py-2 max-[420px]:text-sm"
+                  className="flex items-center gap-2 cursor-pointer bg-gray-600 hover:bg-gray-700 text-white font-semibold px-6 py-3 rounded-lg transition-colors duration-200 shadow-md hover:shadow-lg"
                 >
                   Cancel
                 </button>

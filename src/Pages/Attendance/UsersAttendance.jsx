@@ -9,22 +9,17 @@ const UsersAttendance = () => {
   // State management
   const [currentPage, setCurrentPage] = useState(1)
   const [pendingUsers, setpendingUsers] = useState([])
-  const [listLoading, setListLoading] = useState(false)
   const itemsPerPage = 10
   const date = new Date().toLocaleDateString()
 
   useEffect(() => {
     const loadPendingList = async () => {
       try {
-        setListLoading(true);
         const approvals = await pendingApprovals()
         setpendingUsers(approvals)
       }
       catch (error) {
         toast.error(error.message)
-      }
-      finally {
-        setListLoading(false);
       }
     }
     loadPendingList();
@@ -45,6 +40,7 @@ const UsersAttendance = () => {
         overrideStatus: "PRESENT",
       });
 
+      // 🔁 Update UI status instantly
       setpendingUsers(prev =>
         prev.map(u =>
           u.id === user.id
@@ -52,6 +48,8 @@ const UsersAttendance = () => {
             : u
         )
       );
+
+      // 🎉 Toast (only username + message)
       toast.success(
         `${user.userName || "User"} - ${res.message}`
       );
@@ -60,6 +58,8 @@ const UsersAttendance = () => {
       toast.error(error.message || "Approval failed");
     }
   };
+
+
   // Pagination handlers
   const goToPage = (page) => {
     setCurrentPage(page)
@@ -116,17 +116,7 @@ const UsersAttendance = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {listLoading && (
-                    <tr>
-                      <td colSpan="7" className="py-10">
-                        <div className="flex justify-center flex-col items-center">
-                          <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
-                          <p className='text-sm sm:text-xl mt-2'>Loading...</p>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                  {!listLoading && currentUsers.length > 0 && (
+                  {currentUsers.length > 0 ? (
                     currentUsers.map((user) => (
                       <tr key={user.id} className="hover:bg-gray-50 transition-colors">
                         <td className="px-4 text-center py-4">
@@ -179,8 +169,7 @@ const UsersAttendance = () => {
                         </td>
                       </tr>
                     ))
-                  )}
-                  {!listLoading && currentUsers.length === 0 && (
+                  ) : (
                     <tr>
                       <td colSpan={7} className="px-6 py-16 text-center">
                         <div className="flex flex-col items-center justify-center gap-3 text-gray-500">
@@ -290,8 +279,8 @@ const UsersAttendance = () => {
                     onClick={() => handleApprove(user)}
                     disabled={user.status === "PRESENT"}
                     className={`w-full px-4 py-3 rounded-xl font-semibold text-white transition-all ${user.status === "PRESENT"
-                      ? "bg-green-500 cursor-not-allowed"
-                      : "bg-blue-500 hover:bg-blue-600"}`}>
+                        ? "bg-green-500 cursor-not-allowed"
+                        : "bg-blue-500 hover:bg-blue-600"}`}>
                     {user.status === "PRESENT" ? "Approved" : "Approve"}
                   </button>
                 </div>
