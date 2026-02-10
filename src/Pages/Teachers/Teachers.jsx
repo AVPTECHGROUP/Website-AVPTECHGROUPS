@@ -5,31 +5,32 @@ import QuickActions from '../../Components/Teacher/ManagementComponents/QuickAct
 import TeachersFilters from '../../Components/Teacher/ManagementComponents/TeachersFilters';
 import TeachersTable from '../../Components/Teacher/ManagementComponents/TeachersTable';
 
-const Teachers = () => { 
+const Teachers = () => {
 
   // STATE MANAGEMENT 
-  
+   const [refressStat, setRefressStat] = useState(0);
   // Search and Filters
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All Status');
   const [classFilter, setClassFilter] = useState('All Classes');
   const [salaryFilter, setSalaryFilter] = useState('All Salary Types');
-  
+
   // Pagination
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [totalElements, setTotalElements] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
-  
+
   // UI State
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
-  
+
   // Data State
   const [teachers, setTeachers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  const [classAssignTeacherId, setClassAssignTeacherId] = useState(null);
   // DEBOUNCED SEARCH
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -40,18 +41,18 @@ const Teachers = () => {
   }, [search]);
 
   // CHECK IF FILTERS ARE ACTIVE
-  
-const hasActiveFilters = useMemo(() => {
-  return (
-    debouncedSearch.trim() !== '' ||
-    statusFilter !== 'All Status' ||
-    classFilter !== 'All Classes' ||
-    salaryFilter !== 'All Salary Types'
-  );
-}, [debouncedSearch, statusFilter, classFilter, salaryFilter]);
+
+  const hasActiveFilters = useMemo(() => {
+    return (
+      debouncedSearch.trim() !== '' ||
+      statusFilter !== 'All Status' ||
+      classFilter !== 'All Classes' ||
+      salaryFilter !== 'All Salary Types'
+    );
+  }, [debouncedSearch, statusFilter, classFilter, salaryFilter]);
 
   // FETCH TEACHERS API CALL
-   
+
   const fetchTeachers = async () => {
     setLoading(true);
     setError(null);
@@ -103,17 +104,17 @@ const hasActiveFilters = useMemo(() => {
         joiningDate: teacher.joiningDate || 'N/A'
       }));
 
-     const filteredTeachers = mappedTeachers.filter(t => {
-  if (classFilter !== 'All Classes' && !t.classes.includes(classFilter)) {
-    return false;
-  }
-  if (salaryFilter !== 'All Salary Types' && t.salaryType !== (
-    salaryFilter === 'Monthly' ? 'MONTHLY' : 'PER_DAY'
-  )) {
-    return false;
-  }
-  return true;
-});
+      const filteredTeachers = mappedTeachers.filter(t => {
+        if (classFilter !== 'All Classes' && !t.classes.includes(classFilter)) {
+          return false;
+        }
+        if (salaryFilter !== 'All Salary Types' && t.salaryType !== (
+          salaryFilter === 'Monthly' ? 'MONTHLY' : 'PER_DAY'
+        )) {
+          return false;
+        }
+        return true;
+      });
 
       setTeachers(filteredTeachers);
       setTotalElements(res.pagination?.totalElements || 0);
@@ -129,58 +130,59 @@ const hasActiveFilters = useMemo(() => {
   };
 
   // FETCH ON DEPENDENCY CHANGE
-  
+
   useEffect(() => {
     fetchTeachers();
   }, [page, rowsPerPage, debouncedSearch, statusFilter, classFilter, salaryFilter, hasActiveFilters]);
 
   // // CALCULATE STATISTICS
   const [statistics, setstatistics] = useState(
-           {   totalTeachers : 0,
-              activeTeachers : 0,
-              inactiveTeachers : 0,
-              attendanceBlockedTeachers : 0}
+    {
+      totalTeachers: 0,
+      activeTeachers: 0,
+      inactiveTeachers: 0,
+      attendanceBlockedTeachers: 0
+    }
   );
 
-  const stats = useMemo(() => {
-    const total = statistics.totalTeachers || 0;
-    const active = statistics.activeTeachers || 0;
-    const inActive = statistics.inactiveTeachers || 0;
-    const payrollIncluded = teachers.filter(t => t.payroll === 'INCLUDED').length || 0;
-    const attendanceBlocked = statistics.attendanceBlockedTeachers || 0;
+ const total = statistics.totalTeachers || 0;
+  const active = statistics.activeTeachers || 0;
+  const inActive = statistics.inactiveTeachers || 0;
+  const payrollIncluded = teachers.filter(t => t.payroll === 'INCLUDED').length || 0;
+  const attendanceBlocked = statistics.attendanceBlockedTeachers || 0;
 
-    return {
-      total,
-      active,
-      activePercent: total > 0 ? Math.round((active / total) * 100) : 0,
-      inActive,
-      inActivePercent: total > 0 ? Math.round((inActive / total) * 100) : 0,
-      payrollIncluded,
-      attendanceBlocked
-    };
-  }, [teachers]);
+  const stats = {
+    total,
+    active,
+    activePercent: active,
+    inActive,
+    inActivePercent: inActive,
+    payrollIncluded,
+    attendanceBlocked
+  };
 
-   useEffect(() => {
-          let fetchStatistics = async () => {
-              try {
-                  const statistics_res = await getTeacherStatistics(); // for total statistics
-                  const res = statistics_res.data;
-                  setstatistics(res);
-              }
-              catch (e) {
-                  console.error("get statistics error:", e.message);
-                  throw error;
-              }
-          }
-          fetchStatistics();
-      }, [page, rowsPerPage])
+  useEffect(() => {
+    let fetchStatistics = async () => {
+      try {
+        const statistics_res = await getTeacherStatistics(); // for total statistics
+        const res = statistics_res.data;
+        setstatistics(res);
+      }
+      catch (e) {
+        console.error("get statistics error:", e.message);
+        throw error;
+      }
+    }
+    setTimeout(()=>{
+      fetchStatistics();
+    },3000);
+  }, [teachers])
 
 
 
   return (
     <div className="flex h-screen overflow-hidden bg-linear-to-b from-sky-50 to-sky-100">
       <div className="flex-1 overflow-auto w-0">
-        
         {/* COMPONENT 1: Header with Stats */}
         <TeachersHeader
           search={search}
@@ -193,9 +195,9 @@ const hasActiveFilters = useMemo(() => {
 
         {/* Page Content */}
         <div className="flex-1 overflow-auto p-4 sm:p-5 lg:p-4">
-          
+
           {/* COMPONENT 2: Quick Actions */}
-          <QuickActions />
+          <QuickActions teacherId={classAssignTeacherId} />
 
           {/* COMPONENT 3: Filters */}
           <TeachersFilters
@@ -203,13 +205,14 @@ const hasActiveFilters = useMemo(() => {
             setStatusFilter={setStatusFilter}
             classFilter={classFilter}
             setClassFilter={setClassFilter}
-            salaryFilter={salaryFilter} 
+            salaryFilter={salaryFilter}
             setSalaryFilter={setSalaryFilter}
             setPage={setPage}
           />
 
           {/* COMPONENT 4: Table and Pagination */}
           <TeachersTable
+            assignTeacherId={setClassAssignTeacherId}
             teachers={teachers}
             setTeachers={setTeachers}
             loading={loading}

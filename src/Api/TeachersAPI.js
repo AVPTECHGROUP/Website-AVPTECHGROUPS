@@ -249,6 +249,27 @@ export const createTeacherAssignment = async (teacherId, assignmentData) => {
   }
 };
 
+//get teachers active assignments
+export const getTeachersActiveAssignments = async (teacherId) => {
+  try {
+    const res = await fetch(`${BASE_URL}/teachers/${teacherId}/assignments/active`, {
+      headers: {
+        accept: 'application/json'
+      }
+    });
+    
+    if (!res.ok) {
+      throw new Error('Failed to fetch assignments');
+    }
+    
+    const data = await res.json();
+    return data.data || data;
+  } catch (error) {
+    console.error(" get teachers current assignment error:", error.message);
+    throw error;
+  }
+};
+
 // Update Teacher Assignment
 // PUT /v1/teachers/assignments/{assignmentId}
 export const updateTeacherAssignment = async (assignmentId, updatedAssignment) => {

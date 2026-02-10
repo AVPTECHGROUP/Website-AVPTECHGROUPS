@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ChevronRight,
@@ -10,8 +10,9 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { activateStatus, deactivateStatus } from '../../../Api/TeachersAPI';
-
+import ActionDropDownComp from '../../CommonComp/ActionDropDownComp';
 const TeachersTable = ({
+  assignTeacherId,
   teachers,
   setTeachers,
   loading,
@@ -26,7 +27,7 @@ const TeachersTable = ({
 }) => {
   const navigate = useNavigate();
   const toggleDebounceRef = useRef(null);
-
+  const [assignId , setAssignTeacherId] = useState(null);
   // ============================================
   // HELPER FUNCTIONS
   // ============================================
@@ -79,7 +80,39 @@ const TeachersTable = ({
     }
   }, 500);
 };
+//handle on Click Actions
+ const callAllActions = async (optVal, teacher) => {
+        if (optVal === 'view') navigate(`/teachers/${teacher.id}`);
+        else if (optVal === 'editTeacher') navigate(`/teachers/editTeacher/${teacher.id}`);
+        else if (optVal === 'toogleStatus') handleToggleStatus(teacher);
+    }
 
+   const actionOptions = [
+        {
+            value: "view",
+            label: "View",
+            icon: Eye,
+            text: "text-gray-600",
+            bg: "bg-blue-50",
+            hover: "hover:bg-gray-100",
+        },
+        {
+            value: "editTeacher",
+            label: "Edit",
+            icon: Edit,
+            text: "text-blue-600",
+            bg: "bg-green-50",
+            hover: "hover:bg-blue-100",
+        },
+        {
+            value: "toogleStatus",
+            label: "Toggle Status",
+            icon: Power,
+            text: "text-yellow-600",
+            bg: "bg-yellow-50",
+            hover: "hover:bg-yellow-100",
+        },
+    ];
   // MOBILE/TABLET CARDS VIEW 
 
   return (
@@ -260,6 +293,7 @@ const TeachersTable = ({
                   </span>
                 </button>
               </div>
+              
             </div>
           ))
         )}
@@ -335,7 +369,7 @@ const TeachersTable = ({
                 </tr>
               ) : (
                 teachers.map((teacher) => (
-                  <tr key={teacher.id} className="hover:bg-gray-50">
+                  <tr onClick={()=>{setAssignTeacherId(teacher.id); assignTeacherId(teacher.id)}} key={teacher.id} className={`${assignId === teacher.id ? "bg-blue-50" : ""}`}>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {teacher.employeeCode}
                     </td>
@@ -428,7 +462,7 @@ const TeachersTable = ({
                       {teacher.joiningDate}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-2 pt-3 border-t border-gray-100">
+                      {/* <div className="flex items-center gap-2 pt-3 border-t border-gray-100">
                         <button
                           onClick={() => navigate(`/teachers/${teacher.id}`)}
                           className="flex-1 px-3 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg flex items-center justify-center gap-2 transition-all"
@@ -456,7 +490,8 @@ const TeachersTable = ({
                             }`}
                           ></div>
                         </button>
-                      </div>
+                      </div> */}
+                      <ActionDropDownComp actionOptions={actionOptions} onAction={(optVal) => callAllActions(optVal, teacher)} />
                     </td>
                   </tr>
                 ))

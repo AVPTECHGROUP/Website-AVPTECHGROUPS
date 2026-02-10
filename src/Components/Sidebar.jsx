@@ -196,7 +196,7 @@ const Sidebar = ({
       {/* Logout */}
       <div className="p-4">
         <button 
-          onClick={onLogout}
+          onClick={()=>{onLogout; localStorage.setItem('token','')}}
           className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 hover:bg-gray-100
           ${!sidebarOpen ? 'justify-center' : ''}`}
         >

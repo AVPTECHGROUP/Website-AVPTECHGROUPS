@@ -28,16 +28,11 @@ const MainRoutes = () => {
     <Routes>
 
       {/* Default Redirect */}
-      <Route path="/" element={<Navigate to="/login" />} />
-
       {/* Pages */}
       <Route path='/login' element={<Login_2 />} />
 
-
-
       <Route element={<Protectedroutes />}>
         <Route element={<AppLayout />} >
-
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/attendance" element={<Attendance />} />
         <Route path="/leaves" element={<Leaves />} />
