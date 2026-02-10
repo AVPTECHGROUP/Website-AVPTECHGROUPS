@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { getTeachers, searchTeachers } from '../../Api/TeachersAPI';
+import { getTeachers, getTeacherStatistics, searchTeachers } from '../../Api/TeachersAPI';
 import TeachersHeader from '../../Components/Teacher/ManagementComponents/TeachersHeader';
 import QuickActions from '../../Components/Teacher/ManagementComponents/QuickActions';
 import TeachersFilters from '../../Components/Teacher/ManagementComponents/TeachersFilters';
@@ -176,6 +176,7 @@ const Teachers = () => {
     setTimeout(()=>{
       fetchStatistics();
     },3000);
+
   }, [teachers])
 
 
