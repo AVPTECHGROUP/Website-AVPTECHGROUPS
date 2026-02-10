@@ -1,7 +1,7 @@
 import { ChevronDownIcon, UserCheck } from "lucide-react";
 import { useState } from "react";
 
-export default function ActionDropDownComp({ onAction, actionOptions , displayIcons }) {
+export default function ActionDropDownComp({ onAction, actionOptions}) {
   const [open, setOpen] = useState(false);
   return (
     <div className="relative w-50 border border-gray-300 rounded-md shadow-xs shadow-gray-200 hover:bg-gray-100 px-2 items-center align-middle rounded-smcursor-pointer">
@@ -9,7 +9,7 @@ export default function ActionDropDownComp({ onAction, actionOptions , displayIc
       <button
         onClick={() => setOpen(!open)}
         className="flex py-0.5 w-full items-center justify-evenly pr-2 gap-1 cursor-pointer">
-        <h2>Actions</h2> {displayIcons}
+        <h2>Actions</h2>
         <ChevronDownIcon className="h-4 w-4 pl-2" />
       </button>
 

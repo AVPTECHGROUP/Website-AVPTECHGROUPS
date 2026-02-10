@@ -7,11 +7,12 @@ import {
   deleteTeacherAssignment,
   getClasses,
   getSectionsByClass,
-  getSubjectsBySection
+  getSubjectsBySection,
+  getTeachersActiveAssignments
 } from "../../Api/TeachersAPI";
 
-function ClassAssignment() {
-  const [teachers, setTeachers] = useState([]);
+function ClassAssignment({teacherId}) {
+  const [teachers, setTeachers] = useState([]); 
   const [createdAssignments, setCreatedAssignments] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(false);
@@ -22,6 +23,8 @@ function ClassAssignment() {
   const [classes, setClasses] = useState([]);
   const [sections, setSections] = useState([]);
   const [subjects, setSubjects] = useState([]);
+  // for active teacher (tracks currently selected teacher id)
+  const [activeTeacher, setActiveTeacher] = useState('');
   const [dropdownLoading, setDropdownLoading] = useState({
     classes: false,
     sections: false,
@@ -45,14 +48,18 @@ function ClassAssignment() {
     isClassTeacher: false
   });
 
+  // State for class dropdown selection
+  const [selectedClassDropdown, setSelectedClassDropdown] = useState('');
+
   // ==================== LIFECYCLE ====================
 
   useEffect(() => {
     fetchClasses();
     fetchTeachers();
+
     
     // Load form data from localStorage on mount
-    const savedFormData = localStorage.getItem('classAssignmentFormData');
+    let savedFormData;// = localStorage.getItem('classAssignmentFormData');
     if (savedFormData) {
       try {
         const parsedData = JSON.parse(savedFormData);
@@ -73,7 +80,7 @@ function ClassAssignment() {
     }
 
     // Load created assignments from localStorage
-    const savedAssignments = localStorage.getItem('classAssignmentCreatedAssignments');
+    let savedAssignments ;// = localStorage.getItem('classAssignmentCreatedAssignments');
     if (savedAssignments) {
       try {
         const parsedAssignments = JSON.parse(savedAssignments);
@@ -115,14 +122,14 @@ function ClassAssignment() {
   }, [searchTerm]);
 
   // Save form data to localStorage whenever it changes
-  useEffect(() => {
-    localStorage.setItem('classAssignmentFormData', JSON.stringify(formData));
-  }, [formData]);
+  // useEffect(() => {
+  //   localStorage.setItem('classAssignmentFormData', JSON.stringify(formData));
+  // }, [formData]);
 
   // Save created assignments to localStorage whenever they change
-  useEffect(() => {
-    localStorage.setItem('classAssignmentCreatedAssignments', JSON.stringify(createdAssignments));
-  }, [createdAssignments]);
+  // useEffect(() => {
+  //   localStorage.setItem('classAssignmentCreatedAssignments', JSON.stringify(createdAssignments));
+  // }, [createdAssignments]);
 
   // ==================== FETCH FUNCTIONS ====================
 
@@ -176,7 +183,7 @@ function ClassAssignment() {
       setDropdownLoading(prev => ({ ...prev, subjects: false }));
     }
   };
-
+ // we have to replace it
   const fetchTeachers = async () => {
     try {
       setLoading(true);
@@ -205,10 +212,26 @@ function ClassAssignment() {
     }
   };
 
-  // ==================== FORM HANDLERS ====================
+  useEffect(() => {
+  if (teacherId) {
+    const selectedTeacher = teachers.find(t => String(t.id) === String(teacherId));
+    if (selectedTeacher) {
+      const teacherName = selectedTeacher.fullName || 
+                         `${selectedTeacher.firstName || ''} ${selectedTeacher.lastName || ''}`.trim();
+      setFormData(prev => ({
+        ...prev,
+        teacherId: teacherId,
+        teacherName: teacherName
+      }));
+    }
+  }
+}, [teacherId, teachers]);
 
+  // ==================== FORM HANDLERS ====================
+// update form here 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+    console.log(name ,'name ','value is:', value)
     
     if (name === 'teacherId') {
       const selectedTeacher = teachers.find(t => String(t.id) === String(value));
@@ -230,8 +253,8 @@ function ClassAssignment() {
         
         setFormData(newFormData);
         setCreatedAssignments([]);
-        localStorage.setItem('classAssignmentFormData', JSON.stringify(newFormData));
-        localStorage.removeItem('classAssignmentCreatedAssignments');
+       // localStorage.setItem('classAssignmentFormData', JSON.stringify(newFormData));
+       // localStorage.removeItem('classAssignmentCreatedAssignments');
         setSections([]);
         setSubjects([]);
       }
@@ -258,50 +281,46 @@ function ClassAssignment() {
 
   // Add a new class to assignments
   const handleAddClass = async () => {
-    if (classes.length === 0) {
-      setError("No classes available to add");
+    if (!selectedClassDropdown) {
+      setError("Please select a class first");
       setTimeout(() => setError(null), 3000);
       return;
     }
 
-    const selectedClassId = window.prompt(
-      'Enter Class ID or select from list:\n' + 
-      classes.map(c => `${c.id}: ${c.name || c.className}`).join('\n')
+    const classExists = formData.classAssignments.some(
+      ca => String(ca.gradeId) === String(selectedClassDropdown)
     );
     
-    if (selectedClassId) {
-      const classExists = formData.classAssignments.some(
-        ca => String(ca.gradeId) === String(selectedClassId)
-      );
-      
-      if (classExists) {
-        setError("This class is already added");
-        setTimeout(() => setError(null), 3000);
-        return;
-      }
-
-      const selectedClass = classes.find(c => String(c.id) === String(selectedClassId));
-      
-      if (!selectedClass) {
-        setError("Class not found");
-        setTimeout(() => setError(null), 3000);
-        return;
-      }
-
-      await fetchSections(selectedClassId);
-      
-      setFormData(prev => ({
-        ...prev,
-        classAssignments: [
-          ...prev.classAssignments,
-          { 
-            gradeId: selectedClassId, 
-            gradeName: selectedClass.name || selectedClass.className || '',
-            sections: [] 
-          }
-        ]
-      }));
+    if (classExists) {
+      setError("This class is already added");
+      setTimeout(() => setError(null), 3000);
+      return;
     }
+
+    const selectedClass = classes.find(c => String(c.id) === String(selectedClassDropdown));
+    
+    if (!selectedClass) {
+      setError("Class not found");
+      setTimeout(() => setError(null), 3000);
+      return;
+    }
+
+    await fetchSections(selectedClassDropdown);
+    
+    setFormData(prev => ({
+      ...prev,
+      classAssignments: [
+        ...prev.classAssignments,
+        { 
+          gradeId: selectedClassDropdown, 
+          gradeName: selectedClass.name || selectedClass.className || '',
+          sections: [] 
+        }
+      ]
+    }));
+
+    // Reset dropdown after adding
+    setSelectedClassDropdown('');
   };
 
   // Remove a class from assignments
@@ -662,8 +681,9 @@ function ClassAssignment() {
     setSections([]);
     setSubjects([]);
     // Clear localStorage when canceling
-    localStorage.removeItem('classAssignmentFormData');
-    localStorage.removeItem('classAssignmentCreatedAssignments');
+  //  localStorage.removeItem('classAssignmentFormData');
+   // localStorage.removeItem('classAssignmentCreatedAssignments');
+    navigate('/teachers'); // Navigate back to main teachers page
   };
 
   // ==================== RENDER HELPERS ====================
@@ -678,7 +698,6 @@ function ClassAssignment() {
     
     const searchLower = searchTerm.toLowerCase();
     const sections = assignment.sections || (assignment.sectionId ? [assignment.sectionId] : []);
-    
     return (
       (assignment.teacherName || '').toLowerCase().includes(searchLower) ||
       (assignment.className || assignment.grade || assignment.class || '').toLowerCase().includes(searchLower) ||
@@ -691,6 +710,63 @@ function ClassAssignment() {
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
   const currentAssignments = filteredAssignments.slice(startIndex, endIndex);
+  //fetch call for current assignment fetch
+
+  // Fetch current/active assignments when selected teacher changes
+  useEffect(() => {
+    const fetchCurrentAssignments = async (teacherId) => {
+      if (!teacherId) {
+        setCreatedAssignments([]);
+        setActiveTeacher('');
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await getTeachersActiveAssignments(teacherId);
+
+        // Normalize API response to array
+        let raw = [];
+        if (Array.isArray(response)) raw = response;
+        else if (response?.content && Array.isArray(response.content)) raw = response.content;
+        else if (response?.data && Array.isArray(response.data)) raw = response.data;
+
+        // Map API items to UI assignment shape
+        const mapped = raw.map(item => {
+          const classObj = classes.find(c => String(c.id) === String(item.classId));
+          const className = item.className || classObj?.name || classObj?.className || `Class ${item.classId}`;
+
+          return {
+            id: item.id || `${teacherId}-${item.classId}-${item.sectionId}`,
+            teacherId: teacherId,
+            teacherName: formData.teacherName || '',
+            classId: item.classId,
+            className,
+            sectionId: item.sectionId,
+            sections: item.sectionId ? [item.sectionId] : (item.sections || []),
+            subjectId: item.subjectId,
+            subjectName: item.subjectName || '',
+            isClassTeacher: !!item.isClassTeacher,
+            weeklyPeriods: item.weeklyPeriods || 0,
+            academicYear: item.academicYear || '',
+            status: item.status || 'ACTIVE',
+            remarks: item.remarks || null
+          };
+        });
+
+        setCreatedAssignments(mapped);
+        setActiveTeacher(teacherId);
+      } catch (e) {
+        console.error('current assignment error:', e?.message || e);
+        setError('Failed to fetch active assignments');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCurrentAssignments(formData.teacherId);
+  }, [formData.teacherId, classes, formData.teacherName]);
 
   const handlePreviousPage = () => {
     if (currentPage > 1) {
@@ -787,9 +863,128 @@ function ClassAssignment() {
                 </select>
               </div>
 
-              {/* Subject Selection */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
+              {/* Class Selection Grid */}
+              <div className="space-y-2">
+                <label className="block text-xs font-medium text-gray-700 mb-2">
+                  SELECT CLASSES <span className="text-red-500">*</span>
+                </label>
+                <div className="bg-white border border-gray-300 rounded-lg p-4  flex flex-wrap gap-2 items-start content-start">
+                  {classes.length > 0 ? (
+                    classes.map(cls => {
+                      const isAdded = formData.classAssignments.some(ca => String(ca.gradeId) === String(cls.id));
+                      const isSelected = selectedClassDropdown === String(cls.id);
+                      return (
+                        <button
+                          key={cls.id}
+                          type="button"
+                          onClick={() => setSelectedClassDropdown(cls.id)}
+                          disabled={isAdded}
+                          className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors  ${
+                            isAdded
+                              ? 'bg-blue-600 text-white border border-blue-700 opacity-60 cursor-not-allowed'
+                              : isSelected
+                              ? 'bg-blue-600 text-white border border-blue-700'
+                              : 'bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200'
+                          }`}
+                        >
+                          {cls.name || cls.className}
+                        </button>
+                      );
+                    })
+                  ) : (
+                    <span className="text-xs text-gray-500 py-2">Loading classes...</span>
+                  )}
+                </div>
+               
+              </div>
+
+              {/* Class Teacher Checkbox - Button Style */}
+              <div className='grid grid-cols-2 gap-4'>
+                 <button
+                  type="button"
+                  onClick={handleAddClass}
+                  disabled={!selectedClassDropdown}
+                  className="w-full px-4 py-2 bg-green-600 text-white rounded-lg font-medium text-sm hover:bg-green-700 flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Class
+                </button>
+                <div className="flex flex-col justify-end">
+                <button
+                  type="button"
+                  onClick={() => handleInputChange({
+                    target: {
+                      name: 'isClassTeacher',
+                      type: 'checkbox',
+                      checked: !formData.isClassTeacher
+                    }
+                  })}
+                  className={`w-full px-4 py-2 rounded-lg font-medium text-sm flex items-center justify-center gap-2 transition-colors shadow-md shadow-blue-200 cursor-pointer ${
+                    formData.isClassTeacher
+                      ? 'bg-blue-600 text-white hover:bg-blue-700'
+                      : 'bg-gray-300 text-gray-700  hover:bg-blue-100'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    id="isClassTeacher"
+                    name="isClassTeacher"
+                    checked={formData.isClassTeacher}
+                    onChange={handleInputChange}
+                    className="w-4 h-4 hidden text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                  />
+                  <span>Is Class Teacher</span>
+                </button>
+              </div>
+              </div>
+              
+
+              {/* Sections for Selected Classes */}
+              {formData.classAssignments.length > 0 && (
+                <div className="border-t pt-4">
+                  <h3 className="text-sm font-semibold text-gray-900 mb-3">Select Sections for Each Class</h3>
+                  <div className="space-y-4 ">
+                    {formData.classAssignments.map((classAssignment) => (
+                      <div key={classAssignment.gradeId} className="border border-gray-200 rounded-lg p-4  bg-gray-50 ">
+                        <h4 className="font-medium text-gray-900 mb-3 ">
+                          {classAssignment.gradeName}
+                        </h4>
+
+                        {/* Sections for this class */}
+                        {dropdownLoading.sections ? (
+                          <div className="text-xs text-gray-500">Loading sections...</div>
+                        ) : (
+                          <div className="flex gap-2 flex-wrap ">
+                            {sections.length > 0 ? (
+                              sections.map(section => (
+                                <button
+                                  key={section.id}
+                                  type="button"
+                                  onClick={() => toggleSectionForClass(classAssignment.gradeId, section.id)}
+                                  className={`px-3 py-2 rounded-lg font-medium text-sm transition-colors ${
+                                    classAssignment.sections.includes(section.id)
+                                      ? 'bg-blue-600 text-white'
+                                      : 'bg-white text-gray-700 border border-gray-300 hover:bg-blue-5000 focus:outline-none focus:ring-2  focus:ring-blue-500  focus:ring-opacity-50 focus:border-blue-500 '
+                                  }`}
+                                >
+                                  {section.name || section.sectionName}
+                                </button>
+                              ))
+                            ) : (
+                              <div className="text-xs text-gray-500">No sections available</div>
+                            )}
+                          </div>
+                        )}
+                        
+                        {classAssignment.sections.length === 0 && (
+                          <div className="text-xs text-red-600 mt-2">⚠ Select at least one section</div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div>
                   <label className="block text-xs font-medium text-gray-700 mb-2">
                     SUBJECT <span className="text-red-500">*</span>
                   </label>
@@ -820,90 +1015,6 @@ function ClassAssignment() {
                     </div>
                   )}
                 </div>
-
-                {/* Add Class Button */}
-                <div className="flex flex-col justify-end">
-                  <label className="block text-xs font-medium text-gray-700 mb-2 invisible">Add</label>
-                  <button
-                    type="button"
-                    onClick={handleAddClass}
-                    className="w-full px-4 py-2 bg-green-600 text-white rounded-lg font-medium text-sm hover:bg-green-700 flex items-center justify-center gap-2 transition-colors"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Add Class
-                  </button>
-                </div>
-              </div>
-
-              {/* Class Teacher Checkbox */}
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="isClassTeacher"
-                  name="isClassTeacher"
-                  checked={formData.isClassTeacher}
-                  onChange={handleInputChange}
-                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500 cursor-pointer"
-                />
-                <label htmlFor="isClassTeacher" className="text-sm font-medium text-gray-700 cursor-pointer">
-                  Is Class Teacher
-                </label>
-              </div>
-
-              {/* Selected Classes and Sections */}
-              {formData.classAssignments.length > 0 && (
-                <div className="border-t pt-4">
-                  <h3 className="text-sm font-semibold text-gray-900 mb-3">Selected Classes</h3>
-                  <div className="space-y-4">
-                    {formData.classAssignments.map((classAssignment) => (
-                      <div key={classAssignment.gradeId} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-                        <div className="flex justify-between items-start mb-3">
-                          <h4 className="font-medium text-gray-900">
-                            {classAssignment.gradeName} (ID: {classAssignment.gradeId})
-                          </h4>
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveClass(classAssignment.gradeId)}
-                            className="text-red-600 hover:text-red-800 p-1"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-
-                        {/* Sections for this class */}
-                        {dropdownLoading.sections ? (
-                          <div className="text-xs text-gray-500">Loading sections...</div>
-                        ) : (
-                          <div className="flex gap-2 flex-wrap">
-                            {sections.length > 0 ? (
-                              sections.map(section => (
-                                <button
-                                  key={section.id}
-                                  type="button"
-                                  onClick={() => toggleSectionForClass(classAssignment.gradeId, section.id)}
-                                  className={`px-3 py-2 rounded-lg font-medium text-sm transition-colors ${
-                                    classAssignment.sections.includes(section.id)
-                                      ? 'bg-blue-600 text-white'
-                                      : 'bg-white text-gray-700 border border-gray-300 hover:bg-blue-50'
-                                  }`}
-                                >
-                                  {section.name || section.sectionName}
-                                </button>
-                              ))
-                            ) : (
-                              <div className="text-xs text-gray-500">No sections available</div>
-                            )}
-                          </div>
-                        )}
-                        
-                        {classAssignment.sections.length === 0 && (
-                          <div className="text-xs text-red-600 mt-2">⚠ Select at least one section</div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
 
             {/* Submit Button */}
@@ -929,7 +1040,7 @@ function ClassAssignment() {
                 ) : (
                   <>
                     <Plus className="w-4 h-4" />
-                    {loading ? 'Adding...' : 'Add Assignments'}
+                    {loading ? 'Adding...' : 'Assign'}
                   </>
                 )}
               </button>

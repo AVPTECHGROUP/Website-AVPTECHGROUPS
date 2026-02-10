@@ -1,5 +1,5 @@
 import { Eye, EyeOff, LockKeyhole, Mail, ShieldCheck, Moon, Sun } from 'lucide-react'
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import worker_1 from '../assets/Images/worker_1.jpg'
 import { useNavigate } from 'react-router-dom'
 import { loginAPI } from '../Api/AuthApi' // Import the login API
@@ -13,8 +13,7 @@ const Login_2 = ({ onLoginSuccess }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [isDark, setIsDark] = useState(false)
     const [loginError, setLoginError] = useState('')
-
-    const navigate = useNavigate()
+    const navigate = useNavigate();
     
     const validateForm = () => {
         let allErrors = {}
@@ -77,9 +76,6 @@ const Login_2 = ({ onLoginSuccess }) => {
             <div className={`min-h-screen relative flex items-center flex-col justify-center p-4 transition-colors duration-300 ${isDark ? 'bg-gray-900' : 'bg-blue-100'}`}>
 
                 <h1 className={`text-center font-bold sm:p-8 p-5 sm:text-3xl text-[16px] transition-colors duration-300 ${isDark ? 'text-blue-400' : 'text-black'}`}>School Payroll & Attendance Management System</h1>
-                
-    
-
                 <div className='flex flex-col sm:flex-row'>
 
                     <div className={`sm:w-full max-w-md shadow-xl sm:p-1 sm:mt-0 mt-4 p-5 flex items-center flex-col pt-10 sm:rounded-tl-xl sm:rounded-bl-xl rounded-tl-xl transition-colors duration-300 ${isDark ? 'bg-gray-800' : 'bg-blue-50'}`}>

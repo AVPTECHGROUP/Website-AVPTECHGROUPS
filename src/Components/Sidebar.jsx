@@ -9,7 +9,8 @@ import {
   LogOut,
   IndianRupee,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  UserCog
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 
@@ -30,6 +31,7 @@ const Sidebar = ({
       label: 'Dashboard', 
       route: '/dashboard',
     },
+    { id: 'manageUsers', icon: UserCog, label: 'Manage Users', route: '/dashboard/manageUsers' },
    {
   id: 'attendance',
   icon: Calendar,
@@ -63,9 +65,9 @@ const Sidebar = ({
     }
   ]
 },
+    { id: 'teachers', icon: Users, label: 'Teachers', route: '/teachers' },
     { id: 'leaves', icon: FileText, label: 'Leaves', route: '/leaves' },
     { id: 'payroll', icon: IndianRupee, label: 'Payroll', route: '/payroll' },
-    { id: 'teachers', icon: Users, label: 'Teachers', route: '/teachers' },
     { id: 'settings', icon: Settings, label: 'Settings', route: '/settings' }
   ]
 
@@ -212,7 +214,7 @@ const Sidebar = ({
       {/* Logout */}
       <div className="p-4">
         <button 
-          onClick={onLogout}
+          onClick={()=>{onLogout; localStorage.setItem('token','')}}
           className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 hover:bg-gray-100
           ${!sidebarOpen ? 'justify-center' : ''}`}
         >
