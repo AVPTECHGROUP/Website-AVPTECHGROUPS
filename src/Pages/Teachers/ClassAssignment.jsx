@@ -10,7 +10,6 @@ import {
   getSubjectsBySection,
   getTeachersActiveAssignments
 } from "../../Api/TeachersAPI";
-import {useNavigate } from 'react-router-dom';
 
 function ClassAssignment({teacherId}) {
   const [teachers, setTeachers] = useState([]); 
@@ -19,7 +18,7 @@ function ClassAssignment({teacherId}) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState("");
-  const navigate = useNavigate();
+  
   // Dropdown data
   const [classes, setClasses] = useState([]);
   const [sections, setSections] = useState([]);

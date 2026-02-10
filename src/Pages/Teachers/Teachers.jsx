@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { getTeachers, getTeacherStatistics, searchTeachers } from '../../Api/TeachersAPI';
+import { useEffect, useMemo, useState } from 'react';
+import { getTeachers, searchTeachers } from '../../Api/TeachersAPI';
 import TeachersHeader from '../../Components/Teacher/ManagementComponents/TeachersHeader';
 import QuickActions from '../../Components/Teacher/ManagementComponents/QuickActions';
 import TeachersFilters from '../../Components/Teacher/ManagementComponents/TeachersFilters';
@@ -183,32 +183,27 @@ const Teachers = () => {
   return (
     <div className="flex h-screen overflow-hidden bg-linear-to-b from-sky-50 to-sky-100">
       <div className="flex-1 overflow-auto w-0">
-        {/* COMPONENT 1: Header with Stats */}
-        <TeachersHeader
-          search={search}
-          setSearch={setSearch}
-          setPage={setPage}
-          mobileSearchOpen={mobileSearchOpen}
-          setMobileSearchOpen={setMobileSearchOpen}
-          stats={stats}
-        />
+        
+       {/* COMPONENT 1: Header with Stats */}
+<TeachersHeader stats={stats} />
 
         {/* Page Content */}
         <div className="flex-1 overflow-auto p-4 sm:p-5 lg:p-4">
-
           {/* COMPONENT 2: Quick Actions */}
           <QuickActions teacherId={classAssignTeacherId} />
 
-          {/* COMPONENT 3: Filters */}
-          <TeachersFilters
-            statusFilter={statusFilter}
-            setStatusFilter={setStatusFilter}
-            classFilter={classFilter}
-            setClassFilter={setClassFilter}
-            salaryFilter={salaryFilter}
-            setSalaryFilter={setSalaryFilter}
-            setPage={setPage}
-          />
+  {/* COMPONENT 3: Filters with Search */}
+  <TeachersFilters
+    search={search}
+    setSearch={setSearch}
+    statusFilter={statusFilter}
+    setStatusFilter={setStatusFilter}
+    classFilter={classFilter}
+    setClassFilter={setClassFilter}
+    salaryFilter={salaryFilter}
+    setSalaryFilter={setSalaryFilter}
+    setPage={setPage}
+  />
 
           {/* COMPONENT 4: Table and Pagination */}
           <TeachersTable

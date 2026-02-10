@@ -15,28 +15,30 @@ const WarningVerificationFailed = () => {
                   <TriangleAlert fill='#e0b21c' color='#fef9c2' size={75} />
                 </div>
                 <h2 className='text-2xl font-bold text-gray-900'>Verification Failed</h2>
-                <p className='text-sm text-red-500 font-bold'>
-                  Attempt 3 of 3 failed
-                </p>
+              
                 <p className='text-center text-gray-500 px-11'>We couldn't verify your identity using face
-                  recognition after 3 attempts. You can now request
-                  a manual attendance marking from your
-                  administrator.</p>
+                  recognition. You can now request a manual attendance marking from your administrator.</p>
                 <div>
                 </div>
               </div>
             </div>
   
             {/* Action Buttons */}
-            <div className='space-y-3'>
+            <div className='space-y-3 flex flex-col'> 
               <button
-                onClick={()=>navigate('/teachers/camera/manual')}
-                className='w-full bg-blue-600 hover:bg-blue-700 cursor-pointer text-white font-semibold py-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-xl'
+                onClick={()=>navigate('/attendance/markUserAttendance')}
+                className='text-xl bg-blue-600 hover:bg-blue-700 cursor-pointer text-white font-semibold py-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-xl'
+              >
+                <Camera className='w-5 h-5' />
+                Try Again
+              </button>
+              <button
+                onClick={()=>navigate('/attendance/usersAttendance/manual')}
+                className='text-xl bg-blue-600 hover:bg-blue-700 cursor-pointer text-white font-semibold py-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-xl'
               >
                 <SquarePenIcon className='w-5 h-5' />
                 Raise request to Mark Attendance
               </button>
-              
             </div>
 
             {/* Privacy Notice */}

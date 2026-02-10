@@ -2,22 +2,6 @@ const BASE_URL = "https://ssdev-btgphuazhza9edcu.canadacentral-01.azurewebsites.
 
 // ==================== TEACHER ENDPOINTS ====================
 
-//List all statistics
-export const getTeacherStatistics = async () => {
-  try {
-    const res = await fetch(`${BASE_URL}/teachers/statistics`);
-    if (!res.ok) {
-      const errorText = await res.text();
-      throw new Error(errorText || "Failed to fetch statistics");
-    }
-    const data = await res.json();
-    return data;
-  } catch (e) {
-    console.error("get statistics error:", error.message);
-    throw error;
-  }
-}
-
 // List All Teacher with pagination 
 export const getTeachers = async (page = 0, size = 10, sort = 'id') => {
   try {

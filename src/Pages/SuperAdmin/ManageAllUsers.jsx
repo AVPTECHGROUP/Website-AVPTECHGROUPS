@@ -291,7 +291,7 @@ const ManageAllUsers = () => {
                     </div>
 
                     {/* cards */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 lg:gap-5 mb-8 pt-6">
+                    <div className="grid sm:grid-cols-3 grid-cols-1 gap-3 mb-8 pt-6">
                         {
                             cardsArray.map((card) => (
                                 <CardComponent key={card.keyName} IconName={card.IconName} keyName={card.keyName.toUpperCase()} val={card.val} iconTxColor={card.iconTxColor} iconBgColor={card.iconBgColor} />

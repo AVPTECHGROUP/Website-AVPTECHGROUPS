@@ -162,7 +162,7 @@ function EditTeachersDetails() {
             }
 
             toast.success("Teacher details updated successfully!");
-            // navigate("/teachers");
+            navigate("/teachers");
         } catch (err) {
             console.error(err);
             toast.error("Failed to update teacher or salary. Please try again.");

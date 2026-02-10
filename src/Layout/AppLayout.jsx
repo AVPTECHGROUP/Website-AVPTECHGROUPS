@@ -46,7 +46,8 @@ const AppLayout = () => {
             Delhi Public International School
           </h1>
         </header>
-        <main className='overflow-auto scrollbar-hide'>
+
+        <main className="overflow-auto">
           <Outlet />
         </main>
       </div>
