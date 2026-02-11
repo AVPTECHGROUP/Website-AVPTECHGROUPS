@@ -877,13 +877,13 @@ function ClassAssignment({teacherId}) {
                         <button
                           key={cls.id}
                           type="button"
-                          onClick={() => setSelectedClassDropdown(cls.id)}
+                          onClick={() => setSelectedClassDropdown(String(cls.id))}
                           disabled={isAdded}
                           className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors  ${
                             isAdded
                               ? 'bg-blue-600 text-white border border-blue-700 opacity-60 cursor-not-allowed'
                               : isSelected
-                              ? 'bg-blue-600 text-white border border-blue-700'
+                              ? 'bg-blue-100 text-gray-700 border border-gray-300 ring-2 ring-blue-400 ring-offset-2'
                               : 'bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200'
                           }`}
                         >
