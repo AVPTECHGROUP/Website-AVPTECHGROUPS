@@ -8,7 +8,7 @@ import ProtectedRoutes from '../utils/Protectedroutes';
 import Login from '../Pages/Login_2';
 import Dashboard from '../Pages/Dashboard';
 import Attendance from '../Pages/Attendance/Attendance';
-import Leaves from '../Pages/leaves';
+import Leaves from '../Pages/Leaves';
 import Payroll from '../Pages/Payroll';
 import Teachers from '../Pages/Teachers/Teachers';
 import Settings from '../Pages/Settings';
