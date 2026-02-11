@@ -64,7 +64,7 @@ const MainRoutes = () => {
           <Route path="/teachers/addTeacher" element={<AddNewTeacher />} />
           <Route path="/teachers/:id" element={<DetailsView />} />
           <Route path="/teachers/editTeacher/:id" element={<EditTeachersDetails />} />
-          <Route path="/teachers/classAssignment" element={<ClassAssignment />} />
+          <Route path="/teachers/classAssignment/:teacherId" element={<ClassAssignment />} />
 
           {/* Super Admin */}
           <Route path="/dashboard/addUser" element={<AddnewSystemUser />} />
