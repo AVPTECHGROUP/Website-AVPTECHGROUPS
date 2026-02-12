@@ -233,14 +233,12 @@ export const createTeacherAssignment = async (teacherId, assignmentData) => {
       },
       body: JSON.stringify(assignmentData)
     });
-
-    if (!res.ok) {
-      const errorText = await res.text();
-      throw new Error(errorText || 'Failed to create assignment');
-    }
-
     const data = await res.json();
-    return data.data || data;
+    if (!res.ok) {
+      //const errorText = await res.text();
+      throw new Error(data.message || "Request failed");
+    }
+    return data;
   } catch (error) {
     console.error('createTeacherAssignment error:', error.message);
     throw error;

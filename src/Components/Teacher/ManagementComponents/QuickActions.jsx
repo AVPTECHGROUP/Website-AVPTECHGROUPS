@@ -37,7 +37,7 @@ const QuickActions = ({teacherId}) => {
         title={disablebtn === null ? 'Select one teacher ':''}
           onClick={() => {
             setIsAction('assign');
-            navigate('/teachers/classAssignment');
+            navigate(`/teachers/classAssignment/${teacherId}`);
           }}
           className={`flex sm:px-5 py-2.5 rounded-lg w-full sm:w-fit flex-row gap-2 text-[13px] sm:text-[14px] font-bold justify-center transition-all
             ${disablebtn === null ? 'bg-gray-300 text-gray-700 cursor-not-allowed opacity-50`' : 'bg-blue-600 text-white cursor-pointer'}`}
