@@ -1,4 +1,4 @@
-export default function CardComponent({ IconName, keyName, val, iconTxColor, iconBgColor }) {
+export default function LeaveCardComponent({ IconName, keyName, rem_val, total_val, iconTxColor, iconBgColor }) {
     const toProperCase = (str) => {
         return str
             .toLowerCase()
@@ -13,7 +13,7 @@ export default function CardComponent({ IconName, keyName, val, iconTxColor, ico
             </div>
             <div className="min-w-0">
                 <p className="text-gray-600 font-semibold"> {toProperCase(keyName)}</p>
-                <p className="font-bold text-gray-900">{val}</p>
+                <p className={`font-bold ${iconTxColor} text-lg`}>{rem_val}<span className="text-xs font-normal py-0 text-gray-600"> / {total_val} {total_val>1?"Leave Remaining":"Leaves Remaining"}</span></p>
             </div>
         </div>
     </div>
