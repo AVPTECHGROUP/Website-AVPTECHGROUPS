@@ -8,7 +8,7 @@ import ProtectedRoutes from '../utils/Protectedroutes';
 import Login from '../Pages/Login_2';
 import Dashboard from '../Pages/Dashboard';
 import Attendance from '../Pages/Attendance/Attendance';
-import Leaves from '../Pages/Leaves';
+import Leaves from '../Pages/Leaves/Leaves';
 import Payroll from '../Pages/Payroll';
 import Teachers from '../Pages/Teachers/Teachers';
 import Settings from '../Pages/Settings';
@@ -30,6 +30,8 @@ import ClassAssignment from '../Pages/Teachers/ClassAssignment';
 import AddnewSystemUser from '../Pages/SuperAdmin/AddnewSystemUser';
 import EditSysUser from '../Pages/SuperAdmin/EditSysUser';
 import ManageAllUsers from '../Pages/SuperAdmin/ManageAllUsers';
+import ApplyLeaves from '../Pages/Leaves/ApplyLeaves';
+import MyLeaves from '../Pages/Leaves/MyLeaves';
 
 const MainRoutes = () => {
   return (
@@ -56,7 +58,6 @@ const MainRoutes = () => {
           <Route path="/attendance/usersAttendance/manual" element={<ManualAttendance />} />
 
           {/* Others */}
-          <Route path="/leaves" element={<Leaves />} />
           <Route path="/payroll" element={<Payroll />} />
 
           {/* Teachers */}
@@ -70,6 +71,12 @@ const MainRoutes = () => {
           <Route path="/dashboard/addUser" element={<AddnewSystemUser />} />
           <Route path="/dashboard/editUser/:id" element={<EditSysUser />} />
           <Route path="/dashboard/manageUsers" element={<ManageAllUsers />} />
+
+
+          {/* Leave Management */}
+          <Route path="/leaves" element={<Leaves />} />
+          <Route path="/leaves/applyLeaves" element={<ApplyLeaves />} />
+          <Route path="/leaves/myLeaves" element={<MyLeaves />} />
 
           {/* Settings */}
           <Route path="/settings" element={<Settings />} />
