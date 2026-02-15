@@ -1,199 +1,361 @@
-import { BriefcaseBusiness, User2, UserRoundPen, UserRoundPenIcon } from 'lucide-react'
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { ChevronLeft, GraduationCap, IndianRupee, User } from 'lucide-react';
+import { toast } from 'react-toastify';
+import UserPersonalDetailsTab from '../../Components/SuperAdmin/EditTabComponents/UserPersonalDetailsTab';
+import ParentPersonalDetailsTab from '../../Components/SuperAdmin/EditTabComponents/ParentPersonalDetailsTab';
+import { getUserById, updateUserById } from '../../Api/userManagementAPI';
 
 function EditSysUser() {
-    const inputStyle = "bg-gray-100 mt-1 font-normal text-gray-800 border-gray-400 p-1 px-4 w-full rounded-md focus:outline-none appearance-none";
-    const impMark = <span className="text-red-600 ml-1">*</span>;
+    const { id } = useParams();
+    const navigate = useNavigate(); // for navigation
+    const [sysUser, setsysUser] = useState(null);
+    const [activeTab, setActiveTab] = useState('personal');
+    const [isLoading, setIsLoading] = useState(false);
+    const [activeRole, setActiveRole] = useState('PARENT');
+    const [formData, setFormData] = useState({
+        name: '',
+        gender: '',
+        mobile: '',
+        email: '',
+        dob: '',
+        address: '',
+        empId: '',
+        highestQualification: '',
+        experience: 0,
+        joiningDate: '',
+        loginEmail: '',
+        dessignation: '',
+        accountStatus: false,
+        salaryType: '',
+        baseSalary: '',
+        leaveDeductionPerDay: '',
+        houseRentAllowance: '',
+        travelAllowance: '',
+        dearnessAllowance: '',
+        specialAllowance: '',
+        otherAllowances: '',
+        providentFund: '',
+        professionalTax: '',
+        incomeTax: '',
+        otherDeductions: '',
+    });
 
-    const [selectedRole, setSelectedRole] = useState(""); //used when api calling
+    const generateEmployeeCode = () => {
+                return "EMP" + Math.floor(100 + Math.random() * 900); // EMP123
+            };
 
-    function SelectedInputField() {
-        if (selectedRole === 'parent') {
-            return <>
-                <div className=" p-3 px-4 sm:text-sm md:text-base lg-text-xl">
-                    <label htmlFor="highestQualification" className='font-semibold text-gray-600 text-sm'>Highest Qualification</label>
-                    <input
-                        type="text"
-                        name="highestQualification"
-                        placeholder='Highest Qualification'
-                        className={inputStyle}
-                    />
-                </div>
+    // Utility function
+    function formatToInputDate(dateStr) {
+        if (!dateStr) return '';
+        const date = new Date(dateStr);
+        return date.toISOString().split('T')[0];
+    }
 
-                <div className=" p-3 px-4 sm:text-sm md:text-base lg-text-xl">
-                    <label htmlFor="profession" className='font-semibold text-gray-600 text-sm'>Profession</label>
-                    <input
-                        type="text"
-                        name="Profession"
-                        placeholder='Profession'
-                        className={inputStyle}
-                    />
-                </div>
-            </>
+    // Common handler
+    const handleInputChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+    };
+
+    // Fetch sysUser
+    useEffect(() => {
+        const fetchsysUser = async () => {
+            const data = await getUserById(id);
+            setActiveRole(data.roles[0]);
+            setsysUser(data);
+        };
+        fetchsysUser();
+    }, [id]);
+
+    // Populate form
+    useEffect(() => {
+        if (!sysUser) return;
+        setFormData(prev => ({
+            ...prev,
+            //for actual data mapping uncomment below lines and remove the test data lines
+            name: sysUser.fullName || '',
+            gender: sysUser.gender || '',
+            mobile: sysUser.mobile || '',
+            email: sysUser.email || '',
+            dob: formatToInputDate(sysUser.dateOfBirth),
+            address: sysUser.address || '',
+            empId: sysUser.employeeCode || '',
+            highestQualification: sysUser.qualification || '',
+            experience: sysUser.experienceYears || 0,
+            joiningDate: formatToInputDate(sysUser.joiningDate),
+            loginEmail: sysUser.email || '',
+            dessignation: sysUser.designation || '',
+            accountStatus: sysUser.accountAccessStatus === 'ALLOWED',
+        }));
+    }, [sysUser]);
+
+    // Submit handler
+    async function handle_updateDetails(e) {
+        e.preventDefault();
+        setIsLoading(true);
+        // sysUser personal/professional payload
+        // const sysUserPayload = {
+        //     personalDetails: {
+        //         fullName: formData.name,
+        //         gender: formData.gender,
+        //         mobile: formData.mobile,
+        //         email: formData.email,
+        //         dateOfBirth: formData.dob,
+        //         address: formData.address,
+        //     },
+        //     professionalDetails: {
+        //         employeeCode: formData.id,
+        //         qualification: formData.highestQualification,
+        //         experienceYears: Number(formData.experience),
+        //         joiningDate: formData.joiningDate,
+        //         designation: formData.role.toLowerCase(),
+        //     },
+        //     accountAccessStatus: formData.accountStatus ? "ALLOWED" : "BLOCKED"
+        // };
+
+        let sysUserPayload = {};
+
+        if (activeRole === 'PARENT') {
+            sysUserPayload = {
+                email: formData.email,
+                roleNames: [activeRole],
+                personalDetails: {
+                    fullName: formData.name,
+                    mobile: formData.mobile,
+                    email: formData.email || "test.user@school.com",
+                    gender: formData.gender.toUpperCase(),
+                    dateOfBirth: formData.dob,
+                    address: formData.address || "NA",
+                    emergencyContact: "9999999999",
+                    emergencyContactName: "NA",
+                    emergencyContactRelation: "NA"
+                },
+                // professionalDetails: {
+                //     employeeCode: formData.employeeCode || generateEmployeeCode(),
+                //     qualification: formData.highestQualification || "NA",
+                //     experienceYears: Number(formData.experience || 1),
+                //     joiningDate: formData.joiningDate,
+                //     department: "GENERAL",
+                //     designation: "USER"
+                // },
+                // bankDetails: {
+                //     accountHolderName: "NA",
+                //     accountNumber: "000000000000",
+                //     bankName: "NA",
+                //     ifscCode: "HDFC0123456",
+                //     branchName: "NA"
+                // },
+                accountStatus: "ACTIVE",
+                // payrollStatus: "INCLUDED",
+                remarks: "Created from UI"
+            };
+        } else {
+            sysUserPayload = {
+                email: formData.email,
+                roleNames: [activeRole],
+                personalDetails: {
+                    fullName: formData.name,
+                    mobile: formData.mobile,
+                    email: formData.email || "test.user@school.com",
+                    gender: formData.gender.toUpperCase(),
+                    dateOfBirth: formData.dob,
+                    address: formData.address || "NA",
+                    emergencyContact: "9999999999",
+                    emergencyContactName: "NA",
+                    emergencyContactRelation: "NA"
+                },
+                professionalDetails: {
+                    employeeCode: formData.empId || generateEmployeeCode(),
+                    qualification: formData.highestQualification || "NA",
+                    experienceYears: Number(formData.experience || 1),
+                    joiningDate: formData.joiningDate,
+                    department: "GENERAL",
+                    designation: "USER"
+                },
+                bankDetails: {
+                    accountHolderName: "NA",
+                    accountNumber: "000000000000",
+                    bankName: "NA",
+                    ifscCode: "HDFC0123456",
+                    branchName: "NA"
+                },
+                accountStatus: "ACTIVE",
+                payrollStatus: "INCLUDED",
+                remarks: "Created from UI"
+            };
         }
-        else {
-            return <> <div className="p-3 px-4 sm:text-sm md:text-base lg-text-xl">
-                <label htmlFor="employeeCode" className='font-semibold text-gray-600 text-sm'>Employee Code</label>
-                <input
-                    type="text"
-                    name="employeeCode"
-                    placeholder='Auto-generated if empty'
-                    className={inputStyle}
-                />
-            </div>
-                <div className="input3 p-3 px-4 sm:text-sm md:text-base lg-text-xl ">
-                    <label htmlFor="highestQualification" className='font-semibold text-gray-600 text-sm'>Highest Qualification</label>
-                    <input
-                        type="text"
-                        name="highestQualification"
-                        placeholder='Highest Qualification'
-                        className={inputStyle}
-                    />
-                </div>
-
-                <div className="input4 p-3 px-4 sm:text-sm md:text-base lg-text-xl">
-                    <label htmlFor="experience" className='font-semibold text-gray-600 text-sm'>Experience{`(Years)`}</label>
-                    <input
-                        type="number"
-                        name="experience"
-                        placeholder='0'
-                        className={inputStyle}
-                    />
-                </div>
-
-                <div className="input5 p-3 px-4 sm:text-sm md:text-base lg-text-xl ">
-                    <label htmlFor="joiningDate" className='font-semibold text-gray-600 text-sm'>Date of Joining{impMark} </label>
-                    <input
-                        type="date"
-                        name="joiningDate"
-                        className='bg-gray-100 font-normal text-gray-800 border-gray-400 p-1 px-4 w-full rounded-md focus:outline-none appearance-none'
-                        required
-                    />
-                </div>
-            </>
+          console.log(sysUserPayload);
+        try {
+            // Personal/professional details update
+            await updateUserById(id, sysUserPayload);
+            toast.success(`${formData.name}'s details updated successfully!`);
+             navigate("/dashboard/manageUsers");
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to update user, Please try again.");
+        }
+        finally {
+            setIsLoading(false);
         }
     }
 
-    return (
-        <div className='m-6'>
-            {/* <button
-                type="button"
-                className='bg-white hover:bg-gray-100 text-sm lg:text-lg text-black shadow border border-gray-200 rounded-lg  px-2 my-4 py-1  font-medium cursor-pointer flex items-end'>
-                <ChevronLeft size={25} />  Back
-            </button> */}
 
-            {/* Header */}
-            <div className="mb-6 flex">
-                <UserRoundPen size={45} className='text-blue-600 m-1 mr-4' />
-                <div>
-                    <h1 className="text-xl sm:text-2xl font-bold text-gray-900 flex items-end">
-                        Edit User: UserName
+    const handleDiscard = () => {
+        navigate("/dashboard/manageUsers");
+    };
+
+    if (!sysUser) {
+        return (
+            <div className='min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8'>
+                <button
+                    onClick={() => navigate(-1)}
+                    className="flex items-center cursor-pointer bg-gray-600 p-2 rounded-xl text-white gap-2 hover:bg-gray-900 transition-colors mb-4"
+                >
+                    <ChevronLeft className="w-5 h-5" />
+                    <span className="hidden sm:inline">Back to List</span>
+                </button>
+                <div className="flex items-center justify-center py-8 relative">
+                    <div className="flex items-center justify-center absolute lg:top-80">
+                        <div className="w-7 h-7 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                        <p className="text-gray-600 lg:text-xl font-medium">Loading User...</p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-4">
+            <div className="mx-auto">
+                {/* Back Button */}
+                <button
+                    onClick={() => navigate(-1)}
+                    className="flex items-center cursor-pointer bg-gray-600 p-2 rounded-xl text-white gap-2 hover:bg-gray-900 transition-colors mb-4"
+                >
+                    <ChevronLeft className="w-5 h-5" />
+                    <span className="hidden sm:inline">Back to List</span>
+                </button>
+
+                {/* Header */}
+                <div className="mb-6">
+                    <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
+                        Edit User: {formData.name}
                     </h1>
                     <p className="text-sm sm:text-base text-gray-500">
-                        Update account details for this user.
+                        Manage personal information and account status for users.
                     </p>
                 </div>
-            </div>
 
-            <div className="two mb-0">
-                <div className="divheading flex justify-start align-end mt-8 bg-white border-2 border-gray-200 rounded-t-xl md:p-2 md:pt-3">
-                    <User2 size={32} className=" text-blue-500" />
-                    <h2 className='pl-3 lg:text-xl md:text-base font-medium text-gray-700 pt-1'>Personal Details</h2>
-                </div>
-            </div>
-            <div className=" grid lg:grid-cols-2 sm:grid-cols-1 border-b-2 border-l-2 border-r-2 border-gray-200 bg-white rounded-b-xl">
-                <div className="input1 p-3 px-4 sm:text-sm md:text-base lg-text-xl">
-                    <label htmlFor="name" className='font-semibold text-gray-600 text-sm'>Full Name</label>{impMark}
-                    <input
-                        type="text"
-                        name="name"
-                        placeholder='Enter full name'
-                        className={inputStyle}
-                        required
-                    />
-                </div>
-                <div className="input2 p-3 px-4 sm:text-sm md:text-base lg-text-xl">
-                    <label htmlFor="gender" className='font-semibold text-gray-600 text-sm'>Gender</label>{impMark}
-                    <select
-                        name="gender" className={inputStyle} required>
-                        <option value="" disabled>Select Gender</option>
-                        <option value="Male">Male</option>
-                        <option value="Female">Female</option>
-                    </select>
-                </div>
+                <form onSubmit={handle_updateDetails}>
+                    <div className="bg-white rounded-lg shadow">
+                        {/* Tabs */}
+                        <div className="border-b border-gray-200">
+                            <nav className="flex flex-wrap -mb-px">
+                                <button
+                                    type="button"
+                                    onClick={() => setActiveTab('personal')}
+                                    className={`${activeRole === 'PARENT' ? 'hidden' : 'flex'} items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'personal'
+                                        ? 'border-blue-600 text-blue-600'
+                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                        }`}
+                                >
+                                    <User size={20} />
+                                    <span className="hidden sm:inline">Personal Details</span>
+                                    <span className="sm:hidden">Personal</span>
+                                </button>
+                                {/* <button
+                                    type="button"
+                                    onClick={() => setActiveTab('salary')}
+                                    className={`${formData.role.toLocaleLowerCase() === 'student' ? 'hidden' : 'flex'} items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'salary'
+                                        ? 'border-blue-600 text-blue-600'
+                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                        }`}
+                                >
+                                    <IndianRupee size={18} />
+                                    <span className="hidden sm:inline">Salary Structure</span>
+                                    <span className="sm:hidden">Salary</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setActiveTab('student')}
+                                    className={`${formData.role.toLocaleLowerCase() === 'student' ? 'flex' : 'hidden'} items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'student'
+                                        ? 'border-blue-600 text-blue-600'
+                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                        }`}
+                                >
+                                    <User size={20} />
+                                    <span className="hidden sm:inline">Student Details</span>
+                                    <span className="sm:hidden">Student</span>
+                                </button> */}
+                            </nav>
+                        </div>
 
-                <div className="input3 p-3 px-4 sm:text-sm md:text-base lg-text-xl">
-                    <label htmlFor="mobile" className='font-semibold text-gray-600 text-sm'>Mobile Number </label>{impMark}
-                    <input
-                        type="tel"
-                        name="mobile"
-                        placeholder='Mobile number'
-                        className='bg-gray-100 font-normal text-gray-800 border-gray-400 p-1 px-4 w-full rounded-md focus:outline-none appearance-none'
-                        required
-                    />
-                </div>
+                        {/* Content */}
+                        <div className={`p-4 sm:p-6 lg:p-8 ${activeTab === 'personal' && activeRole === 'PARENT' ? 'hidden' : ''}`}>
+                            {activeTab === 'personal' && (
+                                <UserPersonalDetailsTab
+                                    formData={formData}
+                                    setFormData={setFormData}
+                                    handleInputChange={handleInputChange}
+                                />
+                            )}
+                            {/* {activeTab === 'salary' && (
+                                <SalaryStructureTab
+                                    formData={formData}
+                                    setFormData={setFormData}
+                                    handleInputChange={handleInputChange}
+                                    sysUserId={id}
+                                />
+                            )} */}
+                        </div>
+                        <div className={`p-4 sm:p-6 lg:p-8 ${activeTab === 'personal' && activeRole !== 'PARENT' ? 'hidden' : ''}`}>
+                            {activeTab === 'personal' && (
+                                <ParentPersonalDetailsTab
+                                    formData={formData}
+                                    setFormData={setFormData}
+                                    handleInputChange={handleInputChange}
+                                />
+                            )}
+                        </div>
 
-                <div className="input4 p-3 px-4 sm:text-sm md:text-base lg-text-xl">
-                    <label htmlFor="email" className='font-semibold text-gray-600 text-sm'>Email Address </label>{impMark}
-                    <input
-                        type="email"
-                        name="email"
-                        placeholder='Enter email address'
-                        className={inputStyle}
-                    />
-                </div>
+                        {/* Footer Buttons */}
+                        <div className="border-t border-gray-200 px-4 sm:px-6 lg:px-8 py-4 bg-gray-50 rounded-b-lg">
+                            <div className="flex flex-col sm:flex-row justify-end gap-3">
+                                <button
+                                    type="button"
+                                    onClick={handleDiscard}
+                                    className="px-6 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                                >
+                                    Discard Changes
+                                </button>
+                                <button
+                                    disabled={isLoading}
+                                    type="submit"
+                                    className={`mt-1 px-4 py-3 bg-blue-500  font-semibold rounded-lg transition-all${ isLoading? 'bg-blue-300 cursor-not-allowed text-white'
+                                            : 'bg-blue-500 hover:bg-blue-600 cursor-pointer text-white'
+                                        }`}
+                                >
+                                    {isLoading ? (
+                                        <span className="flex items-center justify-center gap-2">
+                                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                                <path d="M7.707 10.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V6h5a2 2 0 012 2v7a2 2 0 01-2 2H4a2 2 0 01-2-2V8a2 2 0 012-2h5v5.586l-1.293-1.293zM9 4a1 1 0 012 0v2H9V4z" />
+                                            </svg>
+                                            <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                                            Saving...
+                                        </span>
+                                    ) : (
+                                        'Save Changes'
+                                    )}
+                                </button>
 
-                <div className="input5 p-3 px-4 sm:text-sm md:text-base lg-text-xl">
-                    <label htmlFor="dob" className='font-semibold text-gray-600 text-sm'>Date of Birth</label>{impMark}
-                    <input
-                        type="date"
-                        name="dob"
-                        className={inputStyle}
-                        required
-                    />
-                </div>
-                <br />
-                <div className="input6 p-3 px-4 sm:text-sm md:text-base lg-text-xl align-text-top md:col-span-2">
-                    <label htmlFor="address" className='font-semibold text-gray-600 text-sm'>Current Address</label>
-                    <textarea
-                        rows={5}
-                        name="address"
-                        placeholder='Enter residential address'
-                        className={inputStyle}
-                    />
-                </div>
-            </div>
-
-            <div className="two mb-0">
-                <div className="divheading flex justify-start align-end mt-8 bg-white border-2 border-gray-200 rounded-t-xl md:p-2 md:pt-3">
-                    <BriefcaseBusiness size={32} className=" text-blue-500" />
-                    <h2 className='pl-3 lg:text-xl md:text-base font-medium text-gray-700 pt-1'>Professional Details</h2>
-                </div>
-            </div>
-            <div className=" grid lg:grid-cols-2 sm:grid-cols-1 border-b-2 border-x-2 border-x-gray-200 border-b-gray-200 bg-white rounded-b-xl">
-                <div className="input2 p-3 px-4 sm:text-sm md:text-base lg-text-xl">
-                    <label htmlFor="Systemrole" className='font-semibold text-gray-600 text-sm'>Selected Role</label>{impMark}
-                    <input type="text" value={'eg. teacher'} className="bg-gray-100 mt-1 font-normal text-gray-800 border-gray-400 p-1 px-4 w-full rounded-md focus:outline-none appearance-none cursor-not-allowed"  readOnly />
-                </div>
-
-                {<SelectedInputField />}
-            </div>
-
-            <div className="btnClass flex justify-end">
-                <button
-                    className='text-gray-500 hover:bg-gray-200 px-3 py-1 my-2 mr-4 rounded-sm font-medium border-gray-500 border-2 cursor-pointer'>
-                    Cancel
-                </button>
-                <button
-                    type="submit"
-                    className='bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 my-2 ml-4 rounded-sm font-medium border-blue-500 border-2 cursor-pointer'>
-                    Update User
-                </button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
             </div>
         </div>
-
-
-    )
+    );
 }
 
-export default EditSysUser
+export default EditSysUser;
