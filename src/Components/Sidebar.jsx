@@ -70,6 +70,7 @@ const Sidebar = ({
       ]
     },
     { id: 'teachers', icon: Users, label: 'Teachers', route: '/teachers' },
+    { id: 'students', icon: Users, label: 'Students', route: '/students' },
     { id: 'leaves', icon: FileText, label: 'Leaves', route: '/leaves' },
     { id: 'payroll', icon: IndianRupee, label: 'Payroll', route: '/payroll' },
     { id: 'settings', icon: Settings, label: 'Settings', route: '/settings' }

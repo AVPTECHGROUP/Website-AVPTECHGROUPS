@@ -31,6 +31,12 @@ import AddnewSystemUser from '../Pages/SuperAdmin/AddnewSystemUser';
 import EditSysUser from '../Pages/SuperAdmin/EditSysUser';
 import ManageAllUsers from '../Pages/SuperAdmin/ManageAllUsers';
 
+// Sttudents
+import Student from '../Pages/Students/Students';
+import AddNewStudent from '../Pages/Students/AddNewStudent';
+import EditStudentDetails from '../Pages/Students/EditStudentDetails';
+import StudentDetails from '../Pages/Students/StudentDetails';
+
 const MainRoutes = () => {
   return (
     <Routes>
@@ -45,7 +51,11 @@ const MainRoutes = () => {
       <Route element={<ProtectedRoutes />}>
         <Route element={<AppLayout />}>
 
+          {/* Super Admin */}
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/dashboard/addUser" element={<AddnewSystemUser />} />
+          <Route path="/dashboard/editUser/:id" element={<EditSysUser />} />
+          <Route path="/dashboard/manageUsers" element={<ManageAllUsers />} />
 
           {/* Attendance */}
           <Route path="/attendance" element={<Attendance />} />
@@ -55,10 +65,6 @@ const MainRoutes = () => {
           <Route path="/attendance/usersAttendance/warning" element={<WarningVerificationFailed />} />
           <Route path="/attendance/usersAttendance/manual" element={<ManualAttendance />} />
 
-          {/* Others */}
-          <Route path="/leaves" element={<Leaves />} />
-          <Route path="/payroll" element={<Payroll />} />
-
           {/* Teachers */}
           <Route path="/teachers" element={<Teachers />} />
           <Route path="/teachers/addTeacher" element={<AddNewTeacher />} />
@@ -66,10 +72,17 @@ const MainRoutes = () => {
           <Route path="/teachers/editTeacher/:id" element={<EditTeachersDetails />} />
           <Route path="/teachers/classAssignment" element={<ClassAssignment />} />
 
-          {/* Super Admin */}
-          <Route path="/dashboard/addUser" element={<AddnewSystemUser />} />
-          <Route path="/dashboard/editUser/:id" element={<EditSysUser />} />
-          <Route path="/dashboard/manageUsers" element={<ManageAllUsers />} />
+          {/* Students */}
+          <Route path="/students" element={<Student/>} />
+          <Route path="/students/addStudents" element={<AddNewStudent/>} />
+          <Route path="/students/:id" element={<StudentDetails/>} />
+          <Route path="/students/editStudent/:id" element={<EditStudentDetails/>} />
+
+
+          {/* Others */}
+
+          <Route path="/leaves" element={<Leaves />} />
+          <Route path="/payroll" element={<Payroll />} />
 
           {/* Settings */}
           <Route path="/settings" element={<Settings />} />

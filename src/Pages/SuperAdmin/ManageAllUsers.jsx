@@ -24,10 +24,10 @@ import {
     LogOutIcon
 } from 'lucide-react';
 import { toast } from 'react-toastify';
-import { activateUserStatus, allUserFilter, deactivateUserStatus, filterUserByRole, filterUserByStatus, getAllUserRoles, getAllUsers, getUsersStatistics, resetUserPassword, searchUsers } from '../../Api/userManagementAPI';
+import { activateUserStatus, deactivateUserStatus, filterUserByRole, filterUserByStatus, getAllUserRoles, getAllUsers, getUsersStatistics, resetUserPassword, searchUsers } from '../../Api/userManagementAPI';
 import ActionDropDownComp from '../../Components/CommonComp/ActionDropDownComp';
 import CardComponent from '../../Components/CommonComp/CardComponent';
-import QuickActions from '../../Components/SuperAdmin/ManageUser/QuickActions';
+import QuickActions from '../../Components/CommonComp/QuickActions';
 
 const ManageAllUsers = () => {
     // Stores text typed in search input (sys_user name / id / role)

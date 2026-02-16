@@ -12,6 +12,7 @@ import {
 import { toast } from 'react-toastify';
 import { activateStatus, deactivateStatus } from '../../../Api/TeachersAPI';
 import ActionDropDownComp from '../../CommonComp/ActionDropDownComp';
+
 const TeachersTable = ({
   assignTeacherId,
   teachers,
@@ -24,14 +25,15 @@ const TeachersTable = ({
   setRowsPerPage,
   totalElements,
   totalPages,
-  fetchTeachers
+  fetchTeachers,
+  actionOptions: propActionOptions, // Accept action options as prop
+  callAllActions: propCallAllActions, // Accept action handler as prop
+  isUserTable = false // Flag to determine if this is for users or teachers
 }) => {
   const navigate = useNavigate();
-  const toggleDebounceRef = useRef(null);
-  const [assignId , setAssignTeacherId] = useState(null);
-  // ============================================
+  const [assignId, setAssignTeacherId] = useState(null);
+
   // HELPER FUNCTIONS
-  // ============================================
 
   // Get avatar color based on name
   const getAvatarColor = (name) => {
@@ -47,9 +49,8 @@ const TeachersTable = ({
     return colors[index];
   };
 
-  // Toggle teacher active/inactive status
+  // Toggle teacher/user active/inactive status
   const handleToggleStatus = async (teacher) => {
-
     setTeachers(prev =>
       prev.map(t =>
         t.id === teacher.id
@@ -72,7 +73,6 @@ const TeachersTable = ({
       toast.error('Status update failed');
       fetchTeachers(); // rollback from server
     }
-
   };
 
   const NoDataFound = ({ message = "No data found" }) => (
@@ -87,41 +87,42 @@ const TeachersTable = ({
     </div>
   );
 
-//handle on Click Actions
- const callAllActions = async (optVal, teacher) => {
-        if (optVal === 'view') navigate(`/teachers/${teacher.id}`);
-        else if (optVal === 'editTeacher') navigate(`/teachers/editTeacher/${teacher.id}`);
-        else if (optVal === 'toogleStatus') handleToggleStatus(teacher);
-    }
+  // Use prop action handler if provided, otherwise use default
+  const callAllActions = propCallAllActions || (async (optVal, teacher) => {
+    if (optVal === 'view') navigate(`/teachers/${teacher.id}`);
+    else if (optVal === 'editTeacher') navigate(`/teachers/editTeacher/${teacher.id}`);
+    else if (optVal === 'toogleStatus' || optVal === 'toggleStatus') handleToggleStatus(teacher);
+  });
 
-   const actionOptions = [
-        {
-            value: "view",
-            label: "View",
-            icon: Eye,
-            text: "text-gray-600",
-            bg: "bg-blue-50",
-            hover: "hover:bg-gray-100",
-        },
-        {
-            value: "editTeacher",
-            label: "Edit",
-            icon: Edit,
-            text: "text-blue-600",
-            bg: "bg-green-50",
-            hover: "hover:bg-blue-100",
-        },
-        {
-            value: "toogleStatus",
-            label: "Toggle Status",
-            icon: Power,
-            text: "text-yellow-600",
-            bg: "bg-yellow-50",
-            hover: "hover:bg-yellow-100",
-        },
-    ];
+  // Use prop action options if provided, otherwise use default
+  const actionOptions = propActionOptions || [
+    {
+      value: "view",
+      label: "View",
+      icon: Eye,
+      text: "text-gray-600",
+      bg: "bg-blue-50",
+      hover: "hover:bg-gray-100",
+    },
+    {
+      value: "editTeacher",
+      label: "Edit",
+      icon: Edit,
+      text: "text-blue-600",
+      bg: "bg-green-50",
+      hover: "hover:bg-blue-100",
+    },
+    {
+      value: "toogleStatus",
+      label: "Toggle Status",
+      icon: Power,
+      text: "text-yellow-600",
+      bg: "bg-yellow-50",
+      hover: "hover:bg-yellow-100",
+    },
+  ];
+
   // MOBILE/TABLET CARDS VIEW 
-
   return (
     <>
       {/* Mobile Cards (visible below 1024px) */}
@@ -130,7 +131,7 @@ const TeachersTable = ({
           <div className="flex items-center justify-center py-8">
             <div className="text-center">
               <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-              <p className="text-gray-600 font-medium">Loading teachers...</p>
+              <p className="text-gray-600 font-medium">Loading {isUserTable ? 'users' : 'teachers'}...</p>
             </div>
           </div>
         ) : error ? (
@@ -138,7 +139,7 @@ const TeachersTable = ({
             <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <UserRoundXIcon className="w-6 h-6 text-red-600" />
             </div>
-            <h3 className="text-lg font-bold text-gray-900 mb-2">Error Loading Teachers</h3>
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Error Loading {isUserTable ? 'Users' : 'Teachers'}</h3>
             <p className="text-gray-600 mb-4">{error}</p>
             <button
               onClick={() => window.location.reload()}
@@ -148,7 +149,7 @@ const TeachersTable = ({
             </button>
           </div>
         ) : teachers.length === 0 ? (
-          <NoDataFound message="No teachers found" />
+          <NoDataFound message={`No ${isUserTable ? 'users' : 'teachers'} found`} />
         ) : (
           teachers.map((teacher) => (
             <div
@@ -168,7 +169,7 @@ const TeachersTable = ({
                   <div>
                     <h3 className="font-semibold text-gray-900">{teacher.name}</h3>
                     <p className="text-sm text-gray-500">{teacher.role}</p>
-                    <p className="text-xs text-gray-400 mt-1">{teacher.employeeCode}</p>
+                    {teacher.employeeCode && <p className="text-xs text-gray-400 mt-1">{teacher.employeeCode}</p>}
                   </div>
                 </div>
                 <span
@@ -192,149 +193,129 @@ const TeachersTable = ({
                   <span className="text-sm font-medium text-gray-900">{teacher.mobile}</span>
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-500">Classes:</span>
-                  <div className="flex flex-wrap gap-1 justify-end">
-                    {(teacher.classes || []).map((cls, idx) => (
-                      <span
-                        key={idx}
-                        className="inline-block px-2 py-0.5 text-xs bg-blue-50 text-blue-600 rounded"
-                      >
-                        {cls}
-                      </span>
-                    ))}
+                {!isUserTable && teacher.classes && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-500">Classes:</span>
+                    <div className="flex flex-wrap gap-1 justify-end">
+                      {(teacher.classes || []).map((cls, idx) => (
+                        <span
+                          key={idx}
+                          className="inline-block px-2 py-0.5 text-xs bg-blue-50 text-blue-600 rounded"
+                        >
+                          {cls}
+                        </span>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
 
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-500">Subjects:</span>
-                  <div className="flex flex-wrap gap-1 justify-end">
-                    {(teacher.subjects || []).map((subject, idx) => (
-                      <span
-                        key={idx}
-                        className="inline-block px-2 py-0.5 text-xs bg-purple-50 text-purple-600 rounded"
-                      >
-                        {subject}
-                      </span>
-                    ))}
+                {!isUserTable && teacher.salaryType && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-500">Salary Type:</span>
+                    <span
+                      className={`inline-block px-2.5 py-1 text-xs rounded-full ${teacher.salaryType === 'MONTHLY'
+                        ? 'bg-teal-50 text-teal-700'
+                        : 'bg-yellow-50 text-yellow-700'
+                        }`}
+                    >
+                      {teacher.salaryType}
+                    </span>
                   </div>
-                </div>
+                )}
 
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-500">Salary Type:</span>
-                  <span
-                    className={`inline-block px-2.5 py-1 text-xs rounded-full ${teacher.salaryType === 'MONTHLY'
-                      ? 'bg-teal-50 text-teal-700'
-                      : 'bg-yellow-50 text-yellow-700'
-                      }`}
-                  >
-                    {teacher.salaryType}
-                  </span>
-                </div>
+                {!isUserTable && teacher.attendance && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-500">Attendance:</span>
+                    <span
+                      className={`inline-block px-2.5 py-1 text-xs rounded ${teacher.attendance === 'ALLOWED'
+                        ? 'bg-blue-50 text-blue-700'
+                        : 'bg-gray-100 text-gray-700'
+                        }`}
+                    >
+                      {teacher.attendance}
+                    </span>
+                  </div>
+                )}
 
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-500">Attendance:</span>
-                  <span
-                    className={`inline-block px-2.5 py-1 text-xs rounded ${teacher.attendance === 'ALLOWED'
-                      ? 'bg-blue-50 text-blue-700'
-                      : 'bg-gray-100 text-gray-700'
-                      }`}
-                  >
-                    {teacher.attendance}
-                  </span>
-                </div>
+                {!isUserTable && teacher.payroll && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-500">Payroll:</span>
+                    <span
+                      className={`inline-block px-2.5 py-1 text-xs rounded ${teacher.payroll === 'INCLUDED'
+                        ? 'bg-teal-50 text-teal-700'
+                        : 'bg-gray-100 text-gray-700'
+                        }`}
+                    >
+                      {teacher.payroll}
+                    </span>
+                  </div>
+                )}
 
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-500">Payroll:</span>
-                  <span
-                    className={`inline-block px-2.5 py-1 text-xs rounded ${teacher.payroll === 'INCLUDED'
-                      ? 'bg-teal-50 text-teal-700'
-                      : 'bg-gray-100 text-gray-700'
-                      }`}
-                  >
-                    {teacher.payroll}
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-500">Joining Date:</span>
-                  <span className="text-sm font-medium text-gray-900">{teacher.joiningDate}</span>
-                </div>
+                {!isUserTable && teacher.joiningDate && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-500">Joining Date:</span>
+                    <span className="text-sm font-medium text-gray-900">{teacher.joiningDate}</span>
+                  </div>
+                )}
               </div>
 
               {/* Actions */}
               <div className="flex items-center gap-2 pt-3 border-t border-gray-100">
-                <button
-                  onClick={() => navigate(`/teachers/${teacher.id}`)}
-                  className="flex-1 px-3 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg flex items-center justify-center gap-2 transition-all"
-                >
-                  <Eye className="w-4 h-4 text-gray-600" />
-                  <span className="text-sm font-medium text-gray-700">View</span>
-                </button>
-                <button
-                  onClick={() => navigate(`/teachers/editTeacher/${teacher.id}`)}
-                  className="flex-1 px-3 py-2 bg-blue-50 hover:bg-blue-100 rounded-lg flex items-center justify-center gap-2 transition-all"
-                >
-                  <Edit className="w-4 h-4 text-blue-600" />
-                  <span className="text-sm font-medium text-blue-700">Edit</span>
-                </button>
-                <button
-                  onClick={() => handleToggleStatus(teacher)}
-                  disabled={loading}
-                  className={`flex-1 px-3 py-2 rounded-lg flex items-center justify-center gap-2 transition-all ${teacher.status === 'ACTIVE'
-                    ? 'bg-red-50 hover:bg-red-100'
-                    : 'bg-green-50 hover:bg-green-100'
-                    }`}
-                >
-                  <Power
-                    className={`w-4 h-4 ${teacher.status === 'ACTIVE' ? 'text-red-600' : 'text-green-600'
-                      }`}
+                <div className="flex-1">
+                  <ActionDropDownComp
+                    actionOptions={actionOptions}
+                    onAction={(optVal) => callAllActions(optVal, teacher)}
                   />
-                  <span className="text-sm font-medium">
-                    {teacher.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
-                  </span>
-                </button>
+                </div>
               </div>
-              
             </div>
           ))
         )}
       </div>
 
       {/* DESKTOP TABLE VIEW (visible 1024px+) */}
-
       <div className="hidden lg:block bg-white rounded-xl border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
+                {!isUserTable && (
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Employee Code
+                  </th>
+                )}
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Employee Code
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Full Name
+                  {isUserTable ? 'User Name' : 'Full Name'}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Mobile Number
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Assigned Classes
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Salary Type
-                </th>
+                {!isUserTable && (
+                  <>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Assigned Classes
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Salary Type
+                    </th>
+                  </>
+                )}
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Attendance
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Payroll
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Joining Date
-                </th>
+                {!isUserTable && (
+                  <>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Attendance
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Payroll
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Joining Date
+                    </th>
+                  </>
+                )}
                 <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
                 </th>
@@ -343,20 +324,20 @@ const TeachersTable = ({
             <tbody className="bg-white divide-y divide-gray-200">
               {loading ? (
                 <tr>
-                  <td colSpan="11" className="px-6 py-8 text-center">
+                  <td colSpan={isUserTable ? "4" : "10"} className="px-6 py-8 text-center">
                     <div className="flex items-center justify-center flex-col">
                       <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                      <p className="text-gray-600 font-medium ml-4">Loading teachers...</p>
+                      <p className="text-gray-600 font-medium ml-4">Loading {isUserTable ? 'users' : 'teachers'}...</p>
                     </div>
                   </td>
                 </tr>
               ) : error ? (
                 <tr>
-                  <td colSpan="11" className="px-6 py-8 text-center">
+                  <td colSpan={isUserTable ? "4" : "10"} className="px-6 py-8 text-center">
                     <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                       <UserRoundXIcon className="w-6 h-6 text-red-600" />
                     </div>
-                    <h3 className="text-lg font-bold text-gray-900 mb-2">Error Loading Teachers</h3>
+                    <h3 className="text-lg font-bold text-gray-900 mb-2">Error Loading {isUserTable ? 'Users' : 'Teachers'}</h3>
                     <p className="text-gray-600 mb-4">{error}</p>
                     <button
                       onClick={() => window.location.reload()}
@@ -367,17 +348,28 @@ const TeachersTable = ({
                   </td>
                 </tr>
               ) : teachers.length === 0 ? (
-                  <tr>
-                    <td colSpan="11">
-                      <NoDataFound message="No teachers found" />
-                    </td>
-                  </tr>
-                ): (
+                <tr>
+                  <td colSpan={isUserTable ? "4" : "10"}>
+                    <NoDataFound message={`No ${isUserTable ? 'users' : 'teachers'} found`} />
+                  </td>
+                </tr>
+              ) : (
                 teachers.map((teacher) => (
-                  <tr onClick={()=>{setAssignTeacherId(teacher.id); assignTeacherId(teacher.id)}} key={teacher.id} className={`${assignId === teacher.id ? "bg-blue-50" : ""}`}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {teacher.employeeCode}
-                    </td>
+                  <tr
+                    onClick={() => {
+                      if (!isUserTable) {
+                        setAssignTeacherId(teacher.id);
+                        assignTeacherId(teacher.id);
+                      }
+                    }}
+                    key={teacher.id}
+                    className={`${assignId === teacher.id && !isUserTable ? "bg-blue-50" : ""} hover:bg-gray-50`}
+                  >
+                    {!isUserTable && (
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {teacher.employeeCode}
+                      </td>
+                    )}
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-3">
                         <img src={teacher.image} className="w-10 h-10 rounded-full" alt="" />
@@ -390,73 +382,78 @@ const TeachersTable = ({
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {teacher.mobile}
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-wrap gap-1">
-                        {(teacher.classes || []).map((cls, idx) => (
+                    {!isUserTable && (
+                      <>
+                        <td className="px-6 py-4">
+                          <div className="flex flex-wrap gap-1">
+                            {(teacher.classes || []).map((cls, idx) => (
+                              <span
+                                key={idx}
+                                className="inline-block px-2 py-1 text-xs bg-blue-50 text-blue-600 rounded"
+                              >
+                                {cls}
+                              </span>
+                            ))}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
                           <span
-                            key={idx}
-                            className="inline-block px-2 py-1 text-xs bg-blue-50 text-blue-600 rounded"
+                            className={`inline-block px-3 py-1 text-xs rounded-full ${teacher.salaryType === 'MONTHLY'
+                              ? 'bg-teal-50 text-teal-700'
+                              : 'bg-yellow-50 text-yellow-700'
+                              }`}
                           >
-                            {cls}
+                            {teacher.salaryType}
                           </span>
-                        ))}
-                      </div>
-                    </td>
-                  
+                        </td>
+                      </>
+                    )}
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
-                        className={`inline-block px-3 py-1 text-xs rounded-full ${
-                          teacher.salaryType === 'MONTHLY'
-                            ? 'bg-teal-50 text-teal-700'
-                            : 'bg-yellow-50 text-yellow-700'
-                        }`}
-                      >
-                        {teacher.salaryType}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`inline-flex items-center gap-1 px-3 py-1 text-xs rounded-full ${
-                          teacher.status === 'ACTIVE'
-                            ? 'bg-green-50 text-green-700'
-                            : 'bg-red-50 text-red-700'
-                        }`}
+                        className={`inline-flex items-center gap-1 px-3 py-1 text-xs rounded-full ${teacher.status === 'ACTIVE'
+                          ? 'bg-green-50 text-green-700'
+                          : 'bg-red-50 text-red-700'
+                          }`}
                       >
                         <span
-                          className={`w-1.5 h-1.5 rounded-full ${
-                            teacher.status === 'ACTIVE' ? 'bg-green-500' : 'bg-red-500'
-                          }`}
+                          className={`w-1.5 h-1.5 rounded-full ${teacher.status === 'ACTIVE' ? 'bg-green-500' : 'bg-red-500'
+                            }`}
                         ></span>
                         {teacher.status}
                       </span>
                     </td>
+                    {!isUserTable && (
+                      <>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span
+                            className={`inline-block px-3 py-1 text-xs rounded ${teacher.attendance === 'ALLOWED'
+                              ? 'bg-blue-50 text-blue-700'
+                              : 'bg-gray-100 text-gray-700'
+                              }`}
+                          >
+                            {teacher.attendance}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span
+                            className={`inline-block px-3 py-1 text-xs rounded ${teacher.payroll === 'INCLUDED'
+                              ? 'bg-teal-50 text-teal-700'
+                              : 'bg-gray-100 text-gray-700'
+                              }`}
+                          >
+                            {teacher.payroll}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {teacher.joiningDate}
+                        </td>
+                      </>
+                    )}
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`inline-block px-3 py-1 text-xs rounded ${
-                          teacher.attendance === 'ALLOWED'
-                            ? 'bg-blue-50 text-blue-700'
-                            : 'bg-gray-100 text-gray-700'
-                        }`}
-                      >
-                        {teacher.attendance}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`inline-block px-3 py-1 text-xs rounded ${
-                          teacher.payroll === 'INCLUDED'
-                            ? 'bg-teal-50 text-teal-700'
-                            : 'bg-gray-100 text-gray-700'
-                        }`}
-                      >
-                        {teacher.payroll}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {teacher.joiningDate}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                     <ActionDropDownComp actionOptions={actionOptions} onAction={(optVal) => callAllActions(optVal, teacher)} />
+                      <ActionDropDownComp
+                        actionOptions={actionOptions}
+                        onAction={(optVal) => callAllActions(optVal, teacher)}
+                      />
                     </td>
                   </tr>
                 ))
@@ -466,7 +463,6 @@ const TeachersTable = ({
         </div>
 
         {/* DESKTOP PAGINATION */}
-
         <div className="px-6 py-4 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex flex-col sm:flex-row items-center gap-4">
             <span className="text-sm text-gray-700">
@@ -530,10 +526,7 @@ const TeachersTable = ({
         </div>
       </div>
 
-      {/* ============================================ */}
       {/* MOBILE PAGINATION */}
-      {/* ============================================ */}
-
       <div className="lg:hidden bg-white rounded-xl border border-gray-200 p-4">
         <div className="flex flex-col gap-4">
           <div className="text-center">
