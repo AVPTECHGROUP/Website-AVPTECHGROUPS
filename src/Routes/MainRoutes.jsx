@@ -8,7 +8,7 @@ import ProtectedRoutes from '../utils/Protectedroutes';
 import Login from '../Pages/Login_2';
 import Dashboard from '../Pages/Dashboard';
 import Attendance from '../Pages/Attendance/Attendance';
-import Leaves from '../Pages/leaves';
+import Leaves from '../Pages/Leaves/Leaves';
 import Payroll from '../Pages/Payroll';
 import Teachers from '../Pages/Teachers/Teachers';
 import Settings from '../Pages/Settings';
@@ -30,20 +30,20 @@ import ClassAssignment from '../Pages/Teachers/ClassAssignment';
 import AddnewSystemUser from '../Pages/SuperAdmin/AddnewSystemUser';
 import EditSysUser from '../Pages/SuperAdmin/EditSysUser';
 import ManageAllUsers from '../Pages/SuperAdmin/ManageAllUsers';
+import ApplyLeaves from '../Pages/Leaves/ApplyLeaves';
+import MyLeaves from '../Pages/Leaves/MyLeaves';
 
 // Sttudents
 import Student from '../Pages/Students/Students';
 import AddNewStudent from '../Pages/Students/AddNewStudent';
 import EditStudentDetails from '../Pages/Students/EditStudentDetails';
 import StudentDetails from '../Pages/Students/StudentDetails';
+import HolidayManagment from '../Pages/Leaves/Holiday/HolidayManagement';
 
 const MainRoutes = () => {
   return (
     <Routes>
-
-      {/* Default */}
-      {/* <Route path="/" element={<Navigate to="/login" />} /> */}
-
+      
       {/* 🔓 PUBLIC ROUTE (NO SIDEBAR) */}
       <Route path="/login" element={<Login />} />
 
@@ -70,7 +70,7 @@ const MainRoutes = () => {
           <Route path="/teachers/addTeacher" element={<AddNewTeacher />} />
           <Route path="/teachers/:id" element={<DetailsView />} />
           <Route path="/teachers/editTeacher/:id" element={<EditTeachersDetails />} />
-          <Route path="/teachers/classAssignment" element={<ClassAssignment />} />
+          <Route path="/teachers/classAssignment/:teacherId" element={<ClassAssignment />} />
 
           {/* Students */}
           <Route path="/students" element={<Student/>} />
@@ -83,6 +83,13 @@ const MainRoutes = () => {
 
           <Route path="/leaves" element={<Leaves />} />
           <Route path="/payroll" element={<Payroll />} />
+
+
+          {/* Leave Management */}
+          <Route path="/leaves" element={<Leaves />} />
+          <Route path="/leaves/applyLeaves" element={<ApplyLeaves />} />
+          <Route path="/leaves/myLeaves" element={<MyLeaves />} />
+          <Route path="/leaves/manageHolidays" element={<HolidayManagment />} />
 
           {/* Settings */}
           <Route path="/settings" element={<Settings />} />

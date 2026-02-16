@@ -55,8 +55,6 @@ const ManageAllUsers = () => {
     const [totalPages, setTotalPages] = useState(0);
     const [sysUsers, setsysUsers] = useState([])
     const [loading, setLoading] = useState(false);
-    const [isAction, setisAction] = useState('add');
-    const date = new Date().toLocaleDateString();
     const navigate = useNavigate();
 
     //for handle no user found
@@ -238,8 +236,6 @@ const ManageAllUsers = () => {
     const cardsArray = [{ IconName: UsersIcon, keyName: "Total Users", val: statistics.totalUsers, iconTxColor: "text-blue-600", iconBgColor: "bg-blue-50" },
     { IconName: UserCheck2, keyName: "Active Users", val: statistics.activeUsers, iconTxColor: "text-green-600", iconBgColor: "bg-green-50" },
     { IconName: UserRoundXIcon, keyName: "Inactive Users", val: statistics.inactiveUsers, iconTxColor: "text-red-600", iconBgColor: "bg-red-50" },
-    // { IconName: ShieldBanIcon, keyName: "Suspended Users", val: statistics.suspendedUsers, iconTxColor: "text-orange-600", iconBgColor: "bg-orange-50" },
-    // { IconName: ShieldAlertIcon, keyName: "Pending Users", val: statistics.pendingUsers, iconTxColor: "text-yellow-600", iconBgColor: "bg-yellow-50" }
 ]
 
     const tableHeadItems = ['User Name', 'Mobile Number', 'Status'];
@@ -300,7 +296,7 @@ const ManageAllUsers = () => {
                     </div>
 
                     {/* quick actions */}
-                    <QuickActions />
+                    <QuickActions buttonText = 'Add new User' navigateTo = '/dashboard/addUser' />
 
                     {/* filters */}
                     <div className="bg-white grid  lg:grid-cols-3 gap-2 px-4 py-2 rounded-xl border border-gray-200 mb-4">
