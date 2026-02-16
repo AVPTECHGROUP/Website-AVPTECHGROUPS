@@ -26,7 +26,7 @@ const Sidebar = ({
   const onLogout = () => {
     localStorage.removeItem('token')
     navigate('/login', { replace: true })
-  } 
+  }
 
   const menuItems = [
     {
@@ -36,6 +36,7 @@ const Sidebar = ({
       route: '/dashboard',
     },
     { id: 'manageUsers', icon: UserCog, label: 'Manage Users', route: '/dashboard/manageUsers' },
+    { id: 'teachers', icon: Users, label: 'Teachers', route: '/teachers' },
     {
       id: 'attendance',
       icon: Calendar,
@@ -69,8 +70,31 @@ const Sidebar = ({
         }
       ]
     },
-    { id: 'teachers', icon: Users, label: 'Teachers', route: '/teachers' },
-    { id: 'leaves', icon: FileText, label: 'Leaves', route: '/leaves' },
+    {
+      id: 'leaves',
+      icon: FileText,
+      label: (
+        <span className="t font-semibold">Manage Leaves</span>),
+      route: '/leaves',
+      subItems: [
+        {
+          label: (
+            <span className="text-sm text-gray-600 hover:text-blue-600">
+              Apply Leave
+            </span>
+          ),
+          route: '/leaves/applyLeaves'
+        },
+        {
+          label: (
+            <span className="text-sm text-gray-600 hover:text-blue-600">
+              My Leaves
+            </span>
+          ),
+          route: '/leaves/myLeaves'
+        }
+      ]
+    },
     { id: 'payroll', icon: IndianRupee, label: 'Payroll', route: '/payroll' },
     { id: 'settings', icon: Settings, label: 'Settings', route: '/settings' }
   ]
