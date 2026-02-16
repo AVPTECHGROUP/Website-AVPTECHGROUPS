@@ -32,7 +32,6 @@ import EditSysUser from '../Pages/SuperAdmin/EditSysUser';
 import ManageAllUsers from '../Pages/SuperAdmin/ManageAllUsers';
 import ApplyLeaves from '../Pages/Leaves/ApplyLeaves';
 import MyLeaves from '../Pages/Leaves/MyLeaves';
-import HolidayManagement from '../Pages/Leaves/Holiday/HolidayManagement';
 
 const MainRoutes = () => {
   return (
@@ -78,7 +77,6 @@ const MainRoutes = () => {
           <Route path="/leaves" element={<Leaves />} />
           <Route path="/leaves/applyLeaves" element={<ApplyLeaves />} />
           <Route path="/leaves/myLeaves" element={<MyLeaves />} />
-          <Route path="/leaves/manageHoliday" element={<HolidayManagement />} />
 
           {/* Settings */}
           <Route path="/settings" element={<Settings />} />

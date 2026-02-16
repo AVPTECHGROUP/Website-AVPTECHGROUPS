@@ -15,8 +15,9 @@ import {
 } from 'lucide-react';
 import { getAllLeaveRequest } from '../../Api/LeavesManagementAPI.JS';
 import LeavesReqInfoComponent from '../../Components/LeavesComponents/LeaveReqInfoComponent';
-import { approoveRejLeaveReq, } from '../../Api/LeavesManagementAPI';
+import { approoveRejLeaveReq, getALLLeavesStatistics, } from '../../Api/LeavesManagementAPI';
 import { toast } from 'react-toastify';
+import { getListOfValues } from '../../Api/ListOfValues';
 
 const Leaves = () => {
   const date = new Date().toLocaleDateString();
@@ -50,6 +51,45 @@ const Leaves = () => {
     totalThisMonth: 0,
     totalLeavesThisWeek: 0
   });
+
+  //for list of values 
+  const [listOfLeaveType, setListofLeavetype] = useState([]);
+  const [listOfLeaveStatus, setlistOfLeaveStatus] = useState([]);
+
+  useEffect(() => {
+    let fetchListOfValues = async () => {
+      try {
+        const leaveTypeRes = await getListOfValues('LEAVE_TYPE');
+        const formattedLeaveType = leaveTypeRes.map(item => ({
+          id: item.id,
+          value: item.value,
+          label: item.label
+        }));
+        console.log(formattedLeaveType);
+        setListofLeavetype(formattedLeaveType);
+
+        const leaveStatusRes = await getListOfValues('LEAVE_STATUS');
+        const formattedStatus = leaveStatusRes.map(item => ({
+          id: item.id,
+          value: item.value,
+          label: item.label
+        }));
+        setlistOfLeaveStatus(formattedStatus);
+
+      }
+      catch (e) {
+        console.error("get list of values error error:", e.message);
+        throw error;
+      }
+    }
+    fetchListOfValues();
+  }, []);
+
+  //Compare and get lable function
+  function compareAndGetLabel(data, compareValue) {
+  const found = data.find(item => item.value === compareValue);
+  return found ? <span> {found.label} </span>:"";
+}
 
   //for leave statistics 
   const [refressStat, setRefressStat] = useState(0);
@@ -313,17 +353,7 @@ const Leaves = () => {
               onChange={(e) => { setleaveType(e.target.value) }}
               className="px-4 py-2 border border-gray-200 bg-gray-100 rounded-lg focus:outline-none focus:shadow-sm focus:shadow-blue-200 text-sm w-full">
               <option value="All Types">All Leave Types</option>
-              {[{ value: 'SICK_LEAVE', key: 'Sick Leave' },
-              { value: 'CASUAL_LEAVE', key: 'Casual Leave' },
-              { value: 'EARNED_LEAVE', key: 'Earned Leave' },
-              { value: 'UNPAID_LEAVE', key: 'Unpaid Leave' },
-              { value: 'MATERNITY_LEAVE', key: 'Maternity Leave' },
-              { value: 'PATERNITY_LEAVE', key: 'Paternity Leave' },
-              { value: 'BEREAVEMENT_LEAVE', key: 'Bereavement Leave' },
-              { value: 'STUDY_LEAVE', key: 'Study Leave' },
-              { value: 'COMPENSATORY_OFF', key: 'Compensatory Leave' },
-              { value: 'SPECIAL_LEAVE', key: 'Special Leave' }
-              ].map((val) => (<option key={val.value} value={val.value}>{val.key}</option>))}
+              {listOfLeaveType.map((val) => (<option key={val.id} value={val.value}>{val.label}</option>))}
             </select>
 
             {/* Leave Status */}
@@ -332,12 +362,7 @@ const Leaves = () => {
               onChange={(e) => { setleavestatusFilter(e.target.value) }}
               className="px-4 py-2 border border-gray-200 bg-gray-100 rounded-lg focus:outline-none focus:shadow-sm focus:shadow-blue-200 text-sm w-full">
               <option value="All Status">All Status</option>
-              {[{ value: 'PENDING', key: 'Pending' },
-              { value: 'APPROVED', key: 'Approved' },
-              { value: 'REJECTED', key: 'Rejected' },
-              { value: 'CANCELLED', key: 'Cancelled' },
-              { value: 'WITHDRAWN', key: 'Withdrawn' }
-              ].map((val) => (<option key={val.value} value={val.value}>{val.key}</option>))}
+              {listOfLeaveStatus.map((val) => (<option key={val.id} value={val.value}>{val.label}</option>))}
             </select>
 
             {/* Date From */}
@@ -408,8 +433,7 @@ const Leaves = () => {
                         <h3 className="text-sm font-bold text-gray-700 mb-2">No Request Found</h3>
                       </td>
                     </tr> : leaveReq.map((emp) => (
-                      <tr key={emp.id} className="hover:bg-gray-50 transition-colors">
-
+                      <tr key={emp.leaveId} className="hover:bg-gray-50 transition-colors">
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-3">
                             <div className={`w-10 h-10 rounded-full ${getAvatarColor(emp.name)} flex items-center justify-center text-white font-semibold shrink-0`}>
@@ -421,7 +445,7 @@ const Leaves = () => {
                           </div>
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-700">
-                          {emp.leaveType}
+                          {compareAndGetLabel(listOfLeaveType, emp.leaveType)}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-700">
                           {emp.fromDate}
@@ -457,11 +481,11 @@ const Leaves = () => {
               {
                 loading ? (
                   <div className="text-center py-8">
-                                <div className="flex flex-col items-center">
-                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-2"></div>
-                                    <span className="text-gray-600">Loading requests...</span>
-                                </div>
-                            </div>
+                    <div className="flex flex-col items-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-2"></div>
+                      <span className="text-gray-600">Loading requests...</span>
+                    </div>
+                  </div>
                 ) : error ? (
                   <div className="flex flex-col items-center justify-center py-12 text-center">
 
@@ -495,7 +519,6 @@ const Leaves = () => {
                   </td>
                 </tr> : leaveReq.map((emp) => (
                   <div
-                    key={emp.id}
                     className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow"
                   >
                     {/* Header */}
@@ -512,7 +535,7 @@ const Leaves = () => {
                           {emp.name}
                         </p>
                         <p className="text-xs text-gray-500">
-                          {emp.empCode || emp.id}
+                          {emp.empCode}
                         </p>
                       </div>
                       <span
@@ -530,7 +553,7 @@ const Leaves = () => {
                           Leave Type
                         </p>
                         <p className="text-sm font-semibold text-gray-900">
-                          {emp.leaveType}
+                          {compareAndGetLabel(listOfLeaveType, emp.leaveType)}
                         </p>
                       </div>
                       <div>
