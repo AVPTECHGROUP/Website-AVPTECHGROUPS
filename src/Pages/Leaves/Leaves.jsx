@@ -13,7 +13,6 @@ import {
   SearchX,
   UserRoundXIcon,
 } from 'lucide-react';
-import { getALLLeavesStatistics } from '../../Api/LeavesManagementAPI.JS';
 import { getAllLeaveRequest } from '../../Api/LeavesManagementAPI.JS';
 import LeavesReqInfoComponent from '../../Components/LeavesComponents/LeaveReqInfoComponent';
 import { approoveRejLeaveReq, } from '../../Api/LeavesManagementAPI';

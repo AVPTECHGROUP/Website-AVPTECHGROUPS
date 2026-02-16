@@ -80,6 +80,14 @@ const Sidebar = ({
         {
           label: (
             <span className="text-sm text-gray-600 hover:text-blue-600">
+              Manage Holiday
+            </span>
+          ),
+          route: '/leaves/manageHoliday'
+        },
+        {
+          label: (
+            <span className="text-sm text-gray-600 hover:text-blue-600">
               Apply Leave
             </span>
           ),

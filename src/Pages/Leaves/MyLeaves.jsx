@@ -214,7 +214,7 @@ export default function LeaveDashboard() {
                 {/* Leave History */}
                 <div className="bg-gray-50 rounded-xl shadow-sm border border-gray-100">
                     <div className="p-4 sm:p-3 sm:px-4 border-b border-b-gray-500 flex justify-between items-center">
-                        <h2 className="text-lg sm:text-xl font-bold text-gray-900">
+                        <h2 className="text-lg sm:text-lg italic text-blue-600 font-semibold ">
                             My Leave History
                         </h2>
                         <span className="text-xs sm:text-sm text-gray-500">
