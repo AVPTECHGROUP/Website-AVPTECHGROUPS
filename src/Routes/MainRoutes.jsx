@@ -33,13 +33,17 @@ import ManageAllUsers from '../Pages/SuperAdmin/ManageAllUsers';
 import ApplyLeaves from '../Pages/Leaves/ApplyLeaves';
 import MyLeaves from '../Pages/Leaves/MyLeaves';
 
+// Sttudents
+import Student from '../Pages/Students/Students';
+import AddNewStudent from '../Pages/Students/AddNewStudent';
+import EditStudentDetails from '../Pages/Students/EditStudentDetails';
+import StudentDetails from '../Pages/Students/StudentDetails';
+import HolidayManagment from '../Pages/Leaves/Holiday/HolidayManagement';
+
 const MainRoutes = () => {
   return (
     <Routes>
-
-      {/* Default */}
-      {/* <Route path="/" element={<Navigate to="/login" />} /> */}
-
+      
       {/* 🔓 PUBLIC ROUTE (NO SIDEBAR) */}
       <Route path="/login" element={<Login />} />
 
@@ -47,7 +51,11 @@ const MainRoutes = () => {
       <Route element={<ProtectedRoutes />}>
         <Route element={<AppLayout />}>
 
+          {/* Super Admin */}
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/dashboard/addUser" element={<AddnewSystemUser />} />
+          <Route path="/dashboard/editUser/:id" element={<EditSysUser />} />
+          <Route path="/dashboard/manageUsers" element={<ManageAllUsers />} />
 
           {/* Attendance */}
           <Route path="/attendance" element={<Attendance />} />
@@ -57,9 +65,6 @@ const MainRoutes = () => {
           <Route path="/attendance/usersAttendance/warning" element={<WarningVerificationFailed />} />
           <Route path="/attendance/usersAttendance/manual" element={<ManualAttendance />} />
 
-          {/* Others */}
-          <Route path="/payroll" element={<Payroll />} />
-
           {/* Teachers */}
           <Route path="/teachers" element={<Teachers />} />
           <Route path="/teachers/addTeacher" element={<AddNewTeacher />} />
@@ -67,16 +72,24 @@ const MainRoutes = () => {
           <Route path="/teachers/editTeacher/:id" element={<EditTeachersDetails />} />
           <Route path="/teachers/classAssignment/:teacherId" element={<ClassAssignment />} />
 
-          {/* Super Admin */}
-          <Route path="/dashboard/addUser" element={<AddnewSystemUser />} />
-          <Route path="/dashboard/editUser/:id" element={<EditSysUser />} />
-          <Route path="/dashboard/manageUsers" element={<ManageAllUsers />} />
+          {/* Students */}
+          <Route path="/students" element={<Student/>} />
+          <Route path="/students/addStudents" element={<AddNewStudent/>} />
+          <Route path="/students/:id" element={<StudentDetails/>} />
+          <Route path="/students/editStudent/:id" element={<EditStudentDetails/>} />
+
+
+          {/* Others */}
+
+          <Route path="/leaves" element={<Leaves />} />
+          <Route path="/payroll" element={<Payroll />} />
 
 
           {/* Leave Management */}
           <Route path="/leaves" element={<Leaves />} />
           <Route path="/leaves/applyLeaves" element={<ApplyLeaves />} />
           <Route path="/leaves/myLeaves" element={<MyLeaves />} />
+          <Route path="/leaves/manageHolidays" element={<HolidayManagment />} />
 
           {/* Settings */}
           <Route path="/settings" element={<Settings />} />
