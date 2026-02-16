@@ -70,6 +70,7 @@ const Sidebar = ({
         }
       ]
     },
+    { id: 'students', icon: Users, label: 'Students', route: '/students' },
     {
       id: 'leaves',
       icon: FileText,
@@ -92,6 +93,14 @@ const Sidebar = ({
             </span>
           ),
           route: '/leaves/myLeaves'
+        },
+        {
+          label: (
+            <span className="text-sm text-gray-600 hover:text-blue-600">
+              Holiday Management
+            </span>
+          ),
+          route: '/leaves/manageHolidays'
         }
       ]
     },
