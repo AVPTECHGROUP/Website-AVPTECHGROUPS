@@ -102,7 +102,7 @@ const ManageAllUsers = () => {
     }, [debouncedSearch, statusFilter, roleFilter]);
 
     //useEffect only for once dependency as runs or adding user statistics
-     const [refressStat, setRefressStat] = useState(0);
+    const [refressStat, setRefressStat] = useState(0);
     useEffect(() => {
         let fetchStatistics = async () => {
             try {
@@ -221,12 +221,12 @@ const ManageAllUsers = () => {
             console.log(isActive)
             const messageStatus = await (isActive === 'ACTIVE' ? deactivateUserStatus(id) : activateUserStatus(id));
             //  status === 'Active' ? 'Inactive' : 'Active';
-            setRefressStat(prev => prev+1);
+            setRefressStat(prev => prev + 1);
             toast.success(`${messageStatus.message} : ${name}`);
             // Update local state to reflect the change
             const newStatus = isActive === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
             setsysUsers(prev => prev.map(user => user.id === id ? { ...user, status: newStatus } : user));
-            
+
         } catch (error) {
             toast.error(error.message || 'Status update failed');
         }
@@ -236,7 +236,7 @@ const ManageAllUsers = () => {
     const cardsArray = [{ IconName: UsersIcon, keyName: "Total Users", val: statistics.totalUsers, iconTxColor: "text-blue-600", iconBgColor: "bg-blue-50" },
     { IconName: UserCheck2, keyName: "Active Users", val: statistics.activeUsers, iconTxColor: "text-green-600", iconBgColor: "bg-green-50" },
     { IconName: UserRoundXIcon, keyName: "Inactive Users", val: statistics.inactiveUsers, iconTxColor: "text-red-600", iconBgColor: "bg-red-50" },
-]
+    ]
 
     const tableHeadItems = ['User Name', 'Mobile Number', 'Status'];
     let tabledataItemsStyle = 'px-6 py-3 text-left text-gray-700 text-sm';
@@ -296,7 +296,7 @@ const ManageAllUsers = () => {
                     </div>
 
                     {/* quick actions */}
-                    <QuickActions buttonText = 'Add new User' navigateTo = '/dashboard/addUser' />
+                    <QuickActions buttonText='Add new User' navigateTo='/dashboard/addUser' />
 
                     {/* filters */}
                     <div className="bg-white grid  lg:grid-cols-3 gap-2 px-4 py-2 rounded-xl border border-gray-200 mb-4">
@@ -345,10 +345,10 @@ const ManageAllUsers = () => {
                     {/* MOBILE/TABLET CARDS VIEW (visible below 1024px) */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:hidden">
                         {loading ? (
-                            <div className="flex items-center justify-center py-8">
-                                <div className="text-center">
-                                    <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                                    <p className="text-gray-600 font-medium">Loading users...</p>
+                            <div className="text-center py-8">
+                                <div className="flex flex-col items-center">
+                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-2"></div>
+                                    <span className="text-gray-600">Loading users ...</span>
                                 </div>
                             </div>
                         ) : error ? (
@@ -457,10 +457,12 @@ const ManageAllUsers = () => {
                                 <tbody className="bg-white divide-y divide-gray-200 font-normal">
                                     {loading ? (
                                         <tr>
-                                            <td colSpan="11" className="px-6 py-8 text-center">
-                                                <div className="flex items-center justify-center flex-col">
-                                                    <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                                                    <p className="text-gray-600 font-medium ml-4">Loading users...</p>
+                                            <td colSpan={11}>
+                                                <div className="text-center py-8">
+                                                    <div className="flex flex-col items-center">
+                                                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-2"></div>
+                                                        <span className="text-gray-600">Loading holidays...</span>
+                                                    </div>
                                                 </div>
                                             </td>
                                         </tr>
@@ -519,7 +521,7 @@ const ManageAllUsers = () => {
 
                                             </td>
                                             <td className={tabledataItemsStyle}>
-                                                <ActionDropDownComp  actionOptions={actionOptions} onAction={(optVal) => callAllActions(optVal, sys_user)} />
+                                                <ActionDropDownComp actionOptions={actionOptions} onAction={(optVal) => callAllActions(optVal, sys_user)} />
                                             </td>
                                         </tr>
                                     )))

@@ -152,9 +152,8 @@ const TeachersTable = ({
           <NoDataFound message={`No ${isUserTable ? 'users' : 'teachers'} found`} />
         ) : (
           teachers.map((teacher) => (
-            <div
-              key={teacher.id}
-              className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm hover:shadow-md transition-all"
+            <div key={teacher.id}
+              className={`bg-white rounded-xl border border-gray-200 p-4 shadow-sm hover:shadow-md transition-all`}
             >
               {/* Header */}
               <div className="flex items-start justify-between mb-4">
@@ -257,6 +256,26 @@ const TeachersTable = ({
                     <span className="text-sm font-medium text-gray-900">{teacher.joiningDate}</span>
                   </div>
                 )}
+              </div>
+              <div className='flex items-center align-middle'>
+                <span className='text-sm text-gray-500 pb-1.5 pr-2'>Select Teacher </span>
+                <div className="flex items-center justify-evenly gap-2 px-1">
+                <button
+                  onClick={() => {
+                    if (isUserTable) return;
+                    setAssignTeacherId(assignId === teacher.id ? null : teacher.id);
+                    if (assignId !== teacher.id) assignTeacherId(teacher.id);
+                  }}
+                  className={`relative inline-flex items-center w-11 h-6 rounded-full transition-colors duration-300 focus:outline-none ${assignId === teacher.id ? 'bg-blue-600' : 'bg-gray-300'
+                    }`}
+                >
+                  {/* Sliding dot */}
+                  <span
+                    className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform duration-300 ${assignId === teacher.id ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                  />
+                </button>
+              </div>
               </div>
 
               {/* Actions */}
@@ -363,7 +382,7 @@ const TeachersTable = ({
                       }
                     }}
                     key={teacher.id}
-                    className={`${assignId === teacher.id && !isUserTable ? "bg-blue-50" : ""} hover:bg-gray-50`}
+                    className={`${assignId === teacher.id && !isUserTable ? "bg-blue-50" : ""}`}
                   >
                     {!isUserTable && (
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">

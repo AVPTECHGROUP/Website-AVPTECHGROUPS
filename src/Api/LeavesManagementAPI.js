@@ -122,6 +122,7 @@ export const CancelUserlLeaveReq = async (leaveId, userId) => {
     throw error;
   }
 }
+
 // new leave request apply for user
 export const createLeaveRequest = async (user) => {
   const res = await fetch(`${BASE_URL}/apply`, {
@@ -132,19 +133,25 @@ export const createLeaveRequest = async (user) => {
     },
     body: JSON.stringify(user),
   });
-
+  
   const text = await res.text();
-  console.log("User leave request created successfully:", text);
-
+  const data = text ? JSON.parse(text) : {};
+  
   if (!res.ok) {
-    throw new Error(text || "Failed to create leave request");
+    // Create error object with proper structure
+    const error = new Error(data.message || "Failed to create leave request");
+    error.response = {
+      data: data,
+      status: res.status,
+      statusText: res.statusText
+    };
+    throw error;
   }
-
-  return text ? JSON.parse(text) : {};
+  
+  return data;
 };
 
 // user balance statistics
-//List all statistics
 export const getUsersLeaveBalance = async (userId) => {
   try {
     const res = await fetch(`${BASE_URL + `/user/${userId}/balance`}`);

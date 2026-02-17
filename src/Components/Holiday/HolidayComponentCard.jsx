@@ -9,7 +9,8 @@ export default function HolidayComponentCard({
   icon,
   title = "Add New Holiday",
   subtitle = "Configure academic calendar breaks",
-  mode = "create" // 'create' or 'edit'
+  mode = "create", // 'create' or 'edit'
+  loaderIsTrue
 }) {
   const [formData, setFormData] = useState({
     academicYear: '',
@@ -310,11 +311,12 @@ export default function HolidayComponentCard({
             Cancel
           </button>
           <button
+            disabled={loaderIsTrue}
             onClick={handleSubmit}
             type="button"
-            className="w-full sm:w-auto px-4 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors shadow-sm"
+            className={`${loaderIsTrue ? "cursor-not-allowed bg-blue-400 hover:bg-blue-500":"bg-blue-600 hover:bg-blue-700"} w-full sm:w-auto px-4 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-medium text-white  rounded-lg transition-colors shadow-sm`}
           >
-            {mode === 'edit' ? 'Update Holiday' : 'Create Holiday'}
+            {mode === 'edit' ? loaderIsTrue? 'Updating holiday...':'Update Holiday' : loaderIsTrue? 'Creating holiday ...':'Create Holiday'}
           </button>
         </div>
       </div>

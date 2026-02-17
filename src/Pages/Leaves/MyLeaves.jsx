@@ -13,6 +13,7 @@ import {
 } from '../../Api/LeavesManagementAPI';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
+import { getListOfValues } from '../../Api/ListOfValues';
 
 export default function LeaveDashboard() {
     const [leaveData, setLeaveData] = useState([]);
@@ -34,6 +35,33 @@ export default function LeaveDashboard() {
     const [fetchleaveReqRefress, setFetchleaveReqfress] = useState(0);
 
     const navigate = useNavigate();
+    /* ---------------------- compare listof values ---------------------- */
+    const [listOfLeaveType, setListofLeavetype] = useState([]);
+    function compareAndGetLabel(data, compareValue) {
+        const found = data.find(item => item.value === compareValue);
+        return found ? <span className="font-medium text-gray-900 text-sm"> {found.label} </span> : "";
+    }
+
+    useEffect(() => {
+        let fetchListOfValues = async () => {
+          try {
+            const leaveTypeRes = await getListOfValues('LEAVE_TYPE');
+            const formattedLeaveType = leaveTypeRes.map(item => ({
+              id: item.id,
+              value: item.value,
+              label: item.label
+            }));
+            console.log(formattedLeaveType);
+            setListofLeavetype(formattedLeaveType);
+    
+          }
+          catch (e) {
+            console.error("get list of values error error:", e.message);
+            throw error;
+          }
+        }
+        fetchListOfValues();
+      }, []);
 
     /* ---------------------- STATUS STYLES ---------------------- */
     const statusStyles = {
@@ -111,7 +139,7 @@ export default function LeaveDashboard() {
             if (!currUser?.id) return;
             await CancelUserlLeaveReq(leaveReq.leaveId, currUser.id);
             toast.success('Leave request Cancelled successfully.')
-            setFetchleaveReqfress((prev)=>prev+1);
+            setFetchleaveReqfress((prev) => prev + 1);
         } catch (error) {
             console.log(error);
             toast.error('failed to cancel leave request.')
@@ -214,7 +242,7 @@ export default function LeaveDashboard() {
                 {/* Leave History */}
                 <div className="bg-gray-50 rounded-xl shadow-sm border border-gray-100">
                     <div className="p-4 sm:p-3 sm:px-4 border-b border-b-gray-500 flex justify-between items-center">
-                        <h2 className="text-lg sm:text-xl font-bold text-gray-900">
+                        <h2 className="text-lg sm:text-lg italic text-blue-600 font-semibold ">
                             My Leave History
                         </h2>
                         <span className="text-xs sm:text-sm text-gray-500">
@@ -264,7 +292,7 @@ export default function LeaveDashboard() {
                                         <tr key={leaveReq.leaveId} className="hover:bg-gray-50 transition">
                                             <td className="px-4 py-4">
                                                 <span className=" text-sm text-gray-800">
-                                                    {leaveReq.leaveType}
+                                                    {compareAndGetLabel(listOfLeaveType, leaveReq.leaveType)}
                                                 </span>
                                             </td>
                                             <td className="px-4 py-4 text-sm text-gray-700">
@@ -294,7 +322,7 @@ export default function LeaveDashboard() {
                                             <td className="px-4 py-4">
                                                 {leaveReq.currLeavestatus === 'PENDING' ? (
                                                     <button
-                                                    title='Proceed to cancel request'
+                                                        title='Proceed to cancel request'
                                                         onClick={() =>
                                                             handleCancelLeave(leaveReq)
                                                         }
@@ -339,16 +367,14 @@ export default function LeaveDashboard() {
                                         {/* Header Row */}
                                         <div className="flex justify-between items-start mb-3">
                                             <div>
-                                                <h3 className="font-semibold text-gray-900 text-base">
-                                                    {leaveReq.leaveType}
+                                                <h3>
+                                                    {compareAndGetLabel(listOfLeaveType, leaveReq.leaveType)}
                                                 </h3>
                                                 <p className="text-sm text-gray-600 mt-1">
                                                     {formatDateRange(leaveReq.fromDate, leaveReq.toDate)}
                                                 </p>
                                             </div>
-                                            <span
-                                                className={`px-3 py-1 rounded-full text-xs font-semibold ${statusStyles[leaveReq.currLeavestatus]}`}
-                                            >
+                                            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${statusStyles[leaveReq.currLeavestatus]}`}>
                                                 {leaveReq.currLeavestatus}
                                             </span>
                                         </div>

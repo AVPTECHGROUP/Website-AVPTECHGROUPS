@@ -533,6 +533,30 @@ export const updateSection = async (sectionId, sectionData) => {
   }
 };
 
+// Get all section for sectionId->
+export const getAllSections = async () => {
+  try {
+    const res = await fetch(`${BASE_URL}/sections`,{
+      method: "GET",
+      headers: {
+        accept: "application/json",
+      },
+    });
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(errorText || "Failed to fetch sections");
+    }
+
+    const data = await res.json();
+    return data; // { success, message, data, timestamp }
+  } catch (error) {
+    console.error("getAllSections error:", error.message);
+    throw error;
+  }
+};
+
+
 // ==================== SUBJECTS API ====================
 
 // Get Subjects for a Section
