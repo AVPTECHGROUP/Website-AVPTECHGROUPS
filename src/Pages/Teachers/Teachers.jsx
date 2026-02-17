@@ -25,18 +25,26 @@ const Teachers = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  // Statistics State
+  const [statistics, setStatistics] = useState({
+    totalTeachers: 0,
+    activeTeachers: 0,
+    inactiveTeachers: 0,
+    attendanceBlockedTeachers: 0,
+  });
+  const [statsLoading, setStatsLoading] = useState(false);
+
   const [classAssignTeacherId, setClassAssignTeacherId] = useState(null);
+
   // DEBOUNCED SEARCH
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(search);
     }, 500);
-
     return () => clearTimeout(timer);
   }, [search]);
 
   // CHECK IF FILTERS ARE ACTIVE
-
   const hasActiveFilters = useMemo(() => {
     return (
       debouncedSearch.trim() !== '' ||
@@ -46,8 +54,7 @@ const Teachers = () => {
     );
   }, [debouncedSearch, statusFilter, classFilter, salaryFilter]);
 
-  // FETCH TEACHERS API CALL
-
+  // FETCH TEACHERS
   const fetchTeachers = async () => {
     setLoading(true);
     setError(null);
@@ -57,14 +64,12 @@ const Teachers = () => {
 
       if (hasActiveFilters) {
         const filters = {};
-
         if (debouncedSearch.trim()) filters.searchTerm = debouncedSearch.trim();
         if (statusFilter !== 'All Status') filters.status = statusFilter.toUpperCase();
         if (classFilter !== 'All Classes') filters.assignedClasses = classFilter;
         if (salaryFilter !== 'All Salary Types') {
           filters.salaryType = salaryFilter === 'Monthly' ? 'MONTHLY' : 'PER_DAY';
         }
-
         res = await searchTeachers(filters, page - 1, rowsPerPage);
       } else {
         res = await getTeachers(page - 1, rowsPerPage);
@@ -72,7 +77,6 @@ const Teachers = () => {
 
       const teacherArray = res.data || [];
 
-      // Map API response to component-friendly format
       const mappedTeachers = teacherArray.map((teacher) => ({
         id: teacher.id,
         employeeCode: teacher.employeeCode || 'N/A',
@@ -87,34 +91,31 @@ const Teachers = () => {
         role: teacher.designation || 'Teacher',
         mobile: teacher.mobile || 'N/A',
         classes: teacher.assignedClasses
-          ? teacher.assignedClasses.split(',').map(c => c.trim())
+          ? teacher.assignedClasses.split(',').map((c) => c.trim())
           : [],
         subjects: teacher.assignedSubjects
-          ? teacher.assignedSubjects.split(',').map(s => s.trim())
+          ? teacher.assignedSubjects.split(',').map((s) => s.trim())
           : [],
         salaryType: teacher.salaryType || 'MONTHLY',
         status: teacher.status || 'ACTIVE',
         attendance: teacher.attendanceAccessStatus || 'ALLOWED',
         payroll: teacher.payrollStatus || 'INCLUDED',
-        joiningDate: teacher.joiningDate || 'N/A'
+        joiningDate: teacher.joiningDate || 'N/A',
       }));
 
-      const filteredTeachers = mappedTeachers.filter(t => {
-        if (classFilter !== 'All Classes' && !t.classes.includes(classFilter)) {
+      const filteredTeachers = mappedTeachers.filter((t) => {
+        if (classFilter !== 'All Classes' && !t.classes.includes(classFilter)) return false;
+        if (
+          salaryFilter !== 'All Salary Types' &&
+          t.salaryType !== (salaryFilter === 'Monthly' ? 'MONTHLY' : 'PER_DAY')
+        )
           return false;
-        }
-        if (salaryFilter !== 'All Salary Types' && t.salaryType !== (
-          salaryFilter === 'Monthly' ? 'MONTHLY' : 'PER_DAY'
-        )) {
-          return false;
-        }
         return true;
       });
 
       setTeachers(filteredTeachers);
       setTotalElements(res.pagination?.totalElements || 0);
       setTotalPages(res.pagination?.totalPages || 0);
-
     } catch (err) {
       console.error('Error fetching teachers:', err);
       setError(err.message || 'Something went wrong');
@@ -124,82 +125,74 @@ const Teachers = () => {
     }
   };
 
-  // FETCH ON DEPENDENCY CHANGE
+  // FETCH STATISTICS
+  const fetchStatistics = async () => {
+    setStatsLoading(true);
+    try {
+      const statistics_res = await getTeacherStatistics();
+      setStatistics(statistics_res.data);
+    } catch (e) {
+      console.error('Get statistics error:', e.message);
+    } finally {
+      setStatsLoading(false);
+    }
+  };
 
+  // FETCH ON DEPENDENCY CHANGE
   useEffect(() => {
     fetchTeachers();
   }, [page, rowsPerPage, debouncedSearch, statusFilter, classFilter, salaryFilter, hasActiveFilters]);
 
-  // // CALCULATE STATISTICS
-  const [statistics, setstatistics] = useState(
-    {
-      totalTeachers: 0,
-      activeTeachers: 0,
-      inactiveTeachers: 0,
-      attendanceBlockedTeachers: 0
-    }
-  );
+  // FETCH STATISTICS ONCE ON MOUNT
+  useEffect(() => {
+    fetchStatistics();
+  }, []);
 
- const total = statistics.totalTeachers || 0;
+  // BUILD STATS OBJECT
+  const total = statistics.totalTeachers || 0;
   const active = statistics.activeTeachers || 0;
   const inActive = statistics.inactiveTeachers || 0;
-  const payrollIncluded = teachers.filter(t => t.payroll === 'INCLUDED').length || 0;
+  const payrollIncluded = teachers.filter((t) => t.payroll === 'INCLUDED').length || 0;
   const attendanceBlocked = statistics.attendanceBlockedTeachers || 0;
+
+  const activePercent = total > 0 ? Math.round((active / total) * 100) : 0;
+  const inActivePercent = total > 0 ? Math.round((inActive / total) * 100) : 0;
 
   const stats = {
     total,
     active,
-    activePercent: active,
+    activePercent,
     inActive,
-    inActivePercent: inActive,
+    inActivePercent,
     payrollIncluded,
-    attendanceBlocked
+    attendanceBlocked,
   };
-
-  useEffect(() => {
-    let fetchStatistics = async () => {
-      try {
-        const statistics_res = await getTeacherStatistics(); // for total statistics
-        const res = statistics_res.data;
-        setstatistics(res);
-      }
-      catch (e) {
-        console.error("get statistics error:", e.message);
-        throw error;
-      }
-    }
-    setTimeout(()=>{
-      fetchStatistics();
-    },3000);
-
-  }, [teachers])
-
-
 
   return (
     <div className="flex h-screen overflow-hidden bg-linear-to-b from-sky-50 to-sky-100">
       <div className="flex-1 overflow-auto w-0">
-        
-       {/* COMPONENT 1: Header with Stats */}
-<TeachersHeader stats={stats} />
+
+        {/* COMPONENT 1: Header with Stats */}
+        <TeachersHeader stats={stats} loading={statsLoading} />
 
         {/* Page Content */}
         <div className="flex-1 overflow-auto p-4 sm:p-5 lg:p-4">
+
           {/* COMPONENT 2: Quick Actions */}
           <QuickActions teacherId={classAssignTeacherId} />
 
-  {/* COMPONENT 3: Filters with Search */}
-  <TeachersFilters
-    search={search}
-    setSearch={setSearch}
-    statusFilter={statusFilter}
-    setStatusFilter={setStatusFilter}
-    classFilter={classFilter}
-    setClassFilter={setClassFilter}
-    salaryFilter={salaryFilter}
-    setSalaryFilter={setSalaryFilter}
-    setPage={setPage}
-  />
+          {/* COMPONENT 3: Filters with Search */}
+          <TeachersFilters
+            search={search}
+            setSearch={setSearch}
+            statusFilter={statusFilter}
+            setStatusFilter={setStatusFilter}
+            classFilter={classFilter}
+            setClassFilter={setClassFilter}
+            salaryFilter={salaryFilter}
+            setSalaryFilter={setSalaryFilter}
+            setPage={setPage}
+          />
 
           {/* COMPONENT 4: Table and Pagination */}
           <TeachersTable
