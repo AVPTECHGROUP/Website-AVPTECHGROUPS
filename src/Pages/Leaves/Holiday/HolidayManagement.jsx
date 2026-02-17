@@ -621,7 +621,7 @@ export default function HolidayManagement() {
                                                     onClick={() => handleDeleteHoliday(holiday.id)}
                                                     className="p-2 hover:bg-red-50 rounded-lg transition-colors"
                                                 >
-                                                    <Trash2 className="w-4 h-4 text-red-600" />
+                                                    <Trash2 className="w-4 h-4 text-red-600"/>
                                                 </button>
                                             </div>
                                         </div>
