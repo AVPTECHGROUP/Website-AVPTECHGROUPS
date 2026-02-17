@@ -1,13 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, User } from 'lucide-react';
 import { toast } from 'react-toastify';
 import AddStudentDetails from '../../Components/Students/AddStudentDetails';
 import { createStudents } from '../../Api/StudentsApi';
+import { getAllSections } from '../../Api/TeachersAPI';
 
 function AddNewStudent() {
     const navigate = useNavigate();
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [sections, setSections] = useState([]);
+    const [sectionsLoading, setSectionsLoading] = useState(true);
+
     const [formData, setFormData] = useState({
         name: "",
         gender: "",
@@ -17,79 +21,125 @@ function AddNewStudent() {
         dob: "",
         admissionNumber: "",
         admissionDate: "",
+        academicYear: "2025-2026",
         status: "ACTIVE",
+        bloodGroup: "",
+        previousSchool: "",
+        profileImageUrl: "",   // base64 preview only — NOT sent to API
+        sectionId: "",
         fatherName: "",
+        fatherOccupation: "",
+        fatherPhone: "",
+        fatherEmail: "",
         motherName: "",
+        motherOccupation: "",
+        motherPhone: "",
+        motherEmail: "",
+        guardianName: "",
+        guardianRelation: "",
+        guardianPhone: "",
+        guardianEmail: "",
         emergencyContact: "",
         hostelRequired: false,
-        transportRequired: false
+        transportRequired: false,
     });
+
+    useEffect(() => {
+        const fetchSections = async () => {
+            try {
+                const res = await getAllSections();
+                if (res?.success && Array.isArray(res.data)) {
+                    setSections(res.data);
+                } else {
+                    toast.error("Failed to load sections.");
+                }
+            } catch (err) {
+                console.error("fetchSections error:", err);
+                toast.error("Could not fetch sections. Please refresh.");
+            } finally {
+                setSectionsLoading(false);
+            }
+        };
+        fetchSections();
+    }, []);
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
-        setFormData(prev => ({
-            ...prev,
-            [name]: value
-        }));
+        setFormData(prev => ({ ...prev, [name]: value }));
     };
 
+    const phoneRegex = /^[0-9]{10}$/;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
     const validateForm = () => {
-        // Check required fields
-        if (!formData.name || !formData.gender || !formData.mobile || !formData.dob || !formData.admissionDate) {
+        if (!formData.name.trim() || !formData.gender || !formData.mobile || !formData.dob || !formData.admissionDate || !formData.academicYear) {
             toast.error("Please fill all required fields!");
             return false;
         }
-
-        // Validate mobile number - must be exactly 10 digits
-        const mobileRegex = /^[0-9]{10}$/;
-        if (!mobileRegex.test(formData.mobile)) {
+        if (!formData.sectionId) {
+            toast.error("Please select a section!");
+            return false;
+        }
+        if (!phoneRegex.test(formData.mobile)) {
             toast.error("Mobile number must be exactly 10 digits!");
             return false;
         }
-
-        // Validate emergency contact if provided - must be exactly 10 digits
-        if (formData.emergencyContact && !mobileRegex.test(formData.emergencyContact)) {
+        if (formData.emergencyContact && !phoneRegex.test(formData.emergencyContact)) {
             toast.error("Emergency contact must be exactly 10 digits!");
             return false;
         }
-
-        // Validate email format if provided
-        if (formData.email) {
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailRegex.test(formData.email)) {
-                toast.error("Please enter a valid email address!");
-                return false;
-            }
+        if (formData.fatherPhone && !phoneRegex.test(formData.fatherPhone)) {
+            toast.error("Father's phone must be exactly 10 digits!");
+            return false;
         }
-
-        // Check if status is ACTIVE
+        if (formData.motherPhone && !phoneRegex.test(formData.motherPhone)) {
+            toast.error("Mother's phone must be exactly 10 digits!");
+            return false;
+        }
+        if (formData.guardianPhone && !phoneRegex.test(formData.guardianPhone)) {
+            toast.error("Guardian's phone must be exactly 10 digits!");
+            return false;
+        }
+        if (formData.email && !emailRegex.test(formData.email)) {
+            toast.error("Please enter a valid student email address!");
+            return false;
+        }
+        if (formData.fatherEmail && !emailRegex.test(formData.fatherEmail)) {
+            toast.error("Please enter a valid father's email address!");
+            return false;
+        }
+        if (formData.motherEmail && !emailRegex.test(formData.motherEmail)) {
+            toast.error("Please enter a valid mother's email address!");
+            return false;
+        }
+        if (formData.guardianEmail && !emailRegex.test(formData.guardianEmail)) {
+            toast.error("Please enter a valid guardian's email address!");
+            return false;
+        }
         if (formData.status !== 'ACTIVE') {
             toast.error("Student status must be ACTIVE to add a new student!");
             return false;
         }
 
-        // Validate date of birth (should not be in future)
-        const dobDate = new Date(formData.dob);
         const today = new Date();
-        if (dobDate > today) {
-            toast.error("Date of birth cannot be in the future!");
+        today.setHours(0, 0, 0, 0);
+
+        const dobDate = new Date(formData.dob);
+        if (dobDate >= today) {
+            toast.error("Date of birth cannot be today or in the future!");
+            return false;
+        }
+        const age = today.getFullYear() - dobDate.getFullYear();
+        const monthDiff = today.getMonth() - dobDate.getMonth();
+        const actualAge = (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dobDate.getDate())) ? age - 1 : age;
+        if (actualAge < 3) {
+            toast.error("Student must be at least 3 years old!");
             return false;
         }
 
-        // Validate admission date (should not be in future)
         const admissionDateObj = new Date(formData.admissionDate);
         if (admissionDateObj > today) {
             toast.error("Admission date cannot be in the future!");
-            return false;
-        }
-
-        // Check if student is at least 3 years old
-        const age = today.getFullYear() - dobDate.getFullYear();
-        const monthDiff = today.getMonth() - dobDate.getMonth();
-        const actualAge = monthDiff < 0 || (monthDiff === 0 && today.getDate() < dobDate.getDate()) ? age - 1 : age;
-
-        if (actualAge < 3) {
-            toast.error("Student must be at least 3 years old!");
             return false;
         }
 
@@ -98,85 +148,98 @@ function AddNewStudent() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-
-        // Run all validations
-        if (!validateForm()) {
-            return;
-        }
+        if (!validateForm()) return;
 
         setIsSubmitting(true);
         const loadingToast = toast.loading("Adding student...");
 
         try {
-            const [firstName, ...lastNameArr] = formData.name.trim().split(" ");
-            const lastName = lastNameArr.join(" ") || "NA";
+            const nameParts = formData.name.trim().split(" ");
+            const firstName = nameParts[0];
+            const lastName = nameParts.slice(1).join(" ").trim() || firstName;
 
-            // Generate admission number if not provided
             const generatedAdmissionNumber = formData.admissionNumber.trim()
                 ? formData.admissionNumber.trim()
                 : `DPIS-${Math.floor(10000 + Math.random() * 90000)}`;
 
-
             const apiPayload = {
                 admissionNumber: generatedAdmissionNumber,
-                rollNumber: `ROLL-${Date.now()}`,
+                rollNumber: null,           // ✅ null instead of "" — avoids server validation error
 
                 firstName,
                 lastName,
 
                 personalDetails: {
-                    fullName: formData.name,
+                    fullName: formData.name.trim(),
                     mobile: formData.mobile,
-                    email: formData.email || "student@school.com",
+                    email: formData.email.trim() || null,
                     gender: formData.gender.toUpperCase(),
                     dateOfBirth: formData.dob,
-                    address: formData.address || "NA",
-                    emergencyContact: formData.emergencyContact || "9999999999",
-                    emergencyContactName: "Parent",
-                    emergencyContactRelation: "Father"
+                    address: formData.address.trim() || null,
+                    emergencyContact: formData.emergencyContact || null,
+                    emergencyContactName: formData.guardianName.trim() || null,
+                    emergencyContactRelation: formData.guardianRelation || null,
                 },
 
-                sectionId: 1,
+                sectionId: Number(formData.sectionId),
+
                 admissionDate: formData.admissionDate,
-                academicYear: "2025-2026",
+                academicYear: formData.academicYear,
                 status: formData.status,
+
+                bloodGroup: formData.bloodGroup || null,
+                previousSchool: formData.previousSchool.trim() || null,
+
+                // ✅ Always null — sending base64 in JSON body causes 500 errors.
+                // Image upload must be handled via a separate multipart endpoint.
+                profileImageUrl: null,
 
                 hostelRequired: formData.hostelRequired,
                 transportRequired: formData.transportRequired,
 
-                fatherName: formData.fatherName || "NA",
-                motherName: formData.motherName || "NA",
+                fatherName: formData.fatherName.trim() || null,
+                fatherOccupation: formData.fatherOccupation.trim() || null,
+                fatherPhone: formData.fatherPhone || null,
+                fatherEmail: formData.fatherEmail.trim() || null,
 
-                remarks: "Created from UI"
+                motherName: formData.motherName.trim() || null,
+                motherOccupation: formData.motherOccupation.trim() || null,
+                motherPhone: formData.motherPhone || null,
+                motherEmail: formData.motherEmail.trim() || null,
+
+                guardianName: formData.guardianName.trim() || null,
+                guardianRelation: formData.guardianRelation || null,
+                guardianPhone: formData.guardianPhone || null,
+                guardianEmail: formData.guardianEmail.trim() || null,
+
+                remarks: null,
             };
 
+            // ── Log exact payload to console for debugging ───────────────────
+            console.log("📦 API PAYLOAD:", JSON.stringify(apiPayload, null, 2));
+
             const response = await createStudents(apiPayload);
-            console.log("Create Student Response:", response);
+            console.log("✅ Create Student Response:", response);
 
             toast.dismiss(loadingToast);
             toast.success("Student added successfully ✅");
 
-            setTimeout(() => {
-                navigate("/students");
-            }, 500);
+            setTimeout(() => navigate("/students"), 500);
 
         } catch (err) {
             toast.dismiss(loadingToast);
             toast.error(err.message || "Failed to add student ❌");
-            console.error(err);
+            console.error("❌ Submit error:", err);
         } finally {
             setIsSubmitting(false);
         }
     };
 
-    const handleDiscard = () => {
-        navigate('/students');
-    };
+    const handleDiscard = () => navigate('/students');
 
     return (
         <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-4">
             <div className="mx-auto">
-                {/* Back Button */}
                 <button
                     onClick={() => navigate(-1)}
                     className="flex items-center cursor-pointer bg-gray-600 p-2 rounded-xl text-white gap-2 hover:bg-gray-900 transition-colors mb-4"
@@ -185,7 +248,6 @@ function AddNewStudent() {
                     <span className="hidden sm:inline">Back to List</span>
                 </button>
 
-                {/* Header */}
                 <div className="mb-6">
                     <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
                         Add New Student
@@ -197,7 +259,6 @@ function AddNewStudent() {
 
                 <form onSubmit={handleSubmit}>
                     <div className="bg-white rounded-lg shadow">
-                        {/* Tabs */}
                         <div className="border-b border-gray-200">
                             <nav className="flex flex-wrap -mb-px">
                                 <button
@@ -211,16 +272,16 @@ function AddNewStudent() {
                             </nav>
                         </div>
 
-                        {/* Content */}
                         <div className="p-4 sm:p-6 lg:p-8">
                             <AddStudentDetails
                                 formData={formData}
                                 setFormData={setFormData}
                                 handleInputChange={handleInputChange}
+                                sections={sections}
+                                sectionsLoading={sectionsLoading}
                             />
                         </div>
 
-                        {/* Footer Buttons */}
                         <div className="border-t border-gray-200 px-4 sm:px-6 lg:px-8 py-4 bg-gray-50 rounded-b-lg">
                             <div className="flex flex-col sm:flex-row justify-end gap-3">
                                 <button
@@ -234,8 +295,8 @@ function AddNewStudent() {
                                     disabled={isSubmitting}
                                     type="submit"
                                     className={`px-6 py-2.5 text-sm font-medium rounded-lg transition-all ${isSubmitting
-                                            ? 'bg-blue-300 cursor-not-allowed text-white'
-                                            : 'bg-blue-500 hover:bg-blue-600 cursor-pointer text-white'
+                                        ? 'bg-blue-300 cursor-not-allowed text-white'
+                                        : 'bg-blue-500 hover:bg-blue-600 cursor-pointer text-white'
                                         }`}
                                 >
                                     {isSubmitting ? (

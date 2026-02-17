@@ -161,8 +161,8 @@ const Student = () => {
                     <QuickActions buttonText="Add New Student" navigateTo="/students/addStudents" />
 
                     {/* filters */}
-                    <div className="bg-white grid  lg:grid-cols-3 gap-2 px-4 py-2 rounded-xl border border-gray-200 mb-4">
-                        <div className="flex col-span-2 items-center gap-2 border rounded-lg border-gray-200 bg-gray-100 px-2 py-1 focus-within:shadow-sm focus-within:shadow-blue-200">
+                    <div className="bg-white grid lg:grid-cols-3 gap-2 px-4 py-2 rounded-xl border border-gray-200 mb-4">
+                        <div className="flex col-span-3 items-center gap-2 border rounded-lg border-gray-200 bg-gray-100 px-2 py-2 focus-within:shadow-sm focus-within:shadow-blue-200">
                             <SearchIcon className="w-5 h-5 text-gray-500" />
                             <input
                                 value={search}
@@ -174,20 +174,6 @@ const Student = () => {
                                 className="text-base sm:text-sm font-normal focus:outline-none appearance-none text-gray-600 w-full"
                             />
                         </div>
-                        {/* <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <select
-                                // value={statusFilter}
-                                onChange={(e) => {
-                                    setStatusFilter(e.target.value);
-                                    // setpage(1);
-                                }}
-                                className="px-4 py-2 border border-gray-200 bg-gray-100 rounded-lg focus:outline-none focus:shadow-sm focus:shadow-blue-200 text-sm"
-                            >
-                                <option value='All Status'>All Status</option>
-                                <option value='ACTIVE'>Active</option>
-                                <option value='INACTIVE'>Inactive</option>
-                            </select>
-                        </div> */}
                     </div>
 
                     {/* MOBILE/TABLET CARDS VIEW */}
