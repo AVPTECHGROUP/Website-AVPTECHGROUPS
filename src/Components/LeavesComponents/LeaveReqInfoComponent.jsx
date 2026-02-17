@@ -1,7 +1,7 @@
 import { CircleCheckBig, X } from "lucide-react";
 import { useState } from "react";
 
-export default function LeavesReqInfoComponent({ isOpen, onClose, userData, handleLeaveApprove, handleLeaveReject, setRemarks, remarks }) {
+export default function LeavesReqInfoComponent({ isOpen, onClose, userData, handleLeaveApprove, handleLeaveReject, setRemarks, remarks, listLeavetype }) {
     if (!isOpen || !userData) return null;
 
     const getAvatarColor = (name) => {
@@ -25,6 +25,12 @@ export default function LeavesReqInfoComponent({ isOpen, onClose, userData, hand
         WITHDRAWN: 'bg-gray-50 text-gray-800 border-gray-200'
     };
 
+    //Compare and get lable function
+    function compareAndGetLabel(data, compareValue) {
+        const found = data.find(item => item.value === compareValue);
+        return found ? <span> {found.label} </span> : "";
+    }
+
     return (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 sm:p-3">
             <div className="bg-white rounded-lg sm:rounded-xl shadow-2xl w-full max-w-[95%] sm:max-w-md max-h-[95vh] overflow-hidden relative animate-fadeIn">
@@ -47,13 +53,13 @@ export default function LeavesReqInfoComponent({ isOpen, onClose, userData, hand
                         </div>
                         <p className="flex flex-col font-semibold text-gray-900 md:text-xl sm:text-base">
                             {userData.name}
-                           <span className="font-normal text-sm text-gray-400"> {userData.empCode || userData.id}</span>
+                            <span className="font-normal text-sm text-gray-400"> {userData.empCode || userData.id}</span>
                         </p>
                     </div>
                     {/* Status Badge */}
-                        <span className={`mr-8 sm:px-2.5 px-2 py-1 rounded-md text-xs font-medium h-fit w-fit border  ${statusStyles[userData.currEmpstatus]}`}>
-                            {userData.currEmpstatus}
-                        </span>
+                    <span className={`mr-8 sm:px-2.5 px-2 py-1 rounded-md text-xs font-medium h-fit w-fit border  ${statusStyles[userData.currEmpstatus]}`}>
+                        {userData.currEmpstatus}
+                    </span>
                 </div>
 
                 {/* Content */}
@@ -67,7 +73,7 @@ export default function LeavesReqInfoComponent({ isOpen, onClose, userData, hand
                             <div className="flex items-center gap-1.5">
                                 <span className="w-1.5 h-1.5 bg-blue-500 rounded-full shrink-0"></span>
                                 <p className="text-xs sm:text-sm font-semibold text-gray-900 truncate">
-                                    {userData.leaveType}
+                                    {compareAndGetLabel(listLeavetype ,userData.leaveType)}
                                 </p>
                             </div>
                         </div>
@@ -115,12 +121,12 @@ export default function LeavesReqInfoComponent({ isOpen, onClose, userData, hand
                             Remarks
                         </label>
                         <textarea
-                            disabled={userData.currEmpstatus === 'APPROVED' || userData.currEmpstatus === 'REJECTED' || userData.currEmpstatus === 'CANCELLED' }
+                            disabled={userData.currEmpstatus === 'APPROVED' || userData.currEmpstatus === 'REJECTED' || userData.currEmpstatus === 'CANCELLED'}
                             id="remarks"
                             name="remarks"
                             value={remarks}
-                            onChange={(e)=>setRemarks(e.target.value)}
-                            placeholder={`${userData.reviewRemarks === "" ? userData.currEmpstatus === "PENDING" ? "Add your remarks here..." :"No review remark mentioned!":"No review remark mentioned!"}`}
+                            onChange={(e) => setRemarks(e.target.value)}
+                            placeholder={`${userData.reviewRemarks === "" ? userData.currEmpstatus === "PENDING" ? "Add your remarks here..." : "No review remark mentioned!" : "No review remark mentioned!"}`}
                             rows="2"
                             className="w-full text-xs text-gray-700 bg-white p-2 sm:p-2.5 border border-gray-300 rounded-md leading-snug focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
                         />
@@ -129,26 +135,26 @@ export default function LeavesReqInfoComponent({ isOpen, onClose, userData, hand
                     {/* Action Buttons */}
                     <div className="flex flex-col sm:flex-row gap-2 pt-2">
                         <button
-                            disabled={userData.currEmpstatus === 'APPROVED' || userData.currEmpstatus === 'REJECTED' || userData.currEmpstatus === 'CANCELLED' }
-                            onClick={()=>{
+                            disabled={userData.currEmpstatus === 'APPROVED' || userData.currEmpstatus === 'REJECTED' || userData.currEmpstatus === 'CANCELLED'}
+                            onClick={() => {
                                 handleLeaveReject();
                                 onClose();
                             }}
-                            className={`${userData.currEmpstatus === 'APPROVED' || userData.currEmpstatus === 'REJECTED' || userData.currEmpstatus === 'CANCELLED' ? 'cursor-not-allowed bg-red-300':'bg-red-400 hover:bg-red-500 active:bg-red-800'} w-full flex gap-2 justify-center sm:flex-1 py-1 px-4  text-white font-semibold rounded-md  transition-colors text-xs sm:text-sm`}
+                            className={`${userData.currEmpstatus === 'APPROVED' || userData.currEmpstatus === 'REJECTED' || userData.currEmpstatus === 'CANCELLED' ? 'cursor-not-allowed bg-red-300' : 'bg-red-400 hover:bg-red-500 active:bg-red-800'} w-full flex gap-2 justify-center sm:flex-1 py-1 px-4  text-white font-semibold rounded-md  transition-colors text-xs sm:text-sm`}
                         >
-                            <X className="p-0.5"/>
+                            <X className="p-0.5" />
                             Reject
                         </button>
                         <button
-                        disabled={userData.currEmpstatus === 'APPROVED' || userData.currEmpstatus === 'REJECTED' || userData.currEmpstatus === 'CANCELLED' }
+                            disabled={userData.currEmpstatus === 'APPROVED' || userData.currEmpstatus === 'REJECTED' || userData.currEmpstatus === 'CANCELLED'}
                             onClick={() => {
-                              //  alert(`Approved leave for ${userData.name}`);
-                              handleLeaveApprove();
+                                //  alert(`Approved leave for ${userData.name}`);
+                                handleLeaveApprove();
                                 onClose();
                             }}
-                            className={`${userData.currEmpstatus === 'APPROVED' || userData.currEmpstatus === 'REJECTED' || userData.currEmpstatus === 'CANCELLED' ? 'cursor-not-allowed bg-blue-400':'bg-blue-600  hover:bg-blue-700 active:bg-blue-800'} w-full flex gap-2 justify-center sm:flex-1 py-1 px-4  text-white font-semibold rounded-md transition-colors text-xs sm:text-sm`}
+                            className={`${userData.currEmpstatus === 'APPROVED' || userData.currEmpstatus === 'REJECTED' || userData.currEmpstatus === 'CANCELLED' ? 'cursor-not-allowed bg-blue-400' : 'bg-blue-600  hover:bg-blue-700 active:bg-blue-800'} w-full flex gap-2 justify-center sm:flex-1 py-1 px-4  text-white font-semibold rounded-md transition-colors text-xs sm:text-sm`}
                         >
-                            <CircleCheckBig  className="p-0.5"/>
+                            <CircleCheckBig className="p-0.5" />
                             Approve
                         </button>
                     </div>
