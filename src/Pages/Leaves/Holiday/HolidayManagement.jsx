@@ -4,6 +4,7 @@ import CardComponent from '../../../Components/CommonComp/CardComponent';
 import { fetchAllHolidayStatistics, getNextHoliday, getAllHolidays, createHoliday, getHolidayById, updateHoliday, deleteHoliday } from '../../../Api/HolidayManagementAPI';
 import HolidayComponentCard from '../../../Components/Holiday/HolidayComponentCard';
 import { toast } from 'react-toastify';
+import CardLoader from '../../../Components/CommonComp/CardLoader';
 import ListLoader from '../../../Components/CommonComp/ListLoader';
 
 export default function HolidayManagement() {
@@ -324,18 +325,22 @@ export default function HolidayManagement() {
                 </div>
 
                 {/* Statistics Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4 mb-4 md:mb-6">
-                    {cardsArray.map((card) => (
-                        <CardComponent
-                            key={card.keyName}
-                            IconName={card.IconName}
-                            keyName={card.keyName.toUpperCase()}
-                            val={card.val}
-                            iconTxColor={card.iconTxColor}
-                            iconBgColor={card.iconBgColor}
-                        />
-                    ))}
-                </div>
+                    {/* cards */}
+      <div className='grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 text-sm mt-5 mb-6'>
+            {loading
+              ? cardsArray.map((_, i) => <CardLoader key={i} />)
+              : cardsArray.map((card) => (
+                  <CardComponent
+                    key={card.keyName}
+                    IconName={card.IconName}
+                    keyName={card.keyName.toUpperCase()}
+                    val={card.val}
+                    iconTxColor={card.iconTxColor}
+                    iconBgColor={card.iconBgColor}
+                  />
+                ))
+            }
+          </div>
 
                 {holidayLoader ? (
                     <div className="flex justify-between flex-col lg:flex-row bg-linear-to-r from-blue-100 via-indigo-200 to-purple-200 rounded-xl border border-white shadow-md shadow-gray-50 p-4 md:p-5 mb-4 md:mb-6 animate-pulse">

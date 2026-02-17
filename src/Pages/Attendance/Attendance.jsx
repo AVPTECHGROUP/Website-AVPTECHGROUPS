@@ -1,5 +1,6 @@
 import { ClipboardList, UserCheck2, UserX, ChartBarBigIcon, Eye, Edit, Filter, FilterIcon } from 'lucide-react';
 import CardComponent from '../../Components/CommonComp/CardComponent';
+import CardLoader from '../../Components/CommonComp/CardLoader';
 import { useEffect, useState } from 'react';
 import { allAttendanceDetails, attendanceStatistics } from '../../Api/AttendanceApi';
 import ListLoader from '../../Components/CommonComp/ListLoader';
@@ -62,7 +63,6 @@ const Attendance = () => {
   const startRow = pagination ? page * size + 1 : 0;
   const endRow = pagination ? Math.min((page + 1) * size, pagination.totalElements) : 0;
 
-
   const formatDate = (dateString) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
@@ -72,6 +72,38 @@ const Attendance = () => {
       day: 'numeric'
     });
   };
+
+  // ✅ HolidayManagement style — cardsArray
+  const cardsArray = [
+    {
+      IconName: ChartBarBigIcon,
+      keyName: 'Overall Attendance',
+      val: stats?.totalRecords ?? 0,
+      iconTxColor: 'text-blue-600',
+      iconBgColor: 'bg-blue-100',
+    },
+    {
+      IconName: UserCheck2,
+      keyName: 'Total Present',
+      val: stats?.totalPresent ?? 0,
+      iconTxColor: 'text-green-600',
+      iconBgColor: 'bg-green-100',
+    },
+    {
+      IconName: UserX,
+      keyName: 'Total Absent',
+      val: stats?.totalAbsent ?? 0,
+      iconTxColor: 'text-red-600',
+      iconBgColor: 'bg-red-100',
+    },
+    {
+      IconName: UserCheck2,
+      keyName: 'Attendance Percentage',
+      val: `${stats?.attendancePercentage ?? 0}%`,
+      iconTxColor: 'text-blue-600',
+      iconBgColor: 'bg-blue-100',
+    },
+  ];
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -106,39 +138,20 @@ const Attendance = () => {
             </div>
           </div>
 
-          {/* Stats Cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-5 mb-4 sm:mb-6 lg:mb-8">
-            <CardComponent
-              IconName={ChartBarBigIcon}
-              keyName='Overall Attendance'
-              val={statsLoading ? "..." : stats?.totalRecords ?? 0}
-              iconTxColor="text-blue-600"
-              iconBgColor="bg-blue-100"
-            />
-
-            <CardComponent
-              IconName={UserCheck2}
-              keyName='Total Present'
-              val={statsLoading ? "..." : stats?.totalPresent ?? 0}
-              iconTxColor="text-green-600"
-              iconBgColor="bg-green-100"
-            />
-
-            <CardComponent
-              IconName={UserX}
-              keyName='Total Absent'
-              val={statsLoading ? "..." : stats?.totalAbsent ?? 0}
-              iconTxColor="text-red-600"
-              iconBgColor="bg-red-100"
-            />
-
-            <CardComponent
-              IconName={UserCheck2}
-              keyName='Attendance Percentage'
-              val={statsLoading ? "..." : `${stats?.attendancePercentage ?? 0}%`}
-              iconTxColor="text-blue-600"
-              iconBgColor="bg-blue-100"
-            />
+            {statsLoading
+              ? cardsArray.map((_, i) => <CardLoader key={i} />)
+              : cardsArray.map((card) => (
+                  <CardComponent
+                    key={card.keyName}
+                    IconName={card.IconName}
+                    keyName={card.keyName}
+                    val={card.val}
+                    iconTxColor={card.iconTxColor}
+                    iconBgColor={card.iconBgColor}
+                  />
+                ))
+            }
           </div>
 
           {/* Filter Section */}
@@ -213,7 +226,7 @@ const Attendance = () => {
                   {/* Data rows */}
                   {!listLoading && attendanceList.map((item) => (
                     <tr key={item.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-4 lg:px-6 py-4 text-sm  font-medium text-gray-900">
+                      <td className="px-4 lg:px-6 py-4 text-sm font-medium text-gray-900">
                         {item.userId}
                       </td>
 
@@ -244,7 +257,7 @@ const Attendance = () => {
                       <td className="px-4 lg:px-6 py-4">
                         <span
                           className={`px-2.5 py-1 rounded text-xs font-semibold
-    ${item.status === 'PRESENT'
+                            ${item.status === 'PRESENT'
                               ? 'bg-green-50 text-green-700'
                               : item.status === 'LATE'
                                 ? 'bg-yellow-50 text-yellow-700'
@@ -253,7 +266,6 @@ const Attendance = () => {
                         >
                           {item.status}
                         </span>
-
                       </td>
                     </tr>
                   ))}
@@ -271,7 +283,7 @@ const Attendance = () => {
 
             {/* Mobile Card View (visible only on mobile) */}
             <div className="md:hidden">
-              {/*  Loading */}
+              {/* Loading */}
               {listLoading && (
                 <div className="py-10">
                   <div className="flex justify-center flex-col items-center">
@@ -302,7 +314,7 @@ const Attendance = () => {
                     </div>
                     <span
                       className={`px-2.5 py-1 rounded text-xs font-semibold
-    ${item.status === 'PRESENT'
+                        ${item.status === 'PRESENT'
                           ? 'bg-green-50 text-green-700'
                           : item.status === 'LATE'
                             ? 'bg-yellow-50 text-yellow-700'
@@ -311,7 +323,6 @@ const Attendance = () => {
                     >
                       {item.status}
                     </span>
-
                   </div>
 
                   {/* Additional Details */}

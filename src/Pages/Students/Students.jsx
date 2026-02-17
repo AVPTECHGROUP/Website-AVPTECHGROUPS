@@ -14,6 +14,7 @@ import ActionDropDownComp from '../../Components/CommonComp/ActionDropDownComp';
 import CardComponent from '../../Components/CommonComp/CardComponent';
 import QuickActions from '../../Components/CommonComp/QuickActions';
 import { getStudents, searchStudents } from '../../Api/StudentsApi';
+import CardLoader from '../../Components/CommonComp/CardLoader';
 import ListLoader from '../../Components/CommonComp/ListLoader';
 
 const Student = () => {
@@ -145,18 +146,21 @@ const Student = () => {
                     </div>
 
                     {/* Cards */}
-                    <div className="grid sm:grid-cols-3 grid-cols-1 gap-3  pt-6">
-                        {cardsArray.map((card) => (
-                            <CardComponent
-                                key={card.keyName}
-                                IconName={card.IconName}
-                                keyName={card.keyName.toUpperCase()}
-                                val={card.val}
-                                iconTxColor={card.iconTxColor}
-                                iconBgColor={card.iconBgColor}
-                            />
-                        ))}
-                    </div>
+  <div className='grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 text-sm mt-5 mb-6'>
+            {loading
+              ? cardsArray.map((_, i) => <CardLoader key={i} />)
+              : cardsArray.map((card) => (
+                  <CardComponent
+                    key={card.keyName}
+                    IconName={card.IconName}
+                    keyName={card.keyName.toUpperCase()}
+                    val={card.val}
+                    iconTxColor={card.iconTxColor}
+                    iconBgColor={card.iconBgColor}
+                  />
+                ))
+            }
+          </div>
 
                     {/* Quick Actions */}
                     <QuickActions buttonText="Add New Student" navigateTo="/students/addStudents" />
