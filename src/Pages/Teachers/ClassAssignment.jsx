@@ -55,7 +55,6 @@ function ClassAssignment() {
   const sectionToggleTimeoutRef = useRef({});
 
   // ==================== DERIVED STATE ====================
-
   const allSelectedSectionIds = formData.classAssignments.flatMap(ca => ca.sections);
 
   // Preview list: only sections that have a subject assigned (using composite key)
@@ -247,7 +246,6 @@ function ClassAssignment() {
   }, []);
 
   // ==================== FORM HANDLERS ====================
-
   const handleSectionSubjectChange = (classId, sectionId, subjectId) => {
     const uniqueKey = `${classId}-${sectionId}`;
     const subject = (sectionSubjectsMap[uniqueKey] || []).find(s => String(s.id) === String(subjectId));
@@ -285,7 +283,6 @@ function ClassAssignment() {
       setAddingClass(false);  // stop loader
     }
   };
-
   const handleRemoveClass = (gradeId) => {
     const ca = formData.classAssignments.find(c => c.gradeId === gradeId);
     if (ca) {
