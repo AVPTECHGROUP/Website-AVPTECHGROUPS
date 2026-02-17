@@ -13,9 +13,8 @@ import {
   SearchX,
   UserRoundXIcon,
 } from 'lucide-react';
-import { getAllLeaveRequest } from '../../Api/LeavesManagementAPI.JS';
 import LeavesReqInfoComponent from '../../Components/LeavesComponents/LeaveReqInfoComponent';
-import { approoveRejLeaveReq, getALLLeavesStatistics, } from '../../Api/LeavesManagementAPI';
+import { approoveRejLeaveReq, getAllLeaveRequest, getALLLeavesStatistics, } from '../../Api/LeavesManagementAPI';
 import { toast } from 'react-toastify';
 import { getListOfValues } from '../../Api/ListOfValues';
 
@@ -87,9 +86,9 @@ const Leaves = () => {
 
   //Compare and get lable function
   function compareAndGetLabel(data, compareValue) {
-  const found = data.find(item => item.value === compareValue);
-  return found ? <span> {found.label} </span>:"";
-}
+    const found = data.find(item => item.value === compareValue);
+    return found ? <span> {found.label} </span> : "";
+  }
 
   //for leave statistics 
   const [refressStat, setRefressStat] = useState(0);
@@ -661,7 +660,7 @@ const Leaves = () => {
       </div>
 
       {/* poppup called */}
-      <LeavesReqInfoComponent isOpen={isPopupOpen} onClose={handleClosePopup} userData={selectedUser} handleLeaveApprove={handleLeaveApproveReq} handleLeaveReject={handleLeaveRejectReq} setRemarks={setRemarksVal} remarks={remarkVal} />
+      <LeavesReqInfoComponent isOpen={isPopupOpen} onClose={handleClosePopup} userData={selectedUser} handleLeaveApprove={handleLeaveApproveReq} handleLeaveReject={handleLeaveRejectReq} setRemarks={setRemarksVal} remarks={remarkVal} listLeavetype={listOfLeaveType} />
     </div>
   );
 };

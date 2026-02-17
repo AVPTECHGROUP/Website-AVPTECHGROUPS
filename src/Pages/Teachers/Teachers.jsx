@@ -7,8 +7,6 @@ import TeachersTable from '../../Components/Teacher/ManagementComponents/Teacher
 
 const Teachers = () => {
 
-  // STATE MANAGEMENT 
-   const [refressStat, setRefressStat] = useState(0);
   // Search and Filters
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -21,9 +19,6 @@ const Teachers = () => {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [totalElements, setTotalElements] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
-
-  // UI State
-  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
 
   // Data State
   const [teachers, setTeachers] = useState([]);
