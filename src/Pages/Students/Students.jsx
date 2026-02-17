@@ -14,6 +14,7 @@ import ActionDropDownComp from '../../Components/CommonComp/ActionDropDownComp';
 import CardComponent from '../../Components/CommonComp/CardComponent';
 import QuickActions from '../../Components/CommonComp/QuickActions';
 import { getStudents, searchStudents } from '../../Api/StudentsApi';
+import ListLoader from '../../Components/CommonComp/ListLoader';
 
 const Student = () => {
     const [error, setError] = useState(null);
@@ -144,7 +145,7 @@ const Student = () => {
                     </div>
 
                     {/* Cards */}
-                    <div className="grid sm:grid-cols-3 grid-cols-1 gap-3 mb-8 pt-6">
+                    <div className="grid sm:grid-cols-3 grid-cols-1 gap-3  pt-6">
                         {cardsArray.map((card) => (
                             <CardComponent
                                 key={card.keyName}
@@ -257,7 +258,7 @@ const Student = () => {
 
                     {/* DESKTOP TABLE */}
                     <div className="hidden lg:block bg-white rounded-xl border border-gray-200">
-                        <div className="overflow-x-auto min-h-[calc(250px)] max-h-[calc(100vh-510px)] overflow-y-auto">
+                        <div className="overflow-x-auto min-h-[calc(250px)] max-h-[calc(100vh-480px)] overflow-y-auto">
                             <table className="w-full">
                                 <thead className="border-b border-gray-200">
                                     <tr>
@@ -273,14 +274,7 @@ const Student = () => {
                                 </thead>
                                 <tbody className="bg-white divide-y divide-gray-200 font-normal">
                                     {loading ? (
-                                        <tr>
-                                            <td colSpan="4" className="px-6 py-8 text-center">
-                                                <div className="flex items-center justify-center flex-col">
-                                                    <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                                                    <p className="text-gray-600 font-medium ml-4">Loading students...</p>
-                                                </div>
-                                            </td>
-                                        </tr>
+                                        <ListLoader />
                                     ) : error ? (
                                         <tr>
                                             <td colSpan="4" className="px-6 py-8 text-center">

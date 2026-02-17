@@ -17,6 +17,7 @@ import LeavesReqInfoComponent from '../../Components/LeavesComponents/LeaveReqIn
 import { approoveRejLeaveReq, getAllLeaveRequest, getALLLeavesStatistics, } from '../../Api/LeavesManagementAPI';
 import { toast } from 'react-toastify';
 import { getListOfValues } from '../../Api/ListOfValues';
+import ListLoader from '../../Components/CommonComp/ListLoader';
 
 const Leaves = () => {
   const date = new Date().toLocaleDateString();
@@ -400,14 +401,7 @@ const Leaves = () => {
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {loading ? (
-                      <tr>
-                        <td colSpan="6" className="text-center py-8">
-                          <div className="flex flex-col items-center">
-                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-2"></div>
-                            <span className="text-gray-600">Please wait while Loading requests...</span>
-                          </div>
-                        </td>
-                      </tr>
+                      <ListLoader />
                     ) : error ? (
                       <tr>
                         <td colSpan="11" className="px-6 py-8 text-center">

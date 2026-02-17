@@ -12,6 +12,7 @@ import {
 import { toast } from 'react-toastify';
 import { activateStatus, deactivateStatus } from '../../../Api/TeachersAPI';
 import ActionDropDownComp from '../../CommonComp/ActionDropDownComp';
+import ListLoader from '../../CommonComp/ListLoader';
 
 const TeachersTable = ({
   assignTeacherId,
@@ -311,9 +312,9 @@ const TeachersTable = ({
                 </th>
                 {!isUserTable && (
                   <>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Assigned Classes
-                    </th>
+                    </th> */}
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Salary Type
                     </th>
@@ -342,14 +343,7 @@ const TeachersTable = ({
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {loading ? (
-                <tr>
-                  <td colSpan={isUserTable ? "4" : "10"} className="px-6 py-8 text-center">
-                    <div className="flex items-center justify-center flex-col">
-                      <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                      <p className="text-gray-600 font-medium ml-4">Loading {isUserTable ? 'users' : 'teachers'}...</p>
-                    </div>
-                  </td>
-                </tr>
+                <ListLoader />
               ) : error ? (
                 <tr>
                   <td colSpan={isUserTable ? "4" : "10"} className="px-6 py-8 text-center">
@@ -403,7 +397,7 @@ const TeachersTable = ({
                     </td>
                     {!isUserTable && (
                       <>
-                        <td className="px-6 py-4">
+                        {/* <td className="px-6 py-4">
                           <div className="flex flex-wrap gap-1">
                             {(teacher.classes || []).map((cls, idx) => (
                               <span
@@ -414,7 +408,7 @@ const TeachersTable = ({
                               </span>
                             ))}
                           </div>
-                        </td>
+                        </td> */}
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span
                             className={`inline-block px-3 py-1 text-xs rounded-full ${teacher.salaryType === 'MONTHLY'
