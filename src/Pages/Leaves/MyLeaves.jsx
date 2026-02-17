@@ -14,6 +14,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { getListOfValues } from '../../Api/ListOfValues';
+import ListLoader from '../../Components/CommonComp/ListLoader';
 
 export default function LeaveDashboard() {
     const [leaveData, setLeaveData] = useState([]);
@@ -242,7 +243,7 @@ export default function LeaveDashboard() {
                 {/* Leave History */}
                 <div className="bg-gray-50 rounded-xl shadow-sm border border-gray-100">
                     <div className="p-4 sm:p-3 sm:px-4 border-b border-b-gray-500 flex justify-between items-center">
-                        <h2 className="text-lg sm:text-lg italic text-blue-600 font-semibold ">
+                        <h2 className="text-lg sm:text-lg text-gray-800 font-semibold ">
                             My Leave History
                         </h2>
                         <span className="text-xs sm:text-sm text-gray-500">
@@ -265,14 +266,7 @@ export default function LeaveDashboard() {
 
                             <tbody className="divide-y divide-gray-100">
                                 {loading ? (
-                                    <tr>
-                                        <td colSpan="6" className="text-center py-8">
-                                            <div className="flex flex-col items-center">
-                                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-2"></div>
-                                                <span className="text-gray-600">Loading requests...</span>
-                                            </div>
-                                        </td>
-                                    </tr>
+                                    <ListLoader avatar={false}/>
                                 ) : error ? (
                                     <tr>
                                         <td colSpan="6" className="text-center py-8">

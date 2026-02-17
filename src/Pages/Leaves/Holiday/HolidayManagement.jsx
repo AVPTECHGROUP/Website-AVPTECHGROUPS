@@ -5,6 +5,7 @@ import { fetchAllHolidayStatistics, getNextHoliday, getAllHolidays, createHolida
 import HolidayComponentCard from '../../../Components/Holiday/HolidayComponentCard';
 import { toast } from 'react-toastify';
 import CardLoader from '../../../Components/CommonComp/CardLoader';
+import ListLoader from '../../../Components/CommonComp/ListLoader';
 
 export default function HolidayManagement() {
     const [searchTerm, setSearchTerm] = useState('');
@@ -79,9 +80,12 @@ export default function HolidayManagement() {
         if (selectedYear) getHolidayStatistics();
     }, [selectedYear]);
 
+    const [holidayLoader, setHolidayLoader] = useState(false);
+
     useEffect(() => {
         const fetchNextHoliday = async () => {
             try {
+                setHolidayLoader(true);
                 const data = await getNextHoliday();
                 setNextHoliday({
                     name: data.name,
@@ -92,6 +96,9 @@ export default function HolidayManagement() {
             } catch (error) {
                 console.error("Failed to fetch next holiday", error);
                 setNextHoliday(null);
+            }
+            finally {
+                setHolidayLoader(false)
             }
         };
         fetchNextHoliday();
@@ -335,10 +342,34 @@ export default function HolidayManagement() {
             }
           </div>
 
-                {/* Next Holiday */}
-                {nextHoliday && (
+                {holidayLoader ? (
+                    <div className="flex justify-between flex-col lg:flex-row bg-linear-to-r from-blue-100 via-indigo-200 to-purple-200 rounded-xl border border-white shadow-md shadow-gray-50 p-4 md:p-5 mb-4 md:mb-6 animate-pulse">
+                        {/* Left skeleton */}
+                        <div className="flex-1">
+                            {/* Badge */}
+                            <div className="h-5 w-24 bg-blue-200 rounded-full mb-3" />
+                            {/* Title */}
+                            <div className="h-7 w-48 bg-blue-200 rounded-lg mb-2" />
+                            {/* Description line 1 */}
+                            <div className="h-4 w-72 bg-blue-200 rounded mb-2" />
+                            {/* Description line 2 */}
+                            <div className="h-4 w-56 bg-blue-200 rounded mb-4" />
+                        </div>
+                        {/* Right skeleton */}
+                        <div className="flex lg:items-center gap-6 px-2">
+                            <div>
+                                <div className="h-3 w-8 bg-blue-200 rounded mb-2" />
+                                <div className="h-5 w-20 bg-blue-200 rounded" />
+                            </div>
+                            <div>
+                                <div className="h-3 w-8 bg-blue-200 rounded mb-2" />
+                                <div className="h-5 w-28 bg-blue-200 rounded" />
+                            </div>
+                        </div>
+                    </div>
+                ) : nextHoliday &&  (
                     <div className="flex justify-between flex-col lg:flex-row bg-linear-to-r from-blue-100 via-indigo-200 to-purple-200 rounded-xl border border-white shadow-md shadow-gray-50 hover:shadow-md hover:shadow-gray-100 p-4 md:p-5 mb-4 md:mb-6">
-                        <div className='z-4'>
+                        <div className="z-4">
                             <p className="text-xs font-medium text-gray-600 bg-blue-50 w-fit py-1 px-2.5 rounded-full uppercase tracking-wide mb-3">
                                 Next Holiday
                             </p>
@@ -506,17 +537,18 @@ export default function HolidayManagement() {
 
                                 {/* ✅ Loading state inside tbody */}
                                 {loading && (
-                                    <tr>
-                                        <td colSpan={11}>
-                                            <div className="text-center py-8">
-                                                <div className="flex flex-col items-center">
-                                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-2"></div>
-                                                    <span className="text-gray-600">Loading holidays...</span>
-                                                </div>
-                                            </div>
-                                        </td>
-                                    </tr>
+                                    // <tr>
+                                    //     <td colSpan={11}>
+                                    //         <div className="text-center py-8">
+                                    //             <div className="flex flex-col items-center">
+                                    //                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-2"></div>
+                                    //                 <span className="text-gray-600">Loading holidays...</span>
+                                    //             </div>
+                                    //         </div>
+                                    //     </td>
+                                    // </tr>
 
+                                    <ListLoader avatar={false}/>
                                 )}
 
                                 {/* ✅ Empty state inside tbody */}
@@ -626,7 +658,7 @@ export default function HolidayManagement() {
                                                     onClick={() => handleDeleteHoliday(holiday.id)}
                                                     className="p-2 hover:bg-red-50 rounded-lg transition-colors"
                                                 >
-                                                    <Trash2 className="w-4 h-4 text-red-600"/>
+                                                    <Trash2 className="w-4 h-4 text-red-600" />
                                                 </button>
                                             </div>
                                         </div>

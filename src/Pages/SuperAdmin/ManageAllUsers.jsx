@@ -29,6 +29,7 @@ import ActionDropDownComp from '../../Components/CommonComp/ActionDropDownComp';
 import CardComponent from '../../Components/CommonComp/CardComponent';
 import QuickActions from '../../Components/CommonComp/QuickActions';
 import CardLoader from '../../Components/CommonComp/CardLoader';
+import ListLoader from '../../Components/CommonComp/ListLoader';
 
 const ManageAllUsers = () => {
     // Stores text typed in search input (sys_user name / id / role)
@@ -278,7 +279,7 @@ const ManageAllUsers = () => {
             {/* Main Content */}
             <div className="flex-1 flex flex-col overflow-hidden w-0">
                 {/* Page Content */}
-                <div className="flex-1 overflow-auto p-4 sm:p-5 lg:p-4">
+                <div className="flex-1 overflow-auto p-2 sm:p-5 lg:p-4">
                     {/* Page Title */}
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div>
@@ -286,7 +287,6 @@ const ManageAllUsers = () => {
                             <p className="text-gray-500 mt-1 font-medium text-sm sm:text-base">Efficiently manage system roles, permissions and account statuses.</p>
                         </div>
                     </div>
-
                     {/* cards */}
       <div className='grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 text-sm mt-5 mb-6'>
             {loading
@@ -308,7 +308,7 @@ const ManageAllUsers = () => {
                     <QuickActions buttonText='Add new User' navigateTo='/dashboard/addUser' />
 
                     {/* filters */}
-                    <div className="bg-white grid  lg:grid-cols-3 gap-2 px-4 py-2 rounded-xl border border-gray-200 mb-4">
+                    <div className="bg-white grid  lg:grid-cols-3 gap-2 px-4 py-2  rounded-xl border border-gray-200 mb-4 mt-0">
                         <div className="flex col-span-2 items-center gap-2 border rounded-lg border-gray-200 bg-gray-100 px-2 py-1 focus-within:shadow-sm focus-within:shadow-blue-200">
                             <SearchIcon className="w-5 h-5 text-gray-500" />
                             <input
@@ -354,7 +354,7 @@ const ManageAllUsers = () => {
                     {/* MOBILE/TABLET CARDS VIEW (visible below 1024px) */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:hidden">
                         {loading ? (
-                            <div className="text-center py-8">
+                            <div className="text-center py-8 col-span-4">
                                 <div className="flex flex-col items-center">
                                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-2"></div>
                                     <span className="text-gray-600">Loading users ...</span>
@@ -449,7 +449,7 @@ const ManageAllUsers = () => {
 
                     {/* DESKTOP TABLE (visible 1024px and above) */}
                     <div className="hidden lg:block bg-white rounded-xl border border-gray-200 ">
-                        <div className="overflow-x-auto min-h-[calc(250px)] max-h-[calc(100vh-510px)] overflow-y-auto">
+                        <div className="overflow-x-auto min-h-[calc(250px)] max-h-[calc(100vh-480px)] overflow-y-auto">
                             <table className="w-full ">
                                 <thead className="border-b border-gray-200">
                                     <tr>
@@ -465,16 +465,7 @@ const ManageAllUsers = () => {
                                 </thead>
                                 <tbody className="bg-white divide-y divide-gray-200 font-normal">
                                     {loading ? (
-                                        <tr>
-                                            <td colSpan={11}>
-                                                <div className="text-center py-8">
-                                                    <div className="flex flex-col items-center">
-                                                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-2"></div>
-                                                        <span className="text-gray-600">Loading holiddeays...</span>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                        </tr>
+                                        <ListLoader />
                                     ) : error ? (
                                         <tr>
                                             <td colSpan="11" className="px-6 py-8 text-center">

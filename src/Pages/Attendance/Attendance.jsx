@@ -3,6 +3,7 @@ import CardComponent from '../../Components/CommonComp/CardComponent';
 import CardLoader from '../../Components/CommonComp/CardLoader';
 import { useEffect, useState } from 'react';
 import { allAttendanceDetails, attendanceStatistics } from '../../Api/AttendanceApi';
+import ListLoader from '../../Components/CommonComp/ListLoader';
 
 const Attendance = () => {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
@@ -219,14 +220,7 @@ const Attendance = () => {
                 <tbody className="divide-y divide-gray-100">
                   {/* Loading */}
                   {listLoading && (
-                    <tr>
-                      <td colSpan="5" className="py-10">
-                        <div className="flex justify-center flex-col items-center">
-                          <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
-                          <p className='text-sm sm:text-xl mt-2'>Loading...</p>
-                        </div>
-                      </td>
-                    </tr>
+                    <ListLoader />
                   )}
 
                   {/* Data rows */}
