@@ -76,7 +76,11 @@ export const getAllLeaveRequest = async (page = 0, size = 10, sort = 'id', statu
 
   } catch (error) {
     console.error("Leave request fetch error:", error.message);
-    throw error;
+    const message =
+      error.response?.data?.message ||
+      error.message ||
+      "Something went wrong";
+    throw new Error(message);
   }
 };
 
@@ -133,10 +137,10 @@ export const createLeaveRequest = async (user) => {
     },
     body: JSON.stringify(user),
   });
-  
+
   const text = await res.text();
   const data = text ? JSON.parse(text) : {};
-  
+
   if (!res.ok) {
     // Create error object with proper structure
     const error = new Error(data.message || "Failed to create leave request");
@@ -147,7 +151,7 @@ export const createLeaveRequest = async (user) => {
     };
     throw error;
   }
-  
+
   return data;
 };
 
@@ -173,13 +177,15 @@ export const getUserLeaveRequest = async (userId) => {
   try {
     const res = await fetch(`${BASE_URL + `/user/${userId}`}`);
     if (!res.ok) {
-      const errorText = await res.text();
-      throw new Error(errorText || "Failed to fetch leave req statistics");
+      const errorData = await res.json();
+      throw new Error(errorData.message || `Request failed with status ${res.status}`);
     }
     const data = await res.json();
     return data;
-  } catch (e) {
-    console.error("get user leave balance req error:", error.message);
+  } catch (error) {
+    if (error.name === "TypeError" && error.message === "Failed to fetch") {
+      throw new Error("Network error — please check your internet connection");
+    }
     throw error;
   }
 }

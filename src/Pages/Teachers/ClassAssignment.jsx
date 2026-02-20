@@ -24,14 +24,12 @@ function ClassAssignment() {
   const [classes, setClasses] = useState([]);
   const [sections, setSections] = useState([]);
 
-  // { [classId-sectionId]: Subject[] } — subjects fetched per section with composite key
   const [sectionSubjectsMap, setSectionSubjectsMap] = useState({});
-  // { [classId-sectionId]: { subjectId, subjectName } } — user's subject selection per section with composite key
   const [sectionSubjectSelections, setSectionSubjectSelections] = useState({});
   const [dropdownLoading, setDropdownLoading] = useState({
     classes: false,
     sections: false,
-    subjectsBySectionId: {}// per-section loading flags
+    subjectsBySectionId: {}
   });
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -48,23 +46,25 @@ function ClassAssignment() {
     dessignation: ''
   });
 
-  const [selectedClassDropdown, setSelectedClassDropdown] = useState('');
-  const { teacherId } = useParams();
+  // ── CHANGED: multi-select set instead of single string ──
+  const [selectedClassIds, setSelectedClassIds] = useState(new Set());
+  const [addingClass, setAddingClass] = useState(false);
 
-  // Debounce ref for section toggles
+  // ── Sections cache per classId ──
+  const [sectionsByClassId, setSectionsByClassId] = useState({});
+
+  const { teacherId } = useParams();
   const sectionToggleTimeoutRef = useRef({});
 
   // ==================== DERIVED STATE ====================
-  const allSelectedSectionIds = formData.classAssignments.flatMap(ca => ca.sections);
 
-  // Preview list: only sections that have a subject assigned (using composite key)
-  const sectionSubjectMappings = formData.classAssignments.flatMap(ca =>
-    ca.sections
+  const sectionSubjectMappings = formData.classAssignments.flatMap(ca => {
+    const classSections = sectionsByClassId[ca.gradeId] || sections;
+    return ca.sections
       .map(sid => {
         const uniqueKey = `${ca.gradeId}-${sid}`;
         if (!sectionSubjectSelections[uniqueKey]?.subjectId) return null;
-
-        const section = sections.find(s => String(s.id) === String(sid));
+        const section = classSections.find(s => String(s.id) === String(sid));
         return {
           sectionId: sid,
           classId: ca.gradeId,
@@ -75,8 +75,8 @@ function ClassAssignment() {
           subjectName: sectionSubjectSelections[uniqueKey].subjectName
         };
       })
-      .filter(Boolean)
-  );
+      .filter(Boolean);
+  });
 
   // ==================== LIFECYCLE ====================
 
@@ -85,9 +85,14 @@ function ClassAssignment() {
       const fetchTeacherDetails = async () => {
         try {
           const teacher = await getTeacherById(teacherId);
-          setFormData(prev => ({ ...prev, teacherId, teacherName: teacher.fullName, empCode: teacher.employeeCode, currStatus: teacher.status, dessignation: teacher.designation }));
+          setFormData(prev => ({
+            ...prev, teacherId,
+            teacherName: teacher.fullName,
+            empCode: teacher.employeeCode,
+            currStatus: teacher.status,
+            dessignation: teacher.designation
+          }));
         } catch (err) {
-          console.error('Error fetching teacher details:', err);
           setError('Failed to fetch teacher details');
           setTimeout(() => setError(null), 1000);
         }
@@ -105,15 +110,12 @@ function ClassAssignment() {
     }
   }, []);
 
-  //for update current assignments of teacher
   const fetchActiveAssignments = async (tid) => {
     if (!tid) return;
     try {
       setLoading(true);
       const res = await getTeachersActiveAssignments(tid);
-
       const raw = Array.isArray(res) ? res : (res?.content || res?.data || []);
-
       const mapped = raw.map(item => ({
         id: item.id,
         teacherId: tid,
@@ -125,9 +127,7 @@ function ClassAssignment() {
         subjectName: item.subjectName,
         isClassTeacher: !!item.isClassTeacher
       }));
-
       setCreatedAssignments(mapped);
-
     } catch (e) {
       setError("Failed to fetch assignments");
     } finally {
@@ -136,66 +136,42 @@ function ClassAssignment() {
   };
 
   useEffect(() => {
-    if (formData.teacherId) {
-      fetchActiveAssignments(formData.teacherId);
-    }
+    if (formData.teacherId) fetchActiveAssignments(formData.teacherId);
   }, [formData.teacherId]);
 
-  // Keep sectionSubjectsMap + sectionSubjectSelections in sync with selected sections
   useEffect(() => {
     if (formData.classAssignments.length === 0) {
       setSectionSubjectsMap({});
       setSectionSubjectSelections({});
       return;
     }
-
-    // Fetch subjects for newly added sections
     formData.classAssignments.forEach(ca => {
       ca.sections.forEach(sid => {
         const uniqueKey = `${ca.gradeId}-${sid}`;
-        if (!sectionSubjectsMap[uniqueKey]) {
-          fetchSubjectsForSection(ca.gradeId, sid);
-        }
+        if (!sectionSubjectsMap[uniqueKey]) fetchSubjectsForSection(ca.gradeId, sid);
       });
     });
-
-    // Prune removed sections
     const currentKeys = new Set();
     formData.classAssignments.forEach(ca => {
-      ca.sections.forEach(sid => {
-        currentKeys.add(`${ca.gradeId}-${sid}`);
-      });
+      ca.sections.forEach(sid => currentKeys.add(`${ca.gradeId}-${sid}`));
     });
-
     setSectionSubjectsMap(prev => {
-      const updated = { ...prev };
-      Object.keys(updated).forEach(key => {
-        if (!currentKeys.has(key)) {
-          delete updated[key];
-        }
-      });
-      return updated;
+      const u = { ...prev };
+      Object.keys(u).forEach(k => { if (!currentKeys.has(k)) delete u[k]; });
+      return u;
     });
-
     setSectionSubjectSelections(prev => {
-      const updated = { ...prev };
-      Object.keys(updated).forEach(key => {
-        if (!currentKeys.has(key)) {
-          delete updated[key];
-        }
-      });
-      return updated;
+      const u = { ...prev };
+      Object.keys(u).forEach(k => { if (!currentKeys.has(k)) delete u[k]; });
+      return u;
     });
   }, [formData.classAssignments]);
 
   useEffect(() => { setCurrentPage(1); }, [searchTerm]);
 
-  // Cleanup debounce timeouts on unmount
   useEffect(() => {
     return () => {
-      Object.values(sectionToggleTimeoutRef.current).forEach(timeoutId => {
-        if (timeoutId) clearTimeout(timeoutId);
-      });
+      Object.values(sectionToggleTimeoutRef.current).forEach(id => { if (id) clearTimeout(id); });
     };
   }, []);
 
@@ -214,12 +190,18 @@ function ClassAssignment() {
   };
 
   const fetchSections = async (classId) => {
+    // Return cached sections if already fetched
+    if (sectionsByClassId[classId]) return sectionsByClassId[classId];
     try {
       setDropdownLoading(prev => ({ ...prev, sections: true }));
-      setSections(await getSectionsByClass(classId));
+      const result = await getSectionsByClass(classId);
+      setSections(result);
+      setSectionsByClassId(prev => ({ ...prev, [classId]: result }));
+      return result;
     } catch (err) {
       setError("Failed to fetch sections");
       setTimeout(() => setError(null), 1000);
+      return [];
     } finally {
       setDropdownLoading(prev => ({ ...prev, sections: false }));
     }
@@ -246,6 +228,44 @@ function ClassAssignment() {
   }, []);
 
   // ==================== FORM HANDLERS ====================
+
+  // ── CHANGED: toggle class in/out of multi-selection set ──
+  const toggleClassSelection = (classId) => {
+    const strId = String(classId);
+    const isAlreadyAdded = formData.classAssignments.some(ca => String(ca.gradeId) === strId);
+    if (isAlreadyAdded) return;
+    setSelectedClassIds(prev => {
+      const next = new Set(prev);
+      next.has(strId) ? next.delete(strId) : next.add(strId);
+      return next;
+    });
+  };
+
+  // ── CHANGED: add ALL selected classes at once, fetching their sections in parallel ──
+  const handleAddClasses = async () => {
+    if (selectedClassIds.size === 0) return;
+    try {
+      setAddingClass(true);
+      const classIdsArray = Array.from(selectedClassIds);
+
+      // Fetch sections for all selected classes in parallel
+      await Promise.all(classIdsArray.map(cid => fetchSections(cid)));
+
+      const newAssignments = classIdsArray.map(cid => {
+        const selectedClass = classes.find(c => String(c.id) === String(cid));
+        return { gradeId: cid, gradeName: selectedClass?.name || '', sections: [] };
+      });
+
+      setFormData(prev => ({
+        ...prev,
+        classAssignments: [...prev.classAssignments, ...newAssignments]
+      }));
+      setSelectedClassIds(new Set());
+    } finally {
+      setAddingClass(false);
+    }
+  };
+
   const handleSectionSubjectChange = (classId, sectionId, subjectId) => {
     const uniqueKey = `${classId}-${sectionId}`;
     const subject = (sectionSubjectsMap[uniqueKey] || []).find(s => String(s.id) === String(subjectId));
@@ -257,36 +277,9 @@ function ClassAssignment() {
     }));
   };
 
-  //for loader for add class 
-  const [addingClass, setAddingClass] = useState(false);
-  const handleAddClass = async () => {
-    if (!selectedClassDropdown) return;
-    try {
-      setAddingClass(true);   // start loader
-      await fetchSections(selectedClassDropdown);
-      const selectedClass = classes.find(
-        c => String(c.id) === String(selectedClassDropdown)
-      );
-      setFormData(prev => ({
-        ...prev,
-        classAssignments: [
-          ...prev.classAssignments,
-          {
-            gradeId: selectedClassDropdown,
-            gradeName: selectedClass?.name || '',
-            sections: []
-          }
-        ]
-      }));
-      setSelectedClassDropdown('');
-    } finally {
-      setAddingClass(false);  // stop loader
-    }
-  };
   const handleRemoveClass = (gradeId) => {
     const ca = formData.classAssignments.find(c => c.gradeId === gradeId);
     if (ca) {
-      // Clear any pending debounce timeouts for sections in this class
       ca.sections.forEach(sid => {
         const uniqueKey = `${gradeId}-${sid}`;
         if (sectionToggleTimeoutRef.current[uniqueKey]) {
@@ -294,22 +287,14 @@ function ClassAssignment() {
           delete sectionToggleTimeoutRef.current[uniqueKey];
         }
       });
-
-      // Remove all composite keys for this class
       setSectionSubjectsMap(prev => {
         const u = { ...prev };
-        ca.sections.forEach(sid => {
-          const uniqueKey = `${gradeId}-${sid}`;
-          delete u[uniqueKey];
-        });
+        ca.sections.forEach(sid => { delete u[`${gradeId}-${sid}`]; });
         return u;
       });
       setSectionSubjectSelections(prev => {
         const u = { ...prev };
-        ca.sections.forEach(sid => {
-          const uniqueKey = `${gradeId}-${sid}`;
-          delete u[uniqueKey];
-        });
+        ca.sections.forEach(sid => { delete u[`${gradeId}-${sid}`]; });
         return u;
       });
     }
@@ -318,13 +303,7 @@ function ClassAssignment() {
 
   const toggleSectionForClass = (gradeId, sectionId) => {
     const uniqueKey = `${gradeId}-${sectionId}`;
-
-    // Clear any existing timeout for this section
-    if (sectionToggleTimeoutRef.current[uniqueKey]) {
-      clearTimeout(sectionToggleTimeoutRef.current[uniqueKey]);
-    }
-
-    // Set new debounced timeout (300ms delay)
+    if (sectionToggleTimeoutRef.current[uniqueKey]) clearTimeout(sectionToggleTimeoutRef.current[uniqueKey]);
     sectionToggleTimeoutRef.current[uniqueKey] = setTimeout(() => {
       setFormData(prev => ({
         ...prev,
@@ -332,7 +311,6 @@ function ClassAssignment() {
           if (ca.gradeId !== gradeId) return ca;
           const isSelected = ca.sections.includes(sectionId);
           if (isSelected) {
-            // Clear its subject selection on deselect using composite key
             setSectionSubjectSelections(sel => {
               const u = { ...sel };
               delete u[uniqueKey];
@@ -345,10 +323,8 @@ function ClassAssignment() {
           };
         })
       }));
-
-      // Clean up the timeout reference
       delete sectionToggleTimeoutRef.current[uniqueKey];
-    }, 1000); // 300ms debounce delay
+    }, 1000);
   };
 
   const validatePayload = (d) => {
@@ -368,19 +344,12 @@ function ClassAssignment() {
 
   const handleAddMapping = async (e) => {
     e.preventDefault();
-
-    if (!formData.teacherId) {
-      setError("Teacher missing");
-      return;
-    }
-
+    if (!formData.teacherId) { setError("Teacher missing"); return; }
     const assignmentsArray = [];
-
     formData.classAssignments.forEach(ca => {
       ca.sections.forEach(sectionId => {
         const uniqueKey = `${ca.gradeId}-${sectionId}`;
         const subject = sectionSubjectSelections[uniqueKey];
-
         if (subject?.subjectId) {
           assignmentsArray.push({
             classId: Number(ca.gradeId),
@@ -394,15 +363,10 @@ function ClassAssignment() {
         }
       });
     });
-
-    if (assignmentsArray.length === 0) {
-      setError("Please select subjects");
-      return;
-    }
-    let resT;
+    if (assignmentsArray.length === 0) { setError("Please select subjects"); return; }
     try {
       setLoading(true);
-      resT = await createTeacherAssignment(formData.teacherId, assignmentsArray);
+      const resT = await createTeacherAssignment(formData.teacherId, assignmentsArray);
       await fetchActiveAssignments(formData.teacherId);
       setSuccessMessage(resT.message || "Assignment created successfully");
       resetForm();
@@ -421,11 +385,7 @@ function ClassAssignment() {
     setFormData({
       teacherId: assignment.teacherId,
       teacherName: assignment.teacherName,
-      classAssignments: [{
-        gradeId: assignment.classId,
-        gradeName: assignment.className || '',
-        sections: sectionsArray
-      }],
+      classAssignments: [{ gradeId: assignment.classId, gradeName: assignment.className || '', sections: sectionsArray }],
       isClassTeacher: assignment.isClassTeacher || false
     });
     if (assignment.classId) fetchSections(assignment.classId);
@@ -433,10 +393,7 @@ function ClassAssignment() {
     const preFilledSelections = {};
     sectionsArray.forEach(sid => {
       const uniqueKey = `${assignment.classId}-${sid}`;
-      preFilledSelections[uniqueKey] = {
-        subjectId: assignment.subjectId || '',
-        subjectName: assignment.subjectName || ''
-      };
+      preFilledSelections[uniqueKey] = { subjectId: assignment.subjectId || '', subjectName: assignment.subjectName || '' };
       fetchSubjectsForSection(assignment.classId, sid);
     });
     setSectionSubjectSelections(preFilledSelections);
@@ -463,26 +420,18 @@ function ClassAssignment() {
       setLoading(true);
       setError(null);
       const payload = {
-        classId: ca.gradeId,
-        sectionId,
-        subjectId: sel.subjectId,
-        isClassTeacher: formData.isClassTeacher,
-        weeklyPeriods: 5,
-        academicYear: "2025-2026",
-        status: "ACTIVE"
+        classId: ca.gradeId, sectionId, subjectId: sel.subjectId,
+        isClassTeacher: formData.isClassTeacher, weeklyPeriods: 5,
+        academicYear: "2025-2026", status: "ACTIVE"
       };
       if (!validatePayload(payload)) throw new Error("Invalid payload: " + JSON.stringify(payload));
       await updateTeacherAssignment(editingAssignment.id, payload);
-      const secObj = sections.find(s => String(s.id) === String(sectionId));
+      const classSections = sectionsByClassId[ca.gradeId] || sections;
+      const secObj = classSections.find(s => String(s.id) === String(sectionId));
       setCreatedAssignments(prev => prev.map(a => a.id !== editingAssignment.id ? a : {
-        ...a,
-        classId: ca.gradeId,
-        className: ca.gradeName,
+        ...a, classId: ca.gradeId, className: ca.gradeName,
         sections: [{ id: sectionId, name: secObj?.name || secObj?.sectionName || String(sectionId) }],
-        sectionId,
-        subjectId: sel.subjectId,
-        subjectName: sel.subjectName,
-        isClassTeacher: formData.isClassTeacher
+        sectionId, subjectId: sel.subjectId, subjectName: sel.subjectName, isClassTeacher: formData.isClassTeacher
       }));
       setSuccessMessage("Assignment updated successfully!");
       setEditingAssignment(null);
@@ -513,12 +462,8 @@ function ClassAssignment() {
   };
 
   const resetForm = (keepTeacher = true) => {
-    // Clear all pending debounce timeouts
-    Object.values(sectionToggleTimeoutRef.current).forEach(timeoutId => {
-      if (timeoutId) clearTimeout(timeoutId);
-    });
+    Object.values(sectionToggleTimeoutRef.current).forEach(id => { if (id) clearTimeout(id); });
     sectionToggleTimeoutRef.current = {};
-
     setFormData(prev => ({
       teacherId: keepTeacher ? prev.teacherId : '',
       teacherName: keepTeacher ? prev.teacherName : '',
@@ -528,12 +473,10 @@ function ClassAssignment() {
     setSections([]);
     setSectionSubjectsMap({});
     setSectionSubjectSelections({});
+    setSelectedClassIds(new Set());   // ← clear multi-selection on reset
   };
 
-  const handleCancelEdit = () => {
-    setEditingAssignment(null);
-    resetForm();
-  };
+  const handleCancelEdit = () => { setEditingAssignment(null); resetForm(); };
 
   const handleCancel = () => {
     setCreatedAssignments([]);
@@ -564,34 +507,28 @@ function ClassAssignment() {
 
   useEffect(() => {
     const fetch = async (tid) => {
-      if (!tid) {
-        setCreatedAssignments([]);
-        return;
-      }
+      if (!tid) { setCreatedAssignments([]); return; }
       try {
         setLoading(true);
         setError(null);
         const res = await getTeachersActiveAssignments(tid);
         let raw = Array.isArray(res) ? res : (res?.content || res?.data || []);
-        const mapped = raw.map(item => {
-          const classObj = classes.find(c => String(c.id) === String(item.classId));
-          return {
-            id: item.id || `${tid}-${item.classId}-${item.sectionId}`,
-            teacherId: tid,
-            teacherName: formData.teacherName || '',
-            classId: item.classId,
-            className: item.className || `NA`,
-            sectionId: item.sectionId,
-            sections: [{ id: item.sectionId, name: item.sectionName }],
-            subjectId: item.subjectId,
-            subjectName: item.subjectName ?? 'N/A',
-            isClassTeacher: !!item.isClassTeacher,
-            weeklyPeriods: item.weeklyPeriods || 0,
-            academicYear: item.academicYear || '',
-            status: item.status || 'ACTIVE',
-            remarks: item.remarks || null
-          };
-        });
+        const mapped = raw.map(item => ({
+          id: item.id || `${tid}-${item.classId}-${item.sectionId}`,
+          teacherId: tid,
+          teacherName: formData.teacherName || '',
+          classId: item.classId,
+          className: item.className || 'NA',
+          sectionId: item.sectionId,
+          sections: [{ id: item.sectionId, name: item.sectionName }],
+          subjectId: item.subjectId,
+          subjectName: item.subjectName ?? 'N/A',
+          isClassTeacher: !!item.isClassTeacher,
+          weeklyPeriods: item.weeklyPeriods || 0,
+          academicYear: item.academicYear || '',
+          status: item.status || 'ACTIVE',
+          remarks: item.remarks || null
+        }));
         setCreatedAssignments(mapped);
       } catch (e) {
         setError('Failed to fetch active assignments');
@@ -623,41 +560,30 @@ function ClassAssignment() {
 
         {/* Assignment Editor */}
         <div className="p-4 md:p-6 bg-slate-50 border-b border-gray-200">
-          {/* Heading + styled teacher name */}
+
+          {/* Teacher info card */}
           <div className="flex items-start justify-between mb-5">
             {formData.teacherName && (
               <div className="flex items-center justify-between w-full gap-2.5 bg-white border rounded-xl p-4 shadow-sm border-gray-200">
                 <div className="min-w-50 flex items-center gap-2">
-                  {/* Avatar */}
                   <span className="w-14 h-14 rounded-full bg-linear-to-br from-blue-800 to-indigo-600 flex items-center justify-center text-white text-xl font-bold shadow-sm">
                     {getInitials(formData.teacherName)}
                   </span>
-
                   <div className="flex flex-col leading-tight">
                     <span className="text-lg font-medium text-gray-800">{formData.teacherName}</span>
                     <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-500">
                       {formData.dessignation || "teacher"}
                       {formData.empCode && (
-                      <span className="text-[10px] text-blue-800 bg-blue-200 ml-2 px-1 rounded">{formData.empCode}</span>
-                    )}
+                        <span className="text-[10px] text-blue-800 bg-blue-200 ml-2 px-1 rounded">{formData.empCode}</span>
+                      )}
                     </span>
                   </div>
                 </div>
-
-                {/* Status Label */}
-                <div
-                  className={`px-3 py-1 rounded-full text-xs font-semibold ${formData.currStatus === "ACTIVE"
-                      ? "bg-green-100 text-green-800"
-                      : "bg-red-100 text-red-800"
-                    }`}
-                >
+                <div className={`px-3 py-1 rounded-full text-xs font-semibold ${formData.currStatus === "ACTIVE" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
                   {formData.currStatus || 'status'}
                 </div>
               </div>
             )}
-
-
-
             {editingAssignment && (
               <button onClick={handleCancelEdit} className="text-sm text-gray-500 hover:text-gray-800 flex items-center gap-1 mt-1">
                 <X className="w-4 h-4" /> Cancel Edit
@@ -668,18 +594,49 @@ function ClassAssignment() {
           <form onSubmit={editingAssignment ? handleUpdateAssignment : handleAddMapping}>
             <div className="space-y-4 mb-4">
 
-              {/* Class selector */}
+              {/* ── CHANGED: Multi-select class picker ── */}
               <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-                  Select Classes <span className="text-red-500">*</span>
-                </label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                    Select Classes <span className="text-red-500">*</span>
+                  </label>
+                  {/* Selection counter */}
+                  {selectedClassIds.size > 0 && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-semibold text-blue-700 bg-blue-100 px-2.5 py-1 rounded-full">
+                        {selectedClassIds.size} selected
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedClassIds(new Set())}
+                        className="text-xs text-gray-400 hover:text-red-500 transition-colors flex items-center gap-0.5"
+                        title="Clear selection"
+                      >
+                        <X className="w-3 h-3" /> Clear
+                      </button>
+                    </div>
+                  )}
+                </div>
+
                 <div className="bg-white border border-gray-200 rounded-xl p-4 flex flex-wrap gap-2 min-h-14 shadow-sm">
                   {classes.length > 0 ? classes.map(cls => {
                     const isAdded = formData.classAssignments.some(ca => String(ca.gradeId) === String(cls.id));
-                    const isSelected = selectedClassDropdown === String(cls.id);
+                    const isSelected = selectedClassIds.has(String(cls.id));
                     return (
-                      <button key={cls.id} type="button" onClick={() => setSelectedClassDropdown(String(cls.id))} disabled={isAdded}
-                        className={`px-4 py-2 rounded-lg font-medium text-sm transition-all ${isAdded ? 'bg-blue-600 text-white opacity-60 cursor-not-allowed' : isSelected ? 'bg-blue-50 text-blue-700 border-2 border-blue-400 ring-2 ring-blue-100' : 'bg-gray-100 text-gray-700 border border-gray-200 hover:bg-gray-200'}`}>
+                      <button
+                        key={cls.id}
+                        type="button"
+                        onClick={() => toggleClassSelection(String(cls.id))}
+                        disabled={isAdded}
+                        className={`px-4 py-2 rounded-lg font-medium text-sm transition-all ${
+                          isAdded
+                            ? 'bg-blue-600 text-white opacity-60 cursor-not-allowed'
+                            : isSelected
+                              ? 'bg-blue-50 text-blue-700 border-2 border-blue-500 ring-2 ring-blue-100 shadow-sm'
+                              : 'bg-gray-100 text-gray-700 border border-gray-200 hover:bg-gray-200'
+                        }`}
+                      >
+                        {isSelected && !isAdded && <span className="mr-1 text-blue-500 font-bold">✓</span>}
                         {cls.name || cls.className}
                       </button>
                     );
@@ -689,35 +646,40 @@ function ClassAssignment() {
                     </span>
                   )}
                 </div>
+                <p className="text-xs text-gray-400 mt-1.5 ml-1">
+                  Click to select one or more classes, then click <strong>Add Classes</strong> below.
+                </p>
               </div>
 
-              {/* Add Class + Is Class Teacher */}
+              {/* ── CHANGED: "Add Classes" button (label reflects count) + Is Class Teacher ── */}
               <div className="grid grid-cols-2 gap-3">
-                <button type="button" onClick={handleAddClass} disabled={!selectedClassDropdown || addingClass}
-                  className="flex items-center justify-center w-full px-4 py-2.5 bg-green-600 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed">
-                  <Plus className="w-4 h-4" /> {addingClass ? "Adding..." : "Add Class"}
+                <button
+                  type="button"
+                  onClick={handleAddClasses}
+                  disabled={selectedClassIds.size === 0 || addingClass}
+                  className="flex items-center justify-center w-full px-4 py-2.5 bg-green-600 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed gap-1.5 font-medium"
+                >
+                  <Plus className="w-4 h-4" />
+                  {addingClass
+                    ? "Adding…"
+                    : selectedClassIds.size > 1
+                      ? `Add ${selectedClassIds.size} Classes`
+                      : selectedClassIds.size === 1
+                        ? "Add Class"
+                        : "Add Classes"}
                 </button>
+
                 <div className="items-center flex justify-items-center justify-center">
                   <button
                     type="button"
-                    onClick={() =>
-                      setFormData(prev => ({
-                        ...prev,
-                        isClassTeacher: !prev.isClassTeacher,
-                      }))
-                    }
+                    onClick={() => setFormData(prev => ({ ...prev, isClassTeacher: !prev.isClassTeacher }))}
                     className={`relative w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg h-10 flex items-center rounded-lg transition-colors duration-300 ${formData.isClassTeacher ? "bg-blue-500" : "bg-gray-300"}`}
                   >
-                    {/* Text inside toggle */}
                     <span className="text-xs sm:text-sm md:text-base lg:text-lg text-center w-full font-medium text-white px-4">
-                      Set as Class Teacher
+                    Is Class Teacher
                     </span>
-
-                    {/* Toggle Circle */}
-                    <span className={`absolute top-1 left-1 w-8 h-8 bg-white rounded-lg shadow-md flex items-center justify-center text-xs font-bold`}>
-                      {formData.isClassTeacher && (
-                        <span className="text-blue-600 text-sm">✓</span>
-                      )}
+                    <span className="absolute top-1 left-1 w-8 h-8 bg-white rounded-lg shadow-md flex items-center justify-center text-xs font-bold">
+                      {formData.isClassTeacher && <span className="text-blue-600 text-sm">✓</span>}
                     </span>
                   </button>
                 </div>
@@ -726,117 +688,115 @@ function ClassAssignment() {
               {/* Per-class section rows + per-section subject dropdowns */}
               {formData.classAssignments.length > 0 && (
                 <div className="border-t pt-4 space-y-3">
-                  <h3 className="text-sm font-bold text-gray-800">Select Sections &amp; Assign Subjects</h3>
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-bold text-gray-800">Select Sections &amp; Assign Subjects</h3>
+                    <span className="text-xs text-gray-400 font-medium">
+                      {formData.classAssignments.length} class{formData.classAssignments.length > 1 ? 'es' : ''} added
+                    </span>
+                  </div>
 
-                  {formData.classAssignments.map(ca => (
-                    <div key={ca.gradeId} className="border border-gray-200 rounded-xl bg-white overflow-hidden shadow-sm">
+                  {formData.classAssignments.map(ca => {
+                    const classSections = sectionsByClassId[ca.gradeId] || sections;
+                    return (
+                      <div key={ca.gradeId} className="border border-gray-200 rounded-xl bg-white overflow-hidden shadow-sm">
+                        <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-200">
+                          <span className="text-sm font-bold text-gray-800">{ca.gradeName}</span>
+                          <button type="button" onClick={() => handleRemoveClass(ca.gradeId)}
+                            className="text-xs text-red-500 hover:text-red-700 flex items-center gap-1">
+                            <X className="w-3 h-3" /> Remove
+                          </button>
+                        </div>
 
-                      {/* Class header bar */}
-                      <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-200">
-                        <span className="text-sm font-bold text-gray-800">{ca.gradeName}</span>
-                        <button type="button" onClick={() => handleRemoveClass(ca.gradeId)}
-                          className="text-xs text-red-500 hover:text-red-700 flex items-center gap-1">
-                          <X className="w-3 h-3" /> Remove
-                        </button>
-                      </div>
+                        <div className="p-4 space-y-4">
+                          {dropdownLoading.sections && !sectionsByClassId[ca.gradeId] ? (
+                            <p className="text-xs text-gray-400">Loading sections…</p>
+                          ) : classSections.length > 0 ? (
+                            <div className="flex flex-wrap gap-2">
+                              {classSections.map(section => {
+                                const sid = section.id;
+                                const isSelected = ca.sections.includes(sid);
+                                return (
+                                  <button
+                                    key={sid}
+                                    type="button"
+                                    onClick={() => toggleSectionForClass(ca.gradeId, sid)}
+                                    className={`px-3 py-2 rounded-lg font-medium text-sm transition-all ${isSelected
+                                      ? 'bg-blue-600 text-white shadow-sm'
+                                      : 'bg-white text-gray-700 border border-gray-300 hover:bg-blue-50 hover:border-blue-300'
+                                      }`}
+                                  >
+                                    {section.name || section.sectionName}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <p className="text-xs text-gray-400">No sections available</p>
+                          )}
 
-                      <div className="p-4 space-y-4">
-                        {/* Section toggle buttons */}
-                        {dropdownLoading.sections ? (
-                          <p className="text-xs text-gray-400">Loading sections…</p>
-                        ) : sections.length > 0 ? (
-                          <div className="flex flex-wrap gap-2">
-                            {sections.map(section => {
-                              const sid = section.id;
-                              const isSelected = ca.sections.includes(sid);
-                              return (
-                                <button
-                                  key={sid}
-                                  type="button"
-                                  onClick={() => toggleSectionForClass(ca.gradeId, sid)}
-                                  className={`px-3 py-2 rounded-lg font-medium text-sm transition-all ${isSelected
-                                    ? 'bg-blue-600 text-white shadow-sm'
-                                    : 'bg-white text-gray-700 border border-gray-300 hover:bg-blue-50 hover:border-blue-300'
-                                    }`}
-                                >
-                                  {section.name || section.sectionName}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        ) : (
-                          <p className="text-xs text-gray-400">No sections available</p>
-                        )}
+                          {ca.sections.length === 0 && (
+                            <p className="text-xs text-amber-600">⚠ Select at least one section</p>
+                          )}
 
-                        {ca.sections.length === 0 && (
-                          <p className="text-xs text-amber-600">⚠ Select at least one section</p>
-                        )}
-
-                        {/* Per-section subject dropdown — one row per selected section */}
-                        {ca.sections.length > 0 && (
-                          <div className="space-y-2">
-                            {ca.sections.map(sid => {
-                              const uniqueKey = `${ca.gradeId}-${sid}`;
-                              const section = sections.find(s => String(s.id) === String(sid));
-                              const sectionLabel = section?.name || section?.sectionName || `Section ${sid}`;
-                              const subjectsList = sectionSubjectsMap[uniqueKey] || [];
-                              const isLoadingSubjects = !!dropdownLoading.subjectsBySectionId?.[uniqueKey];
-                              const currentVal = sectionSubjectSelections[uniqueKey]?.subjectId || '';
-                              return (
-                                <div key={uniqueKey}
-                                  className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${sectionSubjectSelections[uniqueKey]?.subjectId
-                                    ? 'bg-emerald-50 border-emerald-200'
-                                    : 'bg-blue-50 border-blue-200'
-                                    }`}>
-                                  {/* Section badge */}
-                                  <span className="min-w-8 w-auto max-w-max px-1 h-8 shrink-0 rounded-lg bg-blue-600 text-white flex items-center justify-center text-xs font-bold">
-                                    {sectionLabel}
-                                  </span>
-
-                                  {/* Subject select or locked message */}
-                                  <div className="flex-1 min-w-0">
-                                    {isLoadingSubjects ? (
-                                      <p className="text-xs text-gray-400">Loading subjects…</p>
-                                    ) : (
-                                      <select
-                                        value={currentVal}
-                                        onChange={e => handleSectionSubjectChange(ca.gradeId, sid, e.target.value)}
-                                        disabled={subjectsList.length === 0}
-                                        className="w-full px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                                      >
-                                        {subjectsList.length === 0 ? (
-                                          <option value="">No subjects available</option>
-                                        ) : (
-                                          <>
-                                            <option value="">Select Subject…</option>
-                                            {subjectsList.map(subj => (
-                                              <option key={subj.id} value={subj.id}>
-                                                {subj.name || subj.subjectName}
-                                              </option>
-                                            ))}
-                                          </>
-                                        )}
-                                      </select>
-
+                          {ca.sections.length > 0 && (
+                            <div className="space-y-2">
+                              {ca.sections.map(sid => {
+                                const uniqueKey = `${ca.gradeId}-${sid}`;
+                                const section = classSections.find(s => String(s.id) === String(sid));
+                                const sectionLabel = section?.name || section?.sectionName || `Section ${sid}`;
+                                const subjectsList = sectionSubjectsMap[uniqueKey] || [];
+                                const isLoadingSubjects = !!dropdownLoading.subjectsBySectionId?.[uniqueKey];
+                                const currentVal = sectionSubjectSelections[uniqueKey]?.subjectId || '';
+                                return (
+                                  <div key={uniqueKey}
+                                    className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${sectionSubjectSelections[uniqueKey]?.subjectId
+                                      ? 'bg-emerald-50 border-emerald-200'
+                                      : 'bg-blue-50 border-blue-200'
+                                      }`}>
+                                    <span className="min-w-8 w-auto max-w-max px-1 h-8 shrink-0 rounded-lg bg-blue-600 text-white flex items-center justify-center text-xs font-bold">
+                                      {sectionLabel}
+                                    </span>
+                                    <div className="flex-1 min-w-0">
+                                      {isLoadingSubjects ? (
+                                        <p className="text-xs text-gray-400">Loading subjects…</p>
+                                      ) : (
+                                        <select
+                                          value={currentVal}
+                                          onChange={e => handleSectionSubjectChange(ca.gradeId, sid, e.target.value)}
+                                          disabled={subjectsList.length === 0}
+                                          className="w-full px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                                        >
+                                          {subjectsList.length === 0 ? (
+                                            <option value="">No subjects available</option>
+                                          ) : (
+                                            <>
+                                              <option value="">Select Subject…</option>
+                                              {subjectsList.map(subj => (
+                                                <option key={subj.id} value={subj.id}>
+                                                  {subj.name || subj.subjectName}
+                                                </option>
+                                              ))}
+                                            </>
+                                          )}
+                                        </select>
+                                      )}
+                                    </div>
+                                    {sectionSubjectSelections[uniqueKey]?.subjectId && (
+                                      <span className="w-5 h-5 shrink-0 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-bold">✓</span>
                                     )}
                                   </div>
-
-                                  {/* Green tick when done */}
-                                  {sectionSubjectSelections[uniqueKey]?.subjectId && (
-                                    <span className="w-5 h-5 shrink-0 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-bold">✓</span>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
 
-              {/* ── Quick Reference: Assignment Preview ── */}
+              {/* Assignment Preview */}
               {sectionSubjectMappings.length > 0 && (
                 <div className="rounded-xl border border-blue-200 bg-blue-50 overflow-hidden">
                   <div className="flex items-center gap-2 px-4 py-2.5 bg-blue-100 border-b border-blue-200">
@@ -849,7 +809,6 @@ function ClassAssignment() {
                   <div className="divide-y divide-blue-100">
                     {sectionSubjectMappings.map(m => (
                       <div key={m.uniqueKey} className="flex items-center gap-3 px-4 py-3">
-                        {/* Section badge */}
                         <span className="min-w-8 w-auto max-w-max px-1 h-8 shrink-0 rounded-lg bg-blue-600 text-white flex items-center justify-center text-xs font-bold">
                           {m.sectionName}
                         </span>
@@ -857,14 +816,11 @@ function ClassAssignment() {
                           <span className="text-[10px] text-gray-400 uppercase tracking-wide">Grade</span>
                           <span className="text-xs font-semibold text-gray-700">{m.gradeName}</span>
                         </div>
-                        {/* Arrow */}
                         <span className="text-gray-300 font-light text-lg shrink-0">→</span>
-                        {/* Subject */}
                         <div className="flex items-center gap-1.5 flex-1 min-w-0">
                           <BookOpen className="w-3 h-3 text-blue-500 shrink-0" />
                           <span className="text-sm font-bold text-blue-900 truncate">{m.subjectName}</span>
                         </div>
-                        {/* Clear subject button */}
                         <button type="button"
                           onClick={() => handleSectionSubjectChange(m.classId, m.sectionId, '')}
                           className="shrink-0 text-gray-400 hover:text-red-500 transition-colors p-1 rounded"
@@ -876,7 +832,6 @@ function ClassAssignment() {
                   </div>
                 </div>
               )}
-
             </div>
 
             {/* Banners */}
@@ -900,17 +855,9 @@ function ClassAssignment() {
               </p>
               <button
                 type="submit"
-                disabled={
-                  loading ||
-                  formData.classAssignments.length === 0 ||
-                  sectionSubjectMappings.length === 0
-                }
-                className={`px-5 py-2.5 rounded-lg font-semibold text-sm flex items-center gap-2 transition-colors ${loading
-                  ? "bg-gray-400 text-white cursor-not-allowed"
-                  : "bg-gray-900 text-white hover:bg-gray-800"
-                  }`}
+                disabled={loading || formData.classAssignments.length === 0 || sectionSubjectMappings.length === 0}
+                className={`px-5 py-2.5 rounded-lg font-semibold text-sm flex items-center gap-2 transition-colors ${loading ? "bg-gray-400 text-white cursor-not-allowed" : "bg-gray-900 text-white hover:bg-gray-800"}`}
               >
-
                 {editingAssignment
                   ? <><Edit2 className="w-4 h-4" />{loading ? 'Updating …' : 'Update Assignment'}</>
                   : <><Plus className="w-4 h-4" />{loading ? 'Assigning' : 'Assign'}</>
@@ -944,52 +891,158 @@ function ClassAssignment() {
             </div>
           ) : formData.teacherId !== '' ? (
             <>
-              <div className="overflow-auto shadow shadow-gray-300 p-8 rounded-xl">
-                <table className="w-full text-sm">
-                  <thead className='px-3'>
-                    <tr className="border-b border-gray-200 text-left">
-                      {['Grade', 'Section', 'Subject', 'Class Teacher', 'Actions'].map((h, i) => (
-                        <th key={h} className={`pb-3 text-xs font-semibold text-gray-500 uppercase ${i === 4 ? 'hidden lg:table-cell' : ''}`}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {currentAssignments.map((a, idx) => {
-                      const secList = a.sections || (a.sectionId ? [{ id: a.sectionId, name: null }] : []);
-                      return (
-                        <tr key={a.id || `a-${idx}`} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                          <td className="py-4 text-gray-700">{a.className || 'N/A'}</td>
-                          <td className="py-4">
-                            <div className="flex flex-wrap gap-1.5">
-                              {secList.map(s => {
-                                const sId = typeof s === 'object' ? s.id : s;
-                                const sName = typeof s === 'object' ? s.name : null;
-                                return (
-                                  <span key={sId} className="min-w-8 w-auto max-w-max px-1 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center text-xs font-bold">
-                                    {sName || sId}
-                                  </span>
-                                );
-                              })}
-                            </div>
-                          </td>
-                          <td className="py-4 text-gray-700">{a.subjectName || 'N/A'}</td>
-                          <td className="py-4 hidden lg:table-cell">
-                            <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${a.isClassTeacher ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}`}>
-                              {a.isClassTeacher ? 'Yes' : 'No'}
-                            </span>
-                          </td>
-                          <td className="py-4">
-                            <div className="flex gap-1">
-                              <button onClick={() => handleEditAssignment(a)} className="p-2 text-gray-400 hover:text-blue-600 transition-colors" title="Edit"><Edit2 className="w-4 h-4" /></button>
-                              <button onClick={() => handleDeleteAssignment(a.id)} className="p-2 text-gray-400 hover:text-red-600 transition-colors" title="Delete"><Trash2 className="w-4 h-4" /></button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+              {/* ── MOBILE: Card layout (hidden on lg+) ── */}
+<div className="block lg:hidden space-y-3">
+  {currentAssignments.map((a, idx) => {
+    const secList = a.sections || (a.sectionId ? [{ id: a.sectionId, name: null }] : []);
+    return (
+      <div
+        key={a.id || `a-${idx}`}
+        className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm space-y-3"
+      >
+        {/* Grade + actions row */}
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 mb-0.5">Grade</p>
+            <p className="text-sm font-bold text-gray-800">{a.className || 'N/A'}</p>
+          </div>
+          <div className="flex gap-1">
+            <button
+              onClick={() => handleEditAssignment(a)}
+              className="p-2 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+              title="Edit"
+            >
+              <Edit2 className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => handleDeleteAssignment(a.id)}
+              className="p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+              title="Delete"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        <div className="h-px bg-gray-100" />
+
+        {/* Section + Subject */}
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 mb-1">Section</p>
+            <div className="flex flex-wrap gap-1">
+              {secList.map(s => {
+                const sId = typeof s === 'object' ? s.id : s;
+                const sName = typeof s === 'object' ? s.name : null;
+                return (
+                  <span
+                    key={sId}
+                    className="min-w-7 w-auto px-1.5 h-7 rounded-md bg-blue-600 text-white flex items-center justify-center text-xs font-bold"
+                  >
+                    {sName || sId}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 mb-1">Subject</p>
+            <p className="text-sm text-gray-700 font-medium">{a.subjectName || 'N/A'}</p>
+          </div>
+        </div>
+
+        {/* Class Teacher badge */}
+        <div className="flex items-center gap-2">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Class Teacher:</p>
+          <span
+            className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+              a.isClassTeacher ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+            }`}
+          >
+            {a.isClassTeacher ? 'Yes' : 'No'}
+          </span>
+        </div>
+      </div>
+    );
+  })}
+</div>
+
+{/* ── DESKTOP: Table layout (hidden below lg) ── */}
+<div className="hidden lg:block overflow-x-auto rounded-xl shadow shadow-gray-200">
+  <table className="w-full text-sm">
+    <thead>
+      <tr className="bg-gray-50 border-b border-gray-200 text-left">
+        {['Grade', 'Section', 'Subject', 'Class Teacher', 'Actions'].map(h => (
+          <th
+            key={h}
+            className="px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap"
+          >
+            {h}
+          </th>
+        ))}
+      </tr>
+    </thead>
+    <tbody className="divide-y divide-gray-100">
+      {currentAssignments.map((a, idx) => {
+        const secList = a.sections || (a.sectionId ? [{ id: a.sectionId, name: null }] : []);
+        return (
+          <tr
+            key={a.id || `a-${idx}`}
+            className="hover:bg-gray-50 transition-colors"
+          >
+            <td className="px-5 py-4 text-gray-700 font-medium whitespace-nowrap">
+              {a.className || 'N/A'}
+            </td>
+            <td className="px-5 py-4">
+              <div className="flex flex-wrap gap-1.5">
+                {secList.map(s => {
+                  const sId = typeof s === 'object' ? s.id : s;
+                  const sName = typeof s === 'object' ? s.name : null;
+                  return (
+                    <span
+                      key={sId}
+                      className="min-w-8 w-auto max-w-max px-1 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center text-xs font-bold"
+                    >
+                      {sName || sId}
+                    </span>
+                  );
+                })}
               </div>
+            </td>
+            <td className="px-5 py-4 text-gray-700 whitespace-nowrap">{a.subjectName || 'N/A'}</td>
+            <td className="px-5 py-4">
+              <span
+                className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+                  a.isClassTeacher ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+                }`}
+              >
+                {a.isClassTeacher ? 'Yes' : 'No'}
+              </span>
+            </td>
+            <td className="px-5 py-4">
+              <div className="flex gap-1">
+                <button
+                  onClick={() => handleEditAssignment(a)}
+                  className="p-2 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                  title="Edit"
+                >
+                  <Edit2 className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => handleDeleteAssignment(a.id)}
+                  className="p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                  title="Delete"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            </td>
+          </tr>
+        );
+      })}
+    </tbody>
+  </table>
+</div>
 
               {filteredAssignments.length > itemsPerPage && (
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mt-6 pt-4 border-t border-gray-200">

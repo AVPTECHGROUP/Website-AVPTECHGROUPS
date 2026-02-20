@@ -24,7 +24,7 @@ import {
     LogOutIcon
 } from 'lucide-react';
 import { toast } from 'react-toastify';
-import { activateUserStatus, deactivateUserStatus, filterUserByRole, filterUserByStatus, getAllUserRoles, getAllUsers, getUsersStatistics, resetUserPassword, searchUsers } from '../../Api/userManagementAPI';
+import { activateUserStatus, allUserFilter, deactivateUserStatus, filterUserByRole, filterUserByStatus, getAllUserRoles, getAllUsers, getUsersStatistics, resetUserPassword, searchUsers } from '../../Api/userManagementAPI';
 import ActionDropDownComp from '../../Components/CommonComp/ActionDropDownComp';
 import CardComponent from '../../Components/CommonComp/CardComponent';
 import QuickActions from '../../Components/CommonComp/QuickActions';
@@ -64,6 +64,11 @@ const ManageAllUsers = () => {
 
     //for roleOptions in filter
     const [roleOptions, setRoleOptions] = useState([]);
+
+    function compareAndGetLabel(data, compareValue) {
+        const found = data.find(item => item.roleVal === compareValue);
+        return found ? <span className="text-xs font-medium text-gray-800 bg-gray-100 w-fit rounded-xs px-1 py-0.5"> {found.roleDisplay} </span> : "";
+    }
 
     useEffect(() => {
         const fetchUserRoles = async () => {
@@ -128,26 +133,26 @@ const ManageAllUsers = () => {
                 let res;
                 set_noUserFound(false); // for reset no user found
                 if (hasActiveFilters) {
-                    if (debouncedSearch.trim() !== '') {
-                        const searchTerm = debouncedSearch.trim();
-                        console.log(searchTerm);
-                        res = await searchUsers(searchTerm, page - 1, rowsPerpage);
-                    } else if (statusFilter !== 'All Status' && statusFilter !== undefined) {
-                        res = await filterUserByStatus(statusFilter, page - 1, rowsPerpage);
+                    // if (debouncedSearch.trim() !== '') {
+                    //     const searchTerm = debouncedSearch.trim();
+                    //     console.log(searchTerm);
+                    //     res = await searchUsers(searchTerm, page - 1, rowsPerpage);
+                    // } else if (statusFilter !== 'All Status' && statusFilter !== undefined) {
+                    //     res = await filterUserByStatus(statusFilter, page - 1, rowsPerpage);
 
-                    } else if (roleFilter !== 'All Roles' && roleFilter !== undefined) {
-                        res = await filterUserByRole(roleFilter, page - 1, rowsPerpage);
-                        console.log(roleFilter, "------------->", res);
-                    } else {
-                        res = await getAllUsers(page - 1, rowsPerpage);
-                    }
+                    // } else if (roleFilter !== 'All Roles' && roleFilter !== undefined) {
+                    //     res = await filterUserByRole(roleFilter, page - 1, rowsPerpage);
+                    //     console.log(roleFilter, "------------->", res);
+                    // } else {
+                    //     res = await getAllUsers(page - 1, rowsPerpage);
+                    // }
 
-                    // const filters = { searchTerm: "", status: "", role: "", department: "", emailVerified: true };
-                    // if (debouncedSearch.trim()) filters.searchTerm = debouncedSearch.trim();
-                    // if (statusFilter !== 'All Status') filters.status = statusFilter.toUpperCase();
-                    // if (roleFilter !== 'All Roles') filters.role = roleFilter;
-                    //console.log(filters);
-                    // res = await allUserFilter(filters, page - 1, rowsPerpage);
+                    const filters = {};
+                    if (debouncedSearch.trim()) filters.searchTerm = debouncedSearch.trim();
+                    if (statusFilter !== 'All Status') filters.status = statusFilter.toUpperCase();
+                    if (roleFilter !== 'All Roles') filters.role = roleFilter;
+                    console.log(filters);
+                    res = await allUserFilter(filters, page - 1, rowsPerpage);
                 }
                 else {
                     res = await getAllUsers(page - 1, rowsPerpage);
@@ -190,7 +195,7 @@ const ManageAllUsers = () => {
         };
 
         fetchsysUsers();
-    }, [page, rowsPerpage, debouncedSearch, roleFilter, statusFilter]);
+    }, [page, rowsPerpage, debouncedSearch, roleFilter, statusFilter,roleOptions]);
 
     const getAvatarColor = (name) => {
         const colors = [
@@ -241,11 +246,11 @@ const ManageAllUsers = () => {
     ]
 
     const tableHeadItems = ['User Name', 'Mobile Number', 'Status'];
-    let tabledataItemsStyle = 'px-6 py-3 text-left text-gray-700 text-sm';
+    let tabledataItemsStyle = 'px-4 py-2 text-left text-gray-700 text-sm';
     const actionOptions = [
         {
             value: "editUser",
-            label: "Edit User",
+            label: "Edit",
             icon: UserPenIcon,
             text: "text-blue-600",
             bg: "bg-blue-50",
@@ -253,7 +258,7 @@ const ManageAllUsers = () => {
         },
         {
             value: "resetPassword",
-            label: "Reset Password",
+            label: "Reset",
             icon: KeyIcon,
             text: "text-green-600",
             bg: "bg-green-50",
@@ -288,7 +293,7 @@ const ManageAllUsers = () => {
                         </div>
                     </div>
                     {/* cards */}
-      <div className='grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 text-sm mt-5 mb-6'>
+      <div className='grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 text-sm mt-5'>
             {loading
               ? cardsArray.map((_, i) => <CardLoader key={i} />)
               : cardsArray.map((card) => (
@@ -391,10 +396,8 @@ const ManageAllUsers = () => {
                                         </div>
                                         <div>
                                             <p className="font-medium text-gray-900">{sys_user.name}</p>
-                                            <p
-                                                className={"text-xs rounded-lg w-fit py-0.5 px-2 text-gray-700 font-medium"}
-                                            >
-                                                {sys_user.role[0]}
+                                            <p>
+                                                {compareAndGetLabel(roleOptions,sys_user.role[0])}
                                             </p>
                                         </div>
                                     </div>
@@ -437,10 +440,7 @@ const ManageAllUsers = () => {
                                         </span>
                                     </p>
                                     <div className='flex justify-start items-center align-middle'>
-                                        <span className="font-medium text-gray-600">Actions: </span>
-                                        <span className="text-gray-800 ml-4">
-                                            <ActionDropDownComp actionOptions={actionOptions} onAction={(optVal) => callAllActions(optVal, sys_user)} />
-                                        </span>
+                                        <ActionDropDownComp actionOptions={actionOptions} onAction={(optVal) => callAllActions(optVal, sys_user)} />
                                     </div>
                                 </div>
                             </div>
@@ -458,7 +458,7 @@ const ManageAllUsers = () => {
                                                 {headings}
                                             </th>
                                         ))}
-                                        <th key='ACTIONS' className="px-6 py-3 text-start text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-50">
+                                        <th key='ACTIONS' className="px-6 py-3 text-center text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-50">
                                             ACTIONS
                                         </th>
                                     </tr>
@@ -498,10 +498,8 @@ const ManageAllUsers = () => {
                                                     </div>
                                                     <div>
                                                         <p className="font-medium text-black">{sys_user.name}</p>
-                                                        <p
-                                                            className={`text-sm w-fit px-1 text-gray-600`}
-                                                        >
-                                                            {sys_user.role[0]}
+                                                        <p>
+                                                            {compareAndGetLabel(roleOptions,sys_user.role[0])}
                                                         </p>
                                                     </div>
                                                 </div>

@@ -12,7 +12,103 @@ import {
   ChevronRight,
   UserCog
 } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useContext } from 'react'
+import { UserContext } from '../ContextAPI/UserContext'
+
+const menuItems = [
+  {
+    id: 'dashboard',
+    icon: LayoutDashboard,
+    label: 'Dashboard',
+    route: '/dashboard',
+    roles: ['ADMIN', 'TEACHER', 'SUPER_ADMIN', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST', 'PARENT'],
+  },
+  {
+    id: 'manageUsers',
+    icon: UserCog,
+    label: 'Manage Users',
+    route: '/dashboard/manageUsers',
+    roles: ['ADMIN', 'SUPER_ADMIN'],
+  },
+  {
+    id: 'teachers',
+    icon: Users,
+    label: 'Teachers',
+    route: '/teachers',
+    roles: ['ADMIN', 'SUPER_ADMIN', 'PRINCIPAL'],
+  },
+  {
+    id: 'attendance',
+    icon: Calendar,
+    label: <span className="font-semibold">Attendance</span>,
+    route: '/attendance',
+    roles: ['ADMIN', 'SUPER_ADMIN','TEACHER', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST'],
+    subItems: [
+      {
+        label: <span className="text-sm text-gray-600 hover:text-blue-600">Mark Attendance</span>,
+        route: '/attendance/markUserAttendance',
+        roles: ['SUPER_ADMIN', 'ADMIN','TEACHER', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST'],
+      },
+      {
+        label: <span className="text-sm text-gray-600 hover:text-blue-600">Attendance Registration</span>,
+        route: '/attendance/attendanceImgReg',
+        roles: ['SUPER_ADMIN', 'ADMIN'],
+      },
+      {
+        label: <span className="text-sm text-gray-600 hover:text-blue-600">Pending Approvals</span>,
+        route: '/attendance/usersAttendance',
+        roles: ['SUPER_ADMIN', 'ADMIN'],
+      }
+    ]
+  },
+  {
+    id: 'students',
+    icon: Users,
+    label: 'Students',
+    route: '/students',
+    roles: ['ADMIN', 'SUPER_ADMIN'],
+  },
+  {
+    id: 'leaves',
+    icon: FileText,
+    label: <span className="font-semibold">Manage Leaves</span>,
+    route: '/leaves',
+    roles: ['ADMIN', 'SUPER_ADMIN', 'TEACHER', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST'],
+    subItems: [
+      {
+        label: <span className="text-sm text-gray-600 hover:text-blue-600">Apply Leave</span>,
+        route: '/leaves/applyLeaves',
+        roles: ['ADMIN', 'TEACHER', 'SUPER_ADMIN', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST'],
+      },
+      {
+        label: <span className="text-sm text-gray-600 hover:text-blue-600">My Leaves</span>,
+        route: '/leaves/myLeaves',
+        roles: ['ADMIN', 'TEACHER', 'SUPER_ADMIN', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST'],
+      },
+      {
+        label: <span className="text-sm text-gray-600 hover:text-blue-600">Holiday Management</span>,
+        route: '/leaves/manageHolidays',
+        roles: ['ADMIN', 'SUPER_ADMIN'],
+      }
+    ]
+  },
+  {
+    id: 'payroll',
+    icon: IndianRupee,
+    label: 'Payroll',
+    route: '/payroll',
+    roles: ['ADMIN', 'SUPER_ADMIN', 'ACCOUNTANT'],
+  },
+  {
+    id: 'settings',
+    icon: Settings,
+    label: 'Settings',
+    route: '/settings',
+    roles: ['ADMIN', 'TEACHER', 'SUPER_ADMIN', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST','PARENT'],
+  },
+]
+
+const ADMIN_ROLES = ['ADMIN', 'SUPER_ADMIN']
 
 const Sidebar = ({
   sidebarOpen,
@@ -23,94 +119,36 @@ const Sidebar = ({
   const location = useLocation()
   const [openDropdowns, setOpenDropdowns] = useState({})
 
+  const {user} = useContext(UserContext);
+
+  const userRole = user?.userType || null
+
+  const filteredMenuItems = menuItems
+    .filter(item => item.roles.includes(userRole))
+    .map(item => ({
+      ...item,
+      route: item.id === 'attendance' && !ADMIN_ROLES.includes(userRole)
+        ? '/attendance/markUserAttendance'
+        : item.id === 'leaves' && !ADMIN_ROLES.includes(userRole)
+          ? '/leaves/myLeaves'
+          : item.route,
+      subItems: item.subItems
+        ? item.subItems.filter(sub => !sub.roles || sub.roles.includes(userRole))
+        : undefined
+    }))
+
   const onLogout = () => {
     localStorage.removeItem('token')
-    navigate('/login', { replace: true })
+    localStorage.removeItem('user')
+    window.location.reload();
   }
 
-  const menuItems = [
-    {
-      id: 'dashboard',
-      icon: LayoutDashboard,
-      label: 'Dashboard',
-      route: '/dashboard',
-    },
-    { id: 'manageUsers', icon: UserCog, label: 'Manage Users', route: '/dashboard/manageUsers' },
-    { id: 'teachers', icon: Users, label: 'Teachers', route: '/teachers' },
-    {
-      id: 'attendance',
-      icon: Calendar,
-      label: (
-        <span className="t font-semibold">Attendance</span>),
-      route: '/attendance',
-      subItems: [
-        {
-          label: (
-            <span className="text-sm text-gray-600 hover:text-blue-600">
-              Mark Attendance
-            </span>
-          ),
-          route: '/attendance/markUserAttendance'
-        },
-        {
-          label: (
-            <span className="text-sm text-gray-600 hover:text-blue-600">
-              Attendance Registration
-            </span>
-          ),
-          route: '/attendance/attendanceImgReg'
-        },
-        {
-          label: (
-            <span className="text-sm text-gray-600 hover:text-blue-600">
-              Pending Approvals
-            </span>
-          ),
-          route: '/attendance/usersAttendance'
-        }
-      ]
-    },
-    { id: 'students', icon: Users, label: 'Students', route: '/students' },
-    {
-      id: 'leaves',
-      icon: FileText,
-      label: (
-        <span className="t font-semibold">Manage Leaves</span>),
-      route: '/leaves',
-      subItems: [
-        {
-          label: (
-            <span className="text-sm text-gray-600 hover:text-blue-600">
-              Apply Leave
-            </span>
-          ),
-          route: '/leaves/applyLeaves'
-        },
-        {
-          label: (
-            <span className="text-sm text-gray-600 hover:text-blue-600">
-              My Leaves
-            </span>
-          ),
-          route: '/leaves/myLeaves'
-        },
-        {
-          label: (
-            <span className="text-sm text-gray-600 hover:text-blue-600">
-              Holiday Management
-            </span>
-          ),
-          route: '/leaves/manageHolidays'
-        }
-      ]
-    },
-    { id: 'payroll', icon: IndianRupee, label: 'Payroll', route: '/payroll' },
-    { id: 'settings', icon: Settings, label: 'Settings', route: '/settings' }
-  ]
-
-  // Auto-open dropdown if current route matches any sub-item
   useEffect(() => {
-    menuItems.forEach(item => {
+    if (location.pathname === '/login') return
+
+    const newDropdowns = {}
+
+    filteredMenuItems.forEach(item => {
       if (item.subItems) {
         const isSubItemActive = item.subItems.some(subItem =>
           location.pathname.startsWith(subItem.route)
@@ -118,14 +156,19 @@ const Sidebar = ({
         const isMainRouteActive = location.pathname === item.route
 
         if (isSubItemActive || isMainRouteActive) {
-          setOpenDropdowns(prev => ({
-            ...prev,
-            [item.id]: true
-          }))
+          newDropdowns[item.id] = true
         }
       }
     })
-  }, [location.pathname])
+
+    setOpenDropdowns(prev => {
+      const isSame = Object.keys(newDropdowns).every(key => prev[key] === newDropdowns[key])
+        && Object.keys(newDropdowns).length === Object.keys(prev).filter(k => prev[k] && newDropdowns[k]).length
+      if (isSame) return prev
+      return { ...prev, ...newDropdowns }
+    })
+
+  }, [location.pathname, user])
 
   const toggleDropdown = (itemId) => {
     setOpenDropdowns(prev => ({
@@ -135,15 +178,10 @@ const Sidebar = ({
   }
 
   const handleMenuClick = (route, hasSubItems, itemId) => {
-    // Navigate to the route first
     navigate(route)
-
-    // Then toggle dropdown if it has sub-items and sidebar is open
     if (hasSubItems && sidebarOpen) {
       toggleDropdown(itemId)
     }
-
-    // Close mobile sidebar
     if (window.innerWidth < 1024) {
       setMobileSidebarOpen(false)
     }
@@ -165,10 +203,7 @@ const Sidebar = ({
   }
 
   const isRouteActive = (route, subItems) => {
-    // Check if main route is active
     if (location.pathname === route) return true
-
-    // Check if any sub-item route is active
     if (subItems) {
       return subItems.some(subItem => location.pathname.startsWith(subItem.route))
     }
@@ -186,7 +221,6 @@ const Sidebar = ({
           <button onClick={handleLogoClick} className="shrink-0">
             <img src={dpis} className="w-12 h-12 cursor-pointer" alt="DPIS Logo" />
           </button>
-
           {sidebarOpen && (
             <div>
               <h2 className="font-semibold text-gray-900 text-sm text-nowrap">
@@ -200,7 +234,7 @@ const Sidebar = ({
 
       {/* Menu */}
       <nav className="flex-1 p-4 overflow-y-auto">
-        {menuItems.map((item) => {
+        {filteredMenuItems.map((item) => {
           const Icon = item.icon
           const isActive = isRouteActive(item.route, item.subItems)
           const hasSubItems = item.subItems && item.subItems.length > 0
@@ -220,9 +254,9 @@ const Sidebar = ({
                   {sidebarOpen && <span className="font-medium">{item.label}</span>}
                 </div>
                 {sidebarOpen && hasSubItems && (
-                  isOpen ?
-                    <ChevronDown className="w-4 h-4" /> :
-                    <ChevronRight className="w-4 h-4" />
+                  isOpen
+                    ? <ChevronDown className="w-4 h-4" />
+                    : <ChevronRight className="w-4 h-4" />
                 )}
               </button>
 
@@ -251,7 +285,7 @@ const Sidebar = ({
       {/* Logout */}
       <div className="p-4">
         <button
-          onClick={() => onLogout()}
+          onClick={onLogout}
           className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 hover:bg-gray-100
           ${!sidebarOpen ? 'justify-center' : ''}`}
         >
