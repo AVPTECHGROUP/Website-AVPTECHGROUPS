@@ -127,7 +127,7 @@ function ApplyLeaves() {
       const toDate = new Date(formData.toDate);
       
       if (toDate < fromDate) {
-        newErrors.toDate = 'To date must be after from date';
+        newErrors.toDate = 'To leave date must be after from leave date';
         isValid = false;
       }
     }

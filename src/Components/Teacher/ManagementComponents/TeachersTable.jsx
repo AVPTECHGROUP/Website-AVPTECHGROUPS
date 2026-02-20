@@ -103,14 +103,14 @@ const TeachersTable = ({
       icon: Eye,
       text: "text-gray-600",
       bg: "bg-blue-50",
-      hover: "hover:bg-gray-100",
+      hover: "hover:bg-gray-200",
     },
     {
       value: "editTeacher",
       label: "Edit",
       icon: Edit,
       text: "text-blue-600",
-      bg: "bg-green-50",
+      bg: "bg-blue-50",
       hover: "hover:bg-blue-100",
     },
     {
@@ -295,15 +295,15 @@ const TeachersTable = ({
 
       {/* DESKTOP TABLE VIEW (visible 1024px+) */}
       <div className="hidden lg:block bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto min-h-[calc(250px)] max-h-[calc(100vh-480px)] overflow-y-auto">
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                {!isUserTable && (
+                {/* {!isUserTable && (
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Employee Code
                   </th>
-                )}
+                )} */}
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   {isUserTable ? 'User Name' : 'Full Name'}
                 </th>
@@ -378,17 +378,17 @@ const TeachersTable = ({
                     key={teacher.id}
                     className={`${assignId === teacher.id && !isUserTable ? "bg-blue-50" : ""}`}
                   >
-                    {!isUserTable && (
+                    {/* {!isUserTable && (
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {teacher.employeeCode}
                       </td>
-                    )}
+                    )} */}
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-3">
                         <img src={teacher.image} className="w-10 h-10 rounded-full" alt="" />
                         <div>
                           <div className="text-sm font-medium text-gray-900">{teacher.name}</div>
-                          <div className="text-xs text-gray-500">{teacher.role}</div>
+                          <div className="text-xs font-medium text-gray-800 bg-gray-100 w-fit rounded-xs px-1 py-0.5">{teacher.employeeCode}</div>
                         </div>
                       </div>
                     </td>
