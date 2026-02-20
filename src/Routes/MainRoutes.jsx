@@ -39,60 +39,62 @@ import AddNewStudent from '../Pages/Students/AddNewStudent';
 import EditStudentDetails from '../Pages/Students/EditStudentDetails';
 import StudentDetails from '../Pages/Students/StudentDetails';
 import HolidayManagment from '../Pages/Leaves/Holiday/HolidayManagement';
+import RoleProtectedRoute from '../utils/RoleProtectedRoute';
 
 const MainRoutes = () => {
+  const isTokenExist = localStorage.getItem('token');
   return (
     <Routes>
-      
       {/* 🔓 PUBLIC ROUTE (NO SIDEBAR) */}
-      <Route path="/login" element={<Login />} />
+      <Route path="/login" element={isTokenExist ? <Navigate to="/dashboard" /> : <Login />} />
 
       {/* 🔐 PROTECTED ROUTES */}
       <Route element={<ProtectedRoutes />}>
         <Route element={<AppLayout />}>
 
-          {/* Super Admin */}
+          {/* ✅ SHARED ROUTES — accessible by all logged-in roles */}
           <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/dashboard/addUser" element={<AddnewSystemUser />} />
-          <Route path="/dashboard/editUser/:id" element={<EditSysUser />} />
-          <Route path="/dashboard/manageUsers" element={<ManageAllUsers />} />
-
-          {/* Attendance */}
-          <Route path="/attendance" element={<Attendance />} />
-          <Route path="/attendance/attendanceImgReg" element={<AttendanceImgReg />} />
-          <Route path="/attendance/markUserAttendance" element={<MarkUserAttendance />} />
-          <Route path="/attendance/usersAttendance" element={<UsersAttendance />} />
-          <Route path="/attendance/usersAttendance/warning" element={<WarningVerificationFailed />} />
-          <Route path="/attendance/usersAttendance/manual" element={<ManualAttendance />} />
-
-          {/* Teachers */}
-          <Route path="/teachers" element={<Teachers />} />
-          <Route path="/teachers/addTeacher" element={<AddNewTeacher />} />
-          <Route path="/teachers/:id" element={<DetailsView />} />
-          <Route path="/teachers/editTeacher/:id" element={<EditTeachersDetails />} />
-          <Route path="/teachers/classAssignment/:teacherId" element={<ClassAssignment />} />
-
-          {/* Students */}
-          <Route path="/students" element={<Student/>} />
-          <Route path="/students/addStudents" element={<AddNewStudent/>} />
-          <Route path="/students/:id" element={<StudentDetails/>} />
-          <Route path="/students/editStudent/:id" element={<EditStudentDetails/>} />
-
-
-          {/* Others */}
-
-          <Route path="/leaves" element={<Leaves />} />
-          <Route path="/payroll" element={<Payroll />} />
-
-
-          {/* Leave Management */}
-          <Route path="/leaves" element={<Leaves />} />
+          <Route path="/settings" element={<Settings />} />
           <Route path="/leaves/applyLeaves" element={<ApplyLeaves />} />
           <Route path="/leaves/myLeaves" element={<MyLeaves />} />
-          <Route path="/leaves/manageHolidays" element={<HolidayManagment />} />
+          <Route path="/attendance/markUserAttendance" element={<MarkUserAttendance />} />
 
-          {/* Settings */}
-          <Route path="/settings" element={<Settings />} />
+          {/* ✅ ADMIN & SUPER_ADMIN ONLY */}
+          <Route element={<RoleProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN']} />}>
+            <Route path="/dashboard/addUser" element={<AddnewSystemUser />} />
+            <Route path="/dashboard/editUser/:id" element={<EditSysUser />} />
+            <Route path="/dashboard/manageUsers" element={<ManageAllUsers />} />
+
+            <Route path="/attendance" element={<Attendance />} />
+            <Route path="/attendance/attendanceImgReg" element={<AttendanceImgReg />} />
+            <Route path="/attendance/usersAttendance" element={<UsersAttendance />} />
+            <Route path="/attendance/usersAttendance/warning" element={<WarningVerificationFailed />} />
+            <Route path="/attendance/usersAttendance/manual" element={<ManualAttendance />} />
+
+            <Route path="/teachers" element={<Teachers />} />
+            <Route path="/teachers/addTeacher" element={<AddNewTeacher />} />
+            <Route path="/teachers/editTeacher/:id" element={<EditTeachersDetails />} />
+            <Route path="/teachers/classAssignment/:teacherId" element={<ClassAssignment />} />
+            <Route path="/teachers/:id" element={<DetailsView />} />
+
+            <Route path="/students" element={<Student />} />
+            <Route path="/students/addStudents" element={<AddNewStudent />} />
+            <Route path="/students/:id" element={<StudentDetails />} />
+            <Route path="/students/editStudent/:id" element={<EditStudentDetails />} />
+
+            <Route path="/leaves" element={<Leaves />} />
+            <Route path="/leaves/manageHolidays" element={<HolidayManagment />} />
+          </Route>
+
+          {/* ✅ ADMIN, SUPER_ADMIN & ACCOUNTANT */}
+          <Route element={<RoleProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'ACCOUNTANT']} />}>
+            <Route path="/payroll" element={<Payroll />} />
+          </Route>
+
+          {/* ✅ TEACHER, PRINCIPAL, RECEPTIONIST — leaves list page */}
+          <Route element={<RoleProtectedRoute allowedRoles={['TEACHER', 'PRINCIPAL', 'RECEPTIONIST', 'ACCOUNTANT']} />}>
+            <Route path="/leaves" element={<Navigate to="/leaves/myLeaves" replace />} />
+          </Route>
 
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/dashboard" />} />

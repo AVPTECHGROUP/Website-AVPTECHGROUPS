@@ -1,8 +1,9 @@
 import { Eye, EyeOff, LockKeyhole, Mail, ShieldCheck, Moon, Sun } from 'lucide-react'
-import React, { useEffect, useState } from 'react'
+import React, { useContext, useEffect, useState } from 'react'
 import worker_1 from '../assets/Images/worker_1.jpg'
 import { useNavigate } from 'react-router-dom'
 import { loginAPI } from '../Api/AuthApi' // Import the login API
+import { UserContext } from '../ContextAPI/UserContext'
 
 const Login_2 = ({ onLoginSuccess }) => {
 
@@ -14,7 +15,9 @@ const Login_2 = ({ onLoginSuccess }) => {
     const [isDark, setIsDark] = useState(false)
     const [loginError, setLoginError] = useState('')
     const navigate = useNavigate();
-    
+
+    const { setUser } = useContext(UserContext);
+
     const validateForm = () => {
         let allErrors = {}
 
@@ -44,7 +47,6 @@ const Login_2 = ({ onLoginSuccess }) => {
         setLoginError(''); // Clear previous errors
         try {
             const res = await loginAPI({ email, password });
-
             // Handle different response structures
             const token = res.data?.token || res.token;
             const user = res.data?.user || res.user;
@@ -56,9 +58,16 @@ const Login_2 = ({ onLoginSuccess }) => {
             // store token & user
             localStorage.setItem("token", token);
             if (user) {
+                console.log('logged user is :', user.id, user.roles[0], user.email);
                 localStorage.setItem("user", JSON.stringify(user));
+                setUser({
+                id: user.id,
+                userType: user.roles?.[0],
+                email: user.email,
+                permissions: user.permissions,
+            })
             }
-            
+
             if (onLoginSuccess) onLoginSuccess(token);
 
             // navigate to dashboard
@@ -70,7 +79,7 @@ const Login_2 = ({ onLoginSuccess }) => {
             setIsLoading(false);
         }
     };
-    
+
     return (
         <>
             <div className={`min-h-screen relative flex items-center flex-col justify-center p-4 transition-colors duration-300 ${isDark ? 'bg-gray-900' : 'bg-blue-100'}`}>
@@ -100,15 +109,16 @@ const Login_2 = ({ onLoginSuccess }) => {
                             <div>
                                 <label className={`block text-[16px] font-medium transition-colors duration-300 mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Email Address</label>
                                 <div className='relative'>
-                                    <input 
-                                        value={email} 
+                                    <input
+                                        autoComplete='email'
+                                        value={email}
                                         onChange={(e) => {
                                             setemail(e.target.value);
                                             setLoginError(''); // Clear login error when typing
-                                        }} 
-                                        className={`w-full pl-10 px-2 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 transition-colors duration-300 ${isDark ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-gray-900'}`} 
-                                        type="email" 
-                                        placeholder='Enter your email' 
+                                        }}
+                                        className={`w-full pl-10 px-2 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 transition-colors duration-300 ${isDark ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-gray-900'}`}
+                                        type="email"
+                                        placeholder='Enter your email'
                                     />
                                     <Mail size={19} className={`absolute left-3 bottom-0 -translate-y-1/2 transition-colors duration-300 ${isDark ? 'text-gray-400' : 'text-gray-700'}`} />
                                 </div>
@@ -116,19 +126,20 @@ const Login_2 = ({ onLoginSuccess }) => {
                                     <p className='text-sm mt-1 text-red-500'>{errors.email}</p>
                                 )}
                             </div>
-                            
+
                             <div>
                                 <label className={`block text-[16px] relative bottom-2 font-medium transition-colors duration-300 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Password</label>
                                 <div className='relative'>
-                                    <input 
-                                        value={password} 
+                                    <input
+                                        autoComplete='current-password'
+                                        value={password}
                                         onChange={(e) => {
                                             setpassword(e.target.value);
                                             setLoginError(''); // Clear login error when typing
-                                        }} 
-                                        className={`w-full pl-10 px-2 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 transition-colors duration-300 ${isDark ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-gray-900'}`} 
-                                        type={showPassword ? 'text' : 'password'} 
-                                        placeholder='Enter your password' 
+                                        }}
+                                        className={`w-full pl-10 px-2 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 transition-colors duration-300 ${isDark ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-gray-900'}`}
+                                        type={showPassword ? 'text' : 'password'}
+                                        placeholder='Enter your password'
                                     />
                                     <LockKeyhole size={19} className={`absolute left-3 bottom-0 -translate-y-1/2 transition-colors duration-300 ${isDark ? 'text-gray-400' : 'text-gray-700'}`} />
                                     <button type='button' onClick={() => setshowPassword(!showPassword)} className='absolute right-3 top-3'>
@@ -150,9 +161,9 @@ const Login_2 = ({ onLoginSuccess }) => {
                                 )}
                             </div>
 
-                            <button 
-                                type='submit' 
-                                disabled={isLoading} 
+                            <button
+                                type='submit'
+                                disabled={isLoading}
                                 className={`w-full mt-1 cursor-pointer py-3 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-lg transition ${isLoading ? 'bg-blue-300 cursor-not-allowed' : 'bg-blue-400 hover:bg-blue-600 text-white'}`}>
                                 {isLoading ? (
                                     <span className='flex items-center justify-center gap-2'>
@@ -163,14 +174,14 @@ const Login_2 = ({ onLoginSuccess }) => {
                                     'Login'
                                 )}
                             </button>
-                            
+
                             <hr className={`transition-colors duration-300 ${isDark ? 'border-gray-600' : 'text-gray-300'}`} />
-                            
+
                             <div className='flex items-center justify-center gap-1'>
                                 <ShieldCheck size={14} className={`transition-colors duration-300 ${isDark ? 'text-gray-400' : 'text-gray-700'}`} />
                                 <p className={`text-sm font-medium transition-colors duration-300 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Authorized access only</p>
                             </div>
-                            
+
                             <p className={`text-center relative bottom-2 text-sm font-medium transition-colors duration-300 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Contact system administrator for credentials if you require access.</p>
                         </form>
                     </div>
