@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import {
     Plus,
     Calendar,
@@ -15,8 +15,19 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { getListOfValues } from '../../Api/ListOfValues';
 import ListLoader from '../../Components/CommonComp/ListLoader';
+import { UserContext } from '../../ContextAPI/UserContext';
 
 export default function LeaveDashboard() {
+    const { user } = useContext(UserContext);
+    const [user_id, set_user_id] = useState(null);
+    useEffect(() => {
+        if (!user) return;
+        set_user_id(user.id);
+        console.log("User loaded:", user);
+        console.log("User ID:", user.id);
+    }, [user]);
+
+
     const [leaveData, setLeaveData] = useState([]);
     const [statistics, setStatistics] = useState({
         totalAvailable: 0,
@@ -45,24 +56,24 @@ export default function LeaveDashboard() {
 
     useEffect(() => {
         let fetchListOfValues = async () => {
-          try {
-            const leaveTypeRes = await getListOfValues('LEAVE_TYPE');
-            const formattedLeaveType = leaveTypeRes.map(item => ({
-              id: item.id,
-              value: item.value,
-              label: item.label
-            }));
-            console.log(formattedLeaveType);
-            setListofLeavetype(formattedLeaveType);
-    
-          }
-          catch (e) {
-            console.error("get list of values error error:", e.message);
-            throw error;
-          }
+            try {
+                const leaveTypeRes = await getListOfValues('LEAVE_TYPE');
+                const formattedLeaveType = leaveTypeRes.map(item => ({
+                    id: item.id,
+                    value: item.value,
+                    label: item.label
+                }));
+                console.log(formattedLeaveType);
+                setListofLeavetype(formattedLeaveType);
+
+            }
+            catch (e) {
+                console.error("get list of values error error:", e.message);
+                throw error;
+            }
         }
         fetchListOfValues();
-      }, []);
+    }, []);
 
     /* ---------------------- STATUS STYLES ---------------------- */
     const statusStyles = {
@@ -75,10 +86,9 @@ export default function LeaveDashboard() {
     useEffect(() => {
         const fetchStatistics = async () => {
             try {
-                const currUser = JSON.parse(localStorage.getItem('user'));
-                if (!currUser?.id) return;
+                if (!user_id) return;
 
-                const statistics_res = await getUsersLeaveBalance(currUser.id);
+                const statistics_res = await getUsersLeaveBalance(user_id);
                 setStatistics(statistics_res.data);
             } catch (e) {
                 console.error('Get statistics error:', e.message);
@@ -86,7 +96,7 @@ export default function LeaveDashboard() {
         };
 
         fetchStatistics();
-    }, []);
+    }, [user_id]);
 
     /* ---------------------- FETCH LEAVE REQUESTS ---------------------- */
     useEffect(() => {
@@ -95,10 +105,9 @@ export default function LeaveDashboard() {
             setError(null);
 
             try {
-                const currUser = JSON.parse(localStorage.getItem('user'));
-                if (!currUser?.id) return;
+                if (!user_id) return;
 
-                const res = await getUserLeaveRequest(currUser.id);
+                const res = await getUserLeaveRequest(user_id);
                 const leaveRequests = res.data || [];
 
                 if (leaveRequests.length === 0) {
@@ -121,8 +130,8 @@ export default function LeaveDashboard() {
 
                 setLeaveData(mappedRequests);
             } catch (err) {
-                console.error('Error fetching leave requests:', err);
                 setError(err.message || 'Something went wrong');
+                console.error('Error fetching leave requests:', err.message);
                 setLeaveData([]);
             } finally {
                 setLoading(false);
@@ -130,15 +139,14 @@ export default function LeaveDashboard() {
         };
 
         fetchLeaveRequest();
-    }, [fetchleaveReqRefress]);
+    }, [fetchleaveReqRefress, user_id]);
 
     /* ---------------------- CANCEL HANDLER ---------------------- */
     const handleCancelLeave = async (leaveReq) => {
         if (leaveReq.currLeavestatus !== 'PENDING') return;
         try {
-            const currUser = JSON.parse(localStorage.getItem('user'));
-            if (!currUser?.id) return;
-            await CancelUserlLeaveReq(leaveReq.leaveId, currUser.id);
+            if (!user_id) return;
+            await CancelUserlLeaveReq(leaveReq.leaveId, user_id);
             toast.success('Leave request Cancelled successfully.')
             setFetchleaveReqfress((prev) => prev + 1);
         } catch (error) {
@@ -266,7 +274,7 @@ export default function LeaveDashboard() {
 
                             <tbody className="divide-y divide-gray-100">
                                 {loading ? (
-                                    <ListLoader avatar={false}/>
+                                    <ListLoader avatar={false} />
                                 ) : error ? (
                                     <tr>
                                         <td colSpan="6" className="text-center py-8">

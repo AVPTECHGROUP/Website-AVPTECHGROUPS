@@ -146,7 +146,7 @@ const Student = () => {
                     </div>
 
                     {/* Cards */}
-  <div className='grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 text-sm mt-5 mb-6'>
+  <div className='grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 text-sm mt-5'>
             {loading
               ? cardsArray.map((_, i) => <CardLoader key={i} />)
               : cardsArray.map((card) => (
