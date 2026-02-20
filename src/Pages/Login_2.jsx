@@ -2,7 +2,7 @@ import { Eye, EyeOff, LockKeyhole, Mail, ShieldCheck, Moon, Sun } from 'lucide-r
 import React, { useContext, useEffect, useState } from 'react'
 import worker_1 from '../assets/Images/worker_1.jpg'
 import { useNavigate } from 'react-router-dom'
-import { loginAPI } from '../Api/AuthApi' // Import the login API
+import { loginAPI } from '../Api/AuthApi'
 import { UserContext } from '../ContextAPI/UserContext'
 
 const Login_2 = ({ onLoginSuccess }) => {

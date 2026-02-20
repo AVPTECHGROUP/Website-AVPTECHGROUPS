@@ -1,7 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { GetCurrUserDetails } from "../utils/getCurrUserDetails";
-import { getUserById } from "../Api/userManagementAPI";
-import { toast } from "react-toastify";
 
 export const UserContext = createContext();
 
