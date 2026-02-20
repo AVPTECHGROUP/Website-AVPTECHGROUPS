@@ -289,7 +289,7 @@ function EditStudentDetails() {
                             status: prev.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE'
                           }));
                         }}
-                        className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors duration-300 ${formData.status === 'ACTIVE' ? "bg-green-500" : "bg-red-400"
+                        className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors duration-300 ${formData.status === 'ACTIVE' ? "bg-blue-500" : "bg-gray-300"
                           }`}
                       >
                         <div
