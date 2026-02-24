@@ -1,7 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import { GetCurrUserDetails } from "../utils/getCurrUserDetails";
-import { getUserById } from "../Api/userManagementAPI";
-import { toast } from "react-toastify";
+import { getCurrUserDetails } from "../utils/getCurrUserDetails";
 
 export const UserContext = createContext();
 
@@ -10,7 +8,7 @@ export const UserProvider = ({ children }) => {
 
   useEffect(() => {
     try {
-      const decodedToken = GetCurrUserDetails();
+      const decodedToken = getCurrUserDetails();
       if (decodedToken) {
         setUser({
           id: decodedToken.userId,
