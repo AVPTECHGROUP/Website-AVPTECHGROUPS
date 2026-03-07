@@ -13,6 +13,7 @@ const ManualAttendance = () => {
   const [selectedRole, setSelectedRole] = useState("");
   const [selectedUserId, setSelectedUserId] = useState("");
   const [selectedUserName, setSelectedUserName] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [reason, setReason] = useState("");
@@ -88,7 +89,10 @@ const ManualAttendance = () => {
 
   const handleSubmit = async () => {
     if (!reason.trim() || !selectedRole || !selectedUserId) return;
+
     try {
+      setSubmitting(true);
+
       await requestManualAttendance({
         userId: Number(selectedUserId),
         userType: selectedRole,
@@ -97,10 +101,13 @@ const ManualAttendance = () => {
         gpsLatitude: gps.latitude ?? 0,
         gpsLongitude: gps.longitude ?? 0,
       });
-      toast.success("Request Submitted")
+
+      toast.success("Request Submitted");
       navigate("/attendance/markUserAttendance");
     } catch (error) {
       toast.error(error.message || "Failed to submit manual attendance");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -126,7 +133,7 @@ const ManualAttendance = () => {
                 </p>
               </div>
             </div>
-            
+
             {/* Divider */}
             <hr className="border-gray-100 mb-4 sm:mb-5" />
 
@@ -221,7 +228,7 @@ const ManualAttendance = () => {
 
             {/* Action Buttons */}
             <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-2 sm:gap-3">
-              <button 
+              <button
                 onClick={() => navigate(-1)}
                 className="w-full sm:w-auto px-4 sm:px-5 py-2.5 text-xs sm:text-[13.5px] font-semibold text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
               >
@@ -230,18 +237,20 @@ const ManualAttendance = () => {
               <button
                 onClick={handleSubmit}
                 disabled={
+                  submitting ||
                   !reason.trim() ||
                   !selectedRole ||
                   !selectedUserId ||
                   !selectedUserName
                 }
-                className={`w-full sm:w-auto px-5 sm:px-6 py-2.5 text-xs sm:text-[13.5px] font-semibold text-white rounded-lg transition-all ${
-                  reason.trim() && selectedRole && selectedUserId && selectedUserName
-                    ? "bg-blue-600 hover:bg-blue-700 shadow-md hover:shadow-lg cursor-pointer" 
-                    : "bg-blue-300 cursor-not-allowed"
-                }`}
+                className={`w-full sm:w-auto px-5 sm:px-6 py-2.5 text-xs sm:text-[13.5px] font-semibold text-white rounded-lg transition-all ${submitting
+                    ? "bg-blue-400 cursor-not-allowed"
+                    : reason.trim() && selectedRole && selectedUserId && selectedUserName
+                      ? "bg-blue-600 hover:bg-blue-700 shadow-md hover:shadow-lg"
+                      : "bg-blue-300 cursor-not-allowed"
+                  }`}
               >
-                Submit Request
+                {submitting ? "Submitting..." : "Submit Request"}
               </button>
             </div>
 

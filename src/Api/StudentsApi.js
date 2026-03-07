@@ -23,8 +23,8 @@ export const getStudents = async (page = 0, size = 10, sort = 'id') => {
 // Create new Student
 export const createStudents = async (studentData) => {
     try {
-        console.log("🚀 Sending to:", `${BASE_URL}/students`);
-        console.log("📦 Payload:", JSON.stringify(studentData, null, 2));
+        console.log("Sending to:", `${BASE_URL}/students`);
+        console.log("Payload:", JSON.stringify(studentData, null, 2));
 
         const res = await fetch(`${BASE_URL}/students`, {
             method: 'POST',
@@ -35,23 +35,19 @@ export const createStudents = async (studentData) => {
             body: JSON.stringify(studentData),
         });
 
-        // ── Always read the raw response text first ──────────────────────────
         const rawText = await res.text();
-        console.log("📨 RAW SERVER RESPONSE:", rawText);
+        console.log(" RAW SERVER RESPONSE:", rawText);
 
-        // ── Try to parse as JSON ─────────────────────────────────────────────
         let data;
         try {
             data = JSON.parse(rawText);
         } catch {
-            // Server returned non-JSON (HTML error page, plain text, etc.)
             throw new Error(`Server returned non-JSON response: ${rawText.slice(0, 200)}`);
         }
 
-        console.log("📋 PARSED RESPONSE:", data);
+        console.log("PARSED RESPONSE:", data);
 
         if (!res.ok) {
-            // ── Extract the most descriptive error message available ─────────
             const errMsg =
                 data?.message ||
                 data?.error ||
