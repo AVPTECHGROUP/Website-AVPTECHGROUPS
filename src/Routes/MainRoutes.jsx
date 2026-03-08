@@ -40,26 +40,31 @@ import EditStudentDetails from '../Pages/Students/EditStudentDetails';
 import StudentDetails from '../Pages/Students/StudentDetails';
 import HolidayManagment from '../Pages/Leaves/Holiday/HolidayManagement';
 import RoleProtectedRoute from '../utils/RoleProtectedRoute';
+import Stock from '../Pages/Stock/Stock';
+import Store from '../Pages/Stock/Stores';
+import Items from '../Pages/Stock/Items';
+import Transactions from '../Pages/Stock/Transactions';
+import Movement from '../Pages/Stock/Movement';
 
 const MainRoutes = () => {
   const isTokenExist = localStorage.getItem('token');
   return (
     <Routes>
-      {/* 🔓 PUBLIC ROUTE (NO SIDEBAR) */}
+      {/* PUBLIC ROUTE (NO SIDEBAR) */}
       <Route path="/login" element={isTokenExist ? <Navigate to="/dashboard" /> : <Login />} />
 
-      {/* 🔐 PROTECTED ROUTES */}
+      {/* PROTECTED ROUTES */}
       <Route element={<ProtectedRoutes />}>
         <Route element={<AppLayout />}>
 
-          {/* ✅ SHARED ROUTES — accessible by all logged-in roles */}
+          {/* SHARED ROUTES — accessible by all logged-in roles */}
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/leaves/applyLeaves" element={<ApplyLeaves />} />
           <Route path="/leaves/myLeaves" element={<MyLeaves />} />
           <Route path="/attendance/markUserAttendance" element={<MarkUserAttendance />} />
 
-          {/* ✅ ADMIN & SUPER_ADMIN ONLY */}
+          {/* ADMIN & SUPER_ADMIN ONLY */}
           <Route element={<RoleProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN']} />}>
             <Route path="/dashboard/addUser" element={<AddnewSystemUser />} />
             <Route path="/dashboard/editUser/:id" element={<EditSysUser />} />
@@ -77,6 +82,7 @@ const MainRoutes = () => {
             <Route path="/teachers/classAssignment/:teacherId" element={<ClassAssignment />} />
             <Route path="/teachers/:id" element={<DetailsView />} />
 
+            {/* Students */}
             <Route path="/students" element={<Student />} />
             <Route path="/students/addStudents" element={<AddNewStudent />} />
             <Route path="/students/:id" element={<StudentDetails />} />
@@ -89,6 +95,16 @@ const MainRoutes = () => {
           {/* ✅ ADMIN, SUPER_ADMIN & ACCOUNTANT */}
           <Route element={<RoleProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'ACCOUNTANT']} />}>
             <Route path="/payroll" element={<Payroll />} />
+          </Route>
+
+          {/* Stock */}
+
+          <Route element={<RoleProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'ACCOUNTANT']} />}>
+            <Route path="/stock" element={<Stock />} />
+            <Route path="/stock/stores" element={<Store />} />
+            <Route path="/stock/items" element={<Items />} />
+            <Route path="/stock/transactions" element={<Transactions />} />
+            <Route path="/stock/movementHistory" element={<Movement />} />
           </Route>
 
           {/* ✅ TEACHER, PRINCIPAL, RECEPTIONIST — leaves list page */}
