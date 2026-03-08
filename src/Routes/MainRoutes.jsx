@@ -45,6 +45,13 @@ import Store from '../Pages/Stock/Stores';
 import Items from '../Pages/Stock/Items';
 import Transactions from '../Pages/Stock/Transactions';
 import Movement from '../Pages/Stock/Movement';
+import Transport_Management from '../Pages/Transport/Transport_Management';
+import Vehicles from '../Pages/Transport/Vehicles';
+import Fee_Plans from '../Pages/Transport/Fee_Plans';
+import Driver_Attendants from '../Pages/Transport/Driver_Attendants';
+import Reports from '../Pages/Transport/Reports';
+import Student_Allocations from '../Pages/Transport/Student_Allocations';
+import Routes_Manage from '../Pages/Transport/Routes_Manage';
 
 const MainRoutes = () => {
   const isTokenExist = localStorage.getItem('token');
@@ -92,13 +99,11 @@ const MainRoutes = () => {
             <Route path="/leaves/manageHolidays" element={<HolidayManagment />} />
           </Route>
 
-          {/* ✅ ADMIN, SUPER_ADMIN & ACCOUNTANT */}
           <Route element={<RoleProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'ACCOUNTANT']} />}>
             <Route path="/payroll" element={<Payroll />} />
           </Route>
 
           {/* Stock */}
-
           <Route element={<RoleProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'ACCOUNTANT']} />}>
             <Route path="/stock" element={<Stock />} />
             <Route path="/stock/stores" element={<Store />} />
@@ -106,8 +111,18 @@ const MainRoutes = () => {
             <Route path="/stock/transactions" element={<Transactions />} />
             <Route path="/stock/movementHistory" element={<Movement />} />
           </Route>
+          
+          {/* Transport */}
+          <Route element={<RoleProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'ACCOUNTANT']} />}>
+            <Route path="/route" element={<Transport_Management/>} />
+            <Route path="/route/vehicles" element={<Vehicles/>} />
+            <Route path="/route/Driver&Attendants" element={<Driver_Attendants />} />
+            <Route path="/route/routes_management" element={<Routes_Manage/>} />
+            <Route path="/route/studentAllocations" element={<Student_Allocations />} />
+            <Route path="/route/feePlans" element={<Fee_Plans />}/>
+            <Route path="/route/reports" element={<Reports />}/>
+          </Route>
 
-          {/* ✅ TEACHER, PRINCIPAL, RECEPTIONIST — leaves list page */}
           <Route element={<RoleProtectedRoute allowedRoles={['TEACHER', 'PRINCIPAL', 'RECEPTIONIST', 'ACCOUNTANT']} />}>
             <Route path="/leaves" element={<Navigate to="/leaves/myLeaves" replace />} />
           </Route>

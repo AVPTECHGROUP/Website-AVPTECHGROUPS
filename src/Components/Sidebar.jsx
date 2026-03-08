@@ -11,7 +11,8 @@ import {
   ChevronDown,
   ChevronRight,
   UserCog,
-  Package
+  Package,
+  Bus
 } from 'lucide-react'
 import { useState, useEffect, useContext } from 'react'
 import { UserContext } from '../ContextAPI/UserContext'
@@ -118,6 +119,45 @@ const menuItems = [
       {
         label: <span className="text-sm text-gray-600 hover:text-blue-600">Movement History</span>,
         route: 'stock/movementHistory',
+        roles: ['ADMIN', 'SUPER_ADMIN'],
+      }
+    ]
+  },
+  {
+    id: 'transport',
+    icon: Bus,
+    label: <span className="font-semibold">Transport </span>,
+    route: '/route',
+    roles: ['ADMIN', 'SUPER_ADMIN','PRINCIPAL'],
+    subItems: [
+      {
+        label: <span className="text-sm text-gray-600 hover:text-blue-600">Vehicles</span>,
+        route: '/route/vehicles',
+        roles: ['ADMIN','SUPER_ADMIN', 'PRINCIPAL'],
+      },
+      {
+        label: <span className="text-sm text-gray-600 hover:text-blue-600">Driver & Attendants</span>,
+        route: '/route/Driver&Attendants',
+        roles: ['ADMIN','SUPER_ADMIN','PRINCIPAL'],
+      },
+      {
+        label: <span className="text-sm text-gray-600 hover:text-blue-600">Routes</span>,
+        route: '/route/routes_management',
+        roles: ['ADMIN', 'SUPER_ADMIN'],
+      },
+      {
+        label: <span className="text-sm text-gray-600 hover:text-blue-600">Student Allocations</span>,
+        route: '/route/studentAllocations',
+        roles: ['ADMIN', 'SUPER_ADMIN'],
+      },
+      {
+        label: <span className="text-sm text-gray-600 hover:text-blue-600">Fee Plans</span>,
+        route: '/route/feePlans',
+        roles: ['ADMIN', 'SUPER_ADMIN'],
+      },
+      { 
+        label: <span className="text-sm text-gray-600 hover:text-blue-600">Reports</span>,
+        route: '/route/reports',
         roles: ['ADMIN', 'SUPER_ADMIN'],
       }
     ]
