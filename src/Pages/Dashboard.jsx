@@ -12,18 +12,19 @@ import CardLoader from "../Components/CommonComp/CardLoader";
 import ListLoader from "../Components/CommonComp/ListLoader";
 import ActionDropDownComp from "../Components/CommonComp/ActionDropDownComp";
 import { getDashboardAnalytics, getUpcomingHolidays } from "../Api/DashboardApi";
+import { useNavigate } from "react-router-dom";
 
 Chart.register(ArcElement, Tooltip, Legend);
 
 const quickActions = [
-  { label: "Review Attendance", sub: "pending", subColor: "text-red-500", icon: Eye, bg: "bg-orange-50", iconColor: "text-orange-500", key: "pendingAttendanceApprovals" },
-  { label: "Approve Leaves", sub: "pending", subColor: "text-red-500", icon: CheckSquare, bg: "bg-green-50", iconColor: "text-green-600", key: "pendingLeaveRequests" },
-  { label: "Add New User", sub: "Staff / Teacher / Admin", subColor: "text-gray-400", icon: UserPlus, bg: "bg-blue-50", iconColor: "text-blue-600", key: null },
-  { label: "Admit Student", sub: "New registration", subColor: "text-gray-400", icon: GraduationCap, bg: "bg-purple-50", iconColor: "text-purple-600", key: null },
-  { label: "Manage Stock", sub: "3 items low", subColor: "text-orange-500", icon: Package, bg: "bg-yellow-50", iconColor: "text-yellow-600", key: null },
-  { label: "Transport", sub: "Allocate / Manage", subColor: "text-gray-400", icon: Bus, bg: "bg-cyan-50", iconColor: "text-cyan-600", key: null },
-  { label: "Payroll", sub: "Process payroll", subColor: "text-gray-400", icon: Banknote, bg: "bg-emerald-50", iconColor: "text-emerald-600", key: null },
-  { label: "Reports", sub: "Attendance / Leave", subColor: "text-gray-400", icon: FileBarChart, bg: "bg-indigo-50", iconColor: "text-indigo-600", key: null },
+  { label: "Review Attendance", sub: "pending", subColor: "text-red-500", icon: Eye, bg: "bg-orange-50", iconColor: "text-orange-500", key: "pendingAttendanceApprovals", route: "/attendance/usersAttendance" },
+  { label: "Approve Leaves", sub: "pending", subColor: "text-red-500", icon: CheckSquare, bg: "bg-green-50", iconColor: "text-green-600", key: "pendingLeaveRequests", route:"/leaves" },
+  { label: "Add New User", sub: "Staff / Teacher / Admin", subColor: "text-gray-400", icon: UserPlus, bg: "bg-blue-50", iconColor: "text-blue-600", key: null, route:"/dashboard/addUser" },
+  { label: "Admit Student", sub: "New registration", subColor: "text-gray-400", icon: GraduationCap, bg: "bg-purple-50", iconColor: "text-purple-600", key: null, route:"/students/addStudents" },
+  { label: "Manage Stock", sub: "3 items low", subColor: "text-orange-500", icon: Package, bg: "bg-yellow-50", iconColor: "text-yellow-600", key: null, route:"/stock" },
+  { label: "Transport", sub: "Allocate / Manage", subColor: "text-gray-400", icon: Bus, bg: "bg-cyan-50", iconColor: "text-cyan-600", key: null,route:"/route" },
+  { label: "Payroll", sub: "Process payroll", subColor: "text-gray-400", icon: Banknote, bg: "bg-emerald-50", iconColor: "text-emerald-600", key: null, route:"/payroll" },
+  { label: "Reports", sub: "Attendance / Leave", subColor: "text-gray-400", icon: FileBarChart, bg: "bg-indigo-50", iconColor: "text-indigo-600", key: null, route:"/attendance" },
 ];
 
 const avatarColors = ["bg-blue-500", "bg-green-500", "bg-purple-500", "bg-pink-500", "bg-indigo-500", "bg-yellow-500"];
@@ -64,7 +65,6 @@ const holidayTypeStyle = (type, isOptional) => {
   }
 };
 
-// ─── Main Component ───────────────────────────────────────────────────────────
 export default function Dashboard() {
   const [stats, setStats] = useState(null);
   const [holidays, setHolidays] = useState([]);
@@ -72,6 +72,7 @@ export default function Dashboard() {
   const [error, setError] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
+  const navigate=useNavigate()
   const today = new Date().toLocaleDateString("en-GB", {
     weekday: "long", day: "numeric", month: "long", year: "numeric",
   });
@@ -193,11 +194,13 @@ export default function Dashboard() {
         id: 1, label: "Pending Leave Requests", val: stats.pendingLeaveRequests || 0,
         sub: "Awaiting approval", badge: "Needs Action",
         badgeColor: "text-orange-500", bg: "bg-orange-50", border: "border-orange-200",
+        route: "/leaves"
       },
       {
         id: 2, label: "Attendance Manual Reviews", val: stats.pendingAttendanceApprovals || 0,
         sub: "Face confidence below threshold", badge: "Review Now",
         badgeColor: "text-red-500", bg: "bg-red-50", border: "border-red-200",
+        route: "/attendance/usersAttendance"
       },
     ]
     : [];
@@ -246,7 +249,6 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Action required banner */}
         {!loading && stats && (
           <div className="flex flex-col sm:flex-row gap-3 mb-6">
             <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex-1">
@@ -254,12 +256,12 @@ export default function Dashboard() {
               <span className="text-sm font-semibold text-amber-800">Action Required</span>
               <div className="ml-auto flex flex-wrap gap-2">
                 {stats.pendingLeaveRequests > 0 && (
-                  <span className="text-xs font-semibold text-red-500 bg-red-50 border border-red-200 px-3 py-1 rounded-full">
+                  <span onClick={()=>navigate('/leaves')} className="text-xs font-semibold cursor-pointer text-red-500 bg-red-50 border border-red-200 px-3 py-1 rounded-full">
                     ✕ {stats.pendingLeaveRequests} Leave Request{stats.pendingLeaveRequests !== 1 ? "s" : ""} Pending
                   </span>
                 )}
                 {stats.pendingAttendanceApprovals > 0 && (
-                  <span className="text-xs font-semibold text-orange-500 bg-orange-50 border border-orange-200 px-3 py-1 rounded-full">
+                  <span onClick={()=>navigate('/attendance/usersAttendance')} className="text-xs cursor-pointer font-semibold text-orange-500 bg-orange-50 border border-orange-200 px-3 py-1 rounded-full">
                     ⚠ {stats.pendingAttendanceApprovals} Attendance Manual Review{stats.pendingAttendanceApprovals !== 1 ? "s" : ""}
                   </span>
                 )}
@@ -286,7 +288,7 @@ export default function Dashboard() {
                 {nextHolidayDays != null ? `(${nextHolidayDays} day${nextHolidayDays !== 1 ? "s" : ""} away)` : ""}
               </span>
             </div>
-            <button className="text-xs font-semibold bg-white text-blue-600 px-3 py-1 rounded-full hover:bg-blue-50 transition whitespace-nowrap">
+            <button onClick={()=>navigate('/leaves/manageHolidays')} className="text-xs cursor-pointer font-semibold bg-white text-blue-600 px-3 py-1 rounded-full hover:bg-blue-50 transition whitespace-nowrap">
               View Calendar →
             </button>
           </div>
@@ -376,7 +378,7 @@ export default function Dashboard() {
                   {attendancePending === 0 && attendanceOnLeave === 0 && "No pending reviews today"}
                 </span>
                 {attendancePending > 0 && (
-                  <button className="text-xs text-blue-600 font-semibold hover:underline">Review Pending →</button>
+                  <button onClick={()=>navigate('/attendance/usersAttendance')} className="text-xs text-blue-600 font-semibold hover:underline">Review Pending →</button>
                 )}
               </div>
             </div>
@@ -415,7 +417,7 @@ export default function Dashboard() {
                 {loading
                   ? Array.from({ length: 2 }).map((_, i) => <CardLoader key={i} />)
                   : pendingActionsCards.map((action) => (
-                    <div key={action.id} className={`border ${action.border} ${action.bg} rounded-xl p-4`}>
+                    <div key={action.id} onClick={() => action.route && navigate(action.route)} className={`border ${action.border} ${action.bg} rounded-xl p-4`}>
                       <div className="flex justify-between items-start mb-3">
                         <AlertTriangle className="w-8 h-8 text-gray-400" />
                         <span className={`text-xs font-bold ${action.badgeColor}`}>{action.badge}</span>
@@ -445,7 +447,7 @@ export default function Dashboard() {
                       : qa.sub;
                   const subColor = qa.key && stats && stats[qa.key] > 0 ? "text-red-500" : qa.subColor;
                   return (
-                    <button key={qa.label} className="flex flex-col items-center gap-2 bg-gray-50 hover:bg-blue-50 border border-gray-200 hover:border-blue-300 rounded-xl p-3 transition-all">
+                    <button key={qa.label} onClick={() => qa.route && navigate(qa.route)} className="flex flex-col items-center gap-2 bg-gray-50 hover:bg-blue-50 border border-gray-200 hover:border-blue-300 rounded-xl p-3 transition-all">
                       <div className={`w-12 h-12 ${qa.bg} rounded-xl flex items-center justify-center`}>
                         <qa.icon className={`w-6 h-6 ${qa.iconColor}`} />
                       </div>
@@ -534,7 +536,7 @@ export default function Dashboard() {
               </div>
               <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50">
                 <span className="text-xs text-gray-400">Showing next {holidays.length} holidays</span>
-                <button className="text-xs text-blue-600 font-semibold hover:underline">View Full Calendar →</button>
+                <button onClick={()=>navigate('/leaves/manageHolidays')} className="text-xs text-blue-600 font-semibold hover:underline">View Full Calendar →</button>
               </div>
             </div>
 

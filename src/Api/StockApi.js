@@ -221,3 +221,110 @@ export const transferStock = async (payload) => {
     throw error;
   }
 };
+
+// Get Stock Movement History (Audit Trail)
+export const getStockMovementHistory = async (
+  page = 0,
+  size = 20,
+  itemId = "",
+  storeId = "",
+  movementType = "",
+  fromDate = "",
+  toDate = "",
+  searchTerm = ""
+) => {
+  try {
+    const params = new URLSearchParams({
+      page,
+      size
+    });
+
+    const res = await fetch(`${BASE_URL}/stock/movements/history?${params}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        accept: "application/json"
+      },
+      body: JSON.stringify({
+        itemId,
+        storeId,
+        movementType,
+        fromDate,
+        toDate,
+        searchTerm
+      })
+    });
+
+    if (!res.ok) throw new Error("Failed to fetch stock movement history");
+
+    const data = await res.json();
+
+    return {
+      movements: data.data || [],
+      pagination: data.pagination || {}
+    };
+
+  } catch (error) {
+    console.error("getStockMovementHistory error:", error);
+    throw error;
+  }
+};
+
+// Get Low Stock Items (optional store filter)
+export const getLowStockItems = async (storeId = "") => {
+  try {
+
+    const params = new URLSearchParams({
+      storeId
+    });
+
+    const url = storeId
+      ? `${BASE_URL}/stock/low-stock?${params}`
+      : `${BASE_URL}/stock/low-stock`;
+
+    const res = await fetch(url, {
+      method: "GET",
+      headers: {
+        accept: "application/json"
+      }
+    });
+
+    if (!res.ok) throw new Error("Failed to fetch low stock items");
+
+    const data = await res.json();
+
+    return {
+      items: data.data || []
+    };
+
+  } catch (error) {
+    console.error("getLowStockItems error:", error);
+    throw error;
+  }
+};
+
+// Get Item Stock Overview (all stores)
+export const getItemStockOverview = async (itemId) => {
+  try {
+
+    const res = await fetch(`${BASE_URL}/stock/items/${itemId}/overview`, {
+      method: "GET",
+      headers: {
+        accept: "application/json"
+      }
+    });
+
+    if (!res.ok) throw new Error("Failed to fetch item stock overview");
+
+    const data = await res.json();
+
+    return {
+      item: data.data || {},
+      storeBreakdown: data.data?.storeBreakdown || []
+    };
+
+  } catch (error) {
+    console.error("getItemStockOverview error:", error);
+    throw error;
+  }
+};
