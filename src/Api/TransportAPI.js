@@ -3,10 +3,12 @@ const BASE_URL = "https://ssdev-btgphuazhza9edcu.canadacentral-01.azurewebsites.
 // Get Active Routes
 export const getActiveRoutes = async () => {
   try {
+    const token=localStorage.getItem("token");
     const res = await fetch(`${BASE_URL}/transport/routes/active`, {
       method: "GET",
       headers: {
-        accept: "application/json",
+        Accept: "application/json",
+        Authorization:`Bearer ${token}`,
       },
     });
 
@@ -39,11 +41,12 @@ export const getTransportStaff = async ({
       ...(role && { role }),
       ...(status && { status }),
     });
-
+    const token=localStorage.getItem("token");
     const res = await fetch(`${BASE_URL}/transport/staff?${params}`, {
       method: "GET",
       headers: {
-        accept: "application/json",
+        Accept: "application/json",
+        Authorization:`Bearer ${token}`,
       },
     });
 
@@ -65,11 +68,12 @@ export const getTransportStaff = async ({
 // Get Active Vehicles
 export const getActiveVehicles = async () => {
   try {
-
+    const token=localStorage.getItem("token");
     const res = await fetch(`${BASE_URL}/transport/vehicles/active`, {
       method: "GET",
       headers: {
-        accept: "application/json",
+        Accept: "application/json",
+        Authorization:`Bearer ${token}`,
       },
     });
 
@@ -100,11 +104,12 @@ export const getTransportAllocations = async ({
       ...(routeId && { routeId }),
       ...(stopId && { stopId }),
     });
-
+    const token=localStorage.getItem("token");
     const res = await fetch(`${BASE_URL}/transport/allocations?${params}`, {
       method: "GET",
       headers: {
-        accept: "application/json",
+        Accept: "application/json",
+        Authorization:`Bearer ${token}`,
       },
     });
 
@@ -134,13 +139,14 @@ export const getVehicleCapacityReport = async ({
       onlyOverCapacity,
       expiringSoonDays,
     });
-
+    const token=localStorage.getItem("token");
     const res = await fetch(
       `${BASE_URL}/transport/reports/vehicles/capacity?${params}`,
       {
         method: "GET",
         headers: {
-          accept: "application/json",
+          Accept: "application/json",
+          Authorization:`Bearer ${token}`,
         },
       }
     );
@@ -173,11 +179,12 @@ export const getVehicles = async ({
       ...(type && { type }),
       ...(status && { status }),
     });
-
+    const token=localStorage.getItem("token");
     const res = await fetch(`${BASE_URL}/transport/vehicles?${params}`, {
       method: "GET",
       headers: {
-        accept: "application/json",
+        Accept: "application/json",
+        Authorization:`Bearer ${token}`,
       },
     });
 
@@ -198,10 +205,13 @@ export const getVehicles = async ({
 // /* ADD VEHICLE */
 export const addVehicle = async (vehicleData) => {
   try {
+    const token=localStorage.getItem("token");
     const res = await fetch(`${BASE_URL}/transport/vehicles`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        Accept:"application/json",
+        Authorization:`Bearer ${token}`,
       },
       body: JSON.stringify(vehicleData),
     });
@@ -219,10 +229,13 @@ export const addVehicle = async (vehicleData) => {
 
 export const updateVehicle = async (id, vehicleData) => {
   try {
+    const token=localStorage.getItem("token");
     const res = await fetch(`${BASE_URL}/transport/vehicles/${id}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
+        Accept:"application/json",
+        Authorization:`Bearer ${token }`,
       },
       body: JSON.stringify(vehicleData),
     });
@@ -240,10 +253,15 @@ export const updateVehicle = async (id, vehicleData) => {
 
 export const activateVehicle = async (id) => {
   try {
+    const token =localStorage.getItem("token");
     const res = await fetch(
       `${BASE_URL}/transport/vehicles/${id}/activate`,
       {
         method: "PATCH",
+        headers:{
+          Accept:"application/json",
+          Authorization:`Bearer ${token}`,
+        }
       }
     );
 
@@ -260,10 +278,15 @@ export const activateVehicle = async (id) => {
 
 export const deactivateVehicle = async (id) => {
   try {
+    const token=localStorage.getItem("token");
     const res = await fetch(
       `${BASE_URL}/transport/vehicles/${id}/deactivate`,
       {
         method: "PATCH",
+        headers:{
+          Accept:"application/json",
+          Authorization:`Bearer ${token}`,
+        }
       }
     );
 

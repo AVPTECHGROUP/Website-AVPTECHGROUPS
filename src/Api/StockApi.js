@@ -3,6 +3,7 @@ const BASE_URL = "https://ssdev-btgphuazhza9edcu.canadacentral-01.azurewebsites.
 // Get Items List (with pagination, search, filters)
 export const getItemsList = async (page = 0, size = 20, searchTerm = "", category = "", status = "") => {
     try {
+      const token = localStorage.getItem("token");
         const params = new URLSearchParams({
             page,
             size,
@@ -13,7 +14,8 @@ export const getItemsList = async (page = 0, size = 20, searchTerm = "", categor
         const res = await fetch(`${BASE_URL}/stock/items?${params}`, {
             method: "GET",
             headers: {
-                accept: "application/json"
+                Accept: "application/json",
+                Authorization:`Bearer ${token}`,
             }
         });
         if (!res.ok) throw new Error("Failed to fetch items");
@@ -34,11 +36,13 @@ export const getItemsList = async (page = 0, size = 20, searchTerm = "", categor
 // Create Item
 export const createItem = async (payload) => {
     try {
+      const token=localStorage.getItem("token");
         const res = await fetch(`${BASE_URL}/stock/items`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
-                accept: "application/json"
+                Accept: "application/json",
+                Authorization:`Bearer ${token}`,
             },
             body: JSON.stringify(payload)
         });
@@ -56,10 +60,12 @@ export const createItem = async (payload) => {
 // Get Item By ID
 export const getItemById = async (id) => {
   try {
+    const token=localStorage.getItem("token");
     const res = await fetch(`${BASE_URL}/stock/items/${id}`, {
       method: "GET",
       headers: {
-        accept: "application/json"
+        Accept: "application/json",
+        Authorization:`Bearer ${token}`,
       }
     });
 
@@ -76,11 +82,13 @@ export const getItemById = async (id) => {
 // Update Item
 export const updateItem = async (id, payload) => {
   try {
+    const token=localStorage.getItem("token");
     const res = await fetch(`${BASE_URL}/stock/items/${id}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
-        accept: "application/json"
+        Accept: "application/json",
+        Authorization:`Bearer ${token}`,
       },
       body: JSON.stringify(payload)
     });
@@ -98,10 +106,12 @@ export const updateItem = async (id, payload) => {
 // Activate Item
 export const activateItem = async (id) => {
   try {
+    const token=localStorage.getItem("token");
     const res = await fetch(`${BASE_URL}/stock/items/${id}/activate`, {
       method: "PATCH",
       headers: {
-        accept: "application/json"
+        Accept: "application/json",
+        Authorization:`Bearer ${token}`,
       }
     });
 
@@ -119,10 +129,12 @@ export const activateItem = async (id) => {
 // Deactivate Item
 export const deactivateItem = async (id) => {
   try {
+    const token= localStorage.getItem("token");
     const res = await fetch(`${BASE_URL}/stock/items/${id}/deactivate`, {
       method: "PATCH",
       headers: {
-        accept: "application/json"
+        Accept: "application/json",
+        Authorization:`Bearer ${token}`,
       }
     });
 
@@ -139,11 +151,13 @@ export const deactivateItem = async (id) => {
 // Get All Active Stores (for dropdown)
 export const getActiveStores = async () => {
   try {
+    const token=localStorage.getItem("token");
     const res = await fetch(`${BASE_URL}/stock/stores/active`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
-        accept: "application/json",
+        Accept: "application/json",
+        Authorization:`Bearer ${token}`,
       },
     });
 
@@ -159,11 +173,13 @@ export const getActiveStores = async () => {
 // Add Stock (Inward)
 export const addStockInward = async (payload) => {
   try {
+    const token=localStorage.getItem("token");
     const res = await fetch(`${BASE_URL}/stock/inward`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        accept: "application/json"
+        Accept: "application/json",
+        Authorization:`Bearer ${token},`
       },
       body: JSON.stringify(payload)
     });
@@ -181,11 +197,13 @@ export const addStockInward = async (payload) => {
 // Remove Stock (Outward)
 export const removeStockOutward = async (payload) => {
   try {
+    const token=localStorage.getItem("token");
     const res = await fetch(`${BASE_URL}/stock/outward`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        accept: "application/json"
+        Accept: "application/json",
+        Authorization:`Bearer ${token}`,
       },
       body: JSON.stringify(payload)
     });
@@ -203,11 +221,13 @@ export const removeStockOutward = async (payload) => {
 // Transfer Stock Between Stores
 export const transferStock = async (payload) => {
   try {
+    const token=localStorage.getItem("token");
     const res = await fetch(`${BASE_URL}/stock/transfer`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        accept: "application/json"
+        Accept: "application/json",
+        Authorization:`Bearer ${token}`,
       },
       body: JSON.stringify(payload)
     });
@@ -234,16 +254,18 @@ export const getStockMovementHistory = async (
   searchTerm = ""
 ) => {
   try {
+    
     const params = new URLSearchParams({
       page,
       size
     });
-
+    const token= localStorage.getItem("token");
     const res = await fetch(`${BASE_URL}/stock/movements/history?${params}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        accept: "application/json"
+        Accept: "application/json",
+        Authorization:`Bearer ${token}`,
       },
       body: JSON.stringify({
         itemId,
@@ -281,11 +303,12 @@ export const getLowStockItems = async (storeId = "") => {
     const url = storeId
       ? `${BASE_URL}/stock/low-stock?${params}`
       : `${BASE_URL}/stock/low-stock`;
-
+    const token= localStorage.getItem("token");
     const res = await fetch(url, {
       method: "GET",
       headers: {
-        accept: "application/json"
+        Accept: "application/json",
+        Authorization:`Bearer ${token}`,
       }
     });
 
@@ -306,11 +329,12 @@ export const getLowStockItems = async (storeId = "") => {
 // Get Item Stock Overview (all stores)
 export const getItemStockOverview = async (itemId) => {
   try {
-
+    const token=localStorage.getItem("token");
     const res = await fetch(`${BASE_URL}/stock/items/${itemId}/overview`, {
       method: "GET",
       headers: {
-        accept: "application/json"
+        Accept: "application/json",
+        Authorization:`Bearer ${token}`,
       }
     });
 

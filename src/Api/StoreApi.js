@@ -3,13 +3,14 @@ const BASE_URL = "https://ssdev-btgphuazhza9edcu.canadacentral-01.azurewebsites.
 // Get Stock List
 export const getStockList = async (page = 0, size = 20, searchTerm = "", status = "") => {
     try {
+        const token=localStorage.getItem("token");
         const params = new URLSearchParams({ page, size });
         if (searchTerm) params.append("searchTerm", searchTerm);
         if (status) params.append("status", status);
 
         const res = await fetch(`${BASE_URL}/stock/stores?${params}`, {
             method: "GET",
-            headers: { Accept: "application/json" },
+            headers: { Accept: "application/json", Authorization:`Bearer ${token}`, },
         });
 
         if (!res.ok) throw new Error("Get Stock List Failed");
@@ -29,9 +30,14 @@ export const getStockList = async (page = 0, size = 20, searchTerm = "", status 
 // Create new Store
 export const createStore = async (storeData) => {
     try {
+        const token=localStorage.getItem("token");
         const res = await fetch(`${BASE_URL}/stock/stores`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "application/json" ,
+                Accept:"application/json",
+                Authorization:`Bearer ${token},`
+
+            },
             body: JSON.stringify(storeData),
         });
 
@@ -49,11 +55,13 @@ export const createStore = async (storeData) => {
 // Update Store Data
 export const updateStore = async (id, storeData) => {
     try {
+        const token=localStorage.getItem("token");
         const res = await fetch(`${BASE_URL}/stock/stores/${id}`, {
             method: "PUT",
             headers: {
                 "Content-Type": "application/json",
-                accept: "application/json",
+                Accept: "application/json",
+                Authorization:`Bearer ${token}`,
             },
             body: JSON.stringify(storeData),
         });
@@ -69,11 +77,13 @@ export const updateStore = async (id, storeData) => {
 // Activate Store
 export const activateStore = async (id) => {
     try {
+        const token=localStorage.getItem("token");
         const res = await fetch(`${BASE_URL}/stock/stores/${id}/activate`, {
             method: "PATCH",
             headers: {
                 "Content-Type": "application/json",
-                accept: "application/json",
+                Accept: "application/json",
+                Authorization:`Bearer ${token}`,
             },
         });
 
@@ -88,11 +98,13 @@ export const activateStore = async (id) => {
 // Deactivate Store
 export const deactivateStore = async (id) => {
     try {
+        const token=localStorage.getItem("token");
         const res = await fetch(`${BASE_URL}/stock/stores/${id}/deactivate`, {
             method: "PATCH",
             headers: {
                 "Content-Type": "application/json",
-                accept: "application/json",
+                Accept: "application/json",
+                Authorization:`Bearer ${token}`,
             },
         });
 

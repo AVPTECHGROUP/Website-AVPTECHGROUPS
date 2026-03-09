@@ -4,14 +4,21 @@ const BASE_URL = "https://ssdev-btgphuazhza9edcu.canadacentral-01.azurewebsites.
 
 export const getUsersStatistics = async () => {
   try {
-    const res = await fetch(`${BASE_URL}/users/statistics`);
+    const token=localStorage.getItem("token");
+    const res = await fetch(`${BASE_URL}/users/statistics`,{
+       method:"GET",
+      headers:{
+        Accept:"application/json",
+        Authorization:`Bearer ${token}`,
+      }
+    });
     if (!res.ok) {
       const errorText = await res.text();
       throw new Error(errorText || "Failed to fetch statistics");
     }
     const data = await res.json();
     return data;
-  } catch (e) {
+  } catch (error) {
     console.error("get statistics error:", error.message);
     throw error;
   }
@@ -20,7 +27,14 @@ export const getUsersStatistics = async () => {
 // List All Users with pagination 
 export const getAllUsers = async (page = 0, size = 10, sort = 'id') => {
   try {
-    const res = await fetch(`${BASE_URL}/users?page=${page}&size=${size}&sort=${sort}`);
+    const token=localStorage.getItem("token");
+    const res = await fetch(`${BASE_URL}/users?page=${page}&size=${size}&sort=${sort}`,{
+       method:"GET",
+      headers:{
+        Accept:"application/json",
+        Authorization:`Bearer ${token}`,
+      }
+    });
     if (!res.ok) {
       const errorText = await res.text();
       throw new Error(errorText || "Failed to fetch Users");
@@ -36,10 +50,12 @@ export const getAllUsers = async (page = 0, size = 10, sort = 'id') => {
 // Search Users
 export const searchUsers = async (searchTerm, page, size = 10, sort = 'id') => {
   try {
+    const token=localStorage.getItem("token");
     const res = await fetch(`${BASE_URL}/users/search?searchTerm=${searchTerm}&page=${page}&size=${size}&sort=${sort}`, {
       method: 'GET',
       headers: {
-        accept: 'application/json'
+        Accept: 'application/json',
+        Authorization:`Bearer ${token}`,
       }
     });
     if (!res.ok) {
@@ -57,11 +73,13 @@ export const searchUsers = async (searchTerm, page, size = 10, sort = 'id') => {
 // fileter user by role status and search
 export const allUserFilter = async (filters = {}, page, size = 10, sort = 'id') => {
   try {
+    const token=localStorage.getItem("token");
     const res = await fetch(`${BASE_URL}/users/filter`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        accept: 'application/json'
+        Accept: 'application/json',
+        Authorization:`Bearer ${token}`,
       },
       body: JSON.stringify(
         { filter:filters, pageable: { page: page, size: size, sort: [sort] } }
@@ -83,7 +101,14 @@ export const allUserFilter = async (filters = {}, page, size = 10, sort = 'id') 
 // filter users by role
 export const filterUserByRole = async (userRole, page = 0, size = 10, sort = 'id') => {
   try {
-    const res = await fetch(`${BASE_URL}/users/by-role/${userRole}?page=${page}&size=${size}&sort=${sort}`);
+    const token=localStorage.getItem("token");
+    const res = await fetch(`${BASE_URL}/users/by-role/${userRole}?page=${page}&size=${size}&sort=${sort}`,{
+       method:"GET",
+      headers:{
+        Accept:"application/json",
+        Authorization:`Bearer ${token}`,
+      }
+    });
     if (!res.ok) {
       const errorText = await res.text();
       throw new Error(errorText || "Failed to fetch Users by role");
@@ -99,7 +124,14 @@ export const filterUserByRole = async (userRole, page = 0, size = 10, sort = 'id
 // filter users by status ---pending--
 export const filterUserByStatus = async (userStatus, page = 0, size = 10, sort = 'id') => {
   try {
-    const res = await fetch(`${BASE_URL}/users/by-status/${userStatus}?page=${page}&size=${size}&sort=${sort}`);
+    const token=localStorage.getItem("token");
+    const res = await fetch(`${BASE_URL}/users/by-status/${userStatus}?page=${page}&size=${size}&sort=${sort}`,{
+       method:"GET",
+      headers:{
+        Accept:"application/json",
+        Authorization:`Bearer ${token}`,
+      }
+    });
     if (!res.ok) {
       const errorText = await res.text();
       throw new Error(errorText || "Failed to fetch Users by status");
@@ -114,11 +146,13 @@ export const filterUserByStatus = async (userStatus, page = 0, size = 10, sort =
 
 //Creating new user 
 export const createUser = async (user) => {
+  const token=localStorage.getItem("token");
   const res = await fetch(`${BASE_URL}/users`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      accept: "application/json",
+      Accept: "application/json",
+      Authorization:`Bearer ${token}`,
     },
     body: JSON.stringify(user),
   });
@@ -136,10 +170,12 @@ export const createUser = async (user) => {
 //activate user
 export const activateUserStatus = async (id) => {
   try {
+    const token=localStorage.getItem("token");
     const res = await fetch(`${BASE_URL}/users/${id}/activate`, {
       method: 'PATCH',
       headers: {
-        Accept: 'application/json'
+        Accept: 'application/json',
+        Authorization:`Bearer ${token}`,
       }
     })
     if (!res.ok) throw new Error('Failed to Activate User')
@@ -156,10 +192,12 @@ export const activateUserStatus = async (id) => {
 export const deactivateUserStatus = async (id) => {
 
   try {
+    const token=localStorage.getItem("token");
     const res = await fetch(`${BASE_URL}/users/${id}/deactivate`, {
       method: 'PATCH',
       headers: {
-        Accept: 'application/json'
+        Accept: 'application/json',
+        Authorization:`Bearer ${token}`,
       }
     })
     if (!res.ok) throw new Error('Failed to Deactivate User')
@@ -174,10 +212,12 @@ export const deactivateUserStatus = async (id) => {
 // reset user password
 export const resetUserPassword = async (id) => {
   try {
+    const token=localStorage.getItem("token");
     const res = await fetch(`${BASE_URL}/users/${id}/reset-password`, {
       method: 'POST',
       headers: {
-        Accept: 'application/json'
+        Accept: 'application/json',
+        Authorization:`Bearer ${token}`,
       }
     })
     if (!res.ok) throw new Error('Failed to Reset password')
@@ -191,7 +231,14 @@ export const resetUserPassword = async (id) => {
 // get all roles 
 export const getAllUserRoles = async () => {
   try {
-    const res = await fetch(`${BASE_URL}/roles`);
+    const token=localStorage.getItem("token");
+    const res = await fetch(`${BASE_URL}/roles`,{
+       method:"GET",
+      headers:{
+        Accept:"application/json",
+        Authorization:`Bearer ${token}`,
+      }
+    });
     if (!res.ok) {
       const errorText = await res.text();
       throw new Error(errorText || "Failed to fetch Users by roles");
@@ -207,7 +254,14 @@ export const getAllUserRoles = async () => {
 // Get User by Id
 export const getUserById = async (id) => {
   try {
-    const res = await fetch(`${BASE_URL}/users/${id}`);
+    const token=localStorage.getItem("token");
+    const res = await fetch(`${BASE_URL}/users/${id}`,{
+       method:"GET",
+      headers:{
+        Accept:"application/json",
+        Authorization:`Bearer ${token}`,
+      }
+    });
     if (!res.ok) throw new Error("Failed to fetch User");
     const data = await res.json();
     return data.data || data;
@@ -220,9 +274,10 @@ export const getUserById = async (id) => {
 //update user by id
 export const updateUserById = async (id, updatedUser) => {
   try {
+    const token=localStorage.getItem("token");
     const res = await fetch(`${BASE_URL}/users/${id}`, {
       method: 'PUT',
-      headers: { "Content-Type": "application/json", accept: "application/json" },
+      headers: { "Content-Type": "application/json", Accept: "application/json",Authorization:`Bearer ${token}`, },
       body: JSON.stringify(updatedUser)
     });
     if (!res.ok) throw new Error('Failed to update User');
