@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useContext, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     ChevronRight,
@@ -30,6 +30,7 @@ import CardComponent from '../../Components/CommonComp/CardComponent';
 import QuickActions from '../../Components/CommonComp/QuickActions';
 import CardLoader from '../../Components/CommonComp/CardLoader';
 import ListLoader from '../../Components/CommonComp/ListLoader';
+import { UserContext } from '../../ContextAPI/UserContext';
 
 const ManageAllUsers = () => {
     // Stores text typed in search input (sys_user name / id / role)
@@ -64,6 +65,9 @@ const ManageAllUsers = () => {
 
     //for roleOptions in filter
     const [roleOptions, setRoleOptions] = useState([]);
+
+    const [assignId, setAssgnedUserId] = useState(null); //for select user
+    const { user } = useContext(UserContext);
 
     function compareAndGetLabel(data, compareValue) {
         const found = data.find(item => item.roleVal === compareValue);
@@ -195,7 +199,7 @@ const ManageAllUsers = () => {
         };
 
         fetchsysUsers();
-    }, [page, rowsPerpage, debouncedSearch, roleFilter, statusFilter,roleOptions]);
+    }, [page, rowsPerpage, debouncedSearch, roleFilter, statusFilter, roleOptions]);
 
     const getAvatarColor = (name) => {
         const colors = [
@@ -257,14 +261,6 @@ const ManageAllUsers = () => {
             hover: "hover:bg-blue-100",
         },
         {
-            value: "resetPassword",
-            label: "Reset",
-            icon: KeyIcon,
-            text: "text-green-600",
-            bg: "bg-green-50",
-            hover: "hover:bg-green-100",
-        },
-        {
             value: "toogleStatus",
             label: "Toggle Status",
             icon: Power,
@@ -272,7 +268,25 @@ const ManageAllUsers = () => {
             bg: "bg-yellow-50",
             hover: "hover:bg-yellow-100",
         },
+        {
+            value: "resetPassword",
+            label: "Reset",
+            icon: KeyIcon,
+            text: "text-green-600",
+            bg: "bg-green-50",
+            hover: "hover:bg-green-100",
+        }
     ];
+    // for filter only super admin
+    const getActionOptions = (userId) => {
+        return actionOptions.filter((action) => {
+            if (action.value === "resetPassword") {
+                return assignId === userId && user.userType=== 'SUPER_ADMIN';
+            }
+            return true;
+        });
+    };
+
     const callAllActions = async (optVal, user) => {
         if (optVal === 'editUser') navigate(`/dashboard/editUser/${user.id}`);
         else if (optVal === 'resetPassword') resetPassword(user.id, user.name);
@@ -293,21 +307,21 @@ const ManageAllUsers = () => {
                         </div>
                     </div>
                     {/* cards */}
-      <div className='grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 text-sm mt-5'>
-            {loading
-              ? cardsArray.map((_, i) => <CardLoader key={i} />)
-              : cardsArray.map((card) => (
-                  <CardComponent
-                    key={card.keyName}
-                    IconName={card.IconName}
-                    keyName={card.keyName.toUpperCase()}
-                    val={card.val}
-                    iconTxColor={card.iconTxColor}
-                    iconBgColor={card.iconBgColor}
-                  />
-                ))
-            }
-          </div>
+                    <div className='grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 text-sm mt-5'>
+                        {loading
+                            ? cardsArray.map((_, i) => <CardLoader key={i} />)
+                            : cardsArray.map((card) => (
+                                <CardComponent
+                                    key={card.keyName}
+                                    IconName={card.IconName}
+                                    keyName={card.keyName.toUpperCase()}
+                                    val={card.val}
+                                    iconTxColor={card.iconTxColor}
+                                    iconBgColor={card.iconBgColor}
+                                />
+                            ))
+                        }
+                    </div>
 
                     {/* quick actions */}
                     <QuickActions buttonText='Add new User' navigateTo='/dashboard/addUser' />
@@ -397,7 +411,7 @@ const ManageAllUsers = () => {
                                         <div>
                                             <p className="font-medium text-gray-900">{sys_user.name}</p>
                                             <p>
-                                                {compareAndGetLabel(roleOptions,sys_user.role[0])}
+                                                {compareAndGetLabel(roleOptions, sys_user.role[0])}
                                             </p>
                                         </div>
                                     </div>
@@ -490,7 +504,12 @@ const ManageAllUsers = () => {
                                             <h3 className="text-sm font-bold text-gray-700 mb-2">No Users Found</h3>
                                         </td>
                                     </tr> : (sysUsers.map((sys_user) => (
-                                        <tr key={sys_user.id} className="hover:bg-gray-50">
+                                        <tr key={sys_user.id} className={`${assignId === sys_user.id ? "bg-blue-50" : ""}`} onClick={() => {
+                                            console.log(user.userType);
+                                            if (user.userType === 'SUPER_ADMIN') {
+                                                setAssgnedUserId(sys_user.id);
+                                            }
+                                        }}>
                                             <td className={tabledataItemsStyle}>
                                                 <div className="flex items-center gap-3">
                                                     <div className={`w-10 h-10 rounded-full ${getAvatarColor(sys_user.name)} flex items-center justify-center text-white font-semibold`}>
@@ -499,7 +518,7 @@ const ManageAllUsers = () => {
                                                     <div>
                                                         <p className="font-medium text-black">{sys_user.name}</p>
                                                         <p>
-                                                            {compareAndGetLabel(roleOptions,sys_user.role[0])}
+                                                            {compareAndGetLabel(roleOptions, sys_user.role[0])}
                                                         </p>
                                                     </div>
                                                 </div>
@@ -519,7 +538,7 @@ const ManageAllUsers = () => {
 
                                             </td>
                                             <td className={tabledataItemsStyle}>
-                                                <ActionDropDownComp actionOptions={actionOptions} onAction={(optVal) => callAllActions(optVal, sys_user)} />
+                                                <ActionDropDownComp actionOptions={getActionOptions(sys_user.id)} onAction={(optVal) => callAllActions(optVal, sys_user)} />
                                             </td>
                                         </tr>
                                     )))

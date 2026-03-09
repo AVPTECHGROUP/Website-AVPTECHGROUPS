@@ -4,19 +4,20 @@ import { getAllUserRoles } from '../../../Api/userManagementAPI';
 const AddPersonalDetails = ({ formData, setFormData, handleInputChange }) => {
     const [enabled, setEnabled] = useState(false);
     const [roleSelection, setRoleSelection] = useState([]);
+    const today = new Date().toISOString().split('T')[0];
     useEffect(() => {
         const fetchUserRoles = async () => {
             try {
                 let roleOpt = [];
                 const rolesRes = await getAllUserRoles();
                 const fetchedRoles = rolesRes.data || [];
-               roleOpt = fetchedRoles.map((val) => (
-                        {
-                            key: val.id,
-                            value: val.name,
-                            displayRole : val.displayName
-                        }
-                ))
+                 roleOpt = fetchedRoles
+                    .filter(val => val.id !== 6)
+                    .map(val => ({
+                        key: val.id,
+                        value: val.name,
+                        displayRole: val.displayName
+                    }));
                 setRoleSelection(roleOpt);
             }
             catch (e) {
@@ -107,6 +108,7 @@ const AddPersonalDetails = ({ formData, setFormData, handleInputChange }) => {
                         <input
                             type="date"
                             name="dob"
+                            max={today}
                             value={formData.dob}
                             onChange={handleInputChange}
                             className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
@@ -181,7 +183,7 @@ const AddPersonalDetails = ({ formData, setFormData, handleInputChange }) => {
                                 setEnabled(!enabled);
                                 setFormData(prev => ({ ...prev, accountStatus: !enabled }));
                             }}
-                            className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors duration-300 ${enabled ? "bg-blue-500" : "bg-gray-300"
+                            className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors duration-300 cursor-pointer ${enabled ? "bg-blue-500" : "bg-gray-300"
                                 }`}
                         >
                             <div
