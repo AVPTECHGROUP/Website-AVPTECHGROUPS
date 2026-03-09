@@ -1,0 +1,493 @@
+import React, { useEffect, useState, useCallback } from "react";
+import {
+    School, Package, BookOpen, Plus, Edit, Trash2,
+    ChevronRight, LayoutGrid, CheckCircle, XCircle as XCircleIcon,
+    Loader2,
+} from "lucide-react";
+import CardComponent from "../../Components/CommonComp/CardComponent";
+import CardLoader from "../../Components/CommonComp/CardLoader";
+import ListLoader from "../../Components/CommonComp/ListLoader";
+import ActionDropDownComp from "../../Components/CommonComp/ActionDropDownComp";
+import AddItemStudent from "../../Components/Stock/AddItemStudent";
+import {
+    getClassItemConfigStats,
+    getClassItemConfigs,
+    addOrUpdateClassItemConfig,
+    updateClassItemConfig,
+    deleteClassItemConfig,
+} from "../../Api/StudentStoreApi";
+import { getClasses } from "../../Api/TeachersAPI";
+
+let _setToasts = null;
+const toast = {
+    success: (msg) => _setToasts?.((p) => [...p, { id: Date.now() + Math.random(), type: "success", msg }]),
+    error: (msg) => _setToasts?.((p) => [...p, { id: Date.now() + Math.random(), type: "error", msg }]),
+};
+function ToastContainer() {
+    const [toasts, setToasts] = useState([]);
+    _setToasts = setToasts;
+    const remove = (id) => setToasts((p) => p.filter((t) => t.id !== id));
+    useEffect(() => {
+        if (!toasts.length) return;
+        const t = setTimeout(() => remove(toasts[0].id), 3500);
+        return () => clearTimeout(t);
+    }, [toasts]);
+    return (
+        <div className="fixed bottom-5 right-5 z-9999 flex flex-col gap-2 items-end pointer-events-none">
+            {toasts.map((t) => (
+                <div key={t.id} className={`flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lg text-sm font-medium pointer-events-auto min-w-55 max-w-xs bg-white
+                    ${t.type === "success" ? "border border-green-200 text-green-800" : "border border-red-200 text-red-700"}`}>
+                    {t.type === "success"
+                        ? <CheckCircle className="w-4 h-4 text-green-500 shrink-0" />
+                        : <XCircleIcon className="w-4 h-4 text-red-500 shrink-0" />}
+                    <span className="flex-1">{t.msg}</span>
+                    <button onClick={() => remove(t.id)} className="text-gray-400 hover:text-gray-600 ml-1 text-xs">✕</button>
+                </div>
+            ))}
+        </div>
+    );
+}
+
+const categoryColors = {
+    BOOKS: "bg-blue-100 text-blue-700",
+    STATIONERY: "bg-gray-100 text-gray-700",
+    LAB: "bg-purple-100 text-purple-700",
+    SPORTS: "bg-green-100 text-green-700",
+};
+
+const actionOptions = [
+    { value: "edit", label: "Edit", icon: Edit, text: "text-blue-600", bg: "bg-white", hover: "hover:bg-blue-50" },
+    { value: "delete", label: "Delete", icon: Trash2, text: "text-red-600", bg: "bg-white", hover: "hover:bg-red-50" },
+];
+export default function ClassConfig() {
+    // ── Classes list ──
+    const [classes, setClasses] = useState([]);
+    const [loadingClasses, setLoadingClasses] = useState(true);
+    const [selectedClass, setSelectedClass] = useState(null);
+
+    // ── Config items for selected class ──
+    const [configItems, setConfigItems] = useState([]);
+    const [loadingItems, setLoadingItems] = useState(false);
+    const [deletingId, setDeletingId] = useState(null);
+
+    // ── Stats ──
+    const [statsData, setStatsData] = useState({
+        classesConfigured: 0,
+        totalConfigEntries: 0,
+        totalActiveItems: 0,
+    });
+    const [loadingStats, setLoadingStats] = useState(true);
+
+    // ── Modal ──
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editRow, setEditRow] = useState(null);
+
+    // ── Fetch classes ──
+    useEffect(() => {
+        const load = async () => {
+            setLoadingClasses(true);
+            try {
+                const data = await getClasses();
+                setClasses(data || []);
+                if (data?.length > 0) setSelectedClass(data[0]);
+            } catch {
+                toast.error("Failed to load classes.");
+            } finally {
+                setLoadingClasses(false);
+            }
+        };
+        load();
+    }, []);
+
+    const fetchStats = useCallback(async () => {
+        setLoadingStats(true);
+        try {
+            const data = await getClassItemConfigStats();
+            setStatsData(data);
+        } catch {
+            /* silent */
+        } finally {
+            setLoadingStats(false);
+        }
+    }, []);
+
+    useEffect(() => { fetchStats(); }, [fetchStats]);
+
+    const fetchItems = useCallback(async (classId) => {
+        if (!classId) return;
+        setLoadingItems(true);
+        setConfigItems([]);
+        try {
+            const data = await getClassItemConfigs(classId);
+            setConfigItems(Array.isArray(data) ? data : []);
+        } catch {
+            toast.error("Failed to load items for this class.");
+        } finally {
+            setLoadingItems(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (selectedClass?.id) fetchItems(selectedClass.id);
+    }, [selectedClass, fetchItems]);
+
+    // ── Handle class selection ──
+    const handleSelectClass = (cls) => {
+        setSelectedClass(cls);
+    };
+
+    // ── Delete config item ──
+    const handleAction = async (optVal, row) => {
+        if (optVal === "edit") {
+            setEditRow(row);
+            setIsModalOpen(true);
+        }
+        if (optVal === "delete") {
+            setDeletingId(row.id);
+            try {
+                await deleteClassItemConfig(row.id);
+                toast.success(`"${row.itemName}" removed from ${selectedClass?.name}.`);
+                await fetchItems(selectedClass.id);
+                await fetchStats();
+            } catch {
+                toast.error("Failed to delete item.");
+            } finally {
+                setDeletingId(null);
+            }
+        }
+    };
+    // ── Save (add or edit) ──
+    const handleSave = async ({ itemId, defaultQuantity, remarks }) => {
+        try {
+            if (editRow) {
+                // Edit
+                await updateClassItemConfig(editRow.id, {
+                    defaultQuantity,
+                    remarks: remarks || null,
+                });
+                toast.success(`"${editRow.itemName}" updated successfully.`);
+            } else {
+                // Add 
+                await addOrUpdateClassItemConfig({
+                    classId: selectedClass.id,
+                    itemId,
+                    defaultQuantity,
+                    remarks: remarks || null,
+                });
+                toast.success(`Item added to ${selectedClass?.name}.`);
+            }
+            setEditRow(null);
+            setIsModalOpen(false);
+            await fetchItems(selectedClass.id);
+            await fetchStats();
+        } catch {
+            toast.error(editRow ? "Failed to update item." : "Failed to add item.");
+        }
+    };
+    // ── Derived values ──
+    const totalItems = configItems.length;
+    const totalUnits = configItems.reduce((acc, i) => acc + (i.defaultQuantity || 0), 0);
+
+    const stats = [
+        {
+            key: "Classes Configured",
+            val: statsData.classesConfigured,
+            icon: School,
+            txColor: "text-blue-600",
+            bgColor: "bg-blue-50",
+        },
+        {
+            key: "Total Config Entries",
+            val: statsData.totalConfigEntries,
+            icon: LayoutGrid,
+            txColor: "text-orange-500",
+            bgColor: "bg-orange-50",
+        },
+        {
+            key: "Items Available",
+            val: statsData.totalActiveItems,
+            icon: Package,
+            txColor: "text-yellow-600",
+            bgColor: "bg-yellow-50",
+        },
+    ];
+
+    return (
+        <>
+            <ToastContainer />
+
+            <div className="min-h-screen bg-blue-50 p-4 sm:p-6 lg:p-8 font-sans">
+
+                {/* ── Add / Edit Modal ── */}
+                <AddItemStudent
+                    isOpen={isModalOpen}
+                    onClose={() => { setIsModalOpen(false); setEditRow(null); }}
+                    onSave={handleSave}
+                    editData={editRow}
+                    className={selectedClass?.name ?? ""}
+                />
+
+                {/* ── Page Header ── */}
+                <div className="mb-6">
+                    <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">Class Config</h1>
+                    <p className="text-gray-500 text-sm mt-1">
+                        Configure default items for each class. Items are auto-loaded when creating a student order.
+                    </p>
+                </div>
+
+                {/* ── Stat Cards ── */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                    {loadingStats
+                        ? Array.from({ length: 3 }).map((_, i) => <CardLoader key={i} />)
+                        : stats.map((s) => (
+                            <CardComponent
+                                key={s.key}
+                                IconName={s.icon}
+                                keyName={s.key}
+                                val={s.val}
+                                iconTxColor={s.txColor}
+                                iconBgColor={s.bgColor}
+                            />
+                        ))}
+                </div>
+
+                {/* ── Info Banner ── */}
+                <div className="mb-6 flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3">
+                    <BookOpen className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
+                    <p className="text-sm text-blue-800">
+                        Configure default items for each class. These items are{" "}
+                        <span className="font-bold">automatically pre-loaded</span>{" "}
+                        when creating a student order. You can still add/remove items during order creation.
+                    </p>
+                </div>
+
+                {/* ── Main Grid ── */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+                    {/* ── LEFT: Classes List ── */}
+                    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                        <div className="flex items-center justify-between px-4 py-4 border-b border-gray-100">
+                            <div className="flex items-center gap-2">
+                                <School className="w-5 h-5 text-blue-500" />
+                                <h2 className="font-semibold text-gray-800">Classes</h2>
+                            </div>
+                            <span className="text-xs text-gray-400">{classes.length} classes</span>
+                        </div>
+                        <div className="divide-y divide-gray-100 max-h-130 overflow-y-auto">
+                            {loadingClasses ? (
+                                Array.from({ length: 8 }).map((_, i) => (
+                                    <div key={i} className="px-4 py-3 flex items-center justify-between animate-pulse">
+                                        <div className="h-3.5 bg-gray-200 rounded w-24" />
+                                        <div className="h-4 bg-gray-100 rounded w-12" />
+                                    </div>
+                                ))
+                            ) : classes.length === 0 ? (
+                                <div className="px-4 py-8 text-center text-gray-400 text-sm">No classes found.</div>
+                            ) : (
+                                classes.map((cls) => {
+                                    const isSelected = selectedClass?.id === cls.id;
+                                    // item count badge will just update as configItems loads
+                                    return (
+                                        <button
+                                            key={cls.id}
+                                            onClick={() => handleSelectClass(cls)}
+                                            className={`w-full flex items-center justify-between px-4 py-3 text-left transition-colors
+                                                ${isSelected
+                                                    ? "bg-blue-50 border-l-4 border-blue-500"
+                                                    : "hover:bg-gray-50 border-l-4 border-transparent"
+                                                }`}
+                                        >
+                                            <div className="min-w-0">
+                                                <span className={`text-sm font-semibold ${isSelected ? "text-blue-700" : "text-gray-700"}`}>
+                                                    {cls.name}
+                                                </span>
+                                                {cls.description && (
+                                                    <p className="text-xs text-gray-400 truncate max-w-32.5">{cls.description}</p>
+                                                )}
+                                            </div>
+                                            <div className="flex items-center gap-2 shrink-0">
+                                                {isSelected && !loadingItems && (
+                                                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
+                                                        {configItems.length} items
+                                                    </span>
+                                                )}
+                                                <ChevronRight className={`w-4 h-4 ${isSelected ? "text-blue-500" : "text-gray-300"}`} />
+                                            </div>
+                                        </button>
+                                    );
+                                })
+                            )}
+                        </div>
+                    </div>
+
+                    {/* ── RIGHT: Config Table ── */}
+                    <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+
+                        {/* Table Header */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-4 border-b border-gray-100">
+                            <div className="flex items-center gap-2 min-w-0">
+                                <BookOpen className="w-5 h-5 text-blue-500 shrink-0" />
+                                <div className="min-w-0">
+                                    <h2 className="font-semibold text-gray-800 truncate">
+                                        {selectedClass ? `${selectedClass.name} — Default Item Configuration` : "Default Item Configuration"}
+                                    </h2>
+                                    {selectedClass?.description && (
+                                        <p className="text-xs text-gray-400 truncate">{selectedClass.description}</p>
+                                    )}
+                                </div>
+                            </div>
+                            <button
+                                disabled={!selectedClass}
+                                onClick={() => { setEditRow(null); setIsModalOpen(true); }}
+                                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors w-fit shrink-0"
+                            >
+                                <Plus className="w-4 h-4" />
+                                Add Item
+                            </button>
+                        </div>
+
+                        {/* ── Desktop Table ── */}
+                        <div className="overflow-x-auto hidden sm:block">
+                            <table className="w-full">
+                                <thead>
+                                    <tr className="bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-100">
+                                        <th className="px-5 py-3 text-left">Item</th>
+                                        <th className="px-5 py-3 text-left">Category</th>
+                                        <th className="px-5 py-3 text-center">Default Qty</th>
+                                        <th className="px-5 py-3 text-left">Remarks</th>
+                                        <th className="px-5 py-3 text-left">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100">
+                                    {loadingItems ? (
+                                        <ListLoader rows={5} avatar={false} />
+                                    ) : configItems.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={5} className="px-5 py-14 text-center">
+                                                <div className="flex flex-col items-center gap-2">
+                                                    <Package className="w-10 h-10 text-gray-200" />
+                                                    <p className="text-sm text-gray-400">No items configured for this class.</p>
+                                                    <button
+                                                        onClick={() => { setEditRow(null); setIsModalOpen(true); }}
+                                                        className="mt-1 text-sm text-blue-600 font-semibold hover:underline"
+                                                    >
+                                                        + Add first item
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        configItems.map((row) => {
+                                            const isDeleting = deletingId === row.id;
+                                            return (
+                                                <tr
+                                                    key={row.id}
+                                                    className={`hover:bg-blue-50/40 transition-colors ${isDeleting ? "opacity-40 pointer-events-none" : ""}`}
+                                                >
+                                                    <td className="px-5 py-4">
+                                                        <p className="font-semibold text-gray-800 text-sm">{row.itemName}</p>
+                                                        <p className="text-xs text-gray-400">{row.itemCode} · {row.itemUnit}</p>
+                                                    </td>
+                                                    <td className="px-5 py-4">
+                                                        <span className={`px-2 py-0.5 rounded text-xs font-semibold ${categoryColors[row.itemCategory] ?? "bg-gray-100 text-gray-600"}`}>
+                                                            {row.itemCategory}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-5 py-4 text-center">
+                                                        <span className="text-sm font-bold text-gray-800">{row.defaultQuantity}</span>
+                                                    </td>
+                                                    <td className="px-5 py-4">
+                                                        <span className="text-xs text-gray-500">{row.remarks || "—"}</span>
+                                                    </td>
+                                                    <td className="px-5 py-4">
+                                                        {isDeleting ? (
+                                                            <Loader2 className="w-4 h-4 text-gray-400 animate-spin" />
+                                                        ) : (
+                                                            <ActionDropDownComp
+                                                                actionOptions={actionOptions}
+                                                                onAction={(optVal) => handleAction(optVal, row)}
+                                                            />
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {/* ── Mobile Cards ── */}
+                        <div className="sm:hidden divide-y divide-gray-100">
+                            {loadingItems ? (
+                                <div className="px-4 py-4 space-y-3">
+                                    {Array.from({ length: 4 }).map((_, i) => <CardLoader key={i} />)}
+                                </div>
+                            ) : configItems.length === 0 ? (
+                                <div className="flex flex-col items-center gap-2 py-12">
+                                    <Package className="w-10 h-10 text-gray-200" />
+                                    <p className="text-sm text-gray-400">No items configured.</p>
+                                    <button
+                                        onClick={() => { setEditRow(null); setIsModalOpen(true); }}
+                                        className="mt-1 text-sm text-blue-600 font-semibold hover:underline"
+                                    >
+                                        + Add first item
+                                    </button>
+                                </div>
+                            ) : (
+                                configItems.map((row) => {
+                                    const isDeleting = deletingId === row.id;
+                                    return (
+                                        <div
+                                            key={row.id}
+                                            className={`px-4 py-4 space-y-2 ${isDeleting ? "opacity-40 pointer-events-none" : ""}`}
+                                        >
+                                            <div className="flex items-start justify-between gap-2">
+                                                <div className="min-w-0">
+                                                    <p className="font-semibold text-gray-800 text-sm">{row.itemName}</p>
+                                                    <p className="text-xs text-gray-400">{row.itemCode} · {row.itemUnit}</p>
+                                                </div>
+                                                <span className={`px-2 py-0.5 rounded text-xs font-semibold shrink-0 ${categoryColors[row.itemCategory] ?? "bg-gray-100 text-gray-600"}`}>
+                                                    {row.itemCategory}
+                                                </span>
+                                            </div>
+                                            {row.remarks && (
+                                                <p className="text-xs text-gray-400 italic">{row.remarks}</p>
+                                            )}
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-xs text-gray-500">
+                                                    Default Qty: <span className="font-bold text-gray-800">{row.defaultQuantity}</span>
+                                                </span>
+                                                {isDeleting ? (
+                                                    <Loader2 className="w-4 h-4 text-gray-400 animate-spin" />
+                                                ) : (
+                                                    <ActionDropDownComp
+                                                        actionOptions={actionOptions}
+                                                        onAction={(optVal) => handleAction(optVal, row)}
+                                                    />
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })
+                            )}
+                        </div>
+
+                        {/* ── Footer totals ── */}
+                        {configItems.length > 0 && !loadingItems && (
+                            <div className="flex items-center justify-between px-5 py-3 border-t border-gray-100 bg-gray-50">
+                                <span className="text-sm text-gray-500">
+                                    Total items: <span className="font-bold text-gray-700">{totalItems}</span>
+                                </span>
+                                <span className="text-sm text-gray-500">
+                                    <span className="font-bold text-gray-700">{totalUnits}</span> units
+                                </span>
+                            </div>
+                        )}
+                    </div>
+
+                </div>
+            </div>
+        </>
+    );
+}
