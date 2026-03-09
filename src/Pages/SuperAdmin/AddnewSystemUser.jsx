@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, GraduationCap, IndianRupee, User } from 'lucide-react';
 import { toast } from 'react-toastify';
 import AddPersonalDetails from '../../Components/SuperAdmin/AddTabComponents/AddPersionslDetails';
-import { createUser } from '../../Api/userManagementAPI';
+import { createUser, updateUserById } from '../../Api/userManagementAPI';
 
 function AddnewSystemUser() {
     const navigate = useNavigate();
@@ -11,6 +11,7 @@ function AddnewSystemUser() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [saveNext, setSaveNext] = useState(false);
     const [submitVisible, setSubmitVisible] = useState(true);
+    const [current_userId, setCurrent_userId] = useState(0);
     const [formData, setFormData] = useState({
         name: "",
         gender: "",
@@ -46,6 +47,9 @@ function AddnewSystemUser() {
         additionalSubjects: '',
         isClassTeacher: false
     });
+
+
+    let current_count = 0;
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -157,13 +161,19 @@ function AddnewSystemUser() {
                     remarks: "Created from UI"
                 };
             }
-
-            const response = await createUser(apiPayload);
+            let response;
+            if(current_count === 0 && current_userId === 0){
+             response = await createUser(apiPayload);
+            const userId = response.data.id;
+            setCurrent_userId(userId);
+            }else{
+            current_count = current_count+1;
+             response = await updateUserById(current_userId, apiPayload);
+            }
             console.log("Create User Response:", response);
 
             toast.dismiss(loadingToast);
-
-            toast.success( `New user ${formData.name} added successfully!`, {
+            toast.success(`${formData.name} : ${response.message} `, {
                 duration: 3000,
                 icon: "✅"
             });
@@ -244,7 +254,7 @@ function AddnewSystemUser() {
                                 <button
                                     type="button"
                                     onClick={handleDiscard}
-                                    className="px-6 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                                    className="px-6 cursor-pointer py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
                                 >
                                     Discard Changes
                                 </button>

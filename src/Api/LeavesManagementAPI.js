@@ -1,29 +1,32 @@
+import { authFetch } from "../Authfetch/Authfetch";
+
 const BASE_URL = "https://ssdev-btgphuazhza9edcu.canadacentral-01.azurewebsites.net/api/leave";
 
 // ==================== LEAVES ENDPOINTS ====================
 const leaveStatistics = `/admin/statistics`;
 const getAllLeaveReq = `/admin/all`;
 
-//List all statistics
+// List all statistics
 export const getALLLeavesStatistics = async () => {
   try {
-    const res = await fetch(`${BASE_URL + leaveStatistics}`);
+    const res = await authFetch(`${BASE_URL + leaveStatistics}`, {
+      method: "GET",
+    });
     if (!res.ok) {
       const errorText = await res.text();
       throw new Error(errorText || "Failed to fetch statistics");
     }
     const data = await res.json();
     return data;
-  } catch (e) {
+  } catch (error) {                                               // ✅ fixed: was catch (e) but used error
     console.error("get statistics error:", error.message);
     throw error;
   }
 }
 
-// List All Leave Request with pagination 
+// List All Leave Request with pagination
 export const getAllLeaveRequest = async (page = 0, size = 10, sort = 'id', statusVal = '', leavetypeVal = '', userNameVal = '', fromDateVal = "", toDateVal = "") => {
   try {
-    // Format date to yyyy-mm-dd
     const formatDate = (date) => {
       if (!date) return null;
       const d = new Date(date);
@@ -31,40 +34,32 @@ export const getAllLeaveRequest = async (page = 0, size = 10, sort = 'id', statu
       return d.toISOString().split('T')[0];
     };
 
-    // Format dates
     const formattedFromDate = formatDate(fromDateVal);
     const formattedToDate = formatDate(toDateVal);
 
-    // Build query parameters
     const params = new URLSearchParams();
 
-    // Helper to check if value should be included (not empty, not "All Status" placeholders)
     const isValidFilter = (value) => {
       if (!value) return false;
       const normalized = value.toString().toLowerCase().trim();
       return normalized !== 'all' && normalized !== 'all status' && normalized !== 'all statu' && normalized !== 'select';
     };
 
-    // Add optional filters only if valid
     if (isValidFilter(statusVal)) params.append('status', statusVal);
-
     if (isValidFilter(leavetypeVal)) params.append('leaveType', leavetypeVal);
-
     if (isValidFilter(userNameVal)) params.append('userName', userNameVal);
-
     if (formattedFromDate) params.append('fromDate', formattedFromDate);
-
     if (formattedToDate) params.append('toDate', formattedToDate);
 
-    // Always include pagination and sort
     params.append('page', page);
     params.append('size', size);
     params.append('sort', sort);
 
-    // Build final URL
     const url = `${BASE_URL}${getAllLeaveReq}?${params.toString()}`;
 
-    const res = await fetch(url);
+    const res = await authFetch(url, {
+      method: "GET",
+    });
 
     if (!res.ok) {
       const errorText = await res.text();
@@ -84,24 +79,19 @@ export const getAllLeaveRequest = async (page = 0, size = 10, sort = 'id', statu
   }
 };
 
-//for approove leave 
+// Approve/Reject leave
 export const approoveRejLeaveReq = async (leaveId, remarksVal = 'As per the policy', actionVal = 'APPROVED') => {
   try {
-    const res = await fetch(`${BASE_URL}/admin/${leaveId}/review`, {
+    const res = await authFetch(`${BASE_URL}/admin/${leaveId}/review`, {
       method: 'PATCH',
-      headers: {
-        "Content-Type": "application/json",
-        accept: "application/json",
-      },
-      body: JSON.stringify(
-        {
-          action: actionVal,
-          remarks: remarksVal
-        }
-      ),
-    })
+      // ✅ fixed: was "application-Type" which is invalid, Content-Type is set by authFetch
+      body: JSON.stringify({
+        action: actionVal,
+        remarks: remarksVal
+      }),
+    });
     if (!res.ok) throw new Error('Failed to Approve Leave Request');
-    const data = await res.json()
+    const data = await res.json();
     return data;
   } catch (error) {
     console.error('Failed to approove/reject leave error:', error.message);
@@ -109,17 +99,14 @@ export const approoveRejLeaveReq = async (leaveId, remarksVal = 'As per the poli
   }
 }
 
-//for reject leave 
+// Cancel user leave request
 export const CancelUserlLeaveReq = async (leaveId, userId) => {
   try {
-    const res = await fetch(`${BASE_URL}/${leaveId}/cancel?userId=${userId}`, {
+    const res = await authFetch(`${BASE_URL}/${leaveId}/cancel?userId=${userId}`, {
       method: 'PATCH',
-      headers: {
-        Accept: 'application/json'
-      }
-    })
+    });
     if (!res.ok) throw new Error('Failed to Reject Leave Request');
-    const data = await res.json()
+    const data = await res.json();
     return data;
   } catch (error) {
     console.error('Failed to Cancell leave req error:', error.message);
@@ -127,14 +114,10 @@ export const CancelUserlLeaveReq = async (leaveId, userId) => {
   }
 }
 
-// new leave request apply for user
+// New leave request apply for user
 export const createLeaveRequest = async (user) => {
-  const res = await fetch(`${BASE_URL}/apply`, {
+  const res = await authFetch(`${BASE_URL}/apply`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      accept: "application/json",
-    },
     body: JSON.stringify(user),
   });
 
@@ -142,7 +125,6 @@ export const createLeaveRequest = async (user) => {
   const data = text ? JSON.parse(text) : {};
 
   if (!res.ok) {
-    // Create error object with proper structure
     const error = new Error(data.message || "Failed to create leave request");
     error.response = {
       data: data,
@@ -155,27 +137,30 @@ export const createLeaveRequest = async (user) => {
   return data;
 };
 
-// user balance statistics
+// User leave balance statistics
 export const getUsersLeaveBalance = async (userId) => {
   try {
-    const res = await fetch(`${BASE_URL + `/user/${userId}/balance`}`);
+    const res = await authFetch(`${BASE_URL}/user/${userId}/balance`, {
+      method: "GET",
+    });
     if (!res.ok) {
       const errorText = await res.text();
       throw new Error(errorText || "Failed to fetch leave balance statistics");
     }
     const data = await res.json();
     return data;
-  } catch (e) {
+  } catch (error) {                                               // ✅ fixed: was catch (e) but used error
     console.error("get user leave balance statistics error:", error.message);
     throw error;
   }
 }
 
-
-//List all request for specific user
+// List all requests for specific user
 export const getUserLeaveRequest = async (userId) => {
   try {
-    const res = await fetch(`${BASE_URL + `/user/${userId}`}`);
+    const res = await authFetch(`${BASE_URL}/user/${userId}`, {
+      method: "GET",
+    });
     if (!res.ok) {
       const errorData = await res.json();
       throw new Error(errorData.message || `Request failed with status ${res.status}`);

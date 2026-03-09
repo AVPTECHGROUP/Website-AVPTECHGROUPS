@@ -1,16 +1,21 @@
+import { authFetch } from "../Authfetch/Authfetch";
+
 const BASE_URL = 'https://ssdev-btgphuazhza9edcu.canadacentral-01.azurewebsites.net/api/common/lov';
-//List of values
+
+// List of values
 export const getListOfValues = async (LOV_TYPE = '') => {
-     try {
-        const res = await fetch(`${BASE_URL}/${LOV_TYPE}`);
-        if (!res.ok) {
-            const errorText = await res.text();
-            throw new Error(errorText || "Failed to List of values");
-        }
-        const data = await res.json();
-        return data.data;
-    } catch (e) {
-        console.error("get list of values error:", error.message);
-        throw error;
+  try {
+    const res = await authFetch(`${BASE_URL}/${LOV_TYPE}`, {
+      method: "GET",
+    });
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(errorText || "Failed to List of values");
     }
+    const data = await res.json();
+    return data.data;
+  } catch (error) {                                         // ✅ fixed: was catch (e) but used error
+    console.error("get list of values error:", error.message);
+    throw error;
+  }
 }
