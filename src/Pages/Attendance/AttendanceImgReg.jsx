@@ -30,7 +30,7 @@ const AttendanceImgReg = () => {
 }, []);
 
 
-  const MAX_SIZE = 5 * 1024 * 1024; // 5 MB
+  const MAX_SIZE = 5 * 1024 * 1024; 
   const MIN_IMAGES = 5;
   const MAX_IMAGES = 5;
   const validTypes = ["image/png", "image/jpeg", "image/jpg"];
@@ -150,7 +150,6 @@ const response = await attendanceEnroll({
 
     toast.success("Face enrollment successful ✅");
 
-    // reset
     setImages([]);
     setSelectedRole("");
     setSelectedName("");

@@ -21,7 +21,6 @@ export const getActiveRoutes = async () => {
   }
 };
 
-
 // Get Transport Staff (Driver/Attendant)
 export const getTransportStaff = async ({
   page = 0,
@@ -58,6 +57,87 @@ export const getTransportStaff = async ({
 
   } catch (error) {
     console.error("getTransportStaff error:", error);
+    throw error;
+  }
+};
+
+// Add Transport Staff
+
+export const addTransportStaff = async (staffData) => {
+  try {
+    const res = await fetch(`${BASE_URL}/transport/staff`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(staffData),
+    });
+
+    if (!res.ok) throw new Error("Failed to add staff");
+
+    return await res.json();
+  } catch (error) {
+    console.error("addTransportStaff error:", error);
+    throw error;
+  }
+};
+
+// Update Staff
+export const updateTransportStaff = async (id, staffData) => {
+  try {
+    const res = await fetch(`${BASE_URL}/transport/staff/${id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(staffData),
+    });
+
+    if (!res.ok) throw new Error("Failed to update staff");
+
+    return await res.json();
+  } catch (error) {
+    console.error("updateTransportStaff error:", error);
+    throw error;
+  }
+};
+
+// Activate the Staff
+
+export const activateTransportStaff = async (id) => {
+  try {
+    const res = await fetch(
+      `${BASE_URL}/transport/staff/${id}/activate`,
+      {
+        method: "PATCH",
+      }
+    );
+
+    if (!res.ok) throw new Error("Failed to activate staff");
+
+    return await res.json();
+  } catch (error) {
+    console.error("activateTransportStaff error:", error);
+    throw error;
+  }
+};
+
+// Deactivate Staff
+
+export const deactivateTransportStaff = async (id) => {
+  try {
+    const res = await fetch(
+      `${BASE_URL}/transport/staff/${id}/deactivate`,
+      {
+        method: "PATCH",
+      }
+    );
+
+    if (!res.ok) throw new Error("Failed to deactivate staff");
+
+    return await res.json();
+  } catch (error) {
+    console.error("deactivateTransportStaff error:", error);
     throw error;
   }
 };
@@ -272,6 +352,233 @@ export const deactivateVehicle = async (id) => {
     return await res.json();
   } catch (error) {
     console.error("deactivateVehicle error:", error);
+    throw error;
+  }
+};
+
+/* GET ROUTES (Paginated + Search + Filter) */
+
+export const getRoutes = async ({
+  page = 0,
+  size = 20,
+  searchTerm = "",
+  status = "",
+} = {}) => {
+  try {
+
+    const params = new URLSearchParams({
+      page,
+      size,
+      ...(searchTerm && { searchTerm }),
+      ...(status && { status }),
+    });
+
+    const res = await fetch(`${BASE_URL}/transport/routes?${params}`, {
+      method: "GET",
+      headers: {
+        accept: "application/json",
+      },
+    });
+
+    if (!res.ok) throw new Error("Failed to fetch routes");
+
+    const data = await res.json();
+
+    return {
+      routes: data.data || [],
+      pagination: data.pagination,
+    };
+
+  } catch (error) {
+    console.error("getRoutes error:", error);
+    throw error;
+  }
+};
+
+// Create Route
+
+export const addRoute = async (routeData) => {
+  try {
+
+    const res = await fetch(`${BASE_URL}/transport/routes`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(routeData),
+    });
+
+    if (!res.ok) throw new Error("Failed to create route");
+
+    return await res.json();
+
+  } catch (error) {
+    console.error("addRoute error:", error);
+    throw error;
+  }
+};
+
+// Update Route-->
+export const updateRoute = async (id, routeData) => {
+  try {
+
+    const res = await fetch(`${BASE_URL}/transport/routes/${id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(routeData),
+    });
+
+    if (!res.ok) throw new Error("Failed to update route");
+
+    return await res.json();
+
+  } catch (error) {
+    console.error("updateRoute error:", error);
+    throw error;
+  }
+};
+
+// Active Route
+
+export const activateRoute = async (id) => {
+  try {
+
+    const res = await fetch(
+      `${BASE_URL}/transport/routes/${id}/activate`,
+      {
+        method: "PATCH",
+      }
+    );
+
+    if (!res.ok) throw new Error("Failed to activate route");
+
+    return await res.json();
+
+  } catch (error) {
+    console.error("activateRoute error:", error);
+    throw error;
+  }
+};
+
+// Deactivate Route-->
+export const deactivateRoute = async (id) => {
+  try {
+
+    const res = await fetch(
+      `${BASE_URL}/transport/routes/${id}/deactivate`,
+      {
+        method: "PATCH",
+      }
+    );
+
+    if (!res.ok) throw new Error("Failed to deactivate route");
+
+    return await res.json();
+
+  } catch (error) {
+    console.error("deactivateRoute error:", error);
+    throw error;
+  }
+};
+
+// Get Route Stops
+
+export const getRouteStops = async (routeId) => {
+  try {
+
+    const res = await fetch(
+      `${BASE_URL}/transport/routes/${routeId}/stops`,
+      {
+        method: "GET",
+        headers: {
+          accept: "application/json",
+        },
+      }
+    );
+
+    if (!res.ok) throw new Error("Failed to fetch route stops");
+
+    const data = await res.json();
+
+    return data.data || [];
+
+  } catch (error) {
+    console.error("getRouteStops error:", error);
+    throw error;
+  }
+};
+
+// Add Route Stops
+
+export const addRouteStop = async (routeId, stopData) => {
+  try {
+
+    const res = await fetch(
+      `${BASE_URL}/transport/routes/${routeId}/stops`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(stopData),
+      }
+    );
+
+    if (!res.ok) throw new Error("Failed to add stop");
+
+    return await res.json();
+
+  } catch (error) {
+    console.error("addRouteStop error:", error);
+    throw error;
+  }
+};
+
+// Update RouteStops
+
+export const updateRouteStop = async (routeId, stopId, stopData) => {
+  try {
+
+    const res = await fetch(
+      `${BASE_URL}/transport/routes/${routeId}/stops/${stopId}`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(stopData),
+      }
+    );
+
+    if (!res.ok) throw new Error("Failed to update stop");
+
+    return await res.json();
+
+  } catch (error) {
+    console.error("updateRouteStop error:", error);
+    throw error;
+  }
+};
+
+// Soft Delete Stops-->
+export const deleteRouteStop = async (routeId, stopId) => {
+  try {
+
+    const res = await fetch(
+      `${BASE_URL}/transport/routes/${routeId}/stops/${stopId}`,
+      {
+        method: "DELETE",
+      }
+    );
+
+    if (!res.ok) throw new Error("Failed to delete stop");
+
+    return await res.json();
+
+  } catch (error) {
+    console.error("deleteRouteStop error:", error);
     throw error;
   }
 };

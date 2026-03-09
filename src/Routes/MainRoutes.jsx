@@ -40,11 +40,15 @@ import EditStudentDetails from '../Pages/Students/EditStudentDetails';
 import StudentDetails from '../Pages/Students/StudentDetails';
 import HolidayManagment from '../Pages/Leaves/Holiday/HolidayManagement';
 import RoleProtectedRoute from '../utils/RoleProtectedRoute';
+// Stock Routes
 import Stock from '../Pages/Stock/Stock';
 import Store from '../Pages/Stock/Stores';
 import Items from '../Pages/Stock/Items';
 import Transactions from '../Pages/Stock/Transactions';
 import Movement from '../Pages/Stock/Movement';
+import ClassConfig from '../Pages/Stock/ClassConfig';
+import StudentOrders from '../Pages/Stock/StudentOrders';
+// Transport Routes
 import Transport_Management from '../Pages/Transport/Transport_Management';
 import Vehicles from '../Pages/Transport/Vehicles';
 import Fee_Plans from '../Pages/Transport/Fee_Plans';
@@ -108,6 +112,8 @@ const MainRoutes = () => {
             <Route path="/stock" element={<Stock />} />
             <Route path="/stock/stores" element={<Store />} />
             <Route path="/stock/items" element={<Items />} />
+            <Route path="/stock/classConfig" element={<ClassConfig/>} />
+            <Route path="/stock/studentOrders" element={<StudentOrders/>} />
             <Route path="/stock/transactions" element={<Transactions />} />
             <Route path="/stock/movementHistory" element={<Movement />} />
           </Route>

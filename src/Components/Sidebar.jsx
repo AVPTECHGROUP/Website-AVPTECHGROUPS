@@ -44,12 +44,12 @@ const menuItems = [
     icon: Calendar,
     label: <span className="font-semibold">Attendance</span>,
     route: '/attendance',
-    roles: ['ADMIN', 'SUPER_ADMIN','TEACHER', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST'],
+    roles: ['ADMIN', 'SUPER_ADMIN', 'TEACHER', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST'],
     subItems: [
       {
         label: <span className="text-sm text-gray-600 hover:text-blue-600">Mark Attendance</span>,
         route: '/attendance/markUserAttendance',
-        roles: ['SUPER_ADMIN', 'ADMIN','TEACHER', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST'],
+        roles: ['SUPER_ADMIN', 'ADMIN', 'TEACHER', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST'],
       },
       {
         label: <span className="text-sm text-gray-600 hover:text-blue-600">Attendance Registration</span>,
@@ -99,17 +99,27 @@ const menuItems = [
     icon: Package,
     label: <span className="font-semibold">Stock</span>,
     route: '/stock',
-    roles: ['ADMIN', 'SUPER_ADMIN', 'TEACHER', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST'],
+    roles: ['ADMIN', 'SUPER_ADMIN'],
     subItems: [
       {
         label: <span className="text-sm text-gray-600 hover:text-blue-600">Stores</span>,
         route: '/stock/stores',
-        roles: ['ADMIN', 'TEACHER', 'SUPER_ADMIN', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST'],
+        roles: ['ADMIN', 'SUPER_ADMIN', 'TEACHER'],
       },
       {
         label: <span className="text-sm text-gray-600 hover:text-blue-600">Items</span>,
         route: 'stock/items',
-        roles: ['ADMIN', 'TEACHER', 'SUPER_ADMIN', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST'],
+        roles: ['ADMIN', 'SUPER_ADMIN'],
+      },
+      {
+        label: <span className="text-sm text-gray-600 hover:text-blue-600">Class Config</span>,
+        route: 'stock/classConfig',
+        roles: ['ADMIN', 'SUPER_ADMIN'],
+      },
+      {
+        label: <span className="text-sm text-gray-600 hover:text-blue-600">Student Orders</span>,
+        route: 'stock/studentOrders',
+        roles: ['ADMIN', 'SUPER_ADMIN',],
       },
       {
         label: <span className="text-sm text-gray-600 hover:text-blue-600">Transactions</span>,
@@ -128,17 +138,17 @@ const menuItems = [
     icon: Bus,
     label: <span className="font-semibold">Transport </span>,
     route: '/route',
-    roles: ['ADMIN', 'SUPER_ADMIN','PRINCIPAL'],
+    roles: ['ADMIN', 'SUPER_ADMIN', 'PRINCIPAL'],
     subItems: [
       {
         label: <span className="text-sm text-gray-600 hover:text-blue-600">Vehicles</span>,
         route: '/route/vehicles',
-        roles: ['ADMIN','SUPER_ADMIN', 'PRINCIPAL'],
+        roles: ['ADMIN', 'SUPER_ADMIN',],
       },
       {
         label: <span className="text-sm text-gray-600 hover:text-blue-600">Driver & Attendants</span>,
         route: '/route/Driver&Attendants',
-        roles: ['ADMIN','SUPER_ADMIN','PRINCIPAL'],
+        roles: ['ADMIN', 'SUPER_ADMIN',],
       },
       {
         label: <span className="text-sm text-gray-600 hover:text-blue-600">Routes</span>,
@@ -155,7 +165,7 @@ const menuItems = [
         route: '/route/feePlans',
         roles: ['ADMIN', 'SUPER_ADMIN'],
       },
-      { 
+      {
         label: <span className="text-sm text-gray-600 hover:text-blue-600">Reports</span>,
         route: '/route/reports',
         roles: ['ADMIN', 'SUPER_ADMIN'],
@@ -174,7 +184,7 @@ const menuItems = [
     icon: Settings,
     label: 'Settings',
     route: '/settings',
-    roles: ['ADMIN', 'TEACHER', 'SUPER_ADMIN', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST','PARENT'],
+    roles: ['ADMIN', 'TEACHER', 'SUPER_ADMIN', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST', 'PARENT'],
   },
 ]
 
@@ -189,7 +199,7 @@ const Sidebar = ({
   const location = useLocation()
   const [openDropdowns, setOpenDropdowns] = useState({})
 
-  const {user} = useContext(UserContext);
+  const { user } = useContext(UserContext);
 
   const userRole = user?.userType || null
 
