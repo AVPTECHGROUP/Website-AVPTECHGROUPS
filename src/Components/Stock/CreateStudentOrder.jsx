@@ -144,10 +144,6 @@ export default function CreateStudentOrder({ isOpen, onClose, onSaved }) {
     return () => clearTimeout(t);
   }, [studentSearch, isOpen, doLoadStudents]);
 
-  // ─── Load items for Step 2 ────────────────────────────────────
-  // Same pattern as Transactions.jsx:
-  // 1. getItemsList (all active items)
-  // 2. getItemStockOverview per item → filter by selectedStoreId
   const loadStoreItems = useCallback(async () => {
     if (!selectedStoreId) return;
     setItemsLoading(true);
@@ -486,24 +482,7 @@ export default function CreateStudentOrder({ isOpen, onClose, onSaved }) {
           {/* ══════════ STEP 2: Review & Edit Items ══════════ */}
           {step === 2 && (
             <>
-              {/* Live stock info banner */}
-              <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 text-xs text-gray-700 space-y-1.5">
-                <p>
-                  📦 <strong>Available</strong> ={" "}
-                  <code className="font-mono bg-orange-100 px-1 rounded">store_stocks.quantity</code> for the <em>selected store</em>.
-                </p>
-                <p>
-                  This is a <strong>live running total</strong> — incremented on stock-IN and decremented on stock-OUT, TRANSFER, or order CONFIRM.
-                </p>
-                <p className="text-gray-500">
-                  Read via:{" "}
-                  <code className="font-mono bg-gray-100 px-1 rounded text-gray-600">GET /orders/preview?studentId=&amp;storeId=</code>
-                  {" "}→{" "}
-                  <code className="font-mono bg-gray-100 px-1 rounded text-gray-600">items[].availableQuantitySnapshot</code>
-                  {" "}· ⚠️ = requested qty exceeds available · ✓ = sufficient stock
-                </p>
-              </div>
-
+              
               {itemsLoading ? (
                 <div className="flex flex-col items-center justify-center gap-3 py-14 text-gray-400">
                   <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
