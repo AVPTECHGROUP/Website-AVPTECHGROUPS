@@ -11,6 +11,8 @@ export const attendanceEnroll = async ({ userId, userType, images }) => {
       throw new Error("Exactly 5 images are required");
     }
 
+    const token = localStorage.getItem("token");
+
     const formData = new FormData();
     images.forEach(img => formData.append("images", img));
 
@@ -18,6 +20,10 @@ export const attendanceEnroll = async ({ userId, userType, images }) => {
       `${BASE_URL}/attendance/enroll?user_id=${userId}&user_type=${userType}`,
       {
         method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          // ✅ Do NOT set Content-Type here — browser sets it automatically with boundary for FormData
+        },
         body: formData,
       }
     );
@@ -31,7 +37,7 @@ export const attendanceEnroll = async ({ userId, userType, images }) => {
     return data;
   } catch (error) {
     console.error("Attendance Enroll Error:", error);
-    throw error; 
+    throw error;
   }
 };
 // Marked User Attendance
@@ -45,11 +51,12 @@ export const markAttendanceByFace = async ({
     formData.append("image", imageFile);
 
     const url = `${BASE_URL}/attendance/mark?gps_latitude=${gpsLatitude}&gps_longitude=${gpsLongitude}`;
-
+    const token=localStorage.getItem("token");
     const res = await fetch(url, {
       method: "POST",
       headers: {
         Accept: "application/json",
+        Authorization:`Bearer ${token}`,
       },
       body: formData,
     });
@@ -84,12 +91,13 @@ export const requestManualAttendance = async ({
     if (!remarks) {
       throw new Error("Remarks are required");
     }
-
+    const token=localStorage.getItem("token");
     const res = await fetch(`${BASE_URL}/attendance/manual-review`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        accept: "application/json",
+        Accept: "application/json",
+        Authorization:`Bearer ${token}`,
       },
       body: JSON.stringify({
         userId,
@@ -117,12 +125,14 @@ export const requestManualAttendance = async ({
 // Pending Approvals Request
 export const pendingApprovals = async () => {
   try {
+    const token=localStorage.getItem("token");
     const res = await fetch(
       `${BASE_URL}/attendance/pending-approvals`,
       {
         method: "GET",
         headers: {
           Accept: "application/json",
+          Authorization:`Bearer ${token}`,
         },
       }
     );
@@ -148,12 +158,14 @@ export const approveManualAttendance = async ({
   overrideStatus,
 }) => {
   try {
+    const token=localStorage.getItem("token");
     const res = await fetch(`${BASE_URL}/attendance/${attendanceId}/approve`,
       {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          accept: "application/json",
+          Accept: "application/json",
+          Authorization:`Bearer ${token}`,
         },
         body: JSON.stringify({
           approved,
@@ -179,12 +191,14 @@ export const approveManualAttendance = async ({
 
 export const attendanceStatistics = async (date) => {
   try {
+    const token=localStorage.getItem("token");
     const res = await fetch(
       `${BASE_URL}/attendance/admin/statistics?date=${date}`,
       {
         method: "GET",
         headers: {
           Accept: "application/json",
+          Authorization:`Bearer ${token}`,
         },
       }
     );
@@ -219,12 +233,12 @@ export const allAttendanceDetails = async ({
     params.append('page', page)
     params.append('size', size)
     params.append('sort', sort)
-
+    const token=localStorage.getItem("token");
     const res = await fetch(
       `${BASE_URL}/attendance/admin/all?${params.toString()}`,
       {
         method: 'GET',
-        headers: { Accept: 'application/json' }
+        headers: { Accept: 'application/json',Authorization:`Bearer ${token}`, }
       }
     )
 
