@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import { getCurrUserDetails } from "../utils/GetCurrUserDetails";
+import { getCurrUserDetails } from "../utils/getCurrUserDetails";
 
 export const UserContext = createContext();
 
