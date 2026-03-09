@@ -1,3 +1,5 @@
+import { authFetch } from "../Authfetch/Authfetch";
+
 const BASE_URL = "https://ssdev-btgphuazhza9edcu.canadacentral-01.azurewebsites.net/api";
 
 
@@ -11,19 +13,13 @@ export const attendanceEnroll = async ({ userId, userType, images }) => {
       throw new Error("Exactly 5 images are required");
     }
 
-    const token = localStorage.getItem("token");
-
     const formData = new FormData();
     images.forEach(img => formData.append("images", img));
 
-    const res = await fetch(
+    const res = await authFetch(
       `${BASE_URL}/attendance/enroll?user_id=${userId}&user_type=${userType}`,
       {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          // ✅ Do NOT set Content-Type here — browser sets it automatically with boundary for FormData
-        },
         body: formData,
       }
     );
@@ -40,6 +36,7 @@ export const attendanceEnroll = async ({ userId, userType, images }) => {
     throw error;
   }
 };
+
 // Marked User Attendance
 export const markAttendanceByFace = async ({
   imageFile,
@@ -51,13 +48,9 @@ export const markAttendanceByFace = async ({
     formData.append("image", imageFile);
 
     const url = `${BASE_URL}/attendance/mark?gps_latitude=${gpsLatitude}&gps_longitude=${gpsLongitude}`;
-    const token=localStorage.getItem("token");
-    const res = await fetch(url, {
+
+    const res = await authFetch(url, {
       method: "POST",
-      headers: {
-        Accept: "application/json",
-        Authorization:`Bearer ${token}`,
-      },
       body: formData,
     });
 
@@ -91,14 +84,9 @@ export const requestManualAttendance = async ({
     if (!remarks) {
       throw new Error("Remarks are required");
     }
-    const token=localStorage.getItem("token");
-    const res = await fetch(`${BASE_URL}/attendance/manual-review`, {
+
+    const res = await authFetch(`${BASE_URL}/attendance/manual-review`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        Authorization:`Bearer ${token}`,
-      },
       body: JSON.stringify({
         userId,
         userType,
@@ -125,15 +113,10 @@ export const requestManualAttendance = async ({
 // Pending Approvals Request
 export const pendingApprovals = async () => {
   try {
-    const token=localStorage.getItem("token");
-    const res = await fetch(
+    const res = await authFetch(
       `${BASE_URL}/attendance/pending-approvals`,
       {
         method: "GET",
-        headers: {
-          Accept: "application/json",
-          Authorization:`Bearer ${token}`,
-        },
       }
     );
 
@@ -143,7 +126,7 @@ export const pendingApprovals = async () => {
 
     const data = await res.json();
 
-    return data.data; 
+    return data.data;
   } catch (error) {
     console.error("Pending Approval Error:", error);
     throw error;
@@ -158,15 +141,9 @@ export const approveManualAttendance = async ({
   overrideStatus,
 }) => {
   try {
-    const token=localStorage.getItem("token");
-    const res = await fetch(`${BASE_URL}/attendance/${attendanceId}/approve`,
+    const res = await authFetch(`${BASE_URL}/attendance/${attendanceId}/approve`,
       {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-          Authorization:`Bearer ${token}`,
-        },
         body: JSON.stringify({
           approved,
           remarks,
@@ -188,25 +165,19 @@ export const approveManualAttendance = async ({
 };
 
 // Attendance Statistics
-
 export const attendanceStatistics = async (date) => {
   try {
-    const token=localStorage.getItem("token");
-    const res = await fetch(
+    const res = await authFetch(
       `${BASE_URL}/attendance/admin/statistics?date=${date}`,
       {
         method: "GET",
-        headers: {
-          Accept: "application/json",
-          Authorization:`Bearer ${token}`,
-        },
       }
     );
     if (!res.ok) {
       throw new Error("Failed to fetch Attendance Statistics");
     }
     const response = await res.json();
-    return response.data; 
+    return response.data;
   } catch (error) {
     console.error("Attendance Statistics Error:", error);
     throw error;
@@ -214,7 +185,6 @@ export const attendanceStatistics = async (date) => {
 };
 
 //All Attendance details list
-
 export const allAttendanceDetails = async ({
   attendanceDate,
   role,
@@ -229,16 +199,15 @@ export const allAttendanceDetails = async ({
     if (attendanceDate) params.append('attendance_date', attendanceDate)
     if (role && role !== 'ALL') params.append('user_type', role)
     if (status && status !== 'ALL') params.append('status', status)
-      
+
     params.append('page', page)
     params.append('size', size)
     params.append('sort', sort)
-    const token=localStorage.getItem("token");
-    const res = await fetch(
+
+    const res = await authFetch(
       `${BASE_URL}/attendance/admin/all?${params.toString()}`,
       {
         method: 'GET',
-        headers: { Accept: 'application/json',Authorization:`Bearer ${token}`, }
       }
     )
 

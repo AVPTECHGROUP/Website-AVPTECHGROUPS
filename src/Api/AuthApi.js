@@ -1,28 +1,28 @@
+import { authFetch } from "../Authfetch/Authfetch"; // ✅ import authFetch
+
 const BASE_URL = "https://ssdev-btgphuazhza9edcu.canadacentral-01.azurewebsites.net/api/v1";
 
 // ==================== AUTHENTICATION ENDPOINTS ====================
 
-// Login API
+// Login API — uses plain fetch because there is no token yet at login time
 export const loginAPI = async (credentials) => {
   try {
     const res = await fetch(`${BASE_URL}/auth/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        accept: 'application/json'
+        Accept: 'application/json',
       },
       body: JSON.stringify(credentials)
     });
 
     const data = await res.json();
 
-    // Check if the response was not successful
     if (!res.ok || data.success === false) {
       const errorMessage = data.message || 'Invalid email or password';
       throw new Error(errorMessage);
     }
 
-    // Save token directly to localStorage — UserContext syncs automatically via its useEffect
     if (data.token) {
       localStorage.setItem("token", data.token);
     }
@@ -37,18 +37,11 @@ export const loginAPI = async (credentials) => {
   }
 };
 
-// Logout API
+// Logout API — uses authFetch (token required)
 export const logoutAPI = async () => {
-  const token = localStorage.getItem("token");
-
   try {
-    const res = await fetch(`${BASE_URL}/auth/logout`, {
+    const res = await authFetch(`${BASE_URL}/auth/logout`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        Authorization: `Bearer ${token}`,
-      },
     });
 
     if (!res.ok) {
@@ -63,29 +56,15 @@ export const logoutAPI = async () => {
     throw error;
 
   } finally {
-    // Always clear storage even if API fails
     localStorage.removeItem("token");
     localStorage.removeItem("user");
   }
 };
 
-// Verify Token
+// Verify Token — uses authFetch (token required)
 export const verifyToken = async () => {
   try {
-    const token = localStorage.getItem('token');
-
-    if (!token) {
-      throw new Error('No token found');
-    }
-
-    const res = await fetch(`${BASE_URL}/auth/verify`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        accept: 'application/json',
-        'Authorization': `Bearer ${token}`
-      }
-    });
+    const res = await authFetch(`${BASE_URL}/auth/verify`);
 
     if (!res.ok) {
       throw new Error('Token verification failed');
@@ -99,18 +78,11 @@ export const verifyToken = async () => {
   }
 };
 
-// Refresh Token
+// Refresh Token — uses authFetch (token required)
 export const refreshToken = async () => {
   try {
-    const token = localStorage.getItem('token');
-
-    const res = await fetch(`${BASE_URL}/auth/refresh`, {
+    const res = await authFetch(`${BASE_URL}/auth/refresh`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        accept: 'application/json',
-        'Authorization': `Bearer ${token}`
-      }
     });
 
     if (!res.ok) {
