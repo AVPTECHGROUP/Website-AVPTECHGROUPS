@@ -1,26 +1,32 @@
+import { authFetch } from "../Authfetch/Authfetch";
+
 const BASE_URL = "https://ssdev-btgphuazhza9edcu.canadacentral-01.azurewebsites.net/api/v1";
 
 // ==================== Manage Users ENDPOINTS ====================
 
 export const getUsersStatistics = async () => {
   try {
-    const res = await fetch(`${BASE_URL}/users/statistics`);
+    const res = await authFetch(`${BASE_URL}/users/statistics`, {
+      method: "GET",
+    });
     if (!res.ok) {
       const errorText = await res.text();
       throw new Error(errorText || "Failed to fetch statistics");
     }
     const data = await res.json();
     return data;
-  } catch (e) {
+  } catch (error) {
     console.error("get statistics error:", error.message);
     throw error;
   }
 }
 
-// List All Users with pagination 
+// List All Users with pagination
 export const getAllUsers = async (page = 0, size = 10, sort = 'id') => {
   try {
-    const res = await fetch(`${BASE_URL}/users?page=${page}&size=${size}&sort=${sort}`);
+    const res = await authFetch(`${BASE_URL}/users?page=${page}&size=${size}&sort=${sort}`, {
+      method: "GET",
+    });
     if (!res.ok) {
       const errorText = await res.text();
       throw new Error(errorText || "Failed to fetch Users");
@@ -36,11 +42,8 @@ export const getAllUsers = async (page = 0, size = 10, sort = 'id') => {
 // Search Users
 export const searchUsers = async (searchTerm, page, size = 10, sort = 'id') => {
   try {
-    const res = await fetch(`${BASE_URL}/users/search?searchTerm=${searchTerm}&page=${page}&size=${size}&sort=${sort}`, {
+    const res = await authFetch(`${BASE_URL}/users/search?searchTerm=${searchTerm}&page=${page}&size=${size}&sort=${sort}`, {
       method: 'GET',
-      headers: {
-        accept: 'application/json'
-      }
     });
     if (!res.ok) {
       const errorText = await res.text();
@@ -54,20 +57,15 @@ export const searchUsers = async (searchTerm, page, size = 10, sort = 'id') => {
   }
 };
 
-// fileter user by role status and search
+// Filter user by role status and search
 export const allUserFilter = async (filters = {}, page, size = 10, sort = 'id') => {
   try {
-    const res = await fetch(`${BASE_URL}/users/filter`, {
+    const res = await authFetch(`${BASE_URL}/users/filter`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        accept: 'application/json'
-      },
       body: JSON.stringify(
-        { filter:filters, pageable: { page: page, size: size, sort: [sort] } }
-      )
+        { filter: filters, pageable: { page: page, size: size, sort: [sort] } }
+      ),
     });
-
     if (!res.ok) {
       const errorText = await res.text();
       throw new Error(errorText || 'Failed to Search Users...');
@@ -80,10 +78,12 @@ export const allUserFilter = async (filters = {}, page, size = 10, sort = 'id') 
   }
 };
 
-// filter users by role
+// Filter users by role
 export const filterUserByRole = async (userRole, page = 0, size = 10, sort = 'id') => {
   try {
-    const res = await fetch(`${BASE_URL}/users/by-role/${userRole}?page=${page}&size=${size}&sort=${sort}`);
+    const res = await authFetch(`${BASE_URL}/users/by-role/${userRole}?page=${page}&size=${size}&sort=${sort}`, {
+      method: "GET",
+    });
     if (!res.ok) {
       const errorText = await res.text();
       throw new Error(errorText || "Failed to fetch Users by role");
@@ -96,10 +96,12 @@ export const filterUserByRole = async (userRole, page = 0, size = 10, sort = 'id
   }
 };
 
-// filter users by status ---pending--
+// Filter users by status
 export const filterUserByStatus = async (userStatus, page = 0, size = 10, sort = 'id') => {
   try {
-    const res = await fetch(`${BASE_URL}/users/by-status/${userStatus}?page=${page}&size=${size}&sort=${sort}`);
+    const res = await authFetch(`${BASE_URL}/users/by-status/${userStatus}?page=${page}&size=${size}&sort=${sort}`, {
+      method: "GET",
+    });
     if (!res.ok) {
       const errorText = await res.text();
       throw new Error(errorText || "Failed to fetch Users by status");
@@ -112,14 +114,10 @@ export const filterUserByStatus = async (userStatus, page = 0, size = 10, sort =
   }
 };
 
-//Creating new user 
+// Creating new user
 export const createUser = async (user) => {
-  const res = await fetch(`${BASE_URL}/users`, {
+  const res = await authFetch(`${BASE_URL}/users`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      accept: "application/json",
-    },
     body: JSON.stringify(user),
   });
 
@@ -133,17 +131,14 @@ export const createUser = async (user) => {
   return text ? JSON.parse(text) : {};
 };
 
-//activate user
+// Activate user
 export const activateUserStatus = async (id) => {
   try {
-    const res = await fetch(`${BASE_URL}/users/${id}/activate`, {
+    const res = await authFetch(`${BASE_URL}/users/${id}/activate`, {
       method: 'PATCH',
-      headers: {
-        Accept: 'application/json'
-      }
-    })
-    if (!res.ok) throw new Error('Failed to Activate User')
-    const data = await res.json()
+    });
+    if (!res.ok) throw new Error('Failed to Activate User');
+    const data = await res.json();
     return data;
   } catch (error) {
     console.error('Activate Status error:', error.message);
@@ -151,19 +146,14 @@ export const activateUserStatus = async (id) => {
   }
 }
 
-//deactivate user
-
+// Deactivate user
 export const deactivateUserStatus = async (id) => {
-
   try {
-    const res = await fetch(`${BASE_URL}/users/${id}/deactivate`, {
+    const res = await authFetch(`${BASE_URL}/users/${id}/deactivate`, {
       method: 'PATCH',
-      headers: {
-        Accept: 'application/json'
-      }
-    })
-    if (!res.ok) throw new Error('Failed to Deactivate User')
-    const data = await res.json()
+    });
+    if (!res.ok) throw new Error('Failed to Deactivate User');
+    const data = await res.json();
     return data;
   } catch (error) {
     console.error('Deactivate error:', error.message);
@@ -171,27 +161,27 @@ export const deactivateUserStatus = async (id) => {
   }
 }
 
-// reset user password
+// Reset user password
 export const resetUserPassword = async (id) => {
   try {
-    const res = await fetch(`${BASE_URL}/users/${id}/reset-password`, {
+    const res = await authFetch(`${BASE_URL}/users/${id}/reset-password`, {
       method: 'POST',
-      headers: {
-        Accept: 'application/json'
-      }
-    })
-    if (!res.ok) throw new Error('Failed to Reset password')
-    const data = await res.json()
+    });
+    if (!res.ok) throw new Error('Failed to Reset password');
+    const data = await res.json();
     return data;
   } catch (error) {
     console.error('Reset password error:', error.message);
     throw error;
   }
 }
-// get all roles 
+
+// Get all roles
 export const getAllUserRoles = async () => {
   try {
-    const res = await fetch(`${BASE_URL}/roles`);
+    const res = await authFetch(`${BASE_URL}/roles`, {
+      method: "GET",
+    });
     if (!res.ok) {
       const errorText = await res.text();
       throw new Error(errorText || "Failed to fetch Users by roles");
@@ -207,7 +197,9 @@ export const getAllUserRoles = async () => {
 // Get User by Id
 export const getUserById = async (id) => {
   try {
-    const res = await fetch(`${BASE_URL}/users/${id}`);
+    const res = await authFetch(`${BASE_URL}/users/${id}`, {
+      method: "GET",
+    });
     if (!res.ok) throw new Error("Failed to fetch User");
     const data = await res.json();
     return data.data || data;
@@ -217,13 +209,12 @@ export const getUserById = async (id) => {
   }
 };
 
-//update user by id
+// Update user by id
 export const updateUserById = async (id, updatedUser) => {
   try {
-    const res = await fetch(`${BASE_URL}/users/${id}`, {
+    const res = await authFetch(`${BASE_URL}/users/${id}`, {
       method: 'PUT',
-      headers: { "Content-Type": "application/json", accept: "application/json" },
-      body: JSON.stringify(updatedUser)
+      body: JSON.stringify(updatedUser),
     });
     if (!res.ok) throw new Error('Failed to update User');
     return res.json();

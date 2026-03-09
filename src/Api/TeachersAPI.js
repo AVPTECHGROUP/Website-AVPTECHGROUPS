@@ -1,35 +1,40 @@
+import { authFetch } from "../Authfetch/Authfetch";
+
 const BASE_URL = "https://ssdev-btgphuazhza9edcu.canadacentral-01.azurewebsites.net/api/v1";
 
 // ==================== TEACHER ENDPOINTS ====================
-//List all statistics
+
+// List all statistics
 export const getTeacherStatistics = async () => {
   try {
-    const res = await fetch(`${BASE_URL}/teachers/statistics`);
+    const res = await authFetch(`${BASE_URL}/teachers/statistics`, {
+      method: "GET",
+    });
     if (!res.ok) {
       const errorText = await res.text();
       throw new Error(errorText || "Failed to fetch statistics");
     }
     const data = await res.json();
     return data;
-  } catch (e) {
+  } catch (error) {                                           // ✅ fixed: was catch (e) but used error
     console.error("get statistics error:", error.message);
     throw error;
   }
 }
-// List All Teacher with pagination 
+
+// List All Teacher with pagination
 export const getTeachers = async (page = 0, size = 10, sort = 'id') => {
   try {
-    const res = await fetch(
-      `${BASE_URL}/teachers/paginated?page=${page}&size=${size}&sort=${sort}`
+    const res = await authFetch(
+      `${BASE_URL}/teachers/paginated?page=${page}&size=${size}&sort=${sort}`,
+      { method: "GET" }
     );
-
     if (!res.ok) {
       const errorText = await res.text();
       throw new Error(errorText || "Failed to fetch teachers");
     }
-
     const data = await res.json();
-    return data; 
+    return data;
   } catch (error) {
     console.error("getTeachers error:", error.message);
     throw error;
@@ -38,12 +43,8 @@ export const getTeachers = async (page = 0, size = 10, sort = 'id') => {
 
 // Creating a Teacher
 export const createTeachers = async (teacher) => {
-  const res = await fetch(`${BASE_URL}/teachers`, {
+  const res = await authFetch(`${BASE_URL}/teachers`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      accept: "application/json",
-    },
     body: JSON.stringify(teacher),
   });
 
@@ -60,7 +61,9 @@ export const createTeachers = async (teacher) => {
 // Get Teacher by Id
 export const getTeacherById = async (id) => {
   try {
-    const res = await fetch(`${BASE_URL}/teachers/${id}`);
+    const res = await authFetch(`${BASE_URL}/teachers/${id}`, {
+      method: "GET",                                          // ✅ fixed: was "POST"
+    });
     if (!res.ok) throw new Error("Failed to fetch Teacher");
     const data = await res.json();
     return data.data || data;
@@ -73,10 +76,9 @@ export const getTeacherById = async (id) => {
 // Updating a Teacher
 export const updateTeacher = async (id, updatedTeacher) => {
   try {
-    const res = await fetch(`${BASE_URL}/teachers/${id}`, {
+    const res = await authFetch(`${BASE_URL}/teachers/${id}`, {
       method: 'PUT',
-      headers: { "Content-Type": "application/json", accept: "application/json" },
-      body: JSON.stringify(updatedTeacher)
+      body: JSON.stringify(updatedTeacher),
     });
     if (!res.ok) throw new Error('Failed to update Teacher');
     return res.json();
@@ -89,15 +91,10 @@ export const updateTeacher = async (id, updatedTeacher) => {
 // Search Teachers
 export const searchTeachers = async (filters = {}, page, size = 10, sort = 'id') => {
   try {
-    const res = await fetch(`${BASE_URL}/teachers/search/paginated?page=${page}&size=${size}&sort=${sort}`, {
+    const res = await authFetch(`${BASE_URL}/teachers/search/paginated?page=${page}&size=${size}&sort=${sort}`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        accept: 'application/json'
-      },
-      body: JSON.stringify(filters)
+      body: JSON.stringify(filters),
     });
-
     if (!res.ok) {
       const errorText = await res.text();
       throw new Error(errorText || 'Failed to Search Teachers...');
@@ -113,19 +110,12 @@ export const searchTeachers = async (filters = {}, page, size = 10, sort = 'id')
 // Get Teacher Salary
 export const getTeacherSalary = async (id) => {
   try {
-    const res = await fetch(`${BASE_URL}/teachers/${id}/salary-structure`, {
-      headers: {
-        accept: 'application/json'
-      }
-    });
-    
+    const res = await authFetch(`${BASE_URL}/teachers/${id}/salary-structure`);
     if (!res.ok) {
       throw new Error('Failed to get the teachers salary.');
-    } 
-    
+    }
     const result = await res.json();
-    return result.data; 
-    
+    return result.data;
   } catch (error) {
     console.error('getTeacherSalary error:', error.message);
     throw error;
@@ -135,81 +125,60 @@ export const getTeacherSalary = async (id) => {
 // Update Teacher Salary
 export const updateSalary = async (id, updatedSalary) => {
   try {
-    const res = await fetch(`${BASE_URL}/teachers/${id}/salary-structure`, {
+    const res = await authFetch(`${BASE_URL}/teachers/${id}/salary-structure`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        accept: 'application/json'
-      },
-      body: JSON.stringify(updatedSalary)
+      body: JSON.stringify(updatedSalary),
     });
-
     if (!res.ok) {
       throw new Error('Failed to update the Teachers Salary.');
     }
-    
     const data = await res.json();
     return data;
-
   } catch (error) {
     console.error('updateSalary error:', error.message);
     throw error;
   }
 };
 
-
-// activate teacher status--->
-export const activateStatus=async(id)=>{
+// Activate teacher status
+export const activateStatus = async (id) => {
   try {
-    const res=await fetch(`${BASE_URL}/teachers/${id}/activate`,{
-      method:'PATCH',
-      headers:{
-        Accept:'application/json'
-      }})
-      if(!res.ok) throw new Error('Failed to Activate Teacher')
-      const data=await res.json()
-      return data;
+    const res = await authFetch(`${BASE_URL}/teachers/${id}/activate`, {
+      method: 'PATCH',
+    });
+    if (!res.ok) throw new Error('Failed to Activate Teacher');
+    const data = await res.json();
+    return data;
   } catch (error) {
-      console.error('Activate Status error:', error.message);
-      throw error;
-  }}
-
-// Deactivate teacher status--->
-
-export const deactivateStatus=async(id)=>{
-
-  try {
-    const res=await fetch(`${BASE_URL}/teachers/${id}/deactivate`,{
-      method:'PATCH',
-      headers:{
-        Accept:'application/json'
-      }})
-      if(!res.ok) throw new Error('Failed to Deactivate Teacher')
-      const data=await res.json()
-      return data;
-  } catch (error) {
-      console.error('Deactivate error:', error.message);
-      throw error;
+    console.error('Activate Status error:', error.message);
+    throw error;
   }
+}
 
+// Deactivate teacher status
+export const deactivateStatus = async (id) => {
+  try {
+    const res = await authFetch(`${BASE_URL}/teachers/${id}/deactivate`, {
+      method: 'PATCH',
+    });
+    if (!res.ok) throw new Error('Failed to Deactivate Teacher');
+    const data = await res.json();
+    return data;
+  } catch (error) {
+    console.error('Deactivate error:', error.message);
+    throw error;
+  }
 }
 
 // ==================== ASSIGNMENTS API ====================
 
 // Get Teacher Assignments
-// GET /v1/teachers/{teacherId}/assignments
 export const getTeacherAssignment = async (teacherId) => {
   try {
-    const res = await fetch(`${BASE_URL}/teachers/${teacherId}/assignments`, {
-      headers: {
-        accept: 'application/json'
-      }
-    });
-    
+    const res = await authFetch(`${BASE_URL}/teachers/${teacherId}/assignments`);
     if (!res.ok) {
       throw new Error('Failed to fetch assignments');
     }
-    
     const data = await res.json();
     return data.data || data;
   } catch (error) {
@@ -219,23 +188,15 @@ export const getTeacherAssignment = async (teacherId) => {
 };
 
 // Create Teacher Assignment
-// POST /v1/teachers/{teacherId}/assignments
-// ACCEPTS: Single object OR Array of objects
 export const createTeacherAssignment = async (teacherId, assignmentData) => {
   try {
     console.log("Creating assignment with data:", assignmentData);
-    
-    const res = await fetch(`${BASE_URL}/teachers/${teacherId}/assignments`, {
+    const res = await authFetch(`${BASE_URL}/teachers/${teacherId}/assignments`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        accept: 'application/json'
-      },
-      body: JSON.stringify(assignmentData)
+      body: JSON.stringify(assignmentData),
     });
     const data = await res.json();
     if (!res.ok) {
-      //const errorText = await res.text();
       throw new Error(data.message || "Request failed");
     }
     return data;
@@ -245,45 +206,34 @@ export const createTeacherAssignment = async (teacherId, assignmentData) => {
   }
 };
 
-//get teachers active assignments
+// Get teachers active assignments
 export const getTeachersActiveAssignments = async (teacherId) => {
   try {
-    const res = await fetch(`${BASE_URL}/teachers/${teacherId}/assignments/active`, {
-      headers: {
-        accept: 'application/json'
-      }
+    const res = await authFetch(`${BASE_URL}/teachers/${teacherId}/assignments/active`, {
+      method: "GET",
     });
-    
     if (!res.ok) {
       throw new Error('Failed to fetch assignments');
     }
-    
     const data = await res.json();
     return data.data || data;
   } catch (error) {
-    console.error(" get teachers current assignment error:", error.message);
+    console.error("get teachers current assignment error:", error.message);
     throw error;
   }
 };
 
 // Update Teacher Assignment
-// PUT /v1/teachers/assignments/{assignmentId}
 export const updateTeacherAssignment = async (assignmentId, updatedAssignment) => {
   try {
-    const res = await fetch(`${BASE_URL}/teachers/assignments/${assignmentId}`, {
+    const res = await authFetch(`${BASE_URL}/teachers/assignments/${assignmentId}`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        accept: 'application/json'
-      },
-      body: JSON.stringify(updatedAssignment)
+      body: JSON.stringify(updatedAssignment),
     });
-
     if (!res.ok) {
       const errorText = await res.text();
       throw new Error(errorText || 'Failed to update assignment');
     }
-
     const data = await res.json();
     return data.data || data;
   } catch (error) {
@@ -293,21 +243,15 @@ export const updateTeacherAssignment = async (assignmentId, updatedAssignment) =
 };
 
 // Delete Teacher Assignment
-// DELETE /v1/teachers/assignments/{assignmentId}
 export const deleteTeacherAssignment = async (assignmentId) => {
   try {
-    const res = await fetch(`${BASE_URL}/teachers/assignments/${assignmentId}`, {
+    const res = await authFetch(`${BASE_URL}/teachers/assignments/${assignmentId}`, {
       method: 'DELETE',
-      headers: {
-        accept: 'application/json'
-      }
     });
-
     if (!res.ok) {
       const errorText = await res.text();
       throw new Error(errorText || 'Failed to delete assignment');
     }
-
     return { success: true };
   } catch (error) {
     console.error('deleteTeacherAssignment error:', error.message);
@@ -318,24 +262,14 @@ export const deleteTeacherAssignment = async (assignmentId) => {
 // ==================== CLASSES API ====================
 
 // Get All Classes
-// GET /v1/classes
-// RESPONSE: { success, message, data: [{id, name, ...}] }
 export const getClasses = async () => {
   try {
-    const res = await fetch(`${BASE_URL}/classes`, {
-      headers: {
-        accept: 'application/json'
-      }
-    });
-
+    const res = await authFetch(`${BASE_URL}/classes`);
     if (!res.ok) {
       throw new Error('Failed to fetch classes');
     }
-
     const data = await res.json();
     console.log("Classes API response:", data);
-    
-    // Handle response structure: { success, message, data: [...] }
     if (data.data && Array.isArray(data.data)) {
       console.log("Returning classes from data.data:", data.data);
       return data.data;
@@ -353,19 +287,12 @@ export const getClasses = async () => {
 };
 
 // Get Class by ID
-// GET /v1/classes/{classId}
 export const getClassById = async (classId) => {
   try {
-    const res = await fetch(`${BASE_URL}/classes/${classId}`, {
-      headers: {
-        accept: 'application/json'
-      }
-    });
-
+    const res = await authFetch(`${BASE_URL}/classes/${classId}`);
     if (!res.ok) {
       throw new Error('Failed to fetch class');
     }
-
     const data = await res.json();
     return data.data || data;
   } catch (error) {
@@ -374,23 +301,16 @@ export const getClassById = async (classId) => {
   }
 };
 
-// Create Class (Admin only)
-// POST /v1/classes
+// Create Class
 export const createClass = async (classData) => {
   try {
-    const res = await fetch(`${BASE_URL}/classes`, {
+    const res = await authFetch(`${BASE_URL}/classes`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        accept: 'application/json'
-      },
-      body: JSON.stringify(classData)
+      body: JSON.stringify(classData),
     });
-
     if (!res.ok) {
       throw new Error('Failed to create class');
     }
-
     const data = await res.json();
     return data.data || data;
   } catch (error) {
@@ -400,22 +320,15 @@ export const createClass = async (classData) => {
 };
 
 // Update Class
-// PUT /v1/classes/{classId}
 export const updateClass = async (classId, classData) => {
   try {
-    const res = await fetch(`${BASE_URL}/classes/${classId}`, {
+    const res = await authFetch(`${BASE_URL}/classes/${classId}`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        accept: 'application/json'
-      },
-      body: JSON.stringify(classData)
+      body: JSON.stringify(classData),
     });
-
     if (!res.ok) {
       throw new Error('Failed to update class');
     }
-
     const data = await res.json();
     return data.data || data;
   } catch (error) {
@@ -427,24 +340,14 @@ export const updateClass = async (classId, classData) => {
 // ==================== SECTIONS API ====================
 
 // Get Sections for a Class
-// GET /v1/sections/class/{classId}
-// RESPONSE: { success, message, data: [{id, name, ...}] }
 export const getSectionsByClass = async (classId) => {
   try {
-    const res = await fetch(`${BASE_URL}/sections/class/${classId}`, {
-      headers: {
-        accept: 'application/json'
-      }
-    });
-
+    const res = await authFetch(`${BASE_URL}/sections/class/${classId}`);
     if (!res.ok) {
       throw new Error('Failed to fetch sections');
     }
-
     const data = await res.json();
     console.log("Sections API response:", data);
-    
-    // Handle response structure: { success, message, data: [...] }
     if (data.data && Array.isArray(data.data)) {
       console.log("Returning sections from data.data:", data.data);
       return data.data;
@@ -462,19 +365,12 @@ export const getSectionsByClass = async (classId) => {
 };
 
 // Get Section by ID
-// GET /v1/sections/{sectionId}
 export const getSectionById = async (sectionId) => {
   try {
-    const res = await fetch(`${BASE_URL}/sections/${sectionId}`, {
-      headers: {
-        accept: 'application/json'
-      }
-    });
-
+    const res = await authFetch(`${BASE_URL}/sections/${sectionId}`);
     if (!res.ok) {
       throw new Error('Failed to fetch section');
     }
-
     const data = await res.json();
     return data.data || data;
   } catch (error) {
@@ -484,22 +380,15 @@ export const getSectionById = async (sectionId) => {
 };
 
 // Create Section
-// POST /v1/sections
 export const createSection = async (sectionData) => {
   try {
-    const res = await fetch(`${BASE_URL}/sections`, {
+    const res = await authFetch(`${BASE_URL}/sections`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        accept: 'application/json'
-      },
-      body: JSON.stringify(sectionData)
+      body: JSON.stringify(sectionData),
     });
-
     if (!res.ok) {
       throw new Error('Failed to create section');
     }
-
     const data = await res.json();
     return data.data || data;
   } catch (error) {
@@ -509,22 +398,15 @@ export const createSection = async (sectionData) => {
 };
 
 // Update Section
-// PUT /v1/sections/{sectionId}
 export const updateSection = async (sectionId, sectionData) => {
   try {
-    const res = await fetch(`${BASE_URL}/sections/${sectionId}`, {
+    const res = await authFetch(`${BASE_URL}/sections/${sectionId}`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        accept: 'application/json'
-      },
-      body: JSON.stringify(sectionData)
+      body: JSON.stringify(sectionData),
     });
-
     if (!res.ok) {
       throw new Error('Failed to update section');
     }
-
     const data = await res.json();
     return data.data || data;
   } catch (error) {
@@ -533,58 +415,45 @@ export const updateSection = async (sectionId, sectionData) => {
   }
 };
 
-// Get all section for sectionId->
+// Get all sections
 export const getAllSections = async () => {
   try {
-    const res = await fetch(`${BASE_URL}/sections`,{
+    const res = await authFetch(`${BASE_URL}/sections`, {
       method: "GET",
-      headers: {
-        accept: "application/json",
-      },
     });
-
     if (!res.ok) {
       const errorText = await res.text();
       throw new Error(errorText || "Failed to fetch sections");
     }
-
     const data = await res.json();
-    return data; // { success, message, data, timestamp }
+    return data;
   } catch (error) {
     console.error("getAllSections error:", error.message);
     throw error;
   }
 };
 
-
 // ==================== SUBJECTS API ====================
 
 // Get Subjects for a Section
-// GET /v1/section-subjects/section/{sectionId}
-// RESPONSE: { success, message, data: [{id, name, ...}] }
 export const getSubjectsBySection = async (sectionId) => {
   try {
-    const res = await fetch(`${BASE_URL}/section-subjects/section/${sectionId}`, {
-      headers: { accept: 'application/json' }
-    });
-
+    const res = await authFetch(`${BASE_URL}/section-subjects/section/${sectionId}`);
     if (!res.ok) throw new Error('Failed to fetch subjects');
 
     const data = await res.json();
-    console.log("🔍 API Response:", data);
-    
+    console.log("API Response:", data);
+
     if (data && data.data && Array.isArray(data.data)) {
-      // Transform API response: change subjectId→id, subjectName→name
       const subjects = data.data.map(mapping => ({
-        id: mapping.subjectId,        // ← Change subjectId to id
-        name: mapping.subjectName,    // ← Change subjectName to name
+        id: mapping.subjectId,
+        name: mapping.subjectName,
         code: mapping.subjectCode
       }));
-      
-      console.log("✅ Subjects extracted:", subjects);
+      console.log("Subjects extracted:", subjects);
       return subjects;
     }
-    
+
     return [];
   } catch (error) {
     console.error('Error:', error.message);
@@ -593,23 +462,14 @@ export const getSubjectsBySection = async (sectionId) => {
 };
 
 // Get All Subjects
-// GET /v1/subjects
 export const getAllSubjects = async () => {
   try {
-    const res = await fetch(`${BASE_URL}/subjects`, {
-      headers: {
-        accept: 'application/json'
-      }
-    });
-
+    const res = await authFetch(`${BASE_URL}/subjects`);
     if (!res.ok) {
       throw new Error('Failed to fetch subjects');
     }
-
     const data = await res.json();
     console.log("All subjects API response:", data);
-    
-    // Handle response structure
     if (data.data && Array.isArray(data.data)) {
       return data.data;
     } else if (Array.isArray(data)) {
@@ -625,19 +485,12 @@ export const getAllSubjects = async () => {
 };
 
 // Get Subject by ID
-// GET /v1/subjects/{subjectId}
 export const getSubjectById = async (subjectId) => {
   try {
-    const res = await fetch(`${BASE_URL}/subjects/${subjectId}`, {
-      headers: {
-        accept: 'application/json'
-      }
-    });
-
+    const res = await authFetch(`${BASE_URL}/subjects/${subjectId}`);
     if (!res.ok) {
       throw new Error('Failed to fetch subject');
     }
-
     const data = await res.json();
     return data.data || data;
   } catch (error) {
@@ -647,22 +500,15 @@ export const getSubjectById = async (subjectId) => {
 };
 
 // Create Subject
-// POST /v1/subjects
 export const createSubject = async (subjectData) => {
   try {
-    const res = await fetch(`${BASE_URL}/subjects`, {
+    const res = await authFetch(`${BASE_URL}/subjects`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        accept: 'application/json'
-      },
-      body: JSON.stringify(subjectData)
+      body: JSON.stringify(subjectData),
     });
-
     if (!res.ok) {
       throw new Error('Failed to create subject');
     }
-
     const data = await res.json();
     return data.data || data;
   } catch (error) {
@@ -672,22 +518,15 @@ export const createSubject = async (subjectData) => {
 };
 
 // Update Subject
-// PUT /v1/subjects/{subjectId}
 export const updateSubject = async (subjectId, subjectData) => {
   try {
-    const res = await fetch(`${BASE_URL}/subjects/${subjectId}`, {
+    const res = await authFetch(`${BASE_URL}/subjects/${subjectId}`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        accept: 'application/json'
-      },
-      body: JSON.stringify(subjectData)
+      body: JSON.stringify(subjectData),
     });
-
     if (!res.ok) {
       throw new Error('Failed to update subject');
     }
-
     const data = await res.json();
     return data.data || data;
   } catch (error) {
