@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import CardComponent from '../../Components/CommonComp/CardComponent';
-import CardLoader from '../../Components/CommonComp/CardLoader'; // ← imported here
+import CardLoader from '../../Components/CommonComp/CardLoader';
 import {
   ThumbsUpIcon,
   ClockIcon,

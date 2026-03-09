@@ -123,27 +123,27 @@ function AddNewStudent() {
 
     const buildFamilyErrors = (data) => {
         const e = {};
-        if (!data.fatherName.trim())       e.fatherName       = "Father's name is required";
+        if (!data.fatherName.trim()) e.fatherName = "Father's name is required";
         if (!data.fatherOccupation.trim()) e.fatherOccupation = "Father's occupation is required";
-        if (!data.fatherPhone)             e.fatherPhone      = "Father's phone is required";
+        if (!data.fatherPhone) e.fatherPhone = "Father's phone is required";
         else if (!phoneRegex.test(data.fatherPhone)) e.fatherPhone = "Must be exactly 10 digits";
-        if (!data.fatherEmail.trim())      e.fatherEmail      = "Father's email is required";
+        if (!data.fatherEmail.trim()) e.fatherEmail = "Father's email is required";
         else if (!emailRegex.test(data.fatherEmail)) e.fatherEmail = "Invalid email format";
 
-        if (!data.motherName.trim())       e.motherName       = "Mother's name is required";
+        if (!data.motherName.trim()) e.motherName = "Mother's name is required";
         if (!data.motherOccupation.trim()) e.motherOccupation = "Mother's occupation is required";
-        if (!data.motherPhone)             e.motherPhone      = "Mother's phone is required";
+        if (!data.motherPhone) e.motherPhone = "Mother's phone is required";
         else if (!phoneRegex.test(data.motherPhone)) e.motherPhone = "Must be exactly 10 digits";
-        if (!data.motherEmail.trim())      e.motherEmail      = "Mother's email is required";
+        if (!data.motherEmail.trim()) e.motherEmail = "Mother's email is required";
         else if (!emailRegex.test(data.motherEmail)) e.motherEmail = "Invalid email format";
 
-        if (!data.guardianName.trim())     e.guardianName     = "Guardian's name is required";
-        if (!data.guardianRelation)        e.guardianRelation = "Relation is required";
-        if (!data.guardianPhone)           e.guardianPhone    = "Guardian's phone is required";
+        if (!data.guardianName.trim()) e.guardianName = "Guardian's name is required";
+        if (!data.guardianRelation) e.guardianRelation = "Relation is required";
+        if (!data.guardianPhone) e.guardianPhone = "Guardian's phone is required";
         else if (!phoneRegex.test(data.guardianPhone)) e.guardianPhone = "Must be exactly 10 digits";
         if (data.guardianEmail && !emailRegex.test(data.guardianEmail)) e.guardianEmail = "Invalid email format";
 
-        if (!data.emergencyContact)        e.emergencyContact = "Emergency contact is required";
+        if (!data.emergencyContact) e.emergencyContact = "Emergency contact is required";
         else if (!phoneRegex.test(data.emergencyContact)) e.emergencyContact = "Must be exactly 10 digits";
 
         return e;
@@ -285,11 +285,10 @@ function AddNewStudent() {
                                 <button
                                     type="button"
                                     onClick={() => setActiveTab('personal')}
-                                    className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${
-                                        activeTab === 'personal'
+                                    className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'personal'
                                             ? 'border-blue-600 text-blue-600'
                                             : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                                    }`}
+                                        }`}
                                 >
                                     <User size={20} />
                                     <span className="hidden sm:inline">Personal Details</span>
@@ -300,11 +299,10 @@ function AddNewStudent() {
                                 <button
                                     type="button"
                                     onClick={() => handleTabClick('family')}
-                                    className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${
-                                        activeTab === 'family'
+                                    className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'family'
                                             ? 'border-blue-600 text-blue-600'
                                             : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                                    }`}
+                                        }`}
                                 >
                                     <Users size={20} />
                                     <span className="hidden sm:inline">Family Details</span>
@@ -360,11 +358,10 @@ function AddNewStudent() {
                                         disabled={isSubmitting}
                                         type="button"
                                         onClick={handleSaveDetails}
-                                        className={`px-6 py-2.5 text-sm font-medium rounded-lg transition-all ${
-                                            isSubmitting
+                                        className={`px-6 py-2.5 text-sm font-medium rounded-lg transition-all ${isSubmitting
                                                 ? 'bg-blue-300 cursor-not-allowed text-white'
                                                 : 'bg-blue-500 hover:bg-blue-600 cursor-pointer text-white'
-                                        }`}
+                                            }`}
                                     >
                                         {isSubmitting ? (
                                             <span className="flex items-center justify-center gap-2">

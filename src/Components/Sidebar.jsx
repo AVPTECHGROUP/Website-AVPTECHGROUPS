@@ -10,7 +10,9 @@ import {
   IndianRupee,
   ChevronDown,
   ChevronRight,
-  UserCog
+  UserCog,
+  Package,
+  Bus
 } from 'lucide-react'
 import { useState, useEffect, useContext } from 'react'
 import { UserContext } from '../ContextAPI/UserContext'
@@ -88,6 +90,74 @@ const menuItems = [
       {
         label: <span className="text-sm text-gray-600 hover:text-blue-600">Holiday Management</span>,
         route: '/leaves/manageHolidays',
+        roles: ['ADMIN', 'SUPER_ADMIN'],
+      }
+    ]
+  },
+  {
+    id: 'stock',
+    icon: Package,
+    label: <span className="font-semibold">Stock</span>,
+    route: '/stock',
+    roles: ['ADMIN', 'SUPER_ADMIN', 'TEACHER', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST'],
+    subItems: [
+      {
+        label: <span className="text-sm text-gray-600 hover:text-blue-600">Stores</span>,
+        route: '/stock/stores',
+        roles: ['ADMIN', 'TEACHER', 'SUPER_ADMIN', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST'],
+      },
+      {
+        label: <span className="text-sm text-gray-600 hover:text-blue-600">Items</span>,
+        route: 'stock/items',
+        roles: ['ADMIN', 'TEACHER', 'SUPER_ADMIN', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST'],
+      },
+      {
+        label: <span className="text-sm text-gray-600 hover:text-blue-600">Transactions</span>,
+        route: 'stock/transactions',
+        roles: ['ADMIN', 'SUPER_ADMIN'],
+      },
+      {
+        label: <span className="text-sm text-gray-600 hover:text-blue-600">Movement History</span>,
+        route: 'stock/movementHistory',
+        roles: ['ADMIN', 'SUPER_ADMIN'],
+      }
+    ]
+  },
+  {
+    id: 'transport',
+    icon: Bus,
+    label: <span className="font-semibold">Transport </span>,
+    route: '/route',
+    roles: ['ADMIN', 'SUPER_ADMIN','PRINCIPAL'],
+    subItems: [
+      {
+        label: <span className="text-sm text-gray-600 hover:text-blue-600">Vehicles</span>,
+        route: '/route/vehicles',
+        roles: ['ADMIN','SUPER_ADMIN', 'PRINCIPAL'],
+      },
+      {
+        label: <span className="text-sm text-gray-600 hover:text-blue-600">Driver & Attendants</span>,
+        route: '/route/Driver&Attendants',
+        roles: ['ADMIN','SUPER_ADMIN','PRINCIPAL'],
+      },
+      {
+        label: <span className="text-sm text-gray-600 hover:text-blue-600">Routes</span>,
+        route: '/route/routes_management',
+        roles: ['ADMIN', 'SUPER_ADMIN'],
+      },
+      {
+        label: <span className="text-sm text-gray-600 hover:text-blue-600">Student Allocations</span>,
+        route: '/route/studentAllocations',
+        roles: ['ADMIN', 'SUPER_ADMIN'],
+      },
+      {
+        label: <span className="text-sm text-gray-600 hover:text-blue-600">Fee Plans</span>,
+        route: '/route/feePlans',
+        roles: ['ADMIN', 'SUPER_ADMIN'],
+      },
+      { 
+        label: <span className="text-sm text-gray-600 hover:text-blue-600">Reports</span>,
+        route: '/route/reports',
         roles: ['ADMIN', 'SUPER_ADMIN'],
       }
     ]
@@ -260,7 +330,6 @@ const Sidebar = ({
                 )}
               </button>
 
-              {/* Dropdown Sub-items */}
               {sidebarOpen && hasSubItems && isOpen && (
                 <div className="ml-4 mt-1 space-y-1">
                   {item.subItems.map((subItem, index) => (

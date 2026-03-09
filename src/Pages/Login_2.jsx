@@ -2,7 +2,7 @@ import { Eye, EyeOff, LockKeyhole, Mail, ShieldCheck, Moon, Sun } from 'lucide-r
 import React, { useContext, useEffect, useState } from 'react'
 import worker_1 from '../assets/Images/worker_1.jpg'
 import { useNavigate } from 'react-router-dom'
-import { loginAPI } from '../Api/AuthApi' // Import the login API
+import { loginAPI } from '../Api/AuthApi'
 import { UserContext } from '../ContextAPI/UserContext'
 
 const Login_2 = ({ onLoginSuccess }) => {
@@ -84,7 +84,7 @@ const Login_2 = ({ onLoginSuccess }) => {
         <>
             <div className={`min-h-screen relative flex items-center flex-col justify-center p-4 transition-colors duration-300 ${isDark ? 'bg-gray-900' : 'bg-blue-100'}`}>
 
-                <h1 className={`text-center font-bold sm:p-8 p-5 sm:text-3xl text-[16px] transition-colors duration-300 ${isDark ? 'text-blue-400' : 'text-black'}`}>School Payroll & Attendance Management System</h1>
+                <h1 className={`text-center font-bold sm:p-8 p-5 sm:text-3xl text-[16px] transition-colors duration-300 ${isDark ? 'text-blue-400' : 'text-black'}`}>School Management Portal</h1>
                 <div className='flex flex-col sm:flex-row'>
 
                     <div className={`sm:w-full max-w-md shadow-xl sm:p-1 sm:mt-0 mt-4 p-5 flex items-center flex-col pt-10 sm:rounded-tl-xl sm:rounded-bl-xl rounded-tl-xl transition-colors duration-300 ${isDark ? 'bg-gray-800' : 'bg-blue-50'}`}>
@@ -94,8 +94,7 @@ const Login_2 = ({ onLoginSuccess }) => {
                     <div className={`w-full sm:h-full max-w-md sm:rounded-tr-xl sm:rounded-br-xl rounded-br-xl shadow-xl p-8 transition-colors duration-300 ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
 
                         {/* Heading of the form */}
-                        <h1 className={`text-center text-2xl font-bold tracking-wide leading-tight mb-2 transition-colors duration-300 ${isDark ? 'text-white' : 'text-gray-900'}`}>Super Admin Login</h1>
-                        <p className={`text-center mb-1 font-normal transition-colors duration-300 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Secure access to the School Payroll & Attendance System</p>
+                        <h1 className={`text-center text-2xl font-bold tracking-wide leading-tight mb-2 transition-colors duration-300 ${isDark ? 'text-white' : 'text-gray-900'}`}>System Login</h1>
 
                         {/* Login Error Message */}
                         {loginError && (
