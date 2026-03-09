@@ -7,7 +7,15 @@ const getAllLeaveReq = `/admin/all`;
 //List all statistics
 export const getALLLeavesStatistics = async () => {
   try {
-    const res = await fetch(`${BASE_URL + leaveStatistics}`);
+    const token=localStorage.getItem("token");
+    const res = await fetch(`${BASE_URL + leaveStatistics}`,{
+      method:"GET",
+      headers:{
+        Accept:"Application/json",
+        Authorization:`Bearer ${token}`,
+
+      }
+    });
     if (!res.ok) {
       const errorText = await res.text();
       throw new Error(errorText || "Failed to fetch statistics");
@@ -23,6 +31,7 @@ export const getALLLeavesStatistics = async () => {
 // List All Leave Request with pagination 
 export const getAllLeaveRequest = async (page = 0, size = 10, sort = 'id', statusVal = '', leavetypeVal = '', userNameVal = '', fromDateVal = "", toDateVal = "") => {
   try {
+    const token=localStorage.getItem("token");
     // Format date to yyyy-mm-dd
     const formatDate = (date) => {
       if (!date) return null;
@@ -64,7 +73,12 @@ export const getAllLeaveRequest = async (page = 0, size = 10, sort = 'id', statu
     // Build final URL
     const url = `${BASE_URL}${getAllLeaveReq}?${params.toString()}`;
 
-    const res = await fetch(url);
+    const res = await fetch(url,{
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`},
+      });
 
     if (!res.ok) {
       const errorText = await res.text();
@@ -87,11 +101,14 @@ export const getAllLeaveRequest = async (page = 0, size = 10, sort = 'id', statu
 //for approove leave 
 export const approoveRejLeaveReq = async (leaveId, remarksVal = 'As per the policy', actionVal = 'APPROVED') => {
   try {
+    const token =localStorage.getItem("token");
     const res = await fetch(`${BASE_URL}/admin/${leaveId}/review`, {
       method: 'PATCH',
       headers: {
-        "Content-Type": "application/json",
-        accept: "application/json",
+        "application-Type": "application/json",
+        Accept: "application/json",
+        Authorization:`Bearer ${token}`,
+
       },
       body: JSON.stringify(
         {
@@ -112,10 +129,12 @@ export const approoveRejLeaveReq = async (leaveId, remarksVal = 'As per the poli
 //for reject leave 
 export const CancelUserlLeaveReq = async (leaveId, userId) => {
   try {
+    const token =localStorage.getItem("token");
     const res = await fetch(`${BASE_URL}/${leaveId}/cancel?userId=${userId}`, {
       method: 'PATCH',
       headers: {
-        Accept: 'application/json'
+        Accept: 'application/json',
+        Authorization:`Bearer ${token}`,
       }
     })
     if (!res.ok) throw new Error('Failed to Reject Leave Request');
@@ -129,11 +148,13 @@ export const CancelUserlLeaveReq = async (leaveId, userId) => {
 
 // new leave request apply for user
 export const createLeaveRequest = async (user) => {
+  const token=localStorage.getItem("token");
   const res = await fetch(`${BASE_URL}/apply`, {
     method: "POST",
     headers: {
-      "Content-Type": "application/json",
-      accept: "application/json",
+      
+      Accept: "application/json",
+      Authorization:`Bearer ${token}`,
     },
     body: JSON.stringify(user),
   });
@@ -157,8 +178,16 @@ export const createLeaveRequest = async (user) => {
 
 // user balance statistics
 export const getUsersLeaveBalance = async (userId) => {
-  try {
-    const res = await fetch(`${BASE_URL + `/user/${userId}/balance`}`);
+  try 
+  {
+    const token=localStorage.getItem("token");
+    const res = await fetch(`${BASE_URL + `/user/${userId}/balance`}`,{
+      method:"GET",
+      headers:{
+        Accept:"application/json",
+        Authorization:`Bearer ${token}`,
+      }
+    });
     if (!res.ok) {
       const errorText = await res.text();
       throw new Error(errorText || "Failed to fetch leave balance statistics");
@@ -175,7 +204,14 @@ export const getUsersLeaveBalance = async (userId) => {
 //List all request for specific user
 export const getUserLeaveRequest = async (userId) => {
   try {
-    const res = await fetch(`${BASE_URL + `/user/${userId}`}`);
+    const token=localStorage.getItem("token");
+    const res = await fetch(`${BASE_URL + `/user/${userId}`}`,{
+      method:"GET",
+      headers:{
+        Accept:"application/json",
+        Authorization:`Bearer ${token}`,
+      }
+    });
     if (!res.ok) {
       const errorData = await res.json();
       throw new Error(errorData.message || `Request failed with status ${res.status}`);

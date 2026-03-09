@@ -1,5 +1,6 @@
 const BASE_URL = "https://ssdev-btgphuazhza9edcu.canadacentral-01.azurewebsites.net/api";
 
+
 export const attendanceEnroll = async ({ userId, userType, images }) => {
   try {
     if (!userId || !userType) {

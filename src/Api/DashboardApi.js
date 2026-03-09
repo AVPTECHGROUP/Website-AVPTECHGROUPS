@@ -3,10 +3,12 @@ const BASE_URL = "https://ssdev-btgphuazhza9edcu.canadacentral-01.azurewebsites.
 // Get Dashboard Analytics
 export const getDashboardAnalytics = async () => {
   try {
+    const token =localStorage.getItem("token");
     const res = await fetch(`${BASE_URL}/dashboard/stats`, {
       method: "GET",
       headers: {
         Accept: "application/json",
+        Authorization:`Bearer ${token}`,
       },
     });
 
@@ -24,12 +26,14 @@ export const getDashboardAnalytics = async () => {
 // Get Upcoming Holidays
 export const getUpcomingHolidays = async (limit = 5) => {
   try {
+    const token =localStorage.getItem("token")
     const res = await fetch(
       `${BASE_URL}/dashboard/upcoming-holidays?limit=${limit}`,
       {
         method: "GET",
         headers: {
           Accept: "application/json",
+          Authorization:`Bearer ${token}`,
         },
       }
     );

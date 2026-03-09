@@ -18,16 +18,18 @@ export const loginAPI = async (credentials) => {
 
     // Check if the response was not successful
     if (!res.ok || data.success === false) {
-      // Extract error message from the response
       const errorMessage = data.message || 'Invalid email or password';
       throw new Error(errorMessage);
     }
 
-    // Return successful response
+    // Save token directly to localStorage — UserContext syncs automatically via its useEffect
+    if (data.token) {
+      localStorage.setItem("token", data.token);
+    }
+
     return data;
   } catch (error) {
     console.error('loginAPI error:', error.message);
-    // Re-throw with a user-friendly message
     if (error.message.includes('fetch')) {
       throw new Error('Unable to connect to server. Please check your internet connection.');
     }
@@ -35,41 +37,43 @@ export const loginAPI = async (credentials) => {
   }
 };
 
-// Logout API (if needed)
+// Logout API
 export const logoutAPI = async () => {
+  const token = localStorage.getItem("token");
+
   try {
-    const token = localStorage.getItem('token');
-    
     const res = await fetch(`${BASE_URL}/auth/logout`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        accept: 'application/json',
-        'Authorization': `Bearer ${token}`
-      }
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+      },
     });
 
     if (!res.ok) {
       const errorText = await res.text();
-      throw new Error(errorText || 'Logout failed');
+      throw new Error(errorText || "Logout failed");
     }
 
-    // Clear local storage
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-
     return { success: true };
+
   } catch (error) {
-    console.error('logoutAPI error:', error.message);
+    console.error("logoutAPI error:", error.message);
     throw error;
+
+  } finally {
+    // Always clear storage even if API fails
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
   }
 };
 
-// Verify Token (optional - for checking if user is authenticated)
+// Verify Token
 export const verifyToken = async () => {
   try {
     const token = localStorage.getItem('token');
-    
+
     if (!token) {
       throw new Error('No token found');
     }
@@ -95,11 +99,11 @@ export const verifyToken = async () => {
   }
 };
 
-// Refresh Token (if your API supports it)
+// Refresh Token
 export const refreshToken = async () => {
   try {
     const token = localStorage.getItem('token');
-    
+
     const res = await fetch(`${BASE_URL}/auth/refresh`, {
       method: 'POST',
       headers: {
@@ -114,8 +118,7 @@ export const refreshToken = async () => {
     }
 
     const data = await res.json();
-    
-    // Update token in localStorage
+
     if (data.token) {
       localStorage.setItem('token', data.token);
     }

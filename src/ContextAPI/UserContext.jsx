@@ -5,10 +5,12 @@ export const UserContext = createContext();
 
 export const UserProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [token, setToken] = useState(localStorage.getItem("token"));
 
   useEffect(() => {
     try {
       const decodedToken = getCurrUserDetails();
+
       if (decodedToken) {
         setUser({
           id: decodedToken.userId,
@@ -20,10 +22,23 @@ export const UserProvider = ({ children }) => {
     } catch (error) {
       setUser(null);
     }
-  }, []);
+  }, [token]);
+
+  const saveToken = (newToken) => {
+    localStorage.setItem("token", newToken);
+    setToken(newToken);
+  };
+
+  const logout = () => {
+    localStorage.removeItem("token");
+    setToken(null);
+    setUser(null);
+  };
 
   return (
-    <UserContext.Provider value={{ user, setUser }}>
+    <UserContext.Provider
+      value={{ user, setUser, token, saveToken, logout }}
+    >
       {children}
     </UserContext.Provider>
   );

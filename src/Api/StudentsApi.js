@@ -3,9 +3,12 @@ const BASE_URL = "https://ssdev-btgphuazhza9edcu.canadacentral-01.azurewebsites.
 // Listing of Students
 export const getStudents = async (page = 0, size = 10, sort = 'id') => {
     try {
+        const token=localStorage.getItem("token");
         const res = await fetch(`${BASE_URL}/students/paginated?page=${page}&size=${size}&sort=${sort}`, {
+            method:"GET",
             headers: {
-                accept: "application/json"
+                Accept: "application/json",
+                Authorization:`Bearer ${token}`,
             }
         });
         if (!res.ok) {
@@ -23,6 +26,7 @@ export const getStudents = async (page = 0, size = 10, sort = 'id') => {
 // Create new Student
 export const createStudents = async (studentData) => {
     try {
+        const token=localStorage.getItem("token");
         console.log("Sending to:", `${BASE_URL}/students`);
         console.log("Payload:", JSON.stringify(studentData, null, 2));
 
@@ -31,6 +35,7 @@ export const createStudents = async (studentData) => {
             headers: {
                 'Content-Type': 'application/json',
                 Accept: 'application/json',
+                Authorization:`Bearer ${token}`,
             },
             body: JSON.stringify(studentData),
         });
@@ -58,7 +63,7 @@ export const createStudents = async (studentData) => {
 
         return data;
     } catch (error) {
-        console.error('❌ CREATE STUDENT ERROR:', error.message);
+        console.error(' CREATE STUDENT ERROR:', error.message);
         throw error;
     }
 };
@@ -66,7 +71,14 @@ export const createStudents = async (studentData) => {
 // Get Student by Id
 export const getStudentById = async (id) => {
     try {
-        const res = await fetch(`${BASE_URL}/students/${id}`);
+        const token=localStorage.getItem("token");
+        const res = await fetch(`${BASE_URL}/students/${id}`,{
+            method:"GET",
+            headers:{
+                Accept:"application/json",
+                Authorization:`Bearer ${token}`,
+            }
+        });
         if (!res.ok) throw new Error("Failed to fetch Student");
         const data = await res.json();
         return data.data || data;
@@ -79,9 +91,10 @@ export const getStudentById = async (id) => {
 // Updating a Student
 export const updateStudent = async (id, updatedStudent) => {
     try {
+        const token=localStorage.getItem("token");
         const res = await fetch(`${BASE_URL}/students/${id}`, {
             method: 'PUT',
-            headers: { "Content-Type": "application/json", accept: "application/json" },
+            headers: { "Content-Type": "application/json", Accept: "application/json" ,Authorization:`Bearer ${token}`,},
             body: JSON.stringify(updatedStudent)
         });
         if (!res.ok) throw new Error('Failed to update Student');
@@ -95,11 +108,13 @@ export const updateStudent = async (id, updatedStudent) => {
 // Search Student
 export const searchStudents = async (filters = {}, page, size = 10, sort = 'id') => {
     try {
+        const token=localStorage.getItem("token");
         const res = await fetch(`${BASE_URL}/students/search/paginated?page=${page}&size=${size}&sort=${sort}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                accept: 'application/json'
+                Accept: 'application/json',
+                Authorization:`Bearer ${token}`,
             },
             body: JSON.stringify(filters)
         });

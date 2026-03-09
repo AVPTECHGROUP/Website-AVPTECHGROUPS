@@ -4,7 +4,14 @@ const BASE_URL = "https://ssdev-btgphuazhza9edcu.canadacentral-01.azurewebsites.
 //List all statistics
 export const getTeacherStatistics = async () => {
   try {
-    const res = await fetch(`${BASE_URL}/teachers/statistics`);
+    const token=localStorage.getItem("token");
+    const res = await fetch(`${BASE_URL}/teachers/statistics`,{
+      method:"GET",
+      headers:{
+        Accept:"application/json",
+        Authorization:`Bearer ${token}`,
+      }
+    });
     if (!res.ok) {
       const errorText = await res.text();
       throw new Error(errorText || "Failed to fetch statistics");
@@ -19,8 +26,16 @@ export const getTeacherStatistics = async () => {
 // List All Teacher with pagination 
 export const getTeachers = async (page = 0, size = 10, sort = 'id') => {
   try {
+    const token =localStorage.getItem("token");
     const res = await fetch(
-      `${BASE_URL}/teachers/paginated?page=${page}&size=${size}&sort=${sort}`
+      `${BASE_URL}/teachers/paginated?page=${page}&size=${size}&sort=${sort}`,
+      {
+        method:"GET",
+      headers:{
+        Accept:"application/json",
+        Authorization:`Bearer ${token}`,
+      }
+      }
     );
 
     if (!res.ok) {
@@ -38,11 +53,13 @@ export const getTeachers = async (page = 0, size = 10, sort = 'id') => {
 
 // Creating a Teacher
 export const createTeachers = async (teacher) => {
+  const token=localStorage.getItem("token");
   const res = await fetch(`${BASE_URL}/teachers`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      accept: "application/json",
+      Accept: "application/json",
+      Authorization:`Bearer ${token}`,
     },
     body: JSON.stringify(teacher),
   });
@@ -60,7 +77,14 @@ export const createTeachers = async (teacher) => {
 // Get Teacher by Id
 export const getTeacherById = async (id) => {
   try {
-    const res = await fetch(`${BASE_URL}/teachers/${id}`);
+    const token=localStorage.getItem("token");
+    const res = await fetch(`${BASE_URL}/teachers/${id}`,{
+       method:"POST",
+      headers:{
+        Accept:"application/json",
+        Authorization:`Bearer ${token}`,
+      }
+    });
     if (!res.ok) throw new Error("Failed to fetch Teacher");
     const data = await res.json();
     return data.data || data;
@@ -73,9 +97,10 @@ export const getTeacherById = async (id) => {
 // Updating a Teacher
 export const updateTeacher = async (id, updatedTeacher) => {
   try {
+    const token=localStorage.getItem("token");
     const res = await fetch(`${BASE_URL}/teachers/${id}`, {
       method: 'PUT',
-      headers: { "Content-Type": "application/json", accept: "application/json" },
+      headers: { "Content-Type": "application/json", Accept: "application/json",Authorization:`Bearer ${token}` },
       body: JSON.stringify(updatedTeacher)
     });
     if (!res.ok) throw new Error('Failed to update Teacher');
@@ -89,11 +114,13 @@ export const updateTeacher = async (id, updatedTeacher) => {
 // Search Teachers
 export const searchTeachers = async (filters = {}, page, size = 10, sort = 'id') => {
   try {
+    const token=localStorage.getItem("token");
     const res = await fetch(`${BASE_URL}/teachers/search/paginated?page=${page}&size=${size}&sort=${sort}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        accept: 'application/json'
+        Accept: 'application/json',
+        Authorization:`Bearer ${token}`,
       },
       body: JSON.stringify(filters)
     });
@@ -113,9 +140,11 @@ export const searchTeachers = async (filters = {}, page, size = 10, sort = 'id')
 // Get Teacher Salary
 export const getTeacherSalary = async (id) => {
   try {
+    const token=localStorage.getItem("token");
     const res = await fetch(`${BASE_URL}/teachers/${id}/salary-structure`, {
       headers: {
-        accept: 'application/json'
+        Accept: 'application/json',
+        Authorization:`Bearer ${token}`,
       }
     });
     
@@ -135,11 +164,13 @@ export const getTeacherSalary = async (id) => {
 // Update Teacher Salary
 export const updateSalary = async (id, updatedSalary) => {
   try {
+    const token=localStorage.getItem("token");
     const res = await fetch(`${BASE_URL}/teachers/${id}/salary-structure`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        accept: 'application/json'
+        Accept: 'application/json',
+        Authorization:`Bearer ${token}`,
       },
       body: JSON.stringify(updatedSalary)
     });
@@ -161,10 +192,12 @@ export const updateSalary = async (id, updatedSalary) => {
 // activate teacher status--->
 export const activateStatus=async(id)=>{
   try {
+    const token=localStorage.getItem("token");
     const res=await fetch(`${BASE_URL}/teachers/${id}/activate`,{
       method:'PATCH',
       headers:{
-        Accept:'application/json'
+        Accept:'application/json',
+        Authorization:`Bearer ${token}`,
       }})
       if(!res.ok) throw new Error('Failed to Activate Teacher')
       const data=await res.json()
@@ -179,10 +212,12 @@ export const activateStatus=async(id)=>{
 export const deactivateStatus=async(id)=>{
 
   try {
+    const token=localStorage.getItem("token");
     const res=await fetch(`${BASE_URL}/teachers/${id}/deactivate`,{
       method:'PATCH',
       headers:{
-        Accept:'application/json'
+        Accept:'application/json',
+        Authorization:`Bearer ${token}`,
       }})
       if(!res.ok) throw new Error('Failed to Deactivate Teacher')
       const data=await res.json()
@@ -200,9 +235,11 @@ export const deactivateStatus=async(id)=>{
 // GET /v1/teachers/{teacherId}/assignments
 export const getTeacherAssignment = async (teacherId) => {
   try {
+    const token=localStorage.getItem("token");
     const res = await fetch(`${BASE_URL}/teachers/${teacherId}/assignments`, {
       headers: {
-        accept: 'application/json'
+        Accept: 'application/json',
+        Authorization:`Bearer ${token}`,
       }
     });
     
@@ -224,12 +261,13 @@ export const getTeacherAssignment = async (teacherId) => {
 export const createTeacherAssignment = async (teacherId, assignmentData) => {
   try {
     console.log("Creating assignment with data:", assignmentData);
-    
+    const token=localStorage.getItem("token");
     const res = await fetch(`${BASE_URL}/teachers/${teacherId}/assignments`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        accept: 'application/json'
+        Accept: 'application/json',
+        Authorization:`Bearer ${token}`,
       },
       body: JSON.stringify(assignmentData)
     });
@@ -248,9 +286,12 @@ export const createTeacherAssignment = async (teacherId, assignmentData) => {
 //get teachers active assignments
 export const getTeachersActiveAssignments = async (teacherId) => {
   try {
+    const token =localStorage.getItem("token");
     const res = await fetch(`${BASE_URL}/teachers/${teacherId}/assignments/active`, {
+      method:"GET",
       headers: {
-        accept: 'application/json'
+        Accept: 'application/json',
+        Authorization:`Bearer ${token}`,
       }
     });
     
@@ -270,11 +311,13 @@ export const getTeachersActiveAssignments = async (teacherId) => {
 // PUT /v1/teachers/assignments/{assignmentId}
 export const updateTeacherAssignment = async (assignmentId, updatedAssignment) => {
   try {
+    const token=localStorage.getItem("token");
     const res = await fetch(`${BASE_URL}/teachers/assignments/${assignmentId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        accept: 'application/json'
+        Accept: 'application/json',
+        Authorization:`Bearer ${token}`,
       },
       body: JSON.stringify(updatedAssignment)
     });
@@ -296,10 +339,12 @@ export const updateTeacherAssignment = async (assignmentId, updatedAssignment) =
 // DELETE /v1/teachers/assignments/{assignmentId}
 export const deleteTeacherAssignment = async (assignmentId) => {
   try {
+    const token=localStorage.getItem("token");
     const res = await fetch(`${BASE_URL}/teachers/assignments/${assignmentId}`, {
       method: 'DELETE',
       headers: {
-        accept: 'application/json'
+        Accept: 'application/json',
+        Authorization:`Bearer ${token}`,
       }
     });
 
@@ -322,9 +367,11 @@ export const deleteTeacherAssignment = async (assignmentId) => {
 // RESPONSE: { success, message, data: [{id, name, ...}] }
 export const getClasses = async () => {
   try {
+    const token=localStorage.getItem("token");
     const res = await fetch(`${BASE_URL}/classes`, {
       headers: {
-        accept: 'application/json'
+        Accept: 'application/json',
+        Authorization:`Bearer ${token}`,
       }
     });
 
@@ -356,9 +403,11 @@ export const getClasses = async () => {
 // GET /v1/classes/{classId}
 export const getClassById = async (classId) => {
   try {
+    const token=localStorage.getItem("token");
     const res = await fetch(`${BASE_URL}/classes/${classId}`, {
       headers: {
-        accept: 'application/json'
+        Accept: 'application/json',
+        Authorization:`Bearer ${token}`,
       }
     });
 
@@ -378,11 +427,13 @@ export const getClassById = async (classId) => {
 // POST /v1/classes
 export const createClass = async (classData) => {
   try {
+    const token=localStorage.getItem("token");
     const res = await fetch(`${BASE_URL}/classes`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        accept: 'application/json'
+        Accept: 'application/json',
+        Authorization:`Bearer ${token}`,
       },
       body: JSON.stringify(classData)
     });
@@ -403,11 +454,13 @@ export const createClass = async (classData) => {
 // PUT /v1/classes/{classId}
 export const updateClass = async (classId, classData) => {
   try {
+    const token=localStorage.getItem("token");
     const res = await fetch(`${BASE_URL}/classes/${classId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        accept: 'application/json'
+        Accept: 'application/json',
+        Authorization:`Bearer ${token}`,
       },
       body: JSON.stringify(classData)
     });
@@ -431,9 +484,11 @@ export const updateClass = async (classId, classData) => {
 // RESPONSE: { success, message, data: [{id, name, ...}] }
 export const getSectionsByClass = async (classId) => {
   try {
+    const token=localStorage.getItem("token");
     const res = await fetch(`${BASE_URL}/sections/class/${classId}`, {
       headers: {
-        accept: 'application/json'
+        Accept: 'application/json',
+        Authorization:`Bearer ${token}`,
       }
     });
 
@@ -465,9 +520,11 @@ export const getSectionsByClass = async (classId) => {
 // GET /v1/sections/{sectionId}
 export const getSectionById = async (sectionId) => {
   try {
+    const token=localStorage.getItem("token");
     const res = await fetch(`${BASE_URL}/sections/${sectionId}`, {
       headers: {
-        accept: 'application/json'
+        Accept: 'application/json',
+        Authorization:`Bearer ${token}`,
       }
     });
 
@@ -487,11 +544,13 @@ export const getSectionById = async (sectionId) => {
 // POST /v1/sections
 export const createSection = async (sectionData) => {
   try {
+    const token=localStorage.getItem("token");
     const res = await fetch(`${BASE_URL}/sections`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        accept: 'application/json'
+        Accept: 'application/json',
+        Authorization:`Bearer ${token}`,
       },
       body: JSON.stringify(sectionData)
     });
@@ -512,11 +571,13 @@ export const createSection = async (sectionData) => {
 // PUT /v1/sections/{sectionId}
 export const updateSection = async (sectionId, sectionData) => {
   try {
+    const token=localStorage.getItem("token");
     const res = await fetch(`${BASE_URL}/sections/${sectionId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        accept: 'application/json'
+        Accept: 'application/json',
+        Authorization:`Bearer ${token}`,
       },
       body: JSON.stringify(sectionData)
     });
@@ -536,10 +597,12 @@ export const updateSection = async (sectionId, sectionData) => {
 // Get all section for sectionId->
 export const getAllSections = async () => {
   try {
+    const token=localStorage.getItem("token");
     const res = await fetch(`${BASE_URL}/sections`,{
       method: "GET",
       headers: {
-        accept: "application/json",
+        Accept: "application/json",
+        Authorization:`Bearer ${token}`,
       },
     });
 
@@ -564,14 +627,15 @@ export const getAllSections = async () => {
 // RESPONSE: { success, message, data: [{id, name, ...}] }
 export const getSubjectsBySection = async (sectionId) => {
   try {
+    const token=localStorage.getItem("token");
     const res = await fetch(`${BASE_URL}/section-subjects/section/${sectionId}`, {
-      headers: { accept: 'application/json' }
+      headers: { Accept: 'application/json',Authorization:`Bearer ${token}`, }
     });
 
     if (!res.ok) throw new Error('Failed to fetch subjects');
 
     const data = await res.json();
-    console.log("🔍 API Response:", data);
+    console.log(" API Response:", data);
     
     if (data && data.data && Array.isArray(data.data)) {
       // Transform API response: change subjectId→id, subjectName→name
@@ -581,7 +645,7 @@ export const getSubjectsBySection = async (sectionId) => {
         code: mapping.subjectCode
       }));
       
-      console.log("✅ Subjects extracted:", subjects);
+      console.log(" Subjects extracted:", subjects);
       return subjects;
     }
     
@@ -596,9 +660,11 @@ export const getSubjectsBySection = async (sectionId) => {
 // GET /v1/subjects
 export const getAllSubjects = async () => {
   try {
+    const token=localStorage.getItem("token");
     const res = await fetch(`${BASE_URL}/subjects`, {
       headers: {
-        accept: 'application/json'
+        Accept: 'application/json',
+        Authorization:`Bearer ${token}`,
       }
     });
 
@@ -628,9 +694,11 @@ export const getAllSubjects = async () => {
 // GET /v1/subjects/{subjectId}
 export const getSubjectById = async (subjectId) => {
   try {
+    const token=localStorage.getItem("token");
     const res = await fetch(`${BASE_URL}/subjects/${subjectId}`, {
       headers: {
-        accept: 'application/json'
+        Accept: 'application/json',
+        Authorization:`Bearer ${token}`,
       }
     });
 
@@ -650,11 +718,13 @@ export const getSubjectById = async (subjectId) => {
 // POST /v1/subjects
 export const createSubject = async (subjectData) => {
   try {
+    const token=localStorage.getItem("token");
     const res = await fetch(`${BASE_URL}/subjects`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        accept: 'application/json'
+        Accept: 'application/json',
+        Authorization:`Bearer ${token}`,
       },
       body: JSON.stringify(subjectData)
     });
@@ -675,11 +745,13 @@ export const createSubject = async (subjectData) => {
 // PUT /v1/subjects/{subjectId}
 export const updateSubject = async (subjectId, subjectData) => {
   try {
+    const token=localStorage.getItem("token");
     const res = await fetch(`${BASE_URL}/subjects/${subjectId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        accept: 'application/json'
+        Accept: 'application/json',
+        Authorization:`Bearer ${token}`,
       },
       body: JSON.stringify(subjectData)
     });
