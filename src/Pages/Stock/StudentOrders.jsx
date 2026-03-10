@@ -2,18 +2,17 @@ import { useState, useEffect, useCallback } from "react";
 import {
   ShoppingBag, Search, ChevronDown, Plus, SlidersHorizontal,
   CheckCircle, XCircle as XCircleIcon, Calendar,
-  ClipboardList, Eye, Pencil, CheckCheck, Ban, AlertTriangle, Loader2,
+  ClipboardList, Eye, Pencil, Ban, AlertTriangle, Loader2,
 } from "lucide-react";
-import CardComponent     from "../../Components/CommonComp/CardComponent";
-import CardLoader        from "../../Components/CommonComp/CardLoader";
-import ListLoader        from "../../Components/CommonComp/ListLoader";
+import CardComponent      from "../../Components/CommonComp/CardComponent";
+import CardLoader         from "../../Components/CommonComp/CardLoader";
+import ListLoader         from "../../Components/CommonComp/ListLoader";
 import ActionDropDownComp from "../../Components/CommonComp/ActionDropDownComp";
 import CreateStudentOrder from "../../Components/Stock/CreateStudentOrder";
 import ViewStudentOrder   from "../../Components/Stock/ViewOrder";
 import {
   getOrderStats,
   getStudentOrders,
-  confirmStudentOrder,
   cancelStudentOrder,
 } from "../../Api/StudentOrder";
 
@@ -53,13 +52,10 @@ function ToastContainer() {
     return () => clearTimeout(t);
   }, [toasts]);
   return (
-    <div className="fixed bottom-5 right-5 z-[9999] flex flex-col gap-2 items-end pointer-events-none">
+    <div className="fixed bottom-5 right-5 z-9999 flex flex-col gap-2 items-end pointer-events-none">
       {toasts.map((t) => (
-        <div
-          key={t.id}
-          className={`flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lg text-sm font-medium pointer-events-auto min-w-[220px] max-w-xs bg-white border
-            ${t.type === "success" ? "border-green-200 text-green-800" : "border-red-200 text-red-700"}`}
-        >
+        <div key={t.id} className={`flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lg text-sm font-medium pointer-events-auto min-w-55 max-w-xs bg-white border
+          ${t.type === "success" ? "border-green-200 text-green-800" : "border-red-200 text-red-700"}`}>
           {t.type === "success"
             ? <CheckCircle  className="w-4 h-4 text-green-500 shrink-0" />
             : <XCircleIcon  className="w-4 h-4 text-red-500   shrink-0" />}
@@ -75,15 +71,13 @@ function ToastContainer() {
 function CancelConfirmModal({ order, onConfirm, onClose, loading }) {
   if (!order) return null;
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-60 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm z-10 p-6 space-y-4 ccm-anim">
         <style>{`
           @keyframes ccmIn { from{opacity:0;transform:scale(.94) translateY(8px)} to{opacity:1;transform:scale(1) translateY(0)} }
           .ccm-anim { animation: ccmIn .18s ease-out forwards; }
         `}</style>
-
-        {/* Icon + heading */}
         <div className="flex items-start gap-4">
           <div className="w-11 h-11 rounded-full bg-red-100 flex items-center justify-center shrink-0">
             <AlertTriangle className="w-5 h-5 text-red-500" />
@@ -92,19 +86,15 @@ function CancelConfirmModal({ order, onConfirm, onClose, loading }) {
             <h3 className="text-base font-bold text-gray-800">Cancel Order?</h3>
             <p className="text-sm text-gray-500 mt-1">
               Are you sure you want to cancel{" "}
+              <span className="font-semibold text-gray-700">Order #{order.id}</span>{" "}
+              for{" "}
               <span className="font-semibold text-gray-700">
-                Order #{order.id}
-              </span>{" "}
-              for <span className="font-semibold text-gray-700">
                 {order.studentName || order.student?.name || "this student"}
               </span>?
-              <br />
               <span className="text-red-500 text-xs mt-1 block">This action cannot be undone.</span>
             </p>
           </div>
         </div>
-
-        {/* Buttons */}
         <div className="flex items-center justify-end gap-3 pt-2">
           <button
             onClick={onClose}
@@ -134,23 +124,16 @@ function fmtDate(d) {
   return new Date(d).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
 }
 
-// ─── Build ActionDropDown options per order status ────────────────
 function buildActionOptions(status) {
   const s = (status || "").toUpperCase();
-
   if (s === "DRAFT") {
     return [
-      { value: "view",    label: "View",    icon: Eye,       text: "text-blue-600",  bg: "bg-blue-50",  hover: "hover:bg-blue-100"  },
-      { value: "confirm", label: "Confirm", icon: CheckCheck, text: "text-green-700", bg: "bg-green-50", hover: "hover:bg-green-100" },
-      { value: "cancel",  label: "Cancel",  icon: Ban,        text: "text-red-500",   bg: "bg-red-50",   hover: "hover:bg-red-100"   },
+      { value: "edit",   label: "Edit",   icon: Pencil, text: "text-blue-600",  bg: "bg-blue-50",  hover: "hover:bg-blue-100"  },
+      { value: "view",   label: "View",   icon: Eye,    text: "text-gray-600",  bg: "bg-gray-50",  hover: "hover:bg-gray-100"  },
+      { value: "cancel", label: "Cancel", icon: Ban,    text: "text-red-500",   bg: "bg-red-50",   hover: "hover:bg-red-100"   },
     ];
   }
-  if (s === "CANCELLED") {
-    return [
-      { value: "view", label: "View", icon: Eye, text: "text-gray-600", bg: "bg-gray-50", hover: "hover:bg-gray-100" },
-    ];
-  }
-  // CONFIRMED / DELIVERED / DISPATCHED / etc.
+  // All other statuses: view only
   return [
     { value: "view", label: "View", icon: Eye, text: "text-blue-600", bg: "bg-blue-50", hover: "hover:bg-blue-100" },
   ];
@@ -173,23 +156,19 @@ export default function StudentOrders() {
   const [toDate,       setToDate]       = useState("");
 
   // Modals
-  const [showCreate,   setShowCreate]   = useState(false);
-  const [viewOrder,    setViewOrder]    = useState(null);
-  const [editOrder,    setEditOrder]    = useState(null);
+  const [showCreate,   setShowCreate]   = useState(false);   // new order
+  const [editOrderId,  setEditOrderId]  = useState(null);    // edit draft (order id)
+  const [viewOrder,    setViewOrder]    = useState(null);    // view modal
 
-  // Cancel modal state
-  const [cancelTarget,  setCancelTarget]  = useState(null);   // order to cancel
-  const [cancelling,    setCancelling]    = useState(false);
-
-  // Per-row confirm loading (keyed by order.id)
-  const [confirmingIds, setConfirmingIds] = useState(new Set());
+  // Cancel modal
+  const [cancelTarget, setCancelTarget] = useState(null);
+  const [cancelling,   setCancelling]   = useState(false);
 
   // ── Debounce search ──
   useEffect(() => {
     const t = setTimeout(() => { setSearch(searchInput); setPage(0); }, 400);
     return () => clearTimeout(t);
   }, [searchInput]);
-
   useEffect(() => { setPage(0); }, [statusFilter, fromDate, toDate]);
 
   // ── Fetch stats ──
@@ -237,28 +216,14 @@ export default function StudentOrders() {
     return pages;
   };
 
-  // ── After order created / saved ──
+  // ── Callbacks ──
   const handleOrderSaved = (status) => {
     setShowCreate(false);
+    setEditOrderId(null);
     toast.success(status === "DRAFT" ? "Order saved as draft." : "Order confirmed & stock issued.");
     fetchOrders(); fetchStats();
   };
 
-  // ── Confirm a DRAFT order ──
-  const handleConfirmOrder = async (order) => {
-    setConfirmingIds((prev) => new Set(prev).add(order.id));
-    try {
-      await confirmStudentOrder(order.id);
-      toast.success(`Order #${order.id} confirmed & stock issued.`);
-      fetchOrders(); fetchStats();
-    } catch (e) {
-      toast.error(`Failed to confirm: ${e.message}`);
-    } finally {
-      setConfirmingIds((prev) => { const s = new Set(prev); s.delete(order.id); return s; });
-    }
-  };
-
-  // ── Cancel an order — open modal first ──
   const handleCancelOrder = async () => {
     if (!cancelTarget) return;
     setCancelling(true);
@@ -269,16 +234,13 @@ export default function StudentOrders() {
       fetchOrders(); fetchStats();
     } catch (e) {
       toast.error(`Failed to cancel: ${e.message}`);
-    } finally {
-      setCancelling(false);
-    }
+    } finally { setCancelling(false); }
   };
 
-  // ── ActionDropDown dispatcher ──
-  const handleAction = (actionVal, order) => {
-    if (actionVal === "view")    setViewOrder(order);
-    if (actionVal === "confirm") handleConfirmOrder(order);
-    if (actionVal === "cancel")  setCancelTarget(order);
+  const handleAction = (val, order) => {
+    if (val === "view")   setViewOrder(order);
+    if (val === "edit")   setEditOrderId(order.id);
+    if (val === "cancel") setCancelTarget(order);
   };
 
   // ─── Stat cards ───────────────────────────────────────────────
@@ -292,7 +254,6 @@ export default function StudentOrders() {
     <>
       <ToastContainer />
 
-      {/* ── Cancel Confirmation Modal ── */}
       <CancelConfirmModal
         order={cancelTarget}
         onClose={() => { if (!cancelling) setCancelTarget(null); }}
@@ -310,7 +271,7 @@ export default function StudentOrders() {
           </p>
         </div>
 
-        {/* ── Stat Cards + New Order card ── */}
+        {/* ── Stat Cards + New Order tile ── */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           {statsLoading
             ? Array.from({ length: 3 }).map((_, i) => <CardLoader key={i} />)
@@ -325,20 +286,6 @@ export default function StudentOrders() {
               />
             ))
           }
-          {/* New Order action card */}
-          <button
-            onClick={() => setShowCreate(true)}
-            className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 flex items-center gap-4 hover:shadow-md hover:border-blue-300 transition-all group text-left"
-          >
-            <div className="w-11 h-11 rounded-xl bg-blue-100 flex items-center justify-center shrink-0 group-hover:bg-blue-200 transition-colors">
-              <Plus className="w-5 h-5 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-base font-bold text-blue-600">New Order</p>
-              <p className="text-xs text-gray-500 leading-tight mt-0.5">Create student order</p>
-              <p className="text-xs text-blue-400 mt-0.5">opens New Order wizard</p>
-            </div>
-          </button>
         </div>
 
         {/* ── Table Card ── */}
@@ -378,7 +325,7 @@ export default function StudentOrders() {
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="appearance-none w-full sm:min-w-[150px] pl-3 pr-8 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-300 text-gray-700"
+                  className="appearance-none w-full sm:min-w-37.5 pl-3 pr-8 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-300 text-gray-700"
                 >
                   {STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </select>
@@ -417,7 +364,7 @@ export default function StudentOrders() {
 
           {/* ── Desktop Table ── */}
           <div className="overflow-x-auto hidden sm:block">
-            <table className="w-full min-w-[760px]">
+            <table className="w-full min-w-190">
               <thead>
                 <tr className="bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-100">
                   <th className="px-5 py-3 text-left">#</th>
@@ -449,15 +396,6 @@ export default function StudentOrders() {
                     const storeName   = order.storeName || order.store?.storeName || order.store?.name || "—";
                     const items       = order.items || order.orderItems || [];
                     const orderDate   = order.orderDate || order.createdAt || order.date;
-                    const isConfirming = confirmingIds.has(order.id);
-
-                    // Build action options — disable confirm option while API is running
-                    const rawOptions = buildActionOptions(order.status);
-                    const actionOptions = rawOptions.map((opt) =>
-                      opt.value === "confirm" && isConfirming
-                        ? { ...opt, label: "Confirming…", disabled: true }
-                        : opt
-                    );
 
                     return (
                       <tr key={order.id} className="hover:bg-blue-50/40 transition-colors">
@@ -474,10 +412,7 @@ export default function StudentOrders() {
                           {items.length > 0 ? (
                             <div className="flex flex-wrap gap-1">
                               {items.slice(0, 2).map((it, i) => (
-                                <span
-                                  key={i}
-                                  className="text-xs bg-blue-50 text-blue-700 border border-blue-100 px-2 py-0.5 rounded-full font-medium whitespace-nowrap"
-                                >
+                                <span key={i} className="text-xs bg-blue-50 text-blue-700 border border-blue-100 px-2 py-0.5 rounded-full font-medium whitespace-nowrap">
                                   {it.itemName || it.name} ×{it.quantity || it.qty}
                                 </span>
                               ))}
@@ -499,7 +434,7 @@ export default function StudentOrders() {
                         </td>
                         <td className="px-5 py-4">
                           <ActionDropDownComp
-                            actionOptions={actionOptions}
+                            actionOptions={buildActionOptions(order.status)}
                             onAction={(val) => handleAction(val, order)}
                           />
                         </td>
@@ -526,13 +461,6 @@ export default function StudentOrders() {
                 const orderClass  = order.className || order.student?.className || "—";
                 const storeName   = order.storeName || order.store?.storeName || "—";
                 const items       = order.items || order.orderItems || [];
-                const isConfirming = confirmingIds.has(order.id);
-                const rawOptions  = buildActionOptions(order.status);
-                const actionOptions = rawOptions.map((opt) =>
-                  opt.value === "confirm" && isConfirming
-                    ? { ...opt, label: "Confirming…", disabled: true }
-                    : opt
-                );
                 return (
                   <div key={order.id} className="px-4 py-4 space-y-2">
                     <div className="flex items-start justify-between gap-2">
@@ -549,7 +477,7 @@ export default function StudentOrders() {
                     <p className="text-xs text-gray-500">{storeName} · {items.length} items</p>
                     <div className="pt-1">
                       <ActionDropDownComp
-                        actionOptions={actionOptions}
+                        actionOptions={buildActionOptions(order.status)}
                         onAction={(val) => handleAction(val, order)}
                       />
                     </div>
@@ -594,23 +522,28 @@ export default function StudentOrders() {
         </div>
 
         {/* ── Modals ── */}
+
+        {/* Create new order */}
         <CreateStudentOrder
           isOpen={showCreate}
           onClose={() => setShowCreate(false)}
           onSaved={handleOrderSaved}
         />
+
+        {/* Edit existing draft order — passes editOrderId to prefill wizard */}
+        <CreateStudentOrder
+          isOpen={!!editOrderId}
+          onClose={() => setEditOrderId(null)}
+          onSaved={handleOrderSaved}
+          editOrderId={editOrderId}
+        />
+
+        {/* View order details */}
         <ViewStudentOrder
           isOpen={!!viewOrder}
           onClose={() => setViewOrder(null)}
           order={viewOrder}
         />
-        {editOrder && (
-          <CreateStudentOrder
-            isOpen={!!editOrder}
-            onClose={() => setEditOrder(null)}
-            onSaved={() => { setEditOrder(null); fetchOrders(); fetchStats(); }}
-          />
-        )}
       </div>
     </>
   );
