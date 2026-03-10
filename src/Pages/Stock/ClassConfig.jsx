@@ -251,16 +251,6 @@ export default function ClassConfig() {
                         ))}
                 </div>
 
-                {/* ── Info Banner ── */}
-                <div className="mb-6 flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3">
-                    <BookOpen className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
-                    <p className="text-sm text-blue-800">
-                        Configure default items for each class. These items are{" "}
-                        <span className="font-bold">automatically pre-loaded</span>{" "}
-                        when creating a student order. You can still add/remove items during order creation.
-                    </p>
-                </div>
-
                 {/* ── Main Grid ── */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
@@ -353,9 +343,9 @@ export default function ClassConfig() {
                                     <tr className="bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-100">
                                         <th className="px-5 py-3 text-left">Item</th>
                                         <th className="px-5 py-3 text-left">Category</th>
-                                        <th className="px-5 py-3 text-center">Default Qty</th>
-                                        <th className="px-5 py-3 text-left">Remarks</th>
-                                        <th className="px-5 py-3 text-left">Actions</th>
+                                        <th className="px-5 py-3 text-center text-nowrap">Default Quantity</th>
+                                        <th className="px-5 py-3 text-center">Remarks</th>
+                                        <th className="px-5 py-3 text-center">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">

@@ -108,27 +108,27 @@ const menuItems = [
       },
       {
         label: <span className="text-sm text-gray-600 hover:text-blue-600">Items</span>,
-        route: 'stock/items',
+        route: '/stock/items',
         roles: ['ADMIN', 'SUPER_ADMIN'],
       },
       {
         label: <span className="text-sm text-gray-600 hover:text-blue-600">Class Config</span>,
-        route: 'stock/classConfig',
+        route: '/stock/classConfig',
         roles: ['ADMIN', 'SUPER_ADMIN'],
       },
       {
         label: <span className="text-sm text-gray-600 hover:text-blue-600">Student Orders</span>,
-        route: 'stock/studentOrders',
+        route: '/stock/studentOrders',
         roles: ['ADMIN', 'SUPER_ADMIN',],
       },
       {
         label: <span className="text-sm text-gray-600 hover:text-blue-600">Transactions</span>,
-        route: 'stock/transactions',
+        route: '/stock/transactions',
         roles: ['ADMIN', 'SUPER_ADMIN'],
       },
       {
         label: <span className="text-sm text-gray-600 hover:text-blue-600">Movement History</span>,
-        route: 'stock/movementHistory',
+        route: '/stock/movementHistory',
         roles: ['ADMIN', 'SUPER_ADMIN'],
       }
     ]

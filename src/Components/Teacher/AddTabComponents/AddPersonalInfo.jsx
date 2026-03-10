@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 
 const AddPersonalInfo = ({ formData, setFormData, handleInputChange }) => {
     const [enabled, setEnabled] = useState(false);
+    const today = new Date().toISOString().split('T')[0];
 
     return (
         <div className="space-y-6">
@@ -81,6 +82,7 @@ const AddPersonalInfo = ({ formData, setFormData, handleInputChange }) => {
                             <input
                                 type="date"
                                 name="dob"
+                                max={today}
                                 value={formData.dob}
                                 onChange={handleInputChange}
                                 className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
@@ -211,9 +213,10 @@ const AddPersonalInfo = ({ formData, setFormData, handleInputChange }) => {
 
                         <div>
                             <label htmlFor="accountStatus" className='block font-semibold text-gray-600 text-sm mb-2'>
-                                Account Status
+                                Account Status<span className="text-red-600 ml-1">*</span>
                             </label>
                             <button
+                            required
                                 type="button"
                                 onClick={() => {
                                     setEnabled(!enabled);

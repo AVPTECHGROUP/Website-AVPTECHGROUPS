@@ -22,6 +22,51 @@ export const getItemsList = async (page = 0, size = 20, searchTerm = "", categor
   }
 };
 
+// Paginated + Search + Category + Status filter
+
+export const getStockItems = async (
+  { searchTerm = "", category = "", status = "" } = {},
+  page = 0,
+  size = 20
+) => {
+  try {
+
+    let query = `page=${page}&size=${size}`;
+
+    if (searchTerm) {
+      query += `&searchTerm=${encodeURIComponent(searchTerm)}`;
+    }
+
+    if (category) {
+      query += `&category=${encodeURIComponent(category)}`;
+    }
+
+    if (status) {
+      query += `&status=${status}`;
+    }
+
+    const res = await authFetch(`${BASE_URL}/stock/items?${query}`, {
+      method: "GET",
+    });
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(errorText || "Failed to fetch stock items");
+    }
+
+    const data = await res.json();
+
+    return {
+      items: data.data || [],
+      pagination: data.pagination || {},
+    };
+
+  } catch (error) {
+    console.error("getStockItems error:", error.message);
+    throw error;
+  }
+};
+
 // Create Item
 export const createItem = async (payload) => {
   try {
@@ -152,48 +197,37 @@ export const transferStock = async (payload) => {
     throw error;
   }
 };
-
 // Get Stock Movement History (Audit Trail)
 
 export const getStockMovementHistory = async (
+  filters = {},
   page = 0,
-  size = 20,
-  itemId = "",
-  storeId = "",
-  movementType = "",
-  fromDate = "",
-  toDate = "",
-  searchTerm = ""
+  size = 20
 ) => {
   try {
-    const params = new URLSearchParams({
-      page,
-      size,
-      ...(itemId && { itemId }),
-      ...(storeId && { storeId }),
-      ...(movementType && { movementType }),
-      ...(fromDate && { fromDate }),
-      ...(toDate && { toDate }),
-      ...(searchTerm && { searchTerm }),
-    });
+
     const res = await authFetch(
-      `${BASE_URL}/stock/movements/history?${params}`,
+      `${BASE_URL}/stock/movements/history?page=${page}&size=${size}`,
       {
-        method: "GET",
-        headers: {
-          accept: "application/json",
-        },
+        method: "POST",
+        body: JSON.stringify(filters),
       }
     );
-    if (!res.ok) throw new Error("Failed to fetch stock movement history");
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(errorText || "Failed to fetch stock movement history");
+    }
+
     const data = await res.json();
+
     return {
       movements: data.data || [],
       pagination: data.pagination || {},
     };
 
   } catch (error) {
-    console.error("getStockMovementHistory error:", error);
+    console.error("getStockMovementHistory error:", error.message);
     throw error;
   }
 };
@@ -236,3 +270,99 @@ export const getItemStockOverview = async (itemId) => {
     throw error;
   }
 };
+// List stock aggregated by item across all active stores (POST)
+
+export const getStockOverview = async (
+  filters = {},
+  page = 0,
+  size = 10,
+  sort = "id,desc"
+) => {
+  try {
+
+    const res = await authFetch(`${BASE_URL}/stock/overview`, {
+      method: "POST",
+      body: JSON.stringify({
+        filter: filters,
+        pageable: {
+          page: page,
+          size: size,
+          sort: [sort]
+        },
+        filterOrDefault: filters
+      })
+    });
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(errorText || "Failed to fetch stock overview");
+    }
+
+    const data = await res.json();
+
+    return {
+      items: data.data || [],
+      pagination: data.pagination || {}
+    };
+
+  } catch (error) {
+    console.error("getStockOverview error:", error.message);
+    throw error;
+  }
+};
+
+// get overall stats...
+
+export const getStockOverviewStats = async (storeId = null) => {
+  try {
+
+    let url = `${BASE_URL}/stock/overview/stats`;
+
+    if (storeId) {
+      url += `?storeId=${storeId}`;
+    }
+
+    const res = await authFetch(url, {
+      method: "GET"
+    });
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(errorText || "Failed to fetch stock overview stats");
+    }
+
+    const data = await res.json();
+
+    return data.data || {};
+
+  } catch (error) {
+    console.error("getStockOverviewStats error:", error.message);
+    throw error;
+  }
+};
+
+// Total Items | Active | Inactive | Categories | Low Stock Alerts
+// ===============================
+
+export const getStockItemsStats = async () => {
+  try {
+
+    const res = await authFetch(`${BASE_URL}/stock/items/stats`, {
+      method: "GET"
+    });
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(errorText || "Failed to fetch stock items stats");
+    }
+
+    const data = await res.json();
+
+    return data.data || {};
+
+  } catch (error) {
+    console.error("getStockItemsStats error:", error.message);
+    throw error;
+  }
+};
+
