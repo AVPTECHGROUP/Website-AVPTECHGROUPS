@@ -4,43 +4,37 @@ import {
   CheckCircle, XCircle as XCircleIcon, Calendar,
   ClipboardList, Eye, Pencil, Ban, AlertTriangle, Loader2,
 } from "lucide-react";
-import CardComponent      from "../../Components/CommonComp/CardComponent";
-import CardLoader         from "../../Components/CommonComp/CardLoader";
-import ListLoader         from "../../Components/CommonComp/ListLoader";
+import CardComponent from "../../Components/CommonComp/CardComponent";
+import CardLoader from "../../Components/CommonComp/CardLoader";
+import ListLoader from "../../Components/CommonComp/ListLoader";
 import ActionDropDownComp from "../../Components/CommonComp/ActionDropDownComp";
 import CreateStudentOrder from "../../Components/Stock/CreateStudentOrder";
-import ViewStudentOrder   from "../../Components/Stock/ViewOrder";
-import {
-  getOrderStats,
-  getStudentOrders,
-  cancelStudentOrder,
-} from "../../Api/StudentOrder";
+import ViewStudentOrder from "../../Components/Stock/ViewOrder";
+import { getOrderStats, getStudentOrders, cancelStudentOrder, } from "../../Api/StudentOrder";
 
-// ─── Constants ───────────────────────────────────────────────────
 const STATUS_OPTIONS = [
-  { value: "",          label: "All Status"  },
-  { value: "DRAFT",     label: "Draft"       },
-  { value: "CONFIRMED", label: "Confirmed"   },
-  { value: "CANCELLED", label: "Cancelled"   },
+  { value: "", label: "All Status" },
+  { value: "DRAFT", label: "Draft" },
+  { value: "CONFIRMED", label: "Confirmed" },
+  { value: "CANCELLED", label: "Cancelled" },
 ];
 
 const ITEMS_PER_PAGE = 10;
 
 const statusColors = {
-  DRAFT:      "bg-gray-100   text-gray-600    border border-gray-300",
-  PENDING:    "bg-yellow-100 text-yellow-700  border border-yellow-200",
-  CONFIRMED:  "bg-blue-100   text-blue-700    border border-blue-200",
-  APPROVED:   "bg-blue-100   text-blue-700    border border-blue-200",
+  DRAFT: "bg-gray-100   text-gray-600    border border-gray-300",
+  PENDING: "bg-yellow-100 text-yellow-700  border border-yellow-200",
+  CONFIRMED: "bg-blue-100   text-blue-700    border border-blue-200",
+  APPROVED: "bg-blue-100   text-blue-700    border border-blue-200",
   DISPATCHED: "bg-purple-100 text-purple-700  border border-purple-200",
-  DELIVERED:  "bg-green-100  text-green-700   border border-green-200",
-  CANCELLED:  "bg-red-100    text-red-600     border border-red-200",
+  DELIVERED: "bg-green-100  text-green-700   border border-green-200",
+  CANCELLED: "bg-red-100    text-red-600     border border-red-200",
 };
 
-// ─── Toast ───────────────────────────────────────────────────────
 let _setToasts = null;
 export const toast = {
   success: (msg) => _setToasts?.((p) => [...p, { id: Date.now(), type: "success", msg }]),
-  error:   (msg) => _setToasts?.((p) => [...p, { id: Date.now(), type: "error",   msg }]),
+  error: (msg) => _setToasts?.((p) => [...p, { id: Date.now(), type: "error", msg }]),
 };
 function ToastContainer() {
   const [toasts, setToasts] = useState([]);
@@ -57,8 +51,8 @@ function ToastContainer() {
         <div key={t.id} className={`flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lg text-sm font-medium pointer-events-auto min-w-55 max-w-xs bg-white border
           ${t.type === "success" ? "border-green-200 text-green-800" : "border-red-200 text-red-700"}`}>
           {t.type === "success"
-            ? <CheckCircle  className="w-4 h-4 text-green-500 shrink-0" />
-            : <XCircleIcon  className="w-4 h-4 text-red-500   shrink-0" />}
+            ? <CheckCircle className="w-4 h-4 text-green-500 shrink-0" />
+            : <XCircleIcon className="w-4 h-4 text-red-500   shrink-0" />}
           <span className="flex-1">{t.msg}</span>
           <button onClick={() => remove(t.id)} className="text-gray-400 hover:text-gray-600 text-xs ml-1">✕</button>
         </div>
@@ -128,9 +122,9 @@ function buildActionOptions(status) {
   const s = (status || "").toUpperCase();
   if (s === "DRAFT") {
     return [
-      { value: "edit",   label: "Edit",   icon: Pencil, text: "text-blue-600",  bg: "bg-blue-50",  hover: "hover:bg-blue-100"  },
-      { value: "view",   label: "View",   icon: Eye,    text: "text-gray-600",  bg: "bg-gray-50",  hover: "hover:bg-gray-100"  },
-      { value: "cancel", label: "Cancel", icon: Ban,    text: "text-red-500",   bg: "bg-red-50",   hover: "hover:bg-red-100"   },
+      { value: "edit", label: "Edit", icon: Pencil, text: "text-blue-600", bg: "bg-blue-50", hover: "hover:bg-blue-100" },
+      { value: "view", label: "View", icon: Eye, text: "text-gray-600", bg: "bg-gray-50", hover: "hover:bg-gray-100" },
+      { value: "cancel", label: "Cancel", icon: Ban, text: "text-red-500", bg: "bg-red-50", hover: "hover:bg-red-100" },
     ];
   }
   // All other statuses: view only
@@ -141,28 +135,28 @@ function buildActionOptions(status) {
 
 // ─── Main ─────────────────────────────────────────────────────────
 export default function StudentOrders() {
-  const [orders,       setOrders]       = useState([]);
-  const [pagination,   setPagination]   = useState(null);
-  const [loading,      setLoading]      = useState(true);
+  const [orders, setOrders] = useState([]);
+  const [pagination, setPagination] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [statsLoading, setStatsLoading] = useState(true);
-  const [page,         setPage]         = useState(0);
+  const [page, setPage] = useState(0);
 
   const [stats, setStats] = useState({ draftOrders: 0, confirmedOrders: 0, cancelledOrders: 0 });
 
-  const [searchInput,  setSearchInput]  = useState("");
-  const [search,       setSearch]       = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
-  const [fromDate,     setFromDate]     = useState("");
-  const [toDate,       setToDate]       = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
 
   // Modals
-  const [showCreate,   setShowCreate]   = useState(false);   // new order
-  const [editOrderId,  setEditOrderId]  = useState(null);    // edit draft (order id)
-  const [viewOrder,    setViewOrder]    = useState(null);    // view modal
+  const [showCreate, setShowCreate] = useState(false);   // new order
+  const [editOrderId, setEditOrderId] = useState(null);    // edit draft (order id)
+  const [viewOrder, setViewOrder] = useState(null);    // view modal
 
   // Cancel modal
   const [cancelTarget, setCancelTarget] = useState(null);
-  const [cancelling,   setCancelling]   = useState(false);
+  const [cancelling, setCancelling] = useState(false);
 
   // ── Debounce search ──
   useEffect(() => {
@@ -178,7 +172,7 @@ export default function StudentOrders() {
       .then((data) => {
         const s = data?.data || data || {};
         setStats({
-          draftOrders:     s.draftOrders     ?? s.draft     ?? 0,
+          draftOrders: s.draftOrders ?? s.draft ?? 0,
           confirmedOrders: s.confirmedOrders ?? s.confirmed ?? 0,
           cancelledOrders: s.cancelledOrders ?? s.cancelled ?? 0,
         });
@@ -209,7 +203,7 @@ export default function StudentOrders() {
   useEffect(() => { fetchOrders(); }, [fetchOrders]);
 
   const totalItems = pagination?.totalElements ?? orders.length;
-  const totalPages = pagination?.totalPages    ?? Math.max(1, Math.ceil(totalItems / ITEMS_PER_PAGE));
+  const totalPages = pagination?.totalPages ?? Math.max(1, Math.ceil(totalItems / ITEMS_PER_PAGE));
   const pageNumbers = () => {
     const pages = [];
     for (let i = Math.max(0, page - 2); i <= Math.min(totalPages - 1, page + 2); i++) pages.push(i);
@@ -238,16 +232,16 @@ export default function StudentOrders() {
   };
 
   const handleAction = (val, order) => {
-    if (val === "view")   setViewOrder(order);
-    if (val === "edit")   setEditOrderId(order.id);
+    if (val === "view") setViewOrder(order);
+    if (val === "edit") setEditOrderId(order.id);
     if (val === "cancel") setCancelTarget(order);
   };
 
   // ─── Stat cards ───────────────────────────────────────────────
   const statCards = [
-    { key: "draft",     label: "Draft Orders",    val: stats.draftOrders,     iconTxColor: "text-orange-500", iconBgColor: "bg-orange-100", Icon: ClipboardList },
-    { key: "confirmed", label: "Confirmed Orders", val: stats.confirmedOrders, iconTxColor: "text-green-600",  iconBgColor: "bg-green-100",  Icon: CheckCircle   },
-    { key: "cancelled", label: "Cancelled Orders", val: stats.cancelledOrders, iconTxColor: "text-red-500",    iconBgColor: "bg-red-100",    Icon: XCircleIcon   },
+    { key: "draft", label: "Draft Orders", val: stats.draftOrders, iconTxColor: "text-orange-500", iconBgColor: "bg-orange-100", Icon: ClipboardList },
+    { key: "confirmed", label: "Confirmed Orders", val: stats.confirmedOrders, iconTxColor: "text-green-600", iconBgColor: "bg-green-100", Icon: CheckCircle },
+    { key: "cancelled", label: "Cancelled Orders", val: stats.cancelledOrders, iconTxColor: "text-red-500", iconBgColor: "bg-red-100", Icon: XCircleIcon },
   ];
 
   return (
@@ -389,13 +383,13 @@ export default function StudentOrders() {
                   </tr>
                 ) : (
                   orders.map((order, idx) => {
-                    const sc          = statusColors[order.status] || "bg-gray-100 text-gray-600 border border-gray-200";
+                    const sc = statusColors[order.status] || "bg-gray-100 text-gray-600 border border-gray-200";
                     const studentName = order.studentName || order.student?.name || order.student?.fullName || "—";
-                    const admNumber   = order.admissionNumber || order.student?.admissionNumber || "—";
-                    const orderClass  = order.className || order.class || order.student?.className || "—";
-                    const storeName   = order.storeName || order.store?.storeName || order.store?.name || "—";
-                    const items       = order.items || order.orderItems || [];
-                    const orderDate   = order.orderDate || order.createdAt || order.date;
+                    const admNumber = order.admissionNumber || order.student?.admissionNumber || "—";
+                    const orderClass = order.className || order.class || order.student?.className || "—";
+                    const storeName = order.storeName || order.store?.storeName || order.store?.name || "—";
+                    const items = order.items || order.orderItems || [];
+                    const orderDate = order.orderDate || order.createdAt || order.date;
 
                     return (
                       <tr key={order.id} className="hover:bg-blue-50/40 transition-colors">
@@ -456,11 +450,11 @@ export default function StudentOrders() {
               <p className="text-center text-gray-400 text-sm py-10">No orders found.</p>
             ) : (
               orders.map((order) => {
-                const sc          = statusColors[order.status] || "bg-gray-100 text-gray-600 border border-gray-200";
+                const sc = statusColors[order.status] || "bg-gray-100 text-gray-600 border border-gray-200";
                 const studentName = order.studentName || order.student?.name || "—";
-                const orderClass  = order.className || order.student?.className || "—";
-                const storeName   = order.storeName || order.store?.storeName || "—";
-                const items       = order.items || order.orderItems || [];
+                const orderClass = order.className || order.student?.className || "—";
+                const storeName = order.storeName || order.store?.storeName || "—";
+                const items = order.items || order.orderItems || [];
                 return (
                   <div key={order.id} className="px-4 py-4 space-y-2">
                     <div className="flex items-start justify-between gap-2">
