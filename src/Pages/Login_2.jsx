@@ -143,12 +143,12 @@ const Login_2 = ({ onLoginSuccess }) => {
                                     <LockKeyhole size={19} className={`absolute left-3 bottom-0 -translate-y-1/2 transition-colors duration-300 ${isDark ? 'text-gray-400' : 'text-gray-700'}`} />
                                     <button type='button' onClick={() => setshowPassword(!showPassword)} className='absolute right-3 top-3'>
                                         {showPassword ? (
-                                            <EyeOff
+                                            <Eye
                                                 size={20}
                                                 className={`cursor-pointer ${errors?.password ? "text-red-500" : ""}`}
                                             />
                                         ) : (
-                                            <Eye
+                                            <EyeOff
                                                 size={20}
                                                 className={`cursor-pointer ${errors?.password ? "text-red-500" : ""}`}
                                             />

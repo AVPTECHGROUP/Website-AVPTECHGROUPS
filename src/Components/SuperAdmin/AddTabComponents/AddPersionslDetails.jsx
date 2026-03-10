@@ -12,7 +12,7 @@ const AddPersonalDetails = ({ formData, setFormData, handleInputChange }) => {
                 const rolesRes = await getAllUserRoles();
                 const fetchedRoles = rolesRes.data || [];
                  roleOpt = fetchedRoles
-                    .filter(val => val.id !== 6)
+                    .filter(val => val.id !== 6 && val.id !== 9)
                     .map(val => ({
                         key: val.id,
                         value: val.name,
@@ -21,7 +21,7 @@ const AddPersonalDetails = ({ formData, setFormData, handleInputChange }) => {
                 setRoleSelection(roleOpt);
             }
             catch (e) {
-                console.error('Fetch roles error:', e.message);
+                console.error('Fetch roles error:', e.message); 
                 throw e;
             }
         };
@@ -175,9 +175,10 @@ const AddPersonalDetails = ({ formData, setFormData, handleInputChange }) => {
 
                     <div>
                         <label htmlFor="accountStatus" className='block font-semibold text-gray-600 text-sm mb-2'>
-                            Account Status
+                            Account Status<span className="text-red-600 ml-1">*</span>
                         </label>
                         <button
+                            required
                             type="button"
                             onClick={() => {
                                 setEnabled(!enabled);

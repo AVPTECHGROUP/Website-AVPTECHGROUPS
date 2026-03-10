@@ -170,14 +170,14 @@ function AddnewSystemUser() {
             current_count = current_count+1;
              response = await updateUserById(current_userId, apiPayload);
             }
-            console.log("Create User Response:", response);
+            console.log("Create User Response:", response.message);
 
             toast.dismiss(loadingToast);
             toast.success(`${formData.name} : ${response.message} `, {
                 duration: 3000,
                 icon: "✅"
             });
-
+            navigate('/dashboard/manageUsers');
 
         } catch (err) {
             toast.dismiss(loadingToast);
@@ -251,13 +251,7 @@ function AddnewSystemUser() {
                         {/* Footer Buttons */}
                         <div className="border-t border-gray-200 px-4 sm:px-6 lg:px-8 py-4 bg-gray-50 rounded-b-lg">
                             <div className="flex flex-col sm:flex-row justify-end gap-3">
-                                <button
-                                    type="button"
-                                    onClick={handleDiscard}
-                                    className="px-6 cursor-pointer py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-                                >
-                                    Discard Changes
-                                </button>
+                                
                                 <button
                                     disabled={isSubmitting}
                                     type="submit"

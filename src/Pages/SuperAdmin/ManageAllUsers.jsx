@@ -3,28 +3,17 @@ import { useNavigate } from 'react-router-dom';
 import {
     ChevronRight,
     ChevronLeft,
-    Edit,
-    UserPlusIcon,
     UserRoundXIcon,
-    Eye,
     Power,
     UserCheck2,
     SearchIcon,
     UsersIcon,
-    Banknote,
-    UserRoundSearchIcon,
     UserPenIcon,
-    RotateCcwKey,
-    LogOut,
-    User,
     UserSearch,
-    ShieldAlertIcon,
-    ShieldBanIcon,
     KeyIcon,
-    LogOutIcon
 } from 'lucide-react';
 import { toast } from 'react-toastify';
-import { activateUserStatus, allUserFilter, deactivateUserStatus, filterUserByRole, filterUserByStatus, getAllUserRoles, getAllUsers, getUsersStatistics, resetUserPassword, searchUsers } from '../../Api/userManagementAPI';
+import { activateUserStatus, allUserFilter, deactivateUserStatus, getAllUserRoles, getUsersStatistics, resetUserPassword } from '../../Api/userManagementAPI';
 import ActionDropDownComp from '../../Components/CommonComp/ActionDropDownComp';
 import CardComponent from '../../Components/CommonComp/CardComponent';
 import QuickActions from '../../Components/CommonComp/QuickActions';
@@ -66,7 +55,7 @@ const ManageAllUsers = () => {
     //for roleOptions in filter
     const [roleOptions, setRoleOptions] = useState([]);
 
-    const [assignId, setAssgnedUserId] = useState(null); //for select user
+   // const [assignId, setAssgnedUserId] = useState(null); //for select user
     const { user } = useContext(UserContext);
 
     function compareAndGetLabel(data, compareValue) {
@@ -80,13 +69,13 @@ const ManageAllUsers = () => {
                 let roleOpt = [];
                 const rolesRes = await getAllUserRoles();
                 const fetchedRoles = rolesRes.data || [];
-                roleOpt = fetchedRoles.map((val) => (
-                    {
-                        roleKey: val.id,
-                        roleVal: val.name,
-                        roleDisplay: val.displayName
-                    }
-                ))
+                 roleOpt = fetchedRoles
+                    .filter(val => val.id !== 6 && val.id !== 9)
+                    .map(val => ({
+                         roleKey: val.id,
+                         roleVal: val.name,
+                         roleDisplay: val.displayName
+                    }));
                 setRoleOptions(roleOpt);
             }
             catch (e) {
@@ -100,7 +89,7 @@ const ManageAllUsers = () => {
     useEffect(() => {
         const timer = setTimeout(() => {
             setDebouncedSearch(search);
-        }, 500);
+        }, 1100);
         return () => clearTimeout(timer);
     }, [search]);
 
@@ -135,32 +124,17 @@ const ManageAllUsers = () => {
             setError(null);
             try {
                 let res;
-                set_noUserFound(false); // for reset no user found
-                if (hasActiveFilters) {
-                    // if (debouncedSearch.trim() !== '') {
-                    //     const searchTerm = debouncedSearch.trim();
-                    //     console.log(searchTerm);
-                    //     res = await searchUsers(searchTerm, page - 1, rowsPerpage);
-                    // } else if (statusFilter !== 'All Status' && statusFilter !== undefined) {
-                    //     res = await filterUserByStatus(statusFilter, page - 1, rowsPerpage);
-
-                    // } else if (roleFilter !== 'All Roles' && roleFilter !== undefined) {
-                    //     res = await filterUserByRole(roleFilter, page - 1, rowsPerpage);
-                    //     console.log(roleFilter, "------------->", res);
-                    // } else {
-                    //     res = await getAllUsers(page - 1, rowsPerpage);
-                    // }
-
+                set_noUserFound(false);
                     const filters = {};
                     if (debouncedSearch.trim()) filters.searchTerm = debouncedSearch.trim();
                     if (statusFilter !== 'All Status') filters.status = statusFilter.toUpperCase();
                     if (roleFilter !== 'All Roles') filters.role = roleFilter;
                     console.log(filters);
                     res = await allUserFilter(filters, page - 1, rowsPerpage);
-                }
-                else {
-                    res = await getAllUsers(page - 1, rowsPerpage);
-                }
+                // }
+                // else {
+                //     res = await getAllUsers(page - 1, rowsPerpage);
+                // }
 
                 const sys_userArray = res.data || [];
 
@@ -199,7 +173,7 @@ const ManageAllUsers = () => {
         };
 
         fetchsysUsers();
-    }, [page, rowsPerpage, debouncedSearch, roleFilter, statusFilter, roleOptions]);
+    }, [page, rowsPerpage, debouncedSearch, roleFilter, statusFilter]);
 
     const getAvatarColor = (name) => {
         const colors = [
@@ -278,14 +252,14 @@ const ManageAllUsers = () => {
         }
     ];
     // for filter only super admin
-    const getActionOptions = (userId) => {
-        return actionOptions.filter((action) => {
-            if (action.value === "resetPassword") {
-                return assignId === userId && user.userType=== 'SUPER_ADMIN';
-            }
-            return true;
-        });
-    };
+    // const getActionOptions = (userId) => {
+    //     return actionOptions.filter((action) => {
+    //         if (action.value === "resetPassword") {
+    //             return assignId === userId && user.userType=== 'SUPER_ADMIN';
+    //         }
+    //         return true;
+    //     });
+    // };
 
     const callAllActions = async (optVal, user) => {
         if (optVal === 'editUser') navigate(`/dashboard/editUser/${user.id}`);
@@ -303,7 +277,7 @@ const ManageAllUsers = () => {
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div>
                             <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Manage All Users</h2>
-                            <p className="text-gray-500 mt-1 font-medium text-sm sm:text-base">Efficiently manage system roles, permissions and account statuses.</p>
+                            <p className="text-gray-500 mt-1 font-medium text-sm sm:text-base">Efficiently manage system roles, permissions and account status.</p>
                         </div>
                     </div>
                     {/* cards */}
@@ -504,11 +478,8 @@ const ManageAllUsers = () => {
                                             <h3 className="text-sm font-bold text-gray-700 mb-2">No Users Found</h3>
                                         </td>
                                     </tr> : (sysUsers.map((sys_user) => (
-                                        <tr key={sys_user.id} className={`${assignId === sys_user.id ? "bg-blue-50" : ""}`} onClick={() => {
+                                        <tr key={sys_user.id} onClick={() => {
                                             console.log(user.userType);
-                                            if (user.userType === 'SUPER_ADMIN') {
-                                                setAssgnedUserId(sys_user.id);
-                                            }
                                         }}>
                                             <td className={tabledataItemsStyle}>
                                                 <div className="flex items-center gap-3">
@@ -538,7 +509,7 @@ const ManageAllUsers = () => {
 
                                             </td>
                                             <td className={tabledataItemsStyle}>
-                                                <ActionDropDownComp actionOptions={getActionOptions(sys_user.id)} onAction={(optVal) => callAllActions(optVal, sys_user)} />
+                                                <ActionDropDownComp actionOptions={actionOptions} onAction={(optVal) => callAllActions(optVal, sys_user)} />
                                             </td>
                                         </tr>
                                     )))
