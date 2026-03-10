@@ -50,6 +50,9 @@ export default function Transactions() {
     const [storesLoading, setStoresLoading] = useState(false);
     const [selectedStoreId, setSelectedStoreId] = useState(ALL_STORES_ID);
 
+    // Raw overview data cached — shape: { item, storeBreakdown }[]
+    // Fetched ONCE, filtering done client-side on store change
+    const [rawOverview, setRawOverview] = useState([]);
     const [storeItems, setStoreItems] = useState([]);
     const [itemsLoading, setItemsLoading] = useState(false);
     const [itemsError, setItemsError] = useState("");
@@ -58,6 +61,7 @@ export default function Transactions() {
     const [modalType, setModalType] = useState("in");
     const [isTransferOpen, setIsTransferOpen] = useState(false);
 
+    // ── Load stores once ──────────────────────────────────────────
     useEffect(() => {
         setStoresLoading(true);
         getActiveStores()
@@ -66,81 +70,105 @@ export default function Transactions() {
             .finally(() => setStoresLoading(false));
     }, []);
 
-    const fetchStoreItems = useCallback(async () => {
+    // ── Build storeItems from cached rawOverview whenever store filter changes ──
+    // This is pure client-side filtering — NO extra API calls
+    const applyFilter = useCallback((overview, storeId) => {
+        const result = [];
+        overview.forEach(({ item: ov, storeBreakdown }) => {
+            if (!storeBreakdown?.length) return;
+
+            if (storeId === ALL_STORES_ID) {
+                const totalQty = storeBreakdown.reduce((sum, s) => sum + (s.quantity ?? 0), 0);
+                const storeNames = storeBreakdown.map((s) => s.storeName).join(", ");
+                result.push({
+                    id: ov.itemId,
+                    itemCode: ov.itemCode,
+                    itemName: ov.itemName,
+                    category: ov.category,
+                    unit: ov.unit,
+                    minimumStockLevel: ov.minimumStockLevel,
+                    quantity: totalQty,
+                    isBelowMinimum: ov.isBelowMinimum,
+                    storeNames,
+                });
+            } else {
+                const storeRow = storeBreakdown.find((s) => s.storeId === Number(storeId));
+                if (!storeRow) return;
+                result.push({
+                    id: ov.itemId,
+                    itemCode: ov.itemCode,
+                    itemName: ov.itemName,
+                    category: ov.category,
+                    unit: ov.unit,
+                    minimumStockLevel: ov.minimumStockLevel,
+                    quantity: storeRow.quantity,
+                    isBelowMinimum: storeRow.isBelowMinimum,
+                    storeNames: null,
+                });
+            }
+        });
+        setStoreItems(result);
+    }, []);
+
+    // ── Fetch ALL overview data — called only ONCE (or on manual refresh) ──
+    const fetchAllOverview = useCallback(async () => {
         setItemsLoading(true);
         setItemsError("");
         setStoreItems([]);
+        setRawOverview([]);
 
         try {
+            // Step 1: Get all active items — single call
             const { items: allItems } = await getItemsList(0, 200, "", "", "ACTIVE");
             if (!allItems || allItems.length === 0) return;
 
+            // Step 2: Fetch all overviews in parallel — still N calls but
+            // this only happens ONCE. Store changes are handled client-side.
             const overviewResults = await Promise.allSettled(
                 allItems.map((item) => getItemStockOverview(item.id))
             );
 
-            const result = [];
+            // Cache the raw results
+            const raw = overviewResults
+                .filter((r) => r.status === "fulfilled")
+                .map((r) => r.value); // each: { item, storeBreakdown }
 
-            overviewResults.forEach((res) => {
-                if (res.status !== "fulfilled") return;
-                const { item: ov, storeBreakdown } = res.value;
-
-                if (selectedStoreId === ALL_STORES_ID) {
-                    // Aggregate all breakdown rows into one entry per item
-                    const totalQty = storeBreakdown.reduce((sum, s) => sum + (s.quantity ?? 0), 0);
-                    const storeNames = storeBreakdown.map((s) => s.storeName).join(", ");
-
-                    if (storeBreakdown.length === 0) return;
-
-                    result.push({
-                        id: ov.itemId,
-                        itemCode: ov.itemCode,
-                        itemName: ov.itemName,
-                        category: ov.category,
-                        unit: ov.unit,
-                        minimumStockLevel: ov.minimumStockLevel,
-                        quantity: totalQty,
-                        isBelowMinimum: ov.isBelowMinimum,
-                        storeNames,
-                    });
-                } else {
-                    const storeRow = storeBreakdown.find((s) => s.storeId === Number(selectedStoreId));
-                    if (!storeRow) return;
-
-                    result.push({
-                        id: ov.itemId,
-                        itemCode: ov.itemCode,
-                        itemName: ov.itemName,
-                        category: ov.category,
-                        unit: ov.unit,
-                        minimumStockLevel: ov.minimumStockLevel,
-                        quantity: storeRow.quantity,
-                        isBelowMinimum: storeRow.isBelowMinimum,
-                        storeNames: null,
-                    });
-                }
-            });
-
-            setStoreItems(result);
+            setRawOverview(raw);
+            applyFilter(raw, selectedStoreId);
         } catch {
             setItemsError("Failed to load stock data.");
         } finally {
             setItemsLoading(false);
         }
-    }, [selectedStoreId]);
+    }, []); // eslint-disable-line — intentionally no deps, called once
 
-    useEffect(() => { fetchStoreItems(); }, [fetchStoreItems]);
+    // ── On mount: fetch once ──────────────────────────────────────
+    useEffect(() => {
+        fetchAllOverview();
+    }, []); // eslint-disable-line
+
+    // ── On store filter change: just re-filter, NO API call ───────
+    useEffect(() => {
+        if (rawOverview.length > 0) {
+            applyFilter(rawOverview, selectedStoreId);
+        }
+    }, [selectedStoreId, rawOverview, applyFilter]);
+
+    // ── After stock IN/OUT/transfer: refresh overview ─────────────
+    const handleStockChange = useCallback(() => {
+        fetchAllOverview();
+    }, [fetchAllOverview]);
 
     const totalItems = storeItems.length;
-    const okItems = storeItems.filter((i) => i.quantity >= i.minimumStockLevel).length;
-    const lowItems = storeItems.filter((i) => i.quantity < i.minimumStockLevel && i.quantity > i.minimumStockLevel / 2).length;
-    const critItems = storeItems.filter((i) => i.quantity <= i.minimumStockLevel / 2).length;
+    const okItems    = storeItems.filter((i) => i.quantity >= i.minimumStockLevel).length;
+    const lowItems   = storeItems.filter((i) => i.quantity < i.minimumStockLevel && i.quantity > i.minimumStockLevel / 2).length;
+    const critItems  = storeItems.filter((i) => i.quantity <= i.minimumStockLevel / 2).length;
 
     const stats = [
-        { key: "Total Items", val: itemsLoading ? "…" : totalItems, icon: Package, txColor: "text-blue-600", bgColor: "bg-blue-50" },
-        { key: "OK Stock", val: itemsLoading ? "…" : okItems, icon: Activity, txColor: "text-green-600", bgColor: "bg-green-50" },
-        { key: "Low Stock", val: itemsLoading ? "…" : lowItems, icon: TrendingDown, txColor: "text-orange-500", bgColor: "bg-orange-50" },
-        { key: "Critical Stock", val: itemsLoading ? "…" : critItems, icon: ArrowDownToLine, txColor: "text-red-500", bgColor: "bg-red-50" },
+        { key: "Total Items",    val: itemsLoading ? "…" : totalItems, icon: Package,       txColor: "text-blue-600",   bgColor: "bg-blue-50"   },
+        { key: "OK Stock",       val: itemsLoading ? "…" : okItems,    icon: Activity,      txColor: "text-green-600",  bgColor: "bg-green-50"  },
+        { key: "Low Stock",      val: itemsLoading ? "…" : lowItems,   icon: TrendingDown,  txColor: "text-orange-500", bgColor: "bg-orange-50" },
+        { key: "Critical Stock", val: itemsLoading ? "…" : critItems,  icon: ArrowDownToLine, txColor: "text-red-500",  bgColor: "bg-red-50"    },
     ];
 
     const openModal = (type) => {
@@ -150,19 +178,19 @@ export default function Transactions() {
     };
 
     const actionOptions = [
-        { value: "in", label: "IN", icon: Plus, text: "text-white", bg: "bg-green-600", hover: "hover:bg-green-700" },
-        { value: "out", label: "OUT", icon: Minus, text: "text-white", bg: "bg-red-500", hover: "hover:bg-red-600" },
-        { value: "transfer", label: "Transfer", icon: Repeat2, text: "text-blue-700", bg: "bg-blue-50", hover: "hover:bg-blue-100" },
+        { value: "in",       label: "IN",       icon: Plus,   text: "text-white",    bg: "bg-green-600", hover: "hover:bg-green-700"  },
+        { value: "out",      label: "OUT",      icon: Minus,  text: "text-white",    bg: "bg-red-500",   hover: "hover:bg-red-600"    },
+        { value: "transfer", label: "Transfer", icon: Repeat2, text: "text-blue-700", bg: "bg-blue-50",   hover: "hover:bg-blue-100"   },
     ];
 
     const transactionCards = [
-        { icon: <ArrowDownToLine className="w-8 h-8 text-green-600" />, bg: "bg-green-50", border: "border-green-200", title: "Stock IN", titleColor: "text-green-600", sub: "Add stock to a store", type: "in" },
-        { icon: <ArrowUpFromLine className="w-8 h-8 text-red-500" />, bg: "bg-red-50", border: "border-red-200", title: "Stock OUT", titleColor: "text-red-500", sub: "Remove stock from a store", type: "out" },
-        { icon: <ArrowLeftRight className="w-8 h-8 text-blue-600" />, bg: "bg-blue-50", border: "border-blue-200", title: "Transfer", titleColor: "text-blue-600", sub: "Move between stores", type: "transfer" },
+        { icon: <ArrowDownToLine className="w-8 h-8 text-green-600" />, bg: "bg-green-50", border: "border-green-200", title: "Stock IN",  titleColor: "text-green-600", sub: "Add stock to a store",        type: "in"       },
+        { icon: <ArrowUpFromLine className="w-8 h-8 text-red-500"   />, bg: "bg-red-50",   border: "border-red-200",   title: "Stock OUT", titleColor: "text-red-500",   sub: "Remove stock from a store",   type: "out"      },
+        { icon: <ArrowLeftRight  className="w-8 h-8 text-blue-600"  />, bg: "bg-blue-50",  border: "border-blue-200",  title: "Transfer",  titleColor: "text-blue-600",  sub: "Move between stores",         type: "transfer" },
     ];
 
     const selectedStore = stores.find((s) => String(s.id) === selectedStoreId) ?? null;
-    const isAllStores = selectedStoreId === ALL_STORES_ID;
+    const isAllStores   = selectedStoreId === ALL_STORES_ID;
 
     return (
         <div className="min-h-screen bg-blue-50 p-4 sm:p-6 lg:p-8 font-sans">
@@ -171,12 +199,12 @@ export default function Transactions() {
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
                 mode={modalType}
-                onConfirm={(data) => { console.log(`Stock ${modalType.toUpperCase()}:`, data); fetchStoreItems(); }}
+                onConfirm={(data) => { console.log(`Stock ${modalType.toUpperCase()}:`, data); handleStockChange(); }}
             />
             <TransferStock
                 isOpen={isTransferOpen}
                 onClose={() => setIsTransferOpen(false)}
-                onConfirm={(data) => { console.log("Transfer:", data); fetchStoreItems(); }}
+                onConfirm={(data) => { console.log("Transfer:", data); handleStockChange(); }}
                 stores={stores}
             />
 
@@ -256,7 +284,7 @@ export default function Transactions() {
                     </div>
 
                     <button
-                        onClick={fetchStoreItems}
+                        onClick={fetchAllOverview}
                         disabled={itemsLoading}
                         title="Refresh"
                         className="p-2 rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100 transition disabled:opacity-50 self-end sm:self-auto"
@@ -289,7 +317,7 @@ export default function Transactions() {
                 {itemsError && (
                     <div className="px-5 py-3 bg-red-50 border-b border-red-100 text-sm text-red-600 flex items-center gap-2">
                         <span>{itemsError}</span>
-                        <button onClick={fetchStoreItems} className="underline font-semibold hover:text-red-700">Retry</button>
+                        <button onClick={fetchAllOverview} className="underline font-semibold hover:text-red-700">Retry</button>
                     </div>
                 )}
 
