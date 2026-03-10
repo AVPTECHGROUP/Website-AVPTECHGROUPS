@@ -11,6 +11,8 @@ import {
     UserPenIcon,
     UserSearch,
     KeyIcon,
+    ArrowDown,
+    ArrowUp,
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { activateUserStatus, allUserFilter, deactivateUserStatus, getAllUserRoles, getUsersStatistics, resetUserPassword } from '../../Api/userManagementAPI';
@@ -20,6 +22,7 @@ import QuickActions from '../../Components/CommonComp/QuickActions';
 import CardLoader from '../../Components/CommonComp/CardLoader';
 import ListLoader from '../../Components/CommonComp/ListLoader';
 import { UserContext } from '../../ContextAPI/UserContext';
+import PasswordResetModal from '../../Components/PopupResetPassword/ResetPasswordComponent';
 
 const ManageAllUsers = () => {
     // Stores text typed in search input (sys_user name / id / role)
@@ -55,8 +58,14 @@ const ManageAllUsers = () => {
     //for roleOptions in filter
     const [roleOptions, setRoleOptions] = useState([]);
 
-   // const [assignId, setAssgnedUserId] = useState(null); //for select user
+    const [sorting, setSorting] = useState('firstName,asc');
+
+    // const [assignId, setAssgnedUserId] = useState(null); //for select user
     const { user } = useContext(UserContext);
+
+    //for open and close popup
+    const [isResetOpen, setisResetOpen] = useState(false);
+    const [selectedUser, setSelectedUser] = useState(null);
 
     function compareAndGetLabel(data, compareValue) {
         const found = data.find(item => item.roleVal === compareValue);
@@ -69,12 +78,12 @@ const ManageAllUsers = () => {
                 let roleOpt = [];
                 const rolesRes = await getAllUserRoles();
                 const fetchedRoles = rolesRes.data || [];
-                 roleOpt = fetchedRoles
+                roleOpt = fetchedRoles
                     .filter(val => val.id !== 6 && val.id !== 9)
                     .map(val => ({
-                         roleKey: val.id,
-                         roleVal: val.name,
-                         roleDisplay: val.displayName
+                        roleKey: val.id,
+                        roleVal: val.name,
+                        roleDisplay: val.displayName
                     }));
                 setRoleOptions(roleOpt);
             }
@@ -125,16 +134,12 @@ const ManageAllUsers = () => {
             try {
                 let res;
                 set_noUserFound(false);
-                    const filters = {};
-                    if (debouncedSearch.trim()) filters.searchTerm = debouncedSearch.trim();
-                    if (statusFilter !== 'All Status') filters.status = statusFilter.toUpperCase();
-                    if (roleFilter !== 'All Roles') filters.role = roleFilter;
-                    console.log(filters);
-                    res = await allUserFilter(filters, page - 1, rowsPerpage);
-                // }
-                // else {
-                //     res = await getAllUsers(page - 1, rowsPerpage);
-                // }
+                const filters = {};
+                if (debouncedSearch.trim()) filters.searchTerm = debouncedSearch.trim();
+                if (statusFilter !== 'All Status') filters.status = statusFilter.toUpperCase();
+                if (roleFilter !== 'All Roles') filters.role = roleFilter;
+                console.log(filters);
+                res = await allUserFilter(filters, page - 1, rowsPerpage, sorting);
 
                 const sys_userArray = res.data || [];
 
@@ -173,7 +178,7 @@ const ManageAllUsers = () => {
         };
 
         fetchsysUsers();
-    }, [page, rowsPerpage, debouncedSearch, roleFilter, statusFilter]);
+    }, [page, rowsPerpage, debouncedSearch, roleFilter, statusFilter, sorting]);
 
     const getAvatarColor = (name) => {
         const colors = [
@@ -193,7 +198,8 @@ const ManageAllUsers = () => {
         const req_id = id;
         try {
             const reset_res = await resetUserPassword(req_id);
-            toast.success(`${name} : ${reset_res.message}`);
+            // toast.success(`${name} : ${reset_res.message}`);
+            return reset_res;
         } catch (error) {
             toast.error(error.message || 'Reset password failed');
         }
@@ -223,8 +229,7 @@ const ManageAllUsers = () => {
     { IconName: UserRoundXIcon, keyName: "Inactive Users", val: statistics.inactiveUsers, iconTxColor: "text-red-600", iconBgColor: "bg-red-50" },
     ]
 
-    const tableHeadItems = ['User Name', 'Mobile Number', 'Status'];
-    let tabledataItemsStyle = 'px-4 py-2 text-left text-gray-700 text-sm';
+    let tabledataItemsStyle = 'px-2 py-2 text-left text-gray-700 text-sm';
     const actionOptions = [
         {
             value: "editUser",
@@ -244,26 +249,20 @@ const ManageAllUsers = () => {
         },
         {
             value: "resetPassword",
-            label: "Reset",
+            label: "Password Reset",
             icon: KeyIcon,
             text: "text-green-600",
             bg: "bg-green-50",
             hover: "hover:bg-green-100",
         }
     ];
-    // for filter only super admin
-    // const getActionOptions = (userId) => {
-    //     return actionOptions.filter((action) => {
-    //         if (action.value === "resetPassword") {
-    //             return assignId === userId && user.userType=== 'SUPER_ADMIN';
-    //         }
-    //         return true;
-    //     });
-    // };
 
     const callAllActions = async (optVal, user) => {
         if (optVal === 'editUser') navigate(`/dashboard/editUser/${user.id}`);
-        else if (optVal === 'resetPassword') resetPassword(user.id, user.name);
+        else if (optVal === 'resetPassword'){
+            setSelectedUser(user);
+        setisResetOpen(true);}
+            // resetPassword(user.id, user.name);
         else if (optVal === 'toogleStatus') handleToggleStatus(user.id, user.name, user.status);
     }
 
@@ -299,6 +298,10 @@ const ManageAllUsers = () => {
 
                     {/* quick actions */}
                     <QuickActions buttonText='Add new User' navigateTo='/dashboard/addUser' />
+
+                    {/* popup */}
+                    <PasswordResetModal isOpen={isResetOpen} onClose={() => { setisResetOpen(!isResetOpen); }} userName={selectedUser?.name}
+                        onReset={() => resetPassword(selectedUser?.id, selectedUser?.name)} />
 
                     {/* filters */}
                     <div className="bg-white grid  lg:grid-cols-3 gap-2 px-4 py-2  rounded-xl border border-gray-200 mb-4 mt-0">
@@ -389,20 +392,6 @@ const ManageAllUsers = () => {
                                             </p>
                                         </div>
                                     </div>
-                                    {/* <div className="flex gap-1">
-                                        <button
-                                            type="button"
-                                            onClick={() => handleToggleStatus(sys_user.id, sys_user.name, sys_user.status)}
-                                            className={`w-10 h-5 flex items-center rounded-full p-1 transition-colors duration-300 ${sys_user.status === 'ACTIVE' ? "bg-blue-500" : "bg-gray-300"
-                                                } cursor-pointer`}
-                                        >
-                                            <div
-                                                className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-300 ${sys_user.status === 'ACTIVE' ? "translate-x-4" : "translate-x-0"
-                                                    }`}
-                                            />
-                                        </button>
-
-                                    </div> */}
                                 </div>
                                 {/* Details */}
                                 <div className="space-y-2 text-sm">
@@ -441,11 +430,53 @@ const ManageAllUsers = () => {
                             <table className="w-full ">
                                 <thead className="border-b border-gray-200">
                                     <tr>
-                                        {tableHeadItems.map((headings) => (
-                                            <th key={headings} className="px-6 py-3 text-left text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-50">
-                                                {headings}
-                                            </th>
-                                        ))}
+
+                                        <th key={'User_Name'} className="px-2 py-3 text-left text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-11">
+                                            <button
+                                                onClick={() => setSorting(prev =>
+                                                    prev === 'firstName,asc'
+                                                        ? 'firstName,desc'
+                                                        : 'firstName,asc'
+                                                )}
+                                                className="flex items-center gap-1 hover:text-gray-700 cursor-pointer uppercase"
+                                            >
+                                                User Name
+                                                {sorting === 'firstName,desc' ? < ArrowDown size={16} className='text-xs' /> : < ArrowUp size={16} className='text-xs' />}
+                                            </button>
+                                        </th>
+                                        <th key={'Employee_Id'} className="px-2 py-3 text-left text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-50">
+                                            <button
+                                                onClick={() => setSorting(prev =>
+                                                    prev === 'employeeCode,asc'
+                                                        ? 'employeeCode,desc'
+                                                        : 'employeeCode,asc'
+                                                )}
+                                                className="flex items-center gap-1 hover:text-gray-700 cursor-pointer uppercase"
+                                            >
+                                                Employee Id
+                                                {sorting === 'employeeCode,desc' ? < ArrowDown size={16} className='text-xs' /> : < ArrowUp size={16} className='text-xs' />}
+                                            </button>
+                                        </th>
+                                        <th key={'Email'} className="px-2 py-3 text-left text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-50">
+                                            <button
+                                                onClick={() => setSorting(prev =>
+                                                    prev === 'email,asc'
+                                                        ? 'email,desc'
+                                                        : 'email,asc'
+                                                )}
+                                                className="flex items-center gap-1 hover:text-gray-700 cursor-pointer uppercase"
+                                            >
+                                                Email
+                                                {sorting === 'email,desc' ? < ArrowDown size={16} className='text-xs' /> : < ArrowUp size={16} className='text-xs' />}
+                                            </button>
+                                        </th>
+                                        <th key={'Mobile_Number'} className="px-2 py-3 text-left text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-50">
+                                            Mobile Number
+                                        </th>
+                                        <th key={'Status'} className="px-2 py-3 text-left text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-50">
+                                            Status
+                                        </th>
+
                                         <th key='ACTIONS' className="px-6 py-3 text-center text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-50">
                                             ACTIONS
                                         </th>
@@ -453,7 +484,7 @@ const ManageAllUsers = () => {
                                 </thead>
                                 <tbody className="bg-white divide-y divide-gray-200 font-normal">
                                     {loading ? (
-                                        <ListLoader />
+                                        <ListLoader colSpanSet={6} />
                                     ) : error ? (
                                         <tr>
                                             <td colSpan="11" className="px-6 py-8 text-center">
@@ -493,6 +524,14 @@ const ManageAllUsers = () => {
                                                         </p>
                                                     </div>
                                                 </div>
+                                            </td>
+                                            {/*-------------------------------------------- employee id-------------------------------------------- */}
+                                            <td className={tabledataItemsStyle}>
+                                                {sys_user.empCode}
+                                            </td>
+                                            {/*------------------------------------------------ email ------------------------------------------------*/}
+                                            <td className={tabledataItemsStyle}>
+                                                {sys_user.email}
                                             </td>
                                             <td className={tabledataItemsStyle}>{sys_user.mobile}</td>
                                             <td className={tabledataItemsStyle}>
@@ -555,7 +594,7 @@ const ManageAllUsers = () => {
                             <div className="flex items-center gap-2">
                                 <button
                                     onClick={() => setpage(prev => Math.max(1, prev - 1))}
-                                    disabled={page === 1 || loading || error}
+                                    disabled={page === totalPages || loading || error}
                                     className="px-3 py-1 text-gray-600 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                                 >
                                     <ChevronLeft className="w-4 h-4" />
@@ -575,7 +614,7 @@ const ManageAllUsers = () => {
                                 <button
                                     type='button'
                                     onClick={() => setpage(prev => Math.min(totalPages, prev + 1))}
-                                    disabled={page === 1 || loading || error}
+                                    disabled={page === totalPages || loading || error}
                                     className="px-3 py-1 text-gray-600 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                                 >
                                     <ChevronRight className="w-4 h-4" />

@@ -68,7 +68,8 @@ export const allUserFilter = async (filters = {}, page, size = 10, sort = 'first
     });
     if (!res.ok) {
       const errorText = await res.text();
-      throw new Error(errorText || 'Failed to Search Users...');
+      const data = errorText ? JSON.parse(errorText) : {};
+      throw new Error(data.message || 'Failed to Search Users...');
     }
     const data = await res.json();
     return data;
