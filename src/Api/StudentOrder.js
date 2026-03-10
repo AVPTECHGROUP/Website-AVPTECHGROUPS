@@ -118,22 +118,21 @@ export const getStudentOrderById = async (orderId) => {
 };
 
 //    UPDATE DRAFT ORDER
-
 export const updateStudentOrder = async (orderId, orderData) => {
   try {
-
     const res = await fetch(`${BASE_URL}/stock/orders/${orderId}`, {
       method: "PUT",
-      headers: {
+      headers: { 
         "Content-Type": "application/json",
+        "accept": "application/json",
       },
       body: JSON.stringify(orderData),
     });
-
-    if (!res.ok) throw new Error("Failed to update order");
-
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData?.message || `Failed to update order (${res.status})`);
+    }
     return await res.json();
-
   } catch (error) {
     console.error("updateStudentOrder error:", error);
     throw error;
