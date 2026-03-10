@@ -363,12 +363,12 @@ export default function StudentOrders() {
                 <tr className="bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-100">
                   <th className="px-5 py-3 text-left">#</th>
                   <th className="px-5 py-3 text-left">Student</th>
-                  <th className="px-5 py-3 text-left">Class</th>
-                  <th className="px-5 py-3 text-left">Store</th>
-                  <th className="px-5 py-3 text-left">Items</th>
-                  <th className="px-5 py-3 text-left">Order Date</th>
-                  <th className="px-5 py-3 text-left">Status</th>
-                  <th className="px-5 py-3 text-left">Actions</th>
+                  <th className="px-5 py-3 text-center">Class</th>
+                  <th className="px-5 py-3 text-center">Store</th>
+                  <th className="px-5 py-3 text-center">Items</th>
+                  <th className="px-5 py-3 text-center text-nowrap">Order Date</th>
+                  <th className="px-5 py-3 text-center">Status</th>
+                  <th className="px-5 py-3 text-center">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -397,20 +397,20 @@ export default function StudentOrders() {
                           {page * ITEMS_PER_PAGE + idx + 1}
                         </td>
                         <td className="px-5 py-4">
-                          <p className="text-sm font-bold text-gray-800">{studentName}</p>
+                          <p className="text-sm font-bold text-nowrap text-gray-800">{studentName}</p>
                           <p className="text-xs text-gray-400">{admNumber}</p>
                         </td>
-                        <td className="px-5 py-4 text-sm text-gray-600">{orderClass}</td>
-                        <td className="px-5 py-4 text-sm text-gray-600">{storeName}</td>
-                        <td className="px-5 py-4">
+                        <td className="px-5 py-4 text-sm text-gray-600 text-center text-nowrap">{orderClass}</td>
+                        <td className="px-5 py-4 text-sm text-gray-600 text-nowrap text-center">{storeName}</td>
+                        <td className="px-5 py-4 text-center">
                           {items.length > 0 ? (
-                            <div className="flex flex-wrap gap-1">
+                            <div className="flex flex-wrap items-center justify-center gap-1">
                               {items.slice(0, 2).map((it, i) => (
-                                <span key={i} className="text-xs bg-blue-50 text-blue-700 border border-blue-100 px-2 py-0.5 rounded-full font-medium whitespace-nowrap">
+                                <span key={i} className="text-xs text-center bg-blue-50 text-blue-700 border border-blue-100 px-2 py-0.5 rounded-full font-medium whitespace-nowrap">
                                   {it.itemName || it.name} ×{it.quantity || it.qty}
                                 </span>
                               ))}
-                              {items.length > 2 && (
+                              {items.length > 3 && (
                                 <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-medium">
                                   +{items.length - 2} more
                                 </span>
@@ -421,7 +421,7 @@ export default function StudentOrders() {
                           )}
                         </td>
                         <td className="px-5 py-4 text-sm text-gray-600">{fmtDate(orderDate)}</td>
-                        <td className="px-5 py-4">
+                        <td className="px-5 py-4 text-center">
                           <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${sc}`}>
                             {order.status || "—"}
                           </span>

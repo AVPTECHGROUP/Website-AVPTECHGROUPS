@@ -343,9 +343,9 @@ export default function Stores() {
               <tr className="bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-100">
                 <th className="px-3 lg:px-5 py-3 text-left w-8">#</th>
                 <th className="px-3 lg:px-5 py-3 text-left">Store Name</th>
-                <th className="px-3 lg:px-4 py-3 text-left">Code</th>
-                <th className="px-3 lg:px-4 py-3 text-left">Location</th>
-                <th className="px-3 lg:px-4 py-3 text-left">Status</th>
+                <th className="px-3 lg:px-4 py-3 text-center">Code</th>
+                <th className="px-3 lg:px-4 py-3 text-center">Location</th>
+                <th className="px-3 lg:px-4 py-3 text-center">Status</th>
                 <th className="px-3 lg:px-4 py-3 text-center">Actions</th>
               </tr>
             </thead>
@@ -364,19 +364,19 @@ export default function Stores() {
                     <td className="px-3 lg:px-5 py-3 text-sm text-gray-500">
                       {(page - 1) * ROWS_PER_PAGE + idx + 1}
                     </td>
-                    <td className="px-3 lg:px-5 py-3 max-w-[140px] lg:max-w-[220px]">
+                    <td className="px-3 lg:px-5 py-3 max-w-35 lg:max-w-55">
                       <p className="font-semibold text-gray-800 text-sm truncate">{store.storeName}</p>
                       <p className="text-xs text-gray-400 truncate">{store.description}</p>
                     </td>
-                    <td className="px-3 lg:px-4 py-3">
+                    <td className="px-3 lg:px-4 py-3 text-center">
                       <span className="px-2 py-1 bg-blue-50 text-blue-700 text-xs font-semibold rounded border border-blue-100 whitespace-nowrap">
                         {store.storeCode}
                       </span>
                     </td>
-                    <td className="px-3 lg:px-4 py-3 text-sm text-gray-600 max-w-[120px] lg:max-w-[200px] truncate">
+                    <td className="px-3 lg:px-4 py-3 text-sm text-center text-gray-600 max-w-30 lg:max-w-50 ">
                       {store.location}
                     </td>
-                    <td className="px-3 lg:px-4 py-3">
+                    <td className="px-3 lg:px-4 py-3 text-center">
                       <span className={`px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${
                         store.status === "ACTIVE" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-500"
                       }`}>

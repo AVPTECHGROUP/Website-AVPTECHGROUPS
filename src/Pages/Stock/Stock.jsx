@@ -27,14 +27,14 @@ import {
 } from "../../Api/StockApi";
 import { getStockList } from "../../Api/StoreApi";
 
-// ─── Shared helpers (same as Movement.jsx) ────────────────────────────────────
 const mvTypeMeta = {
     IN: { dot: "bg-green-500", badge: "text-green-700 bg-green-50 border border-green-200", label: "IN" },
     OUT: { dot: "bg-red-500", badge: "text-red-600 bg-red-50 border border-red-200", label: "OUT" },
     TRANSFER: { dot: "bg-blue-500", badge: "text-blue-700 bg-blue-50 border border-blue-200", label: "TRANSFER" },
+    ORDER: { dot: "bg-orange-500", badge: "text-orange-700 bg-orange-50 border border-orange-200", label: "ORDER" },
 };
-const mvQtyColor = { IN: "text-green-600", OUT: "text-red-500", TRANSFER: "text-blue-600" };
-const mvQtyPrefix = { IN: "+", OUT: "-", TRANSFER: "±" };
+const mvQtyColor = { IN: "text-green-600", OUT: "text-red-500", TRANSFER: "text-blue-600", ORDER: "text-orange-600" };
+const mvQtyPrefix = { IN: "+", OUT: "-", TRANSFER: "±", ORDER: "-" };
 
 const formatDateTime = (iso) => {
     if (!iso) return { date: "—", time: "—" };
@@ -65,22 +65,7 @@ const mapMv = (m) => {
     };
 };
 
-// ─── Other badge helpers (unchanged from original) ───────────────────────────
-const categoryBadge = (cat) => {
-    const map = {
-        SPORTS: "bg-blue-100 text-blue-700",
-        LAB: "bg-purple-100 text-purple-700",
-        STATIONERY: "bg-gray-100 text-gray-700",
-        UNIFORM: "bg-yellow-100 text-yellow-700",
-        BOOKS: "bg-teal-100 text-teal-700",
-    };
-    return (
-        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${map[cat] ?? "bg-gray-100 text-gray-600"}`}>
-            {cat}
-        </span>
-    );
-};
-
+// ─── Other badge helpers ──────────────────────────────────────────────────────
 const statusBadge = (available, min) => {
     const isCritical = available <= min / 2;
     if (isCritical)
@@ -95,6 +80,7 @@ const BAR_COLORS = ["bg-blue-500", "bg-purple-500", "bg-orange-400", "bg-teal-50
 
 const MV_PAGE_SIZE = 5;
 
+// ─── Recent Movements Mini-Table ──────────────────────────────────────────────
 function RecentMovementsTable({ stores }) {
     const [loading, setLoading] = useState(false);
     const [movements, setMovements] = useState([]);
@@ -112,10 +98,17 @@ function RecentMovementsTable({ stores }) {
     const fetchMovements = useCallback(async (pageNum = 0) => {
         setLoading(true);
         try {
-            const fromISO = dateFrom ? `${dateFrom}T00:00:00.000Z` : "";
-            const toISO = dateTo ? `${dateTo}T23:59:59.999Z` : "";
+            // Build POST filter body — only include fields that have a value
+            const filters = {};
+            if (storeId)    filters.storeId      = Number(storeId);
+            if (typeFilter) filters.movementType = typeFilter;
+            if (dateFrom)   filters.fromDate     = `${dateFrom}T00:00:00.000Z`;
+            if (dateTo)     filters.toDate       = `${dateTo}T23:59:59.999Z`;
+
             const { movements: raw, pagination: pg } = await getStockMovementHistory(
-                pageNum, MV_PAGE_SIZE, "", storeId, typeFilter, fromISO, toISO, ""
+                filters,
+                pageNum,
+                MV_PAGE_SIZE
             );
             setMovements(raw.map(mapMv));
             setPagination(pg);
@@ -126,7 +119,8 @@ function RecentMovementsTable({ stores }) {
         } finally { setLoading(false); }
     }, [storeId, typeFilter, dateFrom, dateTo]);
 
-    useEffect(() => { fetchMovements(0); }, []);
+    // Load on mount
+    useEffect(() => { fetchMovements(0); }, []); // eslint-disable-line
     const handleApply = () => { fetchMovements(0); };
 
     const totalPages = pagination.totalPages ?? 1;
@@ -158,7 +152,6 @@ function RecentMovementsTable({ stores }) {
 
             {/* ── Filters ── */}
             <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50 space-y-2">
-
                 {/* Row 1: Type + Store */}
                 <div className="flex gap-2">
                     <select
@@ -170,6 +163,7 @@ function RecentMovementsTable({ stores }) {
                         <option value="IN">IN</option>
                         <option value="OUT">OUT</option>
                         <option value="TRANSFER">TRANSFER</option>
+                        <option value="ORDER">ORDER</option>
                     </select>
 
                     <select
@@ -251,17 +245,14 @@ function RecentMovementsTable({ stores }) {
                                 const meta = mvTypeMeta[m.type] || mvTypeMeta["IN"];
                                 return (
                                     <tr key={m.id} className="hover:bg-blue-50/40 transition-colors">
-                                        {/* Date & Time */}
                                         <td className="px-4 py-3 whitespace-nowrap">
                                             <p className="text-xs font-semibold text-gray-700">{m.date}</p>
                                             <p className="text-xs text-gray-400">{m.time}</p>
                                         </td>
-                                        {/* Item */}
                                         <td className="px-4 py-3 max-w-32.5">
                                             <p className="text-xs font-semibold text-gray-800 truncate" title={m.item}>{m.item}</p>
                                             <p className="text-xs text-gray-400">{m.itemId}</p>
                                         </td>
-                                        {/* Type badge */}
                                         <td className="px-4 py-3 whitespace-nowrap">
                                             <div className="flex items-center gap-1">
                                                 <span className={`w-1.5 h-1.5 rounded-full ${meta.dot} shrink-0`} />
@@ -270,21 +261,17 @@ function RecentMovementsTable({ stores }) {
                                                 </span>
                                             </div>
                                         </td>
-                                        {/* Store */}
                                         <td className="px-4 py-3 max-w-30">
                                             <span className="text-xs text-gray-600 truncate block" title={m.store}>{m.store}</span>
                                         </td>
-                                        {/* Qty */}
                                         <td className="px-4 py-3 whitespace-nowrap">
-                                            <span className={`text-xs font-bold ${mvQtyColor[m.type]}`}>
-                                                {mvQtyPrefix[m.type]}{m.qty}
+                                            <span className={`text-xs font-bold ${mvQtyColor[m.type] ?? "text-gray-700"}`}>
+                                                {mvQtyPrefix[m.type] ?? ""}{m.qty}
                                             </span>
                                         </td>
-                                        {/* Before → After */}
                                         <td className="px-4 py-3 text-center text-xs text-gray-600 whitespace-nowrap">
                                             {m.before} → {m.after}
                                         </td>
-                                        {/* By */}
                                         <td className="px-4 py-3 text-xs text-gray-600 whitespace-nowrap">{m.by}</td>
                                     </tr>
                                 );
@@ -390,11 +377,11 @@ export default function Stock() {
         })();
     }, []);
 
-    // Total movements count
+    // Total movements count — POST with empty filters, page 0, size 1
     useEffect(() => {
         (async () => {
             try {
-                const { pagination } = await getStockMovementHistory(0, 1);
+                const { pagination } = await getStockMovementHistory({}, 0, 1);
                 setTotalMovements(pagination?.totalElements ?? 0);
             } catch { setTotalMovements(0); }
         })();
@@ -463,13 +450,11 @@ export default function Stock() {
                 </div>
             )}
 
-            {/* ── Middle Row: Recent Movements (new) + Store Summary ── */}
+            {/* ── Middle Row ── */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-
-                {/* ── Recent Movements — rebuilt as Movement.jsx mini-table ── */}
                 <RecentMovementsTable stores={stores} />
 
-                {/* Store-wise Summary (unchanged) */}
+                {/* Store-wise Summary */}
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
                     <div className="flex items-center gap-2 px-5 py-4 border-b border-gray-100">
                         <BarChart3 className="w-5 h-5 text-purple-500" />
@@ -528,7 +513,7 @@ export default function Stock() {
                 </div>
             </div>
 
-            {/* ── Low Stock Items Table (unchanged) ── */}
+            {/* ── Low Stock Items Table ── */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
                 <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
                     <div className="flex items-center gap-2">

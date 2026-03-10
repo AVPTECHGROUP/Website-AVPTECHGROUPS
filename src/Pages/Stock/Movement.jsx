@@ -22,7 +22,7 @@ import CardLoader from "../../Components/CommonComp/CardLoader";
 import ListLoader from "../../Components/CommonComp/ListLoader";
 import { getStockMovementHistory, getActiveStores } from "../../Api/StockApi";
 
-const ROWS_PER_PAGE = 10;
+const ROWS_PER_PAGE = 20;
 const SEARCH_DEBOUNCE_MS = 400;
 
 // ── Type metadata ─────────────────────────────────────────────────────────────
@@ -167,7 +167,9 @@ const EmptyBox = ({ colSpan }) => {
     : <div className="py-16 text-center px-4">{content}</div>;
 };
 
+// ── Main Component ────────────────────────────────────────────────────────────
 export default function Movement() {
+  // ── Data ──────────────────────────────────────────────────────
   const [movements, setMovements] = useState([]);
   const [stores, setStores] = useState([]);
   const [pagination, setPagination] = useState({});
@@ -243,18 +245,18 @@ export default function Movement() {
     setLoading(true);
     setError(null);
     try {
-      const fromISO = dateFrom ? `${dateFrom}T00:00:00.000Z` : "";
-      const toISO = dateTo ? `${dateTo}T23:59:59.999Z` : "";
+      // Build POST filter body — only include fields that have a value
+      const filters = {};
+      if (storeId) filters.storeId = Number(storeId);
+      if (typeFilter) filters.movementType = typeFilter;
+      if (debouncedSearch) filters.search = debouncedSearch;
+      if (dateFrom) filters.fromDate = `${dateFrom}T00:00:00.000Z`;
+      if (dateTo) filters.toDate = `${dateTo}T23:59:59.999Z`;
 
       const { movements: raw, pagination: pg } = await getStockMovementHistory(
+        filters,
         page,
-        ROWS_PER_PAGE,
-        "",               // itemId
-        storeId,
-        typeFilter,
-        fromISO,
-        toISO,
-        debouncedSearch
+        ROWS_PER_PAGE
       );
 
       setMovements(raw.map(mapMovement));
@@ -323,12 +325,6 @@ export default function Movement() {
             </button>
           </div>
         </div>
-
-        {/* ── Filters — auto-fetch on change, no Apply button ──────
-            Mobile  : stacked full-width
-            md–xl   : 2-col grid
-            xl+     : single row
-        ── */}
 
         {/* xl+ single row */}
         <div className="hidden xl:grid grid-cols-[1fr_160px_180px_150px_150px] gap-3 px-5 py-3 border-b border-gray-100 bg-gray-50/50">
@@ -426,14 +422,14 @@ export default function Movement() {
             <thead>
               <tr className="bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-100">
                 <th className="px-3 lg:px-4 py-3 text-left whitespace-nowrap">Date & Time</th>
-                <th className="px-3 lg:px-4 py-3 text-left whitespace-nowrap">Item</th>
-                <th className="px-3 lg:px-4 py-3 text-left whitespace-nowrap">Type</th>
-                <th className="px-3 lg:px-4 py-3 text-left whitespace-nowrap">Store</th>
-                <th className="px-3 lg:px-4 py-3 text-center whitespace-nowrap">Qty</th>
+                <th className="px-3 lg:px-4 py-3 text-center whitespace-nowrap">Item</th>
+                <th className="px-3 lg:px-4 py-3 text-center whitespace-nowrap">Type</th>
+                <th className="px-3 lg:px-4 py-3 text-center whitespace-nowrap">Store</th>
+                <th className="px-3 lg:px-4 py-3 text-center whitespace-nowrap">Quantity</th>
                 <th className="px-3 lg:px-4 py-3 text-center whitespace-nowrap">Before → After</th>
                 <th className="px-3 lg:px-4 py-3 text-left whitespace-nowrap">Reference</th>
                 <th className="px-3 lg:px-4 py-3 text-left whitespace-nowrap hidden lg:table-cell">Reason / Remarks</th>
-                <th className="px-3 lg:px-4 py-3 text-left whitespace-nowrap">By</th>
+                <th className="px-3 lg:px-4 py-3 whitespace-nowrap text-center">By</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -448,20 +444,20 @@ export default function Movement() {
                     <tr key={m.id} className="hover:bg-blue-50/40 transition-colors">
                       <td className="px-3 lg:px-4 py-3 whitespace-nowrap">
                         <p className="text-sm font-semibold text-gray-700">{m.date}</p>
-                        <p className="text-xs text-gray-400">{m.time}</p>
+                        <p className="text-xs text-gray-400 text-center">{m.time}</p>
                       </td>
-                      <td className="px-3 lg:px-4 py-3 max-w-[120px] lg:max-w-[180px]">
+                      <td className="px-3 lg:px-4 py-3 max-w-30 lg:max-w-45 text-center">
                         <p className="text-sm font-semibold text-gray-800 truncate" title={m.item}>{m.item}</p>
                         <p className="text-xs text-gray-400">{m.itemId}</p>
                       </td>
-                      <td className="px-3 lg:px-4 py-3 whitespace-nowrap">
-                        <div className="flex items-center gap-1.5">
+                      <td className="px-3 lg:px-4 py-3 whitespace-nowrap ">
+                        <div className="flex items-center justify-center gap-1.5">
                           <span className={`w-2 h-2 rounded-full ${meta.dot} shrink-0`} />
                           <span className={`px-2 py-0.5 rounded text-xs font-bold ${meta.badge}`}>{meta.label}</span>
                         </div>
                       </td>
-                      <td className="px-3 lg:px-4 py-3 max-w-[120px] lg:max-w-[160px]">
-                        <span className="text-sm text-gray-600 truncate block" title={m.store}>{m.store}</span>
+                      <td className="px-3 lg:px-4 py-3 max-w-30 lg:max-w-40">
+                        <span className="text-sm text-gray-600 text-nowrap text-center block" title={m.store}>{m.store}</span>
                       </td>
                       <td className="px-3 lg:px-4 py-3 text-center whitespace-nowrap">
                         <span className={`text-sm font-bold ${qtyColor[m.type] ?? "text-gray-700"}`}>
@@ -472,8 +468,8 @@ export default function Movement() {
                         {m.before} → {m.after}
                       </td>
                       <td className="px-3 lg:px-4 py-3 text-sm text-gray-500 whitespace-nowrap">{m.ref}</td>
-                      <td className="px-3 lg:px-4 py-3 max-w-[160px] hidden lg:table-cell">
-                        <span className="text-sm text-gray-600 truncate block" title={m.reason}>{m.reason}</span>
+                      <td className="px-3 lg:px-4 py-3 max-w-40 hidden lg:table-cell">
+                        <span className="text-sm text-gray-600 block text-center" title={m.reason}>{m.reason}</span>
                       </td>
                       <td className="px-3 lg:px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{m.by}</td>
                     </tr>
