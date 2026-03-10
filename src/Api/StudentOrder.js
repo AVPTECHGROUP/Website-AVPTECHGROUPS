@@ -190,4 +190,36 @@ export const cancelStudentOrder = async (
   }
 };
 
+  //  PREVIEW STUDENT ORDER
 
+export const previewStudentOrder = async (studentId, storeId) => {
+  try {
+
+    const params = new URLSearchParams({
+      studentId,
+      storeId,
+    });
+
+    const res = await fetch(
+      `${BASE_URL}/stock/orders/preview?${params}`,
+      {
+        method: "GET",
+        headers: {
+          accept: "application/json",
+        },
+      }
+    );
+
+    if (!res.ok) {
+      throw new Error("Failed to preview student order");
+    }
+
+    const data = await res.json();
+
+    return data;
+
+  } catch (error) {
+    console.error("previewStudentOrder error:", error);
+    throw error;
+  }
+};
