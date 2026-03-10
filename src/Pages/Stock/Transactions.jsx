@@ -19,7 +19,7 @@ import CardLoader from "../../Components/CommonComp/CardLoader";
 import ActionDropDownComp from "../../Components/CommonComp/ActionDropDownComp";
 import StockManagementCard from "../../Components/Stock/StockManagementCard";
 import TransferStock from "../../Components/Stock/TransferStock";
-import { getActiveStores, getItemsList, getItemStockOverview } from "../../Api/StockApi";
+import { getActiveStores, getItemsList } from "../../Api/StockApi";
 
 const categoryColors = {
     STATIONERY: "bg-gray-100 text-gray-700",
@@ -50,9 +50,6 @@ export default function Transactions() {
     const [storesLoading, setStoresLoading] = useState(false);
     const [selectedStoreId, setSelectedStoreId] = useState(ALL_STORES_ID);
 
-    // Raw overview data cached — shape: { item, storeBreakdown }[]
-    // Fetched ONCE, filtering done client-side on store change
-    const [rawOverview, setRawOverview] = useState([]);
     const [storeItems, setStoreItems] = useState([]);
     const [itemsLoading, setItemsLoading] = useState(false);
     const [itemsError, setItemsError] = useState("");
@@ -70,91 +67,42 @@ export default function Transactions() {
             .finally(() => setStoresLoading(false));
     }, []);
 
-    // ── Build storeItems from cached rawOverview whenever store filter changes ──
-    // This is pure client-side filtering — NO extra API calls
-    const applyFilter = useCallback((overview, storeId) => {
-        const result = [];
-        overview.forEach(({ item: ov, storeBreakdown }) => {
-            if (!storeBreakdown?.length) return;
-
-            if (storeId === ALL_STORES_ID) {
-                const totalQty = storeBreakdown.reduce((sum, s) => sum + (s.quantity ?? 0), 0);
-                const storeNames = storeBreakdown.map((s) => s.storeName).join(", ");
-                result.push({
-                    id: ov.itemId,
-                    itemCode: ov.itemCode,
-                    itemName: ov.itemName,
-                    category: ov.category,
-                    unit: ov.unit,
-                    minimumStockLevel: ov.minimumStockLevel,
-                    quantity: totalQty,
-                    isBelowMinimum: ov.isBelowMinimum,
-                    storeNames,
-                });
-            } else {
-                const storeRow = storeBreakdown.find((s) => s.storeId === Number(storeId));
-                if (!storeRow) return;
-                result.push({
-                    id: ov.itemId,
-                    itemCode: ov.itemCode,
-                    itemName: ov.itemName,
-                    category: ov.category,
-                    unit: ov.unit,
-                    minimumStockLevel: ov.minimumStockLevel,
-                    quantity: storeRow.quantity,
-                    isBelowMinimum: storeRow.isBelowMinimum,
-                    storeNames: null,
-                });
-            }
-        });
-        setStoreItems(result);
-    }, []);
-
-    // ── Fetch ALL overview data — called only ONCE (or on manual refresh) ──
+    // ── Fetch items list ──────────────────────────────────────────
     const fetchAllOverview = useCallback(async () => {
         setItemsLoading(true);
         setItemsError("");
         setStoreItems([]);
-        setRawOverview([]);
 
         try {
-            // Step 1: Get all active items — single call
             const { items: allItems } = await getItemsList(0, 200, "", "", "ACTIVE");
             if (!allItems || allItems.length === 0) return;
 
-            // Step 2: Fetch all overviews in parallel — still N calls but
-            // this only happens ONCE. Store changes are handled client-side.
-            const overviewResults = await Promise.allSettled(
-                allItems.map((item) => getItemStockOverview(item.id))
-            );
+            const mapped = allItems.map((item) => ({
+                id: item.id,
+                itemCode: item.itemCode,
+                itemName: item.itemName,
+                category: item.category,
+                unit: item.unit,
+                minimumStockLevel: item.minimumStockLevel ?? 0,
+                quantity: item.quantity ?? 0,
+                isBelowMinimum: item.isBelowMinimum,
+                storeNames: item.storeNames ?? null,
+            }));
 
-            // Cache the raw results
-            const raw = overviewResults
-                .filter((r) => r.status === "fulfilled")
-                .map((r) => r.value); // each: { item, storeBreakdown }
-
-            setRawOverview(raw);
-            applyFilter(raw, selectedStoreId);
+            setStoreItems(mapped);
         } catch {
             setItemsError("Failed to load stock data.");
         } finally {
             setItemsLoading(false);
         }
-    }, []); // eslint-disable-line — intentionally no deps, called once
+    }, []);
 
     // ── On mount: fetch once ──────────────────────────────────────
     useEffect(() => {
         fetchAllOverview();
     }, []); // eslint-disable-line
 
-    // ── On store filter change: just re-filter, NO API call ───────
-    useEffect(() => {
-        if (rawOverview.length > 0) {
-            applyFilter(rawOverview, selectedStoreId);
-        }
-    }, [selectedStoreId, rawOverview, applyFilter]);
-
-    // ── After stock IN/OUT/transfer: refresh overview ─────────────
+    // ── After stock IN/OUT/transfer: refresh ──────────────────────
     const handleStockChange = useCallback(() => {
         fetchAllOverview();
     }, [fetchAllOverview]);
@@ -165,10 +113,10 @@ export default function Transactions() {
     const critItems  = storeItems.filter((i) => i.quantity <= i.minimumStockLevel / 2).length;
 
     const stats = [
-        { key: "Total Items",    val: itemsLoading ? "…" : totalItems, icon: Package,       txColor: "text-blue-600",   bgColor: "bg-blue-50"   },
-        { key: "OK Stock",       val: itemsLoading ? "…" : okItems,    icon: Activity,      txColor: "text-green-600",  bgColor: "bg-green-50"  },
-        { key: "Low Stock",      val: itemsLoading ? "…" : lowItems,   icon: TrendingDown,  txColor: "text-orange-500", bgColor: "bg-orange-50" },
-        { key: "Critical Stock", val: itemsLoading ? "…" : critItems,  icon: ArrowDownToLine, txColor: "text-red-500",  bgColor: "bg-red-50"    },
+        { key: "Total Items",    val: itemsLoading ? "…" : totalItems, icon: Package,         txColor: "text-blue-600",   bgColor: "bg-blue-50"   },
+        { key: "OK Stock",       val: itemsLoading ? "…" : okItems,    icon: Activity,        txColor: "text-green-600",  bgColor: "bg-green-50"  },
+        { key: "Low Stock",      val: itemsLoading ? "…" : lowItems,   icon: TrendingDown,    txColor: "text-orange-500", bgColor: "bg-orange-50" },
+        { key: "Critical Stock", val: itemsLoading ? "…" : critItems,  icon: ArrowDownToLine, txColor: "text-red-500",    bgColor: "bg-red-50"    },
     ];
 
     const openModal = (type) => {
@@ -178,15 +126,15 @@ export default function Transactions() {
     };
 
     const actionOptions = [
-        { value: "in",       label: "IN",       icon: Plus,   text: "text-white",    bg: "bg-green-600", hover: "hover:bg-green-700"  },
-        { value: "out",      label: "OUT",      icon: Minus,  text: "text-white",    bg: "bg-red-500",   hover: "hover:bg-red-600"    },
-        { value: "transfer", label: "Transfer", icon: Repeat2, text: "text-blue-700", bg: "bg-blue-50",   hover: "hover:bg-blue-100"   },
+        { value: "in",       label: "IN",       icon: Plus,    text: "text-white",    bg: "bg-green-600", hover: "hover:bg-green-700" },
+        { value: "out",      label: "OUT",      icon: Minus,   text: "text-white",    bg: "bg-red-500",   hover: "hover:bg-red-600"   },
+        { value: "transfer", label: "Transfer", icon: Repeat2, text: "text-blue-700", bg: "bg-blue-50",   hover: "hover:bg-blue-100"  },
     ];
 
     const transactionCards = [
-        { icon: <ArrowDownToLine className="w-8 h-8 text-green-600" />, bg: "bg-green-50", border: "border-green-200", title: "Stock IN",  titleColor: "text-green-600", sub: "Add stock to a store",        type: "in"       },
-        { icon: <ArrowUpFromLine className="w-8 h-8 text-red-500"   />, bg: "bg-red-50",   border: "border-red-200",   title: "Stock OUT", titleColor: "text-red-500",   sub: "Remove stock from a store",   type: "out"      },
-        { icon: <ArrowLeftRight  className="w-8 h-8 text-blue-600"  />, bg: "bg-blue-50",  border: "border-blue-200",  title: "Transfer",  titleColor: "text-blue-600",  sub: "Move between stores",         type: "transfer" },
+        { icon: <ArrowDownToLine className="w-8 h-8 text-green-600" />, bg: "bg-green-50", border: "border-green-200", title: "Stock IN",  titleColor: "text-green-600", sub: "Add stock to a store",      type: "in"       },
+        { icon: <ArrowUpFromLine className="w-8 h-8 text-red-500"   />, bg: "bg-red-50",   border: "border-red-200",   title: "Stock OUT", titleColor: "text-red-500",   sub: "Remove stock from a store", type: "out"      },
+        { icon: <ArrowLeftRight  className="w-8 h-8 text-blue-600"  />, bg: "bg-blue-50",  border: "border-blue-200",  title: "Transfer",  titleColor: "text-blue-600",  sub: "Move between stores",       type: "transfer" },
     ];
 
     const selectedStore = stores.find((s) => String(s.id) === selectedStoreId) ?? null;
@@ -358,7 +306,7 @@ export default function Transactions() {
                                     <td colSpan={isAllStores ? 8 : 7} className="px-5 py-14 text-center">
                                         <div className="flex flex-col items-center gap-2 text-gray-400">
                                             <Inbox className="w-8 h-8 opacity-30" />
-                                            <p className="text-sm font-medium">No items stocked in this store</p>
+                                            <p className="text-sm font-medium">No items found</p>
                                             <p className="text-xs">Add stock via Stock IN to get started</p>
                                         </div>
                                     </td>
@@ -427,7 +375,7 @@ export default function Transactions() {
                     ) : storeItems.length === 0 ? (
                         <div className="flex flex-col items-center gap-2 text-gray-400 py-12">
                             <Inbox className="w-8 h-8 opacity-30" />
-                            <p className="text-sm font-medium">No items stocked in this store</p>
+                            <p className="text-sm font-medium">No items found</p>
                         </div>
                     ) : (
                         storeItems.map((item) => {

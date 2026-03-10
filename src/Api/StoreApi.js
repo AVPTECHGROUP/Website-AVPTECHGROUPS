@@ -26,11 +26,35 @@ export const getStockList = async (page = 0, size = 20, searchTerm = "", status 
   }
 };
 
+export const getStoreStats = async () => {
+  try {
+
+    const res = await fetch(`${BASE_URL}/stock/stores/stats`, {
+      method: "GET",
+      headers: {
+        accept: "application/json",
+      },
+    });
+
+    if (!res.ok) {
+      throw new Error("Failed to fetch store stats");
+    }
+
+    const data = await res.json();
+
+    return data.data; // returning only stats object
+
+  } catch (error) {
+    console.error("getStoreStats error:", error);
+    throw error;
+  }
+};
+
 // Create new Store
 export const createStore = async (storeData) => {
   try {
     const res = await authFetch(`${BASE_URL}/stock/stores`, {
-      method: "POST",                         // ✅ fixed: was `Bearer ${token},` with trailing comma
+      method: "POST",                         
       body: JSON.stringify(storeData),
     });
 

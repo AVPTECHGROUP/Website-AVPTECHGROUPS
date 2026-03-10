@@ -154,6 +154,7 @@ export const transferStock = async (payload) => {
 };
 
 // Get Stock Movement History (Audit Trail)
+
 export const getStockMovementHistory = async (
   page = 0,
   size = 20,
@@ -165,18 +166,32 @@ export const getStockMovementHistory = async (
   searchTerm = ""
 ) => {
   try {
-    const params = new URLSearchParams({ page, size });
-    const res = await authFetch(`${BASE_URL}/stock/movements/history?${params}`, {
-      method: "POST",
-      body: JSON.stringify({ itemId, storeId, movementType, fromDate, toDate, searchTerm })
+    const params = new URLSearchParams({
+      page,
+      size,
+      ...(itemId && { itemId }),
+      ...(storeId && { storeId }),
+      ...(movementType && { movementType }),
+      ...(fromDate && { fromDate }),
+      ...(toDate && { toDate }),
+      ...(searchTerm && { searchTerm }),
     });
+    const res = await authFetch(
+      `${BASE_URL}/stock/movements/history?${params}`,
+      {
+        method: "GET",
+        headers: {
+          accept: "application/json",
+        },
+      }
+    );
     if (!res.ok) throw new Error("Failed to fetch stock movement history");
-
     const data = await res.json();
     return {
       movements: data.data || [],
-      pagination: data.pagination || {}
+      pagination: data.pagination || {},
     };
+
   } catch (error) {
     console.error("getStockMovementHistory error:", error);
     throw error;
