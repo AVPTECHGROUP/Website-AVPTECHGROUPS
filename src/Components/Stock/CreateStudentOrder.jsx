@@ -367,30 +367,28 @@ export default function CreateStudentOrder({ isOpen, onClose, onSaved, editOrder
   };
 
   // ─── Confirm & Issue Stock ────────────────────────────────────
+  // Edit mode  → PUT (sync current items to DB) → confirmStudentOrder(editOrderId)
+  // Create mode → POST as DRAFT → get newId    → confirmStudentOrder(newId)
+  // Same confirm function, same flow — bilkul add jaisa
   const handleConfirm = async () => {
     setSubmitting(true); setErrors({});
-    const payload = {
-      studentId: selectedStudent.id,
-      storeId:   Number(selectedStoreId),
-      orderDate,
-      remarks:   remarks.trim() || null,
-      status:    "DRAFT",
-      items:     orderItems.map((i) => ({ itemId: i.itemId, quantity: i.quantity })),
-    };
     try {
-      if (isEditMode && editOrderId) {
-        // Edit: update then confirm
-        await updateStudentOrder(editOrderId, payload);
-        await confirmStudentOrder(editOrderId);
-      } else {
-        // Create: POST as DRAFT first to get an id, then confirm it
-        const res  = await createStudentOrder(payload);
-        const data = res?.data || res;
-        const newId = data?.id || data?.orderId;
-        if (newId) {
-          await confirmStudentOrder(newId);
-        }
-      }
+      // Both edit & create: POST new DRAFT → get id → confirm
+      // Edit mode mein bhi naya order POST karo current items se,
+      // phir confirm — exactly same as create flow, no PUT needed
+      const createPayload = {
+        studentId: selectedStudent.id,
+        storeId:   Number(selectedStoreId),
+        orderDate,
+        remarks:   remarks.trim() || null,
+        status:    "DRAFT",
+        items:     orderItems.map((i) => ({ itemId: i.itemId, quantity: i.quantity })),
+      };
+      const res   = await createStudentOrder(createPayload);
+      const data  = res?.data || res;
+      const newId = data?.id || data?.orderId;
+      if (!newId) throw new Error("Order creation failed — no ID returned.");
+      await confirmStudentOrder(newId);
       onSaved?.("CONFIRMED");
     } catch (e) {
       setErrors({ submit: e.message || "Failed to confirm order. Please try again." });
@@ -560,6 +558,16 @@ export default function CreateStudentOrder({ isOpen, onClose, onSaved, editOrder
                           ))}
                         </select>
                         <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                      </div>
+                    )}
+                    {selectedStoreId && (
+                      <div className="flex items-start gap-2 text-xs text-blue-600 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
+                        <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                        <span>
+                          Next step calls{" "}
+                          <code className="font-mono bg-blue-100 px-1 rounded">GET /orders/preview?studentId=&amp;storeId=</code>
+                          {" "}to load live item availability for this store.
+                        </span>
                       </div>
                     )}
                     {errors.store && <p className="text-xs text-red-500">{errors.store}</p>}
