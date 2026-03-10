@@ -9,6 +9,7 @@ import {
   createStudentOrder,
   updateStudentOrder,
   confirmStudentOrder,
+  cancelStudentOrder,
   previewStudentOrder,
   getStudentOrderById,
 } from "../../Api/StudentOrder";
@@ -372,23 +373,28 @@ export default function CreateStudentOrder({ isOpen, onClose, onSaved, editOrder
   // Same confirm function, same flow — bilkul add jaisa
   const handleConfirm = async () => {
     setSubmitting(true); setErrors({});
+    const payload = {
+      studentId: selectedStudent.id,
+      storeId:   Number(selectedStoreId),
+      orderDate,
+      remarks:   remarks.trim() || null,
+      status:    "DRAFT",
+      items:     orderItems.map((i) => ({ itemId: i.itemId, quantity: i.quantity })),
+    };
     try {
-      // Both edit & create: POST new DRAFT → get id → confirm
-      // Edit mode mein bhi naya order POST karo current items se,
-      // phir confirm — exactly same as create flow, no PUT needed
-      const createPayload = {
-        studentId: selectedStudent.id,
-        storeId:   Number(selectedStoreId),
-        orderDate,
-        remarks:   remarks.trim() || null,
-        status:    "DRAFT",
-        items:     orderItems.map((i) => ({ itemId: i.itemId, quantity: i.quantity })),
-      };
-      const res   = await createStudentOrder(createPayload);
-      const data  = res?.data || res;
-      const newId = data?.id || data?.orderId;
-      if (!newId) throw new Error("Order creation failed — no ID returned.");
-      await confirmStudentOrder(newId);
+      if (isEditMode && editOrderId) {
+        // Edit mode: PUT (sync items) → then confirm same order
+        // No new order created — purana editOrderId hi confirm hoga
+        await updateStudentOrder(editOrderId, payload);
+        await confirmStudentOrder(editOrderId);
+      } else {
+        // Create mode: POST as DRAFT → get newId → confirm
+        const res   = await createStudentOrder(payload);
+        const data  = res?.data || res;
+        const newId = data?.id || data?.orderId;
+        if (!newId) throw new Error("Order creation failed — no ID returned.");
+        await confirmStudentOrder(newId);
+      }
       onSaved?.("CONFIRMED");
     } catch (e) {
       setErrors({ submit: e.message || "Failed to confirm order. Please try again." });
