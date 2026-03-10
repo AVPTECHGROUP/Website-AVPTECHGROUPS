@@ -58,7 +58,7 @@ export const searchUsers = async (searchTerm, page, size = 10, sort = 'id') => {
 };
 
 // Filter user by role status and search
-export const allUserFilter = async (filters = {}, page, size = 10, sort = 'id') => {
+export const allUserFilter = async (filters = {}, page, size = 10, sort = 'firstName,asc') => {
   try {
     const res = await authFetch(`${BASE_URL}/users/filter`, {
       method: 'POST',
@@ -68,7 +68,8 @@ export const allUserFilter = async (filters = {}, page, size = 10, sort = 'id') 
     });
     if (!res.ok) {
       const errorText = await res.text();
-      throw new Error(errorText || 'Failed to Search Users...');
+      const data = errorText ? JSON.parse(errorText) : {};
+      throw new Error(data.message || 'Failed to Search Users...');
     }
     const data = await res.json();
     return data;
@@ -122,13 +123,14 @@ export const createUser = async (user) => {
   });
 
   const text = await res.text();
-  console.log("CREATE USER RESPONSE:", text);
+  const data = text ? JSON.parse(text) : {};
+  console.log("CREATE USER RESPONSE:", data);
 
   if (!res.ok) {
-    throw new Error(text || "Failed to create User");
+    throw new Error(data?.message || "Failed to create User");
   }
 
-  return text ? JSON.parse(text) : {};
+  return data;
 };
 
 // Activate user

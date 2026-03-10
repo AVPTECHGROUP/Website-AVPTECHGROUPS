@@ -1,6 +1,6 @@
 import React from "react";
 
-const ListLoader = ({ rows = 3, avatar = true }) => {
+const ListLoader = ({ rows = 3, avatar = true , colSpanSet = 11}) => {
   return (
     <>
       <style>
