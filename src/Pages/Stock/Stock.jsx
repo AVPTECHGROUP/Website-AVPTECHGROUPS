@@ -29,12 +29,12 @@ import { getStockList } from "../../Api/StoreApi";
 
 // ─── Shared helpers (same as Movement.jsx) ────────────────────────────────────
 const mvTypeMeta = {
-    IN:       { dot: "bg-green-500", badge: "text-green-700 bg-green-50 border border-green-200",  label: "IN"       },
-    OUT:      { dot: "bg-red-500",   badge: "text-red-600 bg-red-50 border border-red-200",         label: "OUT"      },
-    TRANSFER: { dot: "bg-blue-500",  badge: "text-blue-700 bg-blue-50 border border-blue-200",      label: "TRANSFER" },
+    IN: { dot: "bg-green-500", badge: "text-green-700 bg-green-50 border border-green-200", label: "IN" },
+    OUT: { dot: "bg-red-500", badge: "text-red-600 bg-red-50 border border-red-200", label: "OUT" },
+    TRANSFER: { dot: "bg-blue-500", badge: "text-blue-700 bg-blue-50 border border-blue-200", label: "TRANSFER" },
 };
-const mvQtyColor  = { IN: "text-green-600", OUT: "text-red-500",  TRANSFER: "text-blue-600" };
-const mvQtyPrefix = { IN: "+",              OUT: "-",              TRANSFER: "±"             };
+const mvQtyColor = { IN: "text-green-600", OUT: "text-red-500", TRANSFER: "text-blue-600" };
+const mvQtyPrefix = { IN: "+", OUT: "-", TRANSFER: "±" };
 
 const formatDateTime = (iso) => {
     if (!iso) return { date: "—", time: "—" };
@@ -47,21 +47,21 @@ const formatDateTime = (iso) => {
 
 const mapMv = (m) => {
     const { date, time } = formatDateTime(m.createdAt);
-    const type  = m.movementType || "IN";
-    let   store = m.storeName    || "—";
+    const type = m.movementType || "IN";
+    let store = m.storeName || "—";
     if (type === "TRANSFER" && m.destinationStoreName) {
         store = `${m.storeName} → ${m.destinationStoreName}`;
     }
     return {
         id: m.id, date, time,
-        item:   m.itemName || "—",
+        item: m.itemName || "—",
         itemId: m.itemCode || `ITM-${m.itemId}`,
         type, store,
-        qty:    m.quantity,
+        qty: m.quantity,
         before: m.quantityBefore,
-        after:  m.quantityAfter,
-        ref:    m.referenceNumber || m.transferReference || "—",
-        by:     m.performedByName || "—",
+        after: m.quantityAfter,
+        ref: m.referenceNumber || m.transferReference || "—",
+        by: m.performedByName || "—",
     };
 };
 
@@ -95,18 +95,17 @@ const BAR_COLORS = ["bg-blue-500", "bg-purple-500", "bg-orange-400", "bg-teal-50
 
 const MV_PAGE_SIZE = 5;
 
-// ─── Recent Movements Mini-Table ─────────────────────────────────────────────
 function RecentMovementsTable({ stores }) {
-    const [loading,    setLoading]    = useState(false);
-    const [movements,  setMovements]  = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [movements, setMovements] = useState([]);
     const [pagination, setPagination] = useState({});
-    const [page,       setPage]       = useState(0);
+    const [page, setPage] = useState(0);
 
     // Filters
     const [typeFilter, setTypeFilter] = useState("");
-    const [storeId,    setStoreId]    = useState("");
-    const [dateFrom,   setDateFrom]   = useState("");
-    const [dateTo,     setDateTo]     = useState("");
+    const [storeId, setStoreId] = useState("");
+    const [dateFrom, setDateFrom] = useState("");
+    const [dateTo, setDateTo] = useState("");
 
     const navigate = useNavigate();
 
@@ -114,7 +113,7 @@ function RecentMovementsTable({ stores }) {
         setLoading(true);
         try {
             const fromISO = dateFrom ? `${dateFrom}T00:00:00.000Z` : "";
-            const toISO   = dateTo   ? `${dateTo}T23:59:59.999Z`   : "";
+            const toISO = dateTo ? `${dateTo}T23:59:59.999Z` : "";
             const { movements: raw, pagination: pg } = await getStockMovementHistory(
                 pageNum, MV_PAGE_SIZE, "", storeId, typeFilter, fromISO, toISO, ""
             );
@@ -127,14 +126,12 @@ function RecentMovementsTable({ stores }) {
         } finally { setLoading(false); }
     }, [storeId, typeFilter, dateFrom, dateTo]);
 
-    // Load on mount with no filters (show latest 5)
-    useEffect(() => { fetchMovements(0); }, []); // eslint-disable-line
-
+    useEffect(() => { fetchMovements(0); }, []);
     const handleApply = () => { fetchMovements(0); };
 
-    const totalPages  = pagination.totalPages  ?? 1;
+    const totalPages = pagination.totalPages ?? 1;
     const currentPage = pagination.currentPage ?? page;
-    const totalEl     = pagination.totalElements ?? movements.length;
+    const totalEl = pagination.totalElements ?? movements.length;
 
     const pageNums = (() => {
         const arr = [], s = Math.max(0, currentPage - 1), e = Math.min(totalPages - 1, currentPage + 1);
@@ -153,7 +150,7 @@ function RecentMovementsTable({ stores }) {
                 </div>
                 <button
                     onClick={() => navigate("/stock/transactions")}
-                    className="text-sm text-blue-600 font-medium hover:underline whitespace-nowrap"
+                    className="text-sm text-blue-600 cursor-pointer font-medium hover:underline whitespace-nowrap"
                 >
                     View All →
                 </button>
@@ -167,7 +164,7 @@ function RecentMovementsTable({ stores }) {
                     <select
                         value={typeFilter}
                         onChange={(e) => setTypeFilter(e.target.value)}
-                        className="flex-1 min-w-0 text-xs border border-gray-200 rounded-lg px-2 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-300 text-gray-800"
+                        className="flex-1 min-w-0 cursor-pointer text-xs border border-gray-200 rounded-lg px-2 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-300 text-gray-800"
                     >
                         <option value="">All Types</option>
                         <option value="IN">IN</option>
@@ -178,7 +175,7 @@ function RecentMovementsTable({ stores }) {
                     <select
                         value={storeId}
                         onChange={(e) => setStoreId(e.target.value)}
-                        className="flex-1 min-w-0 text-xs border border-gray-200 rounded-lg px-2 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-300 text-gray-800"
+                        className="flex-1 min-w-0 cursor-pointer text-xs border border-gray-200 rounded-lg px-2 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-300 text-gray-800"
                     >
                         <option value="">All Stores</option>
                         {stores.map((s) => (
@@ -197,24 +194,24 @@ function RecentMovementsTable({ stores }) {
                             type="date"
                             value={dateFrom}
                             onChange={(e) => setDateFrom(e.target.value)}
-                            className="w-full text-xs border border-gray-200 rounded-lg px-2 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-300 text-gray-800"
+                            className="w-full text-xs border cursor-pointer border-gray-200 rounded-lg px-2 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-300 text-gray-800"
                             style={{ colorScheme: "light" }}
                         />
                     </div>
                     <div className="flex-1 min-w-0">
-                        <p className="text-xs text-gray-400 mb-1 pl-0.5">To</p>
+                        <p className="text-xs text-gray-400 text-center mb-1 pl-0.5">To</p>
                         <input
                             type="date"
                             value={dateTo}
                             onChange={(e) => setDateTo(e.target.value)}
-                            className="w-full text-xs border border-gray-200 rounded-lg px-2 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-300 text-gray-800"
+                            className="w-full text-xs border cursor-pointer border-gray-200 rounded-lg px-2 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-300 text-gray-800"
                             style={{ colorScheme: "light" }}
                         />
                     </div>
                     <button
                         onClick={handleApply}
                         disabled={loading}
-                        className="shrink-0 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-2 rounded-lg transition-colors flex items-center gap-1.5 disabled:opacity-60 whitespace-nowrap"
+                        className="shrink-0 bg-blue-600 cursor-pointer hover:bg-blue-700 text-white text-xs font-semibold px-4 py-2 rounded-lg transition-colors flex items-center gap-1.5 disabled:opacity-60 whitespace-nowrap"
                     >
                         {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Filter className="w-3 h-3" />}
                         Apply
@@ -233,7 +230,7 @@ function RecentMovementsTable({ stores }) {
                             <th className="px-4 py-2.5 text-left whitespace-nowrap">Store</th>
                             <th className="px-4 py-2.5 text-left whitespace-nowrap">Qty</th>
                             <th className="px-4 py-2.5 text-left whitespace-nowrap">Before → After</th>
-                            <th className="px-4 py-2.5 text-left whitespace-nowrap">By</th>
+                            <th className="px-4 py-2.5 text-center whitespace-nowrap">By</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
@@ -284,7 +281,7 @@ function RecentMovementsTable({ stores }) {
                                             </span>
                                         </td>
                                         {/* Before → After */}
-                                        <td className="px-4 py-3 text-xs text-gray-600 whitespace-nowrap">
+                                        <td className="px-4 py-3 text-center text-xs text-gray-600 whitespace-nowrap">
                                             {m.before} → {m.after}
                                         </td>
                                         {/* By */}
@@ -313,11 +310,10 @@ function RecentMovementsTable({ stores }) {
                                 key={p}
                                 onClick={() => fetchMovements(p)}
                                 disabled={loading}
-                                className={`w-7 h-7 flex items-center justify-center rounded-lg text-xs font-semibold transition ${
-                                    p === currentPage
-                                        ? "bg-blue-600 text-white"
-                                        : "border border-gray-200 text-gray-600 hover:border-blue-400 hover:text-blue-600"
-                                }`}
+                                className={`w-7 h-7 flex cursor-pointer items-center justify-center rounded-lg text-xs font-semibold transition ${p === currentPage
+                                    ? "bg-blue-600 text-white"
+                                    : "border border-gray-200 text-gray-600 hover:border-blue-400 hover:text-blue-600"
+                                    }`}
                             >
                                 {p + 1}
                             </button>
@@ -325,7 +321,7 @@ function RecentMovementsTable({ stores }) {
                         <button
                             onClick={() => fetchMovements(currentPage + 1)}
                             disabled={currentPage >= totalPages - 1 || loading}
-                            className="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:border-blue-400 hover:text-blue-600 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                            className="w-7 h-7 flex cursor-pointer items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:border-blue-400 hover:text-blue-600 disabled:opacity-40 disabled:cursor-not-allowed transition"
                         >
                             <ChevronRight className="w-3.5 h-3.5" />
                         </button>
@@ -346,15 +342,15 @@ export default function Stock() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedLowStockItem, setSelectedLowStockItem] = useState(null);
 
-    const [totalStores,   setTotalStores]   = useState(null);
-    const [totalItems,    setTotalItems]    = useState(null);
-    const [totalMovements,setTotalMovements]= useState(null);
+    const [totalStores, setTotalStores] = useState(null);
+    const [totalItems, setTotalItems] = useState(null);
+    const [totalMovements, setTotalMovements] = useState(null);
 
-    const [stores,        setStores]        = useState([]);
+    const [stores, setStores] = useState([]);
     const [lowStockItems, setLowStockItems] = useState([]);
 
-    const [loadingStats,    setLoadingStats]    = useState(true);
-    const [loadingStores,   setLoadingStores]   = useState(true);
+    const [loadingStats, setLoadingStats] = useState(true);
+    const [loadingStores, setLoadingStores] = useState(true);
     const [loadingLowStock, setLoadingLowStock] = useState(true);
 
     // Stats
@@ -366,7 +362,7 @@ export default function Stock() {
                 setTotalStores(storeRes.pagination?.totalElements ?? storeRes.stores?.length ?? 0);
                 setTotalItems(itemRes.pagination?.totalElements ?? itemRes.items?.length ?? 0);
             } catch { setTotalStores(0); setTotalItems(0); }
-            finally  { setLoadingStats(false); }
+            finally { setLoadingStats(false); }
         })();
     }, []);
 
@@ -378,7 +374,7 @@ export default function Stock() {
                 const res = await getActiveStores();
                 setStores(res.data || res || []);
             } catch { setStores([]); }
-            finally  { setLoadingStores(false); }
+            finally { setLoadingStores(false); }
         })();
     }, []);
 
@@ -390,7 +386,7 @@ export default function Stock() {
                 const { items } = await getLowStockItems();
                 setLowStockItems(items);
             } catch { setLowStockItems([]); }
-            finally  { setLoadingLowStock(false); }
+            finally { setLoadingLowStock(false); }
         })();
     }, []);
 
@@ -411,7 +407,7 @@ export default function Stock() {
         const key = item.storeName || `Store ${item.storeId}`;
         if (!storeStockMap[key]) storeStockMap[key] = { atRisk: 0, qty: 0 };
         storeStockMap[key].atRisk += 1;
-        storeStockMap[key].qty    += item.quantity;
+        storeStockMap[key].qty += item.quantity;
     });
 
     const storeSummaryRows = stores.map((s, i) => {
@@ -423,10 +419,10 @@ export default function Stock() {
     const maxQty = Math.max(...storeSummaryRows.map((s) => s.qty), 1);
 
     const stats = [
-        { key: "Total Stores",    val: loadingStats    ? "..." : (totalStores    ?? 0), icon: Store,         txColor: "text-blue-600",   bgColor: "bg-blue-50"   },
-        { key: "Total Items",     val: loadingStats    ? "..." : (totalItems     ?? 0), icon: Package,       txColor: "text-purple-600", bgColor: "bg-purple-50" },
-        { key: "Low Stock Alerts",val: loadingLowStock ? "..." : lowStockCount,         icon: AlertTriangle, txColor: "text-orange-500", bgColor: "bg-orange-50" },
-        { key: "Total Movements", val: totalMovements  === null ? "..." : totalMovements, icon: ArrowLeftRight, txColor: "text-green-600", bgColor: "bg-green-50" },
+        { key: "Total Stores", val: loadingStats ? "..." : (totalStores ?? 0), icon: Store, txColor: "text-blue-600", bgColor: "bg-blue-50" },
+        { key: "Total Items", val: loadingStats ? "..." : (totalItems ?? 0), icon: Package, txColor: "text-purple-600", bgColor: "bg-purple-50" },
+        { key: "Low Stock Alerts", val: loadingLowStock ? "..." : lowStockCount, icon: AlertTriangle, txColor: "text-orange-500", bgColor: "bg-orange-50" },
+        { key: "Total Movements", val: totalMovements === null ? "..." : totalMovements, icon: ArrowLeftRight, txColor: "text-green-600", bgColor: "bg-green-50" },
     ];
 
     const overallLoading = loadingStats && loadingStores && loadingLowStock;
@@ -460,7 +456,7 @@ export default function Stock() {
                     </p>
                     <button
                         onClick={() => navigate("/stock/transactions")}
-                        className="ml-auto text-sm text-blue-600 font-semibold hover:underline whitespace-nowrap"
+                        className="ml-auto text-sm text-blue-600 cursor-pointer font-semibold hover:underline whitespace-nowrap"
                     >
                         View Low Stock →
                     </button>
@@ -605,7 +601,7 @@ export default function Stock() {
                                         <td className="px-5 py-4">
                                             <button
                                                 onClick={() => { setSelectedLowStockItem(item); setIsModalOpen(true); }}
-                                                className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors"
+                                                className="flex cursor-pointer items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors"
                                             >
                                                 <Plus className="w-3.5 h-3.5" />
                                                 Add Stock
