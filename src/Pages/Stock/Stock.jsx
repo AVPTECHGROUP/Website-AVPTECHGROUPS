@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
     Store,
     Package,
@@ -23,10 +23,11 @@ import {
     getActiveStores,
     getLowStockItems,
     getStockMovementHistory,
-    getItemsList,
+    getStockItemsStats,
 } from "../../Api/StockApi";
 import { getStockList } from "../../Api/StoreApi";
 
+// ─── Shared helpers (same as Movement.jsx) ────────────────────────────────────
 const mvTypeMeta = {
     IN: { dot: "bg-green-500", badge: "text-green-700 bg-green-50 border border-green-200", label: "IN" },
     OUT: { dot: "bg-red-500", badge: "text-red-600 bg-red-50 border border-red-200", label: "OUT" },
@@ -93,6 +94,10 @@ function RecentMovementsTable({ stores }) {
     const [dateFrom, setDateFrom] = useState("");
     const [dateTo, setDateTo] = useState("");
 
+    // Prevents double-call: fetchMovements useCallback recreates on mount
+    // which would re-trigger the useEffect. We gate on this ref instead.
+    const didMountFetch = useRef(false);
+
     const navigate = useNavigate();
 
     const fetchMovements = useCallback(async (pageNum = 0) => {
@@ -119,8 +124,13 @@ function RecentMovementsTable({ stores }) {
         } finally { setLoading(false); }
     }, [storeId, typeFilter, dateFrom, dateTo]);
 
-    // Load on mount
-    useEffect(() => { fetchMovements(0); }, []); // eslint-disable-line
+    // Load on mount — run exactly once, ignore subsequent fetchMovements recreations
+    useEffect(() => {
+        if (didMountFetch.current) return;
+        didMountFetch.current = true;
+        fetchMovements(0);
+    }, [fetchMovements]); // fetchMovements in deps so eslint is happy; guard prevents re-runs
+
     const handleApply = () => { fetchMovements(0); };
 
     const totalPages = pagination.totalPages ?? 1;
@@ -340,14 +350,17 @@ export default function Stock() {
     const [loadingStores, setLoadingStores] = useState(true);
     const [loadingLowStock, setLoadingLowStock] = useState(true);
 
-    // Stats
+    // Stats — getStockList for store count, getStockItemsStats for item count
     useEffect(() => {
         (async () => {
             setLoadingStats(true);
             try {
-                const [storeRes, itemRes] = await Promise.all([getStockList(0, 1), getItemsList(0, 1)]);
+                const [storeRes, itemStats] = await Promise.all([
+                    getStockList(0, 1),
+                    getStockItemsStats(),
+                ]);
                 setTotalStores(storeRes.pagination?.totalElements ?? storeRes.stores?.length ?? 0);
-                setTotalItems(itemRes.pagination?.totalElements ?? itemRes.items?.length ?? 0);
+                setTotalItems(itemStats?.totalItems ?? 0);
             } catch { setTotalStores(0); setTotalItems(0); }
             finally { setLoadingStats(false); }
         })();
@@ -503,11 +516,6 @@ export default function Stock() {
                                     </div>
                                 </div>
                             ))
-                        )}
-                        {!loadingStores && !loadingLowStock && storeSummaryRows.length > 0 && (
-                            <p className="text-xs text-gray-400 pt-1">
-                                Bar represents low-stock quantity per store. Green = no alerts.
-                            </p>
                         )}
                     </div>
                 </div>

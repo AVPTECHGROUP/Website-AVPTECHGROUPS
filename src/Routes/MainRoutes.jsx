@@ -56,6 +56,8 @@ import Driver_Attendants from '../Pages/Transport/Driver_Attendants';
 import Reports from '../Pages/Transport/Reports';
 import Student_Allocations from '../Pages/Transport/Student_Allocations';
 import Routes_Manage from '../Pages/Transport/Routes_Manage';
+import CreateStudentOrder from '../Components/Stock/CreateStudentOrder';
+import EditStudentOrder from '../Components/Stock/EditStudentOrder';
 
 const MainRoutes = () => {
   const isTokenExist = localStorage.getItem('token');
@@ -114,6 +116,8 @@ const MainRoutes = () => {
             <Route path="/stock/items" element={<Items />} />
             <Route path="/stock/classConfig" element={<ClassConfig/>} />
             <Route path="/stock/studentOrders" element={<StudentOrders/>} />
+            <Route path="/stock/studentOrders/addOrder" element={<CreateStudentOrder/>} />
+            <Route path="/stock/studentOrders/editOrder" element={<EditStudentOrder/>} />
             <Route path="/stock/transactions" element={<Transactions />} />
             <Route path="/stock/movementHistory" element={<Movement />} />
           </Route>

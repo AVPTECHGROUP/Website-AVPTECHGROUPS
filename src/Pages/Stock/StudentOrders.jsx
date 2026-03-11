@@ -1,16 +1,18 @@
 import { useState, useEffect, useCallback } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
-  ShoppingBag, Search, ChevronDown, Plus, SlidersHorizontal,
-  CheckCircle, XCircle as XCircleIcon, Calendar,
+  ShoppingBag,
+  Plus, 
+  CheckCircle, XCircle as XCircleIcon,
   ClipboardList, Eye, Pencil, Ban, AlertTriangle, Loader2,
+  ChevronLeft, ChevronRight, SearchIcon,
 } from "lucide-react";
 import CardComponent from "../../Components/CommonComp/CardComponent";
 import CardLoader from "../../Components/CommonComp/CardLoader";
 import ListLoader from "../../Components/CommonComp/ListLoader";
 import ActionDropDownComp from "../../Components/CommonComp/ActionDropDownComp";
-import CreateStudentOrder from "../../Components/Stock/CreateStudentOrder";
 import ViewStudentOrder from "../../Components/Stock/ViewOrder";
-import { getOrderStats, getStudentOrders, cancelStudentOrder, } from "../../Api/StudentOrder";
+import { getOrderStats, getStudentOrders, cancelStudentOrder } from "../../Api/StudentOrder";
 
 const STATUS_OPTIONS = [
   { value: "", label: "All Status" },
@@ -19,22 +21,21 @@ const STATUS_OPTIONS = [
   { value: "CANCELLED", label: "Cancelled" },
 ];
 
-const ITEMS_PER_PAGE = 10;
-
 const statusColors = {
-  DRAFT: "bg-gray-100   text-gray-600    border border-gray-300",
-  PENDING: "bg-yellow-100 text-yellow-700  border border-yellow-200",
-  CONFIRMED: "bg-blue-100   text-blue-700    border border-blue-200",
-  APPROVED: "bg-blue-100   text-blue-700    border border-blue-200",
+  DRAFT:      "bg-gray-100   text-gray-600   border border-gray-300",
+  PENDING:    "bg-yellow-100 text-yellow-700  border border-yellow-200",
+  CONFIRMED:  "bg-blue-100   text-blue-700    border border-blue-200",
+  APPROVED:   "bg-blue-100   text-blue-700    border border-blue-200",
   DISPATCHED: "bg-purple-100 text-purple-700  border border-purple-200",
-  DELIVERED: "bg-green-100  text-green-700   border border-green-200",
-  CANCELLED: "bg-red-100    text-red-600     border border-red-200",
+  DELIVERED:  "bg-green-100  text-green-700   border border-green-200",
+  CANCELLED:  "bg-red-100    text-red-600     border border-red-200",
 };
 
+// ── Toast ─────────────────────────────────────────────────────────
 let _setToasts = null;
 export const toast = {
   success: (msg) => _setToasts?.((p) => [...p, { id: Date.now(), type: "success", msg }]),
-  error: (msg) => _setToasts?.((p) => [...p, { id: Date.now(), type: "error", msg }]),
+  error:   (msg) => _setToasts?.((p) => [...p, { id: Date.now(), type: "error",   msg }]),
 };
 function ToastContainer() {
   const [toasts, setToasts] = useState([]);
@@ -51,8 +52,8 @@ function ToastContainer() {
         <div key={t.id} className={`flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lg text-sm font-medium pointer-events-auto min-w-55 max-w-xs bg-white border
           ${t.type === "success" ? "border-green-200 text-green-800" : "border-red-200 text-red-700"}`}>
           {t.type === "success"
-            ? <CheckCircle className="w-4 h-4 text-green-500 shrink-0" />
-            : <XCircleIcon className="w-4 h-4 text-red-500   shrink-0" />}
+            ? <CheckCircle  className="w-4 h-4 text-green-500 shrink-0" />
+            : <XCircleIcon  className="w-4 h-4 text-red-500   shrink-0" />}
           <span className="flex-1">{t.msg}</span>
           <button onClick={() => remove(t.id)} className="text-gray-400 hover:text-gray-600 text-xs ml-1">✕</button>
         </div>
@@ -61,7 +62,7 @@ function ToastContainer() {
   );
 }
 
-// ─── Cancel Confirmation Modal ────────────────────────────────────
+// ── Cancel Confirm Modal ──────────────────────────────────────────
 function CancelConfirmModal({ order, onConfirm, onClose, loading }) {
   if (!order) return null;
   return (
@@ -90,18 +91,12 @@ function CancelConfirmModal({ order, onConfirm, onClose, loading }) {
           </div>
         </div>
         <div className="flex items-center justify-end gap-3 pt-2">
-          <button
-            onClick={onClose}
-            disabled={loading}
-            className="px-5 py-2 text-sm font-semibold text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50"
-          >
+          <button onClick={onClose} disabled={loading}
+            className="px-5 py-2 text-sm font-semibold text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50">
             Keep Order
           </button>
-          <button
-            onClick={onConfirm}
-            disabled={loading}
-            className="flex items-center gap-2 px-5 py-2 text-sm font-semibold text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-          >
+          <button onClick={onConfirm} disabled={loading}
+            className="flex items-center gap-2 px-5 py-2 text-sm font-semibold text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
             {loading
               ? <><Loader2 className="w-4 h-4 animate-spin" /> Cancelling…</>
               : <><Ban className="w-4 h-4" /> Yes, Cancel</>}
@@ -112,7 +107,7 @@ function CancelConfirmModal({ order, onConfirm, onClose, loading }) {
   );
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────
 function fmtDate(d) {
   if (!d) return "—";
   return new Date(d).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
@@ -122,57 +117,77 @@ function buildActionOptions(status) {
   const s = (status || "").toUpperCase();
   if (s === "DRAFT") {
     return [
-      { value: "edit", label: "Edit", icon: Pencil, text: "text-blue-600", bg: "bg-blue-50", hover: "hover:bg-blue-100" },
-      { value: "view", label: "View", icon: Eye, text: "text-gray-600", bg: "bg-gray-50", hover: "hover:bg-gray-100" },
-      { value: "cancel", label: "Cancel", icon: Ban, text: "text-red-500", bg: "bg-red-50", hover: "hover:bg-red-100" },
+      { value: "edit",   label: "Edit",   icon: Pencil,     text: "text-blue-600", bg: "bg-blue-50", hover: "hover:bg-blue-100" },
+      { value: "view",   label: "View",   icon: Eye,        text: "text-gray-600", bg: "bg-gray-50", hover: "hover:bg-gray-100" },
+      { value: "cancel", label: "Cancel", icon: Ban,        text: "text-red-500",  bg: "bg-red-50",  hover: "hover:bg-red-100"  },
     ];
   }
-  // All other statuses: view only
   return [
     { value: "view", label: "View", icon: Eye, text: "text-blue-600", bg: "bg-blue-50", hover: "hover:bg-blue-100" },
   ];
 }
 
-// ─── Main ─────────────────────────────────────────────────────────
+// ── Main Component ────────────────────────────────────────────────
 export default function StudentOrders() {
-  const [orders, setOrders] = useState([]);
-  const [pagination, setPagination] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [statsLoading, setStatsLoading] = useState(true);
-  const [page, setPage] = useState(0);
+  const navigate  = useNavigate();
+  const location  = useLocation();
+
+  const [orders,      setOrders]      = useState([]);
+  const [pagination,  setPagination]  = useState(null);
+  const [loading,     setLoading]     = useState(true);
+  const [statsLoading,setStatsLoading]= useState(true);
+  const [page,        setPage]        = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
 
   const [stats, setStats] = useState({ draftOrders: 0, confirmedOrders: 0, cancelledOrders: 0 });
 
-  const [searchInput, setSearchInput] = useState("");
-  const [search, setSearch] = useState("");
+  const [searchInput,  setSearchInput]  = useState("");
+  const [search,       setSearch]       = useState("");
   const [statusFilter, setStatusFilter] = useState("");
-  const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
+
+  const [noOrderFound, setNoOrderFound] = useState(false);
 
   // Modals
-  const [showCreate, setShowCreate] = useState(false);   // new order
-  const [editOrderId, setEditOrderId] = useState(null);    // edit draft (order id)
-  const [viewOrder, setViewOrder] = useState(null);    // view modal
+  const [viewOrder,    setViewOrder]    = useState(null);
 
-  // Cancel modal
+  // Cancel
   const [cancelTarget, setCancelTarget] = useState(null);
-  const [cancelling, setCancelling] = useState(false);
+  const [cancelling,   setCancelling]   = useState(false);
 
-  // ── Debounce search ──
+  const resetPage = () => setPage(1);
+
+  // ── Handle return from Create/Edit page ──────────────────────
   useEffect(() => {
-    const t = setTimeout(() => { setSearch(searchInput); setPage(0); }, 400);
+    if (location.state?.saved) {
+      const status = location.state.saved;
+      toast.success(
+        status === "DRAFT"
+          ? "Order saved as draft."
+          : "Order confirmed & stock issued."
+      );
+      // Clear the state so toast doesn't re-fire on refresh
+      window.history.replaceState({}, document.title);
+      fetchOrders();
+      fetchStats();
+    }
+  }, []); // eslint-disable-line
+
+  // Debounce search
+  useEffect(() => {
+    const t = setTimeout(() => { setSearch(searchInput); resetPage(); }, 400);
     return () => clearTimeout(t);
   }, [searchInput]);
-  useEffect(() => { setPage(0); }, [statusFilter, fromDate, toDate]);
 
-  // ── Fetch stats ──
+  useEffect(() => { resetPage(); }, [statusFilter]);
+
+  // Fetch stats
   const fetchStats = useCallback(() => {
     setStatsLoading(true);
     getOrderStats()
       .then((data) => {
         const s = data?.data || data || {};
         setStats({
-          draftOrders: s.draftOrders ?? s.draft ?? 0,
+          draftOrders:     s.draftOrders     ?? s.draft     ?? 0,
           confirmedOrders: s.confirmedOrders ?? s.confirmed ?? 0,
           cancelledOrders: s.cancelledOrders ?? s.cancelled ?? 0,
         });
@@ -182,41 +197,32 @@ export default function StudentOrders() {
   }, []);
   useEffect(() => { fetchStats(); }, [fetchStats]);
 
-  // ── Fetch orders ──
+  // Fetch orders
   const fetchOrders = useCallback(async () => {
     setLoading(true);
+    setNoOrderFound(false);
     try {
       const res = await getStudentOrders({
-        page, size: ITEMS_PER_PAGE,
-        searchTerm: search, status: statusFilter,
-        fromDate: fromDate || undefined, toDate: toDate || undefined,
+        page: page - 1,
+        size: rowsPerPage,
+        searchTerm: search,
+        status: statusFilter,
       });
-      setOrders(res.orders || []);
+      const list = res.orders || [];
+      setOrders(list);
       setPagination(res.pagination || null);
+      setNoOrderFound(list.length === 0);
     } catch (e) {
       console.error(e);
       toast.error("Failed to load student orders.");
     } finally {
       setLoading(false);
     }
-  }, [page, search, statusFilter, fromDate, toDate]);
+  }, [page, rowsPerPage, search, statusFilter]);
   useEffect(() => { fetchOrders(); }, [fetchOrders]);
 
   const totalItems = pagination?.totalElements ?? orders.length;
-  const totalPages = pagination?.totalPages ?? Math.max(1, Math.ceil(totalItems / ITEMS_PER_PAGE));
-  const pageNumbers = () => {
-    const pages = [];
-    for (let i = Math.max(0, page - 2); i <= Math.min(totalPages - 1, page + 2); i++) pages.push(i);
-    return pages;
-  };
-
-  // ── Callbacks ──
-  const handleOrderSaved = (status) => {
-    setShowCreate(false);
-    setEditOrderId(null);
-    toast.success(status === "DRAFT" ? "Order saved as draft." : "Order confirmed & stock issued.");
-    fetchOrders(); fetchStats();
-  };
+  const totalPages = pagination?.totalPages    ?? Math.max(1, Math.ceil(totalItems / rowsPerPage));
 
   const handleCancelOrder = async () => {
     if (!cancelTarget) return;
@@ -232,22 +238,22 @@ export default function StudentOrders() {
   };
 
   const handleAction = (val, order) => {
-    if (val === "view") setViewOrder(order);
-    if (val === "edit") setEditOrderId(order.id);
+    if (val === "view")   setViewOrder(order);
+    if (val === "edit")   navigate(`/stock/studentOrders/editOrder?editId=${order.id}`);
     if (val === "cancel") setCancelTarget(order);
   };
 
-  // ─── Stat cards ───────────────────────────────────────────────
   const statCards = [
-    { key: "draft", label: "Draft Orders", val: stats.draftOrders, iconTxColor: "text-orange-500", iconBgColor: "bg-orange-100", Icon: ClipboardList },
-    { key: "confirmed", label: "Confirmed Orders", val: stats.confirmedOrders, iconTxColor: "text-green-600", iconBgColor: "bg-green-100", Icon: CheckCircle },
-    { key: "cancelled", label: "Cancelled Orders", val: stats.cancelledOrders, iconTxColor: "text-red-500", iconBgColor: "bg-red-100", Icon: XCircleIcon },
+    { key: "draft",     label: "Draft Orders",    val: stats.draftOrders,     iconTxColor: "text-orange-500", iconBgColor: "bg-orange-100", Icon: ClipboardList },
+    { key: "confirmed", label: "Confirmed Orders", val: stats.confirmedOrders, iconTxColor: "text-green-600",  iconBgColor: "bg-green-100",  Icon: CheckCircle   },
+    { key: "cancelled", label: "Cancelled Orders", val: stats.cancelledOrders, iconTxColor: "text-red-500",    iconBgColor: "bg-red-100",    Icon: XCircleIcon   },
   ];
+
+  const tdStyle = "px-2 py-2 text-left text-gray-700 text-sm";
 
   return (
     <>
       <ToastContainer />
-
       <CancelConfirmModal
         order={cancelTarget}
         onClose={() => { if (!cancelling) setCancelTarget(null); }}
@@ -255,289 +261,339 @@ export default function StudentOrders() {
         loading={cancelling}
       />
 
-      <div className="min-h-screen bg-blue-50 p-4 sm:p-6 lg:p-8 font-sans">
+      <div className="min-h-screen bg-linear-to-b from-sky-50 to-sky-100">
+        <div className="p-2 sm:p-5 lg:p-4">
 
-        {/* ── Page Header ── */}
-        <div className="mb-6">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">Student Orders</h1>
-          <p className="text-gray-500 text-sm mt-1">
-            Create and manage stock orders for students — track from draft through confirmed.
-          </p>
-        </div>
-
-        {/* ── Stat Cards + New Order tile ── */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          {statsLoading
-            ? Array.from({ length: 3 }).map((_, i) => <CardLoader key={i} />)
-            : statCards.map((card) => (
-              <CardComponent
-                key={card.key}
-                IconName={card.Icon}
-                keyName={card.label}
-                val={card.val}
-                iconTxColor={card.iconTxColor}
-                iconBgColor={card.iconBgColor}
-              />
-            ))
-          }
-        </div>
-
-        {/* ── Table Card ── */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-
-          {/* Toolbar */}
-          <div className="px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100">
-            <div className="flex items-center gap-2">
-              <SlidersHorizontal className="w-5 h-5 text-blue-500" />
-              <h2 className="font-semibold text-gray-800 text-lg">Student Orders</h2>
-              <span className="text-xs text-gray-400 font-normal ml-1">
-                {totalItems} record{totalItems !== 1 ? "s" : ""}
-              </span>
+          {/* Page Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Student Orders</h2>
+              <p className="text-gray-500 mt-1 font-medium text-sm sm:text-base">
+                Create and manage stock orders for students — track from draft through confirmed.
+              </p>
             </div>
-            <button
-              onClick={() => setShowCreate(true)}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors w-fit"
-            >
-              <Plus className="w-4 h-4" /> New Order
-            </button>
           </div>
 
-          {/* Filters */}
-          <div className="px-5 py-4 border-b border-gray-100 space-y-3">
-            <div className="flex flex-col sm:flex-row gap-3">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          {/* Stat Cards */}
+          <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 text-sm mt-5">
+            {statsLoading
+              ? statCards.map((_, i) => <CardLoader key={i} />)
+              : statCards.map((card) => (
+                <CardComponent
+                  key={card.key}
+                  IconName={card.Icon}
+                  keyName={card.label.toUpperCase()}
+                  val={card.val}
+                  iconTxColor={card.iconTxColor}
+                  iconBgColor={card.iconBgColor}
+                />
+              ))}
+          </div>
+
+          {/* ── Main Panel ── */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mt-4">
+
+            {/* Panel Header */}
+            <div className="flex items-center justify-between gap-3 px-4 md:px-5 py-3 md:py-4 border-b border-gray-100">
+              <div className="flex items-center gap-2 min-w-0">
+                <ShoppingBag className="w-5 h-5 text-blue-500 shrink-0" />
+                <h2 className="font-semibold text-gray-800 text-base md:text-lg truncate">Student Orders</h2>
+              </div>
+              {/* ── Navigate to full-page create ── */}
+              <button
+                onClick={() => navigate("/stock/studentOrders/addOrder")}
+                className="flex items-center gap-1.5 cursor-pointer bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs md:text-sm font-semibold px-3 md:px-4 py-2 rounded-lg transition-colors shrink-0"
+              >
+                <Plus className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                New Order
+              </button>
+            </div>
+
+            {/* Filters */}
+            <div className="flex flex-wrap items-center gap-3 px-4 py-3 border-b border-gray-100">
+              <div className="flex flex-1 min-w-45 items-center gap-2 border rounded-lg border-gray-200 bg-gray-50 px-3 py-2 focus-within:ring-2 focus-within:ring-blue-200 focus-within:border-blue-400 transition">
+                <SearchIcon className="w-4 h-4 text-gray-400 shrink-0" />
                 <input
                   type="text"
                   placeholder="Search by student name or order ID…"
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-300 transition"
+                  className="text-sm focus:outline-none text-gray-600 w-full bg-transparent"
                 />
               </div>
-              <div className="relative">
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="appearance-none w-full sm:min-w-37.5 pl-3 pr-8 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-300 text-gray-700"
-                >
-                  {STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                </select>
-                <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
-              </div>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="px-3 py-2 border border-gray-200 bg-gray-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-200 text-sm text-gray-700 w-36 shrink-0"
+              >
+                {STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
             </div>
-            <div className="flex flex-col sm:flex-row gap-3 items-center">
-              <div className="flex items-center gap-2 flex-1">
-                <Calendar className="w-4 h-4 text-gray-400 shrink-0" />
-                <span className="text-xs font-semibold text-gray-500 shrink-0">From</span>
-                <input
-                  type="date" value={fromDate}
-                  onChange={(e) => setFromDate(e.target.value)}
-                  className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-300"
-                />
-              </div>
-              <div className="flex items-center gap-2 flex-1">
-                <Calendar className="w-4 h-4 text-gray-400 shrink-0" />
-                <span className="text-xs font-semibold text-gray-500 shrink-0">To</span>
-                <input
-                  type="date" value={toDate}
-                  onChange={(e) => setToDate(e.target.value)}
-                  className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-300"
-                />
-              </div>
-              {(fromDate || toDate) && (
-                <button
-                  onClick={() => { setFromDate(""); setToDate(""); }}
-                  className="text-xs text-red-500 hover:text-red-700 font-semibold shrink-0"
-                >
-                  Clear dates
-                </button>
-              )}
-            </div>
-          </div>
 
-          {/* ── Desktop Table ── */}
-          <div className="overflow-x-auto hidden sm:block">
-            <table className="w-full min-w-190">
-              <thead>
-                <tr className="bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-100">
-                  <th className="px-5 py-3 text-left">#</th>
-                  <th className="px-5 py-3 text-left">Student</th>
-                  <th className="px-5 py-3 text-center">Class</th>
-                  <th className="px-5 py-3 text-center">Store</th>
-                  <th className="px-5 py-3 text-center">Items</th>
-                  <th className="px-5 py-3 text-center text-nowrap">Order Date</th>
-                  <th className="px-5 py-3 text-center">Status</th>
-                  <th className="px-5 py-3 text-center">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {loading ? (
-                  <ListLoader rows={6} avatar={true} />
-                ) : orders.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} className="px-5 py-12 text-center">
-                      <ShoppingBag className="w-10 h-10 text-gray-200 mx-auto mb-2" />
-                      <p className="text-sm text-gray-400">No orders found.</p>
-                    </td>
-                  </tr>
-                ) : (
-                  orders.map((order, idx) => {
-                    const sc = statusColors[order.status] || "bg-gray-100 text-gray-600 border border-gray-200";
-                    const studentName = order.studentName || order.student?.name || order.student?.fullName || "—";
-                    const admNumber = order.admissionNumber || order.student?.admissionNumber || "—";
-                    const orderClass = order.className || order.class || order.student?.className || "—";
-                    const storeName = order.storeName || order.store?.storeName || order.store?.name || "—";
-                    const items = order.items || order.orderItems || [];
-                    const orderDate = order.orderDate || order.createdAt || order.date;
-
-                    return (
-                      <tr key={order.id} className="hover:bg-blue-50/40 transition-colors">
-                        <td className="px-5 py-4 text-xs text-gray-400 font-medium">
-                          {page * ITEMS_PER_PAGE + idx + 1}
-                        </td>
-                        <td className="px-5 py-4">
-                          <p className="text-sm font-bold text-nowrap text-gray-800">{studentName}</p>
-                          <p className="text-xs text-gray-400">{admNumber}</p>
-                        </td>
-                        <td className="px-5 py-4 text-sm text-gray-600 text-center text-nowrap">{orderClass}</td>
-                        <td className="px-5 py-4 text-sm text-gray-600 text-nowrap text-center">{storeName}</td>
-                        <td className="px-5 py-4 text-center">
-                          {items.length > 0 ? (
-                            <div className="flex flex-wrap items-center justify-center gap-1">
-                              {items.slice(0, 2).map((it, i) => (
-                                <span key={i} className="text-xs text-center bg-blue-50 text-blue-700 border border-blue-100 px-2 py-0.5 rounded-full font-medium whitespace-nowrap">
-                                  {it.itemName || it.name} ×{it.quantity || it.qty}
-                                </span>
-                              ))}
-                              {items.length > 3 && (
-                                <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-medium">
-                                  +{items.length - 2} more
-                                </span>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="text-sm text-gray-400">—</span>
-                          )}
-                        </td>
-                        <td className="px-5 py-4 text-sm text-gray-600">{fmtDate(orderDate)}</td>
-                        <td className="px-5 py-4 text-center">
-                          <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${sc}`}>
-                            {order.status || "—"}
-                          </span>
-                        </td>
-                        <td className="px-5 py-4">
+            {/* ── MOBILE / TABLET CARDS ── */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:hidden px-4 py-4">
+              {loading ? (
+                <div className="text-center py-8 col-span-2">
+                  <div className="flex flex-col items-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-2" />
+                    <span className="text-gray-600">Loading orders…</span>
+                  </div>
+                </div>
+              ) : noOrderFound ? (
+                <div className="text-center py-8 col-span-2">
+                  <ShoppingBag className="w-10 h-10 text-gray-200 mx-auto mb-2" />
+                  <h3 className="text-lg font-bold text-gray-900 mb-1">No Orders Found</h3>
+                  <p className="text-gray-500 text-sm">Try adjusting your filters.</p>
+                </div>
+              ) : (
+                orders.map((order, idx) => {
+                  const sc          = statusColors[order.status] || "bg-gray-100 text-gray-600 border border-gray-200";
+                  const studentName = order.studentName || order.student?.name || "—";
+                  const orderClass  = order.className   || order.student?.className || "—";
+                  const storeName   = order.storeName   || order.store?.storeName   || "—";
+                  const items       = order.items       || order.orderItems         || [];
+                  return (
+                    <div key={order.id} className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+                      <div className="flex items-start justify-between gap-2 mb-3">
+                        <div className="flex items-start gap-2 min-w-0">
+                          <span className="text-xs text-gray-400 mt-0.5 shrink-0">{(page - 1) * rowsPerPage + idx + 1}.</span>
+                          <div className="min-w-0">
+                            <p className="font-semibold text-gray-800 text-sm truncate">{studentName}</p>
+                            <p className="text-xs text-gray-400 truncate">
+                              {order.admissionNumber || order.student?.admissionNumber || "—"}
+                            </p>
+                          </div>
+                        </div>
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-bold shrink-0 ${sc}`}>
+                          {order.status}
+                        </span>
+                      </div>
+                      <div className="space-y-1.5 text-sm">
+                        <p><span className="font-medium text-gray-500">Class:</span><span className="ml-2 text-gray-700">{orderClass}</span></p>
+                        <p><span className="font-medium text-gray-500">Store:</span><span className="ml-2 text-gray-700">{storeName}</span></p>
+                        <p><span className="font-medium text-gray-500">Date:</span><span className="ml-2 text-gray-700">{fmtDate(order.orderDate || order.createdAt)}</span></p>
+                        <p><span className="font-medium text-gray-500">Items:</span><span className="ml-2 text-gray-700">{items.length}</span></p>
+                        <div className="flex justify-start items-center pt-1">
                           <ActionDropDownComp
                             actionOptions={buildActionOptions(order.status)}
                             onAction={(val) => handleAction(val, order)}
                           />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* ── DESKTOP TABLE ── */}
+            <div className="hidden lg:block bg-white rounded-xl border border-gray-200">
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-225">
+                  <thead className="border-b border-gray-200">
+                    <tr>
+                      <th className="px-2 py-3 text-left text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10 w-10">#</th>
+                      <th className="px-2 py-3 text-left text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10">Student</th>
+                      <th className="px-2 py-3 text-left text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10">Class</th>
+                      <th className="px-2 py-3 text-center text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10">Store</th>
+                      <th className="px-2 py-3 text-center text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10">Items</th>
+                      <th className="px-2 py-3 text-left text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10 whitespace-nowrap">Order Date</th>
+                      <th className="px-2 py-3 text-left text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10">Status</th>
+                      <th className="px-6 py-3 text-center text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200 font-normal">
+                    {loading ? (
+                      <ListLoader colSpanSet={8} />
+                    ) : noOrderFound ? (
+                      <tr>
+                        <td colSpan={8} className="px-6 py-10 text-center">
+                          <ShoppingBag className="w-10 h-10 text-gray-200 mx-auto mb-2" />
+                          <h3 className="text-sm font-bold text-gray-700 mb-1">No Orders Found</h3>
+                          <p className="text-xs text-gray-400">Try adjusting your filters.</p>
                         </td>
                       </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* ── Mobile Cards ── */}
-          <div className="sm:hidden divide-y divide-gray-100">
-            {loading ? (
-              <div className="px-4 py-4 space-y-3">
-                {Array.from({ length: 4 }).map((_, i) => <CardLoader key={i} />)}
+                    ) : (
+                      orders.map((order, idx) => {
+                        const sc          = statusColors[order.status] || "bg-gray-100 text-gray-600 border border-gray-200";
+                        const studentName = order.studentName || order.student?.name || order.student?.fullName || "—";
+                        const admNumber   = order.admissionNumber || order.student?.admissionNumber || "—";
+                        const orderClass  = order.className  || order.class || order.student?.className || "—";
+                        const storeName   = order.storeName  || order.store?.storeName || order.store?.name || "—";
+                        const items       = order.items      || order.orderItems || [];
+                        const orderDate   = order.orderDate  || order.createdAt || order.date;
+                        return (
+                          <tr key={order.id} className="hover:bg-blue-50/40 transition-colors">
+                            <td className={tdStyle}>{(page - 1) * rowsPerPage + idx + 1}</td>
+                            <td className={tdStyle}>
+                              <p className="font-medium text-black whitespace-nowrap">{studentName}</p>
+                              <p className="text-xs text-gray-400">{admNumber}</p>
+                            </td>
+                            <td className={tdStyle}>
+                              <span className="text-gray-600 whitespace-nowrap">{orderClass}</span>
+                            </td>
+                            <td className={tdStyle}>
+                              <span className="text-gray-600 whitespace-nowrap">{storeName}</span>
+                            </td>
+                            <td className={tdStyle}>
+                              {items.length > 0 ? (
+                                <div className="flex flex-wrap flex-col items-center gap-1">
+                                  {items.slice(0, 2).map((it, i) => (
+                                    <span key={i} className="text-xs bg-blue-50 text-blue-700 border border-blue-100 px-2 py-0.5 rounded-full font-medium whitespace-nowrap">
+                                      {it.itemName || it.name} ×{it.quantity || it.qty}
+                                    </span>
+                                  ))}
+                                  {items.length > 2 && (
+                                    <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-medium">
+                                      +{items.length - 2} more
+                                    </span>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-gray-400 text-xs">—</span>
+                              )}
+                            </td>
+                            <td className={tdStyle}>
+                              <span className="text-gray-600 whitespace-nowrap">{fmtDate(orderDate)}</span>
+                            </td>
+                            <td className={tdStyle}>
+                              <span className={`inline-flex items-center px-3 py-1 rounded-sm text-xs font-medium ${sc}`}>
+                                {order.status || "—"}
+                              </span>
+                            </td>
+                            <td className={tdStyle}>
+                              <ActionDropDownComp
+                                actionOptions={buildActionOptions(order.status)}
+                                onAction={(val) => handleAction(val, order)}
+                              />
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
               </div>
-            ) : orders.length === 0 ? (
-              <p className="text-center text-gray-400 text-sm py-10">No orders found.</p>
-            ) : (
-              orders.map((order) => {
-                const sc = statusColors[order.status] || "bg-gray-100 text-gray-600 border border-gray-200";
-                const studentName = order.studentName || order.student?.name || "—";
-                const orderClass = order.className || order.student?.className || "—";
-                const storeName = order.storeName || order.store?.storeName || "—";
-                const items = order.items || order.orderItems || [];
-                return (
-                  <div key={order.id} className="px-4 py-4 space-y-2">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <p className="font-bold text-gray-800 text-sm">{studentName}</p>
-                        <p className="text-xs text-gray-400">
-                          {orderClass} · {fmtDate(order.orderDate || order.createdAt)}
-                        </p>
-                      </div>
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-bold shrink-0 ${sc}`}>
-                        {order.status}
-                      </span>
-                    </div>
-                    <p className="text-xs text-gray-500">{storeName} · {items.length} items</p>
-                    <div className="pt-1">
-                      <ActionDropDownComp
-                        actionOptions={buildActionOptions(order.status)}
-                        onAction={(val) => handleAction(val, order)}
-                      />
-                    </div>
+
+              {/* Desktop Pagination */}
+              <div className="px-6 py-4 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="flex flex-col sm:flex-row items-center gap-4">
+                  <span className="text-sm text-gray-700">
+                    {totalItems === 0
+                      ? "No orders"
+                      : `Showing ${(page - 1) * rowsPerPage + 1} to ${Math.min(page * rowsPerPage, totalItems)} of ${totalItems}`}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-700">Rows per page:</span>
+                    <select
+                      value={rowsPerPage}
+                      onChange={(e) => { setRowsPerPage(Number(e.target.value)); resetPage(); }}
+                      className="px-3 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value={10}>10</option>
+                      <option value={25}>25</option>
+                      <option value={50}>50</option>
+                    </select>
                   </div>
-                );
-              })
-            )}
-          </div>
-
-          {/* ── Pagination ── */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-5 py-4 border-t border-gray-100">
-            <p className="text-sm text-gray-400">
-              Showing {totalItems === 0 ? 0 : page * ITEMS_PER_PAGE + 1}–
-              {Math.min((page + 1) * ITEMS_PER_PAGE, totalItems)} of {totalItems} orders
-            </p>
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => setPage((p) => Math.max(0, p - 1))}
-                disabled={page === 0}
-                className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:border-blue-400 hover:text-blue-600 disabled:opacity-40 disabled:cursor-not-allowed transition"
-              >
-                <ChevronDown className="w-4 h-4 rotate-90" />
-              </button>
-              {pageNumbers().map((n) => (
-                <button
-                  key={n} onClick={() => setPage(n)}
-                  className={`w-8 h-8 flex items-center justify-center rounded-lg text-sm font-semibold transition
-                    ${page === n ? "bg-blue-600 text-white" : "border border-gray-200 text-gray-600 hover:border-blue-400 hover:text-blue-600"}`}
-                >
-                  {n + 1}
-                </button>
-              ))}
-              <button
-                onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-                disabled={page >= totalPages - 1}
-                className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:border-blue-400 hover:text-blue-600 disabled:opacity-40 disabled:cursor-not-allowed transition"
-              >
-                <ChevronDown className="w-4 h-4 -rotate-90" />
-              </button>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page === 1 || loading}
+                    className="px-3 py-1 text-gray-600 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  {[...Array(totalPages)].map((_, idx) => (
+                    <button
+                      key={idx + 1}
+                      onClick={() => setPage(idx + 1)}
+                      className={`px-3 py-1 rounded transition-all ${page === idx + 1 ? "bg-blue-500 text-white" : "text-gray-600 hover:bg-gray-100"}`}
+                    >
+                      {idx + 1}
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={page === totalPages || totalPages === 0 || loading}
+                    className="px-3 py-1 text-gray-600 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
             </div>
+
+            {/* Mobile Pagination */}
+            <div className="lg:hidden border-t border-gray-200 px-4 py-4">
+              <div className="flex flex-col gap-4">
+                <div className="text-center text-sm text-gray-700">
+                  {totalItems === 0
+                    ? "No orders"
+                    : `Showing ${(page - 1) * rowsPerPage + 1} to ${Math.min(page * rowsPerPage, totalItems)} of ${totalItems}`}
+                </div>
+                <div className="flex items-center justify-center gap-2">
+                  <span className="text-sm text-gray-700">Rows:</span>
+                  <select
+                    value={rowsPerPage}
+                    onChange={(e) => { setRowsPerPage(Number(e.target.value)); resetPage(); }}
+                    className="px-3 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value={10}>10</option>
+                    <option value={25}>25</option>
+                    <option value={50}>50</option>
+                  </select>
+                </div>
+                <div className="flex items-center justify-center gap-2">
+                  <button
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page === 1 || loading}
+                    className="px-4 py-2 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <div className="flex items-center gap-1">
+                    {totalPages <= 5 ? (
+                      [...Array(totalPages)].map((_, idx) => (
+                        <button key={idx + 1} onClick={() => setPage(idx + 1)}
+                          className={`px-3 py-1 rounded transition-all ${page === idx + 1 ? "bg-blue-500 text-white" : "text-gray-600 hover:bg-gray-100"}`}>
+                          {idx + 1}
+                        </button>
+                      ))
+                    ) : (
+                      <>
+                        <button onClick={() => setPage(1)} className={`px-3 py-1 rounded transition-all ${page === 1 ? "bg-blue-500 text-white" : "text-gray-600 hover:bg-gray-100"}`}>1</button>
+                        {page > 3 && <span className="px-2 text-gray-400">...</span>}
+                        {page > 2 && page < totalPages - 1 && (
+                          <button onClick={() => setPage(page)} className="px-3 py-1 rounded bg-blue-500 text-white">{page}</button>
+                        )}
+                        {page < totalPages - 2 && <span className="px-2 text-gray-400">...</span>}
+                        <button onClick={() => setPage(totalPages)} className={`px-3 py-1 rounded transition-all ${page === totalPages ? "bg-blue-500 text-white" : "text-gray-600 hover:bg-gray-100"}`}>{totalPages}</button>
+                      </>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={page === totalPages || totalPages === 0 || loading}
+                    className="px-4 py-2 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="text-center text-sm text-gray-600">Page {page} of {totalPages}</div>
+              </div>
+            </div>
+
           </div>
+
+          {/* View Modal (kept as popup — view only, no need for full page) */}
+          <ViewStudentOrder
+            isOpen={!!viewOrder}
+            onClose={() => setViewOrder(null)}
+            order={viewOrder}
+          />
+
         </div>
-
-        {/* ── Modals ── */}
-
-        {/* Create new order */}
-        <CreateStudentOrder
-          isOpen={showCreate}
-          onClose={() => setShowCreate(false)}
-          onSaved={handleOrderSaved}
-        />
-
-        {/* Edit existing draft order — passes editOrderId to prefill wizard */}
-        <CreateStudentOrder
-          isOpen={!!editOrderId}
-          onClose={() => setEditOrderId(null)}
-          onSaved={handleOrderSaved}
-          editOrderId={editOrderId}
-        />
-
-        {/* View order details */}
-        <ViewStudentOrder
-          isOpen={!!viewOrder}
-          onClose={() => setViewOrder(null)}
-          order={viewOrder}
-        />
       </div>
     </>
   );
