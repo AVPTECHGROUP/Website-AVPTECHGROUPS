@@ -21,8 +21,7 @@ import {
     Loader2,
     SearchIcon,
 } from "lucide-react";
-import CardComponent from "../../Components/CommonComp/CardComponent";
-import CardLoader from "../../Components/CommonComp/CardLoader";
+import { toast } from "react-toastify";
 import ListLoader from "../../Components/CommonComp/ListLoader";
 import ActionDropDownComp from "../../Components/CommonComp/ActionDropDownComp";
 import StockManagementCard from "../../Components/Stock/StockManagementCard";
@@ -30,11 +29,9 @@ import TransferStock from "../../Components/Stock/TransferStock";
 import {
     getActiveStores,
     getStockOverview,
-    getStockOverviewStats,
 } from "../../Api/StockApi";
 
 // ── Constants ──────────────────────────────────────────────────────────────────
-const ROWS_PER_PAGE = 10;
 const SEARCH_DEBOUNCE_MS = 400;
 const ALL_STORES_ID = "";
 
@@ -93,17 +90,17 @@ export default function Transactions() {
     const [selectedStoreId,  setSelectedStoreId]  = useState(ALL_STORES_ID);
     const [categoryFilter,   setCategoryFilter]   = useState("");
     const [statusFilter,     setStatusFilter]     = useState("");
-    const [page,             setPage]             = useState(1);   // 1-based display
+    const [page,             setPage]             = useState(1);
     const [rowsPerPage,      setRowsPerPage]       = useState(10);
     const debounceRef = useRef(null);
 
     // ── Table data ─────────────────────────────────────────────
-    const [items,       setItems]       = useState([]);
-    const [totalItems,  setTotalItems]  = useState(0);
-    const [totalPages,  setTotalPages]  = useState(0);
+    const [items,        setItems]        = useState([]);
+    const [totalItems,   setTotalItems]   = useState(0);
+    const [totalPages,   setTotalPages]   = useState(0);
     const [itemsLoading, setItemsLoading] = useState(false);
-    const [itemsError,  setItemsError]  = useState("");
-    const [noItemFound, setNoItemFound] = useState(false);
+    const [itemsError,   setItemsError]   = useState("");
+    const [noItemFound,  setNoItemFound]  = useState(false);
 
     // ── Stats ──────────────────────────────────────────────────
     const [statsData,    setStatsData]    = useState(null);
@@ -119,7 +116,9 @@ export default function Transactions() {
         setStoresLoading(true);
         getActiveStores()
             .then((res) => setStores(res?.data ?? []))
-            .catch(() => { })
+            .catch(() => {
+                toast.error("Failed to load stores.");
+            })
             .finally(() => setStoresLoading(false));
     }, []);
 
@@ -147,7 +146,7 @@ export default function Transactions() {
 
             const { items: raw, pagination: pg } = await getStockOverview(
                 filters,
-                page - 1,      // API is 0-based
+                page - 1,
                 rowsPerPage,
                 "id,desc"
             );
@@ -174,6 +173,7 @@ export default function Transactions() {
         } catch {
             setItemsError("Failed to load stock data.");
             setItems([]);
+            toast.error("Failed to load stock data. Please try again.");
         } finally {
             setItemsLoading(false);
         }
@@ -190,6 +190,7 @@ export default function Transactions() {
 
     const clearFilters = () => {
         setSearch(""); setCategoryFilter(""); setStatusFilter(""); resetPage();
+        toast.info("Filters cleared.");
     };
 
     const activeFilterCount = [
@@ -208,9 +209,9 @@ export default function Transactions() {
     };
 
     const actionOptions = [
-        { value: "in",       label: "IN",       icon: Plus,    text: "text-white",      bg: "bg-green-600", hover: "hover:bg-green-700"  },
-        { value: "out",      label: "OUT",      icon: Minus,   text: "text-white",      bg: "bg-red-500",   hover: "hover:bg-red-600"    },
-        { value: "transfer", label: "Transfer", icon: Repeat2, text: "text-blue-700",   bg: "bg-blue-50",   hover: "hover:bg-blue-100"   },
+        { value: "in",       label: "IN",       icon: Plus,    text: "text-white",    bg: "bg-green-600", hover: "hover:bg-green-700" },
+        { value: "out",      label: "OUT",      icon: Minus,   text: "text-white",    bg: "bg-red-500",   hover: "hover:bg-red-600"   },
+        { value: "transfer", label: "Transfer", icon: Repeat2, text: "text-blue-700", bg: "bg-blue-50",   hover: "hover:bg-blue-100"  },
     ];
 
     const transactionCards = [
@@ -222,6 +223,28 @@ export default function Transactions() {
     const tdStyle = "px-2 py-2 text-left text-gray-700 text-sm";
     const colSpan = isAllStores ? 9 : 8;
 
+    // ── Handlers with toast ────────────────────────────────────
+    const handleStockConfirm = (data) => {
+        console.log(`Stock ${modalType.toUpperCase()}:`, data);
+        handleStockChange();
+        toast.success(
+            modalType === "in"
+                ? "Stock added successfully!"
+                : "Stock removed successfully!"
+        );
+    };
+
+    const handleTransferConfirm = (data) => {
+        console.log("Transfer:", data);
+        handleStockChange();
+        toast.success("Stock transferred successfully!");
+    };
+
+    const handleRefresh = () => {
+        handleStockChange();
+        toast.info("Stock data refreshed.");
+    };
+
     // ── Render ─────────────────────────────────────────────────
     return (
         <div className="min-h-screen bg-linear-to-b from-sky-50 to-sky-100">
@@ -231,12 +254,12 @@ export default function Transactions() {
                     isOpen={isModalOpen}
                     onClose={() => setIsModalOpen(false)}
                     mode={modalType}
-                    onConfirm={(data) => { console.log(`Stock ${modalType.toUpperCase()}:`, data); handleStockChange(); }}
+                    onConfirm={handleStockConfirm}
                 />
                 <TransferStock
                     isOpen={isTransferOpen}
                     onClose={() => setIsTransferOpen(false)}
-                    onConfirm={(data) => { console.log("Transfer:", data); handleStockChange(); }}
+                    onConfirm={handleTransferConfirm}
                     stores={stores}
                 />
 
@@ -302,7 +325,7 @@ export default function Transactions() {
                         <div className="flex items-center gap-2 self-end sm:self-auto">
                             {itemsLoading && <Loader2 className="w-4 h-4 text-blue-400 animate-spin" />}
                             <button
-                                onClick={handleStockChange}
+                                onClick={handleRefresh}
                                 disabled={itemsLoading}
                                 title="Refresh"
                                 className="p-2 rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100 transition disabled:opacity-50 shrink-0"
@@ -331,7 +354,7 @@ export default function Transactions() {
                         </div>
                     )}
 
-                    {/* Filters — single flex row */}
+                    {/* Filters */}
                     <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100">
                         <div className="flex flex-1 items-center gap-2 border rounded-lg border-gray-200 bg-gray-50 px-3 py-2 focus-within:ring-2 focus-within:ring-blue-200 focus-within:border-blue-400 transition">
                             <SearchIcon className="w-4 h-4 text-gray-400 shrink-0" />
@@ -376,7 +399,15 @@ export default function Transactions() {
                         ) : itemsError ? (
                             <div className="text-center py-8 col-span-2">
                                 <p className="text-red-500 text-sm mb-3">{itemsError}</p>
-                                <button onClick={fetchItems} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">Retry</button>
+                                <button
+                                    onClick={() => {
+                                        fetchItems();
+                                        toast.info("Retrying…");
+                                    }}
+                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+                                >
+                                    Retry
+                                </button>
                             </div>
                         ) : noItemFound ? (
                             <div className="text-center py-8 col-span-2">
@@ -464,7 +495,15 @@ export default function Transactions() {
                                         <tr>
                                             <td colSpan={colSpan} className="px-6 py-8 text-center">
                                                 <p className="text-red-500 text-sm mb-3">{itemsError}</p>
-                                                <button onClick={fetchItems} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">Retry</button>
+                                                <button
+                                                    onClick={() => {
+                                                        fetchItems();
+                                                        toast.info("Retrying…");
+                                                    }}
+                                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+                                                >
+                                                    Retry
+                                                </button>
                                             </td>
                                         </tr>
                                     ) : noItemFound ? (

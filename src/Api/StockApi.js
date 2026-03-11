@@ -188,10 +188,19 @@ export const transferStock = async (payload) => {
   try {
     const res = await authFetch(`${BASE_URL}/stock/transfer`, {
       method: "POST",
-      body: JSON.stringify(payload)
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
     });
-    if (!res.ok) throw new Error("Failed to transfer stock");
-    return await res.json();
+
+    const data = await res.json(); // 👈 response read karo
+
+    if (!res.ok) {
+      throw new Error(data?.message || "Failed to transfer stock");
+    }
+
+    return data;
   } catch (error) {
     console.error("transferStock error:", error);
     throw error;
