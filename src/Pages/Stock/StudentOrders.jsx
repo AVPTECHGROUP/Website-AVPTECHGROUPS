@@ -13,6 +13,7 @@ import ListLoader from "../../Components/CommonComp/ListLoader";
 import ActionDropDownComp from "../../Components/CommonComp/ActionDropDownComp";
 import ViewStudentOrder from "../../Components/Stock/ViewOrder";
 import { getOrderStats, getStudentOrders, cancelStudentOrder } from "../../Api/StudentOrder";
+import { toast } from "react-toastify";
 
 const STATUS_OPTIONS = [
   { value: "", label: "All Status" },
@@ -30,37 +31,6 @@ const statusColors = {
   DELIVERED:  "bg-green-100  text-green-700   border border-green-200",
   CANCELLED:  "bg-red-100    text-red-600     border border-red-200",
 };
-
-// ── Toast ─────────────────────────────────────────────────────────
-let _setToasts = null;
-export const toast = {
-  success: (msg) => _setToasts?.((p) => [...p, { id: Date.now(), type: "success", msg }]),
-  error:   (msg) => _setToasts?.((p) => [...p, { id: Date.now(), type: "error",   msg }]),
-};
-function ToastContainer() {
-  const [toasts, setToasts] = useState([]);
-  _setToasts = setToasts;
-  const remove = (id) => setToasts((p) => p.filter((t) => t.id !== id));
-  useEffect(() => {
-    if (!toasts.length) return;
-    const t = setTimeout(() => remove(toasts[toasts.length - 1].id), 3500);
-    return () => clearTimeout(t);
-  }, [toasts]);
-  return (
-    <div className="fixed bottom-5 right-5 z-9999 flex flex-col gap-2 items-end pointer-events-none">
-      {toasts.map((t) => (
-        <div key={t.id} className={`flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lg text-sm font-medium pointer-events-auto min-w-55 max-w-xs bg-white border
-          ${t.type === "success" ? "border-green-200 text-green-800" : "border-red-200 text-red-700"}`}>
-          {t.type === "success"
-            ? <CheckCircle  className="w-4 h-4 text-green-500 shrink-0" />
-            : <XCircleIcon  className="w-4 h-4 text-red-500   shrink-0" />}
-          <span className="flex-1">{t.msg}</span>
-          <button onClick={() => remove(t.id)} className="text-gray-400 hover:text-gray-600 text-xs ml-1">✕</button>
-        </div>
-      ))}
-    </div>
-  );
-}
 
 // ── Cancel Confirm Modal ──────────────────────────────────────────
 function CancelConfirmModal({ order, onConfirm, onClose, loading }) {
@@ -253,7 +223,6 @@ export default function StudentOrders() {
 
   return (
     <>
-      <ToastContainer />
       <CancelConfirmModal
         order={cancelTarget}
         onClose={() => { if (!cancelling) setCancelTarget(null); }}

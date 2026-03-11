@@ -1,22 +1,21 @@
+import { authFetch } from "../Authfetch/Authfetch";
+
 const BASE_URL = "https://ssdev-btgphuazhza9edcu.canadacentral-01.azurewebsites.net/api/api/v1";
 
-//Get Order Stats
-
+// Get Order Stats
 export const getOrderStats = async () => {
-  const response = await fetch(`${BASE_URL}/stock/orders/stats`, {
+  const response = await authFetch(`${BASE_URL}/stock/orders/stats`, {
     method: "GET",
-    headers: {
-      Accept: "application/json",
-    },
   });
+
   if (!response.ok) {
     throw new Error("Failed to fetch order stats");
   }
+
   return response.json();
 };
 
-//    GET STUDENT ORDERS (Paginated + Filters)
-
+// GET STUDENT ORDERS (Paginated + Filters)
 export const getStudentOrders = async ({
   page = 0,
   size = 20,
@@ -30,7 +29,6 @@ export const getStudentOrders = async ({
   searchTerm,
 } = {}) => {
   try {
-
     const params = new URLSearchParams({
       page,
       size,
@@ -44,11 +42,8 @@ export const getStudentOrders = async ({
       ...(searchTerm && { searchTerm }),
     });
 
-    const res = await fetch(`${BASE_URL}/stock/orders?${params}`, {
+    const res = await authFetch(`${BASE_URL}/stock/orders?${params}`, {
       method: "GET",
-      headers: {
-        accept: "application/json",
-      },
     });
 
     if (!res.ok) throw new Error("Failed to fetch student orders");
@@ -64,142 +59,131 @@ export const getStudentOrders = async ({
         totalElements: data.totalElements,
       },
     };
-
   } catch (error) {
     console.error("getStudentOrders error:", error);
     throw error;
   }
 };
 
-//    CREATE STUDENT ORDER (DRAFT)
-
+// CREATE STUDENT ORDER
 export const createStudentOrder = async (orderData) => {
   try {
-
-    const res = await fetch(`${BASE_URL}/stock/orders`, {
+    const res = await authFetch(`${BASE_URL}/stock/orders`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
       body: JSON.stringify(orderData),
     });
 
-    if (!res.ok) throw new Error("Failed to create order");
+    const data = await res.json();
 
-    return await res.json();
+    if (!res.ok) {
+      throw new Error(data?.message || "Failed to create order");
+    }
 
+    return data;
   } catch (error) {
     console.error("createStudentOrder error:", error);
     throw error;
   }
 };
 
-
-//    GET SINGLE ORDER
-
+// GET SINGLE ORDER
 export const getStudentOrderById = async (orderId) => {
   try {
-
-    const res = await fetch(`${BASE_URL}/stock/orders/${orderId}`, {
+    const res = await authFetch(`${BASE_URL}/stock/orders/${orderId}`, {
       method: "GET",
-      headers: {
-        accept: "application/json",
-      },
     });
 
-    if (!res.ok) throw new Error("Failed to fetch order");
+    const data = await res.json();
 
-    return await res.json();
+    if (!res.ok) {
+      throw new Error(data?.message || "Failed to fetch order");
+    }
 
+    return data;
   } catch (error) {
     console.error("getStudentOrderById error:", error);
     throw error;
   }
 };
 
-//    UPDATE DRAFT ORDER
+// UPDATE DRAFT ORDER
 export const updateStudentOrder = async (orderId, orderData) => {
   try {
-    const res = await fetch(`${BASE_URL}/stock/orders/${orderId}`, {
+    const res = await authFetch(`${BASE_URL}/stock/orders/${orderId}`, {
       method: "PUT",
-      headers: { 
-        "Content-Type": "application/json",
-        "accept": "application/json",
-      },
       body: JSON.stringify(orderData),
     });
+
+    const data = await res.json();
+
     if (!res.ok) {
-      const errData = await res.json().catch(() => ({}));
-      throw new Error(errData?.message || `Failed to update order (${res.status})`);
+      throw new Error(data?.message || `Failed to update order (${res.status})`);
     }
-    return await res.json();
+
+    return data;
   } catch (error) {
     console.error("updateStudentOrder error:", error);
     throw error;
   }
 };
 
-//    CONFIRM ORDER (Deduct Stock)
-
+// CONFIRM ORDER
 export const confirmStudentOrder = async (orderId) => {
   try {
+    const res = await authFetch(`${BASE_URL}/stock/orders/${orderId}/confirm`, {
+      method: "POST",
+    });
 
-    const res = await fetch(
-      `${BASE_URL}/stock/orders/${orderId}/confirm`,
-      {
-        method: "POST",
-      }
-    );
+    const data = await res.json();
 
-    if (!res.ok) throw new Error("Failed to confirm order");
+    if (!res.ok) {
+      throw new Error(data?.message || "Failed to confirm order");
+    }
 
-    return await res.json();
-
+    return data;
   } catch (error) {
     console.error("confirmStudentOrder error:", error);
     throw error;
   }
 };
 
-//    CANCEL ORDER
+// CANCEL ORDER
 export const cancelStudentOrder = async (
   orderId,
   reason = "Cancelled by admin"
 ) => {
   try {
+    const params = new URLSearchParams({ reason });
 
-    const params = new URLSearchParams({
-      reason,
-    });
-
-    const res = await fetch(
+    const res = await authFetch(
       `${BASE_URL}/stock/orders/${orderId}/cancel?${params}`,
       {
         method: "POST",
       }
     );
 
-    if (!res.ok) throw new Error("Failed to cancel order");
+    const data = await res.json();
 
-    return await res.json();
+    if (!res.ok) {
+      throw new Error(data?.message || "Failed to cancel order");
+    }
 
+    return data;
   } catch (error) {
     console.error("cancelStudentOrder error:", error);
     throw error;
   }
 };
 
-  //  PREVIEW STUDENT ORDER
-
+// PREVIEW STUDENT ORDER
 export const previewStudentOrder = async (studentId, storeId) => {
   try {
-
     const params = new URLSearchParams({
       studentId,
       storeId,
     });
 
-    const res = await fetch(
+    const res = await authFetch(
       `${BASE_URL}/stock/orders/preview?${params}`,
       {
         method: "GET",
@@ -209,39 +193,39 @@ export const previewStudentOrder = async (studentId, storeId) => {
       }
     );
 
-    if (!res.ok) {
-      throw new Error("Failed to preview student order");
-    }
-
     const data = await res.json();
 
-    return data;
+    if (!res.ok) {
+      throw new Error(data?.message || "Failed to preview student order");
+    }
 
+    return data;
   } catch (error) {
     console.error("previewStudentOrder error:", error);
     throw error;
   }
 };
 
-
-// Check Store Availabitlity--
-
+// CHECK ITEM AVAILABILITY
 export const checkItemAvailability = async (storeId, itemIds) => {
-  const response = await fetch(
-    `${BASE_URL}/stock/stores/${storeId}/items/availability`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify(itemIds),
+  try {
+    const res = await authFetch(
+      `${BASE_URL}/stock/stores/${storeId}/items/availability`,
+      {
+        method: "POST",
+        body: JSON.stringify(itemIds),
+      }
+    );
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data?.message || "Failed to check stock availability");
     }
-  );
 
-  if (!response.ok) {
-    throw new Error("Failed to check stock availability");
+    return data;
+  } catch (error) {
+    console.error("checkItemAvailability error:", error);
+    throw error;
   }
-
-  return response.json();
 };
