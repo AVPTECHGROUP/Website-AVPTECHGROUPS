@@ -112,6 +112,11 @@ const menuItems = [
         roles: ['ADMIN', 'SUPER_ADMIN'],
       },
       {
+        label: <span className="text-sm text-gray-600 hover:text-blue-600">Transactions</span>,
+        route: '/stock/transactions',
+        roles: ['ADMIN', 'SUPER_ADMIN'],
+      },
+      {
         label: <span className="text-sm text-gray-600 hover:text-blue-600">Class Config</span>,
         route: '/stock/classConfig',
         roles: ['ADMIN', 'SUPER_ADMIN'],
@@ -120,11 +125,6 @@ const menuItems = [
         label: <span className="text-sm text-gray-600 hover:text-blue-600">Student Orders</span>,
         route: '/stock/studentOrders',
         roles: ['ADMIN', 'SUPER_ADMIN',],
-      },
-      {
-        label: <span className="text-sm text-gray-600 hover:text-blue-600">Transactions</span>,
-        route: '/stock/transactions',
-        roles: ['ADMIN', 'SUPER_ADMIN'],
       },
       {
         label: <span className="text-sm text-gray-600 hover:text-blue-600">Movement History</span>,
@@ -365,7 +365,7 @@ const Sidebar = ({
       <div className="p-4">
         <button
           onClick={onLogout}
-          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 hover:bg-gray-100
+          className={`cursor-pointer w-full flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 hover:bg-gray-100
           ${!sidebarOpen ? 'justify-center' : ''}`}
         >
           <LogOut className="w-5 h-5" />

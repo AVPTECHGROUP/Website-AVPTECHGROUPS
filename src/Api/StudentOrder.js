@@ -222,3 +222,26 @@ export const previewStudentOrder = async (studentId, storeId) => {
     throw error;
   }
 };
+
+
+// Check Store Availabitlity--
+
+export const checkItemAvailability = async (storeId, itemIds) => {
+  const response = await fetch(
+    `${BASE_URL}/stock/stores/${storeId}/items/availability`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(itemIds),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error("Failed to check stock availability");
+  }
+
+  return response.json();
+};

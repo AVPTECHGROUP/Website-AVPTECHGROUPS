@@ -365,4 +365,3 @@ export const getStockItemsStats = async () => {
     throw error;
   }
 };
-
