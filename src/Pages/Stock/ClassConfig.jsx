@@ -17,36 +17,7 @@ import {
     deleteClassItemConfig,
 } from "../../Api/StudentStoreApi";
 import { getClasses } from "../../Api/TeachersAPI";
-
-let _setToasts = null;
-const toast = {
-    success: (msg) => _setToasts?.((p) => [...p, { id: Date.now() + Math.random(), type: "success", msg }]),
-    error: (msg) => _setToasts?.((p) => [...p, { id: Date.now() + Math.random(), type: "error", msg }]),
-};
-function ToastContainer() {
-    const [toasts, setToasts] = useState([]);
-    _setToasts = setToasts;
-    const remove = (id) => setToasts((p) => p.filter((t) => t.id !== id));
-    useEffect(() => {
-        if (!toasts.length) return;
-        const t = setTimeout(() => remove(toasts[0].id), 3500);
-        return () => clearTimeout(t);
-    }, [toasts]);
-    return (
-        <div className="fixed bottom-5 right-5 z-9999 flex flex-col gap-2 items-end pointer-events-none">
-            {toasts.map((t) => (
-                <div key={t.id} className={`flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lg text-sm font-medium pointer-events-auto min-w-55 max-w-xs bg-white
-                    ${t.type === "success" ? "border border-green-200 text-green-800" : "border border-red-200 text-red-700"}`}>
-                    {t.type === "success"
-                        ? <CheckCircle className="w-4 h-4 text-green-500 shrink-0" />
-                        : <XCircleIcon className="w-4 h-4 text-red-500 shrink-0" />}
-                    <span className="flex-1">{t.msg}</span>
-                    <button onClick={() => remove(t.id)} className="text-gray-400 hover:text-gray-600 ml-1 text-xs">✕</button>
-                </div>
-            ))}
-        </div>
-    );
-}
+import { toast } from "react-toastify";
 
 const categoryColors = {
     BOOKS: "bg-blue-100 text-blue-700",
@@ -214,10 +185,7 @@ export default function ClassConfig() {
 
     return (
         <>
-            <ToastContainer />
-
             <div className="min-h-screen bg-blue-50 p-4 sm:p-6 lg:p-8 font-sans">
-
                 {/* ── Add / Edit Modal ── */}
                 <AddItemStudent
                     isOpen={isModalOpen}
