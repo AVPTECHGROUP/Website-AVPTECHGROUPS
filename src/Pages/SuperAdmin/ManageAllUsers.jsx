@@ -13,6 +13,7 @@ import {
     KeyIcon,
     ArrowDown,
     ArrowUp,
+    UserPlusIcon,
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { activateUserStatus, allUserFilter, deactivateUserStatus, getAllUserRoles, getUsersStatistics, resetUserPassword } from '../../Api/userManagementAPI';
@@ -23,6 +24,7 @@ import CardLoader from '../../Components/CommonComp/CardLoader';
 import ListLoader from '../../Components/CommonComp/ListLoader';
 import { UserContext } from '../../ContextAPI/UserContext';
 import PasswordResetModal from '../../Components/PopupResetPassword/ResetPasswordComponent';
+import TooltipComponent from '../../Components/CommonComp/Tooltip_comp/TooltipComp';
 
 const ManageAllUsers = () => {
     // Stores text typed in search input (sys_user name / id / role)
@@ -194,7 +196,7 @@ const ManageAllUsers = () => {
     };
 
     // reset user password
-    const resetPassword = async (id, name) => {
+    const resetPassword = async (id) => {
         const req_id = id;
         try {
             const reset_res = await resetUserPassword(req_id);
@@ -257,12 +259,27 @@ const ManageAllUsers = () => {
         }
     ];
 
+    //for filter options only for super admin
+    const filteredOptions = actionOptions.filter(option => {
+        if (user.userType === 'SUPER_ADMIN') {
+            // SUPER_ADMIN sees all options
+            return true;
+        } else {
+            // Other users: remove "resetPassword"
+            return option.value !== "resetPassword";
+        }
+    });
+
+    console.log(filteredOptions);
+
+
     const callAllActions = async (optVal, user) => {
         if (optVal === 'editUser') navigate(`/dashboard/editUser/${user.id}`);
-        else if (optVal === 'resetPassword'){
+        else if (optVal === 'resetPassword') {
             setSelectedUser(user);
-        setisResetOpen(true);}
-            // resetPassword(user.id, user.name);
+            setisResetOpen(true);
+        }
+        // resetPassword(user.id, user.name);
         else if (optVal === 'toogleStatus') handleToggleStatus(user.id, user.name, user.status);
     }
 
@@ -275,8 +292,11 @@ const ManageAllUsers = () => {
                     {/* Page Title */}
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div>
-                            <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Manage All Users</h2>
-                            <p className="text-gray-500 mt-1 font-medium text-sm sm:text-base">Efficiently manage system roles, permissions and account status.</p>
+                            <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">
+                                <TooltipComponent message="Efficiently manage system roles, permissions and account status." direction='right' color='nocolor'>
+                                    Manage All Users
+                                </TooltipComponent>
+                            </h2>
                         </div>
                     </div>
                     {/* cards */}
@@ -296,16 +316,27 @@ const ManageAllUsers = () => {
                         }
                     </div>
 
-                    {/* quick actions */}
-                    <QuickActions buttonText='Add new User' navigateTo='/dashboard/addUser' />
+                    {/* quick actions
+                    <QuickActions buttonText='Add new User' navigateTo='/dashboard/addUser' /> */}
 
                     {/* popup */}
                     <PasswordResetModal isOpen={isResetOpen} onClose={() => { setisResetOpen(!isResetOpen); }} userName={selectedUser?.name}
-                        onReset={() => resetPassword(selectedUser?.id, selectedUser?.name)} />
+                        onReset={() => resetPassword(selectedUser?.id, selectedUser?.name)} currUserId={selectedUser?.id} />
 
                     {/* filters */}
-                    <div className="bg-white grid  lg:grid-cols-3 gap-2 px-4 py-2  rounded-xl border border-gray-200 mb-4 mt-0">
-                        <div className="flex col-span-2 items-center gap-2 border rounded-lg border-gray-200 bg-gray-100 px-2 py-1 focus-within:shadow-sm focus-within:shadow-blue-200">
+                    <div className="bg-white grid grid-cols-2 lg:grid-cols-5 gap-3 px-4 py-3 rounded-xl border border-gray-200 mb-4 mt-4">
+
+                        {/* Add User Button */}
+                        <button
+                            onClick={() => navigate('/dashboard/adduser')}
+                            className="col-span-2 lg:col-span-1 px-4 py-2.5 w-full cursor-pointer rounded-lg font-medium flex items-center justify-center gap-2 transition-all bg-blue-600 text-white"
+                        >
+                            <UserPlusIcon className="w-5 h-5" />
+                            Add User
+                        </button>
+
+                        {/* Search */}
+                        <div className="col-span-2 flex items-center gap-2 border rounded-lg border-gray-200 bg-gray-100 px-2 py-1 focus-within:shadow-sm focus-within:shadow-blue-200">
                             <SearchIcon className="w-5 h-5 text-gray-500" />
                             <input
                                 value={search}
@@ -313,39 +344,42 @@ const ManageAllUsers = () => {
                                     setsearch(e.target.value);
                                     setpage(1);
                                 }}
-                                placeholder='Search by name, email or ID..' className="text-base sm:text-sm font-normal focus:outline-none  appearance-none text-gray-600 w-full" />
+                                placeholder="Search by name, email or ID.."
+                                className="text-base sm:text-sm font-normal focus:outline-none appearance-none text-gray-600 w-full bg-transparent"
+                            />
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <select
-                                value={statusFilter}
-                                onChange={(e) => {
-                                    setStatusFilter(e.target.value);
-                                    setpage(1);
-                                }}
-                                className="px-4 py-2 border border-gray-200 bg-gray-100 rounded-lg focus:outline-none focus:shadow-sm focus:shadow-blue-200 text-sm"
-                            >
-                                <option value='All Status'>All Status</option>
-                                <option value='ACTIVE'>Active</option>
-                                <option value='INACTIVE'>Inactive</option>
-                            </select>
+                        {/* Status Filter */}
+                        <select
+                            value={statusFilter}
+                            onChange={(e) => {
+                                setStatusFilter(e.target.value);
+                                setpage(1);
+                            }}
+                            className="col-span-1 px-4 py-2 border cursor-pointer border-gray-200 bg-gray-100 rounded-lg focus:outline-none focus:shadow-sm focus:shadow-blue-200 text-sm"
+                        >
+                            <option value="All Status">All Status</option>
+                            <option value="ACTIVE">Active</option>
+                            <option value="INACTIVE">Inactive</option>
+                        </select>
 
-                            <select
-                                value={roleFilter}
-                                onChange={(e) => {
-                                    setroleFilter(e.target.value);
-                                    setpage(1);
-                                }}
-                                className="px-4 py-2 border border-gray-200 bg-gray-100 rounded-lg focus:outline-none focus:shadow-sm focus:shadow-blue-200 text-sm"
-                            >
-                                <option value={'All Roles'}>All Roles</option>
-                                {
-                                    roleOptions.map((item) => (
-                                        <option key={item.roleKey} value={item.roleVal}>{item.roleDisplay}</option>
-                                    ))
-                                }
-                            </select>
-                        </div>
+                        {/* Role Filter */}
+                        <select
+                            value={roleFilter}
+                            onChange={(e) => {
+                                setroleFilter(e.target.value);
+                                setpage(1);
+                            }}
+                            className="cursor-pointer col-span-1 px-4 py-2 border border-gray-200 bg-gray-100 rounded-lg focus:outline-none focus:shadow-sm focus:shadow-blue-200 text-sm"
+                        >
+                            <option value={"All Roles"}>All Roles</option>
+                            {roleOptions.map((item) => (
+                                <option key={item.roleKey} value={item.roleVal}>
+                                    {item.roleDisplay}
+                                </option>
+                            ))}
+                        </select>
+
                     </div>
                     {/* MOBILE/TABLET CARDS VIEW (visible below 1024px) */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:hidden">
@@ -417,7 +451,7 @@ const ManageAllUsers = () => {
                                         </span>
                                     </p>
                                     <div className='flex justify-start items-center align-middle'>
-                                        <ActionDropDownComp actionOptions={actionOptions} onAction={(optVal) => callAllActions(optVal, sys_user)} />
+                                        <ActionDropDownComp actionOptions={filteredOptions} onAction={(optVal) => callAllActions(optVal, sys_user)} />
                                     </div>
                                 </div>
                             </div>
@@ -426,11 +460,10 @@ const ManageAllUsers = () => {
 
                     {/* DESKTOP TABLE (visible 1024px and above) */}
                     <div className="hidden lg:block bg-white rounded-xl border border-gray-200 ">
-                        <div className="overflow-x-auto min-h-[calc(250px)] max-h-[calc(100vh-480px)] overflow-y-auto">
+                        <div className="overflow-x-auto min-h-[calc(300px)] max-h-[calc(100vh-340px)] overflow-y-auto">
                             <table className="w-full ">
                                 <thead className="border-b border-gray-200">
                                     <tr>
-
                                         <th key={'User_Name'} className="px-2 py-3 text-left text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-11">
                                             <button
                                                 onClick={() => setSorting(prev =>
@@ -548,7 +581,7 @@ const ManageAllUsers = () => {
 
                                             </td>
                                             <td className={tabledataItemsStyle}>
-                                                <ActionDropDownComp actionOptions={actionOptions} onAction={(optVal) => callAllActions(optVal, sys_user)} />
+                                                <ActionDropDownComp actionOptions={filteredOptions} onAction={(optVal) => callAllActions(optVal, sys_user)} />
                                             </td>
                                         </tr>
                                     )))
@@ -583,7 +616,7 @@ const ManageAllUsers = () => {
                                             setrowsPerpage(Number(e.target.value));
                                             setpage(1);
                                         }}
-                                        className="px-3 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        className="cursor-pointer px-3 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     >
                                         <option value={10}>10</option>
                                         <option value={25}>25</option>
@@ -595,7 +628,7 @@ const ManageAllUsers = () => {
                                 <button
                                     onClick={() => setpage(prev => Math.max(1, prev - 1))}
                                     disabled={page === totalPages || loading || error}
-                                    className="px-3 py-1 text-gray-600 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                                    className="cursor-pointer px-3 py-1 text-gray-600 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                                 >
                                     <ChevronLeft className="w-4 h-4" />
                                 </button>
@@ -605,7 +638,7 @@ const ManageAllUsers = () => {
                                         onClick={() => setpage(idx + 1)}
                                         className={`px-3 py-1 rounded transition-all ${page === idx + 1
                                             ? 'bg-blue-500 text-white'
-                                            : 'text-gray-600 hover:bg-gray-100'
+                                            : 'text-gray-600 hover:bg-gray-100 cursor-pointer'
                                             }`}
                                     >
                                         {idx + 1}
@@ -615,7 +648,7 @@ const ManageAllUsers = () => {
                                     type='button'
                                     onClick={() => setpage(prev => Math.min(totalPages, prev + 1))}
                                     disabled={page === totalPages || loading || error}
-                                    className="px-3 py-1 text-gray-600 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                                    className="cursor-pointer px-3 py-1 text-gray-600 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                                 >
                                     <ChevronRight className="w-4 h-4" />
                                 </button>
@@ -649,7 +682,7 @@ const ManageAllUsers = () => {
                                         setrowsPerpage(Number(e.target.value));
                                         setpage(1);
                                     }}
-                                    className="px-3 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="cursor-pointer px-3 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 >
                                     <option value={10}>10</option>
                                     <option value={25}>25</option>
@@ -660,8 +693,8 @@ const ManageAllUsers = () => {
                             <div className="flex items-center justify-center gap-2">
                                 <button
                                     onClick={() => setpage(prev => Math.max(1, prev - 1))}
-                                    disabled={page === 1 || loading || error}
-                                    className="px-4 py-2 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                                    disabled={page === totalPages || loading || error}
+                                    className="cursor-pointer px-3 py-1 text-gray-600 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                                 >
                                     <ChevronLeft className="w-4 h-4" />
                                 </button>
@@ -674,7 +707,7 @@ const ManageAllUsers = () => {
                                                 onClick={() => setpage(idx + 1)}
                                                 className={`px-3 py-1 rounded transition-all ${page === idx + 1
                                                     ? 'bg-blue-500 text-white'
-                                                    : 'text-gray-600 hover:bg-gray-100'
+                                                    : 'text-gray-600 hover:bg-gray-100 cursor-pointer'
                                                     }`}
                                             >
                                                 {idx + 1}
@@ -715,10 +748,10 @@ const ManageAllUsers = () => {
                                 </div>
 
                                 <button
-                                    type="button"
+                                    type='button'
                                     onClick={() => setpage(prev => Math.min(totalPages, prev + 1))}
-                                    disabled={page === 1 || loading || error}
-                                    className="px-4 py-2 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                                    disabled={page === totalPages || loading || error}
+                                    className="cursor-pointer px-3 py-1 text-gray-600 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                                 >
                                     <ChevronRight className="w-4 h-4" />
                                 </button>

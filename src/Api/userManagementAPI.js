@@ -178,6 +178,28 @@ export const resetUserPassword = async (id) => {
   }
 }
 
+// update password by id
+export const updateUserPassword = async (id, password, confirmPassword) => {
+  const payload = {
+    "newPassword": `${password}`,
+    "confirmPassword": `${confirmPassword}`
+  }
+  const res = await authFetch(`${BASE_URL}/users/${id}/set-password`, {
+    method: "PUT",
+    body: JSON.stringify(payload)
+  });
+
+  const text = await res.text();
+  const data = text ? JSON.parse(text) : {};
+  console.log("user password reset:", data);
+
+  if (!res.ok) {
+    throw new Error(data?.message || "Failed to update User password");
+  }
+
+  return data;
+};
+
 // Get all roles
 export const getAllUserRoles = async () => {
   try {
