@@ -1,7 +1,6 @@
 import { authFetch } from "../Authfetch/Authfetch";
 
-const BASE_URL = "https://ssdev-btgphuazhza9edcu.canadacentral-01.azurewebsites.net/api";
-
+const BASE_URL = import.meta.env.VITE_API_BASE;
 
 export const attendanceEnroll = async ({ userId, userType, images }) => {
   try {
@@ -12,7 +11,6 @@ export const attendanceEnroll = async ({ userId, userType, images }) => {
     if (!images || images.length !== 5) {
       throw new Error("Exactly 5 images are required");
     }
-
     const formData = new FormData();
     images.forEach(img => formData.append("images", img));
 
@@ -67,7 +65,7 @@ export const markAttendanceByFace = async ({
   }
 };
 
-// Manual Attendance Request api--->
+// Manual Attendance Request
 export const requestManualAttendance = async ({
   userId,
   userType,
@@ -133,7 +131,7 @@ export const pendingApprovals = async () => {
   }
 };
 
-// Approve or Reject manual attendance--->
+// Approve or Reject manual attendance
 export const approveManualAttendance = async ({
   attendanceId,
   approved,
@@ -184,7 +182,7 @@ export const attendanceStatistics = async (date) => {
   }
 };
 
-//All Attendance details list
+// All Attendance details list
 export const allAttendanceDetails = async ({
   attendanceDate,
   role,

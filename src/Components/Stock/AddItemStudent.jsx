@@ -352,7 +352,7 @@ export default function AddItemStudent({
                     <button
                         onClick={handleSave}
                         disabled={saving || loadingItems}
-                        className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed text-white text-sm font-semibold px-5 py-2 rounded-lg transition-colors"
+                        className="flex items-center cursor-pointer gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed text-white text-sm font-semibold px-5 py-2 rounded-lg transition-colors"
                     >
                         {saving
                             ? <><Loader2 className="w-4 h-4 animate-spin" /> {isEditMode ? "Updating…" : "Saving…"}</>

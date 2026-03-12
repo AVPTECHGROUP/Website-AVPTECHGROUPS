@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
-import { X, Search, Loader2, Plus, Check, AlertCircle, AlertTriangle } from "lucide-react";
-import { getStockItems,} from "../../Api/StockApi";
+import { X, Search, Loader2, Plus, Check, AlertCircle, AlertTriangle, IndianRupee } from "lucide-react";
+import { getStockItems } from "../../Api/StockApi";
 import { checkItemAvailability } from "../../Api/StudentOrder";
+
 // ─── Category badge colors ────────────────────────────────────────
 const categoryColors = {
   STATIONERY: "bg-yellow-100 text-yellow-700 border-yellow-200",
@@ -16,20 +17,14 @@ function categoryBadgeCls(cat) {
 }
 
 // ─── Main ─────────────────────────────────────────────────────────
-// Props:
-//   isOpen        — boolean
-//   onClose       — fn()
-//   storeId       — number  (needed for checkItemAvailability)
-//   existingItems — items already in order (shown as already added, non-selectable)
-//   onAddItems    — fn(newItems[]) — called with newly selected items
 export default function StudentOrderAddItem({ isOpen, onClose, storeId, existingItems = [], onAddItems }) {
 
-  const [allItems,       setAllItems]       = useState([]);
-  // availMap: itemId → { availableQuantity, notStockedInStore, isAvailable }
-  const [availMap,       setAvailMap]       = useState({});
-  const [loading,        setLoading]        = useState(false);
-  const [availLoading,   setAvailLoading]   = useState(false);
-  const [error,          setError]          = useState("");
+  const [allItems,     setAllItems]     = useState([]);
+  // availMap: itemId → { availableQuantity, notStockedInStore, isAvailable, unitPrice }
+  const [availMap,     setAvailMap]     = useState({});
+  const [loading,      setLoading]      = useState(false);
+  const [availLoading, setAvailLoading] = useState(false);
+  const [error,        setError]        = useState("");
 
   const [search,         setSearch]         = useState("");
   const [categoryFilter, setCategoryFilter] = useState("ALL");
@@ -40,7 +35,7 @@ export default function StudentOrderAddItem({ isOpen, onClose, storeId, existing
 
   const existingIds = new Set(existingItems.map((i) => String(i.itemId)));
 
-  // ─── Load all active stock items ────────────────────────────────
+  // ─── Load all active stock items ───────────────────────────────
   const loadItems = useCallback(async () => {
     setLoading(true); setError(""); setAvailMap({});
     try {
@@ -52,16 +47,14 @@ export default function StudentOrderAddItem({ isOpen, onClose, storeId, existing
 
       setAllItems(list);
 
-      // Build unique sorted category list
       const cats = [...new Set(
         list.map((i) => (i.category || "").toUpperCase()).filter(Boolean)
       )].sort();
       setCategories(cats);
 
-      // After items load, check live availability for all of them
       if (list.length && storeId) {
         const ids = list.map((i) => i.itemId ?? i.id);
-        checkAvailability(ids);
+        checkAvailability(ids, list);
       }
     } catch (e) {
       console.error("StudentOrderAddItem loadItems:", e);
@@ -71,9 +64,10 @@ export default function StudentOrderAddItem({ isOpen, onClose, storeId, existing
     }
   }, [storeId]); // eslint-disable-line
 
-  // ─── Check availability via POST API ────────────────────────────
-  // POST /stock/stores/{storeId}/items/availability
-  const checkAvailability = useCallback(async (itemIds) => {
+  // ─── Check availability ─────────────────────────────────────────
+  // Also reads unitPrice from the items list (passed in) since availability
+  // API doesn't return price — we merge from stock items
+  const checkAvailability = useCallback(async (itemIds, itemsList) => {
     if (!storeId || !itemIds?.length) return;
     setAvailLoading(true);
     try {
@@ -81,23 +75,27 @@ export default function StudentOrderAddItem({ isOpen, onClose, storeId, existing
       const list = Array.isArray(res) ? res : (res?.data || []);
       const map  = {};
       list.forEach((i) => {
+        // Find unitPrice from the full items list
+        const fullItem = (itemsList || allItems).find(
+          (it) => String(it.itemId ?? it.id) === String(i.itemId)
+        );
         map[String(i.itemId)] = {
           availableQuantity: i.notStockedInStore ? 0 : (i.availableQuantity ?? 0),
           notStockedInStore: i.notStockedInStore ?? false,
           isAvailable:       i.isAvailable       ?? false,
           isOutOfStock:      i.isOutOfStock       ?? false,
+          unitPrice:         fullItem?.unitPrice  ?? null,
         };
       });
       setAvailMap(map);
     } catch (e) {
       console.error("StudentOrderAddItem checkAvailability:", e);
-      // Silently fail — items still show, just without availability
     } finally {
       setAvailLoading(false);
     }
-  }, [storeId]); // eslint-disable-line
+  }, [storeId, allItems]); // eslint-disable-line
 
-  // ─── Open/close effect ──────────────────────────────────────────
+  // ─── Open/close effect ─────────────────────────────────────────
   useEffect(() => {
     if (!isOpen) {
       setSearch(""); setCategoryFilter("ALL");
@@ -108,7 +106,7 @@ export default function StudentOrderAddItem({ isOpen, onClose, storeId, existing
     loadItems();
   }, [isOpen]); // eslint-disable-line
 
-  // ─── Filtered list ───────────────────────────────────────────────
+  // ─── Filtered list ─────────────────────────────────────────────
   const filtered = allItems.filter((item) => {
     const q = search.trim().toLowerCase();
     const matchSearch =
@@ -121,7 +119,7 @@ export default function StudentOrderAddItem({ isOpen, onClose, storeId, existing
     return matchSearch && matchCat;
   });
 
-  // ─── Toggle select ───────────────────────────────────────────────
+  // ─── Toggle select ─────────────────────────────────────────────
   const toggle = (itemId) => {
     const id = String(itemId);
     if (existingIds.has(id)) return;
@@ -132,23 +130,26 @@ export default function StudentOrderAddItem({ isOpen, onClose, storeId, existing
     });
   };
 
-  // ─── Confirm add ─────────────────────────────────────────────────
+  // ─── Confirm add ───────────────────────────────────────────────
   const handleAdd = () => {
     const toAdd = allItems
       .filter((item) => selected.has(String(item.itemId ?? item.id)))
       .map((item) => {
-        const id   = String(item.itemId ?? item.id);
+        const id    = String(item.itemId ?? item.id);
         const avail = availMap[id];
+        const unitPriceSnapshot = avail?.unitPrice ?? item.unitPrice ?? null;
+        const qty   = 1;
         return {
-          itemId:       item.itemId   ?? item.id,
-          itemName:     item.itemName ?? item.name ?? `Item #${id}`,
-          itemCode:     item.itemCode ?? item.code ?? "—",
-          itemUnit:     item.itemUnit ?? item.unit ?? "PCS",
-          category:     item.category ?? "",
-          quantity:     1,
-          // Pass live availableQty from the API response
-          availableQty: avail?.availableQuantity ?? item.availableQuantity ?? item.availableQty ?? null,
-          notStockedInStore: avail?.notStockedInStore ?? false,
+          itemId:             item.itemId   ?? item.id,
+          itemName:           item.itemName ?? item.name ?? `Item #${id}`,
+          itemCode:           item.itemCode ?? item.code ?? "—",
+          itemUnit:           item.itemUnit ?? item.unit ?? "PCS",
+          category:           item.category ?? "",
+          quantity:           qty,
+          availableQty:       avail?.availableQuantity ?? item.availableQuantity ?? null,
+          notStockedInStore:  avail?.notStockedInStore ?? false,
+          unitPriceSnapshot,
+          lineTotal:          unitPriceSnapshot !== null ? unitPriceSnapshot * qty : null,
         };
       });
     if (toAdd.length) onAddItems?.(toAdd);
@@ -157,13 +158,11 @@ export default function StudentOrderAddItem({ isOpen, onClose, storeId, existing
 
   if (!isOpen) return null;
 
-  const isLoadingAnything = loading || availLoading;
-
   return (
     <div className="fixed inset-0 z-70 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
 
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg z-10 flex flex-col max-h-[88vh] sai-anim">
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl z-10 flex flex-col max-h-[88vh] sai-anim">
         <style>{`
           @keyframes saiIn {
             from { opacity: 0; transform: scale(.95) translateY(10px); }
@@ -178,15 +177,10 @@ export default function StudentOrderAddItem({ isOpen, onClose, storeId, existing
             <div className="w-8 h-8 rounded-xl bg-blue-50 flex items-center justify-center">
               <Plus className="w-4 h-4 text-blue-600" />
             </div>
-            <div>
-              <h2 className="text-sm font-bold text-gray-800">Add Extra Items</h2>
-              <p className="text-xs text-gray-400">Source: GET /api/v1/stock/items?status=ACTIVE</p>
-            </div>
+            <h2 className="text-sm font-bold text-gray-800">Add Extra Items</h2>
           </div>
-          <button
-            onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
-          >
+          <button onClick={onClose}
+            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -195,25 +189,18 @@ export default function StudentOrderAddItem({ isOpen, onClose, storeId, existing
         <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-100 shrink-0">
           <div className="flex flex-1 items-center gap-2 border border-gray-200 bg-gray-50 rounded-lg px-3 py-2 focus-within:ring-2 focus-within:ring-blue-200 focus-within:border-blue-400 transition">
             <Search className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-            <input
-              type="text"
-              placeholder="Search item by name or code..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+            <input type="text" placeholder="Search item by name or code..."
+              value={search} onChange={(e) => setSearch(e.target.value)}
               className="text-xs focus:outline-none text-gray-600 w-full bg-transparent placeholder:text-gray-400"
-              autoFocus
-            />
+              autoFocus />
             {search && (
               <button onClick={() => setSearch("")} className="text-gray-300 hover:text-gray-500 shrink-0">
                 <X className="w-3 h-3" />
               </button>
             )}
           </div>
-          <select
-            value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
-            className="text-xs border border-gray-200 bg-white rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200 text-gray-600 shrink-0"
-          >
+          <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}
+            className="text-xs border border-gray-200 bg-white rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200 text-gray-600 shrink-0">
             <option value="ALL">All Categories</option>
             {categories.map((c) => (
               <option key={c} value={c}>{c.charAt(0) + c.slice(1).toLowerCase()}</option>
@@ -221,13 +208,17 @@ export default function StudentOrderAddItem({ isOpen, onClose, storeId, existing
           </select>
         </div>
 
-        {/* ── Table Header ── */}
-        <div className="grid grid-cols-12 items-center px-4 py-2.5 border-b border-gray-100 shrink-0 bg-sky-50/80">
-          <span className="col-span-1" />
-          <span className="col-span-4 text-xs font-bold text-blue-600 uppercase tracking-wider">Item</span>
-          <span className="col-span-3 text-xs font-bold text-blue-600 uppercase tracking-wider">Category</span>
-          <span className="col-span-2 text-xs font-bold text-blue-600 uppercase tracking-wider">Unit</span>
-          <span className="col-span-2 text-xs font-bold text-blue-600 uppercase tracking-wider text-right">Stock</span>
+        {/* ── Table Header — now 14 cols ── */}
+        <div className="grid grid-cols-14 items-center px-4 py-2.5 border-b border-gray-100 shrink-0 bg-sky-50/80"
+          style={{ gridTemplateColumns: "32px 1fr 90px 52px 72px 80px" }}>
+          <span />
+          <span className="text-xs font-bold text-blue-600 uppercase tracking-wider">Item</span>
+          <span className="text-xs font-bold text-blue-600 uppercase tracking-wider">Category</span>
+          <span className="text-xs font-bold text-blue-600 uppercase tracking-wider">Unit</span>
+          <span className="text-xs font-bold text-blue-600 uppercase tracking-wider text-right">Stock</span>
+          <span className="text-xs font-bold text-blue-600 uppercase tracking-wider text-right flex items-center justify-end gap-0.5">
+            <IndianRupee className="w-3 h-3" /> Price
+          </span>
         </div>
 
         {/* ── Item List ── */}
@@ -255,83 +246,88 @@ export default function StudentOrderAddItem({ isOpen, onClose, storeId, existing
             </div>
           ) : (
             filtered.map((item) => {
-              const id          = String(item.itemId ?? item.id);
-              const isExisting  = existingIds.has(id);
-              const isSelected  = selected.has(id);
-              const name        = item.itemName ?? item.name ?? `Item #${id}`;
-              const code        = item.itemCode ?? item.code ?? "—";
-              const unit        = item.itemUnit ?? item.unit ?? "PCS";
-              const cat         = item.category ? item.category.toUpperCase() : "";
-              const catCls      = categoryBadgeCls(cat);
+              const id         = String(item.itemId ?? item.id);
+              const isExisting = existingIds.has(id);
+              const isSelected = selected.has(id);
+              const name       = item.itemName ?? item.name ?? `Item #${id}`;
+              const code       = item.itemCode ?? item.code ?? "—";
+              const unit       = item.itemUnit ?? item.unit ?? "PCS";
+              const cat        = item.category ? item.category.toUpperCase() : "";
+              const catCls     = categoryBadgeCls(cat);
 
-              // Live availability from checkItemAvailability API
-              const avail           = availMap[id];
-              const availQty        = avail?.availableQuantity ?? null;
-              const notStocked      = avail?.notStockedInStore ?? false;
-              const isOutOfStock    = availQty === 0;
+              const avail       = availMap[id];
+              const availQty    = avail?.availableQuantity ?? null;
+              const notStocked  = avail?.notStockedInStore ?? false;
+              const isOutOfStock = availQty === 0;
+              // Unit price: from availMap (merged from stock items) or directly from item
+              const unitPrice   = avail?.unitPrice ?? item.unitPrice ?? null;
 
               return (
-                <div
-                  key={id}
-                  onClick={() => toggle(id)}
-                  className={`grid grid-cols-12 items-center px-4 py-3 transition-colors select-none
-                    ${isExisting
-                      ? "bg-yellow-50/60 cursor-not-allowed"
-                      : isSelected
-                      ? "bg-blue-50 hover:bg-blue-100 cursor-pointer"
-                      : "hover:bg-gray-50 cursor-pointer"}`}
-                >
+                <div key={id} onClick={() => toggle(id)}
+                  style={{ gridTemplateColumns: "32px 1fr 90px 52px 72px 80px" }}
+                  className={`grid items-center px-4 py-3 transition-colors select-none
+                    ${isExisting  ? "bg-yellow-50/60 cursor-not-allowed"
+                    : isSelected  ? "bg-blue-50 hover:bg-blue-100 cursor-pointer"
+                    :               "hover:bg-gray-50 cursor-pointer"}`}>
+
                   {/* Checkbox */}
-                  <div className="col-span-1">
+                  <div>
                     <div className={`w-5 h-5 rounded flex items-center justify-center border-2 transition-all shrink-0
-                      ${isExisting
-                        ? "border-yellow-300 bg-yellow-100"
-                        : isSelected
-                        ? "border-blue-600 bg-blue-600"
-                        : "border-gray-300 bg-white"}`}
-                    >
-                      {isExisting
-                        ? <Check className="w-3 h-3 text-yellow-500" />
-                        : isSelected
-                        ? <Check className="w-3 h-3 text-white" />
-                        : null}
+                      ${isExisting ? "border-yellow-300 bg-yellow-100"
+                      : isSelected  ? "border-blue-600 bg-blue-600"
+                      :               "border-gray-300 bg-white"}`}>
+                      {isExisting ? <Check className="w-3 h-3 text-yellow-500" />
+                      : isSelected ? <Check className="w-3 h-3 text-white" />
+                      : null}
                     </div>
                   </div>
 
                   {/* Name + code */}
-                  <div className="col-span-4 min-w-0 pr-2">
+                  <div className="min-w-0 pr-2">
                     <p className={`text-sm font-bold truncate leading-tight ${isExisting ? "text-gray-400" : "text-gray-800"}`}>
                       {name}
                     </p>
                     <p className="text-xs text-gray-400 truncate mt-0.5">{code}</p>
                   </div>
 
-                  {/* Category badge */}
-                  <div className="col-span-3">
+                  {/* Category */}
+                  <div>
                     {cat
                       ? <span className={`inline-block text-xs font-bold px-2 py-0.5 rounded-full border ${catCls}`}>{cat}</span>
                       : <span className="text-xs text-gray-300">—</span>}
                   </div>
 
                   {/* Unit */}
-                  <div className="col-span-2">
+                  <div>
                     <span className="text-sm text-gray-500 font-medium">{unit}</span>
                   </div>
 
                   {/* Live Stock */}
-                  <div className="col-span-2 text-right">
+                  <div className="text-right">
                     {availLoading && availQty === null ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin text-gray-300 ml-auto" />
                     ) : notStocked ? (
                       <span className="text-xs font-semibold text-gray-400 flex items-center justify-end gap-1">
-                        <AlertTriangle className="w-3 h-3 text-gray-300 shrink-0" />
-                        N/A
+                        <AlertTriangle className="w-3 h-3 text-gray-300 shrink-0" />N/A
                       </span>
                     ) : isOutOfStock ? (
                       <span className="text-xs font-bold text-red-500">0</span>
                     ) : availQty !== null ? (
                       <span className={`text-xs font-bold ${availQty <= 5 ? "text-orange-500" : "text-green-600"}`}>
                         {availQty}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-gray-300">—</span>
+                    )}
+                  </div>
+
+                  {/* Unit Price — NEW */}
+                  <div className="text-right">
+                    {availLoading && unitPrice === null ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-gray-300 ml-auto" />
+                    ) : unitPrice !== null ? (
+                      <span className={`text-xs font-semibold ${isSelected ? "text-blue-700" : "text-gray-600"}`}>
+                        ₹{Number(unitPrice).toFixed(2)}
                       </span>
                     ) : (
                       <span className="text-xs text-gray-300">—</span>
@@ -359,19 +355,12 @@ export default function StudentOrderAddItem({ isOpen, onClose, storeId, existing
             )}
           </p>
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-xs font-semibold text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors"
-            >
+            <button type="button" onClick={onClose}
+              className="px-4 py-2 text-xs font-semibold text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors">
               Cancel
             </button>
-            <button
-              type="button"
-              onClick={handleAdd}
-              disabled={selected.size === 0}
-              className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
+            <button type="button" onClick={handleAdd} disabled={selected.size === 0}
+              className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
               <Plus className="w-3.5 h-3.5" />
               Add {selected.size > 0 ? `(${selected.size})` : "Items"}
             </button>

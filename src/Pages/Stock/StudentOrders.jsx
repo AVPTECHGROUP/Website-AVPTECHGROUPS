@@ -2,16 +2,16 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   ShoppingBag,
-  Plus, 
+  Plus,
   CheckCircle, XCircle as XCircleIcon,
   ClipboardList, Eye, Pencil, Ban, AlertTriangle, Loader2,
-  ChevronLeft, ChevronRight, SearchIcon,
+  ChevronLeft, ChevronRight, SearchIcon, IndianRupee,
 } from "lucide-react";
 import CardComponent from "../../Components/CommonComp/CardComponent";
 import CardLoader from "../../Components/CommonComp/CardLoader";
 import ListLoader from "../../Components/CommonComp/ListLoader";
 import ActionDropDownComp from "../../Components/CommonComp/ActionDropDownComp";
-import ViewStudentOrder from "../../Components/Stock/ViewOrder";
+import ViewStudentOrder from "./ViewOrder";
 import { getOrderStats, getStudentOrders, cancelStudentOrder } from "../../Api/StudentOrder";
 import { toast } from "react-toastify";
 
@@ -23,13 +23,13 @@ const STATUS_OPTIONS = [
 ];
 
 const statusColors = {
-  DRAFT:      "bg-gray-100   text-gray-600   border border-gray-300",
-  PENDING:    "bg-yellow-100 text-yellow-700  border border-yellow-200",
-  CONFIRMED:  "bg-blue-100   text-blue-700    border border-blue-200",
-  APPROVED:   "bg-blue-100   text-blue-700    border border-blue-200",
+  DRAFT: "bg-gray-100   text-gray-600   border border-gray-300",
+  PENDING: "bg-yellow-100 text-yellow-700  border border-yellow-200",
+  CONFIRMED: "bg-blue-100   text-blue-700    border border-blue-200",
+  APPROVED: "bg-blue-100   text-blue-700    border border-blue-200",
   DISPATCHED: "bg-purple-100 text-purple-700  border border-purple-200",
-  DELIVERED:  "bg-green-100  text-green-700   border border-green-200",
-  CANCELLED:  "bg-red-100    text-red-600     border border-red-200",
+  DELIVERED: "bg-green-100  text-green-700   border border-green-200",
+  CANCELLED: "bg-red-100    text-red-600     border border-red-200",
 };
 
 // ── Cancel Confirm Modal ──────────────────────────────────────────
@@ -83,13 +83,18 @@ function fmtDate(d) {
   return new Date(d).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
 }
 
+function fmtAmount(val) {
+  if (val === null || val === undefined) return "—";
+  return `₹${Number(val).toFixed(2)}`;
+}
+
 function buildActionOptions(status) {
   const s = (status || "").toUpperCase();
   if (s === "DRAFT") {
     return [
-      { value: "edit",   label: "Edit",   icon: Pencil,     text: "text-blue-600", bg: "bg-blue-50", hover: "hover:bg-blue-100" },
-      { value: "view",   label: "View",   icon: Eye,        text: "text-gray-600", bg: "bg-gray-50", hover: "hover:bg-gray-100" },
-      { value: "cancel", label: "Cancel", icon: Ban,        text: "text-red-500",  bg: "bg-red-50",  hover: "hover:bg-red-100"  },
+      { value: "edit", label: "Edit", icon: Pencil, text: "text-blue-600", bg: "bg-blue-50", hover: "hover:bg-blue-100" },
+      { value: "view", label: "View", icon: Eye, text: "text-gray-600", bg: "bg-gray-50", hover: "hover:bg-gray-100" },
+      { value: "cancel", label: "Cancel", icon: Ban, text: "text-red-500", bg: "bg-red-50", hover: "hover:bg-red-100" },
     ];
   }
   return [
@@ -99,30 +104,27 @@ function buildActionOptions(status) {
 
 // ── Main Component ────────────────────────────────────────────────
 export default function StudentOrders() {
-  const navigate  = useNavigate();
-  const location  = useLocation();
+  const navigate = useNavigate();
+  const location = useLocation();
 
-  const [orders,      setOrders]      = useState([]);
-  const [pagination,  setPagination]  = useState(null);
-  const [loading,     setLoading]     = useState(true);
-  const [statsLoading,setStatsLoading]= useState(true);
-  const [page,        setPage]        = useState(1);
+  const [orders, setOrders] = useState([]);
+  const [pagination, setPagination] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
   const [stats, setStats] = useState({ draftOrders: 0, confirmedOrders: 0, cancelledOrders: 0 });
 
-  const [searchInput,  setSearchInput]  = useState("");
-  const [search,       setSearch]       = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
 
   const [noOrderFound, setNoOrderFound] = useState(false);
 
-  // Modals
-  const [viewOrder,    setViewOrder]    = useState(null);
-
-  // Cancel
+  const [viewOrder, setViewOrder] = useState(null);
   const [cancelTarget, setCancelTarget] = useState(null);
-  const [cancelling,   setCancelling]   = useState(false);
+  const [cancelling, setCancelling] = useState(false);
 
   const resetPage = () => setPage(1);
 
@@ -135,7 +137,6 @@ export default function StudentOrders() {
           ? "Order saved as draft."
           : "Order confirmed & stock issued."
       );
-      // Clear the state so toast doesn't re-fire on refresh
       window.history.replaceState({}, document.title);
       fetchOrders();
       fetchStats();
@@ -150,14 +151,14 @@ export default function StudentOrders() {
 
   useEffect(() => { resetPage(); }, [statusFilter]);
 
-  // Fetch stats
+  // ── Fetch stats ───────────────────────────────────────────────
   const fetchStats = useCallback(() => {
     setStatsLoading(true);
     getOrderStats()
       .then((data) => {
         const s = data?.data || data || {};
         setStats({
-          draftOrders:     s.draftOrders     ?? s.draft     ?? 0,
+          draftOrders: s.draftOrders ?? s.draft ?? 0,
           confirmedOrders: s.confirmedOrders ?? s.confirmed ?? 0,
           cancelledOrders: s.cancelledOrders ?? s.cancelled ?? 0,
         });
@@ -167,7 +168,7 @@ export default function StudentOrders() {
   }, []);
   useEffect(() => { fetchStats(); }, [fetchStats]);
 
-  // Fetch orders
+  // ── Fetch orders ──────────────────────────────────────────────
   const fetchOrders = useCallback(async () => {
     setLoading(true);
     setNoOrderFound(false);
@@ -192,7 +193,7 @@ export default function StudentOrders() {
   useEffect(() => { fetchOrders(); }, [fetchOrders]);
 
   const totalItems = pagination?.totalElements ?? orders.length;
-  const totalPages = pagination?.totalPages    ?? Math.max(1, Math.ceil(totalItems / rowsPerPage));
+  const totalPages = pagination?.totalPages ?? Math.max(1, Math.ceil(totalItems / rowsPerPage));
 
   const handleCancelOrder = async () => {
     if (!cancelTarget) return;
@@ -208,15 +209,15 @@ export default function StudentOrders() {
   };
 
   const handleAction = (val, order) => {
-    if (val === "view")   setViewOrder(order);
-    if (val === "edit")   navigate(`/stock/studentOrders/editOrder?editId=${order.id}`);
+    if (val === "view") setViewOrder(order);
+    if (val === "edit") navigate(`/stock/studentOrders/editOrder?editId=${order.id}`);
     if (val === "cancel") setCancelTarget(order);
   };
 
   const statCards = [
-    { key: "draft",     label: "Draft Orders",    val: stats.draftOrders,     iconTxColor: "text-orange-500", iconBgColor: "bg-orange-100", Icon: ClipboardList },
-    { key: "confirmed", label: "Confirmed Orders", val: stats.confirmedOrders, iconTxColor: "text-green-600",  iconBgColor: "bg-green-100",  Icon: CheckCircle   },
-    { key: "cancelled", label: "Cancelled Orders", val: stats.cancelledOrders, iconTxColor: "text-red-500",    iconBgColor: "bg-red-100",    Icon: XCircleIcon   },
+    { key: "draft", label: "Draft Orders", val: stats.draftOrders, iconTxColor: "text-orange-500", iconBgColor: "bg-orange-100", Icon: ClipboardList },
+    { key: "confirmed", label: "Confirmed Orders", val: stats.confirmedOrders, iconTxColor: "text-green-600", iconBgColor: "bg-green-100", Icon: CheckCircle },
+    { key: "cancelled", label: "Cancelled Orders", val: stats.cancelledOrders, iconTxColor: "text-red-500", iconBgColor: "bg-red-100", Icon: XCircleIcon },
   ];
 
   const tdStyle = "px-2 py-2 text-left text-gray-700 text-sm";
@@ -268,7 +269,6 @@ export default function StudentOrders() {
                 <ShoppingBag className="w-5 h-5 text-blue-500 shrink-0" />
                 <h2 className="font-semibold text-gray-800 text-base md:text-lg truncate">Student Orders</h2>
               </div>
-              {/* ── Navigate to full-page create ── */}
               <button
                 onClick={() => navigate("/stock/studentOrders/addOrder")}
                 className="flex items-center gap-1.5 cursor-pointer bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs md:text-sm font-semibold px-3 md:px-4 py-2 rounded-lg transition-colors shrink-0"
@@ -316,11 +316,12 @@ export default function StudentOrders() {
                 </div>
               ) : (
                 orders.map((order, idx) => {
-                  const sc          = statusColors[order.status] || "bg-gray-100 text-gray-600 border border-gray-200";
+                  const sc = statusColors[order.status] || "bg-gray-100 text-gray-600 border border-gray-200";
                   const studentName = order.studentName || order.student?.name || "—";
-                  const orderClass  = order.className   || order.student?.className || "—";
-                  const storeName   = order.storeName   || order.store?.storeName   || "—";
-                  const items       = order.items       || order.orderItems         || [];
+                  const orderClass = order.className || order.student?.className || "—";
+                  const storeName = order.storeName || order.store?.storeName || "—";
+                  const items = order.items || order.orderItems || [];
+                  const totalAmt = order.totalAmount;
                   return (
                     <div key={order.id} className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
                       <div className="flex items-start justify-between gap-2 mb-3">
@@ -342,6 +343,11 @@ export default function StudentOrders() {
                         <p><span className="font-medium text-gray-500">Store:</span><span className="ml-2 text-gray-700">{storeName}</span></p>
                         <p><span className="font-medium text-gray-500">Date:</span><span className="ml-2 text-gray-700">{fmtDate(order.orderDate || order.createdAt)}</span></p>
                         <p><span className="font-medium text-gray-500">Items:</span><span className="ml-2 text-gray-700">{items.length}</span></p>
+                        {/* Total Amount on mobile */}
+                        <div className="flex items-center gap-1">
+                          <IndianRupee className="w-3.5 h-3.5 text-green-600 shrink-0" />
+                          <span className="font-bold text-green-700 text-sm">{fmtAmount(totalAmt)}</span>
+                        </div>
                         <div className="flex justify-start items-center pt-1">
                           <ActionDropDownComp
                             actionOptions={buildActionOptions(order.status)}
@@ -361,22 +367,29 @@ export default function StudentOrders() {
                 <table className="w-full min-w-225">
                   <thead className="border-b border-gray-200">
                     <tr>
-                      <th className="px-2 py-3 text-left text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10 w-10">#</th>
-                      <th className="px-2 py-3 text-left text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10">Student</th>
-                      <th className="px-2 py-3 text-left text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10">Class</th>
+                      <th className="px-2 py-3 text-left   text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10 w-10">#</th>
+                      <th className="px-2 py-3 text-left   text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10">Student</th>
+                      <th className="px-2 py-3 text-left   text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10">Class</th>
                       <th className="px-2 py-3 text-center text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10">Store</th>
                       <th className="px-2 py-3 text-center text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10">Items</th>
-                      <th className="px-2 py-3 text-left text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10 whitespace-nowrap">Order Date</th>
-                      <th className="px-2 py-3 text-left text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10">Status</th>
+                      <th className="px-2 py-3 text-left   text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10 whitespace-nowrap">Order Date</th>
+                      {/* ── Total Amount column ── */}
+                      <th className="px-2 py-3 text-left   text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10 whitespace-nowrap">
+                        <span className="flex items-center gap-1">
+                          <IndianRupee className="w-3.5 h-3.5" />
+                          Total
+                        </span>
+                      </th>
+                      <th className="px-2 py-3 text-left   text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10">Status</th>
                       <th className="px-6 py-3 text-center text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200 font-normal">
                     {loading ? (
-                      <ListLoader colSpanSet={8} />
+                      <ListLoader colSpanSet={9} />
                     ) : noOrderFound ? (
                       <tr>
-                        <td colSpan={8} className="px-6 py-10 text-center">
+                        <td colSpan={9} className="px-6 py-10 text-center">
                           <ShoppingBag className="w-10 h-10 text-gray-200 mx-auto mb-2" />
                           <h3 className="text-sm font-bold text-gray-700 mb-1">No Orders Found</h3>
                           <p className="text-xs text-gray-400">Try adjusting your filters.</p>
@@ -384,26 +397,32 @@ export default function StudentOrders() {
                       </tr>
                     ) : (
                       orders.map((order, idx) => {
-                        const sc          = statusColors[order.status] || "bg-gray-100 text-gray-600 border border-gray-200";
+                        const sc = statusColors[order.status] || "bg-gray-100 text-gray-600 border border-gray-200";
                         const studentName = order.studentName || order.student?.name || order.student?.fullName || "—";
-                        const admNumber   = order.admissionNumber || order.student?.admissionNumber || "—";
-                        const orderClass  = order.className  || order.class || order.student?.className || "—";
-                        const storeName   = order.storeName  || order.store?.storeName || order.store?.name || "—";
-                        const items       = order.items      || order.orderItems || [];
-                        const orderDate   = order.orderDate  || order.createdAt || order.date;
+                        const admNumber = order.admissionNumber || order.student?.admissionNumber || "—";
+                        const orderClass = order.className || order.class || order.student?.className || "—";
+                        const storeName = order.storeName || order.store?.storeName || order.store?.name || "—";
+                        const items = order.items || order.orderItems || [];
+                        const orderDate = order.orderDate || order.createdAt || order.date;
+                        const totalAmt = order.totalAmount;   // from API
                         return (
                           <tr key={order.id} className="hover:bg-blue-50/40 transition-colors">
+
                             <td className={tdStyle}>{(page - 1) * rowsPerPage + idx + 1}</td>
+
                             <td className={tdStyle}>
                               <p className="font-medium text-black whitespace-nowrap">{studentName}</p>
                               <p className="text-xs text-gray-400">{admNumber}</p>
                             </td>
+
                             <td className={tdStyle}>
                               <span className="text-gray-600 whitespace-nowrap">{orderClass}</span>
                             </td>
+
                             <td className={tdStyle}>
                               <span className="text-gray-600 whitespace-nowrap">{storeName}</span>
                             </td>
+
                             <td className={tdStyle}>
                               {items.length > 0 ? (
                                 <div className="flex flex-wrap flex-col items-center gap-1">
@@ -422,20 +441,36 @@ export default function StudentOrders() {
                                 <span className="text-gray-400 text-xs">—</span>
                               )}
                             </td>
+
                             <td className={tdStyle}>
                               <span className="text-gray-600 whitespace-nowrap">{fmtDate(orderDate)}</span>
                             </td>
+
+                            {/* ── Total Amount ── */}
+                            <td className={tdStyle}>
+                              <div className="flex items-center gap-1">
+                                <IndianRupee className="w-3.5 h-3.5 text-green-600 shrink-0" />
+                                <span className="font-semibold text-green-700 whitespace-nowrap">
+                                  {totalAmt !== null && totalAmt !== undefined
+                                    ? Number(totalAmt).toFixed(2)
+                                    : "—"}
+                                </span>
+                              </div>
+                            </td>
+
                             <td className={tdStyle}>
                               <span className={`inline-flex items-center px-3 py-1 rounded-sm text-xs font-medium ${sc}`}>
                                 {order.status || "—"}
                               </span>
                             </td>
+
                             <td className={tdStyle}>
                               <ActionDropDownComp
                                 actionOptions={buildActionOptions(order.status)}
                                 onAction={(val) => handleAction(val, order)}
                               />
                             </td>
+
                           </tr>
                         );
                       })
@@ -466,27 +501,18 @@ export default function StudentOrders() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    disabled={page === 1 || loading}
-                    className="px-3 py-1 text-gray-600 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                  >
+                  <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1 || loading}
+                    className="px-3 py-1 text-gray-600 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all">
                     <ChevronLeft className="w-4 h-4" />
                   </button>
                   {[...Array(totalPages)].map((_, idx) => (
-                    <button
-                      key={idx + 1}
-                      onClick={() => setPage(idx + 1)}
-                      className={`px-3 py-1 rounded transition-all ${page === idx + 1 ? "bg-blue-500 text-white" : "text-gray-600 hover:bg-gray-100"}`}
-                    >
+                    <button key={idx + 1} onClick={() => setPage(idx + 1)}
+                      className={`px-3 py-1 rounded transition-all ${page === idx + 1 ? "bg-blue-500 text-white" : "text-gray-600 hover:bg-gray-100"}`}>
                       {idx + 1}
                     </button>
                   ))}
-                  <button
-                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                    disabled={page === totalPages || totalPages === 0 || loading}
-                    className="px-3 py-1 text-gray-600 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                  >
+                  <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages || totalPages === 0 || loading}
+                    className="px-3 py-1 text-gray-600 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all">
                     <ChevronRight className="w-4 h-4" />
                   </button>
                 </div>
@@ -503,22 +529,16 @@ export default function StudentOrders() {
                 </div>
                 <div className="flex items-center justify-center gap-2">
                   <span className="text-sm text-gray-700">Rows:</span>
-                  <select
-                    value={rowsPerPage}
-                    onChange={(e) => { setRowsPerPage(Number(e.target.value)); resetPage(); }}
-                    className="px-3 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
+                  <select value={rowsPerPage} onChange={(e) => { setRowsPerPage(Number(e.target.value)); resetPage(); }}
+                    className="px-3 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
                     <option value={10}>10</option>
                     <option value={25}>25</option>
                     <option value={50}>50</option>
                   </select>
                 </div>
                 <div className="flex items-center justify-center gap-2">
-                  <button
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    disabled={page === 1 || loading}
-                    className="px-4 py-2 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                  >
+                  <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1 || loading}
+                    className="px-4 py-2 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all">
                     <ChevronLeft className="w-4 h-4" />
                   </button>
                   <div className="flex items-center gap-1">
@@ -541,11 +561,8 @@ export default function StudentOrders() {
                       </>
                     )}
                   </div>
-                  <button
-                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                    disabled={page === totalPages || totalPages === 0 || loading}
-                    className="px-4 py-2 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                  >
+                  <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages || totalPages === 0 || loading}
+                    className="px-4 py-2 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all">
                     <ChevronRight className="w-4 h-4" />
                   </button>
                 </div>
@@ -555,7 +572,7 @@ export default function StudentOrders() {
 
           </div>
 
-          {/* View Modal (kept as popup — view only, no need for full page) */}
+          {/* View Modal */}
           <ViewStudentOrder
             isOpen={!!viewOrder}
             onClose={() => setViewOrder(null)}

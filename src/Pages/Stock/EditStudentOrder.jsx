@@ -3,15 +3,13 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import {
     X, User, ShoppingBag, Package, Search, ChevronDown,
     Loader2, Save, Check, AlertCircle, AlertTriangle, Info, RefreshCw,
-    ArrowLeft, CheckCircle, Plus,
+    ArrowLeft, CheckCircle, Plus, IndianRupee,
 } from "lucide-react";
 import { getActiveStores } from "../../Api/StockApi";
 import { getStudents } from "../../Api/StudentsApi";
 import {
-    updateStudentOrder,
-    confirmStudentOrder,
-    previewStudentOrder,
-    checkItemAvailability,
+    updateStudentOrder, confirmStudentOrder,
+    previewStudentOrder, checkItemAvailability,
     getStudentOrderById,
 } from "../../Api/StudentOrder";
 import StudentOrderAddItem from "./StudentOrderAddItem";
@@ -27,12 +25,12 @@ const inputCls =
 
 function parseStudent(raw) {
     const firstName = raw.firstName || raw.first_name || "";
-    const lastName = raw.lastName || raw.last_name || "";
-    const fullName = raw.fullName || raw.full_name || raw.name || "";
-    const name = fullName || [firstName, lastName].filter(Boolean).join(" ") || `Student #${raw.id}`;
+    const lastName  = raw.lastName  || raw.last_name  || "";
+    const fullName  = raw.fullName  || raw.full_name  || raw.name || "";
+    const name      = fullName || [firstName, lastName].filter(Boolean).join(" ") || `Student #${raw.id}`;
     const admission = raw.admissionNumber || raw.admission_number || raw.admNo || "";
     const className = raw.className || raw.class_name || raw.class || raw.classSection || "";
-    const classId = raw.classId || raw.class_id || raw.classroomId || null;
+    const classId   = raw.classId   || raw.class_id   || raw.classroomId || null;
     return { ...raw, _name: name, _admission: admission, _className: className, _classId: classId };
 }
 
@@ -40,24 +38,24 @@ function StepBar({ current }) {
     return (
         <div className="flex items-center w-full">
             {STEPS.map((s, idx) => {
-                const done = current > s.id;
+                const done   = current > s.id;
                 const active = current === s.id;
                 return (
                     <div key={s.id} className="flex items-center flex-1 min-w-0">
                         <div className="flex items-center gap-3 shrink-0">
                             <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all
-                ${done ? "bg-blue-600 border-blue-600 text-white"
-                                    : active ? "border-blue-500 text-blue-600 bg-blue-50"
-                                        : "border-gray-300 text-gray-400 bg-white"}`}>
+                                ${done   ? "bg-blue-600 border-blue-600 text-white"
+                                : active ? "border-blue-500 text-blue-600 bg-blue-50"
+                                :          "border-gray-300 text-gray-400 bg-white"}`}>
                                 {done ? <Check className="w-4 h-4" /> : s.id}
                             </div>
                             <div className="hidden sm:block">
                                 <p className={`text-xs font-bold uppercase tracking-wider
-                  ${active ? "text-blue-600" : done ? "text-gray-500" : "text-gray-400"}`}>
+                                    ${active ? "text-blue-600" : done ? "text-gray-500" : "text-gray-400"}`}>
                                     Step {s.id}
                                 </p>
                                 <p className={`text-sm font-semibold
-                  ${active ? "text-gray-900" : done ? "text-gray-500" : "text-gray-400"}`}>
+                                    ${active ? "text-gray-900" : done ? "text-gray-500" : "text-gray-400"}`}>
                                     {s.label}
                                 </p>
                             </div>
@@ -74,10 +72,7 @@ function StepBar({ current }) {
 
 function Step3Footer({ submitting, previewLoading, onBack, onDraft, onConfirm }) {
     const [ready, setReady] = useState(false);
-    useEffect(() => {
-        const id = setTimeout(() => setReady(true), 50);
-        return () => clearTimeout(id);
-    }, []);
+    useEffect(() => { const id = setTimeout(() => setReady(true), 50); return () => clearTimeout(id); }, []);
     const blocked = submitting || !ready || previewLoading;
     return (
         <div className="flex items-center justify-between gap-3">
@@ -91,60 +86,152 @@ function Step3Footer({ submitting, previewLoading, onBack, onDraft, onConfirm })
                         <Loader2 className="w-3.5 h-3.5 animate-spin" /> Loading data…
                     </span>
                 )}
-                <button type="button" onClick={() => !blocked && onDraft()}
-                    disabled={blocked}
+                <button type="button" onClick={() => !blocked && onDraft()} disabled={blocked}
                     className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors shadow-sm">
                     {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                     Save as Draft
                 </button>
-                <button type="button" onClick={() => !blocked && onConfirm()}
-                    disabled={blocked}
+                <button type="button" onClick={() => !blocked && onConfirm()} disabled={blocked}
                     className="flex items-center gap-2 cursor-pointer bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors shadow-sm">
                     {submitting
                         ? <><Loader2 className="w-4 h-4 animate-spin" /> Submitting…</>
                         : previewLoading
-                            ? <><Loader2 className="w-4 h-4 animate-spin" /> Loading…</>
-                            : <><Check className="w-4 h-4" /> Confirm &amp; Issue Stock</>}
+                        ? <><Loader2 className="w-4 h-4 animate-spin" /> Loading…</>
+                        : <><Check className="w-4 h-4" /> Confirm &amp; Issue Stock</>}
                 </button>
             </div>
         </div>
     );
 }
 
+// ── Shared item row component ────────────────────────────────────
+function ItemRow({ item, onQtyChange, onRemove }) {
+    const avail    = item.availableQty ?? null;
+    const hasIssue = avail !== null && item.quantity > avail;
+    const lineTotal = item.unitPriceSnapshot !== null && item.unitPriceSnapshot !== undefined
+        ? item.unitPriceSnapshot * item.quantity
+        : null;
+
+    return (
+        <div className={`grid items-center border rounded-xl px-3 py-2.5 gap-2 transition-colors
+            ${hasIssue ? "border-orange-300 bg-orange-50/30" : "border-gray-200 hover:border-blue-200"}`}
+            style={{ gridTemplateColumns: "1fr 80px 90px 70px 80px 32px" }}>
+
+            {/* Item name + code */}
+            <div className="min-w-0">
+                <p className="text-sm font-bold truncate text-gray-800">{item.itemName}</p>
+                <p className="text-xs text-gray-400 mt-0.5">{item.itemCode} · {item.itemUnit}
+                    {item.category && <span className="ml-1.5 text-xs font-semibold text-gray-500 bg-gray-100 border border-gray-200 px-1.5 py-0.5 rounded uppercase">{item.category}</span>}
+                </p>
+            </div>
+
+            {/* Qty stepper */}
+            <div className="flex items-center gap-1">
+                <button type="button" onClick={() => onQtyChange(item.itemId, item.quantity - 1)} disabled={item.quantity <= 1}
+                    className="w-6 h-6 flex items-center justify-center rounded font-bold border border-gray-200 bg-white text-gray-600 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition text-sm">−</button>
+                <input type="number" min="1" value={item.quantity}
+                    onChange={(e) => onQtyChange(item.itemId, e.target.value)}
+                    className={`w-10 text-center text-sm font-bold border rounded py-0.5 px-1 focus:outline-none focus:ring-2 transition
+                        ${hasIssue ? "border-orange-400 bg-orange-50 text-orange-700 focus:ring-orange-200"
+                        :            "border-gray-200 bg-white text-gray-800 focus:ring-blue-300"}`} />
+                <button type="button" onClick={() => onQtyChange(item.itemId, item.quantity + 1)}
+                    className={`w-6 h-6 flex items-center justify-center rounded font-bold border transition text-sm
+                        ${hasIssue ? "border-orange-300 bg-orange-50 text-orange-600 hover:bg-orange-100"
+                        :            "border-gray-200 bg-white text-gray-600 hover:bg-gray-100"}`}>+</button>
+            </div>
+
+            {/* Available */}
+            <div className="text-right pr-1">
+                {hasIssue
+                    ? <span className="text-xs font-semibold text-orange-500 flex items-center justify-end gap-1">
+                        <AlertTriangle className="w-3 h-3 shrink-0" />{avail === 0 ? "0 avail" : `${avail} avail`}
+                      </span>
+                    : <span className="text-xs font-semibold text-green-600">✓ {avail ?? "?"} avail</span>}
+            </div>
+
+            {/* Unit Price — NEW */}
+            <div className="text-right pr-1">
+                {item.unitPriceSnapshot !== null && item.unitPriceSnapshot !== undefined
+                    ? <span className="text-xs font-semibold text-gray-700 flex items-center justify-end gap-0.5">
+                        <IndianRupee className="w-3 h-3 text-gray-400" />{Number(item.unitPriceSnapshot).toFixed(2)}
+                      </span>
+                    : <span className="text-xs text-gray-300">—</span>}
+            </div>
+
+            {/* Line Total — NEW */}
+            <div className="text-right pr-1">
+                {lineTotal !== null
+                    ? <span className={`text-xs font-bold flex items-center justify-end gap-0.5
+                          ${hasIssue ? "text-orange-600" : "text-blue-700"}`}>
+                        <IndianRupee className="w-3 h-3" />{Number(lineTotal).toFixed(2)}
+                      </span>
+                    : <span className="text-xs text-gray-300">—</span>}
+            </div>
+
+            {/* Remove */}
+            <button type="button" onClick={() => onRemove(item.itemId)}
+                className="w-7 h-7 flex items-center justify-center rounded-lg text-white bg-red-400 hover:bg-red-500 transition-colors">
+                <X className="w-3.5 h-3.5" />
+            </button>
+        </div>
+    );
+}
+
+// ── Items table header ────────────────────────────────────────────
+function ItemTableHeader() {
+    return (
+        <div className="grid items-center px-3 py-2 gap-2 text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-gray-200"
+            style={{ gridTemplateColumns: "1fr 80px 90px 70px 80px 32px" }}>
+            <span>Item</span>
+            <span>Qty</span>
+            <span className="text-right pr-1">Available</span>
+            <span className="text-right pr-1 flex items-center justify-end gap-0.5">
+                <IndianRupee className="w-3 h-3" /> Unit
+            </span>
+            <span className="text-right pr-1 flex items-center justify-end gap-0.5">
+                <IndianRupee className="w-3 h-3" /> Total
+            </span>
+            <span />
+        </div>
+    );
+}
+
+// ── Main Component ───────────────────────────────────────────────
 export default function EditStudentOrder() {
-    const navigate = useNavigate();
+    const navigate      = useNavigate();
     const [searchParams] = useSearchParams();
-    const editOrderId = Number(searchParams.get("editId")) || null;
+    const editOrderId   = Number(searchParams.get("editId")) || null;
 
     const [step, setStep] = useState(1);
 
-    const [students, setStudents] = useState([]);
+    const [students,        setStudents]        = useState([]);
     const [studentsLoading, setStudentsLoading] = useState(false);
-    const [studentSearch, setStudentSearch] = useState("");
+    const [studentSearch,   setStudentSearch]   = useState("");
     const [selectedStudent, setSelectedStudent] = useState(null);
     const studentsFetchedRef = useRef(false);
 
-    const [stores, setStores] = useState([]);
-    const [storesLoading, setStoresLoading] = useState(false);
+    const [stores,          setStores]          = useState([]);
+    const [storesLoading,   setStoresLoading]   = useState(false);
     const [selectedStoreId, setSelectedStoreId] = useState("");
     const selectedStore = stores.find((s) => String(s.id) === String(selectedStoreId)) || null;
 
     const [orderDate, setOrderDate] = useState(new Date().toISOString().split("T")[0]);
-    const [remarks, setRemarks] = useState("");
+    const [remarks,   setRemarks]   = useState("");
 
     const [previewLoading, setPreviewLoading] = useState(false);
-    const [previewError, setPreviewError] = useState("");
+    const [previewError,   setPreviewError]   = useState("");
+    // orderItems shape: { itemId, itemName, itemCode, itemUnit, category, quantity,
+    //                     availableQty, unitPriceSnapshot, lineTotal }
     const [orderItems, setOrderItems] = useState([]);
 
     const [editLoading, setEditLoading] = useState(false);
-    const [submitting, setSubmitting] = useState(false);
-    const [errors, setErrors] = useState({});
+    const [submitting,  setSubmitting]  = useState(false);
+    const [errors,      setErrors]      = useState({});
     const [showAddItem, setShowAddItem] = useState(false);
 
     const hardReset = useCallback(() => {
         setStep(1);
-        setStudents([]); setStudentSearch("");
-        setSelectedStudent(null);
+        setStudents([]); setStudentSearch(""); setSelectedStudent(null);
         setSelectedStoreId(""); setOrderItems([]);
         setOrderDate(new Date().toISOString().split("T")[0]);
         setRemarks(""); setErrors({}); setSubmitting(false);
@@ -180,37 +267,36 @@ export default function EditStudentOrder() {
     const loadEditOrder = async (orderId) => {
         setEditLoading(true);
         try {
-            const res = await getStudentOrderById(orderId);
+            const res  = await getStudentOrderById(orderId);
             const data = res?.data || res;
             setOrderDate(data.orderDate ? data.orderDate.split("T")[0] : new Date().toISOString().split("T")[0]);
             setRemarks(data.remarks || "");
             setSelectedStoreId(String(data.storeId || ""));
             if (data.studentId) {
                 setSelectedStudent({
-                    id: data.studentId,
-                    _name: data.studentName || `Student #${data.studentId}`,
+                    id:         data.studentId,
+                    _name:      data.studentName   || `Student #${data.studentId}`,
                     _admission: data.admissionNumber || "",
-                    _className: data.className || "",
-                    _classId: data.classId || null,
+                    _className: data.className      || "",
+                    _classId:   data.classId        || null,
                 });
             }
             if (data.items?.length) {
                 setOrderItems(data.items.map((i) => ({
-                    itemId: i.itemId,
-                    itemName: i.itemName,
-                    itemCode: i.itemCode || "—",
-                    itemUnit: i.itemUnit || "PCS",
-                    category: i.category || "",
-                    quantity: i.quantity || 1,
-                    availableQty: i.availableQuantitySnapshot ?? null,
+                    itemId:             i.itemId,
+                    itemName:           i.itemName,
+                    itemCode:           i.itemCode  || "—",
+                    itemUnit:           i.itemUnit  || "PCS",
+                    category:           i.category  || "",
+                    quantity:           i.quantity  || 1,
+                    availableQty:       i.availableQuantitySnapshot ?? null,
+                    unitPriceSnapshot:  i.unitPriceSnapshot ?? null,
+                    lineTotal:          i.lineTotal ?? null,
                 })));
             }
             doLoadStudents();
-        } catch (e) {
-            console.error("loadEditOrder:", e);
-        } finally {
-            setEditLoading(false);
-        }
+        } catch (e) { console.error("loadEditOrder:", e); }
+        finally { setEditLoading(false); }
     };
 
     useEffect(() => {
@@ -219,42 +305,13 @@ export default function EditStudentOrder() {
         if (editOrderId) { loadEditOrder(editOrderId); }
     }, []); // eslint-disable-line
 
-    // ─── fetchPreview — edit mode mein kabhi nahi chalega ─────────
-    const fetchPreview = useCallback(async () => {
-        if (!selectedStoreId) return;
-        setPreviewLoading(true); setPreviewError("");
-        try {
-            const res = await previewStudentOrder(selectedStudent.id, selectedStoreId);
-            const data = res?.data || res;
-            const rawItems = data?.items || data?.orderItems || [];
-            if (!rawItems.length) {
-                setOrderItems([]);
-                setPreviewError("No items found for this student/store combination.");
-                return;
-            }
-            setOrderItems(rawItems.map((i) => ({
-                itemId: i.itemId,
-                itemName: i.itemName || i.name || `Item #${i.itemId}`,
-                itemCode: i.itemCode || i.code || "—",
-                itemUnit: i.itemUnit || i.unit || "PCS",
-                category: i.category || "",
-                quantity: i.quantity || 1,
-                availableQty: i.availableQuantitySnapshot ?? i.availableQty ?? null,
-            })));
-        } catch (e) {
-            console.error("fetchPreview:", e);
-            setPreviewError("Failed to load items. Please try again.");
-            setOrderItems([]);
-        } finally { setPreviewLoading(false); }
-    }, [selectedStudent?.id, selectedStoreId]); // eslint-disable-line
-
-    // ─── Refresh availability — sirf availableQty update, items/qty untouched ──
+    // ─── refreshAvailability — sirf availableQty update ─────────
     const refreshAvailability = useCallback(async () => {
         if (!selectedStoreId || !orderItems.length) return;
         setPreviewLoading(true);
         try {
             const itemIds = orderItems.map((i) => i.itemId);
-            const res = await checkItemAvailability(Number(selectedStoreId), itemIds);
+            const res  = await checkItemAvailability(Number(selectedStoreId), itemIds);
             const list = Array.isArray(res) ? res : (res?.data || []);
             const availMap = {};
             list.forEach((i) => {
@@ -267,19 +324,15 @@ export default function EditStudentOrder() {
                     notStockedInStore: list.find((i) => i.itemId === item.itemId)?.notStockedInStore ?? false,
                 }))
             );
-        } catch (e) {
-            console.error("refreshAvailability:", e);
-        } finally {
-            setPreviewLoading(false);
-        }
+        } catch (e) { console.error("refreshAvailability:", e); }
+        finally { setPreviewLoading(false); }
     }, [selectedStoreId, orderItems]); // eslint-disable-line
 
-    // ─── handleItemsAdded — stale closure fix ────────────────────
-    // Merged list ke saath seedha availability API call karo
+    // ─── handleItemsAdded ─────────────────────────────────────────
     const handleItemsAdded = useCallback((newItems) => {
         setOrderItems((prev) => {
             const existingIds = new Set(prev.map((i) => String(i.itemId)));
-            const fresh = newItems.filter((i) => !existingIds.has(String(i.itemId)));
+            const fresh  = newItems.filter((i) => !existingIds.has(String(i.itemId)));
             const merged = [...prev, ...fresh];
 
             if (!selectedStoreId || !merged.length) return merged;
@@ -305,25 +358,33 @@ export default function EditStudentOrder() {
         });
     }, [selectedStoreId]); // eslint-disable-line
 
-    // ─── Step 2 entry:
-    // Edit mode — items pehle se hain (loadEditOrder se), sirf availableQty refresh karo
-    // Back karke aaye toh bhi sirf refresh (items as-is)
     useEffect(() => {
         if (step !== 2) return;
         if (orderItems.length > 0) { refreshAvailability(); }
     }, [step]); // eslint-disable-line
 
-    const stockIssues = orderItems.filter((i) => i.availableQty !== null && i.quantity > i.availableQty);
-    const hasAnyIssue = stockIssues.length > 0;
-    const totalUnits = orderItems.reduce((a, i) => a + i.quantity, 0);
-
-    const setQty = (id, v) => setOrderItems((p) => p.map((i) => i.itemId === id ? { ...i, quantity: Math.max(1, parseInt(v) || 1) } : i));
+    // ─── qty helpers ─────────────────────────────────────────────
+    const setQty = (id, v) => setOrderItems((p) =>
+        p.map((i) => {
+            if (i.itemId !== id) return i;
+            const qty = Math.max(1, parseInt(v) || 1);
+            const lineTotal = i.unitPriceSnapshot !== null && i.unitPriceSnapshot !== undefined
+                ? i.unitPriceSnapshot * qty : null;
+            return { ...i, quantity: qty, lineTotal };
+        })
+    );
     const removeItem = (id) => setOrderItems((p) => p.filter((i) => i.itemId !== id));
+
+    const stockIssues   = orderItems.filter((i) => i.availableQty !== null && i.quantity > i.availableQty);
+    const hasAnyIssue   = stockIssues.length > 0;
+    const totalUnits    = orderItems.reduce((a, i) => a + i.quantity, 0);
+    const grandTotal    = orderItems.reduce((a, i) => i.lineTotal != null ? a + i.lineTotal : a, 0);
+    const hasPricing    = orderItems.some((i) => i.unitPriceSnapshot !== null && i.unitPriceSnapshot !== undefined);
 
     const validateStep1 = () => {
         const e = {};
         if (!selectedStudent) e.student = "Please select a student.";
-        if (!selectedStoreId) e.store = "Please select a store.";
+        if (!selectedStoreId) e.store   = "Please select a store.";
         setErrors(e);
         return !Object.keys(e).length;
     };
@@ -344,11 +405,11 @@ export default function EditStudentOrder() {
         setSubmitting(true); setErrors({});
         const payload = {
             studentId: selectedStudent.id,
-            storeId: Number(selectedStoreId),
+            storeId:   Number(selectedStoreId),
             orderDate,
-            remarks: remarks.trim() || null,
-            status: "DRAFT",
-            items: orderItems.map((i) => ({ itemId: i.itemId, quantity: i.quantity })),
+            remarks:   remarks.trim() || null,
+            status:    "DRAFT",
+            items:     orderItems.map((i) => ({ itemId: i.itemId, quantity: i.quantity })),
         };
         try {
             await updateStudentOrder(editOrderId, payload);
@@ -362,11 +423,11 @@ export default function EditStudentOrder() {
         setSubmitting(true); setErrors({});
         const payload = {
             studentId: selectedStudent.id,
-            storeId: Number(selectedStoreId),
+            storeId:   Number(selectedStoreId),
             orderDate,
-            remarks: remarks.trim() || null,
-            status: "DRAFT",
-            items: orderItems.map((i) => ({ itemId: i.itemId, quantity: i.quantity })),
+            remarks:   remarks.trim() || null,
+            status:    "DRAFT",
+            items:     orderItems.map((i) => ({ itemId: i.itemId, quantity: i.quantity })),
         };
         try {
             await updateStudentOrder(editOrderId, payload);
@@ -409,11 +470,9 @@ export default function EditStudentOrder() {
                         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Edit Student Order</h1>
                         <p className="text-gray-500 text-sm mt-0.5">Update the order details below and confirm to issue stock.</p>
                     </div>
-                    <button
-                        onClick={() => navigate("/stock/studentOrders")}
-                        className="flex items-center justify-center cursor-pointer w-fit p-2 gap-2 h-10 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 hover:text-gray-700 transition-colors shadow-sm">
-                        <ArrowLeft className="w-4 h-4" />
-                        Back
+                    <button onClick={() => navigate("/stock/studentOrders")}
+                        className="flex items-center justify-center cursor-pointer w-fit p-2 gap-2 h-10 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 transition-colors shadow-sm">
+                        <ArrowLeft className="w-4 h-4" /> Back
                     </button>
                 </div>
 
@@ -425,10 +484,7 @@ export default function EditStudentOrder() {
                     <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 space-y-4 animate-pulse">
                         <div className="h-10 bg-gray-100 rounded-xl" />
                         <div className="h-10 bg-gray-100 rounded-xl" />
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="h-10 bg-gray-100 rounded-xl" />
-                            <div className="h-10 bg-gray-100 rounded-xl" />
-                        </div>
+                        <div className="grid grid-cols-2 gap-4"><div className="h-10 bg-gray-100 rounded-xl" /><div className="h-10 bg-gray-100 rounded-xl" /></div>
                     </div>
                 ) : (
                     <>
@@ -442,10 +498,9 @@ export default function EditStudentOrder() {
                                     <h2 className="font-bold text-gray-800">Student &amp; Store Details</h2>
                                 </div>
 
+                                {/* Student picker */}
                                 <div className="space-y-2">
-                                    <label className="text-sm font-semibold text-gray-700">
-                                        Student <span className="text-red-500">*</span>
-                                    </label>
+                                    <label className="text-sm font-semibold text-gray-700">Student <span className="text-red-500">*</span></label>
                                     {selectedStudent ? (
                                         <div onClick={() => setSelectedStudent(null)}
                                             className="border border-blue-400 bg-blue-50 rounded-xl px-4 py-3 flex items-center justify-between cursor-pointer hover:border-blue-500 transition-colors">
@@ -507,15 +562,13 @@ export default function EditStudentOrder() {
                                             <span className="text-green-600">🏠</span>
                                             <span className="font-semibold text-gray-700">Auto-detected:</span>
                                             <span className="text-blue-600 font-semibold">{selectedStudent._className}</span>
-                                            <span className="text-xs text-gray-400 hidden sm:block ml-auto shrink-0">· Default items pre-loaded from class config</span>
                                         </div>
                                     )}
                                 </div>
 
+                                {/* Store picker */}
                                 <div className="space-y-2">
-                                    <label className="text-sm font-semibold text-gray-700">
-                                        Issue from Store <span className="text-red-500">*</span>
-                                    </label>
+                                    <label className="text-sm font-semibold text-gray-700">Issue from Store <span className="text-red-500">*</span></label>
                                     {storesLoading ? (
                                         <div className={`${inputCls} flex items-center gap-2 text-gray-400`}>
                                             <Loader2 className="w-3.5 h-3.5 animate-spin" /> Loading stores…
@@ -580,8 +633,7 @@ export default function EditStudentOrder() {
                                 <div className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-xl px-4 py-3">
                                     <div className="flex items-center gap-4 text-sm flex-wrap gap-y-1">
                                         <span className="flex items-center gap-1.5 font-semibold text-gray-700">
-                                            <User className="w-3.5 h-3.5 text-blue-400" />
-                                            {selectedStudent?._name}
+                                            <User className="w-3.5 h-3.5 text-blue-400" />{selectedStudent?._name}
                                         </span>
                                         <span className="text-gray-300 hidden sm:block">·</span>
                                         <span className="flex items-center gap-1.5 font-semibold text-gray-700">
@@ -594,9 +646,7 @@ export default function EditStudentOrder() {
                                             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-blue-600 border border-blue-200 bg-blue-50 hover:bg-blue-100 rounded-xl cursor-pointer transition-colors disabled:opacity-50">
                                             <Plus className="w-3.5 h-3.5" /> Add Item
                                         </button>
-                                        {/* Refresh: sirf availableQty update, items/qty untouched */}
                                         <button onClick={refreshAvailability} disabled={previewLoading}
-                                            title="Refresh live stock availability"
                                             className="p-2 rounded-xl flex items-center gap-2 text-gray-600 text-xs cursor-pointer border border-gray-200 bg-white hover:bg-gray-100 transition disabled:opacity-50">
                                             Refresh
                                             <RefreshCw className={`w-4 h-4 text-gray-400 ${previewLoading ? "animate-spin" : ""}`} />
@@ -620,7 +670,7 @@ export default function EditStudentOrder() {
                                 )}
 
                                 {hasAnyIssue && !previewLoading && (
-                                    <div className="flex items-start gap-2 cursor-pointer bg-orange-50 border border-orange-300 rounded-xl px-4 py-3 text-xs text-orange-800">
+                                    <div className="flex items-start gap-2 bg-orange-50 border border-orange-300 rounded-xl px-4 py-3 text-xs text-orange-800">
                                         <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-orange-500" />
                                         <div>
                                             <p className="font-semibold mb-0.5">Stock issue detected</p>
@@ -632,7 +682,7 @@ export default function EditStudentOrder() {
                                 {previewLoading ? (
                                     <div className="flex flex-col items-center justify-center gap-3 py-16 text-gray-400">
                                         <Loader2 className="w-7 h-7 animate-spin text-blue-500" />
-                                        <p className="text-sm">Loading items from preview…</p>
+                                        <p className="text-sm">Loading items…</p>
                                     </div>
                                 ) : previewError ? (
                                     <div className="text-center py-12 border border-dashed border-red-200 rounded-xl text-red-400 space-y-2">
@@ -644,71 +694,36 @@ export default function EditStudentOrder() {
                                     <div className="text-center py-14 border border-dashed border-gray-200 rounded-xl text-gray-400">
                                         <Package className="w-10 h-10 mx-auto text-gray-200 mb-2" />
                                         <p className="text-sm font-medium">No items found for this combination</p>
-                                        <p className="text-xs mt-1">Try a different student or store.</p>
                                     </div>
                                 ) : (
                                     <>
-                                        <div className="grid grid-cols-12 text-xs font-bold text-gray-500 uppercase tracking-wider pb-2 border-b border-gray-200">
-                                            <span className="col-span-4">Item</span>
-                                            <span className="col-span-2">Category</span>
-                                            <span className="col-span-3 text-center">Qty</span>
-                                            <span className="col-span-2 text-right">Available</span>
-                                            <span className="col-span-1" />
-                                        </div>
+                                        <ItemTableHeader />
                                         <div className="space-y-2">
-                                            {orderItems.map((item) => {
-                                                const avail = item.availableQty ?? null;
-                                                const hasIssue = avail !== null && item.quantity > avail;
-                                                return (
-                                                    <div key={item.itemId}
-                                                        className={`grid grid-cols-12 items-center border rounded-xl px-4 py-3 transition-colors
-                              ${hasIssue ? "border-orange-300 bg-orange-50/30" : "border-gray-200 hover:border-blue-200"}`}>
-                                                        <div className="col-span-4 min-w-0">
-                                                            <p className="text-sm font-bold truncate text-gray-800">{item.itemName}</p>
-                                                            <p className="text-xs text-gray-400 mt-0.5">{item.itemCode} · {item.itemUnit}</p>
-                                                        </div>
-                                                        <div className="col-span-2">
-                                                            {item.category
-                                                                ? <span className="text-xs font-semibold text-gray-600 bg-gray-100 border border-gray-200 px-2 py-0.5 rounded uppercase tracking-wide">{item.category}</span>
-                                                                : <span className="text-xs text-gray-300">—</span>}
-                                                        </div>
-                                                        <div className="col-span-3 flex items-center justify-center gap-1">
-                                                            <button type="button" onClick={() => setQty(item.itemId, item.quantity - 1)} disabled={item.quantity <= 1}
-                                                                className="w-7 h-7 flex items-center justify-center rounded-lg font-bold text-base border border-gray-200 bg-white text-gray-600 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition">−</button>
-                                                            <input type="number" min="1" value={item.quantity}
-                                                                onChange={(e) => setQty(item.itemId, e.target.value)}
-                                                                className={`w-12 text-center text-sm font-bold border rounded-lg py-1 px-1 focus:outline-none focus:ring-2 transition
-                                  ${hasIssue ? "border-orange-400 bg-orange-50 text-orange-700 focus:ring-orange-200" : "border-gray-200 bg-white text-gray-800 focus:ring-blue-300"}`} />
-                                                            <button type="button" onClick={() => setQty(item.itemId, item.quantity + 1)}
-                                                                className={`w-7 h-7 flex items-center justify-center rounded-lg font-bold text-base border transition
-                                  ${hasIssue ? "border-orange-300 bg-orange-50 text-orange-600 hover:bg-orange-100" : "border-gray-200 bg-white text-gray-600 hover:bg-gray-100"}`}>+</button>
-                                                        </div>
-                                                        <div className="col-span-2 text-right">
-                                                            {hasIssue
-                                                                ? <span className="text-xs font-semibold text-orange-500 flex items-center justify-end gap-1"><AlertTriangle className="w-3 h-3 shrink-0" />{avail === 0 ? "0 avail" : `${avail} avail`}</span>
-                                                                : <span className="text-xs font-semibold text-green-600">✓ {avail ?? "?"} avail</span>}
-                                                        </div>
-                                                        <div className="col-span-1 flex justify-end">
-                                                            <button type="button" onClick={() => removeItem(item.itemId)}
-                                                                className="w-7 h-7 flex items-center justify-center rounded-lg text-white bg-red-400 hover:bg-red-500 transition-colors">
-                                                                <X className="w-3.5 h-3.5" />
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })}
+                                            {orderItems.map((item) => (
+                                                <ItemRow key={item.itemId} item={item}
+                                                    onQtyChange={setQty} onRemove={removeItem} />
+                                            ))}
                                         </div>
+
+                                        {/* Per-item stock warnings */}
                                         {stockIssues.map((item) => (
                                             <div key={`warn-${item.itemId}`} className="flex items-start gap-2 bg-yellow-50 border border-yellow-300 rounded-xl px-4 py-3 text-xs text-yellow-800">
                                                 <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-yellow-600" />
                                                 <span>
-                                                    <strong>{item.itemName}:</strong> Only <strong>{item.availableQty}</strong> item{item.availableQty !== 1 ? "s" : ""} available in this store, but you requested <strong>{item.quantity}</strong>. Reduce quantity to confirm.
+                                                    <strong>{item.itemName}:</strong> Only <strong>{item.availableQty}</strong> available, requested <strong>{item.quantity}</strong>. Reduce quantity to confirm.
                                                 </span>
                                             </div>
                                         ))}
-                                        <div className={`flex items-center justify-between rounded-xl px-4 py-3 border ${hasAnyIssue ? "bg-orange-50 border-orange-200" : "bg-gray-50 border-gray-200"}`}>
-                                            <span className="text-sm text-gray-600">Total items: <strong className="text-gray-800">{orderItems.length} types</strong></span>
-                                            <span className="text-sm text-gray-600">Total units: <strong className="text-gray-800">{totalUnits}</strong></span>
+
+                                        {/* Summary bar */}
+                                        <div className={`flex items-center justify-between rounded-xl px-4 py-3 border flex-wrap gap-2
+                                            ${hasAnyIssue ? "bg-orange-50 border-orange-200" : "bg-gray-50 border-gray-200"}`}>
+                                            <span className="text-sm text-gray-600">{orderItems.length} item type{orderItems.length !== 1 ? "s" : ""} · <strong className="text-gray-800">{totalUnits} units</strong></span>
+                                            {hasPricing && (
+                                                <span className="flex items-center gap-1 text-sm font-bold text-green-700">
+                                                    <IndianRupee className="w-3.5 h-3.5" /> {grandTotal.toFixed(2)} estimated
+                                                </span>
+                                            )}
                                             {hasAnyIssue && (
                                                 <span className="text-sm font-semibold text-orange-500 flex items-center gap-1.5">
                                                     <AlertTriangle className="w-4 h-4" />{stockIssues.length} stock issue{stockIssues.length > 1 ? "s" : ""}
@@ -718,7 +733,7 @@ export default function EditStudentOrder() {
                                     </>
                                 )}
 
-                                {errors.items && <div className="flex items-center gap-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2"><AlertCircle className="w-3.5 h-3.5 shrink-0" /> {errors.items}</div>}
+                                {errors.items  && <div className="flex items-center gap-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2"><AlertCircle className="w-3.5 h-3.5 shrink-0" /> {errors.items}</div>}
                                 {errors.submit && <div className="flex items-center gap-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2.5"><AlertCircle className="w-3.5 h-3.5 shrink-0" /> {errors.submit}</div>}
 
                                 <div className="flex items-center justify-between pt-4 border-t border-gray-100">
@@ -727,15 +742,13 @@ export default function EditStudentOrder() {
                                         ← Back
                                     </button>
                                     <div className="flex items-center gap-3">
-                                        <button type="button" onClick={() => handleSaveDraft()}
-                                            disabled={submitting || previewLoading}
+                                        <button type="button" onClick={() => handleSaveDraft()} disabled={submitting || previewLoading}
                                             className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors shadow-sm">
                                             {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                                             Save as Draft
                                         </button>
                                         {!hasAnyIssue && orderItems.length > 0 && (
-                                            <button type="button" onClick={goNext}
-                                                disabled={submitting || previewLoading}
+                                            <button type="button" onClick={goNext} disabled={submitting || previewLoading}
                                                 className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors shadow-sm">
                                                 Next →
                                             </button>
@@ -755,75 +768,87 @@ export default function EditStudentOrder() {
                                     <h2 className="font-bold text-gray-800">Confirm Order</h2>
                                 </div>
                                 <p className="text-sm text-gray-500">Review your order before submitting.</p>
+
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-1">
                                         <p className="text-xs text-gray-400 font-medium flex items-center gap-1 mb-2"><User className="w-3.5 h-3.5" /> Student</p>
                                         <p className="text-sm font-bold text-gray-800">{selectedStudent?._name}</p>
                                         {selectedStudent?._admission && <p className="text-xs text-gray-500">ADM: {selectedStudent._admission}</p>}
-                                        {selectedStudent?._className && (
-                                            <span className="inline-block text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded mt-1">{selectedStudent._className}</span>
-                                        )}
+                                        {selectedStudent?._className && <span className="inline-block text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded mt-1">{selectedStudent._className}</span>}
                                     </div>
                                     <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-1">
                                         <p className="text-xs text-gray-400 font-medium flex items-center gap-1 mb-2"><ShoppingBag className="w-3.5 h-3.5" /> Store</p>
-                                        <p className="text-sm font-bold text-gray-800">{selectedStore?.storeName || selectedStore?.name || `Store #${selectedStoreId}`}</p>
-                                        {(selectedStore?.storeCode || selectedStore?.code) && (
-                                            <p className="text-xs text-gray-500">{selectedStore.storeCode || selectedStore.code}</p>
-                                        )}
+                                        <p className="text-sm font-bold text-gray-800">{selectedStore?.storeName || `Store #${selectedStoreId}`}</p>
+                                        {(selectedStore?.storeCode || selectedStore?.code) && <p className="text-xs text-gray-500">{selectedStore.storeCode || selectedStore.code}</p>}
                                     </div>
                                 </div>
+
                                 {(orderDate || remarks) && (
                                     <div className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 space-y-1.5">
-                                        {orderDate && (
-                                            <p className="text-xs text-gray-600">
-                                                <span className="font-semibold text-gray-700">Order Date:</span>{" "}
-                                                {new Date(orderDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
-                                            </p>
-                                        )}
+                                        {orderDate && <p className="text-xs text-gray-600"><span className="font-semibold text-gray-700">Order Date:</span> {new Date(orderDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</p>}
                                         {remarks && <p className="text-xs text-gray-600"><span className="font-semibold text-gray-700">Remarks:</span> {remarks}</p>}
                                     </div>
                                 )}
+
                                 <div>
                                     <p className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-1.5">
                                         <Package className="w-4 h-4 text-gray-400" /> Order Items ({orderItems.length})
                                     </p>
                                     <div className="border border-gray-200 rounded-xl overflow-hidden divide-y divide-gray-100">
+                                        {/* Header */}
+                                        <div className="grid text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 px-4 py-2"
+                                            style={{ gridTemplateColumns: "1fr 60px 72px 80px" }}>
+                                            <span>Item</span>
+                                            <span className="text-center">Qty</span>
+                                            <span className="text-right">Unit Price</span>
+                                            <span className="text-right">Line Total</span>
+                                        </div>
                                         {orderItems.map((item) => {
-                                            const hasIssue = item.availableQty !== null && item.quantity > item.availableQty;
+                                            const hasIssue  = item.availableQty !== null && item.quantity > item.availableQty;
+                                            const lineTotal = item.unitPriceSnapshot !== null && item.unitPriceSnapshot !== undefined
+                                                ? item.unitPriceSnapshot * item.quantity : null;
                                             return (
-                                                <div key={item.itemId} className={`flex items-center justify-between px-4 py-3 ${hasIssue ? "bg-orange-50" : ""}`}>
+                                                <div key={item.itemId}
+                                                    className={`grid items-center px-4 py-3 gap-2 ${hasIssue ? "bg-orange-50" : ""}`}
+                                                    style={{ gridTemplateColumns: "1fr 60px 72px 80px" }}>
                                                     <div className="min-w-0 flex-1">
                                                         <p className="text-sm font-semibold text-gray-800 truncate">{item.itemName}</p>
                                                         <p className="text-xs text-gray-400">{item.itemCode} · {item.itemUnit}</p>
                                                     </div>
-                                                    <div className="flex items-center gap-2 shrink-0 ml-3">
-                                                        {hasIssue && <AlertTriangle className="w-3.5 h-3.5 text-orange-500" />}
-                                                        <span className={`text-sm font-bold px-3 py-1 rounded-lg border ${hasIssue ? "bg-orange-100 text-orange-700 border-orange-300" : "bg-blue-50 text-blue-700 border-blue-200"}`}>
-                                                            × {item.quantity}
+                                                    <div className="text-center">
+                                                        <span className={`text-sm font-bold px-2 py-0.5 rounded-lg border ${hasIssue ? "bg-orange-100 text-orange-700 border-orange-300" : "bg-blue-50 text-blue-700 border-blue-200"}`}>
+                                                            ×{item.quantity}
                                                         </span>
+                                                    </div>
+                                                    <div className="text-right text-xs text-gray-600 font-medium">
+                                                        {item.unitPriceSnapshot != null ? `₹${Number(item.unitPriceSnapshot).toFixed(2)}` : "—"}
+                                                    </div>
+                                                    <div className="text-right text-xs font-bold text-blue-700">
+                                                        {lineTotal != null ? `₹${Number(lineTotal).toFixed(2)}` : "—"}
                                                     </div>
                                                 </div>
                                             );
                                         })}
-                                    </div>
-                                    <div className="flex justify-between text-xs text-gray-500 mt-2 px-1">
-                                        <span>{orderItems.length} type{orderItems.length !== 1 ? "s" : ""}</span>
-                                        <span className="font-semibold text-gray-700">{totalUnits} total units</span>
+                                        {/* Grand total row */}
+                                        {hasPricing && (
+                                            <div className="flex items-center justify-between px-4 py-3 bg-green-50 border-t border-green-200">
+                                                <span className="text-sm font-bold text-gray-700">{totalUnits} units total</span>
+                                                <span className="flex items-center gap-1 text-base font-bold text-green-700">
+                                                    <IndianRupee className="w-4 h-4" />{grandTotal.toFixed(2)}
+                                                </span>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
+
                                 {errors.submit && (
                                     <div className="flex items-center gap-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2.5">
                                         <AlertCircle className="w-3.5 h-3.5 shrink-0" /> {errors.submit}
                                     </div>
                                 )}
                                 <div className="pt-4 border-t border-gray-100">
-                                    <Step3Footer
-                                        submitting={submitting}
-                                        previewLoading={previewLoading}
-                                        onBack={goBack}
-                                        onDraft={handleSaveDraft}
-                                        onConfirm={handleConfirm}
-                                    />
+                                    <Step3Footer submitting={submitting} previewLoading={previewLoading}
+                                        onBack={goBack} onDraft={handleSaveDraft} onConfirm={handleConfirm} />
                                 </div>
                             </div>
                         )}

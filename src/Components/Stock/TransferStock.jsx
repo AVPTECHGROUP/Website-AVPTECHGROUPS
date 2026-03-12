@@ -1,27 +1,33 @@
 import React, { useState, useEffect } from "react";
-import { X, ArrowRight, Package, Hash, AlignLeft, ArrowLeftRight, Info } from "lucide-react";
-import { getActiveStores, getItemsList, transferStock } from "../../Api/StockApi";
-
+import { X, ArrowRight, Package, Hash, AlignLeft, ArrowLeftRight, Info, Loader2 } from "lucide-react";
+import { getActiveStores, transferStock } from "../../Api/StockApi";
+import { getStoreStock } from "../../Api/StoreApi";
 export default function TransferStock({ isOpen, onClose, onConfirm }) {
-    const [fromStore, setFromStore] = useState("");
-    const [toStore, setToStore] = useState("");
-    const [item, setItem] = useState("");
-    const [quantity, setQuantity] = useState("");
-    const [remarks, setRemarks] = useState("");
-    const [errors, setErrors] = useState({});
+    const [fromStore,  setFromStore]  = useState("");
+    const [toStore,    setToStore]    = useState("");
+    const [item,       setItem]       = useState("");
+    const [quantity,   setQuantity]   = useState("");
+    const [remarks,    setRemarks]    = useState("");
+    const [errors,     setErrors]     = useState({});
 
-    const [storeOptions, setStoreOptions] = useState([]);
-    const [itemOptions, setItemOptions] = useState([]);
+    const [storeOptions,  setStoreOptions]  = useState([]);
+    const [itemOptions,   setItemOptions]   = useState([]);   // items from fromStore's stock
+    const [storeStockMap, setStoreStockMap] = useState({});   // itemId -> quantity
     const [loadingStores, setLoadingStores] = useState(false);
-    const [loadingItems, setLoadingItems] = useState(false);
-    const [submitting, setSubmitting] = useState(false);
-    const [apiError, setApiError] = useState("");
+    const [loadingItems,  setLoadingItems]  = useState(false);
+    const [submitting,    setSubmitting]    = useState(false);
+    const [apiError,      setApiError]      = useState("");
 
     const selectedItem = itemOptions.find((i) => i.value === item);
-    const parsedQty = parseInt(quantity) || 0;
-    const fromAfter = selectedItem ? selectedItem.currentStock - parsedQty : null;
+    const parsedQty    = parseInt(quantity) || 0;
+    // Available qty from the source store's actual stock
+    const availableQty = selectedItem ? (storeStockMap[selectedItem.value] ?? selectedItem.currentStock) : null;
+    const fromAfter    = availableQty !== null && parsedQty > 0 ? availableQty - parsedQty : availableQty;
 
-    // Fetch stores
+    const fromStoreObj = storeOptions.find((s) => s.value === fromStore);
+    const toStoreObj   = storeOptions.find((s) => s.value === toStore);
+
+    // ── Fetch stores once on open ──────────────────────────────
     useEffect(() => {
         if (!isOpen) return;
         setLoadingStores(true);
@@ -41,37 +47,49 @@ export default function TransferStock({ isOpen, onClose, onConfirm }) {
             .finally(() => setLoadingStores(false));
     }, [isOpen]);
 
-    // Fetch items
+    // ── Fetch items from source store whenever fromStore changes ──
     useEffect(() => {
-        if (!isOpen) return;
-        setLoadingItems(true);
-        getItemsList(0, 100, "", "", "ACTIVE")
-            .then(({ items }) => {
-                const mapped = items.map((i) => ({
-                    value: String(i.id),
-                    label: `${i.itemName} (${i.itemCode})`,
-                    unit: i.unit,
-                    currentStock: i.totalQuantity ?? 0,
-                }));
-                setItemOptions(mapped);
-            })
-            .catch(() => setApiError("Failed to load items."))
-            .finally(() => setLoadingItems(false));
-    }, [isOpen]);
-
-    useEffect(() => {
-        if (isOpen) {
-            document.body.style.overflow = "hidden";
-        } else {
-            document.body.style.overflow = "";
+        if (!isOpen || !fromStore) {
+            setItemOptions([]);
+            setStoreStockMap({});
+            return;
         }
+        setLoadingItems(true);
+        setItem("");
+        setQuantity("");
+        setStoreStockMap({});
+        setItemOptions([]);
+        setApiError("");
+
+        getStoreStock(Number(fromStore))
+            .then((stockList) => {
+                const map = {};
+                const opts = (stockList || []).map((s) => {
+                    map[String(s.itemId)] = s.quantity;
+                    return {
+                        value:        String(s.itemId),
+                        label:        `${s.itemName} (${s.itemCode})`,
+                        unit:         s.unit ?? "",
+                        currentStock: s.quantity,
+                    };
+                });
+                setStoreStockMap(map);
+                setItemOptions(opts);
+                if (opts.length === 0) setApiError("No stock found for this store.");
+            })
+            .catch(() => setApiError("Failed to load store stock."))
+            .finally(() => setLoadingItems(false));
+    }, [isOpen, fromStore]);
+
+    // ── Body scroll lock ──────────────────────────────────────
+    useEffect(() => {
+        document.body.style.overflow = isOpen ? "hidden" : "";
         return () => { document.body.style.overflow = ""; };
     }, [isOpen]);
 
-    useEffect(() => { setItem(""); }, [fromStore]);
-
     const handleFromStore = (val) => {
         setFromStore(val);
+        setErrors((p) => ({ ...p, fromStore: "" }));
         if (val === toStore) {
             const other = storeOptions.find((s) => s.value !== val);
             if (other) setToStore(other.value);
@@ -80,6 +98,7 @@ export default function TransferStock({ isOpen, onClose, onConfirm }) {
 
     const handleToStore = (val) => {
         setToStore(val);
+        setErrors((p) => ({ ...p, toStore: "" }));
         if (val === fromStore) {
             const other = storeOptions.find((s) => s.value !== val);
             if (other) setFromStore(other.value);
@@ -87,41 +106,33 @@ export default function TransferStock({ isOpen, onClose, onConfirm }) {
     };
 
     const handleReset = () => {
-        setItem("");
-        setQuantity("");
-        setRemarks("");
-        setErrors({});
-        setApiError("");
-        setSubmitting(false);
+        setItem(""); setQuantity(""); setRemarks(""); setErrors({}); setApiError("");
+        setSubmitting(false); setItemOptions([]); setStoreStockMap({});
         if (storeOptions.length >= 2) {
             setFromStore(storeOptions[0].value);
             setToStore(storeOptions[1].value);
         } else {
-            setFromStore("");
-            setToStore("");
+            setFromStore(""); setToStore("");
         }
     };
 
-    const handleClose = () => {
-        handleReset();
-        onClose();
-    };
+    const handleClose = () => { handleReset(); onClose(); };
 
     const validate = () => {
-        let newErrors = {};
-        if (!fromStore) newErrors.fromStore = "Source store is required";
-        if (!toStore) newErrors.toStore = "Destination store is required";
-        if (!item) newErrors.item = "Item is required";
+        const e = {};
+        if (!fromStore) e.fromStore = "Source store is required";
+        if (!toStore)   e.toStore   = "Destination store is required";
+        if (!item)      e.item      = "Item is required";
         if (!quantity) {
-            newErrors.quantity = "Quantity is required";
+            e.quantity = "Quantity is required";
         } else if (parseInt(quantity) <= 0) {
-            newErrors.quantity = "Quantity must be greater than 0";
-        } else if (selectedItem && parseInt(quantity) > selectedItem.currentStock) {
-            newErrors.quantity = "Quantity exceeds available stock";
+            e.quantity = "Quantity must be greater than 0";
+        } else if (availableQty !== null && parseInt(quantity) > availableQty) {
+            e.quantity = `Only ${availableQty} units available in source store`;
         }
-        if (!remarks) newErrors.remarks = "Remarks are required";
-        setErrors(newErrors);
-        return Object.keys(newErrors).length === 0;
+        if (!remarks) e.remarks = "Remarks are required";
+        setErrors(e);
+        return Object.keys(e).length === 0;
     };
 
     const handleConfirm = async () => {
@@ -129,14 +140,13 @@ export default function TransferStock({ isOpen, onClose, onConfirm }) {
         setSubmitting(true);
         setApiError("");
         try {
-            const payload = {
-                sourceStoreId: parseInt(fromStore),
+            const result = await transferStock({
+                sourceStoreId:      parseInt(fromStore),
                 destinationStoreId: parseInt(toStore),
-                itemId: parseInt(item),
-                quantity: parsedQty,
+                itemId:             parseInt(item),
+                quantity:           parsedQty,
                 remarks,
-            };
-            const result = await transferStock(payload);
+            });
             if (onConfirm) onConfirm(result);
             handleClose();
         } catch (err) {
@@ -147,8 +157,10 @@ export default function TransferStock({ isOpen, onClose, onConfirm }) {
 
     if (!isOpen) return null;
 
-    const fromStoreObj = storeOptions.find((s) => s.value === fromStore);
-    const toStoreObj = storeOptions.find((s) => s.value === toStore);
+    const inputCls = (err) =>
+        `w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 transition ${
+            err ? "border-red-400" : "border-gray-200"
+        }`;
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -171,10 +183,7 @@ export default function TransferStock({ isOpen, onClose, onConfirm }) {
                         </div>
                         <h2 className="text-lg font-bold text-gray-800">Transfer Stock Between Stores</h2>
                     </div>
-                    <button
-                        onClick={handleClose}
-                        className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
-                    >
+                    <button onClick={handleClose} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
                         <X className="w-5 h-5" />
                     </button>
                 </div>
@@ -182,7 +191,6 @@ export default function TransferStock({ isOpen, onClose, onConfirm }) {
                 {/* Body */}
                 <div className="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto">
 
-                    {/* API Error */}
                     {apiError && (
                         <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">
                             {apiError}
@@ -194,23 +202,27 @@ export default function TransferStock({ isOpen, onClose, onConfirm }) {
                         {/* From */}
                         <div className="flex-1 space-y-1">
                             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">From Store</p>
-                            <select
-                                value={fromStore}
-                                disabled={loadingStores}
-                                onChange={(e) => handleFromStore(e.target.value)}
-                                className={`w-full px-3 py-2 text-sm font-semibold text-gray-700 bg-white border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-400 transition ${errors.fromStore ? "border-red-500" : "border-gray-200"} ${loadingStores ? "opacity-60 cursor-not-allowed" : ""}`}
-                            >
-                                <option value="">{loadingStores ? "Loading..." : "Select store..."}</option>
-                                {storeOptions.map((s) => (
-                                    <option key={s.value} value={s.value}>{s.label}</option>
-                                ))}
-                            </select>
+                            <div className="relative">
+                                <select
+                                    value={fromStore}
+                                    disabled={loadingStores}
+                                    onChange={(e) => handleFromStore(e.target.value)}
+                                    className={`w-full px-3 py-2 text-sm font-semibold text-gray-700 bg-white border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 transition appearance-none pr-8 ${errors.fromStore ? "border-red-500" : "border-gray-200"} ${loadingStores ? "opacity-60 cursor-not-allowed" : ""}`}
+                                >
+                                    <option value="">{loadingStores ? "Loading…" : "Select store…"}</option>
+                                    {storeOptions.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+                                </select>
+                                {loadingStores
+                                    ? <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 animate-spin pointer-events-none" />
+                                    : <svg className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                                }
+                            </div>
                             {errors.fromStore && <p className="text-red-500 text-xs mt-1">{errors.fromStore}</p>}
                         </div>
 
                         {/* Arrow */}
-                        <div className="flex items-end pb-1">
-                            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center shrink-0">
+                        <div className="flex items-end pb-1 shrink-0">
+                            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
                                 <ArrowRight className="w-4 h-4 text-blue-600" />
                             </div>
                         </div>
@@ -218,42 +230,54 @@ export default function TransferStock({ isOpen, onClose, onConfirm }) {
                         {/* To */}
                         <div className="flex-1 space-y-1">
                             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">To Store</p>
-                            <select
-                                value={toStore}
-                                disabled={loadingStores}
-                                onChange={(e) => handleToStore(e.target.value)}
-                                className={`w-full px-3 py-2 text-sm font-semibold text-gray-700 bg-white border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-400 transition ${errors.toStore ? "border-red-500" : "border-gray-200"} ${loadingStores ? "opacity-60 cursor-not-allowed" : ""}`}
-                            >
-                                <option value="">{loadingStores ? "Loading..." : "Select store..."}</option>
-                                {storeOptions.map((s) => (
-                                    <option key={s.value} value={s.value}>{s.label}</option>
-                                ))}
-                            </select>
+                            <div className="relative">
+                                <select
+                                    value={toStore}
+                                    disabled={loadingStores}
+                                    onChange={(e) => handleToStore(e.target.value)}
+                                    className={`w-full px-3 py-2 text-sm font-semibold text-gray-700 bg-white border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 transition appearance-none pr-8 ${errors.toStore ? "border-red-500" : "border-gray-200"} ${loadingStores ? "opacity-60 cursor-not-allowed" : ""}`}
+                                >
+                                    <option value="">{loadingStores ? "Loading…" : "Select store…"}</option>
+                                    {storeOptions.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+                                </select>
+                                {loadingStores
+                                    ? <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 animate-spin pointer-events-none" />
+                                    : <svg className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                                }
+                            </div>
                             {errors.toStore && <p className="text-red-500 text-xs mt-1">{errors.toStore}</p>}
                         </div>
                     </div>
 
-                    {/* Item */}
+                    {/* Item — from source store stock */}
                     <div className="space-y-1.5">
                         <label className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
                             <Package className="w-4 h-4 text-gray-400" />
                             Item <span className="text-red-500">*</span>
+                            {fromStore && (
+                                <span className="ml-auto text-xs font-normal text-gray-400">
+                                    {loadingItems ? "Loading store items…" : `${itemOptions.length} item(s) in store`}
+                                </span>
+                            )}
                         </label>
-                        <select
-                            value={item}
-                            disabled={loadingItems}
-                            onChange={(e) => {
-                                setItem(e.target.value);
-                                setErrors({ ...errors, item: "" });
-                            }}
-                            className={`w-full border rounded-lg px-3 py-2.5 text-sm ${errors.item ? "border-red-500" : "border-gray-200"} ${loadingItems ? "opacity-60 cursor-not-allowed" : ""}`}
-                        >
-                            <option value="">{loadingItems ? "Loading items..." : "Select an item..."}</option>
-                            {itemOptions.map((i) => (
-                                <option key={i.value} value={i.value}>{i.label}</option>
-                            ))}
-                        </select>
-                        {errors.item && <p className="text-red-500 text-xs mt-1">{errors.item}</p>}
+                        <div className="relative">
+                            <select
+                                value={item}
+                                disabled={loadingItems || !fromStore}
+                                onChange={(e) => { setItem(e.target.value); setQuantity(""); setErrors((p) => ({ ...p, item: "", quantity: "" })); }}
+                                className={`${inputCls(errors.item)} appearance-none pr-8 ${(loadingItems || !fromStore) ? "opacity-60 cursor-not-allowed" : ""}`}
+                            >
+                                <option value="">
+                                    {loadingItems ? "Loading items…" : !fromStore ? "Select a store first…" : "Select an item…"}
+                                </option>
+                                {itemOptions.map((i) => <option key={i.value} value={i.value}>{i.label}</option>)}
+                            </select>
+                            {loadingItems
+                                ? <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 animate-spin pointer-events-none" />
+                                : <svg className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                            }
+                        </div>
+                        {errors.item && <p className="text-red-500 text-xs mt-0.5">{errors.item}</p>}
                     </div>
 
                     {/* Quantity */}
@@ -262,18 +286,23 @@ export default function TransferStock({ isOpen, onClose, onConfirm }) {
                             <Hash className="w-4 h-4 text-gray-400" />
                             Quantity to Transfer <span className="text-red-500">*</span>
                         </label>
-                        <input
-                            type="number"
-                            min="1"
-                            placeholder="e.g. 10"
-                            value={quantity}
-                            onChange={(e) => {
-                                setQuantity(e.target.value);
-                                setErrors({ ...errors, quantity: "" });
-                            }}
-                            className={`w-full border rounded-lg px-3 py-2.5 text-sm ${errors.quantity ? "border-red-500" : "border-gray-200"}`}
-                        />
-                        {errors.quantity && <p className="text-red-500 text-xs mt-1">{errors.quantity}</p>}
+                        <div className="relative">
+                            <input
+                                type="number"
+                                min="1"
+                                placeholder="e.g. 10"
+                                value={quantity}
+                                onChange={(e) => { setQuantity(e.target.value); setErrors((p) => ({ ...p, quantity: "" })); }}
+                                className={`${inputCls(errors.quantity)} ${selectedItem && availableQty !== null ? "pr-32" : ""}`}
+                            />
+                            {/* Available qty hint inside input */}
+                            {selectedItem && availableQty !== null && (
+                                <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[11px] font-semibold text-gray-400 whitespace-nowrap pointer-events-none">
+                                    {availableQty} available
+                                </span>
+                            )}
+                        </div>
+                        {errors.quantity && <p className="text-red-500 text-xs mt-0.5">{errors.quantity}</p>}
                     </div>
 
                     {/* Remarks */}
@@ -286,34 +315,36 @@ export default function TransferStock({ isOpen, onClose, onConfirm }) {
                             rows={3}
                             placeholder="e.g. Moving surplus to Lab Store"
                             value={remarks}
-                            onChange={(e) => {
-                                setRemarks(e.target.value);
-                                setErrors({ ...errors, remarks: "" });
-                            }}
-                            className={`w-full border rounded-lg px-3 py-2.5 text-sm ${errors.remarks ? "border-red-500" : "border-gray-200"}`}
+                            onChange={(e) => { setRemarks(e.target.value); setErrors((p) => ({ ...p, remarks: "" })); }}
+                            className={`${inputCls(errors.remarks)} resize-none`}
                         />
-                        {errors.remarks && <p className="text-red-500 text-xs mt-1">{errors.remarks}</p>}
+                        {errors.remarks && <p className="text-red-500 text-xs mt-0.5">{errors.remarks}</p>}
                     </div>
 
                     {/* Preview Banner */}
-                    <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3">
-                        <Info className="w-4 h-4 text-blue-500 shrink-0" />
-                        <p className="text-sm text-blue-700">
-                            <span className="font-semibold">{fromStoreObj?.label ?? "Source"}:</span>{" "}
-                            <span className="font-bold">
-                                {selectedItem ? selectedItem.currentStock : "—"}
-                            </span>
-                            {" → "}
-                            <span className="font-bold">
-                                {selectedItem && parsedQty > 0 ? fromAfter : selectedItem ? selectedItem.currentStock : "—"}
-                            </span>
-                            <span className="mx-2 text-blue-400">|</span>
-                            <span className="font-semibold">{toStoreObj?.label ?? "Destination"}:</span>{" "}
-                            <span className="font-bold">—</span>
-                            {selectedItem && (
-                                <span className="font-normal opacity-70"> (preview)</span>
-                            )}
-                        </p>
+                    <div className="flex items-start gap-2.5 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3">
+                        <Info className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
+                        <div className="text-sm text-blue-700 space-y-0.5">
+                            <p>
+                                <span className="font-semibold">{fromStoreObj?.label ?? "Source"} — current: </span>
+                                <span className="font-bold">
+                                    {selectedItem && availableQty !== null
+                                        ? `${availableQty} ${selectedItem.unit || ""}`
+                                        : "—"}
+                                </span>
+                                <span className="mx-1.5 text-blue-300">→</span>
+                                <span className="font-bold">
+                                    {selectedItem && availableQty !== null && parsedQty > 0
+                                        ? `${fromAfter} ${selectedItem.unit || ""}`
+                                        : "—"}
+                                </span>
+                                <span className="font-normal opacity-60 ml-1">(after transfer)</span>
+                            </p>
+                            <p>
+                                <span className="font-semibold">{toStoreObj?.label ?? "Destination"}: </span>
+                                <span className="font-normal opacity-70">will receive {parsedQty > 0 && selectedItem ? `${parsedQty} ${selectedItem.unit || ""}` : "—"}</span>
+                            </p>
+                        </div>
                     </div>
                 </div>
 
@@ -331,20 +362,10 @@ export default function TransferStock({ isOpen, onClose, onConfirm }) {
                         disabled={submitting}
                         className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-5 py-2 rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                     >
-                        {submitting ? (
-                            <>
-                                <svg className="animate-spin w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                                </svg>
-                                Transferring...
-                            </>
-                        ) : (
-                            <>
-                                <ArrowLeftRight className="w-4 h-4" />
-                                Confirm Transfer
-                            </>
-                        )}
+                        {submitting
+                            ? <><Loader2 className="w-4 h-4 animate-spin" /> Transferring…</>
+                            : <><ArrowLeftRight className="w-4 h-4" /> Confirm Transfer</>
+                        }
                     </button>
                 </div>
             </div>

@@ -1,8 +1,8 @@
 import { authFetch } from "../Authfetch/Authfetch";
 
-const BASE_URL = "https://ssdev-btgphuazhza9edcu.canadacentral-01.azurewebsites.net/api/api/v1";
+const BASE_URL = import.meta.env.VITE_API_BASE_DOUBLE_V1;
 
-// (Add or update default item for a class)
+// Add or update default item for a class
 export const addOrUpdateClassItemConfig = async (configData) => {
   try {
     const res = await authFetch(`${BASE_URL}/stock/class-item-configs`, {
@@ -17,7 +17,7 @@ export const addOrUpdateClassItemConfig = async (configData) => {
   }
 };
 
-/* GET ALL CONFIGURED ITEMS FOR A CLASS */
+// Get All Configured Items for a Class
 export const getClassItemConfigs = async (classId) => {
   try {
     const res = await authFetch(`${BASE_URL}/stock/class-item-configs/${classId}`, {
@@ -32,9 +32,7 @@ export const getClassItemConfigs = async (classId) => {
   }
 };
 
-/* UPDATE CLASS ITEM CONFIG
-   (Update quantity or remarks)
-*/
+// Update Class Item Config (quantity or remarks)
 export const updateClassItemConfig = async (configId, configData) => {
   try {
     const res = await authFetch(`${BASE_URL}/stock/class-item-configs/${configId}`, {
@@ -49,7 +47,7 @@ export const updateClassItemConfig = async (configId, configData) => {
   }
 };
 
-/* DELETE CLASS ITEM CONFIG */
+// Delete Class Item Config
 export const deleteClassItemConfig = async (configId) => {
   try {
     const res = await authFetch(`${BASE_URL}/stock/class-item-configs/${configId}`, {
@@ -63,13 +61,13 @@ export const deleteClassItemConfig = async (configId) => {
   }
 };
 
-// CLASS ITEM CONFIG STATS
+// Class Item Config Stats
 export const getClassItemConfigStats = async () => {
   try {
     const res = await authFetch(`${BASE_URL}/stock/class-item-configs/stats`, {
       method: "GET",
     });
-    if (!res.ok) throw new Error(`Failed to fetch config stats from: ${BASE_URL}/stock/class-item-configs/stats`);
+    if (!res.ok) throw new Error(`Failed to fetch config stats`);
     return await res.json();
   } catch (error) {
     console.error(`getClassItemConfigStats error: ${error.message}`);

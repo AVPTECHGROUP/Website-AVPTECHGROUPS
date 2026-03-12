@@ -1,6 +1,6 @@
 import { authFetch } from "../Authfetch/Authfetch";
 
-const BASE_URL = "https://ssdev-btgphuazhza9edcu.canadacentral-01.azurewebsites.net/api/v1";
+const BASE_URL = import.meta.env.VITE_API_BASE_V1;
 
 // Get Active Routes
 export const getActiveRoutes = async () => {
@@ -49,19 +49,13 @@ export const getTransportStaff = async ({
 };
 
 // Add Transport Staff
-
 export const addTransportStaff = async (staffData) => {
   try {
-    const res = await fetch(`${BASE_URL}/transport/staff`, {
+    const res = await authFetch(`${BASE_URL}/transport/staff`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
       body: JSON.stringify(staffData),
     });
-
     if (!res.ok) throw new Error("Failed to add staff");
-
     return await res.json();
   } catch (error) {
     console.error("addTransportStaff error:", error);
@@ -72,16 +66,11 @@ export const addTransportStaff = async (staffData) => {
 // Update Staff
 export const updateTransportStaff = async (id, staffData) => {
   try {
-    const res = await fetch(`${BASE_URL}/transport/staff/${id}`, {
+    const res = await authFetch(`${BASE_URL}/transport/staff/${id}`, {
       method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
       body: JSON.stringify(staffData),
     });
-
     if (!res.ok) throw new Error("Failed to update staff");
-
     return await res.json();
   } catch (error) {
     console.error("updateTransportStaff error:", error);
@@ -89,19 +78,13 @@ export const updateTransportStaff = async (id, staffData) => {
   }
 };
 
-// Activate the Staff
-
+// Activate Staff
 export const activateTransportStaff = async (id) => {
   try {
-    const res = await fetch(
-      `${BASE_URL}/transport/staff/${id}/activate`,
-      {
-        method: "PATCH",
-      }
-    );
-
+    const res = await authFetch(`${BASE_URL}/transport/staff/${id}/activate`, {
+      method: "PATCH",
+    });
     if (!res.ok) throw new Error("Failed to activate staff");
-
     return await res.json();
   } catch (error) {
     console.error("activateTransportStaff error:", error);
@@ -110,18 +93,12 @@ export const activateTransportStaff = async (id) => {
 };
 
 // Deactivate Staff
-
 export const deactivateTransportStaff = async (id) => {
   try {
-    const res = await fetch(
-      `${BASE_URL}/transport/staff/${id}/deactivate`,
-      {
-        method: "PATCH",
-      }
-    );
-
+    const res = await authFetch(`${BASE_URL}/transport/staff/${id}/deactivate`, {
+      method: "PATCH",
+    });
     if (!res.ok) throw new Error("Failed to deactivate staff");
-
     return await res.json();
   } catch (error) {
     console.error("deactivateTransportStaff error:", error);
@@ -179,10 +156,7 @@ export const getVehicleCapacityReport = async ({
   expiringSoonDays = 30,
 } = {}) => {
   try {
-    const params = new URLSearchParams({
-      onlyOverCapacity,
-      expiringSoonDays,
-    });
+    const params = new URLSearchParams({ onlyOverCapacity, expiringSoonDays });
     const res = await authFetch(
       `${BASE_URL}/transport/reports/vehicles/capacity?${params}`,
       { method: "GET" }
@@ -285,8 +259,7 @@ export const deactivateVehicle = async (id) => {
   }
 };
 
-/* GET ROUTES (Paginated + Search + Filter) */
-
+// Get Routes (Paginated + Search + Filter)
 export const getRoutes = async ({
   page = 0,
   size = 20,
@@ -294,30 +267,21 @@ export const getRoutes = async ({
   status = "",
 } = {}) => {
   try {
-
     const params = new URLSearchParams({
       page,
       size,
       ...(searchTerm && { searchTerm }),
       ...(status && { status }),
     });
-
-    const res = await fetch(`${BASE_URL}/transport/routes?${params}`, {
+    const res = await authFetch(`${BASE_URL}/transport/routes?${params}`, {
       method: "GET",
-      headers: {
-        accept: "application/json",
-      },
     });
-
     if (!res.ok) throw new Error("Failed to fetch routes");
-
     const data = await res.json();
-
     return {
       routes: data.data || [],
       pagination: data.pagination,
     };
-
   } catch (error) {
     console.error("getRoutes error:", error);
     throw error;
@@ -325,87 +289,57 @@ export const getRoutes = async ({
 };
 
 // Create Route
-
 export const addRoute = async (routeData) => {
   try {
-
-    const res = await fetch(`${BASE_URL}/transport/routes`, {
+    const res = await authFetch(`${BASE_URL}/transport/routes`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
       body: JSON.stringify(routeData),
     });
-
     if (!res.ok) throw new Error("Failed to create route");
-
     return await res.json();
-
   } catch (error) {
     console.error("addRoute error:", error);
     throw error;
   }
 };
 
-// Update Route-->
+// Update Route
 export const updateRoute = async (id, routeData) => {
   try {
-
-    const res = await fetch(`${BASE_URL}/transport/routes/${id}`, {
+    const res = await authFetch(`${BASE_URL}/transport/routes/${id}`, {
       method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
       body: JSON.stringify(routeData),
     });
-
     if (!res.ok) throw new Error("Failed to update route");
-
     return await res.json();
-
   } catch (error) {
     console.error("updateRoute error:", error);
     throw error;
   }
 };
 
-// Active Route
-
+// Activate Route
 export const activateRoute = async (id) => {
   try {
-
-    const res = await fetch(
-      `${BASE_URL}/transport/routes/${id}/activate`,
-      {
-        method: "PATCH",
-      }
-    );
-
+    const res = await authFetch(`${BASE_URL}/transport/routes/${id}/activate`, {
+      method: "PATCH",
+    });
     if (!res.ok) throw new Error("Failed to activate route");
-
     return await res.json();
-
   } catch (error) {
     console.error("activateRoute error:", error);
     throw error;
   }
 };
 
-// Deactivate Route-->
+// Deactivate Route
 export const deactivateRoute = async (id) => {
   try {
-
-    const res = await fetch(
-      `${BASE_URL}/transport/routes/${id}/deactivate`,
-      {
-        method: "PATCH",
-      }
-    );
-
+    const res = await authFetch(`${BASE_URL}/transport/routes/${id}/deactivate`, {
+      method: "PATCH",
+    });
     if (!res.ok) throw new Error("Failed to deactivate route");
-
     return await res.json();
-
   } catch (error) {
     console.error("deactivateRoute error:", error);
     throw error;
@@ -413,99 +347,58 @@ export const deactivateRoute = async (id) => {
 };
 
 // Get Route Stops
-
 export const getRouteStops = async (routeId) => {
   try {
-
-    const res = await fetch(
-      `${BASE_URL}/transport/routes/${routeId}/stops`,
-      {
-        method: "GET",
-        headers: {
-          accept: "application/json",
-        },
-      }
-    );
-
+    const res = await authFetch(`${BASE_URL}/transport/routes/${routeId}/stops`, {
+      method: "GET",
+    });
     if (!res.ok) throw new Error("Failed to fetch route stops");
-
     const data = await res.json();
-
     return data.data || [];
-
   } catch (error) {
     console.error("getRouteStops error:", error);
     throw error;
   }
 };
 
-// Add Route Stops
-
+// Add Route Stop
 export const addRouteStop = async (routeId, stopData) => {
   try {
-
-    const res = await fetch(
-      `${BASE_URL}/transport/routes/${routeId}/stops`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(stopData),
-      }
-    );
-
+    const res = await authFetch(`${BASE_URL}/transport/routes/${routeId}/stops`, {
+      method: "POST",
+      body: JSON.stringify(stopData),
+    });
     if (!res.ok) throw new Error("Failed to add stop");
-
     return await res.json();
-
   } catch (error) {
     console.error("addRouteStop error:", error);
     throw error;
   }
 };
 
-// Update RouteStops
-
+// Update Route Stop
 export const updateRouteStop = async (routeId, stopId, stopData) => {
   try {
-
-    const res = await fetch(
-      `${BASE_URL}/transport/routes/${routeId}/stops/${stopId}`,
-      {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(stopData),
-      }
-    );
-
+    const res = await authFetch(`${BASE_URL}/transport/routes/${routeId}/stops/${stopId}`, {
+      method: "PUT",
+      body: JSON.stringify(stopData),
+    });
     if (!res.ok) throw new Error("Failed to update stop");
-
     return await res.json();
-
   } catch (error) {
     console.error("updateRouteStop error:", error);
     throw error;
   }
 };
 
-// Soft Delete Stops-->
+// Soft Delete Stop
 export const deleteRouteStop = async (routeId, stopId) => {
   try {
-
-    const res = await fetch(
-      `${BASE_URL}/transport/routes/${routeId}/stops/${stopId}`,
-      {
-        method: "DELETE",
-      }
-    );
-
+    const res = await authFetch(`${BASE_URL}/transport/routes/${routeId}/stops/${stopId}`, {
+      method: "DELETE",
+    });
     if (!res.ok) throw new Error("Failed to delete stop");
-
     return await res.json();
-
   } catch (error) {
     console.error("deleteRouteStop error:", error);
     throw error;

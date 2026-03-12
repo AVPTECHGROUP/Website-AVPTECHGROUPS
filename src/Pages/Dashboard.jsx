@@ -21,7 +21,7 @@ const quickActions = [
   { label: "Approve Leaves", sub: "pending", subColor: "text-red-500", icon: CheckSquare, bg: "bg-green-50", iconColor: "text-green-600", key: "pendingLeaveRequests", route:"/leaves" },
   { label: "Add New User", sub: "Staff / Teacher / Admin", subColor: "text-gray-400", icon: UserPlus, bg: "bg-blue-50", iconColor: "text-blue-600", key: null, route:"/dashboard/addUser" },
   { label: "Admit Student", sub: "New registration", subColor: "text-gray-400", icon: GraduationCap, bg: "bg-purple-50", iconColor: "text-purple-600", key: null, route:"/students/addStudents" },
-  { label: "Manage Stock", sub: "3 items low", subColor: "text-orange-500", icon: Package, bg: "bg-yellow-50", iconColor: "text-yellow-600", key: null, route:"/stock" },
+  { label: "Manage Stock", subColor: "text-orange-500", icon: Package, bg: "bg-yellow-50", iconColor: "text-yellow-600", key: null, route:"/stock" },
   { label: "Transport", sub: "Allocate / Manage", subColor: "text-gray-400", icon: Bus, bg: "bg-cyan-50", iconColor: "text-cyan-600", key: null,route:"/route" },
   { label: "Payroll", sub: "Process payroll", subColor: "text-gray-400", icon: Banknote, bg: "bg-emerald-50", iconColor: "text-emerald-600", key: null, route:"/payroll" },
   { label: "Reports", sub: "Attendance / Leave", subColor: "text-gray-400", icon: FileBarChart, bg: "bg-indigo-50", iconColor: "text-indigo-600", key: null, route:"/attendance" },
@@ -452,7 +452,7 @@ export default function Dashboard() {
                         <qa.icon className={`w-6 h-6 ${qa.iconColor}`} />
                       </div>
                       <p className="text-xs font-semibold text-gray-700 text-center leading-tight">{qa.label}</p>
-                      <p className={`text-xs ${subColor} text-center leading-tight`}>{dynamicSub}</p>
+                      <p className={`text-xs ${subColor} text-center leading-tight relative`}>{dynamicSub}</p>
                     </button>
                   );
                 })}
