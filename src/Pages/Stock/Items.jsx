@@ -2,8 +2,7 @@ import React, { useEffect, useState, useCallback, useMemo, useRef } from "react"
 import {
     Package, PackageCheck, PackageX, Layers, Plus,
     ChevronLeft, ChevronRight, Eye, Edit, SearchIcon,
-    Power,
-    MinusCircle,
+    Power, MinusCircle,
 } from "lucide-react";
 import CardComponent from "../../Components/CommonComp/CardComponent";
 import CardLoader from "../../Components/CommonComp/CardLoader";
@@ -15,34 +14,34 @@ import {
     getStockItems, getStockItemsStats,
     activateItem, deactivateItem, createItem, updateItem,
 } from "../../Api/StockApi";
+import { getListOfValues } from "../../Api/ListOfValues";
 import { toast } from "react-toastify";
 
 // ── Constants ────────────────────────────────────────────────────
-const ROWS_PER_PAGE = 10;
 const SEARCH_DEBOUNCE_MS = 400;
 
-const CATEGORY_OPTIONS = [
-    "All Categories", "STATIONERY", "LAB", "SPORTS", "UNIFORM", "BOOKS", "FURNITURE",
-];
-
 const STATUS_OPTIONS = [
-    { label: "Active", api: "ACTIVE" },
-    { label: "Inactive", api: "INACTIVE" },
+    { label: "All Status", api: "" },
+    { label: "Active",     api: "ACTIVE" },
+    { label: "Inactive",   api: "INACTIVE" },
 ];
 
 const categoryColors = {
-    STATIONERY: "bg-gray-100 text-gray-700",
-    LAB: "bg-purple-100 text-purple-700",
-    SPORTS: "bg-blue-100 text-blue-700",
-    UNIFORM: "bg-orange-100 text-orange-700",
-    BOOKS: "bg-yellow-100 text-yellow-700",
-    FURNITURE: "bg-amber-100 text-amber-700",
+    STATIONERY:  "bg-gray-100   text-gray-700",
+    LAB:         "bg-purple-100 text-purple-700",
+    SPORTS:      "bg-blue-100   text-blue-700",
+    UNIFORM:     "bg-orange-100 text-orange-700",
+    BOOKS:       "bg-yellow-100 text-yellow-700",
+    FURNITURE:   "bg-amber-100  text-amber-700",
+    ELECTRONICS: "bg-cyan-100   text-cyan-700",
+    CLEANING:    "bg-teal-100   text-teal-700",
+    OTHER:       "bg-gray-100   text-gray-500",
 };
 
 const stockBarColor = (qty, min) => {
     if (!qty || qty === 0) return "bg-red-500";
-    if (qty <= min / 2) return "bg-red-500";
-    if (qty < min) return "bg-orange-400";
+    if (qty <= min / 2)   return "bg-red-500";
+    if (qty < min)        return "bg-orange-400";
     return "bg-blue-500";
 };
 
@@ -50,35 +49,39 @@ const stockBarColor = (qty, min) => {
 export default function Items() {
 
     // ── Table data ─────────────────────────────────────────────
-    const [items, setItems] = useState([]);
+    const [items,      setItems]      = useState([]);
     const [totalItems, setTotalItems] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
 
     // ── Stats ──────────────────────────────────────────────────
-    const [statsData, setStatsData] = useState(null);
+    const [statsData,    setStatsData]    = useState(null);
     const [statsLoading, setStatsLoading] = useState(true);
 
+    // ── Categories from LOV ─────────────────────────────────────
+    const [categoryOptions, setCategoryOptions] = useState([]);
+    const [catsLoading,     setCatsLoading]     = useState(true);
+
     // ── Loading / action state ─────────────────────────────────
-    const [loading, setLoading] = useState(true);
-    const [saving, setSaving] = useState(false);
-    const [togglingId, setTogglingId] = useState(null);
+    const [loading,     setLoading]     = useState(true);
+    const [saving,      setSaving]      = useState(false);
+    const [togglingId,  setTogglingId]  = useState(null);
     const [noItemFound, setNoItemFound] = useState(false);
-    const [error, setError] = useState(null);
+    const [error,       setError]       = useState(null);
 
     // ── Filters & pagination (1-based display, 0-based API) ────
-    const [search, setSearch] = useState("");
+    const [search,          setSearch]          = useState("");
     const [debouncedSearch, setDebouncedSearch] = useState("");
-    const [categoryFilter, setCategoryFilter] = useState("All Categories");
-    const [statusFilter, setStatusFilter] = useState("Active");
-    const [page, setPage] = useState(1);   // 1-based
-    const [rowsPerPage, setRowsPerPage] = useState(10);
+    const [categoryFilter,  setCategoryFilter]  = useState("");   // "" = All
+    const [statusFilter,    setStatusFilter]    = useState("Active");
+    const [page,            setPage]            = useState(1);    // 1-based
+    const [rowsPerPage,     setRowsPerPage]     = useState(10);
 
     const debounceRef = useRef(null);
 
     // ── Modals ─────────────────────────────────────────────────
-    const [isNewItemOpen, setIsNewItemOpen] = useState(false);
-    const [editItemData, setEditItemData] = useState(null);
-    const [viewItemData, setViewItemData] = useState(null);
+    const [isNewItemOpen,  setIsNewItemOpen]  = useState(false);
+    const [editItemData,   setEditItemData]   = useState(null);
+    const [viewItemData,   setViewItemData]   = useState(null);
     const [isViewItemOpen, setIsViewItemOpen] = useState(false);
 
     // ── Debounce search ────────────────────────────────────────
@@ -90,6 +93,15 @@ export default function Items() {
         }, SEARCH_DEBOUNCE_MS);
         return () => clearTimeout(debounceRef.current);
     }, [search]);
+
+    // ── Fetch LOV categories on mount ──────────────────────────
+    useEffect(() => {
+        setCatsLoading(true);
+        getListOfValues("ITEM_CATEGORY")
+            .then((data) => setCategoryOptions(data.map((d) => ({ label: d.label, value: d.value }))))
+            .catch(() => setCategoryOptions([]))
+            .finally(() => setCatsLoading(false));
+    }, []);
 
     // ── Fetch stats ────────────────────────────────────────────
     const fetchStats = useCallback(async () => {
@@ -111,26 +123,26 @@ export default function Items() {
         setError(null);
         setNoItemFound(false);
         try {
-            const categoryVal = categoryFilter === "All Categories" ? "" : categoryFilter;
             const statusVal = STATUS_OPTIONS.find((o) => o.label === statusFilter)?.api ?? "";
 
             const { items: raw, pagination: pg } = await getStockItems(
-                { searchTerm: debouncedSearch, category: categoryVal, status: statusVal },
-                page - 1,       // API is 0-based
+                { searchTerm: debouncedSearch, category: categoryFilter, status: statusVal },
+                page - 1,
                 rowsPerPage,
             );
 
             const mapped = (raw ?? []).map((item) => ({
-                id: item.id,
-                code: item.itemCode,
-                name: item.itemName,
-                category: item.category,
-                unit: item.unit,
-                totalStock: item.totalQuantity ?? 0,
-                minLevel: item.minimumStockLevel ?? 0,
+                id:          item.id,
+                code:        item.itemCode,
+                name:        item.itemName,
+                category:    item.category,
+                unit:        item.unit,
+                price:       item.unitPrice ?? 0,       // unitPrice from API
+                totalStock:  item.totalQuantity ?? 0,
+                minLevel:    item.minimumStockLevel ?? 0,
                 description: item.description ?? "",
-                status: item.status,
-                isBelowMin: item.isBelowMinimum,
+                status:      item.status,
+                isBelowMin:  item.isBelowMinimum,
             }));
 
             setItems(mapped);
@@ -152,27 +164,27 @@ export default function Items() {
 
     // ── Stat cards ─────────────────────────────────────────────
     const stats = useMemo(() => [
-        { key: "Total Items", val: statsData?.totalItems ?? 0, icon: Package, txColor: "text-blue-600", bgColor: "bg-blue-50" },
-        { key: "Active Items", val: statsData?.activeItems ?? 0, icon: PackageCheck, txColor: "text-green-600", bgColor: "bg-green-50" },
-        { key: "Inactive", val: statsData?.inactiveItems ?? 0, icon: PackageX, txColor: "text-red-500", bgColor: "bg-red-50" },
-        { key: "Categories", val: statsData?.categories ?? statsData?.totalCategories ?? 0, icon: Layers, txColor: "text-purple-600", bgColor: "bg-purple-50" },
+        { key: "Total Items",  val: statsData?.totalItems    ?? 0, icon: Package,      txColor: "text-blue-600",   bgColor: "bg-blue-50"   },
+        { key: "Active Items", val: statsData?.activeItems   ?? 0, icon: PackageCheck, txColor: "text-green-600",  bgColor: "bg-green-50"  },
+        { key: "Inactive",     val: statsData?.inactiveItems ?? 0, icon: PackageX,     txColor: "text-red-500",    bgColor: "bg-red-50"    },
+        // { key: "Categories",   val: statsData?.categories ?? statsData?.totalCategories ?? 0, icon: Layers, txColor: "text-purple-600", bgColor: "bg-purple-50" },
     ], [statsData]);
 
     const resetPage = () => setPage(1);
 
     // ── Action menu ────────────────────────────────────────────
     const getActionOptions = (item) => [
-        { value: "view", label: "View", icon: Eye, text: "text-blue-600", bg: "bg-blue-50", hover: "hover:bg-blue-100" },
-        { value: "edit", label: "Edit", icon: Edit, text: "text-orange-600", bg: "bg-orange-50", hover: "hover:bg-orange-100" },
+        { value: "view",  label: "View",  icon: Eye,  text: "text-blue-600",   bg: "bg-blue-50",   hover: "hover:bg-blue-100"   },
+        { value: "edit",  label: "Edit",  icon: Edit, text: "text-orange-600", bg: "bg-orange-50", hover: "hover:bg-orange-100" },
         {
             value: "toggleStatus",
             label: togglingId === item.id
                 ? (item.status === "ACTIVE" ? "Deactivating…" : "Activating…")
-                : (item.status === "ACTIVE" ? "Deactivate" : "Activate"),
-            icon: item.status === "ACTIVE" ? MinusCircle : Power,
-            text: item.status === "ACTIVE" ? "text-red-600" : "text-green-600",
-            bg: item.status === "ACTIVE" ? "bg-red-50" : "bg-green-50",
-            hover: item.status === "ACTIVE" ? "hover:bg-red-100" : "hover:bg-green-100",
+                : (item.status === "ACTIVE" ? "Inactive" : "Activate"),
+            icon:     item.status === "ACTIVE" ? MinusCircle : Power,
+            text:     item.status === "ACTIVE" ? "text-red-600"      : "text-green-600",
+            bg:       item.status === "ACTIVE" ? "bg-red-50"         : "bg-green-50",
+            hover:    item.status === "ACTIVE" ? "hover:bg-red-100"  : "hover:bg-green-100",
             disabled: togglingId === item.id,
         },
     ];
@@ -202,18 +214,21 @@ export default function Items() {
         }
     };
 
+    // ── Save handler — POST / PUT ───────────────────────────────
     const handleSaveItem = async (payload) => {
         if (saving) return;
         try {
             setSaving(true);
+            // payload comes from NewItem: { itemCode, itemName, category, unit, unitPrice, minimumStockLevel, status, description }
             const mappedPayload = {
-                itemCode: payload.itemCode ?? payload.code,
-                itemName: payload.itemName ?? payload.name,
-                category: payload.category,
-                unit: payload.unit,
-                minimumStockLevel: payload.minimumStockLevel ?? payload.minLevel,
-                description: payload.description ?? "",
-                status: payload.status ?? "ACTIVE",
+                itemCode:          payload.itemCode,
+                itemName:          payload.itemName,
+                category:          payload.category,
+                unit:              payload.unit,
+                unitPrice:         payload.unitPrice,          // ← sent to API
+                minimumStockLevel: payload.minimumStockLevel,
+                description:       payload.description ?? "",
+                status:            payload.status ?? "ACTIVE",
             };
             if (editItemData) {
                 await updateItem(editItemData.id, mappedPayload);
@@ -256,14 +271,8 @@ export default function Items() {
                     {statsLoading
                         ? stats.map((_, i) => <CardLoader key={i} />)
                         : stats.map((s) => (
-                            <CardComponent
-                                key={s.key}
-                                IconName={s.icon}
-                                keyName={s.key.toUpperCase()}
-                                val={s.val}
-                                iconTxColor={s.txColor}
-                                iconBgColor={s.bgColor}
-                            />
+                            <CardComponent key={s.key} IconName={s.icon} keyName={s.key.toUpperCase()}
+                                val={s.val} iconTxColor={s.txColor} iconBgColor={s.bgColor} />
                         ))}
                 </div>
 
@@ -298,9 +307,9 @@ export default function Items() {
                         item={viewItemData}
                     />
 
-                    {/* Filters */}
-                    <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100">
-                        <div className="flex flex-1 items-center gap-2 border rounded-lg border-gray-200 bg-gray-50 px-3 py-2 focus-within:ring-2 focus-within:ring-blue-200 focus-within:border-blue-400 transition">
+                    {/* ── Filters ── */}
+                    <div className="flex flex-wrap items-center gap-3 px-4 py-3 border-b border-gray-100">
+                        <div className="flex flex-1 min-w-48 items-center gap-2 border rounded-lg border-gray-200 bg-gray-50 px-3 py-2 focus-within:ring-2 focus-within:ring-blue-200 focus-within:border-blue-400 transition">
                             <SearchIcon className="w-4 h-4 text-gray-400 shrink-0" />
                             <input
                                 type="text"
@@ -313,16 +322,22 @@ export default function Items() {
                         <select
                             value={categoryFilter}
                             onChange={(e) => { setCategoryFilter(e.target.value); resetPage(); }}
-                            className="px-3 py-2 border border-gray-200 bg-gray-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-200 text-sm text-gray-700 w-44 shrink-0"
+                            disabled={catsLoading}
+                            className="px-3 py-2 border border-gray-200 bg-gray-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-200 text-sm text-gray-700 w-44 shrink-0 disabled:opacity-60"
                         >
-                            {CATEGORY_OPTIONS.map((c) => <option key={c}>{c}</option>)}
+                            <option value="">{catsLoading ? "Loading…" : "All Categories"}</option>
+                            {categoryOptions.map((c) => (
+                                <option key={c.value} value={c.value}>{c.label}</option>
+                            ))}
                         </select>
                         <select
                             value={statusFilter}
                             onChange={(e) => { setStatusFilter(e.target.value); resetPage(); }}
                             className="px-3 py-2 border border-gray-200 bg-gray-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-200 text-sm text-gray-700 w-36 shrink-0"
                         >
-                            {STATUS_OPTIONS.map((o) => <option key={o.label} value={o.label}>{o.label}</option>)}
+                            {STATUS_OPTIONS.map((o) => (
+                                <option key={o.label} value={o.label}>{o.label}</option>
+                            ))}
                         </select>
                     </div>
 
@@ -337,11 +352,7 @@ export default function Items() {
                             </div>
                         ) : error ? (
                             <div className="text-center py-8 col-span-2">
-                                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <XCircle className="w-6 h-6 text-red-600" />
-                                </div>
-                                <h3 className="text-lg font-bold text-gray-900 mb-2">Error Loading Items</h3>
-                                <p className="text-gray-600 mb-4">{error}</p>
+                                <p className="text-red-600 mb-4">{error}</p>
                                 <button onClick={() => window.location.reload()} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Retry</button>
                             </div>
                         ) : noItemFound ? (
@@ -365,8 +376,7 @@ export default function Items() {
                                                 <p className="text-xs text-gray-400 truncate">{item.code}</p>
                                             </div>
                                         </div>
-                                        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold shrink-0 ${item.status === "ACTIVE" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"
-                                            }`}>
+                                        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold shrink-0 ${item.status === "ACTIVE" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"}`}>
                                             {item.status === "ACTIVE" ? "Active" : "Inactive"}
                                         </span>
                                     </div>
@@ -376,6 +386,9 @@ export default function Items() {
                                                 {item.category}
                                             </span>
                                             <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">{item.unit}</span>
+                                            <span className="text-xs font-semibold text-gray-700 bg-green-50 border border-green-100 px-2 py-0.5 rounded">
+                                                ₹{Number(item.price).toFixed(2)}
+                                            </span>
                                         </div>
                                         <div className="space-y-1">
                                             <div className="flex justify-between text-xs text-gray-500">
@@ -401,39 +414,38 @@ export default function Items() {
                         )}
                     </div>
 
-                    {/* ── DESKTOP TABLE (lg and above) ── */}
+                    {/* ── DESKTOP TABLE (lg+) ── */}
                     <div className="hidden lg:block bg-white rounded-xl border border-gray-200">
                         <div className="overflow-x-auto">
                             <table className="w-full">
                                 <thead className="border-b border-gray-200">
                                     <tr>
-                                        <th className="px-2 py-3 text-left text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10 w-10">#</th>
-                                        <th className="px-2 py-3 text-left text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10">Item</th>
-                                        <th className="px-2 py-3 text-left text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10">Category</th>
-                                        <th className="px-2 py-3 text-left text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10">Unit</th>
-                                        <th className="px-2 py-3 text-left text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10">Stock</th>
-                                        <th className="px-2 py-3 text-left text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10">Min Lvl</th>
-                                        <th className="px-2 py-3 text-left text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10">Status</th>
-                                        <th className="px-6 py-3 text-center text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10">Actions</th>
+                                        {[
+                                            ["#",           "w-10",  "text-left"],
+                                            ["Item",        "",      "text-left"],
+                                            ["Category",    "",      "text-left"],
+                                            ["Unit",        "",      "text-left"],
+                                            ["Unit Price",  "",      "text-left"],
+                                            ["Stock",       "",      "text-left"],
+                                            ["Min Lvl",     "",      "text-left"],
+                                            ["Status",      "",      "text-left"],
+                                            ["Actions",     "",      "text-center"],
+                                        ].map(([label, w, align]) => (
+                                            <th key={label}
+                                                className={`px-2 py-3 text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10 ${w} ${align}`}>
+                                                {label}
+                                            </th>
+                                        ))}
                                     </tr>
                                 </thead>
                                 <tbody className="bg-white divide-y divide-gray-200 font-normal">
                                     {loading ? (
-                                        <ListLoader colSpanSet={8} />
+                                        <ListLoader colSpanSet={9} />
                                     ) : error ? (
-                                        <tr>
-                                            <td colSpan={8} className="px-6 py-8 text-center">
-                                                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                                    <XCircle className="w-6 h-6 text-red-600" />
-                                                </div>
-                                                <h3 className="text-lg font-bold text-gray-900 mb-2">Error Loading Items</h3>
-                                                <p className="text-gray-600 mb-4">{error}</p>
-                                                <button onClick={() => window.location.reload()} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Retry</button>
-                                            </td>
-                                        </tr>
+                                        <tr><td colSpan={9} className="px-6 py-8 text-center text-red-600">{error}</td></tr>
                                     ) : noItemFound ? (
                                         <tr>
-                                            <td colSpan={8} className="px-6 py-8 text-center">
+                                            <td colSpan={9} className="px-6 py-8 text-center">
                                                 <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-1">
                                                     <Package className="w-6 h-6 text-blue-600" />
                                                 </div>
@@ -443,27 +455,38 @@ export default function Items() {
                                     ) : (
                                         items.map((item, idx) => (
                                             <tr key={item.id} className="hover:bg-blue-50/40 transition-colors">
-                                                <td className={tdStyle}>
-                                                    {(page - 1) * rowsPerPage + idx + 1}
-                                                </td>
+
+                                                <td className={tdStyle}>{(page - 1) * rowsPerPage + idx + 1}</td>
+
                                                 <td className={tdStyle}>
                                                     <p className="font-medium text-black truncate max-w-50">{item.name}</p>
                                                     <p className="text-xs text-gray-400 truncate max-w-50">{item.code}</p>
                                                 </td>
+
                                                 <td className={tdStyle}>
                                                     <span className={`px-2 py-0.5 rounded text-xs font-semibold whitespace-nowrap ${categoryColors[item.category] ?? "bg-gray-100 text-gray-600"}`}>
                                                         {item.category}
                                                     </span>
                                                 </td>
+
                                                 <td className={tdStyle}>
                                                     <span className="text-gray-600 whitespace-nowrap">{item.unit}</span>
                                                 </td>
+
+                                                {/* Unit Price */}
+                                                <td className={tdStyle}>
+                                                    <span className="text-gray-700 font-semibold whitespace-nowrap">
+                                                        ₹{Number(item.price).toFixed(2)}
+                                                    </span>
+                                                </td>
+
                                                 <td className={tdStyle}>
                                                     <div className="flex items-center gap-1.5">
-                                                        <span className={`text-sm font-bold w-7 shrink-0 ${item.totalStock < item.minLevel ? "text-red-500"
+                                                        <span className={`text-sm font-bold w-7 shrink-0 ${
+                                                            item.totalStock < item.minLevel         ? "text-red-500"
                                                             : item.totalStock < item.minLevel * 1.5 ? "text-orange-500"
-                                                                : "text-gray-800"
-                                                            }`}>
+                                                            : "text-gray-800"
+                                                        }`}>
                                                             {item.totalStock}
                                                         </span>
                                                         <div className="w-16 bg-gray-100 rounded-full h-2 shrink-0">
@@ -474,17 +497,19 @@ export default function Items() {
                                                         </div>
                                                     </div>
                                                 </td>
+
                                                 <td className={tdStyle}>
                                                     <span className="text-gray-600">{item.minLevel}</span>
                                                 </td>
+
                                                 <td className={tdStyle}>
-                                                    <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-sm text-xs font-medium ${item.status === "ACTIVE"
-                                                        ? "bg-green-50 text-green-700"
-                                                        : "bg-red-50 text-red-700"
-                                                        }`}>
+                                                    <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-sm text-xs font-medium ${
+                                                        item.status === "ACTIVE" ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"
+                                                    }`}>
                                                         {item.status === "ACTIVE" ? "Active" : "Inactive"}
                                                     </span>
                                                 </td>
+
                                                 <td className={tdStyle}>
                                                     <ActionDropDownComp
                                                         actionOptions={getActionOptions(item)}
@@ -520,28 +545,18 @@ export default function Items() {
                                 </div>
                             </div>
                             <div className="flex items-center gap-2">
-                                <button
-                                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                                    disabled={page === 1 || loading}
-                                    className="px-3 py-1 text-gray-600 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                                >
+                                <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1 || loading}
+                                    className="px-3 py-1 text-gray-600 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all">
                                     <ChevronLeft className="w-4 h-4" />
                                 </button>
                                 {[...Array(totalPages)].map((_, idx) => (
-                                    <button
-                                        key={idx + 1}
-                                        onClick={() => setPage(idx + 1)}
-                                        className={`px-3 py-1 rounded transition-all ${page === idx + 1 ? "bg-blue-500 text-white" : "text-gray-600 hover:bg-gray-100"
-                                            }`}
-                                    >
+                                    <button key={idx + 1} onClick={() => setPage(idx + 1)}
+                                        className={`px-3 py-1 rounded transition-all ${page === idx + 1 ? "bg-blue-500 text-white" : "text-gray-600 hover:bg-gray-100"}`}>
                                         {idx + 1}
                                     </button>
                                 ))}
-                                <button
-                                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                                    disabled={page === totalPages || totalPages === 0 || loading}
-                                    className="px-3 py-1 text-gray-600 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                                >
+                                <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages || totalPages === 0 || loading}
+                                    className="px-3 py-1 text-gray-600 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all">
                                     <ChevronRight className="w-4 h-4" />
                                 </button>
                             </div>
@@ -558,33 +573,23 @@ export default function Items() {
                             </div>
                             <div className="flex items-center justify-center gap-2">
                                 <span className="text-sm text-gray-700">Rows:</span>
-                                <select
-                                    value={rowsPerPage}
-                                    onChange={(e) => { setRowsPerPage(Number(e.target.value)); resetPage(); }}
-                                    className="px-3 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                >
+                                <select value={rowsPerPage} onChange={(e) => { setRowsPerPage(Number(e.target.value)); resetPage(); }}
+                                    className="px-3 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
                                     <option value={10}>10</option>
                                     <option value={25}>25</option>
                                     <option value={50}>50</option>
                                 </select>
                             </div>
                             <div className="flex items-center justify-center gap-2">
-                                <button
-                                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                                    disabled={page === 1 || loading}
-                                    className="px-4 py-2 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                                >
+                                <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1 || loading}
+                                    className="px-4 py-2 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all">
                                     <ChevronLeft className="w-4 h-4" />
                                 </button>
                                 <div className="flex items-center gap-1">
                                     {totalPages <= 5 ? (
                                         [...Array(totalPages)].map((_, idx) => (
-                                            <button
-                                                key={idx + 1}
-                                                onClick={() => setPage(idx + 1)}
-                                                className={`px-3 py-1 rounded transition-all ${page === idx + 1 ? "bg-blue-500 text-white" : "text-gray-600 hover:bg-gray-100"
-                                                    }`}
-                                            >
+                                            <button key={idx + 1} onClick={() => setPage(idx + 1)}
+                                                className={`px-3 py-1 rounded transition-all ${page === idx + 1 ? "bg-blue-500 text-white" : "text-gray-600 hover:bg-gray-100"}`}>
                                                 {idx + 1}
                                             </button>
                                         ))
@@ -600,11 +605,8 @@ export default function Items() {
                                         </>
                                     )}
                                 </div>
-                                <button
-                                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                                    disabled={page === totalPages || totalPages === 0 || loading}
-                                    className="px-4 py-2 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                                >
+                                <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages || totalPages === 0 || loading}
+                                    className="px-4 py-2 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all">
                                     <ChevronRight className="w-4 h-4" />
                                 </button>
                             </div>
@@ -613,7 +615,6 @@ export default function Items() {
                     </div>
 
                 </div>{/* ── end white panel ── */}
-
             </div>
         </div>
     );

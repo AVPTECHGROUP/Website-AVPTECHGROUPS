@@ -1,15 +1,13 @@
 import { authFetch } from "../Authfetch/Authfetch";
 
-const BASE_URL = "https://ssdev-btgphuazhza9edcu.canadacentral-01.azurewebsites.net/api/leave";
+const BASE_URL = `${import.meta.env.VITE_API_BASE}/leave`;
 
 // ==================== LEAVES ENDPOINTS ====================
-const leaveStatistics = `/admin/statistics`;
-const getAllLeaveReq = `/admin/all`;
 
 // List all statistics
 export const getALLLeavesStatistics = async () => {
   try {
-    const res = await authFetch(`${BASE_URL + leaveStatistics}`, {
+    const res = await authFetch(`${BASE_URL}/admin/statistics`, {
       method: "GET",
     });
     if (!res.ok) {
@@ -18,7 +16,7 @@ export const getALLLeavesStatistics = async () => {
     }
     const data = await res.json();
     return data;
-  } catch (error) {                                               // ✅ fixed: was catch (e) but used error
+  } catch (error) {
     console.error("get statistics error:", error.message);
     throw error;
   }
@@ -55,7 +53,7 @@ export const getAllLeaveRequest = async (page = 0, size = 10, sort = 'id', statu
     params.append('size', size);
     params.append('sort', sort);
 
-    const url = `${BASE_URL}${getAllLeaveReq}?${params.toString()}`;
+    const url = `${BASE_URL}/admin/all?${params.toString()}`;
 
     const res = await authFetch(url, {
       method: "GET",
@@ -84,7 +82,6 @@ export const approoveRejLeaveReq = async (leaveId, remarksVal = 'As per the poli
   try {
     const res = await authFetch(`${BASE_URL}/admin/${leaveId}/review`, {
       method: 'PATCH',
-      // ✅ fixed: was "application-Type" which is invalid, Content-Type is set by authFetch
       body: JSON.stringify({
         action: actionVal,
         remarks: remarksVal
@@ -149,7 +146,7 @@ export const getUsersLeaveBalance = async (userId) => {
     }
     const data = await res.json();
     return data;
-  } catch (error) {                                               // ✅ fixed: was catch (e) but used error
+  } catch (error) {
     console.error("get user leave balance statistics error:", error.message);
     throw error;
   }

@@ -1,21 +1,25 @@
 import { authFetch } from "../Authfetch/Authfetch";
 
-const BASE_URL = 'https://ssdev-btgphuazhza9edcu.canadacentral-01.azurewebsites.net/api/common/lov';
+const BASE_URL = import.meta.env.VITE_API_BASE;
+const LOV_BASE_URL = `${BASE_URL}/common/lov`;
 
-// List of values
-export const getListOfValues = async (LOV_TYPE = '') => {
+// Get list of values by LOV type
+export const getListOfValues = async (lovType = "") => {
   try {
-    const res = await authFetch(`${BASE_URL}/${LOV_TYPE}`, {
+    const res = await authFetch(`${LOV_BASE_URL}/${lovType}`, {
       method: "GET",
     });
+
     if (!res.ok) {
       const errorText = await res.text();
-      throw new Error(errorText || "Failed to List of values");
+      throw new Error(errorText || "Failed to fetch LOV values");
     }
+
     const data = await res.json();
-    return data.data;
-  } catch (error) {                                         // ✅ fixed: was catch (e) but used error
-    console.error("get list of values error:", error.message);
+
+    return data?.data || [];
+  } catch (error) {
+    console.error("getListOfValues error:", error.message);
     throw error;
   }
-}
+};

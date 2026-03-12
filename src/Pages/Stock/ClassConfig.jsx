@@ -249,7 +249,7 @@ export default function ClassConfig() {
                                         <button
                                             key={cls.id}
                                             onClick={() => handleSelectClass(cls)}
-                                            className={`w-full flex items-center justify-between px-4 py-3 text-left transition-colors
+                                            className={`w-full flex items-center cursor-pointer justify-between px-4 py-3 text-left transition-colors
                                                 ${isSelected
                                                     ? "bg-blue-50 border-l-4 border-blue-500"
                                                     : "hover:bg-gray-50 border-l-4 border-transparent"
@@ -297,7 +297,7 @@ export default function ClassConfig() {
                             <button
                                 disabled={!selectedClass}
                                 onClick={() => { setEditRow(null); setIsModalOpen(true); }}
-                                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors w-fit shrink-0"
+                                className="flex items-center gap-2 cursor-pointer bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors w-fit shrink-0"
                             >
                                 <Plus className="w-4 h-4" />
                                 Add Item
@@ -327,7 +327,7 @@ export default function ClassConfig() {
                                                     <p className="text-sm text-gray-400">No items configured for this class.</p>
                                                     <button
                                                         onClick={() => { setEditRow(null); setIsModalOpen(true); }}
-                                                        className="mt-1 text-sm text-blue-600 font-semibold hover:underline"
+                                                        className="mt-1 text-sm cursor-pointer text-blue-600 font-semibold hover:underline"
                                                     >
                                                         + Add first item
                                                     </button>
@@ -387,7 +387,7 @@ export default function ClassConfig() {
                                     <p className="text-sm text-gray-400">No items configured.</p>
                                     <button
                                         onClick={() => { setEditRow(null); setIsModalOpen(true); }}
-                                        className="mt-1 text-sm text-blue-600 font-semibold hover:underline"
+                                        className="mt-1 text-sm text-blue-600 cursor-pointer font-semibold hover:underline"
                                     >
                                         + Add first item
                                     </button>

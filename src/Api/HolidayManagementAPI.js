@@ -1,8 +1,8 @@
 import { authFetch } from "../Authfetch/Authfetch";
 
-const BASE_URL = "https://ssdev-btgphuazhza9edcu.canadacentral-01.azurewebsites.net/api/api/holidays";
+const BASE_URL = `${import.meta.env.VITE_API_BASE_DOUBLE}/holidays`;
 
-// fetch all statistics for holiday
+// Fetch all statistics for holiday
 export const fetchAllHolidayStatistics = async (year = '') => {
   try {
     const res = await authFetch(`${BASE_URL}/statistics?year=${year}`, {
@@ -20,7 +20,7 @@ export const fetchAllHolidayStatistics = async (year = '') => {
   }
 }
 
-// get next holiday
+// Get next holiday
 export const getNextHoliday = async () => {
   try {
     const res = await authFetch(`${BASE_URL}/next`, {
@@ -125,7 +125,7 @@ export const deleteHoliday = async (holiday_id) => {
 export const getHolidayById = async (id) => {
   try {
     const res = await authFetch(`${BASE_URL}/${id}`, {
-      method: "GET", // ✅ fixed typo: was "GeT"
+      method: "GET",
     });
     if (!res.ok) throw new Error("Failed to fetch holiday");
     const data = await res.json();
