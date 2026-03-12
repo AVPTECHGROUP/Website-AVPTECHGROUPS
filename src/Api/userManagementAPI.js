@@ -1,6 +1,6 @@
 import { authFetch } from "../Authfetch/Authfetch";
 
-const BASE_URL = "https://ssdev-btgphuazhza9edcu.canadacentral-01.azurewebsites.net/api/v1";
+const BASE_URL = import.meta.env.VITE_API_BASE_V1;
 
 // ==================== Manage Users ENDPOINTS ====================
 

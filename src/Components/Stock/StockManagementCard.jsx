@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from "react";
-import { X, CheckSquare, Store, Package, Hash, FileText, AlignLeft, ShoppingCart } from "lucide-react";
+import React, { useState, useEffect, useCallback } from "react";
+import { X, CheckSquare, Store, Package, Hash, FileText, AlignLeft, ShoppingCart, Loader2 } from "lucide-react";
 import { getActiveStores, getItemsList, addStockInward, removeStockOutward } from "../../Api/StockApi";
-
+import { getStoreStock } from "../../Api/StoreApi";
 export default function StockManagementCard({
     isOpen,
     onClose,
@@ -10,16 +10,14 @@ export default function StockManagementCard({
 }) {
     const isStockIn = mode === "in";
 
-    // Dynamic props based on mode
     const heading = isStockIn ? "Add Stock (Inward)" : "Remove Stock (Outward)";
     const headingIconColor = isStockIn ? "text-green-600" : "text-red-600";
-    const previewLabelText = isStockIn ? "Current stock:" : "Current stock:";
     const previewBgColor = isStockIn ? "bg-green-50" : "bg-red-50";
     const previewBorderColor = isStockIn ? "border-green-200" : "border-red-200";
     const previewTextColor = isStockIn ? "text-green-700" : "text-red-700";
     const confirmBtnText = isStockIn ? "Confirm Stock IN" : "Confirm Stock OUT";
-    const confirmBtnBgColor = isStockIn ? "bg-green-600" : "bg-red-600";
-    const confirmBtnHoverColor = isStockIn ? "hover:bg-green-700" : "hover:bg-red-700";
+    const confirmBtnBg = isStockIn ? "bg-green-600" : "bg-red-600";
+    const confirmBtnHover = isStockIn ? "hover:bg-green-700" : "hover:bg-red-700";
 
     const [store, setStore] = useState("");
     const [item, setItem] = useState("");
@@ -30,7 +28,8 @@ export default function StockManagementCard({
     const [errors, setErrors] = useState({});
 
     const [storeOptions, setStoreOptions] = useState([]);
-    const [itemOptions, setItemOptions] = useState([]);
+    const [itemOptions, setItemOptions] = useState([]);   // for stock-in: all items
+    const [storeStockMap, setStoreStockMap] = useState({});   // itemId -> quantity from store stock
     const [loadingStores, setLoadingStores] = useState(false);
     const [loadingItems, setLoadingItems] = useState(false);
     const [submitting, setSubmitting] = useState(false);
@@ -38,88 +37,106 @@ export default function StockManagementCard({
 
     const selectedItem = itemOptions.find((i) => i.value === item);
     const parsedQty = parseInt(quantity) || 0;
-    const afterStock = selectedItem
+    // For stock-out, available qty comes from the store's actual stock
+    const availableQty = selectedItem ? (storeStockMap[selectedItem.value] ?? selectedItem.currentStock) : null;
+    const afterStock = availableQty !== null
         ? isStockIn
-            ? selectedItem.currentStock + parsedQty
-            : selectedItem.currentStock - parsedQty
+            ? availableQty + parsedQty
+            : availableQty - parsedQty
         : null;
 
-    // Fetch stores
+    // ── Fetch stores once on open ──────────────────────────────
     useEffect(() => {
         if (!isOpen) return;
         setLoadingStores(true);
         getActiveStores()
             .then((res) => {
-                const stores = (res?.data || []).map((s) => ({
+                setStoreOptions((res?.data || []).map((s) => ({
                     value: String(s.id),
                     label: s.storeName.trim(),
-                }));
-                setStoreOptions(stores);
+                })));
             })
             .catch(() => setApiError("Failed to load stores."))
             .finally(() => setLoadingStores(false));
     }, [isOpen]);
 
-    // Fetch items
+    // ── For Stock IN: fetch all active items ──────────────────
     useEffect(() => {
-        if (!isOpen) return;
+        if (!isOpen || !isStockIn) return;
         setLoadingItems(true);
-        getItemsList(0, 100, "", "", "ACTIVE")
+        getItemsList(0, 200, "", "", "ACTIVE")
             .then(({ items }) => {
-                const mapped = items.map((i) => ({
+                setItemOptions(items.map((i) => ({
                     value: String(i.id),
                     label: `${i.itemName} (${i.itemCode})`,
                     unit: i.unit,
                     currentStock: i.totalQuantity ?? 0,
-                }));
-                setItemOptions(mapped);
+                })));
             })
             .catch(() => setApiError("Failed to load items."))
             .finally(() => setLoadingItems(false));
-    }, [isOpen]);
+    }, [isOpen, isStockIn]);
 
+    // ── For Stock OUT: fetch store-specific stock on store change ──
     useEffect(() => {
-        if (isOpen) {
-            document.body.style.overflow = "hidden";
-        } else {
-            document.body.style.overflow = "";
+        if (!isOpen || isStockIn || !store) {
+            if (!isStockIn) { setItemOptions([]); setStoreStockMap({}); }
+            return;
         }
+        setLoadingItems(true);
+        setItem("");
+        setStoreStockMap({});
+        getStoreStock(Number(store))
+            .then((stockList) => {
+                // stockList: [{ itemId, itemName, itemCode, quantity, minimumStockLevel, ... }]
+                const map = {};
+                const opts = (stockList || []).map((s) => {
+                    map[String(s.itemId)] = s.quantity;
+                    return {
+                        value: String(s.itemId),
+                        label: `${s.itemName} (${s.itemCode})`,
+                        unit: s.unit ?? "",
+                        currentStock: s.quantity,
+                    };
+                });
+                setStoreStockMap(map);
+                setItemOptions(opts);
+                if (opts.length === 0) setApiError("No stock found for this store.");
+            })
+            .catch(() => setApiError("Failed to load store stock."))
+            .finally(() => setLoadingItems(false));
+    }, [isOpen, isStockIn, store]);
+
+    // ── Body scroll lock ──────────────────────────────────────
+    useEffect(() => {
+        document.body.style.overflow = isOpen ? "hidden" : "";
         return () => { document.body.style.overflow = ""; };
     }, [isOpen]);
 
     const handleReset = () => {
-        setStore("");
-        setItem("");
-        setQuantity("");
-        setReference("");
-        setRemovalReason("");
-        setRemarks("");
-        setErrors({});
-        setApiError("");
-        setSubmitting(false);
+        setStore(""); setItem(""); setQuantity(""); setReference("");
+        setRemovalReason(""); setRemarks(""); setErrors({}); setApiError("");
+        setSubmitting(false); setItemOptions([]); setStoreStockMap({});
     };
 
-    const handleClose = () => {
-        handleReset();
-        onClose();
-    };
+    const handleClose = () => { handleReset(); onClose(); };
 
     const validate = () => {
-        let newErrors = {};
-        if (!store) newErrors.store = "Store is required";
-        if (!item) newErrors.item = "Item is required";
+        const e = {};
+        if (!store) e.store = "Store is required";
+        if (!item) e.item = "Item is required";
         if (!quantity) {
-            newErrors.quantity = "Quantity is required";
+            e.quantity = "Quantity is required";
         } else if (parseInt(quantity) <= 0) {
-            newErrors.quantity = "Quantity must be greater than 0";
-        } else if (!isStockIn && selectedItem && parseInt(quantity) > selectedItem.currentStock) {
-            newErrors.quantity = "Quantity exceeds available stock";
+            e.quantity = "Quantity must be greater than 0";
+        } else if (!isStockIn && availableQty !== null && parseInt(quantity) > availableQty) {
+            e.quantity = `Only ${availableQty} units available in this store`;
         }
-        if (isStockIn && !reference) newErrors.reference = "Reference number is required";
-        if (!isStockIn && !removalReason) newErrors.removalReason = "Removal reason is required";
-        if (!remarks) newErrors.remarks = "Remarks are required";
-        setErrors(newErrors);
-        return Object.keys(newErrors).length === 0;
+        if (isStockIn && !reference) e.reference = "Reference number is required";
+        if (!isStockIn && !removalReason) e.removalReason = "Removal reason is required";
+        if (!remarks) e.remarks = "Remarks are required";
+        setErrors(e);
+        return Object.keys(e).length === 0;
     };
 
     const handleConfirm = async () => {
@@ -129,23 +146,15 @@ export default function StockManagementCard({
         try {
             let result;
             if (isStockIn) {
-                const payload = {
-                    storeId: parseInt(store),
-                    itemId: parseInt(item),
-                    quantity: parsedQty,
-                    referenceNumber: reference,
-                    remarks,
-                };
-                result = await addStockInward(payload);
+                result = await addStockInward({
+                    storeId: parseInt(store), itemId: parseInt(item),
+                    quantity: parsedQty, referenceNumber: reference, remarks,
+                });
             } else {
-                const payload = {
-                    storeId: parseInt(store),
-                    itemId: parseInt(item),
-                    quantity: parsedQty,
-                    removalReason,
-                    remarks,
-                };
-                result = await removeStockOutward(payload);
+                result = await removeStockOutward({
+                    storeId: parseInt(store), itemId: parseInt(item),
+                    quantity: parsedQty, removalReason, remarks,
+                });
             }
             if (onConfirm) onConfirm(result);
             handleClose();
@@ -166,6 +175,10 @@ export default function StockManagementCard({
         { value: "OTHER", label: "Other" },
     ];
 
+    const inputCls = (err) =>
+        `w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 transition ${err ? "border-red-400" : "border-gray-200"
+        }`;
+
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-black/10" onClick={handleClose} />
@@ -185,17 +198,13 @@ export default function StockManagementCard({
                         <ShoppingCart className={`w-5 h-5 ${headingIconColor}`} />
                         <h2 className="text-lg font-bold text-gray-800">{heading}</h2>
                     </div>
-                    <button
-                        onClick={handleClose}
-                        className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
-                    >
+                    <button onClick={handleClose} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
                         <X className="w-5 h-5" />
                     </button>
                 </div>
 
                 <div className="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto">
 
-                    {/* API Error */}
                     {apiError && (
                         <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">
                             {apiError}
@@ -208,21 +217,22 @@ export default function StockManagementCard({
                             <Store className="w-4 h-4 text-gray-400" />
                             Store <span className="text-red-500">*</span>
                         </label>
-                        <select
-                            value={store}
-                            disabled={loadingStores}
-                            onChange={(e) => {
-                                setStore(e.target.value);
-                                setErrors({ ...errors, store: "" });
-                            }}
-                            className={`w-full border rounded-lg px-3 py-2.5 text-sm ${errors.store ? "border-red-500" : "border-gray-200"} ${loadingStores ? "opacity-60 cursor-not-allowed" : ""}`}
-                        >
-                            <option value="">{loadingStores ? "Loading stores..." : "Select a store..."}</option>
-                            {storeOptions.map((s) => (
-                                <option key={s.value} value={s.value}>{s.label}</option>
-                            ))}
-                        </select>
-                        {errors.store && <p className="text-red-500 text-xs mt-1">{errors.store}</p>}
+                        <div className="relative">
+                            <select
+                                value={store}
+                                disabled={loadingStores}
+                                onChange={(e) => { setStore(e.target.value); setErrors((p) => ({ ...p, store: "" })); setApiError(""); }}
+                                className={`${inputCls(errors.store)} appearance-none pr-8 ${loadingStores ? "opacity-60 cursor-not-allowed" : ""}`}
+                            >
+                                <option value="">{loadingStores ? "Loading stores…" : "Select a store…"}</option>
+                                {storeOptions.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+                            </select>
+                            {loadingStores
+                                ? <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 animate-spin pointer-events-none" />
+                                : <svg className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                            }
+                        </div>
+                        {errors.store && <p className="text-red-500 text-xs mt-0.5">{errors.store}</p>}
                     </div>
 
                     {/* Item */}
@@ -230,62 +240,76 @@ export default function StockManagementCard({
                         <label className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
                             <Package className="w-4 h-4 text-gray-400" />
                             Item <span className="text-red-500">*</span>
+                            {!isStockIn && store && (
+                                <span className="ml-auto text-xs font-normal text-gray-400">
+                                    {loadingItems ? "Loading store items…" : `${itemOptions.length} item(s) in store`}
+                                </span>
+                            )}
                         </label>
-                        <select
-                            value={item}
-                            disabled={loadingItems}
-                            onChange={(e) => {
-                                setItem(e.target.value);
-                                setErrors({ ...errors, item: "" });
-                            }}
-                            className={`w-full border rounded-lg px-3 py-2 text-sm ${errors.item ? "border-red-500" : "border-gray-200"} ${loadingItems ? "opacity-60 cursor-not-allowed" : ""}`}
-                        >
-                            <option value="">{loadingItems ? "Loading items..." : "Select an item..."}</option>
-                            {itemOptions.map((i) => (
-                                <option key={i.value} value={i.value}>{i.label}</option>
-                            ))}
-                        </select>
-                        {errors.item && <p className="text-red-500 text-xs">{errors.item}</p>}
+                        <div className="relative">
+                            <select
+                                value={item}
+                                disabled={loadingItems || (!isStockIn && !store)}
+                                onChange={(e) => { setItem(e.target.value); setQuantity(""); setErrors((p) => ({ ...p, item: "", quantity: "" })); }}
+                                className={`${inputCls(errors.item)} appearance-none pr-8 ${(loadingItems || (!isStockIn && !store)) ? "opacity-60 cursor-not-allowed" : ""}`}
+                            >
+                                <option value="">
+                                    {loadingItems
+                                        ? "Loading items…"
+                                        : !isStockIn && !store
+                                            ? "Select a store first…"
+                                            : "Select an item…"}
+                                </option>
+                                {itemOptions.map((i) => <option key={i.value} value={i.value}>{i.label}</option>)}
+                            </select>
+                            {loadingItems
+                                ? <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 animate-spin pointer-events-none" />
+                                : <svg className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                            }
+                        </div>
+                        {errors.item && <p className="text-red-500 text-xs mt-0.5">{errors.item}</p>}
                     </div>
 
-                    {/* Quantity + Reference (Stock In) or Quantity + Removal Reason (Stock Out) */}
+                    {/* Quantity + Reference / Removal Reason */}
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1.5">
                             <label className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
                                 <Hash className="w-4 h-4 text-gray-400" />
                                 Quantity <span className="text-red-500">*</span>
                             </label>
-                            <input
-                                type="number"
-                                min="1"
-                                placeholder="e.g. 50"
-                                value={quantity}
-                                onChange={(e) => {
-                                    setQuantity(e.target.value);
-                                    setErrors({ ...errors, quantity: "" });
-                                }}
-                                className={`w-full border rounded-lg px-3 py-2 text-sm ${errors.quantity ? "border-red-500" : "border-gray-200"}`}
-                            />
-                            {errors.quantity && <p className="text-red-500 text-xs">{errors.quantity}</p>}
+                            <div className="relative">
+                                <input
+                                    type="number"
+                                    min="1"
+                                    placeholder="e.g. 50"
+                                    value={quantity}
+                                    onChange={(e) => { setQuantity(e.target.value); setErrors((p) => ({ ...p, quantity: "" })); }}
+                                    className={`${inputCls(errors.quantity)} ${selectedItem && availableQty !== null ? "pr-28" : ""}`}
+                                />
+                                {/* Available qty hint inside the input */}
+                                {selectedItem && availableQty !== null && (
+                                    <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[11px] font-semibold text-gray-400 whitespace-nowrap pointer-events-none">
+                                        {availableQty} available
+                                    </span>
+                                )}
+                            </div>
+                            {errors.quantity && <p className="text-red-500 text-xs mt-0.5">{errors.quantity}</p>}
                         </div>
 
                         {isStockIn ? (
                             <div className="space-y-1.5">
                                 <label className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
                                     <FileText className="w-4 h-4 text-gray-400" />
-                                    Invoice / Reference No. <span className="text-red-500">*</span>
+                                    Invoice / Ref No. <span className="text-red-500">*</span>
                                 </label>
                                 <input
                                     type="text"
                                     placeholder="e.g. INV-2026-031"
                                     value={reference}
-                                    onChange={(e) => {
-                                        setReference(e.target.value);
-                                        setErrors({ ...errors, reference: "" });
-                                    }}
-                                    className={`w-full border rounded-lg px-3 py-2 text-sm ${errors.reference ? "border-red-500" : "border-gray-200"}`}
+                                    onChange={(e) => { setReference(e.target.value); setErrors((p) => ({ ...p, reference: "" })); }}
+                                    className={inputCls(errors.reference)}
                                 />
-                                {errors.reference && <p className="text-red-500 text-xs">{errors.reference}</p>}
+                                {errors.reference && <p className="text-red-500 text-xs mt-0.5">{errors.reference}</p>}
                             </div>
                         ) : (
                             <div className="space-y-1.5">
@@ -293,20 +317,18 @@ export default function StockManagementCard({
                                     <FileText className="w-4 h-4 text-gray-400" />
                                     Removal Reason <span className="text-red-500">*</span>
                                 </label>
-                                <select
-                                    value={removalReason}
-                                    onChange={(e) => {
-                                        setRemovalReason(e.target.value);
-                                        setErrors({ ...errors, removalReason: "" });
-                                    }}
-                                    className={`w-full border rounded-lg px-3 py-2 text-sm ${errors.removalReason ? "border-red-500" : "border-gray-200"}`}
-                                >
-                                    <option value="">Select reason...</option>
-                                    {removalReasonOptions.map((r) => (
-                                        <option key={r.value} value={r.value}>{r.label}</option>
-                                    ))}
-                                </select>
-                                {errors.removalReason && <p className="text-red-500 text-xs">{errors.removalReason}</p>}
+                                <div className="relative">
+                                    <select
+                                        value={removalReason}
+                                        onChange={(e) => { setRemovalReason(e.target.value); setErrors((p) => ({ ...p, removalReason: "" })); }}
+                                        className={`${inputCls(errors.removalReason)} appearance-none pr-8`}
+                                    >
+                                        <option value="">Select reason…</option>
+                                        {removalReasonOptions.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
+                                    </select>
+                                    <svg className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                                </div>
+                                {errors.removalReason && <p className="text-red-500 text-xs mt-0.5">{errors.removalReason}</p>}
                             </div>
                         )}
                     </div>
@@ -321,32 +343,34 @@ export default function StockManagementCard({
                             rows={3}
                             placeholder={isStockIn ? "e.g. Received from vendor ABC" : "e.g. Issued to Class 10 students"}
                             value={remarks}
-                            onChange={(e) => {
-                                setRemarks(e.target.value);
-                                setErrors({ ...errors, remarks: "" });
-                            }}
-                            className={`w-full border rounded-lg px-3 py-2 text-sm ${errors.remarks ? "border-red-500" : "border-gray-200"}`}
+                            onChange={(e) => { setRemarks(e.target.value); setErrors((p) => ({ ...p, remarks: "" })); }}
+                            className={`${inputCls(errors.remarks)} resize-none`}
                         />
-                        {errors.remarks && <p className="text-red-500 text-xs">{errors.remarks}</p>}
+                        {errors.remarks && <p className="text-red-500 text-xs mt-0.5">{errors.remarks}</p>}
                     </div>
 
                     {/* Preview Banner */}
-                    <div className={`flex items-center gap-2 ${previewBgColor} border ${previewBorderColor} rounded-xl px-4 py-3`}>
-                        <CheckSquare className={`w-4 h-4 ${previewTextColor} shrink-0`} />
-                        <p className={`text-sm ${previewTextColor}`}>
-                            {previewLabelText}{" "}
-                            <span className="font-bold">
-                                {selectedItem ? `${selectedItem.currentStock} ${selectedItem.unit}` : "—"}
-                            </span>
-                            {" → After: "}
-                            <span className="font-bold">
-                                {selectedItem
-                                    ? `${parsedQty > 0 ? afterStock : selectedItem.currentStock} ${selectedItem.unit}`
-                                    : "—"}
-                            </span>
-                            {" "}
-                            <span className="font-normal opacity-70">(preview)</span>
-                        </p>
+                    <div className={`flex items-start gap-2.5 ${previewBgColor} border ${previewBorderColor} rounded-xl px-4 py-3`}>
+                        <CheckSquare className={`w-4 h-4 ${previewTextColor} shrink-0 mt-0.5`} />
+                        <div className={`text-sm ${previewTextColor} space-y-0.5`}>
+                            <p>
+                                <span className="font-semibold">Current stock: </span>
+                                <span className="font-bold">
+                                    {selectedItem && availableQty !== null
+                                        ? `${availableQty} ${selectedItem.unit || ""}`
+                                        : "—"}
+                                </span>
+                            </p>
+                            <p>
+                                <span className="font-semibold">After {isStockIn ? "inward" : "outward"}: </span>
+                                <span className={`font-bold ${!isStockIn && afterStock !== null && afterStock < 0 ? "text-red-600" : ""}`}>
+                                    {selectedItem && availableQty !== null && parsedQty > 0
+                                        ? `${afterStock} ${selectedItem.unit || ""}`
+                                        : "—"}
+                                </span>
+                                <span className="font-normal opacity-60 ml-1">(preview)</span>
+                            </p>
+                        </div>
                     </div>
                 </div>
 
@@ -362,21 +386,12 @@ export default function StockManagementCard({
                     <button
                         onClick={handleConfirm}
                         disabled={submitting}
-                        className={`flex items-center gap-2 ${confirmBtnBgColor} ${confirmBtnHoverColor} text-white text-sm font-semibold px-5 py-2 rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed`}
+                        className={`flex items-center gap-2 ${confirmBtnBg} ${confirmBtnHover} text-white text-sm font-semibold px-5 py-2 rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed`}
                     >
                         {submitting ? (
-                            <>
-                                <svg className="animate-spin w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                                </svg>
-                                Processing...
-                            </>
+                            <><Loader2 className="w-4 h-4 animate-spin" /> Processing…</>
                         ) : (
-                            <>
-                                <CheckSquare className="w-4 h-4" />
-                                {confirmBtnText}
-                            </>
+                            <><CheckSquare className="w-4 h-4" /> {confirmBtnText}</>
                         )}
                     </button>
                 </div>

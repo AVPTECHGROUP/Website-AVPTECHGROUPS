@@ -1,6 +1,6 @@
 import { authFetch } from "../Authfetch/Authfetch";
 
-const BASE_URL = "https://ssdev-btgphuazhza9edcu.canadacentral-01.azurewebsites.net/api/api/v1";
+const BASE_URL = import.meta.env.VITE_API_BASE_DOUBLE_V1;
 
 // Get Order Stats
 export const getOrderStats = async () => {
@@ -178,10 +178,7 @@ export const cancelStudentOrder = async (
 // PREVIEW STUDENT ORDER
 export const previewStudentOrder = async (studentId, storeId) => {
   try {
-    const params = new URLSearchParams({
-      studentId,
-      storeId,
-    });
+    const params = new URLSearchParams({ studentId, storeId });
 
     const res = await authFetch(
       `${BASE_URL}/stock/orders/preview?${params}`,

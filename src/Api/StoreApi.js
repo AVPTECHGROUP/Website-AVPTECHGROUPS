@@ -1,6 +1,6 @@
 import { authFetch } from "../Authfetch/Authfetch";
 
-const BASE_URL = "https://ssdev-btgphuazhza9edcu.canadacentral-01.azurewebsites.net/api/v1";
+const BASE_URL = import.meta.env.VITE_API_BASE_V1;
 
 // Get Stock List
 export const getStockList = async (page = 0, size = 20, searchTerm = "", status = "") => {
@@ -26,14 +26,11 @@ export const getStockList = async (page = 0, size = 20, searchTerm = "", status 
   }
 };
 
+// Get Store Stats
 export const getStoreStats = async () => {
   try {
-
-    const res = await fetch(`${BASE_URL}/stock/stores/stats`, {
+    const res = await authFetch(`${BASE_URL}/stock/stores/stats`, {
       method: "GET",
-      headers: {
-        accept: "application/json",
-      },
     });
 
     if (!res.ok) {
@@ -41,9 +38,7 @@ export const getStoreStats = async () => {
     }
 
     const data = await res.json();
-
-    return data.data; // returning only stats object
-
+    return data.data;
   } catch (error) {
     console.error("getStoreStats error:", error);
     throw error;
@@ -54,7 +49,7 @@ export const getStoreStats = async () => {
 export const createStore = async (storeData) => {
   try {
     const res = await authFetch(`${BASE_URL}/stock/stores`, {
-      method: "POST",                         
+      method: "POST",
       body: JSON.stringify(storeData),
     });
 
@@ -111,6 +106,23 @@ export const deactivateStore = async (id) => {
     return await res.json();
   } catch (error) {
     console.error("DeactivateStore error:", error.message);
+    throw error;
+  }
+};
+
+// Get Stock Levels for a Specific Store
+export const getStoreStock = async (storeId) => {
+  try {
+    const res = await authFetch(`${BASE_URL}/stock/stores/${storeId}/stock`, {
+      method: "GET",
+    });
+
+    if (!res.ok) throw new Error("Failed to fetch store stock");
+
+    const result = await res.json();
+    return result.data;
+  } catch (error) {
+    console.error("getStoreStock error:", error.message);
     throw error;
   }
 };

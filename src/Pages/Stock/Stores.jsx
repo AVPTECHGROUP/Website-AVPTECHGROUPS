@@ -68,6 +68,7 @@ export default function Stores() {
       setNoStoreFound(false);
 
       const apiStatus =
+      
         statusFilter === "All Status" ? "" :
         statusFilter === "Active"     ? "ACTIVE" : "INACTIVE";
 
@@ -110,7 +111,7 @@ export default function Stores() {
       value:    "toggleStatus",
       label:    togglingId === store.id
                   ? (store.status === "ACTIVE" ? "Deactivating…" : "Activating…")
-                  : (store.status === "ACTIVE" ? "Deactivate"    : "Activate"),
+                  : (store.status === "ACTIVE" ? "Inactive"    : "Activate"),
       icon:     store.status === "ACTIVE" ? MinusCircle : Power,
       text:     store.status === "ACTIVE" ? "text-red-600"   : "text-green-600",
       bg:       store.status === "ACTIVE" ? "bg-red-50"      : "bg-green-50",
@@ -238,6 +239,7 @@ export default function Stores() {
                 onChange={(e) => { setStatusFilter(e.target.value); resetPage(); }}
                 className="px-3 py-2 border border-gray-200 bg-gray-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-200 text-sm text-gray-700 w-40 shrink-0"
               >
+                <option value="All Status">All Status</option>
                 <option value="Active">Active</option>
                 <option value="Inactive">Inactive</option>
               </select>

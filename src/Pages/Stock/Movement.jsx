@@ -20,9 +20,9 @@ import {
 import CardComponent from "../../Components/CommonComp/CardComponent";
 import CardLoader from "../../Components/CommonComp/CardLoader";
 import ListLoader from "../../Components/CommonComp/ListLoader";
-import { getStockMovementHistory, getActiveStores } from "../../Api/StockApi";
+import { getStockMovementHistory, getStockMovementStats, getActiveStores } from "../../Api/StockApi";
 
-const ROWS_PER_PAGE = 20;
+const ROWS_PER_PAGE_OPTIONS = [10, 20, 50];
 const SEARCH_DEBOUNCE_MS = 400;
 
 // ── Type metadata ─────────────────────────────────────────────────────────────
@@ -49,16 +49,14 @@ const formatDateTime = (isoString) => {
 const mapMovement = (m) => {
   const { date, time } = formatDateTime(m.createdAt);
   const type = m.movementType || "IN";
-  let store = m.storeName || "—";
-  if (type === "TRANSFER" && m.destinationStoreName) {
-    store = `${m.storeName} → ${m.destinationStoreName}`;
-  }
   return {
     id: m.id,
     date, time,
     item: m.itemName || "—",
     itemId: m.itemCode || `ITM-${m.itemId}`,
-    type, store,
+    type,
+    storeName: m.storeName || "—",
+    destStore: type === "TRANSFER" ? (m.destinationStoreName || null) : null,
     qty: m.quantity,
     before: m.quantityBefore,
     after: m.quantityAfter,
@@ -69,84 +67,108 @@ const mapMovement = (m) => {
 };
 
 const exportToCSV = (movements) => {
-  const headers = ["Date", "Time", "Item", "Item ID", "Type", "Store", "Qty", "Before", "After", "Reference", "Reason / Remarks", "Performed By"];
+  const headers = ["Date", "Time", "Item", "Item ID", "Type", "Store", "Dest Store", "Qty", "Before", "After", "Reference", "Reason / Remarks", "Performed By"];
   const rows = movements.map((m) => [
-    m.date, m.time, m.item, m.itemId, m.type, m.store,
+    m.date, m.time, m.item, m.itemId, m.type,
+    m.storeName, m.destStore || "",
     `${qtyPrefix[m.type] ?? ""}${m.qty}`, m.before, m.after, m.ref, m.reason, m.by,
   ]);
-  const csv = [headers, ...rows].map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+  const csv = [headers, ...rows].map((r) => r.map((c) => `"${String(c ?? "").replace(/"/g, '""')}"`).join(",")).join("\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  a.href = url;
-  a.download = `stock-movements-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.href = url; a.download = `stock-movements-${new Date().toISOString().slice(0, 10)}.csv`;
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   URL.revokeObjectURL(url);
 };
 
-// ── Mobile Card ───────────────────────────────────────────────────────────────
-const MobileCard = ({ m }) => {
+// ── Store Cell ────────────────────────────────────────────────────────────────
+const StoreCell = ({ storeName, destStore }) => {
+  if (!destStore) {
+    return (
+      <span className="text-sm text-gray-700 font-medium block truncate" title={storeName}>
+        {storeName}
+      </span>
+    );
+  }
+  return (
+    <div className="flex flex-col gap-0.5 min-w-0">
+      <span className="text-xs font-semibold text-gray-700 truncate leading-tight" title={storeName}>
+        {storeName}
+      </span>
+      <div className="flex items-center gap-1 min-w-0">
+        <ArrowRightLeft className="w-3 h-3 text-blue-400 shrink-0" />
+        <span className="text-xs font-semibold text-blue-600 truncate leading-tight" title={destStore}>
+          {destStore}
+        </span>
+      </div>
+    </div>
+  );
+};
+
+// ── Mobile / Tablet Card ──────────────────────────────────────────────────────
+const MobileCard = ({ m, idx, page, rowsPerPage }) => {
   const meta = typeMeta[m.type] || typeMeta["IN"];
   return (
-    <div className="p-4 border-b border-gray-100 last:border-b-0 hover:bg-blue-50/30 transition-colors">
+    <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
+      {/* Header row */}
       <div className="flex items-start justify-between gap-2 mb-3">
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-bold text-gray-800 truncate">{m.item}</p>
-          <p className="text-xs text-gray-400 mt-0.5">{m.itemId}</p>
+        <div className="flex items-start gap-2 min-w-0">
+          <span className="text-xs text-gray-400 mt-0.5 shrink-0">{(page - 1) * rowsPerPage + idx + 1}.</span>
+          <div className="min-w-0">
+            <p className="font-semibold text-gray-800 text-sm truncate" title={m.item}>{m.item}</p>
+            <p className="text-xs text-gray-400 truncate">{m.itemId}</p>
+          </div>
         </div>
         <div className="flex items-center gap-1 shrink-0">
           <span className={`w-2 h-2 rounded-full ${meta.dot}`} />
           <span className={`px-2 py-0.5 rounded-md text-xs font-bold ${meta.badge}`}>{meta.label}</span>
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
-        <div className="flex items-start gap-1.5">
-          <CalendarDays className="w-3.5 h-3.5 text-gray-400 shrink-0 mt-0.5" />
-          <div>
-            <p className="text-xs font-semibold text-gray-700">{m.date}</p>
-            <p className="text-xs text-gray-400">{m.time}</p>
-          </div>
-        </div>
-        <div className="flex items-start gap-1.5">
-          <ArrowRightLeft className="w-3.5 h-3.5 text-gray-400 shrink-0 mt-0.5" />
-          <div>
-            <p className="text-xs text-gray-400">Quantity</p>
-            <p className={`text-xs font-bold ${qtyColor[m.type] ?? "text-gray-700"}`}>
+
+      {/* Details grid */}
+      <div className="space-y-1.5 text-sm">
+        <p>
+          <span className="font-medium text-gray-500">Date:</span>
+          <span className="ml-2 text-gray-700">{m.date}</span>
+          <span className="ml-1 text-gray-400 text-xs">{m.time}</span>
+        </p>
+        <p>
+          <span className="font-medium text-gray-500">Store:</span>
+          <span className="ml-2 text-gray-700">{m.storeName}</span>
+          {m.destStore && (
+            <span className="ml-1 text-blue-600 text-xs flex items-center gap-1">
+              <ArrowRightLeft className="w-3 h-3" />{m.destStore}
+            </span>
+          )}
+        </p>
+        <div className="flex items-center gap-4">
+          <p>
+            <span className="font-medium text-gray-500">Qty:</span>
+            <span className={`ml-2 font-bold ${qtyColor[m.type] ?? "text-gray-700"}`}>
               {qtyPrefix[m.type] ?? ""}{m.qty}
-            </p>
-          </div>
+            </span>
+          </p>
+          <p>
+            <span className="font-medium text-gray-500">Stock:</span>
+            <span className="ml-2 text-gray-700 text-xs">{m.before} → {m.after}</span>
+          </p>
         </div>
-        <div className="flex items-start gap-1.5 col-span-2">
-          <Store className="w-3.5 h-3.5 text-gray-400 shrink-0 mt-0.5" />
-          <p className="text-xs text-gray-600 leading-relaxed" title={m.store}>{m.store}</p>
-        </div>
-        <div className="flex items-start gap-1.5">
-          <Tag className="w-3.5 h-3.5 text-gray-400 shrink-0 mt-0.5" />
-          <div>
-            <p className="text-xs text-gray-400">Stock change</p>
-            <p className="text-xs font-semibold text-gray-700">{m.before} → {m.after}</p>
-          </div>
-        </div>
-        <div className="flex items-start gap-1.5">
-          <User className="w-3.5 h-3.5 text-gray-400 shrink-0 mt-0.5" />
-          <div>
-            <p className="text-xs text-gray-400">By</p>
-            <p className="text-xs font-semibold text-gray-700 truncate">{m.by}</p>
-          </div>
-        </div>
+        <p>
+          <span className="font-medium text-gray-500">By:</span>
+          <span className="ml-2 text-gray-700">{m.by}</span>
+        </p>
         {m.ref !== "—" && (
-          <div className="col-span-2">
-            <p className="text-xs text-gray-400">
-              Ref: <span className="text-gray-600 font-medium">{m.ref}</span>
-            </p>
-          </div>
+          <p>
+            <span className="font-medium text-gray-500">Ref:</span>
+            <span className="ml-2 text-gray-600 text-xs">{m.ref}</span>
+          </p>
         )}
         {m.reason !== "—" && (
-          <div className="col-span-2">
-            <p className="text-xs text-gray-400 line-clamp-2" title={m.reason}>
-              Reason: <span className="text-gray-600">{m.reason}</span>
-            </p>
-          </div>
+          <p className="line-clamp-2">
+            <span className="font-medium text-gray-500">Reason:</span>
+            <span className="ml-2 text-gray-600 text-xs" title={m.reason}>{m.reason}</span>
+          </p>
         )}
       </div>
     </div>
@@ -154,12 +176,12 @@ const MobileCard = ({ m }) => {
 };
 
 // ── Empty State ───────────────────────────────────────────────────────────────
-const EmptyBox = ({ colSpan }) => {
+const EmptyState = ({ colSpan }) => {
   const content = (
     <div className="flex flex-col items-center gap-2 text-gray-400">
-      <Inbox className="w-8 h-8 opacity-30" />
-      <p className="text-sm font-medium">No movements found</p>
-      <p className="text-xs">Try adjusting your filters or date range</p>
+      <Inbox className="w-10 h-10 opacity-30" />
+      <p className="text-sm font-bold text-gray-700 mb-1">No Movements Found</p>
+      <p className="text-xs text-gray-400">Try adjusting your filters or date range.</p>
     </div>
   );
   return colSpan
@@ -169,62 +191,63 @@ const EmptyBox = ({ colSpan }) => {
 
 // ── Main Component ────────────────────────────────────────────────────────────
 export default function Movement() {
-  // ── Data ──────────────────────────────────────────────────────
+
   const [movements, setMovements] = useState([]);
   const [stores, setStores] = useState([]);
   const [pagination, setPagination] = useState({});
 
-  // ── Loading / error ───────────────────────────────────────────
+  const [statsData, setStatsData] = useState(null);
+  const [statsLoading, setStatsLoading] = useState(true);
+
   const [loading, setLoading] = useState(false);
   const [storesLoading, setStoresLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // ── Filter state ──────────────────────────────────────────────
-  const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
   const [storeId, setStoreId] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
-  const [page, setPage] = useState(0);
-
-  // Debounced search value — only used for API calls
+  const [page, setPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(20);
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const debounceRef = useRef(null);
 
-  // ── Pagination ────────────────────────────────────────────────
-  const totalPages = pagination.totalPages ?? 1;
-  const currentPage = pagination.currentPage ?? page;
   const totalElements = pagination.totalElements ?? 0;
-  const startItem = totalElements === 0 ? 0 : currentPage * ROWS_PER_PAGE + 1;
-  const endItem = Math.min((currentPage + 1) * ROWS_PER_PAGE, totalElements);
+  const totalPages = pagination.totalPages ?? Math.max(1, Math.ceil(totalElements / rowsPerPage));
+  const startItem = totalElements === 0 ? 0 : (page - 1) * rowsPerPage + 1;
+  const endItem = Math.min(page * rowsPerPage, totalElements);
 
-  const pageNumbers = (() => {
-    const arr = [], s = Math.max(0, currentPage - 2), e = Math.min(totalPages - 1, currentPage + 2);
-    for (let i = s; i <= e; i++) arr.push(i);
-    return arr;
-  })();
+  const resetPage = () => setPage(1);
 
-  // ── Stats ─────────────────────────────────────────────────────
-  const countByType = (t) => movements.filter((m) => m.type === t).length;
   const stats = [
-    { key: "Total Movements", val: totalElements, icon: History, txColor: "text-blue-600", bgColor: "bg-blue-50" },
-    { key: "Stock IN", val: countByType("IN"), icon: ArrowDownToLine, txColor: "text-green-600", bgColor: "bg-green-50" },
-    { key: "Stock OUT", val: countByType("OUT"), icon: ArrowUpFromLine, txColor: "text-red-500", bgColor: "bg-red-50" },
-    { key: "Transfers", val: countByType("TRANSFER"), icon: ArrowLeftRight, txColor: "text-blue-600", bgColor: "bg-indigo-50" },
-    { key: "Orders", val: countByType("ORDER"), icon: ShoppingCart, txColor: "text-orange-600", bgColor: "bg-orange-50" },
+    { key: "Total Movements", val: statsData?.totalMovements ?? 0, icon: History, txColor: "text-blue-600", bgColor: "bg-blue-50" },
+    { key: "Stock IN", val: statsData?.stockIn ?? 0, icon: ArrowDownToLine, txColor: "text-green-600", bgColor: "bg-green-50" },
+    { key: "Stock OUT", val: statsData?.stockOut ?? 0, icon: ArrowUpFromLine, txColor: "text-red-500", bgColor: "bg-red-50" },
+    { key: "Transfers", val: statsData?.transfers ?? 0, icon: ArrowLeftRight, txColor: "text-blue-600", bgColor: "bg-indigo-50" },
+    { key: "Orders", val: statsData?.orders ?? 0, icon: ShoppingCart, txColor: "text-orange-600", bgColor: "bg-orange-50" },
   ];
 
-  // ── Debounce search input ─────────────────────────────────────
+  // ── Fetch stats ───────────────────────────────────────────────────────────
+  useEffect(() => {
+    setStatsLoading(true);
+    getStockMovementStats({})
+      .then((data) => setStatsData(data))
+      .catch(() => setStatsData(null))
+      .finally(() => setStatsLoading(false));
+  }, []);
+
+  // ── Debounce search ───────────────────────────────────────────────────────
   useEffect(() => {
     clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
-      setDebouncedSearch(search);
-      setPage(0); // reset to page 0 on new search
+      setDebouncedSearch(searchInput);
+      resetPage();
     }, SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(debounceRef.current);
-  }, [search]);
+  }, [searchInput]);
 
-  // ── Load stores once on mount ─────────────────────────────────
+  // ── Fetch stores ──────────────────────────────────────────────────────────
   useEffect(() => {
     (async () => {
       setStoresLoading(true);
@@ -240,12 +263,11 @@ export default function Movement() {
     })();
   }, []);
 
-  // ── Fetch whenever any filter or page changes ─────────────────
+  // ── Fetch movements ───────────────────────────────────────────────────────
   const fetchMovements = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      // Build POST filter body — only include fields that have a value
       const filters = {};
       if (storeId) filters.storeId = Number(storeId);
       if (typeFilter) filters.movementType = typeFilter;
@@ -253,12 +275,7 @@ export default function Movement() {
       if (dateFrom) filters.fromDate = `${dateFrom}T00:00:00.000Z`;
       if (dateTo) filters.toDate = `${dateTo}T23:59:59.999Z`;
 
-      const { movements: raw, pagination: pg } = await getStockMovementHistory(
-        filters,
-        page,
-        ROWS_PER_PAGE
-      );
-
+      const { movements: raw, pagination: pg } = await getStockMovementHistory(filters, page - 1, rowsPerPage);
       setMovements(raw.map(mapMovement));
       setPagination(pg);
     } catch (err) {
@@ -269,264 +286,425 @@ export default function Movement() {
     } finally {
       setLoading(false);
     }
-  }, [page, storeId, typeFilter, dateFrom, dateTo, debouncedSearch]);
+  }, [page, rowsPerPage, storeId, typeFilter, dateFrom, dateTo, debouncedSearch]);
 
-  // Re-fetch whenever fetch deps change
-  useEffect(() => {
-    fetchMovements();
-  }, [fetchMovements]);
+  useEffect(() => { fetchMovements(); }, [fetchMovements]);
 
-  // Reset to page 0 when non-search filters change
-  const handleTypeChange = (v) => { setTypeFilter(v); setPage(0); };
-  const handleStoreChange = (v) => { setStoreId(v); setPage(0); };
-  const handleFromChange = (v) => { setDateFrom(v); setPage(0); };
-  const handleToChange = (v) => { setDateTo(v); setPage(0); };
+  const handleTypeChange = (v) => { setTypeFilter(v); resetPage(); };
+  const handleStoreChange = (v) => { setStoreId(v); resetPage(); };
+  const handleFromChange = (v) => { setDateFrom(v); resetPage(); };
+  const handleToChange = (v) => { setDateTo(v); resetPage(); };
 
-  // ── Render ────────────────────────────────────────────────────
+  const filterCls = "text-sm border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 text-gray-700 w-full transition cursor-pointer";
+  const tdStyle = "px-3 py-3 text-left text-gray-700 text-sm";
+
   return (
-    <div className="min-h-screen bg-blue-50 p-3 md:p-5 xl:p-8 font-sans">
+    <div className="min-h-screen bg-linear-to-b from-sky-50 to-sky-100">
+      <div className="p-2 sm:p-5 lg:p-4">
 
-      {/* Page heading */}
-      <div className="mb-4 md:mb-6">
-        <h1 className="text-xl md:text-2xl xl:text-3xl font-bold text-gray-800">Stock Movement History</h1>
-        <p className="text-gray-500 text-xs md:text-sm mt-1">
-          Track all stock IN, OUT, ORDER and transfer movements across stores.
-        </p>
-      </div>
-
-      {/* Stats — 2-col mobile, 3-col md, 5-col xl */}
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3 md:gap-4 mb-4 md:mb-6">
-        {loading
-          ? Array.from({ length: 5 }).map((_, i) => <CardLoader key={i} />)
-          : stats.map((s) => (
-            <CardComponent key={s.key} IconName={s.icon} keyName={s.key} val={s.val}
-              iconTxColor={s.txColor} iconBgColor={s.bgColor} />
-          ))}
-      </div>
-
-      {/* Main Panel */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-
-        {/* Panel header */}
-        <div className="flex items-center justify-between gap-3 px-4 md:px-5 py-3 md:py-4 border-b border-gray-100">
-          <div className="flex items-center gap-2 min-w-0">
-            <History className="w-4 h-4 md:w-5 md:h-5 text-blue-500 shrink-0" />
-            <h2 className="font-semibold text-gray-800 text-base md:text-lg truncate">Stock Movement History</h2>
+        {/* Heading */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Stock Movement History</h1>
+            <p className="text-gray-500 mt-1 font-medium text-sm sm:text-base">
+              Track all stock IN, OUT, ORDER and transfer movements across stores.
+            </p>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
-            {loading && <Loader2 className="w-4 h-4 text-blue-400 animate-spin" />}
+        </div>
+
+        {/* Stat Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3 md:gap-4 mt-5">
+          {statsLoading
+            ? Array.from({ length: 5 }).map((_, i) => <CardLoader key={i} />)
+            : stats.map((s) => (
+              <CardComponent key={s.key} IconName={s.icon} keyName={s.key} val={s.val}
+                iconTxColor={s.txColor} iconBgColor={s.bgColor} />
+            ))}
+        </div>
+
+        {/* Main Panel */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mt-4">
+
+          {/* Panel header */}
+          <div className="flex items-center justify-between gap-3 px-4 md:px-5 py-3 md:py-4 border-b border-gray-100">
+            <div className="flex items-center gap-2 min-w-0">
+              <History className="w-4 h-4 md:w-5 md:h-5 text-blue-500 shrink-0" />
+              <h2 className="font-semibold text-gray-800 text-base md:text-lg truncate">Stock Movement History</h2>
+            </div>
             <button
               onClick={() => exportToCSV(movements)}
               disabled={movements.length === 0}
-              className="flex items-center gap-1.5 border border-blue-300 text-blue-600 hover:bg-blue-50 text-xs md:text-sm font-semibold px-3 md:px-4 py-2 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              className="flex items-center cursor-pointer gap-1.5 border border-blue-300 text-blue-600 hover:bg-blue-50 active:bg-blue-100 text-xs md:text-sm font-semibold px-3 md:px-4 py-2 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <Download className="w-3.5 h-3.5 md:w-4 md:h-4" />
               Export CSV
             </button>
           </div>
-        </div>
 
-        {/* xl+ single row */}
-        <div className="hidden xl:grid grid-cols-[1fr_160px_180px_150px_150px] gap-3 px-5 py-3 border-b border-gray-100 bg-gray-50/50">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-            <input type="text" placeholder="Search item, store, user…" value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-300 transition" />
-          </div>
-          <select value={typeFilter} onChange={(e) => handleTypeChange(e.target.value)}
-            className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-300 text-gray-700">
-            <option value="">All Types</option>
-            <option value="IN">IN</option>
-            <option value="OUT">OUT</option>
-            <option value="TRANSFER">TRANSFER</option>
-            <option value="ORDER">ORDER</option>
-          </select>
-          <select value={storeId} onChange={(e) => handleStoreChange(e.target.value)} disabled={storesLoading}
-            className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-300 text-gray-700 disabled:opacity-60">
-            <option value="">{storesLoading ? "Loading stores…" : "All Stores"}</option>
-            {stores.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-          </select>
-          <input type="date" value={dateFrom} onChange={(e) => handleFromChange(e.target.value)}
-            className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-300 text-gray-700" />
-          <input type="date" value={dateTo} onChange={(e) => handleToChange(e.target.value)}
-            className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-300 text-gray-700" />
-        </div>
+          {/* Filters — desktop: single row (search wide left, controls right); mobile: stacked */}
+          <div className="px-4 md:px-5 py-3 border-b border-gray-100 bg-white">
 
-        {/* md–xl: 2-col grid */}
-        <div className="hidden md:grid xl:hidden grid-cols-2 gap-2 px-4 py-3 border-b border-gray-100 bg-gray-50/50">
-          <div className="relative col-span-2">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-            <input type="text" placeholder="Search item, store, user…" value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-300 transition" />
-          </div>
-          <select value={typeFilter} onChange={(e) => handleTypeChange(e.target.value)}
-            className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-300 text-gray-700">
-            <option value="">All Types</option>
-            <option value="IN">IN</option>
-            <option value="OUT">OUT</option>
-            <option value="TRANSFER">TRANSFER</option>
-            <option value="ORDER">ORDER</option>
-          </select>
-          <select value={storeId} onChange={(e) => handleStoreChange(e.target.value)} disabled={storesLoading}
-            className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-300 text-gray-700 disabled:opacity-60">
-            <option value="">{storesLoading ? "Loading stores…" : "All Stores"}</option>
-            {stores.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-          </select>
-          <input type="date" value={dateFrom} onChange={(e) => handleFromChange(e.target.value)}
-            className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-300 text-gray-700" />
-          <input type="date" value={dateTo} onChange={(e) => handleToChange(e.target.value)}
-            className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-300 text-gray-700" />
-        </div>
-
-        {/* Mobile: stacked */}
-        <div className="flex md:hidden flex-col gap-2 px-4 py-3 border-b border-gray-100 bg-gray-50/50">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-            <input type="text" placeholder="Search item, store, user…" value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-300 transition" />
-          </div>
-          <select value={typeFilter} onChange={(e) => handleTypeChange(e.target.value)}
-            className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-300 text-gray-700">
-            <option value="">All Types</option>
-            <option value="IN">IN</option>
-            <option value="OUT">OUT</option>
-            <option value="TRANSFER">TRANSFER</option>
-            <option value="ORDER">ORDER</option>
-          </select>
-          <select value={storeId} onChange={(e) => handleStoreChange(e.target.value)} disabled={storesLoading}
-            className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-300 text-gray-700 disabled:opacity-60">
-            <option value="">{storesLoading ? "Loading stores…" : "All Stores"}</option>
-            {stores.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-          </select>
-          <div className="grid grid-cols-2 gap-2">
-            <input type="date" value={dateFrom} onChange={(e) => handleFromChange(e.target.value)}
-              className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-300 text-gray-700" />
-            <input type="date" value={dateTo} onChange={(e) => handleToChange(e.target.value)}
-              className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-300 text-gray-700" />
-          </div>
-        </div>
-
-        {/* Error */}
-        {error && (
-          <div className="mx-4 md:mx-5 mt-4 px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
-            {error}
-          </div>
-        )}
-
-        {/* ── Desktop Table: md+ ── */}
-        <div className="hidden md:block overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-100">
-                <th className="px-3 lg:px-4 py-3 text-left whitespace-nowrap">Date & Time</th>
-                <th className="px-3 lg:px-4 py-3 text-center whitespace-nowrap">Item</th>
-                <th className="px-3 lg:px-4 py-3 text-center whitespace-nowrap">Type</th>
-                <th className="px-3 lg:px-4 py-3 text-center whitespace-nowrap">Store</th>
-                <th className="px-3 lg:px-4 py-3 text-center whitespace-nowrap">Quantity</th>
-                <th className="px-3 lg:px-4 py-3 text-center whitespace-nowrap">Before → After</th>
-                <th className="px-3 lg:px-4 py-3 text-left whitespace-nowrap">Reference</th>
-                <th className="px-3 lg:px-4 py-3 text-left whitespace-nowrap hidden lg:table-cell">Reason / Remarks</th>
-                <th className="px-3 lg:px-4 py-3 whitespace-nowrap text-center">By</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {loading ? (
-                <ListLoader rows={8} avatar={false} />
-              ) : movements.length === 0 ? (
-                <EmptyBox colSpan={9} />
-              ) : (
-                movements.map((m) => {
-                  const meta = typeMeta[m.type] || typeMeta["IN"];
-                  return (
-                    <tr key={m.id} className="hover:bg-blue-50/40 transition-colors">
-                      <td className="px-3 lg:px-4 py-3 whitespace-nowrap">
-                        <p className="text-sm font-semibold text-gray-700">{m.date}</p>
-                        <p className="text-xs text-gray-400 text-center">{m.time}</p>
-                      </td>
-                      <td className="px-3 lg:px-4 py-3 max-w-30 lg:max-w-45 text-center">
-                        <p className="text-sm font-semibold text-gray-800 truncate" title={m.item}>{m.item}</p>
-                        <p className="text-xs text-gray-400">{m.itemId}</p>
-                      </td>
-                      <td className="px-3 lg:px-4 py-3 whitespace-nowrap ">
-                        <div className="flex items-center justify-center gap-1.5">
-                          <span className={`w-2 h-2 rounded-full ${meta.dot} shrink-0`} />
-                          <span className={`px-2 py-0.5 rounded text-xs font-bold ${meta.badge}`}>{meta.label}</span>
-                        </div>
-                      </td>
-                      <td className="px-3 lg:px-4 py-3 max-w-30 lg:max-w-40">
-                        <span className="text-sm text-gray-600 text-nowrap text-center block" title={m.store}>{m.store}</span>
-                      </td>
-                      <td className="px-3 lg:px-4 py-3 text-center whitespace-nowrap">
-                        <span className={`text-sm font-bold ${qtyColor[m.type] ?? "text-gray-700"}`}>
-                          {qtyPrefix[m.type] ?? ""}{m.qty}
-                        </span>
-                      </td>
-                      <td className="px-3 lg:px-4 py-3 text-sm text-gray-600 text-center whitespace-nowrap">
-                        {m.before} → {m.after}
-                      </td>
-                      <td className="px-3 lg:px-4 py-3 text-sm text-gray-500 whitespace-nowrap">{m.ref}</td>
-                      <td className="px-3 lg:px-4 py-3 max-w-40 hidden lg:table-cell">
-                        <span className="text-sm text-gray-600 block text-center" title={m.reason}>{m.reason}</span>
-                      </td>
-                      <td className="px-3 lg:px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{m.by}</td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* ── Mobile Cards: < md ── */}
-        <div className="md:hidden">
-          {loading ? (
-            <div className="p-4 space-y-3">
-              {Array.from({ length: 4 }).map((_, i) => <CardLoader key={i} />)}
+            {/* lg+: exact screenshot layout — search flex-1, then 4 fixed-width controls */}
+            <div className="hidden lg:flex items-center gap-3">
+              {/* Search */}
+              <div className="flex flex-1 items-center gap-2 border border-gray-200 rounded-lg bg-white px-3 py-2 focus-within:ring-2 focus-within:ring-blue-200 focus-within:border-blue-400 transition">
+                <Search className="w-4 h-4 text-gray-400 shrink-0" />
+                <input
+                  type="text"
+                  placeholder="Search item, store, user..."
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  className="text-sm focus:outline-none text-gray-600 w-full bg-transparent"
+                />
+              </div>
+              {/* All Types */}
+              <select
+                value={typeFilter}
+                onChange={(e) => handleTypeChange(e.target.value)}
+                className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-200 text-gray-700 w-36 shrink-0 cursor-pointer"
+              >
+                <option value="">All Types</option>
+                <option value="IN">IN</option>
+                <option value="OUT">OUT</option>
+                <option value="TRANSFER">TRANSFER</option>
+                <option value="ORDER">ORDER</option>
+              </select>
+              {/* All Stores */}
+              <select
+                value={storeId}
+                onChange={(e) => handleStoreChange(e.target.value)}
+                disabled={storesLoading}
+                className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-200 text-gray-700 w-44 shrink-0 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                <option value="">{storesLoading ? "Loading stores…" : "All Stores"}</option>
+                {stores.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+              {/* Date From */}
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => handleFromChange(e.target.value)}
+                className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-200 text-gray-700 w-40 shrink-0 cursor-pointer"
+              />
+              {/* Date To */}
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => handleToChange(e.target.value)}
+                className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-200 text-gray-700 w-40 shrink-0 cursor-pointer"
+              />
             </div>
-          ) : movements.length === 0 ? (
-            <EmptyBox />
-          ) : (
-            movements.map((m) => <MobileCard key={m.id} m={m} />)
-          )}
-        </div>
 
-        {/* ── Pagination ── */}
-        {movements.length > 0 && (
-          <div className="flex flex-col-reverse sm:flex-row items-center justify-between gap-3 px-4 md:px-5 py-4 border-t border-gray-100">
-            <p className="text-xs md:text-sm text-gray-400 text-center sm:text-left">
-              Showing {startItem}–{endItem} of {totalElements} movements
-            </p>
-            {totalPages > 1 && (
-              <div className="flex items-center gap-1">
+            {/* md: 2-col grid */}
+            <div className="hidden md:grid lg:hidden grid-cols-2 gap-2">
+              <div className="col-span-2 flex items-center gap-2 border border-gray-200 rounded-lg bg-white px-3 py-2 focus-within:ring-2 focus-within:ring-blue-200 focus-within:border-blue-400 transition">
+                <Search className="w-4 h-4 text-gray-400 shrink-0" />
+                <input
+                  type="text"
+                  placeholder="Search item, store, user..."
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  className="text-sm focus:outline-none text-gray-600 w-full bg-transparent"
+                />
+              </div>
+              <select value={typeFilter} onChange={(e) => handleTypeChange(e.target.value)}
+                className={`${filterCls} cursor-pointer`}>
+                <option value="">All Types</option>
+                <option value="IN">IN</option>
+                <option value="OUT">OUT</option>
+                <option value="TRANSFER">TRANSFER</option>
+                <option value="ORDER">ORDER</option>
+              </select>
+              <select value={storeId} onChange={(e) => handleStoreChange(e.target.value)} disabled={storesLoading}
+                className={`${filterCls} cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed`}>
+                <option value="">{storesLoading ? "Loading stores…" : "All Stores"}</option>
+                {stores.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+              <input type="date" value={dateFrom} onChange={(e) => handleFromChange(e.target.value)}
+                className={`${filterCls} cursor-pointer`} />
+              <input type="date" value={dateTo} onChange={(e) => handleToChange(e.target.value)}
+                className={`${filterCls} cursor-pointer`} />
+            </div>
+
+            {/* Mobile: stacked */}
+            <div className="flex md:hidden flex-col gap-2">
+              <div className="flex items-center gap-2 border border-gray-200 rounded-lg bg-white px-3 py-2 focus-within:ring-2 focus-within:ring-blue-200 focus-within:border-blue-400 transition">
+                <Search className="w-4 h-4 text-gray-400 shrink-0" />
+                <input
+                  type="text"
+                  placeholder="Search item, store, user..."
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  className="text-sm focus:outline-none text-gray-600 w-full bg-transparent"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <select value={typeFilter} onChange={(e) => handleTypeChange(e.target.value)}
+                  className={`${filterCls} cursor-pointer`}>
+                  <option value="">All Types</option>
+                  <option value="IN">IN</option>
+                  <option value="OUT">OUT</option>
+                  <option value="TRANSFER">TRANSFER</option>
+                  <option value="ORDER">ORDER</option>
+                </select>
+                <select value={storeId} onChange={(e) => handleStoreChange(e.target.value)} disabled={storesLoading}
+                  className={`${filterCls} cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed`}>
+                  <option value="">{storesLoading ? "Loading stores…" : "All Stores"}</option>
+                  {stores.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <input type="date" value={dateFrom} onChange={(e) => handleFromChange(e.target.value)}
+                  className={`${filterCls} cursor-pointer`} />
+                <input type="date" value={dateTo} onChange={(e) => handleToChange(e.target.value)}
+                  className={`${filterCls} cursor-pointer`} />
+              </div>
+            </div>
+
+          </div>
+
+          {/* Error */}
+          {error && (
+            <div className="mx-4 md:mx-5 mt-4 px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
+              {error}
+            </div>
+          )}
+
+          {/* ── Mobile / Tablet Cards (< lg) ── */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:hidden px-4 py-4">
+            {loading ? (
+              <div className="text-center py-8 col-span-2">
+                <div className="flex flex-col items-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-2" />
+                  <span className="text-gray-600 text-sm">Loading movements…</span>
+                </div>
+              </div>
+            ) : movements.length === 0 ? (
+              <div className="col-span-2"><EmptyState /></div>
+            ) : (
+              movements.map((m, idx) => (
+                <MobileCard key={m.id} m={m} idx={idx} page={page} rowsPerPage={rowsPerPage} />
+              ))
+            )}
+          </div>
+
+          {/* ── Desktop Table (lg+) ── */}
+          <div className="hidden lg:block bg-white rounded-xl border-0">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-225">
+                <thead className="border-b border-gray-200">
+                  <tr>
+                    <th className="px-3 py-3 text-left   text-xs font-semibold text-gray-500 uppercase tracking-wider sticky top-0 bg-gray-50 z-10">Date & Time</th>
+                    <th className="px-3 py-3 text-center   text-xs font-semibold text-gray-500 uppercase tracking-wider sticky top-0 bg-gray-50 z-10">Item</th>
+                    <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider sticky top-0 bg-gray-50 z-10">Type</th>
+                    <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider sticky top-0 bg-gray-50 z-10">Store</th>
+                    <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider sticky top-0 bg-gray-50 z-10">Qty</th>
+                    <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider sticky top-0 bg-gray-50 z-10 whitespace-nowrap">Before → After</th>
+                    <th className="px-3 py-3 text-left   text-xs font-semibold text-gray-500 uppercase tracking-wider sticky top-0 bg-gray-50 z-10">Reference</th>
+                    <th className="px-3 py-3 text-center   text-xs font-semibold text-gray-500 uppercase tracking-wider sticky top-0 bg-gray-50 z-10">Reason</th>
+                    <th className="px-3 py-3 text-center   text-xs font-semibold text-gray-500 uppercase tracking-wider sticky top-0 bg-gray-50 z-10">By</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-100 font-normal">
+                  {loading ? (
+                    <ListLoader colSpanSet={10} />
+                  ) : movements.length === 0 ? (
+                    <EmptyState colSpan={10} />
+                  ) : (
+                    movements.map((m, idx) => {
+                      const meta = typeMeta[m.type] || typeMeta["IN"];
+                      return (
+                        <tr key={m.id} className="hover:bg-blue-50/40 transition-colors">
+
+                          {/* Date & Time */}
+                          <td className={tdStyle}>
+                            <p className="text-sm font-medium text-gray-700 whitespace-nowrap">{m.date}</p>
+                            <p className="text-xs text-gray-400 whitespace-nowrap">{m.time}</p>
+                          </td>
+
+                          {/* Item */}
+                          <td className={`${tdStyle} max-w-40`}>
+                            <p className="text-sm font-semibold text-gray-800 truncate" title={m.item}>{m.item}</p>
+                            <p className="text-xs text-gray-400 truncate">{m.itemId}</p>
+                          </td>
+
+                          {/* Type */}
+                          <td className={`${tdStyle} text-center`}>
+                            <div className="flex items-center justify-center gap-1">
+                              <span className={`w-2 h-2 rounded-full shrink-0 ${meta.dot}`} />
+                              <span className={`px-2 py-0.5 rounded text-xs font-bold whitespace-nowrap ${meta.badge}`}>
+                                {meta.label}
+                              </span>
+                            </div>
+                          </td>
+
+                          {/* Store */}
+                          <td className={`text-center max-w-45 overflow-hidden`}>
+                            <StoreCell storeName={m.storeName} destStore={m.destStore} />
+                          </td>
+
+                          {/* Qty */}
+                          <td className={`text-center`}>
+                            <span className={`text-sm font-bold whitespace-nowrap ${qtyColor[m.type] ?? "text-gray-700"}`}>
+                              {qtyPrefix[m.type] ?? ""}{m.qty}
+                            </span>
+                          </td>
+
+                          {/* Before → After */}
+                          <td className={`text-center`}>
+                            <span className="text-sm text-gray-600 text-center whitespace-nowrap">
+                              {m.before} → {m.after}
+                            </span>
+                          </td>
+
+                          {/* Reference */}
+                          <td className={`${tdStyle} max-w-30 overflow-hidden`}>
+                            <span className="text-xs text-gray-500 truncate block" title={m.ref}>{m.ref}</span>
+                          </td>
+
+                          {/* Reason */}
+                          <td className={`text-center max-w-30.5 overflow-hidden`}>
+                            <span className="text-xs text-gray-600 truncate block" title={m.reason}>{m.reason}</span>
+                          </td>
+
+                          {/* By */}
+                          <td className={`text-center max-w-30 overflow-hidden`}>
+                            <span className="text-xs text-gray-600 truncate block" title={m.by}>{m.by}</span>
+                          </td>
+
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* ── Desktop Pagination ── */}
+            <div className="px-5 py-4 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="flex flex-col sm:flex-row items-center gap-4">
+                <span className="text-sm text-gray-700">
+                  {totalElements === 0
+                    ? "No movements"
+                    : `Showing ${startItem} to ${endItem} of ${totalElements}`}
+                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-700">Rows per page:</span>
+                  <select
+                    value={rowsPerPage}
+                    onChange={(e) => { setRowsPerPage(Number(e.target.value)); resetPage(); }}
+                    className="px-3 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer text-sm"
+                  >
+                    {ROWS_PER_PAGE_OPTIONS.map((n) => <option key={n} value={n}>{n}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              {totalPages > 1 && (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page === 1 || loading}
+                    className="px-3 py-1 text-gray-600 hover:bg-gray-100 rounded cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+
+                  {[...Array(totalPages)].slice(
+                    Math.max(0, page - 3),
+                    Math.min(totalPages, page + 2)
+                  ).map((_, i) => {
+                    const p = Math.max(0, page - 3) + i + 1;
+                    return (
+                      <button
+                        key={p}
+                        onClick={() => setPage(p)}
+                        disabled={loading}
+                        className={`px-3 py-1 rounded cursor-pointer transition-all text-sm font-semibold ${p === page
+                          ? "bg-blue-500 text-white"
+                          : "text-gray-600 hover:bg-gray-100"
+                          }`}
+                      >
+                        {p}
+                      </button>
+                    );
+                  })}
+
+                  <button
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={page === totalPages || totalPages === 0 || loading}
+                    className="px-3 py-1 text-gray-600 hover:bg-gray-100 rounded cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* ── Mobile Pagination ── */}
+          <div className="lg:hidden border-t border-gray-200 px-4 py-4">
+            <div className="flex flex-col gap-4">
+              <div className="text-center text-sm text-gray-700">
+                {totalElements === 0
+                  ? "No movements"
+                  : `Showing ${startItem} to ${endItem} of ${totalElements}`}
+              </div>
+              <div className="flex items-center justify-center gap-2">
+                <span className="text-sm text-gray-700">Rows:</span>
+                <select
+                  value={rowsPerPage}
+                  onChange={(e) => { setRowsPerPage(Number(e.target.value)); resetPage(); }}
+                  className="px-3 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                >
+                  {ROWS_PER_PAGE_OPTIONS.map((n) => <option key={n} value={n}>{n}</option>)}
+                </select>
+              </div>
+              <div className="flex items-center justify-center gap-2">
                 <button
-                  onClick={() => setPage(currentPage - 1)}
-                  disabled={currentPage === 0 || loading}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:border-blue-400 hover:text-blue-600 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1 || loading}
+                  className="px-4 py-2 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
-                {pageNumbers.map((p) => (
-                  <button key={p} onClick={() => setPage(p)} disabled={loading}
-                    className={`w-8 h-8 flex items-center justify-center rounded-lg text-sm font-semibold transition ${p === currentPage ? "bg-blue-600 text-white" : "border border-gray-200 text-gray-600 hover:border-blue-400 hover:text-blue-600"
-                      }`}>
-                    {p + 1}
-                  </button>
-                ))}
+                <div className="flex items-center gap-1">
+                  {totalPages <= 5 ? (
+                    [...Array(totalPages)].map((_, idx) => (
+                      <button
+                        key={idx + 1}
+                        onClick={() => setPage(idx + 1)}
+                        className={`px-3 py-1 rounded cursor-pointer transition-all text-sm font-semibold ${page === idx + 1 ? "bg-blue-500 text-white" : "text-gray-600 hover:bg-gray-100"
+                          }`}
+                      >
+                        {idx + 1}
+                      </button>
+                    ))
+                  ) : (
+                    <>
+                      <button onClick={() => setPage(1)} className={`px-3 py-1 rounded cursor-pointer transition-all text-sm font-semibold ${page === 1 ? "bg-blue-500 text-white" : "text-gray-600 hover:bg-gray-100"}`}>1</button>
+                      {page > 3 && <span className="px-2 text-gray-400">…</span>}
+                      {page > 2 && page < totalPages - 1 && (
+                        <button onClick={() => setPage(page)} className="px-3 py-1 rounded cursor-pointer bg-blue-500 text-white text-sm font-semibold">{page}</button>
+                      )}
+                      {page < totalPages - 2 && <span className="px-2 text-gray-400">…</span>}
+                      <button onClick={() => setPage(totalPages)} className={`px-3 py-1 rounded cursor-pointer transition-all text-sm font-semibold ${page === totalPages ? "bg-blue-500 text-white" : "text-gray-600 hover:bg-gray-100"}`}>{totalPages}</button>
+                    </>
+                  )}
+                </div>
                 <button
-                  onClick={() => setPage(currentPage + 1)}
-                  disabled={currentPage >= totalPages - 1 || loading}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:border-blue-400 hover:text-blue-600 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages || totalPages === 0 || loading}
+                  className="px-4 py-2 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                 >
                   <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
-            )}
+              <div className="text-center text-sm text-gray-600">Page {page} of {totalPages}</div>
+            </div>
           </div>
-        )}
 
+        </div>
       </div>
     </div>
   );

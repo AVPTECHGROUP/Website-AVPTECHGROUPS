@@ -1,6 +1,6 @@
 import { authFetch } from "../Authfetch/Authfetch";
 
-const BASE_URL = "https://ssdev-btgphuazhza9edcu.canadacentral-01.azurewebsites.net/api/v1";
+const BASE_URL = import.meta.env.VITE_API_BASE_V1;
 
 // Get Items List (with pagination, search, filters)
 export const getItemsList = async (page = 0, size = 20, searchTerm = "", category = "", status = "") => {
@@ -23,27 +23,17 @@ export const getItemsList = async (page = 0, size = 20, searchTerm = "", categor
 };
 
 // Paginated + Search + Category + Status filter
-
 export const getStockItems = async (
   { searchTerm = "", category = "", status = "" } = {},
   page = 0,
   size = 20
 ) => {
   try {
-
     let query = `page=${page}&size=${size}`;
 
-    if (searchTerm) {
-      query += `&searchTerm=${encodeURIComponent(searchTerm)}`;
-    }
-
-    if (category) {
-      query += `&category=${encodeURIComponent(category)}`;
-    }
-
-    if (status) {
-      query += `&status=${status}`;
-    }
+    if (searchTerm) query += `&searchTerm=${encodeURIComponent(searchTerm)}`;
+    if (category) query += `&category=${encodeURIComponent(category)}`;
+    if (status) query += `&status=${status}`;
 
     const res = await authFetch(`${BASE_URL}/stock/items?${query}`, {
       method: "GET",
@@ -158,7 +148,7 @@ export const addStockInward = async (payload) => {
   try {
     const res = await authFetch(`${BASE_URL}/stock/inward`, {
       method: "POST",
-      body: JSON.stringify(payload)    // ✅ fixed: was `Bearer ${token},` with trailing comma
+      body: JSON.stringify(payload)
     });
     if (!res.ok) throw new Error("Failed to add inward stock");
     return await res.json();
@@ -194,7 +184,7 @@ export const transferStock = async (payload) => {
       body: JSON.stringify(payload),
     });
 
-    const data = await res.json(); // 👈 response read karo
+    const data = await res.json();
 
     if (!res.ok) {
       throw new Error(data?.message || "Failed to transfer stock");
@@ -206,15 +196,14 @@ export const transferStock = async (payload) => {
     throw error;
   }
 };
-// Get Stock Movement History (Audit Trail)
 
+// Get Stock Movement History (Audit Trail)
 export const getStockMovementHistory = async (
   filters = {},
   page = 0,
   size = 20
 ) => {
   try {
-
     const res = await authFetch(
       `${BASE_URL}/stock/movements/history?page=${page}&size=${size}`,
       {
@@ -279,8 +268,8 @@ export const getItemStockOverview = async (itemId) => {
     throw error;
   }
 };
-// List stock aggregated by item across all active stores (POST)
 
+// List stock aggregated by item across all active stores (POST)
 export const getStockOverview = async (
   filters = {},
   page = 0,
@@ -288,7 +277,6 @@ export const getStockOverview = async (
   sort = "id,desc"
 ) => {
   try {
-
     const res = await authFetch(`${BASE_URL}/stock/overview`, {
       method: "POST",
       body: JSON.stringify({
@@ -320,16 +308,11 @@ export const getStockOverview = async (
   }
 };
 
-// get overall stats...
-
+// Get overall stats
 export const getStockOverviewStats = async (storeId = null) => {
   try {
-
     let url = `${BASE_URL}/stock/overview/stats`;
-
-    if (storeId) {
-      url += `?storeId=${storeId}`;
-    }
+    if (storeId) url += `?storeId=${storeId}`;
 
     const res = await authFetch(url, {
       method: "GET"
@@ -341,7 +324,6 @@ export const getStockOverviewStats = async (storeId = null) => {
     }
 
     const data = await res.json();
-
     return data.data || {};
 
   } catch (error) {
@@ -351,11 +333,8 @@ export const getStockOverviewStats = async (storeId = null) => {
 };
 
 // Total Items | Active | Inactive | Categories | Low Stock Alerts
-// ===============================
-
 export const getStockItemsStats = async () => {
   try {
-
     const res = await authFetch(`${BASE_URL}/stock/items/stats`, {
       method: "GET"
     });
@@ -366,11 +345,29 @@ export const getStockItemsStats = async () => {
     }
 
     const data = await res.json();
-
     return data.data || {};
 
   } catch (error) {
     console.error("getStockItemsStats error:", error.message);
+    throw error;
+  }
+};
+
+// Get Stock Movement Stats
+export const getStockMovementStats = async (filters = {}) => {
+  try {
+    const res = await authFetch(`${BASE_URL}/stock/movements/stats`, {
+      method: "POST",
+      body: JSON.stringify(filters),
+    });
+
+    if (!res.ok) throw new Error("Failed to fetch stock movement stats");
+
+    const result = await res.json();
+    return result.data;
+
+  } catch (error) {
+    console.error("getStockMovementStats error:", error.message);
     throw error;
   }
 };

@@ -1,6 +1,6 @@
 import { authFetch } from "../Authfetch/Authfetch";
 
-const BASE_URL = "https://ssdev-btgphuazhza9edcu.canadacentral-01.azurewebsites.net/api/v1";
+const BASE_URL = import.meta.env.VITE_API_BASE_V1;
 
 // ==================== TEACHER ENDPOINTS ====================
 
@@ -16,7 +16,7 @@ export const getTeacherStatistics = async () => {
     }
     const data = await res.json();
     return data;
-  } catch (error) {                                           // ✅ fixed: was catch (e) but used error
+  } catch (error) {
     console.error("get statistics error:", error.message);
     throw error;
   }
@@ -62,7 +62,7 @@ export const createTeachers = async (teacher) => {
 export const getTeacherById = async (id) => {
   try {
     const res = await authFetch(`${BASE_URL}/teachers/${id}`, {
-      method: "GET",                                          // ✅ fixed: was "POST"
+      method: "GET",
     });
     if (!res.ok) throw new Error("Failed to fetch Teacher");
     const data = await res.json();
@@ -271,10 +271,8 @@ export const getClasses = async () => {
     const data = await res.json();
     console.log("Classes API response:", data);
     if (data.data && Array.isArray(data.data)) {
-      console.log("Returning classes from data.data:", data.data);
       return data.data;
     } else if (Array.isArray(data)) {
-      console.log("Returning classes as direct array:", data);
       return data;
     } else {
       console.warn("Unexpected classes response format:", data);
@@ -349,10 +347,8 @@ export const getSectionsByClass = async (classId) => {
     const data = await res.json();
     console.log("Sections API response:", data);
     if (data.data && Array.isArray(data.data)) {
-      console.log("Returning sections from data.data:", data.data);
       return data.data;
     } else if (Array.isArray(data)) {
-      console.log("Returning sections as direct array:", data);
       return data;
     } else {
       console.warn("Unexpected sections response format:", data);
