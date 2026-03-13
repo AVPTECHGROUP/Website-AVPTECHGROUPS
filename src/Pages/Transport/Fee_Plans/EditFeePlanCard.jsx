@@ -1,21 +1,9 @@
 import { useState, useEffect } from "react";
-import { X, CreditCard, Save, Loader2, Tag, DollarSign, RefreshCw, Ruler, AlignLeft } from "lucide-react";
+import { X, CreditCard, Save, Loader2 } from "lucide-react";
+import { toast } from "react-toastify";
+import { getActiveRoutes, updateTransportFeePlan } from "../../../Api/TransportAPI";
 
-const ROUTES = [
-  "— Generic / Distance Plan —",
-  "RT-001 – Route A (North Zone)",
-  "RT-002 – Route B (South Zone)",
-];
 const FREQUENCIES = ["MONTHLY", "QUARTERLY", "ANNUALLY", "ONE-TIME"];
-
-const EMPTY = {
-  planName: "",
-  route: "",
-  feeAmount: "",
-  frequency: "MONTHLY",
-  distanceSlab: "",
-  description: "",
-};
 
 function Field({ label, required, children }) {
   return (
@@ -33,7 +21,7 @@ const base =
   "focus:outline-none focus:ring-2 transition border-gray-200 focus:ring-blue-300 focus:border-blue-400";
 const errCls = "border-red-400 focus:ring-red-200 focus:border-red-400";
 
-function SelectInput({ value, onChange, options, hasError }) {
+function SelectInput({ value, onChange, children, hasError }) {
   return (
     <div className="relative">
       <select
@@ -41,7 +29,7 @@ function SelectInput({ value, onChange, options, hasError }) {
         onChange={onChange}
         className={`${base} appearance-none pr-9 cursor-pointer ${hasError ? errCls : ""}`}
       >
-        {options.map((o) => <option key={o} value={o}>{o}</option>)}
+        {children}
       </select>
       <svg className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none"
         fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -51,19 +39,47 @@ function SelectInput({ value, onChange, options, hasError }) {
   );
 }
 
-export default function AddFeePlanCard({ isOpen, onClose, onSave }) {
-  const [form, setForm]     = useState(EMPTY);
-  const [saving, setSaving] = useState(false);
-  const [errors, setErrors] = useState({});
+export default function EditFeePlanCard({ isOpen, onClose, onSave, plan }) {
+  const [form, setForm]                   = useState({});
+  const [saving, setSaving]               = useState(false);
+  const [errors, setErrors]               = useState({});
+  const [routes, setRoutes]               = useState([]);
+  const [loadingRoutes, setLoadingRoutes] = useState(false);
 
   useEffect(() => {
-    if (isOpen) { setForm(EMPTY); setErrors({}); }
-  }, [isOpen]);
+    if (isOpen && plan) {
+      setForm({
+        planName:       plan.planName      ?? "",
+        routeId:        plan.routeId       ?? "",
+        feeAmount:      plan.amount        ?? "",
+        frequency:      plan.frequency     ?? "MONTHLY",
+        distanceSlabKm: plan.distanceSlab && plan.distanceSlab !== "—"
+                          ? plan.distanceSlab.replace(" km", "")
+                          : "",
+        description:    plan.description   ?? "",
+      });
+      setErrors({});
+      fetchRoutes();
+    }
+  }, [isOpen, plan]);
 
   useEffect(() => {
     document.body.style.overflow = isOpen ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
   }, [isOpen]);
+
+  const fetchRoutes = async () => {
+    try {
+      setLoadingRoutes(true);
+      const data = await getActiveRoutes();
+      setRoutes(data);
+    } catch (err) {
+      console.error("Failed to fetch routes:", err);
+      toast.error("Failed to load routes. Please try again.");
+    } finally {
+      setLoadingRoutes(false);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -74,12 +90,12 @@ export default function AddFeePlanCard({ isOpen, onClose, onSave }) {
 
   const validate = () => {
     const e = {};
-    if (!form.planName.trim()) e.planName  = "Plan name is required";
-    if (!form.feeAmount)       e.feeAmount = "Fee amount is required";
+    if (!form.planName?.trim())    e.planName    = "Plan name is required";
+    if (!form.feeAmount)           e.feeAmount   = "Fee amount is required";
     else if (isNaN(Number(form.feeAmount)) || Number(form.feeAmount) <= 0)
-      e.feeAmount = "Enter a valid positive amount";
-    if (!form.frequency)       e.frequency = "Frequency is required";
-    if (!form.description.trim()) e.description = "Description is required";
+                                   e.feeAmount   = "Enter a valid positive amount";
+    if (!form.frequency)           e.frequency   = "Frequency is required";
+    if (!form.description?.trim()) e.description = "Description is required";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -87,10 +103,25 @@ export default function AddFeePlanCard({ isOpen, onClose, onSave }) {
   const handleSave = async () => {
     if (!validate()) return;
     setSaving(true);
-    await new Promise((r) => setTimeout(r, 1500));
-    onSave?.({ ...form, feeAmount: Number(form.feeAmount) });
-    setSaving(false);
-    onClose();
+    try {
+      const payload = {
+        planName:    form.planName.trim(),
+        feeAmount:   Number(form.feeAmount),
+        frequency:   form.frequency,
+        description: form.description.trim(),
+        ...(form.routeId        && { routeId:        Number(form.routeId) }),
+        ...(form.distanceSlabKm && { distanceSlabKm: Number(form.distanceSlabKm) }),
+      };
+      await updateTransportFeePlan(plan.id, payload);
+      toast.success("Fee plan updated successfully!");
+      onSave?.();
+      onClose();
+    } catch (err) {
+      console.error("Failed to update fee plan:", err);
+      toast.error("Failed to update fee plan. Please try again.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -112,7 +143,7 @@ export default function AddFeePlanCard({ isOpen, onClose, onSave }) {
             <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center">
               <CreditCard className="w-4 h-4 text-indigo-600" />
             </div>
-            <h2 className="text-lg font-bold text-gray-800">Create Fee Plan</h2>
+            <h2 className="text-lg font-bold text-gray-800">Edit Fee Plan</h2>
           </div>
           <button onClick={onClose}
             className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
@@ -123,58 +154,56 @@ export default function AddFeePlanCard({ isOpen, onClose, onSave }) {
         {/* Body */}
         <div className="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto">
 
-          {/* Plan Name + Route */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Plan Name" required>
               <input type="text" placeholder="e.g. Route C Monthly Fee"
-                value={form.planName} onChange={(e) => set("planName", e.target.value)}
+                value={form.planName ?? ""} onChange={(e) => set("planName", e.target.value)}
                 className={`${base} ${errors.planName ? errCls : ""}`} />
               {errors.planName && <p className="text-xs text-red-500 mt-0.5">{errors.planName}</p>}
             </Field>
 
             <Field label="Route (optional)">
-              <SelectInput
-                value={form.route || ROUTES[0]}
-                onChange={(e) => set("route", e.target.value === ROUTES[0] ? "" : e.target.value)}
-                options={ROUTES}
-              />
+              <SelectInput value={form.routeId ?? ""} onChange={(e) => set("routeId", e.target.value)}>
+                <option value="">— Generic / Distance Plan —</option>
+                {loadingRoutes
+                  ? <option disabled>Loading routes…</option>
+                  : routes.map((r) => (
+                      <option key={r.id} value={r.id}>{r.routeName || r.name}</option>
+                    ))
+                }
+              </SelectInput>
             </Field>
           </div>
 
-          {/* Fee Amount + Frequency */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Fee Amount" required>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-medium">₹</span>
                 <input type="number" min="0" step="0.01" placeholder="1200.00"
-                  value={form.feeAmount} onChange={(e) => set("feeAmount", e.target.value)}
+                  value={form.feeAmount ?? ""} onChange={(e) => set("feeAmount", e.target.value)}
                   className={`${base} pl-7 ${errors.feeAmount ? errCls : ""}`} />
               </div>
               {errors.feeAmount && <p className="text-xs text-red-500 mt-0.5">{errors.feeAmount}</p>}
             </Field>
 
             <Field label="Frequency" required>
-              <SelectInput
-                value={form.frequency}
-                onChange={(e) => set("frequency", e.target.value)}
-                options={FREQUENCIES}
-                hasError={!!errors.frequency}
-              />
+              <SelectInput value={form.frequency ?? "MONTHLY"} onChange={(e) => set("frequency", e.target.value)} hasError={!!errors.frequency}>
+                {FREQUENCIES.map((f) => <option key={f} value={f}>{f}</option>)}
+              </SelectInput>
               {errors.frequency && <p className="text-xs text-red-500 mt-0.5">{errors.frequency}</p>}
             </Field>
           </div>
 
-          {/* Distance Slab + Description */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Distance Slab (km)">
-              <input type="text" placeholder="5.0 (optional)"
-                value={form.distanceSlab} onChange={(e) => set("distanceSlab", e.target.value)}
+              <input type="number" min="0" step="0.1" placeholder="5.0 (optional)"
+                value={form.distanceSlabKm ?? ""} onChange={(e) => set("distanceSlabKm", e.target.value)}
                 className={base} />
             </Field>
 
             <Field label="Description" required>
-              <input type="text" placeholder="Optional description"
-                value={form.description} onChange={(e) => set("description", e.target.value)}
+              <input type="text" placeholder="Brief description"
+                value={form.description ?? ""} onChange={(e) => set("description", e.target.value)}
                 className={`${base} ${errors.description ? errCls : ""}`} />
               {errors.description && <p className="text-xs text-red-500 mt-0.5">{errors.description}</p>}
             </Field>
@@ -191,8 +220,8 @@ export default function AddFeePlanCard({ isOpen, onClose, onSave }) {
           <button onClick={handleSave} disabled={saving}
             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed text-white text-sm font-semibold px-5 py-2 rounded-lg transition-colors">
             {saving
-              ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</>
-              : <><Save className="w-4 h-4" /> Save Plan</>
+              ? <><Loader2 className="w-4 h-4 animate-spin" /> Updating…</>
+              : <><Save className="w-4 h-4" /> Update Plan</>
             }
           </button>
         </div>

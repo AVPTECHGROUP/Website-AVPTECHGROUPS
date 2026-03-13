@@ -48,16 +48,16 @@ import Transactions from '../Pages/Stock/Transactions';
 import Movement from '../Pages/Stock/Movement';
 import ClassConfig from '../Pages/Stock/ClassConfig';
 import StudentOrders from '../Pages/Stock/StudentOrders';
+import CreateStudentOrder from '../Pages/Stock/CreateStudentOrder';
+import EditStudentOrder from '../Pages/Stock/EditStudentOrder';
 // Transport Routes
 import Transport_Management from '../Pages/Transport/Transport_Management';
 import Vehicles from '../Pages/Transport/Vehicles';
-import Fee_Plans from '../Pages/Transport/Fee_Plans';
+import Fee_Plans from '../Pages/Transport/Fee_Plans/Fee_Plans';
 import Driver_Attendants from '../Pages/Transport/Driver_Attendants';
-import Reports from '../Pages/Transport/Reports';
-import Student_Allocations from '../Pages/Transport/Student_Allocations';
+import Reports from '../Pages/Transport/Reports/Reports';
+import Student_Allocations from '../Pages/Transport/Student_Allocation/Student_Allocations';
 import Routes_Manage from '../Pages/Transport/Routes_Manage';
-import CreateStudentOrder from '../Pages/Stock/CreateStudentOrder';
-import EditStudentOrder from '../Pages/Stock/EditStudentOrder';
 
 const MainRoutes = () => {
   const isTokenExist = localStorage.getItem('token');

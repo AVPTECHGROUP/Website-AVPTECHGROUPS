@@ -5,11 +5,11 @@ import {
   RefreshCw, CheckCircle, XCircle, MapPin, Bus, CreditCard,
   Calendar, Hash,
 } from "lucide-react";
-import ActionDropDownComp from "../../Components/CommonComp/ActionDropDownComp";
-import AllocateStudentCard from "../../Components/Transport/AllocateStudentCards";
-import EditAllocateStudentCards from "../../Components/Transport/EditAllocateStudentCards";
-import ListLoader from "../../Components/CommonComp/ListLoader";
-import { getTransportAllocations, deleteTransportAllocation  } from "../../Api/TransportAPI";
+import ActionDropDownComp from "../../../Components/CommonComp/ActionDropDownComp";
+import AllocateStudentCard from "./AllocateStudentCards";
+import EditAllocateStudentCards from "./EditAllocateStudentCards";
+import ListLoader from "../../../Components/CommonComp/ListLoader";
+import { getTransportAllocations, deleteTransportAllocation  } from "../../../Api/TransportAPI";
 
 // ─── Type badge colours ───────────────────────────────────────────
 const typeColors = {
