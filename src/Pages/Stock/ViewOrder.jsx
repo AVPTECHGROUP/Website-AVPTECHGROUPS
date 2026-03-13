@@ -30,124 +30,142 @@ function fmtRupee(val) {
   return `₹${Number(val).toFixed(2)}`;
 }
 
+/* ─── Print styles ─────────────────────────────────────────────────────────── */
 const PRINT_STYLES = `
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     font-family: 'Segoe UI', Arial, sans-serif;
     background: #fff;
     color: #000;
-    padding: 2px 6px;
+    padding: 0;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
 
-  .slip {
+  /* 3 slips side by side, filling the full width */
+  .slips-row {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
     width: 100%;
-    border: 1px solid #aaa;
-    border-radius: 3px;
-    padding: 4px 7px;
+    gap: 0;
+  }
+
+  /* Each slip: equal width, no extra margin/padding waste */
+  .slip {
+    flex: 1 1 0;
+    min-width: 0;
+    border: 1px solid #999;
+    padding: 4px 5px;
     page-break-inside: avoid;
   }
 
+  /* Vertical dashed cut line between slips */
   .cut {
+    width: 8px;
+    align-self: stretch;
     display: flex;
     align-items: center;
-    gap: 4px;
-    margin: 2px 0;
-    color: #555;
-    font-size: 6.5px;
-    letter-spacing: 0.1em;
+    justify-content: center;
+    flex-shrink: 0;
+    position: relative;
   }
-  .cut-rule { flex: 1; border-top: 1px dashed #aaa; }
+  .cut::before {
+    content: '';
+    position: absolute;
+    top: 0; bottom: 0;
+    left: 50%;
+    border-left: 1px dashed #bbb;
+  }
+  .cut-label {
+    writing-mode: vertical-lr;
+    font-size: 5px;
+    color: #aaa;
+    letter-spacing: 0.1em;
+    background: #fff;
+    padding: 2px 0;
+    z-index: 1;
+    position: relative;
+  }
 
   .hdr {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
     border-bottom: 1.5px solid #000;
     padding-bottom: 3px;
     margin-bottom: 3px;
+    gap: 2px;
   }
-  .order-id  { font-size: 10px; font-weight: 800; color: #000; }
-  .order-sub { font-size: 7px; color: #000; }
-  .hdr-right { display: flex; align-items: center; gap: 4px; }
+  .order-id  { font-size: 9px; font-weight: 800; color: #000; }
+  .order-sub { font-size: 6px; color: #555; margin-top: 1px; }
+  .hdr-right { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
 
-  .pill { font-size: 6.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; padding: 1px 5px; border-radius: 999px; border: 1px solid #000; color: #000; }
-  .chip { font-size: 6.5px; font-weight: 700; padding: 1px 5px; border-radius: 999px; border: 1px solid #000; color: #000; }
-  .pdate { font-size: 6.5px; color: #000; }
+  .pill  { font-size: 6px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; padding: 1px 4px; border-radius: 999px; border: 1px solid #000; color: #000; display: inline-block; }
+  .chip  { font-size: 6px; font-weight: 700; padding: 1px 4px; border-radius: 999px; border: 1px solid #555; color: #333; display: inline-block; }
+  .pdate { font-size: 5.5px; color: #777; }
 
-  .meta { display: flex; gap: 4px; margin-bottom: 3px; }
+  .meta { display: flex; flex-direction: column; gap: 2px; margin-bottom: 3px; }
+  .meta-row { display: flex; flex-direction: row; gap: 2px; }
   .meta-box {
-    flex: 1; min-width: 0;
-    background: #f5f5f5; border: 1px solid #ccc;
-    border-radius: 2px; padding: 2px 5px;
+    background: #f5f5f5; border: 1px solid #ddd;
+    padding: 2px 4px;
   }
-  .meta-box .lbl {
-    font-size: 6px; font-weight: 800; text-transform: uppercase;
-    letter-spacing: 0.07em; color: #000; margin-bottom: 1px;
-  }
-  .meta-box .val { font-size: 8px; font-weight: 700; color: #000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .meta-box .sub { font-size: 6.5px; color: #000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .meta-box .lbl { font-size: 5.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; color: #777; margin-bottom: 1px; }
+  .meta-box .val { font-size: 7.5px; font-weight: 700; color: #000; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .meta-box .sub { font-size: 6px; color: #444; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
   .remarks {
-    background: #f5f5f5; border: 1px solid #bbb;
-    border-radius: 2px; padding: 2px 5px;
-    font-size: 7px; color: #000; margin-bottom: 3px;
+    background: #fffbea; border: 1px solid #e5d68a;
+    padding: 2px 4px; font-size: 6.5px; color: #333; margin-bottom: 3px;
   }
   .remarks b { font-weight: 700; }
 
-  .tbl-lbl { font-size: 6.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.07em; color: #000; margin-bottom: 1px; }
+  .tbl-lbl { font-size: 6px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; color: #555; margin-bottom: 1px; }
   table { width: 100%; border-collapse: collapse; }
-  thead tr { background: #333; color: #fff; }
-  thead th { padding: 2px 5px; text-align: left; font-size: 6.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; }
+  thead tr { background: #222; color: #fff; }
+  thead th { padding: 2px 4px; text-align: left; font-size: 6px; font-weight: 700; text-transform: uppercase; white-space: nowrap; }
   thead th.c { text-align: center; }
   thead th.r { text-align: right; }
-  tbody tr:nth-child(even) { background: #f5f5f5; }
-  tbody td { padding: 1.5px 5px; border-bottom: 1px solid #ddd; font-size: 7.5px; color: #000; vertical-align: middle; }
+  tbody tr:nth-child(even) { background: #f7f7f7; }
+  tbody td { padding: 1.5px 4px; border-bottom: 1px solid #e8e8e8; font-size: 7px; color: #000; vertical-align: middle; }
   tbody td.c { text-align: center; font-weight: 700; }
   tbody td.r { text-align: right; }
-  .icode { font-size: 7px; color: #000; font-weight: 400; margin-left: 4px; }
+  .icode { font-size: 6px; color: #666; margin-left: 3px; }
 
-  .foot {
-    display: flex; align-items: flex-end;
-    justify-content: space-between;
-    margin-top: 3px; gap: 8px;
-  }
+  .foot { display: flex; align-items: flex-end; justify-content: space-between; margin-top: 3px; gap: 4px; }
   .summary {
-    display: flex; gap: 8px; align-items: center;
-    background: #f5f5f5; border: 1px solid #ccc;
-    border-radius: 2px; padding: 2px 6px;
-    font-size: 7px; color: #000; white-space: nowrap;
+    background: #f5f5f5; border: 1px solid #ddd;
+    padding: 2px 4px; font-size: 6.5px; color: #333;
   }
   .summary b { color: #000; }
-  .sigs { display: flex; gap: 10px; flex: 1; justify-content: flex-end; }
-  .sig  { text-align: center; min-width: 52px; }
+
+  .sigs { display: flex; gap: 8px; flex: 1; justify-content: flex-end; }
+  .sig  { text-align: center; min-width: 48px; }
   .sig-line { border-bottom: 1px solid #555; height: 10px; margin-bottom: 1px; }
-  .sig-lbl  { font-size: 5.5px; color: #000; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+  .sig-lbl  { font-size: 5px; color: #333; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
 
   @media print {
-    @page { margin: 6mm; size: A4 portrait; }
+    @page { margin: 4mm; size: A4 landscape; }
     body  { padding: 0; }
   }
 `;
 
-function buildSlip(o, copyType, items, total, rawStatus) {
-  const sigLabel = copyType === "Parent" ? "Parent/Guardian" : copyType;
+/* ─── Build a single slip ───────────────────────────────────────────────────── */
+function buildSlip(o, copyType, items, total, rawStatus, gstNumber) {
+  const sigLabel = copyType === "Parent" ? "Parent / Guardian" : copyType;
 
   const itemRows = items.length === 0
-    ? `<tr><td colspan="5" style="text-align:center;color:#000;padding:3px 0">No items</td></tr>`
+    ? `<tr><td colspan="4" style="text-align:center;color:#555;padding:4px 0">No items</td></tr>`
     : items.map((item, idx) => {
         const name      = item.itemName || item.name || `Item #${item.itemId || idx}`;
         const code      = item.itemCode || item.code || "";
-        const qty       = item.quantity || item.qty || 0;
-        const unit      = item.itemUnit || item.unit || "—";
+        const qty       = item.quantity  || item.qty  || 0;
         const unitPrice = item.unitPriceSnapshot != null ? `₹${Number(item.unitPriceSnapshot).toFixed(2)}` : "—";
         const lineTotal = item.lineTotal          != null ? `₹${Number(item.lineTotal).toFixed(2)}`         : "—";
         return `<tr>
           <td>${name}${code ? `<span class="icode">(${code})</span>` : ""}</td>
           <td class="c">${qty}</td>
-          <td class="c">${item.availableQuantitySnapshot ?? "—"}</td>
-          <td class="r">${unit}</td>
           <td class="r">${unitPrice}</td>
           <td class="r">${lineTotal}</td>
         </tr>`;
@@ -170,25 +188,25 @@ function buildSlip(o, copyType, items, total, rawStatus) {
       </div>
 
       <div class="meta">
-        <div class="meta-box">
-          <div class="lbl">Student</div>
-          <div class="val">${o.studentName || "—"}</div>
-          ${o.admissionNumber ? `<div class="sub">ADM: ${o.admissionNumber}</div>` : ""}
-          ${o.className       ? `<div class="sub">Class: ${o.className}</div>`     : ""}
+        <div class="meta-row">
+          <div class="meta-box" style="flex:1">
+            <div class="lbl">Student</div>
+            <div class="val">${o.studentName || "—"}</div>
+            ${o.admissionNumber ? `<div class="sub">ADM: ${o.admissionNumber}</div>` : ""}
+            ${o.className       ? `<div class="sub">Class: ${o.className}</div>`     : ""}
+          </div>
+          <div class="meta-box" style="flex:1">
+            <div class="lbl">Firm Name</div>
+            <div class="val">LEELA ENTERPRISES</div>
+            <div class="sub">GST: ${gstNumber || "—"}</div>
+          </div>
         </div>
-        <div class="meta-box">
-          <div class="lbl">Firm Name</div>
-          <div class="val">${o.firmName || o.companyName || "—"}</div>
-          <div class="sub">GST: ${o.gstNumber || o.gstNo || "—"}</div>
-        </div>
-        ${o.issuedByName ? `
-        <div class="meta-box">
-          <div class="lbl">Issued By</div>
-          <div class="val">${o.issuedByName}</div>
-        </div>` : ""}
-        <div class="meta-box">
-          <div class="lbl">Date</div>
-          <div class="val">${fmtDate(o.orderDate || o.createdAt)}</div>
+        <div class="meta-row">
+          <div class="meta-box" style="flex:1">
+            <div class="lbl">Issued By</div>
+            <div class="val">${o.issuedByName || "—"}</div>
+            <div class="sub">Date: ${fmtDate(o.orderDate || o.createdAt)}</div>
+          </div>
         </div>
       </div>
 
@@ -200,8 +218,6 @@ function buildSlip(o, copyType, items, total, rawStatus) {
           <tr>
             <th>Item Name</th>
             <th class="c">Qty</th>
-            <th class="c">Stock at Issue</th>
-            <th class="r">Unit</th>
             <th class="r">Unit Price</th>
             <th class="r">Line Total</th>
           </tr>
@@ -211,8 +227,6 @@ function buildSlip(o, copyType, items, total, rawStatus) {
           <tr style="border-top:1.5px solid #000;">
             <td style="font-weight:800">Order Total</td>
             <td class="c" style="font-weight:800">${total}</td>
-            <td></td>
-            <td></td>
             <td></td>
             <td class="r" style="font-weight:800;color:#1d4ed8">${orderTotal}</td>
           </tr>
@@ -226,28 +240,32 @@ function buildSlip(o, copyType, items, total, rawStatus) {
           <span>Total: <b>${orderTotal}</b></span>
         </div>
         <div class="sigs">
-          <div class="sig"><div class="sig-line"></div><div class="sig-lbl">Issued By</div></div>
-          <div class="sig"><div class="sig-line"></div><div class="sig-lbl">Store Incharge</div></div>
           <div class="sig"><div class="sig-line"></div><div class="sig-lbl">${sigLabel}</div></div>
         </div>
       </div>
     </div>`;
 }
 
-function printOrder(o) {
+/* ─── Print orchestrator ────────────────────────────────────────────────────── */
+function printOrder(o, gstNumber) {
   const rawStatus = (o.status || o.orderStatus || "").toUpperCase();
   const items     = o.items || o.orderItems || [];
   const total     = items.reduce((a, i) => a + (i.quantity || i.qty || 0), 0);
-  const copies    = ["Accountant", "Super Admin", "Parent"];
-  const CUT       = `<div class="cut"><div class="cut-rule"></div>✂ cut here<div class="cut-rule"></div></div>`;
+  const copies    = ["Accountant", "Admin", "Parent"];
 
-  const body = copies.map((copy, idx) =>
-    buildSlip(o, copy, items, total, rawStatus) + (idx < copies.length - 1 ? CUT : "")
-  ).join("");
+  const CUT = `<div class="cut"><span class="cut-label">✂ cut</span></div>`;
 
-  const win = window.open("", "_blank", "width=820,height=1050");
+  const body = `
+    <div class="slips-row">
+      ${copies.map((copy, idx) =>
+        buildSlip(o, copy, items, total, rawStatus, gstNumber) +
+        (idx < copies.length - 1 ? CUT : "")
+      ).join("")}
+    </div>`;
+
+  const win = window.open("", "_blank", "width=1100,height=800");
   win.document.write(`<!DOCTYPE html><html><head>
-    <title>Order #${o.id} - Print Copies</title>
+    <title>Order #${o.id} – Print Copies</title>
     <style>${PRINT_STYLES}</style>
   </head><body>${body}</body></html>`);
   win.document.close();
@@ -255,11 +273,13 @@ function printOrder(o) {
   setTimeout(() => { win.print(); win.close(); }, 450);
 }
 
+/* ─── Main component ────────────────────────────────────────────────────────── */
 export default function ViewStudentOrder({ isOpen, onClose, order }) {
   const [fullOrder,    setFullOrder]    = useState(null);
   const [fetchLoading, setFetchLoading] = useState(false);
   const [fetchError,   setFetchError]   = useState("");
   const [printing,     setPrinting]     = useState(false);
+  const [gstInput,     setGstInput]     = useState("");
 
   useEffect(() => {
     document.body.style.overflow = isOpen ? "hidden" : "";
@@ -292,7 +312,7 @@ export default function ViewStudentOrder({ isOpen, onClose, order }) {
   const handlePrint = () => {
     if (fetchLoading) return;
     setPrinting(true);
-    printOrder(o);
+    printOrder(o, gstInput);
     setTimeout(() => setPrinting(false), 600);
   };
 
@@ -300,6 +320,7 @@ export default function ViewStudentOrder({ isOpen, onClose, order }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
 
+      {/* Modal — no fixed max-height so it can grow; capped at 92 vh with scroll */}
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl z-10 flex flex-col max-h-[92vh] vso-anim">
         <style>{`
           @keyframes vsoIn {
@@ -309,7 +330,7 @@ export default function ViewStudentOrder({ isOpen, onClose, order }) {
           .vso-anim { animation: vsoIn .2s ease-out forwards; }
         `}</style>
 
-        {/* Header */}
+        {/* ── Header ── */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
@@ -330,13 +351,16 @@ export default function ViewStudentOrder({ isOpen, onClose, order }) {
                 <StatusIcon className="w-3.5 h-3.5" /> {sc.label}
               </span>
             )}
-            <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
+            <button
+              onClick={onClose}
+              className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+            >
               <X className="w-5 h-5" />
             </button>
           </div>
         </div>
 
-        {/* Body */}
+        {/* ── Body ── */}
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
           {fetchError && (
             <div className="flex items-center gap-2 text-xs text-orange-700 bg-orange-50 border border-orange-200 rounded-lg px-3 py-2">
@@ -364,29 +388,58 @@ export default function ViewStudentOrder({ isOpen, onClose, order }) {
                   </p>
                   <p className="text-sm font-bold text-gray-800 leading-tight">{o.studentName || "—"}</p>
                   {o.admissionNumber && <p className="text-xs text-gray-500">ADM: {o.admissionNumber}</p>}
-                  {o.className && <span className="inline-block text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded mt-0.5">{o.className}</span>}
+                  {o.className && (
+                    <span className="inline-block text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded mt-0.5">
+                      {o.className}
+                    </span>
+                  )}
                 </div>
                 <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-1">
                   <p className="text-xs text-gray-400 font-medium flex items-center gap-1 mb-2">
                     <ShoppingBag className="w-3.5 h-3.5" /> Store
                   </p>
-                  <p className="text-sm font-bold text-gray-800 leading-tight">{o.storeName || `Store #${o.storeId}` || "—"}</p>
+                  <p className="text-sm font-bold text-gray-800 leading-tight">
+                    {o.storeName || (o.storeId ? `Store #${o.storeId}` : "—")}
+                  </p>
                   {o.storeCode && <p className="text-xs text-gray-500">{o.storeCode}</p>}
                   {(o.storeLocation || o.storeAddress) && (
                     <p className="text-xs text-gray-500 flex items-start gap-1">
-                      <MapPin className="w-3 h-3 shrink-0 mt-0.5" />{o.storeLocation || o.storeAddress}
+                      <MapPin className="w-3 h-3 shrink-0 mt-0.5" />
+                      {o.storeLocation || o.storeAddress}
                     </p>
                   )}
                 </div>
               </div>
 
-              {/* Meta row */}
-              {(o.issuedByName || o.orderDate) && (
+              {/* Meta row — order date only (issued-by removed) */}
+              {o.orderDate && (
                 <div className="flex items-center gap-4 text-xs text-gray-500 bg-gray-50 border border-gray-100 rounded-xl px-4 py-2.5">
-                  {o.orderDate    && <span>📅 <span className="font-semibold text-gray-700">Order Date:</span> {fmtDate(o.orderDate)}</span>}
-                  {o.issuedByName && <span>👤 <span className="font-semibold text-gray-700">Issued by:</span> {o.issuedByName}</span>}
+                  <span>📅 <span className="font-semibold text-gray-700">Order Date:</span> {fmtDate(o.orderDate)}</span>
                 </div>
               )}
+
+              {/* Firm name + GST input */}
+              <div className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-widest mb-0.5">Firm Name</p>
+                    <p className="text-sm font-extrabold text-gray-800 tracking-wide">LEELA ENTERPRISES</p>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-1">
+                    GST Number <span className="text-gray-300 font-normal normal-case">(optional — will appear on print)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={gstInput}
+                    onChange={(e) => setGstInput(e.target.value.toUpperCase())}
+                    placeholder="e.g. 22AAAAA0000A1Z5"
+                    maxLength={15}
+                    className="w-full text-sm font-mono border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent bg-white placeholder-gray-300 tracking-widest"
+                  />
+                </div>
+              </div>
 
               {/* Remarks */}
               {o.remarks && (
@@ -396,9 +449,12 @@ export default function ViewStudentOrder({ isOpen, onClose, order }) {
                 </div>
               )}
 
-              {/* Items table */}
+              {/* Items table — 4 columns (removed Stock at Issue, Unit) */}
               <div>
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Items ({items.length})</p>
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">
+                  Items ({items.length})
+                </p>
+
                 {items.length === 0 ? (
                   <div className="text-center py-6 text-gray-400 border border-dashed border-gray-200 rounded-xl">
                     <Package className="w-8 h-8 mx-auto text-gray-200 mb-1" />
@@ -408,48 +464,34 @@ export default function ViewStudentOrder({ isOpen, onClose, order }) {
                   <>
                     {/* Column headers */}
                     <div className="grid grid-cols-12 border-b border-gray-200 pb-2 text-xs font-bold text-gray-400 uppercase tracking-wider">
-                      <span className="col-span-4">Item</span>
-                      <span className="col-span-1 text-center">Qty</span>
-                      <span className="col-span-2 text-center">Stock at Issue</span>
-                      <span className="col-span-1 text-center">Unit</span>
+                      <span className="col-span-5">Item</span>
+                      <span className="col-span-2 text-center">Qty</span>
                       <span className="col-span-2 text-right">Unit Price</span>
-                      <span className="col-span-2 text-right">Line Total</span>
+                      <span className="col-span-3 text-right">Line Total</span>
                     </div>
 
                     {/* Item rows */}
                     <div className="divide-y divide-gray-100">
                       {items.map((item, idx) => {
-                        const name          = item.itemName || item.name || `Item #${item.itemId || idx}`;
-                        const code          = item.itemCode || item.code || "";
-                        const qty           = item.quantity || item.qty || 0;
-                        const unit          = item.itemUnit || item.unit || "—";
-                        const stockSnapshot = item.availableQuantitySnapshot ?? "—";
-                        const unitPrice     = item.unitPriceSnapshot != null ? fmtRupee(item.unitPriceSnapshot) : "—";
-                        const lineTotal     = item.lineTotal          != null ? fmtRupee(item.lineTotal)         : "—";
+                        const name      = item.itemName || item.name || `Item #${item.itemId || idx}`;
+                        const code      = item.itemCode || item.code || "";
+                        const qty       = item.quantity  || item.qty  || 0;
+                        const unitPrice = item.unitPriceSnapshot != null ? fmtRupee(item.unitPriceSnapshot) : "—";
+                        const lineTotal = item.lineTotal          != null ? fmtRupee(item.lineTotal)         : "—";
 
                         return (
                           <div key={item.id || item.itemId || idx} className="grid grid-cols-12 items-center py-3">
                             {/* Item name + code */}
-                            <div className="col-span-4">
-                              <p className="text-sm font-semibold text-gray-800">
-                                {name}
-                              </p>
+                            <div className="col-span-5">
+                              <p className="text-sm font-semibold text-gray-800">{name}</p>
                               {code && <p className="text-xs text-gray-400">{code}</p>}
                             </div>
 
                             {/* Qty */}
-                            <div className="col-span-1 text-center">
-                              <span className="text-sm font-bold text-gray-800 bg-gray-100 px-2 py-1 rounded-lg">{qty}</span>
-                            </div>
-
-                            {/* Stock at Issue */}
-                            <div className="col-span-2 text-center text-sm text-gray-500">
-                              {stockSnapshot}
-                            </div>
-
-                            {/* Unit */}
-                            <div className="col-span-1 text-center text-xs text-gray-500 font-medium">
-                              {unit}
+                            <div className="col-span-2 text-center">
+                              <span className="text-sm font-bold text-gray-800 bg-gray-100 px-2 py-1 rounded-lg">
+                                {qty}
+                              </span>
                             </div>
 
                             {/* Unit Price */}
@@ -458,7 +500,7 @@ export default function ViewStudentOrder({ isOpen, onClose, order }) {
                             </div>
 
                             {/* Line Total */}
-                            <div className="col-span-2 text-right text-sm font-bold text-gray-800">
+                            <div className="col-span-3 text-right text-sm font-bold text-gray-800">
                               {lineTotal}
                             </div>
                           </div>
@@ -468,12 +510,10 @@ export default function ViewStudentOrder({ isOpen, onClose, order }) {
 
                     {/* Order Total row */}
                     <div className="grid grid-cols-12 items-center pt-3 mt-1 border-t-2 border-gray-200">
-                      <div className="col-span-4 text-sm font-bold text-gray-800">Order Total</div>
-                      <div className="col-span-1 text-center text-sm font-bold text-gray-800">{total}</div>
+                      <div className="col-span-5 text-sm font-bold text-gray-800">Order Total</div>
+                      <div className="col-span-2 text-center text-sm font-bold text-gray-800">{total}</div>
                       <div className="col-span-2" />
-                      <div className="col-span-1" />
-                      <div className="col-span-2" />
-                      <div className="col-span-2 text-right text-sm font-bold text-blue-600">
+                      <div className="col-span-3 text-right text-sm font-bold text-blue-600">
                         {o.totalAmount != null ? fmtRupee(o.totalAmount) : "—"}
                       </div>
                     </div>
@@ -506,10 +546,10 @@ export default function ViewStudentOrder({ isOpen, onClose, order }) {
           )}
         </div>
 
-        {/* Footer */}
+        {/* ── Footer ── */}
         <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 shrink-0">
           <p className="text-[10px] text-gray-400 hidden sm:block">
-            🖨️ Prints 3 copies on one A4 — Accountant · Super Admin · Parent
+            🖨️ Prints 3 copies side-by-side on A4 Landscape — Accountant · Admin · Parent
           </p>
           <div className="flex items-center gap-2 ml-auto">
             <button
