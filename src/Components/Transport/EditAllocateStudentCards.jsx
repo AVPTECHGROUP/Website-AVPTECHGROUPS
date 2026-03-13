@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { X, GraduationCap, Save, Loader2, Info, ChevronDown, Search } from "lucide-react";
-import { addTransportAllocation, getActiveRoutes, getTransportFeePlans } from "../../Api/TransportAPI";
-import { getStudents } from "../../Api/StudentsApi";
+import { X, Pencil, Save, Loader2, Info, ChevronDown, Search, X as XIcon } from "lucide-react";
+import { updateTransportAllocation, getActiveRoutes, getTransportFeePlans } from "../../Api/TransportAPI";
 
 // ─── Constants ────────────────────────────────────────────────────
 const PICKUP_TYPES = [
@@ -9,17 +8,6 @@ const PICKUP_TYPES = [
   { value: "PICKUP_ONLY", label: "PICKUP ONLY" },
   { value: "DROP_ONLY",   label: "DROP ONLY" },
 ];
-
-const EMPTY = {
-  studentId:      "",
-  routeId:        "",
-  stopId:         "",
-  pickupDropType: "BOTH",
-  effectiveFrom:  "",
-  effectiveTo:    "",
-  feePlanId:      "",
-  remarks:        "",
-};
 
 // ─── Styles ───────────────────────────────────────────────────────
 const inputBase =
@@ -70,7 +58,7 @@ function SelectInput({ value, onChange, options = [], placeholder = "— Select 
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  // Auto-focus search & scroll selected into view
+  // Auto-focus search & highlight selected
   useEffect(() => {
     if (!open) return;
     if (showSearch) setTimeout(() => searchRef.current?.focus(), 30);
@@ -78,7 +66,7 @@ function SelectInput({ value, onChange, options = [], placeholder = "— Select 
     setFocused(idx >= 0 ? idx : -1);
   }, [open]); // eslint-disable-line
 
-  // Scroll focused item
+  // Scroll focused item into view
   useEffect(() => {
     if (focused >= 0 && listRef.current) {
       listRef.current.children[focused]?.scrollIntoView({ block: "nearest" });
@@ -127,10 +115,12 @@ function SelectInput({ value, onChange, options = [], placeholder = "— Select 
         }
       </button>
 
-      {/* Dropdown panel — rendered in a portal-like absolute, z-[9999] ensures it floats above modal body */}
+      {/* Dropdown panel */}
       {open && !isDisabled && (
-        <div className="absolute left-0 right-0 z-9999 mt-1.5 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden"
-          style={{ animation: "dropIn 0.14s ease-out forwards", transformOrigin: "top" }}>
+        <div
+          className="absolute left-0 right-0 z-[9999] mt-1.5 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden"
+          style={{ animation: "dropIn 0.14s ease-out forwards", transformOrigin: "top" }}
+        >
           <style>{`
             @keyframes dropIn {
               from { opacity:0; transform: translateY(-6px) scaleY(0.95); }
@@ -163,14 +153,12 @@ function SelectInput({ value, onChange, options = [], placeholder = "— Select 
 
           {/* List */}
           <ul ref={listRef} className="overflow-y-auto overscroll-contain" style={{ maxHeight: "220px" }} role="listbox">
-            {/* Placeholder option */}
             {!query && (
               <li onClick={() => select("")}
                 className={`px-3 py-2.5 text-sm cursor-pointer transition-colors ${!value ? "bg-blue-50 text-blue-600 font-medium" : "text-gray-400 hover:bg-gray-50"}`}>
                 {placeholder}
               </li>
             )}
-
             {filtered.length === 0
               ? <li className="px-3 py-6 text-xs text-center text-gray-400">No results found</li>
               : filtered.map((o, i) => {
@@ -181,9 +169,9 @@ function SelectInput({ value, onChange, options = [], placeholder = "— Select 
                       role="option" aria-selected={isSel}
                       className={[
                         "px-3 py-2.5 text-sm cursor-pointer transition-colors",
-                        isSel              ? "bg-blue-50 text-blue-700 font-semibold" : "text-gray-700",
-                        isFoc && !isSel    ? "bg-gray-100" : "",
-                        !isSel && !isFoc   ? "hover:bg-gray-50" : "",
+                        isSel            ? "bg-blue-50 text-blue-700 font-semibold" : "text-gray-700",
+                        isFoc && !isSel  ? "bg-gray-100" : "",
+                        !isSel && !isFoc ? "hover:bg-gray-50" : "",
                       ].join(" ")}>
                       {o.label}
                     </li>
@@ -192,7 +180,6 @@ function SelectInput({ value, onChange, options = [], placeholder = "— Select 
             }
           </ul>
 
-          {/* Footer count */}
           {filtered.length > 0 && (
             <div className="px-3 py-1.5 border-t border-gray-100 text-xs text-gray-400 text-right">
               {filtered.length} option{filtered.length !== 1 ? "s" : ""}
@@ -205,48 +192,50 @@ function SelectInput({ value, onChange, options = [], placeholder = "— Select 
 }
 
 // ─── Main Component ───────────────────────────────────────────────
-export default function AllocateStudentCard({ isOpen, onClose, onSave }) {
-  const [form,     setForm]     = useState(EMPTY);
+/**
+ * Props:
+ *  isOpen    – boolean
+ *  onClose   – () => void
+ *  onUpdate  – () => void   called after successful PUT
+ *  editData  – allocation object from GET /allocations (required when open)
+ */
+export default function EditAllocateStudentCards({ isOpen, onClose, onUpdate, editData }) {
+  const [form,     setForm]     = useState({});
   const [saving,   setSaving]   = useState(false);
   const [errors,   setErrors]   = useState({});
   const [apiError, setApiError] = useState("");
 
-  const [students,  setStudents]  = useState([]);
   const [routes,    setRoutes]    = useState([]);
   const [feePlans,  setFeePlans]  = useState([]);
   const [stops,     setStops]     = useState([]);
 
-  const [loadingStudents, setLoadingStudents] = useState(false);
   const [loadingRoutes,   setLoadingRoutes]   = useState(false);
   const [loadingFeePlans, setLoadingFeePlans] = useState(false);
 
-  // Fetch on open
+  // Populate + fetch on open
   useEffect(() => {
-    if (!isOpen) return;
-    setForm(EMPTY);
+    if (!isOpen || !editData) return;
     setErrors({});
     setApiError("");
-    setStops([]);
+    setForm({
+      studentId:      editData.studentId      ?? "",
+      routeId:        editData.routeId        ?? "",
+      stopId:         editData.stopId         ?? "",
+      pickupDropType: editData.pickupDropType ?? "BOTH",
+      effectiveFrom:  editData.effectiveFrom  ?? "",
+      effectiveTo:    editData.effectiveTo    ?? "",
+      feePlanId:      editData.feePlanId      ?? "",
+      remarks:        editData.remarks        ?? "",
+    });
 
-    const fetchAll = async () => {
-      setLoadingStudents(true);
+    const fetchDropdowns = async () => {
       setLoadingRoutes(true);
       setLoadingFeePlans(true);
 
-      const [studRes, routeRes, feeRes] = await Promise.allSettled([
-        getStudents(0, 200, "id"),
+      const [routeRes, feeRes] = await Promise.allSettled([
         getActiveRoutes(),
         getTransportFeePlans(),
       ]);
-
-      if (studRes.status === "fulfilled") {
-        const list = studRes.value?.data || studRes.value || [];
-        setStudents(list.map((s) => ({
-          value: s.id,
-          label: `${s.admissionNumber ? `[${s.admissionNumber}] ` : ""}${s.fullName || `${s.firstName} ${s.lastName}`}${s.className ? ` — ${s.className}${s.sectionName ? " " + s.sectionName : ""}` : ""}`,
-        })));
-      }
-      setLoadingStudents(false);
 
       if (routeRes.status === "fulfilled") setRoutes(routeRes.value || []);
       setLoadingRoutes(false);
@@ -260,12 +249,12 @@ export default function AllocateStudentCard({ isOpen, onClose, onSave }) {
       setLoadingFeePlans(false);
     };
 
-    fetchAll();
-  }, [isOpen]);
+    fetchDropdowns();
+  }, [isOpen, editData]);
 
-  // Derive stops from selected route
+  // Derive stops when route changes
   useEffect(() => {
-    if (!form.routeId) { setStops([]); return; }
+    if (!form.routeId || routes.length === 0) return;
     const route = routes.find((r) => String(r.id) === String(form.routeId));
     setStops((route?.stops || []).map((s) => ({
       value: s.id,
@@ -273,12 +262,23 @@ export default function AllocateStudentCard({ isOpen, onClose, onSave }) {
     })));
   }, [form.routeId, routes]);
 
+  // Also set stops on initial load
+  useEffect(() => {
+    if (routes.length > 0 && editData?.routeId) {
+      const route = routes.find((r) => String(r.id) === String(editData.routeId));
+      setStops((route?.stops || []).map((s) => ({
+        value: s.id,
+        label: `${s.stopName}${s.locationAddress ? ` — ${s.locationAddress}` : ""}`,
+      })));
+    }
+  }, [routes, editData]);
+
   useEffect(() => {
     document.body.style.overflow = isOpen ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
   }, [isOpen]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !editData) return null;
 
   const set = (k, v) => {
     setForm((p) => ({ ...p, [k]: v, ...(k === "routeId" ? { stopId: "" } : {}) }));
@@ -288,7 +288,6 @@ export default function AllocateStudentCard({ isOpen, onClose, onSave }) {
 
   const validate = () => {
     const e = {};
-    if (!form.studentId)      e.studentId      = "Please select a student";
     if (!form.routeId)        e.routeId        = "Please select a route";
     if (!form.stopId)         e.stopId         = "Please select a stop";
     if (!form.pickupDropType) e.pickupDropType = "Please select pickup/drop type";
@@ -303,7 +302,7 @@ export default function AllocateStudentCard({ isOpen, onClose, onSave }) {
     setSaving(true);
     setApiError("");
     try {
-      await addTransportAllocation({
+      await updateTransportAllocation(editData.id, {
         studentId:      Number(form.studentId),
         routeId:        Number(form.routeId),
         stopId:         Number(form.stopId),
@@ -313,7 +312,7 @@ export default function AllocateStudentCard({ isOpen, onClose, onSave }) {
         feePlanId:      Number(form.feePlanId),
         remarks:        form.remarks || null,
       });
-      onSave?.();
+      onUpdate?.();
       onClose();
     } catch (err) {
       setApiError(err?.message || "Something went wrong. Please try again.");
@@ -329,9 +328,9 @@ export default function AllocateStudentCard({ isOpen, onClose, onSave }) {
       <div className="absolute inset-0 bg-black/25 backdrop-blur-[1px]" onClick={!saving ? onClose : undefined} />
 
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl z-10 flex flex-col max-h-[92vh]"
-        style={{ animation: "allocIn 0.22s ease-out forwards" }}>
+        style={{ animation: "editIn 0.22s ease-out forwards" }}>
         <style>{`
-          @keyframes allocIn {
+          @keyframes editIn {
             from { opacity:0; transform:scale(0.96) translateY(14px); }
             to   { opacity:1; transform:scale(1) translateY(0); }
           }
@@ -340,12 +339,14 @@ export default function AllocateStudentCard({ isOpen, onClose, onSave }) {
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-purple-50 flex items-center justify-center">
-              <GraduationCap className="w-5 h-5 text-purple-600" />
+            <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center">
+              <Pencil className="w-5 h-5 text-blue-600" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-gray-900">Allocate Student to Transport</h2>
-              <p className="text-xs text-gray-400 mt-0.5">Assign a student to a route, stop and fee plan</p>
+              <h2 className="text-base font-bold text-gray-900">Edit Transport Allocation</h2>
+              <p className="text-xs text-gray-400 mt-0.5">
+                Editing allocation for <span className="font-semibold text-gray-600">{editData.studentName}</span>
+              </p>
             </div>
           </div>
           <button onClick={!saving ? onClose : undefined} disabled={saving}
@@ -354,13 +355,13 @@ export default function AllocateStudentCard({ isOpen, onClose, onSave }) {
           </button>
         </div>
 
-        {/* Scrollable body — overflow visible so dropdowns can escape */}
+        {/* Scrollable body */}
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5" style={{ overflowX: "visible" }}>
 
-          {/* Info banner */}
-          <div className="flex items-start gap-2.5 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-xs text-blue-700">
-            <Info className="w-4 h-4 shrink-0 mt-0.5 text-blue-500" />
-            <span>Vehicle capacity is validated automatically. A student can only have one active transport allocation.</span>
+          {/* Amber info */}
+          <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-xs text-amber-700">
+            <Info className="w-4 h-4 shrink-0 mt-0.5 text-amber-500" />
+            <span>Changes to route or stop will take effect immediately. Student cannot be changed after allocation.</span>
           </div>
 
           {/* API error */}
@@ -371,13 +372,16 @@ export default function AllocateStudentCard({ isOpen, onClose, onSave }) {
             </div>
           )}
 
-          {/* Student | Route */}
+          {/* Student (read-only) | Route */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label="Student" required>
-              <SelectInput value={form.studentId} onChange={(e) => set("studentId", e.target.value)}
-                options={students} placeholder="— Select Student —"
-                hasError={!!errors.studentId} loading={loadingStudents} />
-              {errors.studentId && <p className="text-xs text-red-500 mt-0.5">{errors.studentId}</p>}
+            <Field label="Student">
+              <div className={`${inputBase} ${disCls} flex flex-col justify-center min-h-[42px]`}>
+                <span className="font-semibold text-gray-700">{editData.studentName}</span>
+                {editData.admissionNumber && (
+                  <span className="text-xs text-gray-400 mt-0.5">Adm: {editData.admissionNumber}</span>
+                )}
+              </div>
+              <p className="text-xs text-gray-400 mt-0.5">Student cannot be changed after allocation</p>
             </Field>
             <Field label="Route" required>
               <SelectInput value={form.routeId} onChange={(e) => set("routeId", e.target.value)}
@@ -413,7 +417,7 @@ export default function AllocateStudentCard({ isOpen, onClose, onSave }) {
               {errors.effectiveFrom && <p className="text-xs text-red-500 mt-0.5">{errors.effectiveFrom}</p>}
             </Field>
             <Field label="Effective To">
-              <input type="date" value={form.effectiveTo}
+              <input type="date" value={form.effectiveTo ?? ""}
                 onChange={(e) => set("effectiveTo", e.target.value)}
                 className={inputBase} />
             </Field>
@@ -428,12 +432,12 @@ export default function AllocateStudentCard({ isOpen, onClose, onSave }) {
               {errors.feePlanId && <p className="text-xs text-red-500 mt-0.5">{errors.feePlanId}</p>}
             </Field>
             <Field label="Remarks">
-              <input type="text" placeholder="Optional" value={form.remarks}
+              <input type="text" placeholder="Optional" value={form.remarks ?? ""}
                 onChange={(e) => set("remarks", e.target.value)} className={inputBase} />
             </Field>
           </div>
 
-          {/* Bottom padding so last dropdown isn't clipped */}
+          {/* Bottom padding */}
           <div className="h-2" />
         </div>
 
@@ -446,8 +450,8 @@ export default function AllocateStudentCard({ isOpen, onClose, onSave }) {
           <button onClick={handleSubmit} disabled={saving}
             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed text-white text-sm font-semibold px-5 py-2 rounded-lg transition-colors shadow-sm">
             {saving
-              ? <><Loader2 className="w-4 h-4 animate-spin" /> Allocating…</>
-              : <><Save className="w-4 h-4" /> Allocate</>
+              ? <><Loader2 className="w-4 h-4 animate-spin" /> Updating…</>
+              : <><Save className="w-4 h-4" /> Update Allocation</>
             }
           </button>
         </div>
