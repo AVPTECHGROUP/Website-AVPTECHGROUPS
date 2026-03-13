@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { X, Pencil, Save, Loader2, Info, ChevronDown, Search, X as XIcon } from "lucide-react";
-import { updateTransportAllocation, getActiveRoutes, getTransportFeePlans } from "../../Api/TransportAPI";
+import { updateTransportAllocation, getActiveRoutes, getTransportFeePlans } from "../../../Api/TransportAPI";
 
 // ─── Constants ────────────────────────────────────────────────────
 const PICKUP_TYPES = [
@@ -118,7 +118,7 @@ function SelectInput({ value, onChange, options = [], placeholder = "— Select 
       {/* Dropdown panel */}
       {open && !isDisabled && (
         <div
-          className="absolute left-0 right-0 z-[9999] mt-1.5 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden"
+          className="absolute left-0 right-0 z-9999 mt-1.5 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden"
           style={{ animation: "dropIn 0.14s ease-out forwards", transformOrigin: "top" }}
         >
           <style>{`
@@ -375,7 +375,7 @@ export default function EditAllocateStudentCards({ isOpen, onClose, onUpdate, ed
           {/* Student (read-only) | Route */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Student">
-              <div className={`${inputBase} ${disCls} flex flex-col justify-center min-h-[42px]`}>
+              <div className={`${inputBase} ${disCls} flex flex-col justify-center min-h-10.5`}>
                 <span className="font-semibold text-gray-700">{editData.studentName}</span>
                 {editData.admissionNumber && (
                   <span className="text-xs text-gray-400 mt-0.5">Adm: {editData.admissionNumber}</span>

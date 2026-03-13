@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { X, GraduationCap, Save, Loader2, Info, ChevronDown, Search } from "lucide-react";
-import { addTransportAllocation, getActiveRoutes, getTransportFeePlans } from "../../Api/TransportAPI";
-import { getStudents } from "../../Api/StudentsApi";
+import { addTransportAllocation, getActiveRoutes, getTransportFeePlans } from "../../../Api/TransportAPI";
+import { getStudents } from "../../../Api/StudentsApi";
 
 // ─── Constants ────────────────────────────────────────────────────
 const PICKUP_TYPES = [

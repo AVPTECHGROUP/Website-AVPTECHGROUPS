@@ -492,3 +492,219 @@ export const getTransportFeePlans = async () => {
     throw error;
   }
 };
+
+// Create Fee Plan
+export const addTransportFeePlan = async (feePlanData) => {
+  try {
+    const res = await authFetch(`${BASE_URL}/transport/fee-plans`, {
+      method: "POST",
+      body: JSON.stringify(feePlanData),
+    });
+
+    if (!res.ok) throw new Error("Failed to create fee plan");
+
+    return await res.json();
+  } catch (error) {
+    console.error("addTransportFeePlan error:", error);
+    throw error;
+  }
+};
+
+// Update Fee Plan
+export const updateTransportFeePlan = async (id, feePlanData) => {
+  try {
+    const res = await authFetch(`${BASE_URL}/transport/fee-plans/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(feePlanData),
+    });
+
+    if (!res.ok) throw new Error("Failed to update fee plan");
+
+    return await res.json();
+  } catch (error) {
+    console.error("updateTransportFeePlan error:", error);
+    throw error;
+  }
+};
+
+// Activate Fee Plan
+export const activateTransportFeePlan = async (id) => {
+  try {
+    const res = await authFetch(
+      `${BASE_URL}/transport/fee-plans/${id}/activate`,
+      {
+        method: "PATCH",
+      }
+    );
+
+    if (!res.ok) throw new Error("Failed to activate fee plan");
+
+    return await res.json();
+  } catch (error) {
+    console.error("activateTransportFeePlan error:", error);
+    throw error;
+  }
+};
+
+// Deactivate Fee Plan
+export const deactivateTransportFeePlan = async (id) => {
+  try {
+    const res = await authFetch(
+      `${BASE_URL}/transport/fee-plans/${id}/deactivate`,
+      {
+        method: "PATCH",
+      }
+    );
+
+    if (!res.ok) throw new Error("Failed to deactivate fee plan");
+
+    return await res.json();
+  } catch (error) {
+    console.error("deactivateTransportFeePlan error:", error);
+    throw error;
+  }
+};
+
+export const getFeePlansByRoute = async (routeId) => {
+  try {
+    const res = await authFetch(
+      `${BASE_URL}/transport/fee-plans/route/${routeId}`,
+      {
+        method: "GET",
+      }
+    );
+
+    if (!res.ok) throw new Error("Failed to fetch fee plans for route");
+
+    const data = await res.json();
+    return data.data || [];
+  } catch (error) {
+    console.error("getFeePlansByRoute error:", error);
+    throw error;
+  }
+};
+
+export const getRouteStudentsReport = async (routeId) => {
+  try {
+    const res = await authFetch(
+      `${BASE_URL}/transport/reports/routes/${routeId}/students`,
+      {
+        method: "GET",
+      }
+    );
+
+    if (!res.ok) throw new Error("Failed to fetch route students report");
+
+    const data = await res.json();
+
+    return data.data || {};
+  } catch (error) {
+    console.error("getRouteStudentsReport error:", error);
+    throw error;
+  }
+};
+
+// Get Route-wise Student Report (All Routes)
+export const getAllRoutesStudentsReport = async () => {
+  try {
+    const res = await authFetch(
+      `${BASE_URL}/transport/reports/routes/students`,
+      {
+        method: "GET",
+      }
+    );
+
+    if (!res.ok) throw new Error("Failed to fetch routes students report");
+
+    const data = await res.json();
+
+    return data.data || [];
+  } catch (error) {
+    console.error("getAllRoutesStudentsReport error:", error);
+    throw error;
+  }
+};
+
+// Get Staff Assignment Report
+export const getStaffAssignmentReport = async ({
+  role = "",
+  onlyExpiring = false,
+} = {}) => {
+  try {
+    const params = new URLSearchParams({
+      ...(role && { role }),
+      onlyExpiring,
+    });
+
+    const res = await authFetch(
+      `${BASE_URL}/transport/reports/staff/assignments?${params}`,
+      {
+        method: "GET",
+      }
+    );
+
+    if (!res.ok) throw new Error("Failed to fetch staff assignment report");
+
+    const data = await res.json();
+
+    return data.data || [];
+  } catch (error) {
+    console.error("getStaffAssignmentReport error:", error);
+    throw error;
+  }
+};
+
+// Get Vehicle Capacity Utilization Report
+export const getVehicleCapacityUtilizationReport = async ({
+  onlyOverCapacity = false,
+  expiringSoonDays = 30,
+} = {}) => {
+  try {
+    const params = new URLSearchParams({
+      onlyOverCapacity,
+      expiringSoonDays,
+    });
+
+    const res = await authFetch(
+      `${BASE_URL}/transport/reports/vehicles/capacity?${params}`,
+      {
+        method: "GET",
+      }
+    );
+
+    if (!res.ok)
+      throw new Error("Failed to fetch vehicle capacity report");
+
+    const data = await res.json();
+
+    return data.data || [];
+  } catch (error) {
+    console.error("getVehicleCapacityUtilizationReport error:", error);
+    throw error;
+  }
+};
+
+// Get Student Transport Fee Report
+export const getTransportFeeReport = async ({ routeId } = {}) => {
+  try {
+    const params = new URLSearchParams({
+      ...(routeId && { routeId }),
+    });
+
+    const res = await authFetch(
+      `${BASE_URL}/transport/reports/fees${params.toString() ? `?${params}` : ""}`,
+      {
+        method: "GET",
+      }
+    );
+
+    if (!res.ok) throw new Error("Failed to fetch transport fee report");
+
+    const data = await res.json();
+
+    return data.data || {};
+  } catch (error) {
+    console.error("getTransportFeeReport error:", error);
+    throw error;
+  }
+};
