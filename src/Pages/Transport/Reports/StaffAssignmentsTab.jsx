@@ -139,9 +139,8 @@ export default function StaffAssignmentsTab() {
             exportToCSV(data);
             toast.success("CSV exported successfully!");
           }}
-          className="inline-flex items-center gap-1.5 border border-gray-200 text-gray-600 text-xs font-semibold px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer w-fit"
-        >
-          <Download className="w-3.5 h-3.5" /> Export
+          className="inline-flex items-center gap-1.5 border border-gray-200 text-gray-600 text-xs font-semibold px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer w-fit">
+          <Download className="w-3.5 h-3.5" /> Export CSV
         </button>
       </div>
 
