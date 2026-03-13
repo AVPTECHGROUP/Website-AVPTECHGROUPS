@@ -124,7 +124,7 @@ export const getActiveVehicles = async () => {
 // Get Transport Allocations
 export const getTransportAllocations = async ({
   page = 0,
-  size = 20,
+  size = 10,
   routeId,
   stopId,
 } = {}) => {
@@ -401,6 +401,94 @@ export const deleteRouteStop = async (routeId, stopId) => {
     return await res.json();
   } catch (error) {
     console.error("deleteRouteStop error:", error);
+    throw error;
+  }
+};
+
+// Get Allocation By ID
+export const getTransportAllocationById = async (id) => {
+  try {
+    const res = await authFetch(`${BASE_URL}/transport/allocations/${id}`, {
+      method: "GET",
+    });
+
+    if (!res.ok) throw new Error("Failed to fetch allocation");
+
+    return await res.json();
+  } catch (error) {
+    console.error("getTransportAllocationById error:", error);
+    throw error;
+  }
+};
+
+
+// Allocate Student to Route
+export const addTransportAllocation = async (allocationData) => {
+  try {
+    const res = await authFetch(`${BASE_URL}/transport/allocations`, {
+      method: "POST",
+      body: JSON.stringify(allocationData),
+    });
+
+    if (!res.ok) throw new Error("Failed to allocate student");
+
+    return await res.json();
+  } catch (error) {
+    console.error("addTransportAllocation error:", error);
+    throw error;
+  }
+};
+
+
+// Update Allocation
+export const updateTransportAllocation = async (id, allocationData) => {
+  try {
+    const res = await authFetch(`${BASE_URL}/transport/allocations/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(allocationData),
+    });
+
+    if (!res.ok) throw new Error("Failed to update allocation");
+
+    return await res.json();
+  } catch (error) {
+    console.error("updateTransportAllocation error:", error);
+    throw error;
+  }
+};
+
+
+// Deallocate Student (Soft Delete)
+export const deleteTransportAllocation = async (id) => {
+  try {
+    const res = await authFetch(`${BASE_URL}/transport/allocations/${id}`, {
+      method: "DELETE",
+    });
+
+    if (!res.ok) throw new Error("Failed to delete allocation");
+
+    return await res.json();
+  } catch (error) {
+    console.error("deleteTransportAllocation error:", error);
+    throw error;
+  }
+};
+
+
+// Get All Active Transport Fee Plans
+export const getTransportFeePlans = async () => {
+  try {
+    const res = await authFetch(`${BASE_URL}/transport/fee-plans`, {
+      method: "GET",
+    });
+
+    if (!res.ok) throw new Error("Failed to fetch transport fee plans");
+
+    const data = await res.json();
+
+    return data.data || [];
+  } catch (error) {
+    console.error("getTransportFeePlans error:", error);
     throw error;
   }
 };
