@@ -178,7 +178,7 @@ function RouteStudentList() {
       {/* Header */}
       <div className="px-4 sm:px-6 py-4 sm:py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100">
         <h2 className="font-bold text-gray-900 flex items-center gap-2 text-sm sm:text-base">
-          📋 Route-wise Student List
+           Route-wise Student List
         </h2>
         <button
           onClick={() => {
@@ -240,7 +240,7 @@ function RouteStudentList() {
               {metaFields.map((c) => (
                 <div key={c.label}>
                   <p className="text-gray-600 font-medium mb-0.5">{c.label}</p>
-                  <p className="font-bold text-gray-800 text-xs text-nowrap wrap-break-word">{c.val}</p>
+                  <p className="font-bold text-gray-800 text-xs wrap-break-word">{c.val}</p>
                 </div>
               ))}
             </div>
@@ -340,16 +340,27 @@ function RouteStudentList() {
     </div>
   );
 }
+function TabIcon({ icon, color }) {
+  const colorMap = {
+    blue: "bg-blue-100 text-blue-600",
+    green: "bg-green-100 text-green-600",
+    red: "bg-red-100 text-red-500",
+    purple: "bg-purple-100 text-purple-600",
+  };
+  return (
+    <span className={`inline-flex items-center justify-center w-7 h-7 rounded-lg shrink-0 ${colorMap[color] ?? colorMap.blue}`}>
+      {icon}
+    </span>
+  );  
+}
 
-// ─── Tab Config ───────────────────────────────────────────────────
 const TABS = [
-  { id: "route", label: "Route Student List", emoji: <List/> },
-  { id: "vehicle", label: "Vehicle Capacity", emoji: <Bus/>},
-  { id: "driver", label: "Staff Assignments", emoji: <User2/> },
-  { id: "fee", label: "Student Fee Report", emoji: <File/> },
+  { id: "route", label: "Route Student List", emoji: <TabIcon icon={<List className="w-5 h-5" />} color="blue" /> },
+  { id: "vehicle", label: "Vehicle Capacity", emoji: <TabIcon icon={<Bus className="w-5 h-5" />} color="green" /> },
+  { id: "driver", label: "Staff Assignments", emoji: <TabIcon icon={<User2 className="w-5 h-5" />} color="red" /> },
+  { id: "fee", label: "Student Fee Report", emoji: <TabIcon icon={<File className="w-5 h-5" />} color="purple" /> },
 ];
 
-// ─── Main ─────────────────────────────────────────────────────────
 export default function Reports() {
   const [activeTab, setActiveTab] = useState("route");
 
@@ -363,7 +374,7 @@ export default function Reports() {
           Reports Management
         </h1>
         <p className="text-gray-500 text-xs sm:text-sm mt-1 max-w-2xl">
-          View route-wise student lists, vehicle capacity, driver assignments, and student fee reports.
+          View route-wise student lists, vehicle capacity, staff assignments, and student fee reports.
         </p>
       </div>
 
