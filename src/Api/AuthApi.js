@@ -23,11 +23,18 @@ export const loginAPI = async (credentials) => {
       throw new Error(errorMessage);
     }
 
-    if (data.token) {
-      localStorage.setItem("token", data.token);
+    // Save token
+    if (data.data?.token) {
+      localStorage.setItem("token", data.data.token);
+    }
+
+    // Save logged in user
+    if (data.data?.user) {
+      localStorage.setItem("user", JSON.stringify(data.data.user));
     }
 
     return data;
+
   } catch (error) {
     console.error('loginAPI error:', error.message);
     if (error.message.includes('fetch')) {
