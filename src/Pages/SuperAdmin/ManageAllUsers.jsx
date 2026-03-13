@@ -19,7 +19,6 @@ import { toast } from 'react-toastify';
 import { activateUserStatus, allUserFilter, deactivateUserStatus, getAllUserRoles, getUsersStatistics, resetUserPassword } from '../../Api/userManagementAPI';
 import ActionDropDownComp from '../../Components/CommonComp/ActionDropDownComp';
 import CardComponent from '../../Components/CommonComp/CardComponent';
-import QuickActions from '../../Components/CommonComp/QuickActions';
 import CardLoader from '../../Components/CommonComp/CardLoader';
 import ListLoader from '../../Components/CommonComp/ListLoader';
 import { UserContext } from '../../ContextAPI/UserContext';
@@ -535,7 +534,7 @@ const ManageAllUsers = () => {
                                             </td>
                                         </tr>
                                     ) : noUserFound ? <tr>
-                                        <td colSpan="4" className="px-6 py-8 text-center">
+                                        <td colSpan="11" className="px-6 py-8 text-center relative top-15">
                                             <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-1">
                                                 <UserSearch className="w-6 h-6 text-blue-600" />
                                             </div>
