@@ -62,16 +62,15 @@ const mapMovement = (m) => {
     after: m.quantityAfter,
     ref: m.referenceNumber || m.transferReference || "—",
     reason: m.remarks || (m.removalReason ? m.removalReason.replace(/_/g, " ") : "—"),
-    by: m.performedByName || "—",
   };
 };
 
 const exportToCSV = (movements) => {
-  const headers = ["Date", "Time", "Item", "Item ID", "Type", "Store", "Dest Store", "Qty", "Before", "After", "Reference", "Reason / Remarks", "Performed By"];
+  const headers = ["Date", "Time", "Item", "Item ID", "Type", "Store", "Dest Store", "Qty", "Before", "After", "Reference", "Reason / Remarks"];
   const rows = movements.map((m) => [
     m.date, m.time, m.item, m.itemId, m.type,
     m.storeName, m.destStore || "",
-    `${qtyPrefix[m.type] ?? ""}${m.qty}`, m.before, m.after, m.ref, m.reason, m.by,
+    `${qtyPrefix[m.type] ?? ""}${m.qty}`, m.before, m.after, m.ref, m.reason,
   ]);
   const csv = [headers, ...rows].map((r) => r.map((c) => `"${String(c ?? "").replace(/"/g, '""')}"`).join(",")).join("\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
@@ -154,10 +153,6 @@ const MobileCard = ({ m, idx, page, rowsPerPage }) => {
             <span className="ml-2 text-gray-700 text-xs">{m.before} → {m.after}</span>
           </p>
         </div>
-        <p>
-          <span className="font-medium text-gray-500">By:</span>
-          <span className="ml-2 text-gray-700">{m.by}</span>
-        </p>
         {m.ref !== "—" && (
           <p>
             <span className="font-medium text-gray-500">Ref:</span>
@@ -502,8 +497,7 @@ export default function Movement() {
                     <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider sticky top-0 bg-gray-50 z-10 whitespace-nowrap">Before → After</th>
                     <th className="px-3 py-3 text-left   text-xs font-semibold text-gray-500 uppercase tracking-wider sticky top-0 bg-gray-50 z-10">Reference</th>
                     <th className="px-3 py-3 text-center   text-xs font-semibold text-gray-500 uppercase tracking-wider sticky top-0 bg-gray-50 z-10">Reason</th>
-                    <th className="px-3 py-3 text-center   text-xs font-semibold text-gray-500 uppercase tracking-wider sticky top-0 bg-gray-50 z-10">By</th>
-                  </tr>
+                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-100 font-normal">
                   {loading ? (
@@ -564,14 +558,8 @@ export default function Movement() {
 
                           {/* Reason */}
                           <td className={`text-center max-w-30.5 overflow-hidden`}>
-                            <span className="text-xs text-gray-600 truncate block" title={m.reason}>{m.reason}</span>
+                            <span className="text-xs text-gray-600 block" title={m.reason}>{m.reason}</span>
                           </td>
-
-                          {/* By */}
-                          <td className={`text-center max-w-30 overflow-hidden`}>
-                            <span className="text-xs text-gray-600 truncate block" title={m.by}>{m.by}</span>
-                          </td>
-
                         </tr>
                       );
                     })

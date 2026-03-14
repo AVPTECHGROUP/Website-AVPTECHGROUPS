@@ -17,7 +17,7 @@ import {
   Shield,
   ChevronUp
 } from 'lucide-react'
-import { useState, useEffect, useContext, useRef, useCallback } from 'react'
+import { useState, useEffect, useContext, useRef } from 'react'
 import { UserContext } from '../ContextAPI/UserContext'
 
 const menuItems = [
@@ -277,36 +277,15 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
     })
   }, [location.pathname])
 
-  const closeTimers = useRef({})
-
-  const handleMenuMouseEnter = useCallback((itemId) => {
-    // Cancel any pending close for this item
-    if (closeTimers.current[itemId]) {
-      clearTimeout(closeTimers.current[itemId])
-      delete closeTimers.current[itemId]
-    }
-    setOpenDropdowns(prev => prev[itemId] ? prev : { ...prev, [itemId]: true })
-  }, [])
-
-  const handleMenuMouseLeave = useCallback((itemId) => {
-    // Small grace period so cursor can travel from parent into sub-items
-    closeTimers.current[itemId] = setTimeout(() => {
-      setOpenDropdowns(prev => {
-        if (!prev[itemId]) return prev
-        const next = { ...prev }
-        delete next[itemId]
-        return next
-      })
-    }, 150)
-  }, [])
-
-  // Cleanup all timers on unmount
-  useEffect(() => () => {
-    Object.values(closeTimers.current).forEach(clearTimeout)
-  }, [])
+  const toggleDropdown = (itemId) => {
+    setOpenDropdowns(prev => ({ ...prev, [itemId]: !prev[itemId] }))
+  }
 
   const handleMenuClick = (item) => {
     navigate(item.route)
+    if (item.subItems && item.subItems.length > 0 && sidebarOpen) {
+      toggleDropdown(item.id)
+    }
     if (window.innerWidth < 1024) setMobileSidebarOpen(false)
   }
 
@@ -372,8 +351,6 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
             <div
               key={item.id}
               className="mb-0.5"
-              onMouseEnter={() => hasSubItems && sidebarOpen && handleMenuMouseEnter(item.id)}
-              onMouseLeave={() => hasSubItems && sidebarOpen && handleMenuMouseLeave(item.id)}
             >
 
               {/* Parent row */}

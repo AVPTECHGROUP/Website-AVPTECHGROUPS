@@ -13,6 +13,7 @@ import {
     Loader2,
     ChevronLeft,
     ChevronRight,
+    X,
 } from "lucide-react";
 import CardComponent from "../../Components/CommonComp/CardComponent";
 import CardLoader from "../../Components/CommonComp/CardLoader";
@@ -62,7 +63,6 @@ const mapMv = (m) => {
         before: m.quantityBefore,
         after: m.quantityAfter,
         ref: m.referenceNumber || m.transferReference || "—",
-        by: m.performedByName || "—",
     };
 };
 
@@ -94,8 +94,6 @@ function RecentMovementsTable({ stores }) {
     const [dateFrom, setDateFrom] = useState("");
     const [dateTo, setDateTo] = useState("");
 
-    // Prevents double-call: fetchMovements useCallback recreates on mount
-    // which would re-trigger the useEffect. We gate on this ref instead.
     const didMountFetch = useRef(false);
 
     const navigate = useNavigate();
@@ -103,7 +101,6 @@ function RecentMovementsTable({ stores }) {
     const fetchMovements = useCallback(async (pageNum = 0) => {
         setLoading(true);
         try {
-            // Build POST filter body — only include fields that have a value
             const filters = {};
             if (storeId)    filters.storeId      = Number(storeId);
             if (typeFilter) filters.movementType = typeFilter;
@@ -124,14 +121,62 @@ function RecentMovementsTable({ stores }) {
         } finally { setLoading(false); }
     }, [storeId, typeFilter, dateFrom, dateTo]);
 
-    // Load on mount — run exactly once, ignore subsequent fetchMovements recreations
     useEffect(() => {
         if (didMountFetch.current) return;
         didMountFetch.current = true;
         fetchMovements(0);
-    }, [fetchMovements]); // fetchMovements in deps so eslint is happy; guard prevents re-runs
+    }, [fetchMovements]);
 
-    const handleApply = () => { fetchMovements(0); };
+    const [dateError, setDateError] = useState("");
+
+    const handleApply = () => {
+        if (dateFrom && dateTo && dateTo < dateFrom) {
+            setDateError("To Date cannot be earlier than From Date.");
+            return;
+        }
+        setDateError("");
+        fetchMovements(0);
+    };
+
+    const handleDateFrom = (val) => {
+        setDateFrom(val);
+        if (dateTo && val && dateTo < val) {
+            setDateError("To Date cannot be earlier than From Date.");
+        } else {
+            setDateError("");
+        }
+    };
+
+    const handleDateTo = (val) => {
+        setDateTo(val);
+        if (dateFrom && val && val < dateFrom) {
+            setDateError("To Date cannot be earlier than From Date.");
+        } else {
+            setDateError("");
+        }
+    };
+
+    // ── Clear all filters and refetch ──
+    const hasActiveFilters = typeFilter || storeId || dateFrom || dateTo;
+
+    const clearFilters = useCallback(async () => {
+        setTypeFilter("");
+        setStoreId("");
+        setDateFrom("");
+        setDateTo("");
+        setDateError("");
+        // Fetch with empty filters directly (state updates are async)
+        setLoading(true);
+        try {
+            const { movements: raw, pagination: pg } = await getStockMovementHistory({}, 0, MV_PAGE_SIZE);
+            setMovements(raw.map(mapMv));
+            setPagination(pg);
+            setPage(0);
+        } catch {
+            setMovements([]);
+            setPagination({});
+        } finally { setLoading(false); }
+    }, []);
 
     const totalPages = pagination.totalPages ?? 1;
     const currentPage = pagination.currentPage ?? page;
@@ -190,15 +235,15 @@ function RecentMovementsTable({ stores }) {
                     </select>
                 </div>
 
-                {/* Row 2: From date + To date + Apply */}
+                {/* Row 2: From date + To date + Apply + Clear */}
                 <div className="flex gap-2 items-end">
                     <div className="flex-1 min-w-0">
                         <p className="text-xs text-gray-400 mb-1 pl-0.5">From</p>
                         <input
                             type="date"
                             value={dateFrom}
-                            onChange={(e) => setDateFrom(e.target.value)}
-                            className="w-full text-xs border cursor-pointer border-gray-200 rounded-lg px-2 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-300 text-gray-800"
+                            onChange={(e) => handleDateFrom(e.target.value)}
+                            className={`w-full text-xs border cursor-pointer rounded-lg px-2 py-2 bg-white focus:outline-none focus:ring-2 text-gray-800 ${dateFrom && dateTo && dateTo < dateFrom ? "border-red-400 focus:ring-red-300" : "border-gray-200 focus:ring-blue-300"}`}
                             style={{ colorScheme: "light" }}
                         />
                     </div>
@@ -207,8 +252,9 @@ function RecentMovementsTable({ stores }) {
                         <input
                             type="date"
                             value={dateTo}
-                            onChange={(e) => setDateTo(e.target.value)}
-                            className="w-full text-xs border cursor-pointer border-gray-200 rounded-lg px-2 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-300 text-gray-800"
+                            min={dateFrom || undefined}
+                            onChange={(e) => handleDateTo(e.target.value)}
+                            className={`w-full text-xs border cursor-pointer rounded-lg px-2 py-2 bg-white focus:outline-none focus:ring-2 text-gray-800 ${dateFrom && dateTo && dateTo < dateFrom ? "border-red-400 focus:ring-red-300" : "border-gray-200 focus:ring-blue-300"}`}
                             style={{ colorScheme: "light" }}
                         />
                     </div>
@@ -220,7 +266,28 @@ function RecentMovementsTable({ stores }) {
                         {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Filter className="w-3 h-3" />}
                         Apply
                     </button>
+
+                    {/* Clear Filters — only visible when a filter is active */}
+                    {hasActiveFilters && (
+                        <button
+                            onClick={clearFilters}
+                            disabled={loading}
+                            title="Clear all filters"
+                            className="shrink-0 cursor-pointer border border-gray-200 hover:border-red-300 hover:bg-red-50 hover:text-red-600 text-gray-500 text-xs font-semibold px-3 py-2 rounded-lg transition-colors flex items-center gap-1.5 disabled:opacity-60 whitespace-nowrap"
+                        >
+                            <X className="w-3 h-3" />
+                            Clear
+                        </button>
+                    )}
                 </div>
+
+                {/* Date validation error */}
+                {dateError && (
+                    <div className="flex items-center gap-1.5 text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                        <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                        <p className="text-xs font-medium">{dateError}</p>
+                    </div>
+                )}
             </div>
 
             {/* ── Table ── */}
@@ -234,7 +301,6 @@ function RecentMovementsTable({ stores }) {
                             <th className="px-4 py-2.5 text-left whitespace-nowrap">Store</th>
                             <th className="px-4 py-2.5 text-left whitespace-nowrap">Qty</th>
                             <th className="px-4 py-2.5 text-left whitespace-nowrap">Before → After</th>
-                            <th className="px-4 py-2.5 text-center whitespace-nowrap">By</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
@@ -282,7 +348,6 @@ function RecentMovementsTable({ stores }) {
                                         <td className="px-4 py-3 text-center text-xs text-gray-600 whitespace-nowrap">
                                             {m.before} → {m.after}
                                         </td>
-                                        <td className="px-4 py-3 text-xs text-gray-600 whitespace-nowrap">{m.by}</td>
                                     </tr>
                                 );
                             })
