@@ -2,7 +2,13 @@ import React, { useState, useEffect } from "react";
 import { X, ArrowRight, Package, Hash, AlignLeft, ArrowLeftRight, Info, Loader2 } from "lucide-react";
 import { getActiveStores, transferStock } from "../../Api/StockApi";
 import { getStoreStock } from "../../Api/StoreApi";
-export default function TransferStock({ isOpen, onClose, onConfirm }) {
+
+export default function TransferStock({
+    isOpen,
+    onClose,
+    onConfirm,
+    preselectedItem = null,   // ← NEW prop: item object from the table row
+}) {
     const [fromStore,  setFromStore]  = useState("");
     const [toStore,    setToStore]    = useState("");
     const [item,       setItem]       = useState("");
@@ -11,8 +17,8 @@ export default function TransferStock({ isOpen, onClose, onConfirm }) {
     const [errors,     setErrors]     = useState({});
 
     const [storeOptions,  setStoreOptions]  = useState([]);
-    const [itemOptions,   setItemOptions]   = useState([]);   // items from fromStore's stock
-    const [storeStockMap, setStoreStockMap] = useState({});   // itemId -> quantity
+    const [itemOptions,   setItemOptions]   = useState([]);
+    const [storeStockMap, setStoreStockMap] = useState({});
     const [loadingStores, setLoadingStores] = useState(false);
     const [loadingItems,  setLoadingItems]  = useState(false);
     const [submitting,    setSubmitting]    = useState(false);
@@ -20,7 +26,6 @@ export default function TransferStock({ isOpen, onClose, onConfirm }) {
 
     const selectedItem = itemOptions.find((i) => i.value === item);
     const parsedQty    = parseInt(quantity) || 0;
-    // Available qty from the source store's actual stock
     const availableQty = selectedItem ? (storeStockMap[selectedItem.value] ?? selectedItem.currentStock) : null;
     const fromAfter    = availableQty !== null && parsedQty > 0 ? availableQty - parsedQty : availableQty;
 
@@ -46,6 +51,29 @@ export default function TransferStock({ isOpen, onClose, onConfirm }) {
             .catch(() => setApiError("Failed to load stores."))
             .finally(() => setLoadingStores(false));
     }, [isOpen]);
+
+    // ── Pre-fill fromStore from preselectedItem ────────────────
+    // Overrides the default first-store selection when opened from table row
+    useEffect(() => {
+        if (!isOpen || !preselectedItem) return;
+
+        if (preselectedItem.stores?.length > 0) {
+            const sourceId = String(preselectedItem.stores[0].storeId);
+            setFromStore(sourceId);
+
+            // Set toStore to a different store (second in list, or first available that isn't sourceId)
+            if (preselectedItem.stores.length > 1) {
+                setToStore(String(preselectedItem.stores[1].storeId));
+            } else {
+                // fall back: pick any store from storeOptions that isn't the source
+                setStoreOptions((opts) => {
+                    const other = opts.find((o) => o.value !== sourceId);
+                    if (other) setToStore(other.value);
+                    return opts;
+                });
+            }
+        }
+    }, [isOpen, preselectedItem]);
 
     // ── Fetch items from source store whenever fromStore changes ──
     useEffect(() => {
@@ -80,6 +108,16 @@ export default function TransferStock({ isOpen, onClose, onConfirm }) {
             .catch(() => setApiError("Failed to load store stock."))
             .finally(() => setLoadingItems(false));
     }, [isOpen, fromStore]);
+
+    // ── Once itemOptions are loaded, auto-select preselected item ──
+    useEffect(() => {
+        if (!preselectedItem || itemOptions.length === 0) return;
+        const match = itemOptions.find((o) => o.value === String(preselectedItem.id));
+        if (match) {
+            setItem(match.value);
+            setQuantity(""); // user sets qty explicitly
+        }
+    }, [itemOptions, preselectedItem]);
 
     // ── Body scroll lock ──────────────────────────────────────
     useEffect(() => {
@@ -182,6 +220,12 @@ export default function TransferStock({ isOpen, onClose, onConfirm }) {
                             <ArrowLeftRight className="w-4 h-4 text-blue-600" />
                         </div>
                         <h2 className="text-lg font-bold text-gray-800">Transfer Stock Between Stores</h2>
+                        {/* Show prefilled badge if item was opened from table row */}
+                        {preselectedItem && (
+                            <span className="ml-1 text-[11px] font-semibold bg-blue-50 text-blue-600 border border-blue-200 px-2 py-0.5 rounded-full">
+                                {preselectedItem.itemName}
+                            </span>
+                        )}
                     </div>
                     <button onClick={handleClose} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
                         <X className="w-5 h-5" />
@@ -295,7 +339,6 @@ export default function TransferStock({ isOpen, onClose, onConfirm }) {
                                 onChange={(e) => { setQuantity(e.target.value); setErrors((p) => ({ ...p, quantity: "" })); }}
                                 className={`${inputCls(errors.quantity)} ${selectedItem && availableQty !== null ? "pr-32" : ""}`}
                             />
-                            {/* Available qty hint inside input */}
                             {selectedItem && availableQty !== null && (
                                 <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[11px] font-semibold text-gray-400 whitespace-nowrap pointer-events-none">
                                     {availableQty} available
