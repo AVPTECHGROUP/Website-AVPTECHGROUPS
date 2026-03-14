@@ -178,9 +178,10 @@ export default function Transactions() {
     const [noItemFound,  setNoItemFound]  = useState(false);
 
     // ── Modals ─────────────────────────────────────────────────
-    const [isModalOpen,    setIsModalOpen]    = useState(false);
-    const [modalType,      setModalType]      = useState("in");
-    const [isTransferOpen, setIsTransferOpen] = useState(false);
+    const [isModalOpen,     setIsModalOpen]     = useState(false);
+    const [modalType,       setModalType]       = useState("in");
+    const [isTransferOpen,  setIsTransferOpen]  = useState(false);
+    const [preselectedItem, setPreselectedItem] = useState(null); // ← NEW
 
     // ── Load stores once ───────────────────────────────────────
     useEffect(() => {
@@ -293,10 +294,22 @@ export default function Transactions() {
     const isAllStores   = selectedStoreId === ALL_STORES_ID;
     const selectedStore = stores.find((s) => String(s.id) === selectedStoreId) ?? null;
 
-    const openModal = (type) => {
+    // ── openModal now accepts an optional item for pre-filling ──
+    const openModal = (type, item = null) => {
+        setPreselectedItem(item);
         if (type === "transfer") { setIsTransferOpen(true); return; }
         setModalType(type);
         setIsModalOpen(true);
+    };
+
+    const closeStockModal = () => {
+        setIsModalOpen(false);
+        setPreselectedItem(null);
+    };
+
+    const closeTransferModal = () => {
+        setIsTransferOpen(false);
+        setPreselectedItem(null);
     };
 
     const transactionCards = [
@@ -332,15 +345,17 @@ export default function Transactions() {
 
                 <StockManagementCard
                     isOpen={isModalOpen}
-                    onClose={() => setIsModalOpen(false)}
+                    onClose={closeStockModal}
                     mode={modalType}
                     onConfirm={handleStockConfirm}
+                    preselectedItem={preselectedItem}       // ← NEW
                 />
                 <TransferStock
                     isOpen={isTransferOpen}
-                    onClose={() => setIsTransferOpen(false)}
+                    onClose={closeTransferModal}
                     onConfirm={handleTransferConfirm}
                     stores={stores}
+                    preselectedItem={preselectedItem}       // ← NEW
                 />
 
                 {/* Page Header */}
@@ -550,7 +565,8 @@ export default function Transactions() {
                                                     )}
                                                 </div>
                                             )}
-                                            <MobileActions onAction={openModal} />
+                                            {/* ← Pass item context to mobile actions */}
+                                            <MobileActions onAction={(type) => openModal(type, item)} />
                                         </div>
                                     </div>
                                 );
@@ -661,9 +677,9 @@ export default function Transactions() {
                                                         </span>
                                                     </td>
 
-                                                    {/* Actions — inline buttons */}
+                                                    {/* Actions — pass item context ← KEY CHANGE */}
                                                     <td className="px-3 py-3">
-                                                        <InlineActions onAction={openModal} />
+                                                        <InlineActions onAction={(type) => openModal(type, item)} />
                                                     </td>
 
                                                 </tr>
