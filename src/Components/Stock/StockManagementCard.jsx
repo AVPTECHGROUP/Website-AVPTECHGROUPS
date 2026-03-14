@@ -2,47 +2,46 @@ import React, { useState, useEffect, useCallback } from "react";
 import { X, CheckSquare, Store, Package, Hash, FileText, AlignLeft, ShoppingCart, Loader2 } from "lucide-react";
 import { getActiveStores, getItemsList, addStockInward, removeStockOutward } from "../../Api/StockApi";
 import { getStoreStock } from "../../Api/StoreApi";
+
 export default function StockManagementCard({
     isOpen,
     onClose,
     mode = "in",
     onConfirm,
+    preselectedItem = null,   // ← NEW prop: item object from the table row
 }) {
     const isStockIn = mode === "in";
 
-    const heading = isStockIn ? "Add Stock (Inward)" : "Remove Stock (Outward)";
-    const headingIconColor = isStockIn ? "text-green-600" : "text-red-600";
-    const previewBgColor = isStockIn ? "bg-green-50" : "bg-red-50";
-    const previewBorderColor = isStockIn ? "border-green-200" : "border-red-200";
-    const previewTextColor = isStockIn ? "text-green-700" : "text-red-700";
-    const confirmBtnText = isStockIn ? "Confirm Stock IN" : "Confirm Stock OUT";
-    const confirmBtnBg = isStockIn ? "bg-green-600" : "bg-red-600";
-    const confirmBtnHover = isStockIn ? "hover:bg-green-700" : "hover:bg-red-700";
+    const heading           = isStockIn ? "Add Stock (Inward)" : "Remove Stock (Outward)";
+    const headingIconColor  = isStockIn ? "text-green-600" : "text-red-600";
+    const previewBgColor    = isStockIn ? "bg-green-50" : "bg-red-50";
+    const previewBorderColor= isStockIn ? "border-green-200" : "border-red-200";
+    const previewTextColor  = isStockIn ? "text-green-700" : "text-red-700";
+    const confirmBtnText    = isStockIn ? "Confirm Stock IN" : "Confirm Stock OUT";
+    const confirmBtnBg      = isStockIn ? "bg-green-600" : "bg-red-600";
+    const confirmBtnHover   = isStockIn ? "hover:bg-green-700" : "hover:bg-red-700";
 
-    const [store, setStore] = useState("");
-    const [item, setItem] = useState("");
-    const [quantity, setQuantity] = useState("");
-    const [reference, setReference] = useState("");
+    const [store,         setStore]         = useState("");
+    const [item,          setItem]          = useState("");
+    const [quantity,      setQuantity]      = useState("");
+    const [reference,     setReference]     = useState("");
     const [removalReason, setRemovalReason] = useState("");
-    const [remarks, setRemarks] = useState("");
-    const [errors, setErrors] = useState({});
+    const [remarks,       setRemarks]       = useState("");
+    const [errors,        setErrors]        = useState({});
 
-    const [storeOptions, setStoreOptions] = useState([]);
-    const [itemOptions, setItemOptions] = useState([]);   // for stock-in: all items
-    const [storeStockMap, setStoreStockMap] = useState({});   // itemId -> quantity from store stock
+    const [storeOptions,  setStoreOptions]  = useState([]);
+    const [itemOptions,   setItemOptions]   = useState([]);
+    const [storeStockMap, setStoreStockMap] = useState({});
     const [loadingStores, setLoadingStores] = useState(false);
-    const [loadingItems, setLoadingItems] = useState(false);
-    const [submitting, setSubmitting] = useState(false);
-    const [apiError, setApiError] = useState("");
+    const [loadingItems,  setLoadingItems]  = useState(false);
+    const [submitting,    setSubmitting]    = useState(false);
+    const [apiError,      setApiError]      = useState("");
 
-    const selectedItem = itemOptions.find((i) => i.value === item);
-    const parsedQty = parseInt(quantity) || 0;
-    // For stock-out, available qty comes from the store's actual stock
-    const availableQty = selectedItem ? (storeStockMap[selectedItem.value] ?? selectedItem.currentStock) : null;
-    const afterStock = availableQty !== null
-        ? isStockIn
-            ? availableQty + parsedQty
-            : availableQty - parsedQty
+    const selectedItem  = itemOptions.find((i) => i.value === item);
+    const parsedQty     = parseInt(quantity) || 0;
+    const availableQty  = selectedItem ? (storeStockMap[selectedItem.value] ?? selectedItem.currentStock) : null;
+    const afterStock    = availableQty !== null
+        ? isStockIn ? availableQty + parsedQty : availableQty - parsedQty
         : null;
 
     // ── Fetch stores once on open ──────────────────────────────
@@ -60,6 +59,21 @@ export default function StockManagementCard({
             .finally(() => setLoadingStores(false));
     }, [isOpen]);
 
+    // ── Pre-fill store from preselectedItem ────────────────────
+    // Runs after stores load so the select value is recognised
+    useEffect(() => {
+        if (!isOpen || !preselectedItem) return;
+
+        if (!isStockIn) {
+            // Stock OUT: pre-select the first store that holds this item
+            if (preselectedItem.stores?.length > 0) {
+                setStore(String(preselectedItem.stores[0].storeId));
+            }
+        }
+        // Stock IN: leave store blank — user should choose where to receive
+        // but we still want to pre-select the item once item options load (handled below)
+    }, [isOpen, preselectedItem, isStockIn]);
+
     // ── For Stock IN: fetch all active items ──────────────────
     useEffect(() => {
         if (!isOpen || !isStockIn) return;
@@ -67,9 +81,9 @@ export default function StockManagementCard({
         getItemsList(0, 200, "", "", "ACTIVE")
             .then(({ items }) => {
                 setItemOptions(items.map((i) => ({
-                    value: String(i.id),
-                    label: `${i.itemName} (${i.itemCode})`,
-                    unit: i.unit,
+                    value:        String(i.id),
+                    label:        `${i.itemName} (${i.itemCode})`,
+                    unit:         i.unit,
                     currentStock: i.totalQuantity ?? 0,
                 })));
             })
@@ -88,14 +102,13 @@ export default function StockManagementCard({
         setStoreStockMap({});
         getStoreStock(Number(store))
             .then((stockList) => {
-                // stockList: [{ itemId, itemName, itemCode, quantity, minimumStockLevel, ... }]
                 const map = {};
                 const opts = (stockList || []).map((s) => {
                     map[String(s.itemId)] = s.quantity;
                     return {
-                        value: String(s.itemId),
-                        label: `${s.itemName} (${s.itemCode})`,
-                        unit: s.unit ?? "",
+                        value:        String(s.itemId),
+                        label:        `${s.itemName} (${s.itemCode})`,
+                        unit:         s.unit ?? "",
                         currentStock: s.quantity,
                     };
                 });
@@ -106,6 +119,18 @@ export default function StockManagementCard({
             .catch(() => setApiError("Failed to load store stock."))
             .finally(() => setLoadingItems(false));
     }, [isOpen, isStockIn, store]);
+
+    // ── Once itemOptions are loaded, auto-select preselected item ──
+    // This handles the async race: item options may not be ready when
+    // the modal first opens, so we watch itemOptions and apply once ready.
+    useEffect(() => {
+        if (!preselectedItem || itemOptions.length === 0) return;
+        const match = itemOptions.find((o) => o.value === String(preselectedItem.id));
+        if (match) {
+            setItem(match.value);
+            setQuantity(""); // reset qty so user sets it intentionally
+        }
+    }, [itemOptions, preselectedItem]);
 
     // ── Body scroll lock ──────────────────────────────────────
     useEffect(() => {
@@ -123,8 +148,8 @@ export default function StockManagementCard({
 
     const validate = () => {
         const e = {};
-        if (!store) e.store = "Store is required";
-        if (!item) e.item = "Item is required";
+        if (!store)    e.store    = "Store is required";
+        if (!item)     e.item     = "Item is required";
         if (!quantity) {
             e.quantity = "Quantity is required";
         } else if (parseInt(quantity) <= 0) {
@@ -132,9 +157,9 @@ export default function StockManagementCard({
         } else if (!isStockIn && availableQty !== null && parseInt(quantity) > availableQty) {
             e.quantity = `Only ${availableQty} units available in this store`;
         }
-        if (isStockIn && !reference) e.reference = "Reference number is required";
+        if (isStockIn && !reference)    e.reference     = "Reference number is required";
         if (!isStockIn && !removalReason) e.removalReason = "Removal reason is required";
-        if (!remarks) e.remarks = "Remarks are required";
+        if (!remarks)  e.remarks  = "Remarks are required";
         setErrors(e);
         return Object.keys(e).length === 0;
     };
@@ -168,15 +193,16 @@ export default function StockManagementCard({
 
     const removalReasonOptions = [
         { value: "ISSUED_TO_STUDENT", label: "Issued to Student" },
-        { value: "ISSUED_TO_STAFF", label: "Issued to Staff" },
-        { value: "DAMAGED", label: "Damaged" },
-        { value: "EXPIRED", label: "Expired" },
-        { value: "LOST", label: "Lost" },
-        { value: "OTHER", label: "Other" },
+        { value: "ISSUED_TO_STAFF",   label: "Issued to Staff"   },
+        { value: "DAMAGED",           label: "Damaged"           },
+        { value: "EXPIRED",           label: "Expired"           },
+        { value: "LOST",              label: "Lost"              },
+        { value: "OTHER",             label: "Other"             },
     ];
 
     const inputCls = (err) =>
-        `w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 transition ${err ? "border-red-400" : "border-gray-200"
+        `w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 transition ${
+            err ? "border-red-400" : "border-gray-200"
         }`;
 
     return (
@@ -197,6 +223,12 @@ export default function StockManagementCard({
                     <div className="flex items-center gap-2">
                         <ShoppingCart className={`w-5 h-5 ${headingIconColor}`} />
                         <h2 className="text-lg font-bold text-gray-800">{heading}</h2>
+                        {/* Show prefilled badge if item was opened from table row */}
+                        {preselectedItem && (
+                            <span className="ml-1 text-[11px] font-semibold bg-blue-50 text-blue-600 border border-blue-200 px-2 py-0.5 rounded-full">
+                                {preselectedItem.itemName}
+                            </span>
+                        )}
                     </div>
                     <button onClick={handleClose} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
                         <X className="w-5 h-5" />
@@ -286,7 +318,6 @@ export default function StockManagementCard({
                                     onChange={(e) => { setQuantity(e.target.value); setErrors((p) => ({ ...p, quantity: "" })); }}
                                     className={`${inputCls(errors.quantity)} ${selectedItem && availableQty !== null ? "pr-28" : ""}`}
                                 />
-                                {/* Available qty hint inside the input */}
                                 {selectedItem && availableQty !== null && (
                                     <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[11px] font-semibold text-gray-400 whitespace-nowrap pointer-events-none">
                                         {availableQty} available
