@@ -19,7 +19,7 @@ const quickActions = [
   { label: "Approve Leaves", sub: "pending", subColor: "text-red-500", icon: CheckSquare, bg: "bg-green-50", iconColor: "text-green-600", key: "pendingLeaveRequests", route: "/leaves" },
   { label: "Add New User", sub: "Staff / Teacher / Admin", subColor: "text-gray-400", icon: UserPlus, bg: "bg-blue-50", iconColor: "text-blue-600", key: null, route: "/dashboard/addUser" },
   { label: "Admit Student", sub: "New registration", subColor: "text-gray-400", icon: GraduationCap, bg: "bg-purple-50", iconColor: "text-purple-600", key: null, route: "/students/addStudents" },
-  { label: "Manage Stock", subColor: "text-orange-500", icon: Package, bg: "bg-yellow-50", iconColor: "text-yellow-600", key: null, route: "/stock" },
+  { label: "Manage Stock", sub: "Inventory", subColor: "text-orange-500", icon: Package, bg: "bg-yellow-50", iconColor: "text-yellow-600", key: null, route: "/stock" },
   { label: "Transport", sub: "Allocate / Manage", subColor: "text-gray-400", icon: Bus, bg: "bg-cyan-50", iconColor: "text-cyan-600", key: null, route: "/route" },
   { label: "Payroll", sub: "Process payroll", subColor: "text-gray-400", icon: Banknote, bg: "bg-emerald-50", iconColor: "text-emerald-600", key: null, route: "/payroll" },
   { label: "Reports", sub: "Attendance / Leave", subColor: "text-gray-400", icon: FileBarChart, bg: "bg-indigo-50", iconColor: "text-indigo-600", key: null, route: "/attendance" },
@@ -71,7 +71,7 @@ export default function Dashboard() {
   const [userName, setUserName] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
 
-  const navigate = useNavigate()
+  const navigate = useNavigate();
   const today = new Date().toLocaleDateString("en-GB", {
     weekday: "long", day: "numeric", month: "long", year: "numeric",
   });
@@ -110,15 +110,6 @@ export default function Dashboard() {
   const totalPendingActions = stats
     ? (stats.pendingLeaveRequests || 0) + (stats.pendingAttendanceApprovals || 0)
     : 0;
-
-  const topStats = stats
-    ? [
-      { key: "Total Students", val: stats.totalStudents, icon: GraduationCap, txColor: "text-blue-600", bgColor: "bg-blue-50" },
-      { key: "Total Teachers", val: stats.totalTeachers, icon: BookOpen, txColor: "text-green-600", bgColor: "bg-green-50" },
-      { key: "Total Staff", val: stats.totalStaff, icon: Users, txColor: "text-purple-600", bgColor: "bg-purple-50" },
-      { key: "Pending Actions", val: totalPendingActions, icon: AlertTriangle, txColor: "text-orange-500", bgColor: "bg-orange-50" },
-    ]
-    : [];
 
   const peopleStats = stats
     ? [
@@ -165,7 +156,7 @@ export default function Dashboard() {
     datasets: [{
       data: attendanceTotalRecords > 0
         ? [attendancePresent, attendanceLate, attendanceAbsent, attendanceOnLeave, attendancePending]
-        : [1, 0, 0, 0, 0], // fallback so chart renders
+        : [1, 0, 0, 0, 0],
       backgroundColor: ["#22c55e", "#f59e0b", "#ef4444", "#94a3b8", "#f97316"],
       borderWidth: 0,
       hoverOffset: 4,
@@ -180,7 +171,7 @@ export default function Dashboard() {
     { label: "Pending Review", val: attendancePending, pct: `${attendanceTotalRecords > 0 ? Math.round((attendancePending / attendanceTotalRecords) * 100) : 0}%`, color: "bg-orange-400" },
   ];
 
-  // Next holiday from first item in holidays list (most accurate) or from stats
+  // Next holiday
   const nextHoliday = holidays.length > 0 ? holidays[0] : null;
   const nextHolidayName = nextHoliday?.name || stats?.nextHolidayName || "—";
   const nextHolidayDate = nextHoliday?.holidayDate || stats?.nextHolidayDate;
@@ -211,16 +202,6 @@ export default function Dashboard() {
     ]
     : [];
 
-  // ── Action table ─────────────────────────────────────────────────────────
-  const actionOptions = [
-    { value: "view", label: "View", icon: Eye, text: "text-blue-600", bg: "bg-blue-50", hover: "hover:bg-blue-100" },
-    { value: "edit", label: "Edit", icon: Edit, text: "text-orange-600", bg: "bg-orange-50", hover: "hover:bg-orange-100" },
-  ];
-  const callAllActions = (optVal, row) => {
-    if (optVal === "view") console.log("View:", row.id);
-    else console.log("Edit:", row.id);
-  };
-
   const attendanceDateLabel = stats?.attendanceDate
     ? new Date(stats.attendanceDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
     : today;
@@ -229,7 +210,7 @@ export default function Dashboard() {
     <div className="min-h-screen bg-blue-50 font-sans">
       <div className="p-4 sm:p-6 lg:p-8">
 
-        {/* Header */}
+        {/* ── Header ── */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
@@ -239,24 +220,25 @@ export default function Dashboard() {
           </div>
           <button
             onClick={() => setRefreshKey((k) => k + 1)}
-            className="flex items-center gap-2 border border-gray-200 bg-white hover:bg-gray-50 text-gray-600 text-sm font-semibold px-4 py-2 rounded-lg transition-colors w-fit"
+            className="flex items-center gap-2 border border-gray-200 bg-white hover:bg-gray-50 text-gray-600 text-sm font-semibold px-4 py-2 rounded-lg transition-colors w-fit cursor-pointer"
           >
             <RefreshCw className="w-4 h-4" />
             Refresh
           </button>
         </div>
 
-        {/* Error banner */}
+        {/* ── Error banner ── */}
         {error && (
           <div className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-6">
             <AlertTriangle className="w-5 h-5 text-red-500 shrink-0" />
             <span className="text-sm font-semibold text-red-700">{error}</span>
-            <button onClick={() => setRefreshKey((k) => k + 1)} className="ml-auto text-xs font-bold text-red-600 underline">
+            <button onClick={() => setRefreshKey((k) => k + 1)} className="ml-auto text-xs font-bold text-red-600 underline cursor-pointer">
               Retry
             </button>
           </div>
         )}
 
+        {/* ── Action Required banner ── */}
         {!loading && stats && (
           <div className="flex flex-col sm:flex-row gap-3 mb-6">
             <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex-1">
@@ -283,7 +265,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Next holiday bar */}
+        {/* ── Next holiday bar ── */}
         {!loading && (nextHolidayName || stats?.nextHolidayName) && (
           <div className="flex items-center justify-between bg-blue-100 border-blue-400 border text-white rounded-xl px-4 py-3 mb-6">
             <div className="flex items-center gap-2">
@@ -302,25 +284,32 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Top stat cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        {/* ── People stats cards ── */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
           {loading
-            ? Array.from({ length: 4 }).map((_, i) => <CardLoader key={i} />)
-            : topStats.map((s) => (
-              <CardComponent
-                key={s.key}
-                IconName={s.icon}
-                keyName={s.key}
-                val={s.val}
-                iconTxColor={s.txColor}
-                iconBgColor={s.bgColor}
-              />
+            ? Array.from({ length: 3 }).map((_, i) => <CardLoader key={i} />)
+            : peopleStats.map((s) => (
+              <div key={s.label} className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4">
+                <div className={`w-10 h-10 ${s.bgColor} rounded-xl flex items-center justify-center mb-3`}>
+                  <s.icon className={`w-5 h-5 ${s.iconColor}`} />
+                </div>
+                <p className={`text-3xl font-bold ${s.iconColor}`}>{s.val}</p>
+                <p className="text-sm text-gray-500 mt-0.5 mb-3">{s.label}</p>
+                <div className="w-full bg-gray-100 rounded-full h-1.5 mb-1">
+                  <div className={`${s.color} h-1.5 rounded-full`} style={{ width: s.val > 0 ? `${(s.active / s.val) * 100}%` : "0%" }} />
+                </div>
+                <div className="flex justify-between text-xs text-gray-500">
+                  <span>{s.active} <span className="text-green-600 font-semibold ml-1">Active</span></span>
+                  <span>{s.inactive} Inactive <span className="text-gray-400">({s.inactivePercent})</span></span>
+                </div>
+              </div>
             ))}
         </div>
 
+        {/* ── Main 3-col grid: Attendance + Pending Actions | Right column ── */}
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6">
 
-          {/* ── Left column ── */}
+          {/* Left column — Attendance chart + Pending Actions */}
           <div className="xl:col-span-2 space-y-6">
 
             {/* Attendance chart */}
@@ -332,7 +321,7 @@ export default function Dashboard() {
                     Staff Attendance — {attendanceDateLabel}
                   </h2>
                 </div>
-                <button className="text-sm text-blue-600 font-medium hover:underline whitespace-nowrap">View All →</button>
+                <button onClick={()=>navigate('/attendance')} className="text-sm text-blue-600 font-medium hover:underline whitespace-nowrap cursor-pointer">View All →</button>
               </div>
               <div className="p-5 flex flex-col sm:flex-row gap-6 items-center">
                 <div className="relative w-36 h-36 shrink-0">
@@ -386,31 +375,9 @@ export default function Dashboard() {
                   {attendancePending === 0 && attendanceOnLeave === 0 && "No pending reviews today"}
                 </span>
                 {attendancePending > 0 && (
-                  <button onClick={() => navigate('/attendance/usersAttendance')} className="text-xs text-blue-600 font-semibold hover:underline">Review Pending →</button>
+                  <button onClick={() => navigate('/attendance/usersAttendance')} className="text-xs text-blue-600 font-semibold hover:underline cursor-pointer">Review Pending →</button>
                 )}
               </div>
-            </div>
-
-            {/* People stats cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {loading
-                ? Array.from({ length: 3 }).map((_, i) => <CardLoader key={i} />)
-                : peopleStats.map((s) => (
-                  <div key={s.label} className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4">
-                    <div className={`w-10 h-10 ${s.bgColor} rounded-xl flex items-center justify-center mb-3`}>
-                      <s.icon className={`w-5 h-5 ${s.iconColor}`} />
-                    </div>
-                    <p className={`text-3xl font-bold ${s.iconColor}`}>{s.val}</p>
-                    <p className="text-sm text-gray-500 mt-0.5 mb-3">{s.label}</p>
-                    <div className="w-full bg-gray-100 rounded-full h-1.5 mb-1">
-                      <div className={`${s.color} h-1.5 rounded-full`} style={{ width: s.val > 0 ? `${(s.active / s.val) * 100}%` : "0%" }} />
-                    </div>
-                    <div className="flex justify-between text-xs text-gray-500">
-                      <span>{s.active} <span className="text-green-600 font-semibold ml-1">Active</span></span>
-                      <span>{s.inactive} Inactive <span className="text-gray-400">({s.inactivePercent})</span></span>
-                    </div>
-                  </div>
-                ))}
             </div>
 
             {/* Pending Actions */}
@@ -425,7 +392,7 @@ export default function Dashboard() {
                 {loading
                   ? Array.from({ length: 2 }).map((_, i) => <CardLoader key={i} />)
                   : pendingActionsCards.map((action) => (
-                    <div key={action.id} onClick={() => action.route && navigate(action.route)} className={`border ${action.border} ${action.bg} rounded-xl p-4`}>
+                    <div key={action.id} onClick={() => action.route && navigate(action.route)} className={`border ${action.border} ${action.bg} rounded-xl p-4 cursor-pointer hover:shadow-md transition-shadow`}>
                       <div className="flex justify-between items-start mb-3">
                         <AlertTriangle className="w-8 h-8 text-gray-400" />
                         <span className={`text-xs font-bold ${action.badgeColor}`}>{action.badge}</span>
@@ -438,37 +405,9 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Quick Actions */}
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-              <div className="px-5 py-4 border-b border-gray-100">
-                <div className="flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5 text-yellow-500" />
-                  <h2 className="font-semibold text-gray-800">Quick Actions</h2>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4">
-                {quickActions.map((qa) => {
-                  const dynamicSub = qa.key && stats
-                    ? `${stats[qa.key] || 0} pending`
-                    : qa.key === null && qa.label === "Payroll"
-                      ? payrollLabel
-                      : qa.sub;
-                  const subColor = qa.key && stats && stats[qa.key] > 0 ? "text-red-500" : qa.subColor;
-                  return (
-                    <button key={qa.label} onClick={() => qa.route && navigate(qa.route)} className="flex flex-col items-center gap-2 bg-gray-50 hover:bg-blue-50 border border-gray-200 hover:border-blue-300 rounded-xl p-3 transition-all">
-                      <div className={`w-12 h-12 ${qa.bg} rounded-xl flex items-center justify-center`}>
-                        <qa.icon className={`w-6 h-6 ${qa.iconColor}`} />
-                      </div>
-                      <p className="text-xs font-semibold text-gray-700 text-center leading-tight">{qa.label}</p>
-                      <p className={`text-xs ${subColor} text-center leading-tight relative`}>{dynamicSub}</p>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
           </div>
 
-          {/* ── Right column ── */}
+          {/* Right column */}
           <div className="space-y-6">
 
             {/* Next Holiday hero card */}
@@ -544,37 +483,48 @@ export default function Dashboard() {
               </div>
               <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50">
                 <span className="text-xs text-gray-400">Showing next {holidays.length} holidays</span>
-                <button onClick={() => navigate('/leaves/manageHolidays')} className="text-xs text-blue-600 font-semibold hover:underline">View Full Calendar →</button>
-              </div>
-            </div>
-
-            {/* Month Summary */}
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-              <div className="flex items-center gap-2 px-4 py-4 border-b border-gray-100">
-                <FileBarChart className="w-4 h-4 text-blue-500" />
-                <h2 className="font-semibold text-gray-800 text-sm">
-                  {stats
-                    ? `${monthNames[(stats.currentMonth || 3) - 1]} ${stats.currentYear || 2026} Summary`
-                    : "Month Summary"}
-                </h2>
-              </div>
-              <div className="grid grid-cols-2 gap-3 p-4">
-                {[
-                  { label: "Holidays", val: holidays.filter(h => !h.isOptional).length, bg: "bg-red-50", color: "text-red-500" },
-                  { label: "Optional", val: holidays.filter(h => h.isOptional).length, bg: "bg-yellow-50", color: "text-yellow-600" },
-                  { label: "Total Staff", val: stats?.totalStaff || 0, bg: "bg-blue-50", color: "text-blue-600" },
-                  { label: "Active Staff", val: stats?.activeStaff || 0, bg: "bg-green-50", color: "text-green-600" },
-                ].map((s) => (
-                  <div key={s.label} className={`${s.bg} rounded-xl p-3 text-center`}>
-                    <p className={`text-2xl font-bold ${s.color}`}>{s.val}</p>
-                    <p className="text-xs text-gray-500 mt-0.5">{s.label}</p>
-                  </div>
-                ))}
+                <button onClick={() => navigate('/leaves/manageHolidays')} className="text-xs text-blue-600 font-semibold hover:underline cursor-pointer">View Full Calendar →</button>
               </div>
             </div>
 
           </div>
         </div>
+
+        {/* ── Full-width Quick Actions (outside the 3-col grid) ── */}
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden mb-6">
+          <div className="px-5 py-4 border-b border-gray-100">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-yellow-500" />
+              <h2 className="font-semibold text-gray-800">Quick Actions</h2>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 p-4">
+            {quickActions.map((qa) => {
+              const dynamicSub =
+                qa.key && stats
+                  ? `${stats[qa.key] || 0} pending`
+                  : qa.label === "Payroll"
+                    ? payrollLabel
+                    : qa.sub;
+              const subColor =
+                qa.key && stats && stats[qa.key] > 0 ? "text-red-500" : qa.subColor;
+              return (
+                <button
+                  key={qa.label}
+                  onClick={() => qa.route && navigate(qa.route)}
+                  className="flex flex-col items-center gap-2 bg-gray-50 hover:bg-blue-50 border border-gray-200 hover:border-blue-300 rounded-xl p-3 transition-all cursor-pointer"
+                >
+                  <div className={`w-12 h-12 ${qa.bg} rounded-xl flex items-center justify-center`}>
+                    <qa.icon className={`w-6 h-6 ${qa.iconColor}`} />
+                  </div>
+                  <p className="text-xs font-semibold text-gray-700 text-center leading-tight">{qa.label}</p>
+                  <p className={`text-xs ${subColor} text-center leading-tight`}>{dynamicSub}</p>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
       </div>
     </div>
   );
