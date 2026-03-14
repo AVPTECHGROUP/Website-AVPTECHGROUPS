@@ -1,11 +1,8 @@
-name: Azure Static Web Apps CI/CD
+name: Prod Azure Static Web Apps CI/CD
 
 on:
+  workflow_dispatch:
   push:
-    branches:
-      - deploy_main_prod
-  pull_request:
-    types: [opened, synchronize, reopened, closed]
     branches:
       - deploy_main_prod
 
