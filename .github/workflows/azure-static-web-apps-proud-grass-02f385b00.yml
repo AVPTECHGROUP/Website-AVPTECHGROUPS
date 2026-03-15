@@ -1,10 +1,13 @@
 name: Prod Azure Static Web Apps CI/CD
 
 on:
+#  push:
+#    branches:
   workflow_dispatch:
 
 jobs:
   build_and_deploy_job:
+    if: github.event_name == 'workflow_dispatch'    
     runs-on: ubuntu-latest
     name: Build and Deploy Job
     steps:
@@ -12,20 +15,6 @@ jobs:
         with:
           submodules: true
           lfs: false
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-      - name: Install dependencies
-        run: npm ci
-      - name: Write .env.production (prod)
-        run: |
-          echo "VITE_API_BASE_V1=https://schoolspine-prod-daeyg5dgf3a2drbc.centralindia-01.azurewebsites.net/api/v1" > .env.production
-          echo "VITE_API_BASE=https://schoolspine-prod-daeyg5dgf3a2drbc.centralindia-01.azurewebsites.net/api" >> .env.production
-          echo "VITE_API_BASE_DOUBLE=https://schoolspine-prod-daeyg5dgf3a2drbc.centralindia-01.azurewebsites.net/api/api" >> .env.production
-          echo "VITE_API_BASE_DOUBLE_V1=https://schoolspine-prod-daeyg5dgf3a2drbc.centralindia-01.azurewebsites.net/api/api/v1" >> .env.production
-      - name: Build (production)
-        run: npm run build
       - name: Build And Deploy
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
@@ -38,7 +27,4 @@ jobs:
           app_location: "/" # App source code path
           api_location: "" # Api source code path - optional
           output_location: "dist" # Built app content directory - optional
-          skip_app_build: true
           ###### End of Repository/Build Configurations ######
-
-
