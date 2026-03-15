@@ -18,6 +18,11 @@ jobs:
       - name: Build And Deploy
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
+        env:
+          VITE_API_BASE_V1: https://schoolspine-prod-daeyg5dgf3a2drbc.centralindia-01.azurewebsites.net/api/v1
+          VITE_API_BASE: https://schoolspine-prod-daeyg5dgf3a2drbc.centralindia-01.azurewebsites.net/api
+          VITE_API_BASE_DOUBLE: https://schoolspine-prod-daeyg5dgf3a2drbc.centralindia-01.azurewebsites.net/api/api
+          VITE_API_BASE_DOUBLE_V1: https://schoolspine-prod-daeyg5dgf3a2drbc.centralindia-01.azurewebsites.net/api/api/v1
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_PROUD_GRASS_02F385B00 }}
           repo_token: ${{ secrets.GITHUB_TOKEN }} # Used for Github integrations (i.e. PR comments)
