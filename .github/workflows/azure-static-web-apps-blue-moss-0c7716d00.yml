@@ -13,20 +13,7 @@ jobs:
         with:
           submodules: true
           lfs: false
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-      - name: Install dependencies
-        run: npm ci
-      - name: Write .env.production (staging)
-        run: |
-          echo "VITE_API_BASE_V1=https://ssdev-btgphuazhza9edcu.canadacentral-01.azurewebsites.net/api/v1" > .env.production
-          echo "VITE_API_BASE=https://ssdev-btgphuazhza9edcu.canadacentral-01.azurewebsites.net/api" >> .env.production
-          echo "VITE_API_BASE_DOUBLE=https://ssdev-btgphuazhza9edcu.canadacentral-01.azurewebsites.net/api/api" >> .env.production
-          echo "VITE_API_BASE_DOUBLE_V1=https://ssdev-btgphuazhza9edcu.canadacentral-01.azurewebsites.net/api/api/v1" >> .env.production
-      - name: Build (staging)
-        run: npm run build
+          
       - name: Build And Deploy
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
