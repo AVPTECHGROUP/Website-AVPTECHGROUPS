@@ -33,13 +33,14 @@ import ManageAllUsers from '../Pages/SuperAdmin/ManageAllUsers';
 import ApplyLeaves from '../Pages/Leaves/ApplyLeaves';
 import MyLeaves from '../Pages/Leaves/MyLeaves';
 
-// Sttudents
+// Students
 import Student from '../Pages/Students/Students';
 import AddNewStudent from '../Pages/Students/AddNewStudent';
 import EditStudentDetails from '../Pages/Students/EditStudentDetails';
 import StudentDetails from '../Pages/Students/StudentDetails';
 import HolidayManagment from '../Pages/Leaves/Holiday/HolidayManagement';
 import RoleProtectedRoute from '../utils/RoleProtectedRoute';
+
 // Stock Routes
 import Stock from '../Pages/Stock/Stock';
 import Store from '../Pages/Stock/Stores';
@@ -50,6 +51,7 @@ import ClassConfig from '../Pages/Stock/ClassConfig';
 import StudentOrders from '../Pages/Stock/StudentOrders';
 import CreateStudentOrder from '../Pages/Stock/CreateStudentOrder';
 import EditStudentOrder from '../Pages/Stock/EditStudentOrder';
+
 // Transport Routes
 import Transport_Management from '../Pages/Transport/Transport_Management';
 import Vehicles from '../Pages/Transport/Vehicles';
@@ -59,25 +61,37 @@ import Reports from '../Pages/Transport/Reports/Reports';
 import Student_Allocations from '../Pages/Transport/Student_Allocation/Student_Allocations';
 import Routes_Manage from '../Pages/Transport/Routes_Manage';
 
+// ─── Role Groups (single source of truth) ─────────────────────────────────────
+// Changing a role here automatically applies everywhere it's used below.
+
+/** Full stock access — can manage stores, items, reports, movement history */
+const STOCK_ACCOUNTANT_ROLES = ['ADMIN', 'SUPER_ADMIN', 'STORE_ACCOUNTANT'];
+
+/** Operational stock access — transactions, orders, class config, item view */
+const STOCK_SELLER_ROLES = ['ADMIN', 'SUPER_ADMIN', 'STORE_ACCOUNTANT', 'STORE_SELLER'];
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 const MainRoutes = () => {
   const isTokenExist = localStorage.getItem('token');
+
   return (
     <Routes>
-      {/* PUBLIC ROUTE (NO SIDEBAR) */}
+      {/* PUBLIC ROUTE */}
       <Route path="/login" element={isTokenExist ? <Navigate to="/dashboard" /> : <Login />} />
 
       {/* PROTECTED ROUTES */}
       <Route element={<ProtectedRoutes />}>
         <Route element={<AppLayout />}>
 
-          {/* SHARED ROUTES — accessible by all logged-in roles */}
+          {/* ── Shared — all logged-in roles ───────────────────────────────── */}
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/leaves/applyLeaves" element={<ApplyLeaves />} />
           <Route path="/leaves/myLeaves" element={<MyLeaves />} />
           <Route path="/attendance/markUserAttendance" element={<MarkUserAttendance />} />
 
-          {/* ADMIN & SUPER_ADMIN ONLY */}
+          {/* ── User Management — ADMIN & SUPER_ADMIN only ─────────────────── */}
           <Route element={<RoleProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN']} />}>
             <Route path="/dashboard/addUser" element={<AddnewSystemUser />} />
             <Route path="/dashboard/editUser/:id" element={<EditSysUser />} />
@@ -95,7 +109,6 @@ const MainRoutes = () => {
             <Route path="/teachers/classAssignment/:teacherId" element={<ClassAssignment />} />
             <Route path="/teachers/:id" element={<DetailsView />} />
 
-            {/* Students */}
             <Route path="/students" element={<Student />} />
             <Route path="/students/addStudents" element={<AddNewStudent />} />
             <Route path="/students/:id" element={<StudentDetails />} />
@@ -105,34 +118,48 @@ const MainRoutes = () => {
             <Route path="/leaves/manageHolidays" element={<HolidayManagment />} />
           </Route>
 
+          {/* ── Payroll ─────────────────────────────────────────────────────── */}
           <Route element={<RoleProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'ACCOUNTANT']} />}>
             <Route path="/payroll" element={<Payroll />} />
           </Route>
 
-          {/* Stock */}
-          <Route element={<RoleProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'ACCOUNTANT']} />}>
+          {/* Stock landing — visible to all stock roles */}
+          <Route element={<RoleProtectedRoute allowedRoles={STOCK_SELLER_ROLES} />}>
             <Route path="/stock" element={<Stock />} />
-            <Route path="/stock/stores" element={<Store />} />
-            <Route path="/stock/items" element={<Items />} />
-            <Route path="/stock/classConfig" element={<ClassConfig/>} />
-            <Route path="/stock/studentOrders" element={<StudentOrders/>} />
-            <Route path="/stock/studentOrders/addOrder" element={<CreateStudentOrder/>} />
-            <Route path="/stock/studentOrders/editOrder" element={<EditStudentOrder/>} />
-            <Route path="/stock/transactions" element={<Transactions />} />
-            <Route path="/stock/movementHistory" element={<Movement />} />
-          </Route>
-          
-          {/* Transport */}
-          <Route element={<RoleProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'ACCOUNTANT']} />}>
-            <Route path="/route" element={<Transport_Management/>} />
-            <Route path="/route/vehicles" element={<Vehicles/>} />
-            <Route path="/route/Driver&Attendants" element={<Driver_Attendants />} />
-            <Route path="/route/routes_management" element={<Routes_Manage/>} />
-            <Route path="/route/studentAllocations" element={<Student_Allocations />} />
-            <Route path="/route/feePlans" element={<Fee_Plans />}/>
-            <Route path="/route/reports" element={<Reports />}/>
           </Route>
 
+          {/* Stores — STORE_ACCOUNTANT and above only */}
+          <Route element={<RoleProtectedRoute allowedRoles={STOCK_ACCOUNTANT_ROLES} />}>
+            <Route path="/stock/stores" element={<Store />} />
+          </Route>
+
+          {/* Items, Transactions, Class Config, Student Orders — all stock roles */}
+          <Route element={<RoleProtectedRoute allowedRoles={STOCK_SELLER_ROLES} />}>
+            <Route path="/stock/items" element={<Items />} />
+            <Route path="/stock/classConfig" element={<ClassConfig />} />
+            <Route path="/stock/studentOrders" element={<StudentOrders />} />
+            <Route path="/stock/studentOrders/addOrder" element={<CreateStudentOrder />} />
+            <Route path="/stock/studentOrders/editOrder" element={<EditStudentOrder />} />
+            <Route path="/stock/transactions" element={<Transactions />} />
+          </Route>
+
+          {/* Movement History & Stock Reports — STORE_ACCOUNTANT and above only */}
+          <Route element={<RoleProtectedRoute allowedRoles={STOCK_ACCOUNTANT_ROLES} />}>
+            <Route path="/stock/movementHistory" element={<Movement />} />
+          </Route>
+
+          {/* ── Transport — ADMIN & SUPER_ADMIN only ────────────────────────── */}
+          <Route element={<RoleProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN']} />}>
+            <Route path="/route" element={<Transport_Management />} />
+            <Route path="/route/vehicles" element={<Vehicles />} />
+            <Route path="/route/Driver&Attendants" element={<Driver_Attendants />} />
+            <Route path="/route/routes_management" element={<Routes_Manage />} />
+            <Route path="/route/studentAllocations" element={<Student_Allocations />} />
+            <Route path="/route/feePlans" element={<Fee_Plans />} />
+            <Route path="/route/reports" element={<Reports />} />
+          </Route>
+
+          {/* ── Leaves redirect for non-admin roles ─────────────────────────── */}
           <Route element={<RoleProtectedRoute allowedRoles={['TEACHER', 'PRINCIPAL', 'RECEPTIONIST', 'ACCOUNTANT']} />}>
             <Route path="/leaves" element={<Navigate to="/leaves/myLeaves" replace />} />
           </Route>
@@ -142,7 +169,6 @@ const MainRoutes = () => {
 
         </Route>
       </Route>
-
     </Routes>
   );
 };
