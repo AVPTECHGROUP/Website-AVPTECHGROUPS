@@ -19,6 +19,7 @@ function AddNewStudent() {
     const [formData, setFormData] = useState({
         name: "", gender: "", email: "", mobile: "", address: "", dob: "",
         admissionNumber: "", admissionDate: "", academicYear: "2025-2026",
+        rollNumber: "",  // ✅ Added rollNumber
         status: "ACTIVE", bloodGroup: "", previousSchool: "", profileImageUrl: "",
         sectionId: "", fatherName: "", fatherOccupation: "", fatherPhone: "",
         fatherEmail: "", motherName: "", motherOccupation: "", motherPhone: "",
@@ -95,6 +96,7 @@ function AddNewStudent() {
         if (!formData.name.trim() || !formData.gender || !formData.mobile || !formData.dob || !formData.admissionDate || !formData.academicYear) {
             toast.error("Please fill all required fields!"); return false;
         }
+        if (!formData.rollNumber.trim()) { toast.error("Please enter a roll number!"); return false; }
         if (!formData.sectionId) { toast.error("Please select a section!"); return false; }
         if (!phoneRegex.test(formData.mobile)) { toast.error("Mobile number must be exactly 10 digits!"); return false; }
         if (formData.email && !emailRegex.test(formData.email)) { toast.error("Please enter a valid student email address!"); return false; }
@@ -159,7 +161,9 @@ function AddNewStudent() {
                 ? formData.admissionNumber.trim()
                 : `DPIS-${Math.floor(10000 + Math.random() * 90000)}`;
             const apiPayload = {
-                admissionNumber: generatedAdmissionNumber, rollNumber: null, firstName, lastName,
+                admissionNumber: generatedAdmissionNumber,
+                rollNumber: formData.rollNumber.trim() || null,  // ✅ Included in payload
+                firstName, lastName,
                 personalDetails: {
                     fullName: formData.name.trim(), mobile: formData.mobile,
                     email: formData.email.trim() || null, gender: formData.gender.toUpperCase(),
@@ -229,11 +233,30 @@ function AddNewStudent() {
                         </div>
                         <div className="p-4 sm:p-6 lg:p-8">
                             {activeTab === 'personal' && (
-                                <AddStudentPersonalDetails
-                                    formData={formData} setFormData={setFormData}
-                                    handleInputChange={handleInputChange}
-                                    sections={sections} sectionsLoading={sectionsLoading}
-                                />
+                                <>
+                                    <AddStudentPersonalDetails
+                                        formData={formData} setFormData={setFormData}
+                                        handleInputChange={handleInputChange}
+                                        sections={sections} sectionsLoading={sectionsLoading}
+                                    />
+                                    {/* ✅ Roll Number — placed directly below admission number */}
+                                    <div className="grid lg:grid-cols-2 sm:grid-cols-1 gap-4 mt-4">
+                                        <div>
+                                            <label htmlFor="rollNumber" className='block font-semibold text-gray-600 text-sm mb-2'>
+                                                Roll Number<span className="text-red-600 ml-1">*</span>
+                                            </label>
+                                            <input
+                                                type="text"
+                                                id="rollNumber"
+                                                name="rollNumber"
+                                                value={formData.rollNumber}
+                                                onChange={handleInputChange}
+                                                placeholder="Enter roll number"
+                                                className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                                            />
+                                        </div>
+                                    </div>
+                                </>
                             )}
                             {activeTab === 'family' && (
                                 <AddStudentFamilyDetails
