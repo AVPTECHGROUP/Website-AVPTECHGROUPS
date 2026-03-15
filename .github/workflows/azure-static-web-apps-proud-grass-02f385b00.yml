@@ -2,9 +2,6 @@ name: Prod Azure Static Web Apps CI/CD
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - deploy_main_prod
 
 jobs:
   build_and_deploy_job:
