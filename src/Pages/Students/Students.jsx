@@ -8,8 +8,8 @@ import {
     UsersIcon,
     UserPenIcon,
     UserSearch,
-    Info,
     UserPlus,
+    Info,
 } from 'lucide-react';
 import ActionDropDownComp from '../../Components/CommonComp/ActionDropDownComp';
 import CardComponent from '../../Components/CommonComp/CardComponent';
@@ -158,24 +158,22 @@ const Student = () => {
         },
     ];
 
-    const tableHeadItems = ['Student Name', 'Mobile Number', 'Status'];
-    const tdStyle = 'px-6 py-3 text-left text-gray-700 text-sm';
+    // ✅ Updated: 5 columns now — added Class and Section
+    const tableHeadItems = ['Student Name', 'Mobile Number', 'Class', 'Section', 'Status'];
+    const tdStyle = 'px-6 py-3 text-center text-gray-700 text-sm';
 
+    // ✅ Updated: only Edit Student action remains
     const actionOptions = [
         { value: 'editStudent', label: 'Edit Student', icon: UserPenIcon, text: 'text-blue-600', bg: 'bg-blue-50', hover: 'hover:bg-blue-100' },
-        { value: 'viewStudent', label: 'View Student', icon: Info, text: 'text-orange-600', bg: 'bg-orange-50', hover: 'hover:bg-orange-100' },
     ];
 
     const callAllActions = async (optVal, student) => {
         if (optVal === 'editStudent') navigate(`/students/editStudent/${student.id}`);
-        if (optVal === 'viewStudent') navigate(`/students/${student.id}`);
     };
 
     return (
-        // ── Outer shell: full viewport height, flex column ──
         <div className="flex flex-col h-screen overflow-hidden bg-linear-to-b from-sky-50 to-sky-100">
             <div className="flex flex-col flex-1 overflow-hidden">
-                {/* ── Scrollable page area ── */}
                 <div className="flex flex-col flex-1 overflow-hidden p-4 sm:p-5 lg:p-4 gap-4">
 
                     {/* Page Title */}
@@ -203,7 +201,7 @@ const Student = () => {
                             ))}
                     </div>
 
-                    {/* ── Search + Add Student Bar ── */}
+                    {/* Search + Add Student Bar */}
                     <div className="bg-white flex items-center gap-3 px-4 py-3 rounded-xl border border-gray-200 shrink-0">
                         <button
                             onClick={() => navigate('/students/addStudents')}
@@ -236,7 +234,7 @@ const Student = () => {
                         </div>
                     </div>
 
-                    {/* MOBILE / TABLET CARDS — scrollable independently */}
+                    {/* MOBILE / TABLET CARDS */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:hidden overflow-y-auto">
                         {loading ? (
                             <div className="flex items-center justify-center py-8 col-span-full">
@@ -273,15 +271,31 @@ const Student = () => {
                                         </div>
                                         <div>
                                             <p className="font-medium text-gray-900">{student.name}</p>
-                                            {student.className && (
-                                                <p className="text-xs text-gray-500">Class {student.className} – {student.sectionName}</p>
-                                            )}
                                         </div>
                                     </div>
                                     <div className="space-y-2 text-sm">
                                         <p>
                                             <span className="font-medium text-gray-600">Contact:</span>
                                             <span className="text-gray-800 ml-4">{student.mobile}</span>
+                                        </p>
+                                        {/* ✅ Separate Class and Section fields in mobile card */}
+                                        <p>
+                                            <span className="font-medium text-gray-600">Class:</span>
+                                            <span className="text-gray-800 ml-4">
+                                                {student.className
+                                                    ? <span className="inline-flex items-center px-2 py-0.5 rounded bg-blue-50 text-blue-700 text-xs font-medium">{student.className}</span>
+                                                    : <span className="text-gray-400 text-xs">N/A</span>
+                                                }
+                                            </span>
+                                        </p>
+                                        <p>
+                                            <span className="font-medium text-gray-600">Section:</span>
+                                            <span className="text-gray-800 ml-2">
+                                                {student.sectionName
+                                                    ? <span className="inline-flex items-center px-2 py-0.5 rounded bg-purple-50 text-purple-700 text-xs font-medium">{student.sectionName}</span>
+                                                    : <span className="text-gray-400 text-xs">N/A</span>
+                                                }
+                                            </span>
                                         </p>
                                         <p className="flex items-center gap-2">
                                             <span className="font-medium text-gray-600">Status:</span>
@@ -290,9 +304,22 @@ const Student = () => {
                                                 {student.status}
                                             </span>
                                         </p>
-                                        <div className="flex items-center gap-3">
-                                            <span className="font-medium text-gray-600">Actions:</span>
-                                            <ActionDropDownComp actionOptions={actionOptions} onAction={(optVal) => callAllActions(optVal, student)} />
+                                        {/* Edit + View buttons */}
+                                        <div className="flex items-center gap-2 pt-1">
+                                            <button
+                                                onClick={() => navigate(`/students/editStudent/${student.id}`)}
+                                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+                                            >
+                                                <UserPenIcon className="w-3.5 h-3.5" />
+                                                Edit
+                                            </button>
+                                            <button
+                                                onClick={() => navigate(`/students/${student.id}`)}
+                                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-orange-50 text-orange-600 hover:bg-orange-100 transition-colors"
+                                            >
+                                                <Info className="w-3.5 h-3.5" />
+                                                View
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
@@ -300,20 +327,19 @@ const Student = () => {
                         )}
                     </div>
 
-                    {/* ── DESKTOP TABLE — flex-1 so it fills ALL remaining height ── */}
+                    {/* DESKTOP TABLE */}
                     <div className="hidden lg:flex lg:flex-col flex-1 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden min-h-0">
 
-                        {/* Scrollable tbody area — flex-1 stretches to fill */}
                         <div className="flex-1 overflow-auto">
                             <table className="w-full">
                                 <thead className="border-b border-gray-100">
                                     <tr>
                                         {tableHeadItems.map((h) => (
-                                            <th key={h} className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider sticky top-0 bg-gray-50 z-50">
+                                            <th key={h} className="px-6 py-3 text=center text-xs font-semibold text-gray-500 uppercase tracking-wider sticky top-0 bg-gray-50 z-50">
                                                 {h}
                                             </th>
                                         ))}
-                                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider sticky top-0 bg-gray-50 z-50">
+                                        <th className="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider sticky top-0 bg-gray-50 z-50">
                                             Actions
                                         </th>
                                     </tr>
@@ -323,7 +349,7 @@ const Student = () => {
                                         <ListLoader />
                                     ) : error ? (
                                         <tr>
-                                            <td colSpan="4" className="px-6 py-8 text-center">
+                                            <td colSpan="6" className="px-6 py-8 text-center">
                                                 <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                                                     <UserRoundXIcon className="w-6 h-6 text-red-600" />
                                                 </div>
@@ -336,7 +362,7 @@ const Student = () => {
                                         </tr>
                                     ) : noUserFound ? (
                                         <tr>
-                                            <td colSpan="4" className="px-6 py-12 text-center">
+                                            <td colSpan="6" className="px-6 py-12 text-center">
                                                 <div className="w-14 h-14 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-3">
                                                     <UserSearch className="w-7 h-7 text-blue-500" />
                                                 </div>
@@ -347,28 +373,61 @@ const Student = () => {
                                     ) : (
                                         students.map((student) => (
                                             <tr key={student.id} className="hover:bg-gray-50 transition-colors">
+                                                {/* Student Name */}
                                                 <td className={tdStyle}>
                                                     <div className="flex items-center gap-3">
                                                         <div className={`w-9 h-9 rounded-full ${getAvatarColor(student.name)} flex items-center justify-center text-white text-sm font-semibold shrink-0`}>
                                                             {student.avatar}
                                                         </div>
-                                                        <div>
-                                                            <p className="font-medium text-gray-900">{student.name}</p>
-                                                            {student.className && (
-                                                                <p className="text-xs text-gray-400">Class {student.className} – {student.sectionName}</p>
-                                                            )}
-                                                        </div>
+                                                        <p className="font-medium text-gray-900">{student.name}</p>
                                                     </div>
                                                 </td>
-                                                <td className={tdStyle}>{student.mobile}</td>
+
+                                                {/* Mobile Number */}
+                                                <td className={`${tdStyle} text-center`}>{student.mobile}</td>
+
+                                                {/* ✅ Class — separate column */}
                                                 <td className={tdStyle}>
-                                                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${student.status === 'ACTIVE' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                                                    {student.className
+                                                        ? <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-blue-50 text-blue-700 text-xs font-medium">{student.className}</span>
+                                                        : <span className="text-gray-400 text-xs">—</span>
+                                                    }
+                                                </td>
+
+                                                {/* ✅ Section — separate column */}
+                                                <td className={tdStyle}>
+                                                    {student.sectionName
+                                                        ? <span className="inline-flex items-center justify-center px-2.5 py-1 rounded-md bg-purple-50 text-purple-700 text-xs font-medium">{student.sectionName}</span>
+                                                        : <span className="text-gray-400 text-xs">—</span>
+                                                    }
+                                                </td>
+
+                                                {/* Status */}
+                                                <td className={tdStyle}>
+                                                    <span className={`inline-flex items-center justify-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${student.status === 'ACTIVE' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
                                                         <span className={`w-1.5 h-1.5 rounded-full ${student.status === 'ACTIVE' ? 'bg-green-500' : 'bg-red-500'}`} />
                                                         {student.status}
                                                     </span>
                                                 </td>
-                                                <td className={tdStyle}>
-                                                    <ActionDropDownComp actionOptions={actionOptions} onAction={(optVal) => callAllActions(optVal, student)} />
+
+                                                {/* Edit + View action buttons */}
+                                                <td className='text-center'>
+                                                    <div className="flex items-center justify-center gap-2">
+                                                        <button
+                                                            onClick={() => navigate(`/students/editStudent/${student.id}`)}
+                                                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+                                                        >
+                                                            <UserPenIcon className="w-3.5 h-3.5" />
+                                                            Edit
+                                                        </button>
+                                                        <button
+                                                            onClick={() => navigate(`/students/${student.id}`)}
+                                                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-orange-50 text-orange-600 hover:bg-orange-100 transition-colors"
+                                                        >
+                                                            <Info className="w-3.5 h-3.5" />
+                                                            View
+                                                        </button>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         ))
@@ -377,7 +436,7 @@ const Student = () => {
                             </table>
                         </div>
 
-                        {/* Pagination — pinned to bottom of the white card */}
+                        {/* Desktop Pagination */}
                         <div className="shrink-0 px-6 py-4 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4 bg-white">
                             <div className="flex flex-col sm:flex-row items-center gap-4">
                                 <span className="text-sm text-gray-500">
