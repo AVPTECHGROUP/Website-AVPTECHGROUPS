@@ -22,7 +22,10 @@ jobs:
       - name: Build (staging)
         run: npm run build
         env:
-          VITE_BASE_URL: https://ssdev-btgphuazhza9edcu.canadacentral-01.azurewebsites.net
+          VITE_API_BASE_V1: https://ssdev-btgphuazhza9edcu.canadacentral-01.azurewebsites.net/api/v1
+          VITE_API_BASE: https://ssdev-btgphuazhza9edcu.canadacentral-01.azurewebsites.net/api
+          VITE_API_BASE_DOUBLE: https://ssdev-btgphuazhza9edcu.canadacentral-01.azurewebsites.net/api/api
+          VITE_API_BASE_DOUBLE_V1: https://ssdev-btgphuazhza9edcu.canadacentral-01.azurewebsites.net/api/api/v1
       - name: Build And Deploy
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
