@@ -5,6 +5,7 @@ import QuickActions from '../../Components/Teacher/ManagementComponents/QuickAct
 import TeachersFilters from '../../Components/Teacher/ManagementComponents/TeachersFilters';
 import TeachersTable from '../../Components/Teacher/ManagementComponents/TeachersTable';
 
+
 const Teachers = () => {
 
   // Search and Filters
