@@ -13,6 +13,16 @@ jobs:
         with:
           submodules: true
           lfs: false
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      - name: Install dependencies
+        run: npm ci
+      - name: Build (staging)
+        run: npm run build
+        env:
+          VITE_BASE_URL: https://ssdev-btgphuazhza9edcu.canadacentral-01.azurewebsites.net
       - name: Build And Deploy
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
@@ -23,4 +33,4 @@ jobs:
           app_location: "/"
           api_location: ""
           output_location: "dist"
-          app_build_command: "npm run build -- --mode staging"
+          skip_app_build: true
