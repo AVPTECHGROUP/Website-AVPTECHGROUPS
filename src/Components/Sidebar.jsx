@@ -26,7 +26,7 @@ const menuItems = [
     icon: LayoutDashboard,
     label: 'Dashboard',
     route: '/dashboard',
-    roles: ['ADMIN', 'TEACHER', 'SUPER_ADMIN', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST', 'PARENT'],
+    roles: ['ADMIN', 'TEACHER', 'SUPER_ADMIN', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST', 'PARENT', 'STORE_ACCOUNTANT', 'STORE_SELLER'],
   },
   {
     id: 'manageUsers',
@@ -102,37 +102,37 @@ const menuItems = [
     icon: Package,
     label: 'Stock',
     route: '/stock',
-    roles: ['ADMIN', 'SUPER_ADMIN','STORE_ACCOUNTANT','STORE_SELLER'],
+    roles: ['ADMIN', 'SUPER_ADMIN', 'STORE_ACCOUNTANT', 'STORE_SELLER'],
     subItems: [
       {
         label: 'Stores',
         route: '/stock/stores',
-        roles: ['ADMIN', 'SUPER_ADMIN',],
+        roles: ['ADMIN', 'SUPER_ADMIN', 'STORE_ACCOUNTANT'],
       },
       {
         label: 'Items',
         route: '/stock/items',
-        roles: ['ADMIN', 'SUPER_ADMIN'],
+        roles: ['ADMIN', 'SUPER_ADMIN', 'STORE_ACCOUNTANT', 'STORE_SELLER'],
       },
       {
         label: 'Transactions',
         route: '/stock/transactions',
-        roles: ['ADMIN', 'SUPER_ADMIN'],
+        roles: ['ADMIN', 'SUPER_ADMIN', 'STORE_ACCOUNTANT', 'STORE_SELLER'],
       },
       {
         label: 'Class Config',
         route: '/stock/classConfig',
-        roles: ['ADMIN', 'SUPER_ADMIN'],
+        roles: ['ADMIN', 'SUPER_ADMIN', 'STORE_ACCOUNTANT', 'STORE_SELLER'],
       },
       {
         label: 'Student Orders',
         route: '/stock/studentOrders',
-        roles: ['ADMIN', 'SUPER_ADMIN'],
+        roles: ['ADMIN', 'SUPER_ADMIN', 'STORE_ACCOUNTANT', 'STORE_SELLER'],
       },
       {
         label: 'Movement History',
         route: '/stock/movementHistory',
-        roles: ['ADMIN', 'SUPER_ADMIN'],
+        roles: ['ADMIN', 'SUPER_ADMIN', 'STORE_ACCOUNTANT'],
       }
     ]
   },
@@ -175,32 +175,34 @@ const menuItems = [
       }
     ]
   },
-  {
-    id: 'payroll',
-    icon: IndianRupee,
-    label: 'Payroll',
-    route: '/payroll',
-    roles: ['ADMIN', 'SUPER_ADMIN', 'ACCOUNTANT'],
-  },
-  {
-    id: 'settings',
-    icon: Settings,
-    label: 'Settings',
-    route: '/settings',
-    roles: ['ADMIN', 'TEACHER', 'SUPER_ADMIN', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST', 'PARENT'],
-  },
+  // {
+  //   id: 'payroll',
+  //   icon: IndianRupee,
+  //   label: 'Payroll',
+  //   route: '/payroll',
+  //   roles: ['ADMIN', 'SUPER_ADMIN', 'ACCOUNTANT'],
+  // },
+  // {
+  //   id: 'settings',
+  //   icon: Settings,
+  //   label: 'Settings',
+  //   route: '/settings',
+  //   roles: ['ADMIN', 'TEACHER', 'SUPER_ADMIN', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST', 'PARENT', 'STORE_ACCOUNTANT', 'STORE_SELLER'],
+  // },
 ]
 
 const ADMIN_ROLES = ['ADMIN', 'SUPER_ADMIN']
 
 const roleBadgeStyles = {
-  SUPER_ADMIN: 'bg-purple-100 text-purple-700',
-  ADMIN: 'bg-blue-100 text-blue-700',
-  TEACHER: 'bg-green-100 text-green-700',
-  PRINCIPAL: 'bg-amber-100 text-amber-700',
-  ACCOUNTANT: 'bg-cyan-100 text-cyan-700',
-  RECEPTIONIST: 'bg-pink-100 text-pink-700',
-  PARENT: 'bg-orange-100 text-orange-700',
+  SUPER_ADMIN:      'bg-purple-100 text-purple-700',
+  ADMIN:            'bg-blue-100 text-blue-700',
+  TEACHER:          'bg-green-100 text-green-700',
+  PRINCIPAL:        'bg-amber-100 text-amber-700',
+  ACCOUNTANT:       'bg-cyan-100 text-cyan-700',
+  RECEPTIONIST:     'bg-pink-100 text-pink-700',
+  PARENT:           'bg-orange-100 text-orange-700',
+  STORE_ACCOUNTANT: 'bg-teal-100 text-teal-700',  
+  STORE_SELLER:     'bg-indigo-100 text-indigo-700', 
 }
 
 const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
@@ -317,6 +319,15 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
   const initials = displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
   const badgeClass = roleBadgeStyles[userRole] || 'bg-gray-100 text-gray-600'
 
+  // ✅ Format role label nicely for display (e.g. STORE_ACCOUNTANT → Store Accountant)
+  const formatRoleLabel = (role) => {
+    if (!role) return ''
+    return role
+      .split('_')
+      .map(word => word.charAt(0) + word.slice(1).toLowerCase())
+      .join(' ')
+  }
+
   return (
     <div
       className={`bg-[#F8FAFC] border-r border-gray-200 flex flex-col transition-all duration-300 h-full
@@ -348,11 +359,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
           const isOpen = openDropdowns[item.id]
 
           return (
-            <div
-              key={item.id}
-              className="mb-0.5"
-            >
-
+            <div key={item.id} className="mb-0.5">
               {/* Parent row */}
               <button
                 onClick={() => handleMenuClick(item)}
@@ -371,7 +378,6 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
                     <span className="font-medium text-sm truncate">{item.label}</span>
                   )}
                 </div>
-
                 {sidebarOpen && hasSubItems && (
                   <ChevronDown
                     className={`w-4 h-4 shrink-0 transition-transform duration-300
@@ -387,7 +393,6 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
                   style={{ maxHeight: isOpen ? `${item.subItems.length * 48}px` : '0px' }}
                   className="overflow-hidden transition-[max-height] duration-300 ease-in-out"
                 >
-                  {/* Left accent line + items */}
                   <div className="mt-1 ml-4 pl-3 border-l-2 border-gray-200 space-y-0.5 pb-1">
                     {item.subItems.map((subItem, index) => {
                       const isSubActive = location.pathname.startsWith(subItem.route)
@@ -402,7 +407,6 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
                               : 'text-gray-500 hover:bg-gray-100 hover:text-gray-800'
                             }`}
                         >
-                          {/* Dot indicator */}
                           <span
                             className={`w-1.5 h-1.5 rounded-full shrink-0 transition-all duration-200
                               ${isSubActive ? 'bg-blue-500' : 'bg-gray-300'}`}
@@ -414,7 +418,6 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
                   </div>
                 </div>
               )}
-
             </div>
           )
         })}
@@ -423,7 +426,6 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
       {/* ── Profile Section ── */}
       <div className="p-3 border-t border-gray-200 shrink-0" ref={profileRef}>
         <div className="relative">
-
           {/* Trigger button */}
           <button
             onClick={() => setProfileOpen(prev => !prev)}
@@ -437,13 +439,13 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
               flex items-center justify-center text-white font-bold text-sm shadow-sm">
               {initials}
             </div>
-
             {sidebarOpen && (
               <>
                 <div className="flex-1 text-left min-w-0">
                   <p className="text-sm font-semibold text-gray-800 truncate">{displayName}</p>
+                  {/* ✅ Fixed: uses formatRoleLabel so STORE_ACCOUNTANT shows as "Store Accountant" */}
                   <p className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full inline-block mt-0.5 ${badgeClass}`}>
-                    {userRole?.replace('_', ' ')}
+                    {formatRoleLabel(userRole)}
                   </p>
                 </div>
                 <ChevronUp
@@ -475,8 +477,9 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
 
               <div className="pt-7 px-4 pb-3 border-b border-gray-100">
                 <p className="font-bold text-gray-900 text-sm">{displayName}</p>
+                {/* ✅ Fixed: uses formatRoleLabel in dropdown too */}
                 <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full inline-block mt-1 ${badgeClass}`}>
-                  {userRole?.replace('_', ' ')}
+                  {formatRoleLabel(userRole)}
                 </span>
               </div>
 
@@ -540,7 +543,6 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
           from { opacity: 0; transform: translateY(8px); }
           to   { opacity: 1; transform: translateY(0); }
         }
-        /* Hide scrollbar — all browsers — while keeping scroll functional */
         .sidebar-scroll::-webkit-scrollbar { display: none; }
         .sidebar-scroll { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>

@@ -7,8 +7,24 @@ import { createUser, updateUserById } from '../../Api/userManagementAPI';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const VALID_GENDERS = ['MALE', 'FEMALE', 'OTHER'];
-const VALID_ROLES = ['PARENT', 'TEACHER', 'ADMIN', 'ACCOUNTANT', 'LIBRARIAN'];
-const MOBILE_REGEX = /^[6-9]\d{9}$/;           // Indian 10-digit mobile
+
+// ✅ All 9 roles from the API — was previously missing PRINCIPAL, RECEPTIONIST, STORE_ACCOUNTANT, STORE_SELLER
+const VALID_ROLES = [
+    'SUPER_ADMIN',
+    'ADMIN',
+    'PRINCIPAL',
+    'TEACHER',
+    'ACCOUNTANT',
+    'PARENT',
+    'RECEPTIONIST',
+    'STORE_ACCOUNTANT',
+    'STORE_SELLER',
+];
+
+// Roles that don't need professional / bank details in the payload
+const PARENT_LIKE_ROLES = ['PARENT'];
+
+const MOBILE_REGEX = /^[6-9]\d{9}$/;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const EMP_CODE_REGEX = /^[A-Za-z0-9\-_]{2,20}$/;
 const MAX_NAME_LENGTH = 100;
@@ -18,43 +34,28 @@ const MAX_EXPERIENCE = 60;
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const generateEmployeeCode = () => 'EMP' + Math.floor(100 + Math.random() * 900);
 
-/** Returns true when a date string is a valid past/present date */
 const isValidPastDate = (dateStr) => {
     if (!dateStr) return false;
     const d = new Date(dateStr);
     return !isNaN(d.getTime()) && d <= new Date();
 };
 
-/** Returns true when a date string is a valid present/future date */
-const isValidPresentOrFutureDate = (dateStr) => {
-    if (!dateStr) return false;
-    const d = new Date(dateStr);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return !isNaN(d.getTime()) && d >= today;
-};
-
-/** Returns true when a date string is a valid joining date (not > today) */
 const isValidJoiningDate = (dateStr) => {
     if (!dateStr) return false;
     const d = new Date(dateStr);
     return !isNaN(d.getTime()) && d <= new Date();
 };
 
-/**
- * Validates all required fields for both PARENT and non-PARENT roles.
- * Returns { valid: boolean, errors: string[] }
- */
 const validateFormData = (formData) => {
     const errors = [];
-    const isParent = formData.userRole === 'PARENT';
+    const isParentLike = PARENT_LIKE_ROLES.includes(formData.userRole);
 
-    // ── Role ──────────────────────────────────────────────────────
+    // Role
     if (!formData.userRole || !VALID_ROLES.includes(formData.userRole)) {
         errors.push('Please select a valid user role.');
     }
 
-    // ── Name ──────────────────────────────────────────────────────
+    // Name
     const trimmedName = (formData.name || '').trim();
     if (!trimmedName) {
         errors.push('Full name is required.');
@@ -66,17 +67,17 @@ const validateFormData = (formData) => {
         errors.push('Full name contains invalid characters.');
     }
 
-    // ── Gender ────────────────────────────────────────────────────
+    // Gender
     if (!formData.gender || !VALID_GENDERS.includes(formData.gender.toUpperCase())) {
         errors.push('Please select a valid gender.');
     }
 
-    // ── Email ─────────────────────────────────────────────────────
+    // Email
     if (!formData.email || !EMAIL_REGEX.test(formData.email.trim())) {
         errors.push('Please enter a valid email address.');
     }
 
-    // ── Mobile ────────────────────────────────────────────────────
+    // Mobile
     const mobileTrimmed = (formData.mobile || '').replace(/\s/g, '');
     if (!mobileTrimmed) {
         errors.push('Mobile number is required.');
@@ -84,7 +85,7 @@ const validateFormData = (formData) => {
         errors.push('Mobile number must be a valid 10-digit Indian mobile number.');
     }
 
-    // ── Date of birth ─────────────────────────────────────────────
+    // DOB
     if (formData.dob) {
         if (!isValidPastDate(formData.dob)) {
             errors.push('Date of birth must be a valid past date.');
@@ -95,24 +96,19 @@ const validateFormData = (formData) => {
         }
     }
 
-    // ── Address ───────────────────────────────────────────────────
+    // Address
     if (formData.address && formData.address.trim().length > MAX_ADDRESS_LENGTH) {
         errors.push(`Address cannot exceed ${MAX_ADDRESS_LENGTH} characters.`);
     }
 
-    // ── Non-PARENT specific fields ─────────────────────────────────
-    if (!isParent) {
-        // Employee code (optional, but validated if provided)
+    // Non-PARENT fields
+    if (!isParentLike) {
         if (formData.employeeCode && !EMP_CODE_REGEX.test(formData.employeeCode.trim())) {
             errors.push('Employee code must be 2–20 alphanumeric characters.');
         }
-
-        // Joining date
         if (formData.joiningDate && !isValidJoiningDate(formData.joiningDate)) {
             errors.push('Joining date must be a valid date not in the future.');
         }
-
-        // Experience
         const exp = Number(formData.experience);
         if (formData.experience !== '' && formData.experience !== undefined) {
             if (!Number.isFinite(exp) || exp < 0) {
@@ -123,7 +119,7 @@ const validateFormData = (formData) => {
         }
     }
 
-    // ── Account status ────────────────────────────────────────────
+    // Account status
     if (!formData.accountStatus) {
         errors.push('Please enable account status before saving.');
     }
@@ -137,8 +133,6 @@ function AddnewSystemUser() {
     const [activeTab, setActiveTab] = useState('personal');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [fieldErrors, setFieldErrors] = useState({});
-
-    // Use a ref to track create/update state — avoids stale-closure issues with `let`
     const createdUserIdRef = useRef(null);
 
     const [formData, setFormData] = useState({
@@ -156,7 +150,6 @@ function AddnewSystemUser() {
         payrollStatus: 'ACTIVE',
         accountStatus: false,
         userRole: '',
-        // Salary fields
         salaryType: '',
         baseSalary: '',
         leaveDeductionPerDay: '',
@@ -169,7 +162,6 @@ function AddnewSystemUser() {
         professionalTax: '',
         incomeTax: '',
         otherDeductions: '',
-        // Class assignment fields
         assignedClass: '',
         section: '',
         primarySubject: '',
@@ -177,34 +169,21 @@ function AddnewSystemUser() {
         isClassTeacher: false,
     });
 
-    // ── Input handler — sanitises and updates ────────────────────────────────
     const handleInputChange = (e) => {
         const { name, value } = e.target;
-
-        // Clear field-level error on change
         if (fieldErrors[name]) {
-            setFieldErrors((prev) => {
-                const next = { ...prev };
-                delete next[name];
-                return next;
-            });
+            setFieldErrors((prev) => { const next = { ...prev }; delete next[name]; return next; });
         }
-
-        // Field-specific sanitisation
         let sanitized = value;
         if (name === 'mobile') sanitized = value.replace(/\D/g, '').slice(0, 10);
-        if (name === 'experience') {
-            sanitized = value === '' ? '' : Math.max(0, Math.min(MAX_EXPERIENCE, Number(value)));
-        }
+        if (name === 'experience') sanitized = value === '' ? '' : Math.max(0, Math.min(MAX_EXPERIENCE, Number(value)));
         if (name === 'name') sanitized = value.slice(0, MAX_NAME_LENGTH);
         if (name === 'address') sanitized = value.slice(0, MAX_ADDRESS_LENGTH);
-
         setFormData((prev) => ({ ...prev, [name]: sanitized }));
     };
 
-    // ── Build API payload ─────────────────────────────────────────────────────
     const buildPayload = (data) => {
-        const isParent = data.userRole === 'PARENT';
+        const isParentLike = PARENT_LIKE_ROLES.includes(data.userRole);
         const personalDetails = {
             fullName: data.name.trim(),
             mobile: data.mobile.trim(),
@@ -216,8 +195,7 @@ function AddnewSystemUser() {
             emergencyContactName: 'NA',
             emergencyContactRelation: 'NA',
         };
-
-        if (isParent) {
+        if (isParentLike) {
             return {
                 email: data.email.trim(),
                 roleNames: [data.userRole],
@@ -226,7 +204,6 @@ function AddnewSystemUser() {
                 remarks: 'Created from UI',
             };
         }
-
         return {
             email: data.email.trim(),
             roleNames: [data.userRole],
@@ -252,15 +229,11 @@ function AddnewSystemUser() {
         };
     };
 
-    // ── Submit ────────────────────────────────────────────────────────────────
     const handleSubmit = async (e) => {
         e.preventDefault();
-
         const { valid, errors } = validateFormData(formData);
         if (!valid) {
-            // Show first error as toast and store all for inline display
             toast.error(errors[0]);
-            // Map errors to field names for inline hints (best-effort)
             const mapped = {};
             errors.forEach((msg) => {
                 if (msg.toLowerCase().includes('name')) mapped.name = msg;
@@ -278,27 +251,19 @@ function AddnewSystemUser() {
             setFieldErrors(mapped);
             return;
         }
-
         setFieldErrors({});
         setIsSubmitting(true);
         const loadingToast = toast.loading('Adding user...');
-
         try {
             const apiPayload = buildPayload(formData);
             let response;
-
             if (!createdUserIdRef.current) {
-                // First-time create
                 response = await createUser(apiPayload);
-                if (!response?.data?.id) {
-                    throw new Error('Invalid response: user ID not returned from server.');
-                }
+                if (!response?.data?.id) throw new Error('Invalid response: user ID not returned from server.');
                 createdUserIdRef.current = response.data.id;
             } else {
-                // Subsequent calls — update
                 response = await updateUserById(createdUserIdRef.current, apiPayload);
             }
-
             toast.dismiss(loadingToast);
             toast.success(`${formData.name.trim()} : ${response?.message ?? 'User added successfully'}`);
             navigate('/dashboard/manageUsers');
@@ -314,45 +279,26 @@ function AddnewSystemUser() {
     return (
         <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-4">
             <div className="mx-auto">
-                {/* Back Button */}
-                <button
-                    onClick={() => navigate(-1)}
-                    className="flex items-center cursor-pointer bg-gray-600 p-2 rounded-xl text-white gap-2 hover:bg-gray-900 transition-colors mb-4"
-                >
+                <button onClick={() => navigate(-1)} className="flex items-center cursor-pointer bg-gray-600 p-2 rounded-xl text-white gap-2 hover:bg-gray-900 transition-colors mb-4">
                     <ChevronLeft className="w-5 h-5" />
                     <span className="hidden sm:inline">Back to List</span>
                 </button>
-
-                {/* Header */}
                 <div className="mb-6">
                     <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Add New User</h1>
-                    <p className="text-sm sm:text-base text-gray-500">
-                        Enter the details below to onboard a new user into the system.
-                    </p>
+                    <p className="text-sm sm:text-base text-gray-500">Enter the details below to onboard a new user into the system.</p>
                 </div>
-
                 <form onSubmit={handleSubmit} noValidate>
                     <div className="bg-white rounded-lg shadow">
-                        {/* Tabs */}
                         <div className="border-b border-gray-200">
                             <nav className="flex flex-wrap -mb-px">
-                                <button
-                                    type="button"
-                                    onClick={() => setActiveTab('personal')}
-                                    className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${
-                                        activeTab === 'personal'
-                                            ? 'border-blue-600 text-blue-600'
-                                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                                    }`}
-                                >
+                                <button type="button" onClick={() => setActiveTab('personal')}
+                                    className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'personal' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
                                     <User size={20} />
                                     <span className="hidden sm:inline">Personal Details</span>
                                     <span className="sm:hidden">Personal</span>
                                 </button>
                             </nav>
                         </div>
-
-                        {/* Content */}
                         <div className="p-4 sm:p-6 lg:p-8">
                             {activeTab === 'personal' && (
                                 <AddPersonalDetails
@@ -363,34 +309,20 @@ function AddnewSystemUser() {
                                 />
                             )}
                         </div>
-
-                        {/* Footer Buttons */}
                         <div className="border-t border-gray-200 px-4 sm:px-6 lg:px-8 py-4 bg-gray-50 rounded-b-lg">
                             <div className="flex flex-col sm:flex-row justify-end gap-3">
-                                <button
-                                    type="button"
-                                    onClick={() => navigate('/dashboard/manageUsers')}
-                                    className="px-6 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                                >
+                                <button type="button" onClick={() => navigate('/dashboard/manageUsers')}
+                                    className="px-6 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
                                     Discard
                                 </button>
-                                <button
-                                    disabled={isSubmitting}
-                                    type="submit"
-                                    className={`px-6 py-2.5 text-sm font-medium rounded-lg transition-all ${
-                                        isSubmitting
-                                            ? 'bg-blue-300 cursor-not-allowed text-white'
-                                            : 'bg-blue-500 hover:bg-blue-600 cursor-pointer text-white'
-                                    }`}
-                                >
+                                <button disabled={isSubmitting} type="submit"
+                                    className={`px-6 py-2.5 text-sm font-medium rounded-lg transition-all ${isSubmitting ? 'bg-blue-300 cursor-not-allowed text-white' : 'bg-blue-500 hover:bg-blue-600 cursor-pointer text-white'}`}>
                                     {isSubmitting ? (
                                         <span className="flex items-center justify-center gap-2">
                                             <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                                             Adding...
                                         </span>
-                                    ) : (
-                                        'Save Details'
-                                    )}
+                                    ) : 'Save Details'}
                                 </button>
                             </div>
                         </div>

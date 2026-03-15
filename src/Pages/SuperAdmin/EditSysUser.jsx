@@ -8,7 +8,23 @@ import { getUserById, updateUserById } from '../../Api/userManagementAPI';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const VALID_GENDERS = ['MALE', 'FEMALE', 'OTHER'];
-const VALID_ROLES = ['PARENT', 'TEACHER', 'ADMIN', 'ACCOUNTANT', 'LIBRARIAN'];
+
+// ✅ All 9 roles from the API — was previously missing PRINCIPAL, RECEPTIONIST, STORE_ACCOUNTANT, STORE_SELLER
+const VALID_ROLES = [
+    'SUPER_ADMIN',
+    'ADMIN',
+    'PRINCIPAL',
+    'TEACHER',
+    'ACCOUNTANT',
+    'PARENT',
+    'RECEPTIONIST',
+    'STORE_ACCOUNTANT',
+    'STORE_SELLER',
+];
+
+// Roles that don't need professional / bank details in the payload
+const PARENT_LIKE_ROLES = ['PARENT'];
+
 const MOBILE_REGEX = /^[6-9]\d{9}$/;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const EMP_CODE_REGEX = /^[A-Za-z0-9\-_]{2,20}$/;
@@ -19,7 +35,6 @@ const MAX_EXPERIENCE = 60;
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const generateEmployeeCode = () => 'EMP' + Math.floor(100 + Math.random() * 900);
 
-/** Parses a date string and returns YYYY-MM-DD or '' */
 const formatToInputDate = (dateStr) => {
     if (!dateStr) return '';
     const date = new Date(dateStr);
@@ -27,84 +42,65 @@ const formatToInputDate = (dateStr) => {
     return date.toISOString().split('T')[0];
 };
 
-/** Returns true when a date string is a valid past/present date */
 const isValidPastDate = (dateStr) => {
-    if (!dateStr) return true; // optional field — empty is OK
+    if (!dateStr) return true;
     const d = new Date(dateStr);
     return !isNaN(d.getTime()) && d <= new Date();
 };
 
-/** Returns true when a date string is a valid joining date (not after today) */
 const isValidJoiningDate = (dateStr) => {
-    if (!dateStr) return true; // optional field
+    if (!dateStr) return true;
     const d = new Date(dateStr);
     return !isNaN(d.getTime()) && d <= new Date();
 };
 
-/**
- * Validates all editable fields.
- * Returns { valid: boolean, errors: string[], fieldMap: object }
- */
 const validateFormData = (formData, activeRole) => {
     const errors = [];
     const fieldMap = {};
-    const isParent = activeRole === 'PARENT';
+    const isParentLike = PARENT_LIKE_ROLES.includes(activeRole);
 
-    const addError = (field, msg) => {
-        errors.push(msg);
-        fieldMap[field] = msg;
-    };
+    const addError = (field, msg) => { errors.push(msg); fieldMap[field] = msg; };
 
-    // ── Name ──────────────────────────────────────────────────────
+    // Name
     const trimmedName = (formData.name || '').trim();
-    if (!trimmedName) {
-        addError('name', 'Full name is required.');
-    } else if (trimmedName.length < 2) {
-        addError('name', 'Full name must be at least 2 characters.');
-    } else if (trimmedName.length > MAX_NAME_LENGTH) {
-        addError('name', `Full name cannot exceed ${MAX_NAME_LENGTH} characters.`);
-    } else if (!/^[a-zA-Z\s'.,-]+$/.test(trimmedName)) {
-        addError('name', 'Full name contains invalid characters.');
-    }
+    if (!trimmedName) addError('name', 'Full name is required.');
+    else if (trimmedName.length < 2) addError('name', 'Full name must be at least 2 characters.');
+    else if (trimmedName.length > MAX_NAME_LENGTH) addError('name', `Full name cannot exceed ${MAX_NAME_LENGTH} characters.`);
+    else if (!/^[a-zA-Z\s'.,-]+$/.test(trimmedName)) addError('name', 'Full name contains invalid characters.');
 
-    // ── Gender ────────────────────────────────────────────────────
+    // Gender
     if (!formData.gender || !VALID_GENDERS.includes(formData.gender.toUpperCase())) {
         addError('gender', 'Please select a valid gender.');
     }
 
-    // ── Email ─────────────────────────────────────────────────────
+    // Email
     if (!formData.email || !EMAIL_REGEX.test(formData.email.trim())) {
         addError('email', 'Please enter a valid email address.');
     }
 
-    // ── Mobile ────────────────────────────────────────────────────
+    // Mobile
     const mobileTrimmed = (formData.mobile || '').replace(/\s/g, '');
-    if (!mobileTrimmed) {
-        addError('mobile', 'Mobile number is required.');
-    } else if (!MOBILE_REGEX.test(mobileTrimmed)) {
-        addError('mobile', 'Mobile must be a valid 10-digit Indian number.');
-    }
+    if (!mobileTrimmed) addError('mobile', 'Mobile number is required.');
+    else if (!MOBILE_REGEX.test(mobileTrimmed)) addError('mobile', 'Mobile must be a valid 10-digit Indian number.');
 
-    // ── Date of birth (optional but validated when provided) ──────
+    // DOB
     if (formData.dob) {
         if (!isValidPastDate(formData.dob)) {
             addError('dob', 'Date of birth must be a valid past date.');
         } else {
-            const age = Math.floor(
-                (new Date() - new Date(formData.dob)) / (1000 * 60 * 60 * 24 * 365.25),
-            );
+            const age = Math.floor((new Date() - new Date(formData.dob)) / (1000 * 60 * 60 * 24 * 365.25));
             if (age < 18) addError('dob', 'User must be at least 18 years old.');
             if (age > 100) addError('dob', 'Date of birth seems invalid (age > 100).');
         }
     }
 
-    // ── Address ───────────────────────────────────────────────────
+    // Address
     if (formData.address && formData.address.trim().length > MAX_ADDRESS_LENGTH) {
         addError('address', `Address cannot exceed ${MAX_ADDRESS_LENGTH} characters.`);
     }
 
-    // ── Non-PARENT specific ───────────────────────────────────────
-    if (!isParent) {
+    // Non-PARENT fields
+    if (!isParentLike) {
         if (formData.empId && !EMP_CODE_REGEX.test(formData.empId.trim())) {
             addError('empId', 'Employee code must be 2–20 alphanumeric characters.');
         }
@@ -113,11 +109,8 @@ const validateFormData = (formData, activeRole) => {
         }
         if (formData.experience !== '' && formData.experience !== undefined) {
             const exp = Number(formData.experience);
-            if (!Number.isFinite(exp) || exp < 0) {
-                addError('experience', 'Experience must be a non-negative number.');
-            } else if (exp > MAX_EXPERIENCE) {
-                addError('experience', `Experience cannot exceed ${MAX_EXPERIENCE} years.`);
-            }
+            if (!Number.isFinite(exp) || exp < 0) addError('experience', 'Experience must be a non-negative number.');
+            else if (exp > MAX_EXPERIENCE) addError('experience', `Experience cannot exceed ${MAX_EXPERIENCE} years.`);
         }
     }
 
@@ -136,34 +129,16 @@ function EditSysUser() {
     const [fieldErrors, setFieldErrors] = useState({});
 
     const [formData, setFormData] = useState({
-        name: '',
-        gender: '',
-        mobile: '',
-        email: '',
-        dob: '',
-        address: '',
-        empId: '',
-        highestQualification: '',
-        experience: 0,
-        joiningDate: '',
-        loginEmail: '',
-        dessignation: '',
-        accountStatus: false,
-        salaryType: '',
-        baseSalary: '',
-        leaveDeductionPerDay: '',
-        houseRentAllowance: '',
-        travelAllowance: '',
-        dearnessAllowance: '',
-        specialAllowance: '',
-        otherAllowances: '',
-        providentFund: '',
-        professionalTax: '',
-        incomeTax: '',
-        otherDeductions: '',
+        name: '', gender: '', mobile: '', email: '', dob: '', address: '',
+        empId: '', highestQualification: '', experience: 0, joiningDate: '',
+        loginEmail: '', dessignation: '', accountStatus: false,
+        salaryType: '', baseSalary: '', leaveDeductionPerDay: '',
+        houseRentAllowance: '', travelAllowance: '', dearnessAllowance: '',
+        specialAllowance: '', otherAllowances: '', providentFund: '',
+        professionalTax: '', incomeTax: '', otherDeductions: '',
     });
 
-    // ── Validate id param ────────────────────────────────────────────────────
+    // Validate id param
     useEffect(() => {
         if (!id || isNaN(Number(id)) || Number(id) <= 0) {
             toast.error('Invalid user ID in URL.');
@@ -171,30 +146,23 @@ function EditSysUser() {
         }
     }, [id, navigate]);
 
-    // ── Fetch user ────────────────────────────────────────────────────────────
+    // Fetch user
     useEffect(() => {
         if (!id || isNaN(Number(id))) return;
-
         const fetchsysUser = async () => {
             setFetchError(null);
             try {
                 const data = await getUserById(id);
-
-                // Validate API response shape
-                if (!data || typeof data !== 'object') {
-                    throw new Error('Unexpected response format from server.');
-                }
-
-                // Validate and set active role
+                if (!data || typeof data !== 'object') throw new Error('Unexpected response format from server.');
                 const rawRoles = Array.isArray(data.roles) ? data.roles : [];
                 const firstRole = rawRoles[0];
+                // ✅ Fixed: Now checks against the full VALID_ROLES list including STORE_ACCOUNTANT, STORE_SELLER etc.
                 if (!firstRole || !VALID_ROLES.includes(firstRole)) {
                     console.warn(`EditSysUser: unknown role "${firstRole}", defaulting to PARENT.`);
                     setActiveRole('PARENT');
                 } else {
                     setActiveRole(firstRole);
                 }
-
                 setsysUser(data);
             } catch (err) {
                 console.error('EditSysUser fetch error:', err);
@@ -203,31 +171,24 @@ function EditSysUser() {
                 toast.error(msg);
             }
         };
-
         fetchsysUser();
     }, [id]);
 
-    // ── Populate form from fetched user ───────────────────────────────────────
+    // Populate form
     useEffect(() => {
         if (!sysUser) return;
-
         setFormData((prev) => ({
             ...prev,
             name: (sysUser.fullName || '').slice(0, MAX_NAME_LENGTH),
-            gender: VALID_GENDERS.includes((sysUser.gender || '').toUpperCase())
-                ? sysUser.gender
-                : '',
-            mobile: typeof sysUser.mobile === 'string'
-                ? sysUser.mobile.replace(/\D/g, '').slice(0, 10)
-                : '',
+            gender: VALID_GENDERS.includes((sysUser.gender || '').toUpperCase()) ? sysUser.gender : '',
+            mobile: typeof sysUser.mobile === 'string' ? sysUser.mobile.replace(/\D/g, '').slice(0, 10) : '',
             email: EMAIL_REGEX.test(sysUser.email || '') ? sysUser.email : '',
             dob: formatToInputDate(sysUser.dateOfBirth),
             address: (sysUser.address || '').slice(0, MAX_ADDRESS_LENGTH),
             empId: sysUser.employeeCode || '',
             highestQualification: sysUser.qualification || '',
             experience: Number.isFinite(Number(sysUser.experienceYears))
-                ? Math.min(MAX_EXPERIENCE, Math.max(0, Number(sysUser.experienceYears)))
-                : 0,
+                ? Math.min(MAX_EXPERIENCE, Math.max(0, Number(sysUser.experienceYears))) : 0,
             joiningDate: formatToInputDate(sysUser.joiningDate),
             loginEmail: EMAIL_REGEX.test(sysUser.email || '') ? sysUser.email : '',
             dessignation: sysUser.designation || '',
@@ -235,34 +196,21 @@ function EditSysUser() {
         }));
     }, [sysUser]);
 
-    // ── Input handler ─────────────────────────────────────────────────────────
     const handleInputChange = useCallback((e) => {
         const { name, value } = e.target;
-
-        // Clear field error on change
         if (fieldErrors[name]) {
-            setFieldErrors((prev) => {
-                const next = { ...prev };
-                delete next[name];
-                return next;
-            });
+            setFieldErrors((prev) => { const next = { ...prev }; delete next[name]; return next; });
         }
-
-        // Field-specific sanitisation
         let sanitized = value;
         if (name === 'mobile') sanitized = value.replace(/\D/g, '').slice(0, 10);
-        if (name === 'experience') {
-            sanitized = value === '' ? '' : Math.max(0, Math.min(MAX_EXPERIENCE, Number(value)));
-        }
+        if (name === 'experience') sanitized = value === '' ? '' : Math.max(0, Math.min(MAX_EXPERIENCE, Number(value)));
         if (name === 'name') sanitized = value.slice(0, MAX_NAME_LENGTH);
         if (name === 'address') sanitized = value.slice(0, MAX_ADDRESS_LENGTH);
-
         setFormData((prev) => ({ ...prev, [name]: sanitized }));
     }, [fieldErrors]);
 
-    // ── Build API payload ─────────────────────────────────────────────────────
     const buildPayload = (data, role) => {
-        const isParent = role === 'PARENT';
+        const isParentLike = PARENT_LIKE_ROLES.includes(role);
         const personalDetails = {
             fullName: data.name.trim(),
             mobile: data.mobile.trim(),
@@ -274,8 +222,7 @@ function EditSysUser() {
             emergencyContactName: 'NA',
             emergencyContactRelation: 'NA',
         };
-
-        if (isParent) {
+        if (isParentLike) {
             return {
                 email: data.email.trim(),
                 roleNames: [role],
@@ -284,7 +231,6 @@ function EditSysUser() {
                 remarks: 'Updated from UI',
             };
         }
-
         return {
             email: data.email.trim(),
             roleNames: [role],
@@ -310,26 +256,20 @@ function EditSysUser() {
         };
     };
 
-    // ── Submit ────────────────────────────────────────────────────────────────
     const handle_updateDetails = async (e) => {
         e.preventDefault();
-
-        // Validate id once more before submitting
         if (!id || isNaN(Number(id)) || Number(id) <= 0) {
             toast.error('Cannot update: invalid user ID.');
             return;
         }
-
         const { valid, errors, fieldMap } = validateFormData(formData, activeRole);
         if (!valid) {
             toast.error(errors[0]);
             setFieldErrors(fieldMap);
             return;
         }
-
         setFieldErrors({});
         setIsLoading(true);
-
         try {
             const sysUserPayload = buildPayload(formData, activeRole);
             await updateUserById(id, sysUserPayload);
@@ -343,26 +283,18 @@ function EditSysUser() {
         }
     };
 
-    // ── Loading / error states ─────────────────────────────────────────────────
     if (fetchError) {
         return (
             <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">
-                <button
-                    onClick={() => navigate(-1)}
-                    className="flex items-center cursor-pointer bg-gray-600 p-2 rounded-xl text-white gap-2 hover:bg-gray-900 transition-colors mb-4"
-                >
-                    <ChevronLeft className="w-5 h-5" />
-                    <span className="hidden sm:inline">Back to List</span>
+                <button onClick={() => navigate(-1)} className="flex items-center cursor-pointer bg-gray-600 p-2 rounded-xl text-white gap-2 hover:bg-gray-900 transition-colors mb-4">
+                    <ChevronLeft className="w-5 h-5" /><span className="hidden sm:inline">Back to List</span>
                 </button>
                 <div className="flex flex-col items-center justify-center py-16">
                     <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mb-4">
                         <User className="w-6 h-6 text-red-600" />
                     </div>
                     <p className="text-gray-700 font-medium mb-4">{fetchError}</p>
-                    <button
-                        onClick={() => navigate('/dashboard/manageUsers')}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                    >
+                    <button onClick={() => navigate('/dashboard/manageUsers')} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
                         Back to Users
                     </button>
                 </div>
@@ -373,12 +305,8 @@ function EditSysUser() {
     if (!sysUser) {
         return (
             <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">
-                <button
-                    onClick={() => navigate(-1)}
-                    className="flex items-center cursor-pointer bg-gray-600 p-2 rounded-xl text-white gap-2 hover:bg-gray-900 transition-colors mb-4"
-                >
-                    <ChevronLeft className="w-5 h-5" />
-                    <span className="hidden sm:inline">Back to List</span>
+                <button onClick={() => navigate(-1)} className="flex items-center cursor-pointer bg-gray-600 p-2 rounded-xl text-white gap-2 hover:bg-gray-900 transition-colors mb-4">
+                    <ChevronLeft className="w-5 h-5" /><span className="hidden sm:inline">Back to List</span>
                 </button>
                 <div className="flex items-center justify-center py-8 relative">
                     <div className="flex items-center gap-3 absolute lg:top-80">
@@ -390,44 +318,25 @@ function EditSysUser() {
         );
     }
 
-    const isParentRole = activeRole === 'PARENT';
+    // ✅ Fixed: isParentRole now correctly evaluates STORE_ACCOUNTANT, STORE_SELLER etc. as non-PARENT
+    const isParentRole = PARENT_LIKE_ROLES.includes(activeRole);
 
     return (
         <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-4">
             <div className="mx-auto">
-                {/* Back Button */}
-                <button
-                    onClick={() => navigate(-1)}
-                    className="flex items-center cursor-pointer bg-gray-600 p-2 rounded-xl text-white gap-2 hover:bg-gray-900 transition-colors mb-4"
-                >
-                    <ChevronLeft className="w-5 h-5" />
-                    <span className="hidden sm:inline">Back to List</span>
+                <button onClick={() => navigate(-1)} className="flex items-center cursor-pointer bg-gray-600 p-2 rounded-xl text-white gap-2 hover:bg-gray-900 transition-colors mb-4">
+                    <ChevronLeft className="w-5 h-5" /><span className="hidden sm:inline">Back to List</span>
                 </button>
-
-                {/* Header */}
                 <div className="mb-6">
-                    <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
-                        Edit User: {formData.name || '—'}
-                    </h1>
-                    <p className="text-sm sm:text-base text-gray-500">
-                        Manage personal information and account status for users.
-                    </p>
+                    <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Edit User: {formData.name || '—'}</h1>
+                    <p className="text-sm sm:text-base text-gray-500">Manage personal information and account status for users.</p>
                 </div>
-
                 <form onSubmit={handle_updateDetails} noValidate>
                     <div className="bg-white rounded-lg shadow">
-                        {/* Tabs */}
                         <div className="border-b border-gray-200">
                             <nav className="flex flex-wrap -mb-px">
-                                <button
-                                    type="button"
-                                    onClick={() => setActiveTab('personal')}
-                                    className={`${isParentRole ? 'hidden' : 'flex'} items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${
-                                        activeTab === 'personal'
-                                            ? 'border-blue-600 text-blue-600'
-                                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                                    }`}
-                                >
+                                <button type="button" onClick={() => setActiveTab('personal')}
+                                    className={`${isParentRole ? 'hidden' : 'flex'} items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'personal' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
                                     <User size={20} />
                                     <span className="hidden sm:inline">Personal Details</span>
                                     <span className="sm:hidden">Personal</span>
@@ -435,7 +344,7 @@ function EditSysUser() {
                             </nav>
                         </div>
 
-                        {/* Content — non-PARENT tab */}
+                        {/* Non-PARENT content */}
                         <div className={`p-4 sm:p-6 lg:p-8 ${activeTab === 'personal' && isParentRole ? 'hidden' : ''}`}>
                             {activeTab === 'personal' && (
                                 <UserPersonalDetailsTab
@@ -447,7 +356,7 @@ function EditSysUser() {
                             )}
                         </div>
 
-                        {/* Content — PARENT tab */}
+                        {/* PARENT content */}
                         <div className={`p-4 sm:p-6 lg:p-8 ${activeTab === 'personal' && !isParentRole ? 'hidden' : ''}`}>
                             {activeTab === 'personal' && (
                                 <ParentPersonalDetailsTab
@@ -459,33 +368,20 @@ function EditSysUser() {
                             )}
                         </div>
 
-                        {/* Footer Buttons */}
                         <div className="border-t border-gray-200 px-4 sm:px-6 lg:px-8 py-4 bg-gray-50 rounded-b-lg">
                             <div className="flex flex-col sm:flex-row justify-end gap-3">
-                                <button
-                                    type="button"
-                                    onClick={() => navigate('/dashboard/manageUsers')}
-                                    className="px-6 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-                                >
+                                <button type="button" onClick={() => navigate('/dashboard/manageUsers')}
+                                    className="px-6 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
                                     Discard Changes
                                 </button>
-                                <button
-                                    disabled={isLoading}
-                                    type="submit"
-                                    className={`mt-1 px-4 py-3 font-semibold rounded-lg transition-all ${
-                                        isLoading
-                                            ? 'bg-blue-300 cursor-not-allowed text-white'
-                                            : 'bg-blue-500 hover:bg-blue-600 cursor-pointer text-white'
-                                    }`}
-                                >
+                                <button disabled={isLoading} type="submit"
+                                    className={`mt-1 px-4 py-3 font-semibold rounded-lg transition-all ${isLoading ? 'bg-blue-300 cursor-not-allowed text-white' : 'bg-blue-500 hover:bg-blue-600 cursor-pointer text-white'}`}>
                                     {isLoading ? (
                                         <span className="flex items-center justify-center gap-2">
                                             <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                                             Saving...
                                         </span>
-                                    ) : (
-                                        'Save Changes'
-                                    )}
+                                    ) : 'Save Changes'}
                                 </button>
                             </div>
                         </div>
