@@ -5,7 +5,7 @@ on:
 
 jobs:
   build_and_deploy_job:
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch'    
     runs-on: ubuntu-latest
     name: Build and Deploy Job
     steps:
@@ -13,27 +13,16 @@ jobs:
         with:
           submodules: true
           lfs: false
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-      - name: Install dependencies
-        run: npm ci
-      - name: Build (staging)
-        run: npm run build
-        env:
-          VITE_API_BASE_V1: https://ssdev-btgphuazhza9edcu.canadacentral-01.azurewebsites.net/api/v1
-          VITE_API_BASE: https://ssdev-btgphuazhza9edcu.canadacentral-01.azurewebsites.net/api
-          VITE_API_BASE_DOUBLE: https://ssdev-btgphuazhza9edcu.canadacentral-01.azurewebsites.net/api/api
-          VITE_API_BASE_DOUBLE_V1: https://ssdev-btgphuazhza9edcu.canadacentral-01.azurewebsites.net/api/api/v1
       - name: Build And Deploy
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_BLUE_MOSS_0C7716D00 }}
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }} # Used for Github integrations (i.e. PR comments)
           action: "upload"
-          app_location: "/"
-          api_location: ""
-          output_location: "dist"
-          skip_app_build: true
+          ###### Repository/Build Configurations - These values can be configured to match your app requirements. ######
+          # For more information regarding Static Web App workflow configurations, please visit: https://aka.ms/swaworkflowconfig
+          app_location: "/" # App source code path
+          api_location: "" # Api source code path - optional
+          output_location: "dist" # Built app content directory - optional
+          ###### End of Repository/Build Configurations ######

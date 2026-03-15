@@ -20,13 +20,14 @@ jobs:
           node-version: '18'
       - name: Install dependencies
         run: npm ci
+      - name: Write .env.production (prod)
+        run: |
+          echo "VITE_API_BASE_V1=https://schoolspine-prod-daeyg5dgf3a2drbc.centralindia-01.azurewebsites.net/api/v1" > .env.production
+          echo "VITE_API_BASE=https://schoolspine-prod-daeyg5dgf3a2drbc.centralindia-01.azurewebsites.net/api" >> .env.production
+          echo "VITE_API_BASE_DOUBLE=https://schoolspine-prod-daeyg5dgf3a2drbc.centralindia-01.azurewebsites.net/api/api" >> .env.production
+          echo "VITE_API_BASE_DOUBLE_V1=https://schoolspine-prod-daeyg5dgf3a2drbc.centralindia-01.azurewebsites.net/api/api/v1" >> .env.production
       - name: Build (production)
         run: npm run build
-        env:
-          VITE_API_BASE_V1: https://schoolspine-prod-daeyg5dgf3a2drbc.centralindia-01.azurewebsites.net/api/v1
-          VITE_API_BASE: https://schoolspine-prod-daeyg5dgf3a2drbc.centralindia-01.azurewebsites.net/api
-          VITE_API_BASE_DOUBLE: https://schoolspine-prod-daeyg5dgf3a2drbc.centralindia-01.azurewebsites.net/api/api
-          VITE_API_BASE_DOUBLE_V1: https://schoolspine-prod-daeyg5dgf3a2drbc.centralindia-01.azurewebsites.net/api/api/v1
       - name: Build And Deploy
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
