@@ -102,12 +102,12 @@ const menuItems = [
     icon: Package,
     label: 'Stock',
     route: '/stock',
-    roles: ['ADMIN', 'SUPER_ADMIN'],
+    roles: ['ADMIN', 'SUPER_ADMIN','STORE_ACCOUNTANT','STORE_SELLER'],
     subItems: [
       {
         label: 'Stores',
         route: '/stock/stores',
-        roles: ['ADMIN', 'SUPER_ADMIN', 'TEACHER'],
+        roles: ['ADMIN', 'SUPER_ADMIN',],
       },
       {
         label: 'Items',
