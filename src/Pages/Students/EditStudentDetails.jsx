@@ -20,7 +20,6 @@ function EditStudentDetails() {
         const res = await getStudentById(id);
         const student = res.data || res;
 
-
         setFormData({
           name: student.fullName,
           gender: student.personalDetails?.gender || '',
@@ -30,6 +29,7 @@ function EditStudentDetails() {
           dob: student.personalDetails?.dateOfBirth,
           admissionNumber: student.admissionNumber,
           admissionDate: student.admissionDate,
+          rollNumber: student.rollNumber || '',  // ✅ Added rollNumber
           status: student.status,
           fatherName: student.fatherName || '',
           motherName: student.motherName || '',
@@ -57,26 +57,27 @@ function EditStudentDetails() {
   };
 
   const validateForm = () => {
-    // Check required fields
     if (!formData.name || !formData.mobile || !formData.gender) {
       toast.error("Please fill all required fields!");
       return false;
     }
 
-    // Validate mobile number - must be exactly 10 digits
+    if (!formData.rollNumber || !formData.rollNumber.trim()) {
+      toast.error("Please enter a roll number!");
+      return false;
+    }
+
     const mobileRegex = /^[0-9]{10}$/;
     if (!mobileRegex.test(formData.mobile)) {
       toast.error("Mobile number must be exactly 10 digits!");
       return false;
     }
 
-    // Validate emergency contact if provided - must be exactly 10 digits
     if (formData.emergencyContact && !mobileRegex.test(formData.emergencyContact)) {
       toast.error("Emergency contact must be exactly 10 digits!");
       return false;
     }
 
-    // Validate email format if provided
     if (formData.email) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(formData.email)) {
@@ -94,6 +95,8 @@ function EditStudentDetails() {
     return {
       firstName: nameParts[0],
       lastName: nameParts.slice(1).join(' '),
+
+      rollNumber: formData.rollNumber.trim() || null,  // ✅ Included in update payload
 
       personalDetails: {
         fullName: formData.name,
@@ -149,7 +152,7 @@ function EditStudentDetails() {
         <div className="w-6 h-6 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
       </div>
     );
-  } 
+  }
 
   if (!formData) return null;
 
@@ -260,6 +263,21 @@ function EditStudentDetails() {
                         className='bg-gray-200 font-normal text-gray-600 border border-gray-300 p-2 px-4 w-full rounded-md cursor-not-allowed'
                         disabled
                         readOnly
+                      />
+                    </div>
+
+                    <div>
+                      <label htmlFor="rollNumber" className='block font-semibold text-gray-600 text-sm mb-2'>
+                        Roll Number<span className="text-red-600 ml-1">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        name="rollNumber"
+                        value={formData.rollNumber}
+                        onChange={handleInputChange}
+                        placeholder="Enter roll number"
+                        className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                        required
                       />
                     </div>
 

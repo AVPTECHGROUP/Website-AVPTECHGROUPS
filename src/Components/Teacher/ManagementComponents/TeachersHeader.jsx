@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import CardComponent from '../../CommonComp/CardComponent';
 import CardLoader from '../../CommonComp/CardLoader';
+import TooltipComponent from '../../CommonComp/Tooltip_comp/TooltipComp';
 
 const TeachersHeader = ({ stats, loading }) => {
   const cards = [
@@ -53,11 +54,10 @@ const TeachersHeader = ({ stats, loading }) => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
         <div>
           <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">
-            Manage Teachers
+            <TooltipComponent message="Efficiently manage all teacher records, class assignments and account status." direction='right' color='nocolor'>
+              Manage All Teachers
+            </TooltipComponent>
           </h2>
-          <p className="text-gray-500 mt-1 font-medium text-sm sm:text-base">
-            Oversee and manage your academic staff directory.
-          </p>
         </div>
       </div>
 
@@ -66,15 +66,15 @@ const TeachersHeader = ({ stats, loading }) => {
         {loading
           ? Array.from({ length: 5 }).map((_, i) => <CardLoader key={i} />)
           : cards.map((card, i) => (
-              <CardComponent
-                key={i}
-                IconName={card.iconName}
-                keyName={card.keyName}
-                val={card.val}
-                iconTxColor={card.iconTxColor}
-                iconBgColor={card.iconBgColor}
-              />
-            ))}
+            <CardComponent
+              key={i}
+              IconName={card.iconName}
+              keyName={card.keyName}
+              val={card.val}
+              iconTxColor={card.iconTxColor}
+              iconBgColor={card.iconBgColor}
+            />
+          ))}
       </div>
     </div>
   );
