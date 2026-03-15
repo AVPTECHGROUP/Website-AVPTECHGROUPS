@@ -16,6 +16,7 @@ import CardComponent from '../../Components/CommonComp/CardComponent';
 import { getStudents, searchStudents } from '../../Api/StudentsApi';
 import CardLoader from '../../Components/CommonComp/CardLoader';
 import ListLoader from '../../Components/CommonComp/ListLoader';
+import TooltipComponent from '../../Components/CommonComp/Tooltip_comp/TooltipComp';
 
 const Student = () => {
     const [error, setError] = useState(null);
@@ -101,7 +102,7 @@ const Student = () => {
         const active = 'bg-blue-500 text-white';
         const inactive = 'text-gray-600 hover:bg-gray-100';
         const dots = (key) => (
-            <span key={key} className="min-w-[32px] h-8 flex items-center justify-center text-gray-400 text-sm select-none">
+            <span key={key} className="min-w-8 h-8 flex items-center justify-center text-gray-400 text-sm select-none">
                 …
             </span>
         );
@@ -172,7 +173,7 @@ const Student = () => {
 
     return (
         // ── Outer shell: full viewport height, flex column ──
-        <div className="flex flex-col h-screen overflow-hidden bg-gradient-to-b from-sky-50 to-sky-100">
+        <div className="flex flex-col h-screen overflow-hidden bg-linear-to-b from-sky-50 to-sky-100">
             <div className="flex flex-col flex-1 overflow-hidden">
                 {/* ── Scrollable page area ── */}
                 <div className="flex flex-col flex-1 overflow-hidden p-4 sm:p-5 lg:p-4 gap-4">
@@ -180,11 +181,10 @@ const Student = () => {
                     {/* Page Title */}
                     <div>
                         <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">
-                            Manage All Students
+                            <TooltipComponent message="Efficiently manage all student records, class assignments and account status." direction='right' color='nocolor'>
+                                Manage All Students
+                            </TooltipComponent>
                         </h2>
-                        <p className="text-gray-500 mt-1 font-medium text-sm sm:text-base">
-                            Efficiently manage all students.
-                        </p>
                     </div>
 
                     {/* Cards */}
@@ -216,7 +216,7 @@ const Student = () => {
                             Add New Student
                         </button>
 
-                        <div className="flex-1 flex items-center gap-2 border border-gray-200 rounded-lg bg-gray-100 px-2 py-1 focus-within:shadow-sm focus-within:shadow-blue-200 transition-all">
+                        <div className="flex-1 flex items-center gap-2 border border-gray-200 rounded-lg bg-gray-100 px-2 py-2.5 focus-within:shadow-sm focus-within:shadow-blue-200 transition-all">
                             <SearchIcon className="w-4 h-4 text-gray-500 shrink-0" />
                             <input
                                 value={search}
