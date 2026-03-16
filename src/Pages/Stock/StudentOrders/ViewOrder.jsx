@@ -2,18 +2,18 @@ import { useEffect, useState } from "react";
 import {
   X, User, ShoppingBag, Package, MapPin,
   CheckCircle, Clock, XCircle, Truck, Loader2,
-  FileText, Printer,
+  FileText, Printer, CreditCard, Hash,
 } from "lucide-react";
-import { getStudentOrderById } from "../../Api/StudentOrder";
+import { getStudentOrderById } from "../../../Api/StudentOrder";
 
 const statusConfig = {
-  DRAFT: { cls: "bg-gray-100   text-gray-600   border-gray-300", icon: FileText, label: "Draft" },
-  PENDING: { cls: "bg-yellow-100 text-yellow-700 border-yellow-200", icon: Clock, label: "Pending" },
-  CONFIRMED: { cls: "bg-blue-100   text-blue-700   border-blue-200", icon: CheckCircle, label: "Confirmed" },
-  APPROVED: { cls: "bg-blue-100   text-blue-700   border-blue-200", icon: CheckCircle, label: "Approved" },
-  DISPATCHED: { cls: "bg-purple-100 text-purple-700 border-purple-200", icon: Truck, label: "Dispatched" },
-  DELIVERED: { cls: "bg-green-100  text-green-700  border-green-200", icon: CheckCircle, label: "Delivered" },
-  CANCELLED: { cls: "bg-red-100    text-red-600    border-red-200", icon: XCircle, label: "Cancelled" },
+  DRAFT:      { cls: "bg-gray-100   text-gray-600   border-gray-300",   icon: FileText,    label: "Draft"      },
+  PENDING:    { cls: "bg-yellow-100 text-yellow-700 border-yellow-200", icon: Clock,       label: "Pending"    },
+  CONFIRMED:  { cls: "bg-blue-100   text-blue-700   border-blue-200",   icon: CheckCircle, label: "Confirmed"  },
+  APPROVED:   { cls: "bg-blue-100   text-blue-700   border-blue-200",   icon: CheckCircle, label: "Approved"   },
+  DISPATCHED: { cls: "bg-purple-100 text-purple-700 border-purple-200", icon: Truck,       label: "Dispatched" },
+  DELIVERED:  { cls: "bg-green-100  text-green-700  border-green-200",  icon: CheckCircle, label: "Delivered"  },
+  CANCELLED:  { cls: "bg-red-100    text-red-600    border-red-200",    icon: XCircle,     label: "Cancelled"  },
 };
 
 const fallbackStatus = {
@@ -30,7 +30,17 @@ function fmtRupee(val) {
   return `₹${Number(val).toFixed(2)}`;
 }
 
-/* ─── Print styles ─────────────────────────────────────────────────────────── */
+// Humanise payment method value → label
+function fmtPaymentMethod(val) {
+  if (!val) return null;
+  const map = {
+    CASH: "Cash", ONLINE: "Online", UPI: "UPI",
+    CHEQUE: "Cheque", DD: "Demand Draft", CARD: "Card", FREE_ISSUE: "Free Issue",
+  };
+  return map[val.toUpperCase()] || val;
+}
+
+/* ─── Print styles ──────────────────────────────────────────────────────────── */
 const PRINT_STYLES = `
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -42,7 +52,6 @@ const PRINT_STYLES = `
     print-color-adjust: exact;
   }
 
-  /* 3 slips side by side, filling the full width */
   .slips-row {
     display: flex;
     flex-direction: row;
@@ -51,7 +60,6 @@ const PRINT_STYLES = `
     gap: 0;
   }
 
-  /* Each slip: equal width, no extra margin/padding waste */
   .slip {
     flex: 1 1 0;
     min-width: 0;
@@ -60,7 +68,6 @@ const PRINT_STYLES = `
     page-break-inside: avoid;
   }
 
-  /* Vertical dashed cut line between slips */
   .cut {
     width: 8px;
     align-self: stretch;
@@ -115,6 +122,20 @@ const PRINT_STYLES = `
   .meta-box .val { font-size: 7.5px; font-weight: 700; color: #000; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .meta-box .sub { font-size: 6px; color: #444; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+  .payment-bar {
+    display: flex;
+    gap: 6px;
+    background: #f0f7ff;
+    border: 1px solid #bfdbfe;
+    padding: 2px 5px;
+    margin-bottom: 3px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .payment-bar .plbl { font-size: 5.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; color: #3b82f6; }
+  .payment-bar .pval { font-size: 7px; font-weight: 700; color: #1e3a5f; }
+  .payment-bar .sep  { font-size: 7px; color: #93c5fd; }
+
   .remarks {
     background: #fffbea; border: 1px solid #e5d68a;
     padding: 2px 4px; font-size: 6.5px; color: #333; margin-bottom: 3px;
@@ -158,20 +179,31 @@ function buildSlip(o, copyType, items, total, rawStatus, gstNumber) {
   const itemRows = items.length === 0
     ? `<tr><td colspan="4" style="text-align:center;color:#555;padding:4px 0">No items</td></tr>`
     : items.map((item, idx) => {
-      const name = item.itemName || item.name || `Item #${item.itemId || idx}`;
-      const code = item.itemCode || item.code || "";
-      const qty = item.quantity || item.qty || 0;
-      const unitPrice = item.unitPriceSnapshot != null ? `₹${Number(item.unitPriceSnapshot).toFixed(2)}` : "—";
-      const lineTotal = item.lineTotal != null ? `₹${Number(item.lineTotal).toFixed(2)}` : "—";
-      return `<tr>
+        const name      = item.itemName || item.name || `Item #${item.itemId || idx}`;
+        const code      = item.itemCode || item.code || "";
+        const qty       = item.quantity || item.qty || 0;
+        const unitPrice = item.unitPriceSnapshot != null ? `₹${Number(item.unitPriceSnapshot).toFixed(2)}` : "—";
+        const lineTotal = item.lineTotal        != null ? `₹${Number(item.lineTotal).toFixed(2)}`        : "—";
+        return `<tr>
           <td>${name}${code ? `<span class="icode">(${code})</span>` : ""}</td>
           <td class="c">${qty}</td>
           <td class="r">${unitPrice}</td>
           <td class="r">${lineTotal}</td>
         </tr>`;
-    }).join("");
+      }).join("");
 
   const orderTotal = o.totalAmount != null ? `₹${Number(o.totalAmount).toFixed(2)}` : "—";
+
+  // ── Payment bar (only rendered when paymentMethod exists) ──
+  const paymentMethod   = o.paymentMethod   || null;
+  const txnNumber       = o.transactionNumber || null;
+  const paymentBarHtml  = paymentMethod
+    ? `<div class="payment-bar">
+        <span class="plbl">Payment</span>
+        <span class="pval">${fmtPaymentMethod(paymentMethod)}</span>
+        ${txnNumber ? `<span class="sep">|</span><span class="plbl">Ref</span><span class="pval">${txnNumber}</span>` : ""}
+      </div>`
+    : "";
 
   return `
     <div class="slip">
@@ -193,7 +225,7 @@ function buildSlip(o, copyType, items, total, rawStatus, gstNumber) {
             <div class="lbl">Student</div>
             <div class="val">${o.studentName || "—"}</div>
             ${o.admissionNumber ? `<div class="sub">ADM: ${o.admissionNumber}</div>` : ""}
-            ${o.className ? `<div class="sub">Class: ${o.className}</div>` : ""}
+            ${o.className       ? `<div class="sub">Class: ${o.className}</div>`     : ""}
           </div>
           <div class="meta-box" style="flex:1">
             <div class="lbl">Firm Name</div>
@@ -209,6 +241,8 @@ function buildSlip(o, copyType, items, total, rawStatus, gstNumber) {
           </div>
         </div>
       </div>
+
+      ${paymentBarHtml}
 
       ${o.remarks ? `<div class="remarks"><b>Remarks:</b> ${o.remarks}</div>` : ""}
 
@@ -249,18 +283,18 @@ function buildSlip(o, copyType, items, total, rawStatus, gstNumber) {
 /* ─── Print orchestrator ────────────────────────────────────────────────────── */
 function printOrder(o, gstNumber) {
   const rawStatus = (o.status || o.orderStatus || "").toUpperCase();
-  const items = o.items || o.orderItems || [];
-  const total = items.reduce((a, i) => a + (i.quantity || i.qty || 0), 0);
-  const copies = ["Accountant", "Admin", "Parent"];
+  const items     = o.items || o.orderItems || [];
+  const total     = items.reduce((a, i) => a + (i.quantity || i.qty || 0), 0);
+  const copies    = ["Accountant", "Admin", "Parent"];
 
   const CUT = `<div class="cut"><span class="cut-label">✂ cut</span></div>`;
 
   const body = `
     <div class="slips-row">
       ${copies.map((copy, idx) =>
-    buildSlip(o, copy, items, total, rawStatus, gstNumber) +
-    (idx < copies.length - 1 ? CUT : "")
-  ).join("")}
+        buildSlip(o, copy, items, total, rawStatus, gstNumber) +
+        (idx < copies.length - 1 ? CUT : "")
+      ).join("")}
     </div>`;
 
   const win = window.open("", "_blank", "width=1100,height=800");
@@ -275,11 +309,11 @@ function printOrder(o, gstNumber) {
 
 /* ─── Main component ────────────────────────────────────────────────────────── */
 export default function ViewStudentOrder({ isOpen, onClose, order }) {
-  const [fullOrder, setFullOrder] = useState(null);
+  const [fullOrder,    setFullOrder]    = useState(null);
   const [fetchLoading, setFetchLoading] = useState(false);
-  const [fetchError, setFetchError] = useState("");
-  const [printing, setPrinting] = useState(false);
-  const [gstInput, setGstInput] = useState("");
+  const [fetchError,   setFetchError]   = useState("");
+  const [printing,     setPrinting]     = useState(false);
+  const [gstInput,     setGstInput]     = useState("");
 
   useEffect(() => {
     document.body.style.overflow = isOpen ? "hidden" : "";
@@ -302,12 +336,15 @@ export default function ViewStudentOrder({ isOpen, onClose, order }) {
 
   if (!isOpen || !order) return null;
 
-  const o = fullOrder || order;
-  const rawStatus = (o.status || o.orderStatus || "").toUpperCase();
-  const sc = statusConfig[rawStatus] || fallbackStatus;
+  const o          = fullOrder || order;
+  const rawStatus  = (o.status || o.orderStatus || "").toUpperCase();
+  const sc         = statusConfig[rawStatus] || fallbackStatus;
   const StatusIcon = sc.icon;
-  const items = o.items || o.orderItems || [];
-  const total = items.reduce((a, i) => a + (i.quantity || i.qty || 0), 0);
+  const items      = o.items || o.orderItems || [];
+  const total      = items.reduce((a, i) => a + (i.quantity || i.qty || 0), 0);
+
+  const paymentMethodLabel = fmtPaymentMethod(o.paymentMethod);
+  const txnNumber          = o.transactionNumber || null;
 
   const handlePrint = () => {
     if (fetchLoading) return;
@@ -320,7 +357,6 @@ export default function ViewStudentOrder({ isOpen, onClose, order }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
 
-      {/* Modal — no fixed max-height so it can grow; capped at 92 vh with scroll */}
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl z-10 flex flex-col max-h-[92vh] vso-anim">
         <style>{`
           @keyframes vsoIn {
@@ -411,10 +447,35 @@ export default function ViewStudentOrder({ isOpen, onClose, order }) {
                 </div>
               </div>
 
-              {/* Meta row — order date only (issued-by removed) */}
+              {/* Order date row */}
               {o.orderDate && (
                 <div className="flex items-center gap-4 text-xs text-gray-500 bg-gray-50 border border-gray-100 rounded-xl px-4 py-2.5">
                   <span>📅 <span className="font-semibold text-gray-700">Order Date:</span> {fmtDate(o.orderDate)}</span>
+                </div>
+              )}
+
+              {/* ── Payment Details (shown only if paymentMethod exists) ── */}
+              {paymentMethodLabel && (
+                <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 flex flex-wrap items-center gap-x-5 gap-y-2">
+                  <div className="flex items-center gap-2">
+                    <CreditCard className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                    <div>
+                      <p className="text-[10px] text-blue-400 font-bold uppercase tracking-widest leading-none mb-0.5">Payment Method</p>
+                      <p className="text-sm font-bold text-blue-800">{paymentMethodLabel}</p>
+                    </div>
+                  </div>
+                  {txnNumber && (
+                    <>
+                      <div className="w-px h-8 bg-blue-200 hidden sm:block" />
+                      <div className="flex items-center gap-2">
+                        <Hash className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                        <div>
+                          <p className="text-[10px] text-blue-400 font-bold uppercase tracking-widest leading-none mb-0.5">Transaction / Ref No.</p>
+                          <p className="text-sm font-bold text-blue-800 font-mono">{txnNumber}</p>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
 
@@ -449,7 +510,7 @@ export default function ViewStudentOrder({ isOpen, onClose, order }) {
                 </div>
               )}
 
-              {/* Items table — 4 columns (removed Stock at Issue, Unit) */}
+              {/* Items table */}
               <div>
                 <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">
                   Items ({items.length})
@@ -462,7 +523,6 @@ export default function ViewStudentOrder({ isOpen, onClose, order }) {
                   </div>
                 ) : (
                   <>
-                    {/* Column headers */}
                     <div className="grid grid-cols-12 border-b border-gray-200 pb-2 text-xs font-bold text-gray-400 uppercase tracking-wider">
                       <span className="col-span-5">Item</span>
                       <span className="col-span-2 text-center">Qty</span>
@@ -470,45 +530,30 @@ export default function ViewStudentOrder({ isOpen, onClose, order }) {
                       <span className="col-span-3 text-right">Line Total</span>
                     </div>
 
-                    {/* Item rows */}
                     <div className="divide-y divide-gray-100">
                       {items.map((item, idx) => {
-                        const name = item.itemName || item.name || `Item #${item.itemId || idx}`;
-                        const code = item.itemCode || item.code || "";
-                        const qty = item.quantity || item.qty || 0;
+                        const name      = item.itemName || item.name || `Item #${item.itemId || idx}`;
+                        const code      = item.itemCode || item.code || "";
+                        const qty       = item.quantity || item.qty || 0;
                         const unitPrice = item.unitPriceSnapshot != null ? fmtRupee(item.unitPriceSnapshot) : "—";
-                        const lineTotal = item.lineTotal != null ? fmtRupee(item.lineTotal) : "—";
+                        const lineTotal = item.lineTotal         != null ? fmtRupee(item.lineTotal)         : "—";
 
                         return (
                           <div key={item.id || item.itemId || idx} className="grid grid-cols-12 items-center py-3">
-                            {/* Item name + code */}
                             <div className="col-span-5">
                               <p className="text-sm font-semibold text-gray-800">{name}</p>
                               {code && <p className="text-xs text-gray-400">{code}</p>}
                             </div>
-
-                            {/* Qty */}
                             <div className="col-span-2 text-center">
-                              <span className="text-sm font-bold text-gray-800 bg-gray-100 px-2 py-1 rounded-lg">
-                                {qty}
-                              </span>
+                              <span className="text-sm font-bold text-gray-800 bg-gray-100 px-2 py-1 rounded-lg">{qty}</span>
                             </div>
-
-                            {/* Unit Price */}
-                            <div className="col-span-2 text-right text-sm text-gray-700">
-                              {unitPrice}
-                            </div>
-
-                            {/* Line Total */}
-                            <div className="col-span-3 text-right text-sm font-bold text-gray-800">
-                              {lineTotal}
-                            </div>
+                            <div className="col-span-2 text-right text-sm text-gray-700">{unitPrice}</div>
+                            <div className="col-span-3 text-right text-sm font-bold text-gray-800">{lineTotal}</div>
                           </div>
                         );
                       })}
                     </div>
 
-                    {/* Order Total row */}
                     <div className="grid grid-cols-12 items-center pt-3 mt-1 border-t-2 border-gray-200">
                       <div className="col-span-5 text-sm font-bold text-gray-800">Order Total</div>
                       <div className="col-span-2 text-center text-sm font-bold text-gray-800">{total}</div>
@@ -530,16 +575,14 @@ export default function ViewStudentOrder({ isOpen, onClose, order }) {
                   <span className="text-sm text-gray-600">
                     <span className="font-bold text-gray-800">{total}</span> total units
                   </span>
-                  {rawStatus === "DELIVERED" && <span className="flex items-center gap-1.5 text-sm font-semibold text-green-600"><CheckCircle className="w-4 h-4" /> Order delivered</span>}
-                  {rawStatus === "CANCELLED" && <span className="flex items-center gap-1.5 text-sm font-semibold text-red-500"><XCircle className="w-4 h-4" /> Order cancelled</span>}
+                  {rawStatus === "DELIVERED"  && <span className="flex items-center gap-1.5 text-sm font-semibold text-green-600"><CheckCircle className="w-4 h-4" /> Order delivered</span>}
+                  {rawStatus === "CANCELLED"  && <span className="flex items-center gap-1.5 text-sm font-semibold text-red-500"><XCircle className="w-4 h-4" /> Order cancelled</span>}
                   {rawStatus === "DISPATCHED" && <span className="flex items-center gap-1.5 text-sm font-semibold text-purple-600"><Truck className="w-4 h-4" /> Out for delivery</span>}
-                  {rawStatus === "CONFIRMED" && <span className="flex items-center gap-1.5 text-sm font-semibold text-blue-600"><CheckCircle className="w-4 h-4" /> Stock deducted successfully</span>}
-                  {rawStatus === "DRAFT" && <span className="flex items-center gap-1.5 text-sm font-semibold text-gray-500"><FileText className="w-4 h-4" /> Saved as draft</span>}
+                  {rawStatus === "CONFIRMED"  && <span className="flex items-center gap-1.5 text-sm font-semibold text-blue-600"><CheckCircle className="w-4 h-4" /> Stock deducted successfully</span>}
+                  {rawStatus === "DRAFT"      && <span className="flex items-center gap-1.5 text-sm font-semibold text-gray-500"><FileText className="w-4 h-4" /> Saved as draft</span>}
                 </div>
                 {o.totalAmount != null && (
-                  <span className="text-sm font-bold text-blue-600">
-                    Total: {fmtRupee(o.totalAmount)}
-                  </span>
+                  <span className="text-sm font-bold text-blue-600">Total: {fmtRupee(o.totalAmount)}</span>
                 )}
               </div>
             </>

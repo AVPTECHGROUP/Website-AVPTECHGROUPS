@@ -7,12 +7,12 @@ import {
   ClipboardList, Eye, Pencil, Ban, AlertTriangle, Loader2,
   ChevronLeft, ChevronRight, SearchIcon, IndianRupee,
 } from "lucide-react";
-import CardComponent from "../../Components/CommonComp/CardComponent";
-import CardLoader from "../../Components/CommonComp/CardLoader";
-import ListLoader from "../../Components/CommonComp/ListLoader";
-import ActionDropDownComp from "../../Components/CommonComp/ActionDropDownComp";
+import CardComponent from "../../../Components/CommonComp/CardComponent";
+import CardLoader from "../../../Components/CommonComp/CardLoader";
+import ListLoader from "../../../Components/CommonComp/ListLoader";
+import ActionDropDownComp from "../../../Components/CommonComp/ActionDropDownComp";
 import ViewStudentOrder from "./ViewOrder";
-import { getOrderStats, getStudentOrders, cancelStudentOrder } from "../../Api/StudentOrder";
+import { getOrderStats, getStudentOrders, cancelStudentOrder } from "../../../Api/StudentOrder";
 import { toast } from "react-toastify";
 
 const STATUS_OPTIONS = [

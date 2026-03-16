@@ -10,6 +10,15 @@ function fmtDate(d) {
   });
 }
 
+function fmtPaymentMethod(val) {
+  if (!val) return null;
+  const map = {
+    CASH: "Cash", ONLINE: "Online", UPI: "UPI",
+    CHEQUE: "Cheque", DD: "Demand Draft", CARD: "Card", FREE_ISSUE: "Free Issue",
+  };
+  return map[(val || "").toUpperCase()] || val;
+}
+
 const PRINT_STYLES = `
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -81,6 +90,36 @@ const PRINT_STYLES = `
   .meta-box .lbl { font-size: 5.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; color: #777; margin-bottom: 1px; }
   .meta-box .val { font-size: 7.5px; font-weight: 700; color: #000; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .meta-box .sub { font-size: 6px; color: #444; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* ── Payment bar ── */
+  .payment-bar {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    padding: 2px 5px;
+    margin-bottom: 3px;
+    flex-wrap: wrap;
+  }
+  .payment-bar .plbl {
+    font-size: 5.5px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: #3b82f6;
+  }
+  .payment-bar .pval {
+    font-size: 7px;
+    font-weight: 700;
+    color: #1e3a5f;
+  }
+  .payment-bar .psep {
+    font-size: 7px;
+    color: #93c5fd;
+    margin: 0 1px;
+  }
+
   .remarks { background: #fffbea; border: 1px solid #e5d68a; padding: 2px 4px; font-size: 6.5px; color: #333; margin-bottom: 3px; }
   .remarks b { font-weight: 700; }
   .tbl-lbl { font-size: 6px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; color: #555; margin-bottom: 1px; }
@@ -134,6 +173,19 @@ function buildSlip(o, copyType, items, total, rawStatus, gstNumber) {
   const orderTotal = o.totalAmount != null
     ? `\u20B9${Number(o.totalAmount).toFixed(2)}` : "\u2014";
 
+  // ── Payment bar — only rendered when paymentMethod is present ──
+  const pmLabel  = fmtPaymentMethod(o.paymentMethod);
+  const txnNo    = o.transactionNumber || null;
+  const paymentBarHtml = pmLabel
+    ? `<div class="payment-bar">
+        <span class="plbl">Payment</span>
+        <span class="pval">${pmLabel}</span>
+        ${txnNo
+          ? `<span class="psep">|</span><span class="plbl">Ref</span><span class="pval">${txnNo}</span>`
+          : ""}
+      </div>`
+    : "";
+
   return `
     <div class="slip">
       <div class="hdr">
@@ -169,6 +221,7 @@ function buildSlip(o, copyType, items, total, rawStatus, gstNumber) {
           </div>
         </div>
       </div>
+      ${paymentBarHtml}
       ${o.remarks ? `<div class="remarks"><b>Remarks:</b> ${o.remarks}</div>` : ""}
       <div class="tbl-lbl">Items (${items.length})</div>
       <table>

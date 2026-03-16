@@ -47,10 +47,10 @@ import Store from '../Pages/Stock/Stores';
 import Items from '../Pages/Stock/Items';
 import Transactions from '../Pages/Stock/Transactions';
 import Movement from '../Pages/Stock/Movement';
-import ClassConfig from '../Pages/Stock/ClassConfig';
-import StudentOrders from '../Pages/Stock/StudentOrders';
-import CreateStudentOrder from '../Pages/Stock/CreateStudentOrder';
-import EditStudentOrder from '../Pages/Stock/EditStudentOrder';
+import ClassConfig from '../Pages/Stock/ClassConfig/ClassConfig';
+import StudentOrders from '../Pages/Stock/StudentOrders/StudentOrders';
+import CreateStudentOrder from '../Pages/Stock/StudentOrders/CreateStudentOrder';
+import EditStudentOrder from '../Pages/Stock/StudentOrders/EditStudentOrder';
 
 // Transport Routes
 import Transport_Management from '../Pages/Transport/Transport_Management';

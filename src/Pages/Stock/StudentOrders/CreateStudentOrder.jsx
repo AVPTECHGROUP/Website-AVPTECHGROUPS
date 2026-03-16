@@ -3,16 +3,17 @@ import { useNavigate } from "react-router-dom";
 import {
     X, User, ShoppingBag, Package, Search, ChevronDown,
     Loader2, Save, Check, AlertCircle, AlertTriangle, RefreshCw,
-    ArrowLeft, CheckCircle, Plus, IndianRupee,
+    ArrowLeft, CheckCircle, Plus, IndianRupee, CreditCard, Hash,
 } from "lucide-react";
-import { getActiveStores } from "../../Api/StockApi";
-import { getStudents } from "../../Api/StudentsApi";
+import { getActiveStores } from "../../../Api/StockApi";
+import { getStudents } from "../../../Api/StudentsApi";
 import {
     createStudentOrder, confirmStudentOrder,
     previewStudentOrder, checkItemAvailability,
-} from "../../Api/StudentOrder";
-import PrintConfirmModal from "../../Components/CommonComp/Print/PrintConfirmCard";
-import { printOrder } from "../../Components/CommonComp/Print/Printorderutil";
+} from "../../../Api/StudentOrder";
+import { getListOfValues } from "../../../Api/ListOfValues";
+import PrintConfirmModal from "../../../Components/CommonComp/Print/PrintConfirmCard";
+import { printOrder } from "../../../Components/CommonComp/Print/Printorderutil";
 import StudentOrderAddItem from "./StudentOrderAddItem";
 
 const STEPS = [
@@ -254,18 +255,34 @@ export default function CreateStudentOrder() {
     const [orderDate, setOrderDate] = useState(new Date().toISOString().split("T")[0]);
     const [remarks, setRemarks] = useState("");
 
+    // ── Payment fields ────────────────────────────────────────
+    const [paymentMethods, setPaymentMethods]     = useState([]);
+    const [paymentMethodsLoading, setPaymentMethodsLoading] = useState(false);
+    const [paymentMethod, setPaymentMethod]       = useState("");
+    const [transactionNumber, setTransactionNumber] = useState("");
+
     const [previewLoading, setPreviewLoading] = useState(false);
-    const [previewError, setPreviewError] = useState("");
-    const [orderItems, setOrderItems] = useState([]);
+    const [previewError, setPreviewError]     = useState("");
+    const [orderItems, setOrderItems]         = useState([]);
 
     const [submitting, setSubmitting] = useState(false);
-    const [errors, setErrors] = useState({});
+    const [errors, setErrors]         = useState({});
     const [showAddItem, setShowAddItem] = useState(false);
 
     // ── Print confirm modal state ─────────────────────────────
     const [printModal, setPrintModal] = useState({ open: false, orderId: null, orderData: null });
 
     useEffect(() => { loadStores(); doLoadStudents(); }, []); // eslint-disable-line
+
+    // Load payment methods when reaching Step 3
+    useEffect(() => {
+        if (step !== 3 || paymentMethods.length > 0) return;
+        setPaymentMethodsLoading(true);
+        getListOfValues("PAYMENT_METHOD")
+            .then((data) => setPaymentMethods(data || []))
+            .catch((e) => console.error("loadPaymentMethods:", e))
+            .finally(() => setPaymentMethodsLoading(false));
+    }, [step]); // eslint-disable-line
 
     const loadStores = async () => {
         setStoresLoading(true);
@@ -281,7 +298,7 @@ export default function CreateStudentOrder() {
         studentsFetchedRef.current = true;
         setStudentsLoading(true);
         try {
-            const raw = await getStudents(0, 500, "id");
+            const raw = await getStudents(0, 1000, "id");
             const items = raw?.content || raw?.data?.content || raw?.students ||
                 (Array.isArray(raw?.data) ? raw.data : null) || (Array.isArray(raw) ? raw : []);
             setStudents(items.map(parseStudent));
@@ -368,16 +385,16 @@ export default function CreateStudentOrder() {
     );
     const removeItem = (id) => setOrderItems((p) => p.filter((i) => i.itemId !== id));
 
-    const stockIssues = orderItems.filter((i) => i.availableQty !== null && i.quantity > i.availableQty);
-    const hasAnyIssue = stockIssues.length > 0;
-    const totalUnits = orderItems.reduce((a, i) => a + i.quantity, 0);
-    const grandTotal = orderItems.reduce((a, i) => i.lineTotal != null ? a + i.lineTotal : a, 0);
-    const hasPricing = orderItems.some((i) => i.unitPriceSnapshot !== null && i.unitPriceSnapshot !== undefined);
+    const stockIssues  = orderItems.filter((i) => i.availableQty !== null && i.quantity > i.availableQty);
+    const hasAnyIssue  = stockIssues.length > 0;
+    const totalUnits   = orderItems.reduce((a, i) => a + i.quantity, 0);
+    const grandTotal   = orderItems.reduce((a, i) => i.lineTotal != null ? a + i.lineTotal : a, 0);
+    const hasPricing   = orderItems.some((i) => i.unitPriceSnapshot !== null && i.unitPriceSnapshot !== undefined);
 
     const validateStep1 = () => {
         const e = {};
         if (!selectedStudent) e.student = "Please select a student.";
-        if (!selectedStoreId) e.store = "Please select a store.";
+        if (!selectedStoreId) e.store   = "Please select a store.";
         setErrors(e); return !Object.keys(e).length;
     };
     const validateStep2 = () => {
@@ -394,7 +411,11 @@ export default function CreateStudentOrder() {
     const buildPayload = (status) => ({
         studentId: selectedStudent.id,
         storeId: Number(selectedStoreId),
-        orderDate, remarks: remarks.trim() || null, status,
+        orderDate,
+        remarks: remarks.trim() || null,
+        status,
+        paymentMethod:     paymentMethod     || null,
+        transactionNumber: transactionNumber.trim() || null,
         items: orderItems.map((i) => ({ itemId: i.itemId, quantity: i.quantity })),
     });
 
@@ -422,22 +443,19 @@ export default function CreateStudentOrder() {
                 orderId: newId,
                 orderData: {
                     id: newId,
-                    issuedByName:    issuedByName,
-                    studentName: selectedStudent?._name,
+                    issuedByName,
+                    studentName:     selectedStudent?._name,
                     admissionNumber: selectedStudent?._admission,
-                    className: selectedStudent?._className,
-                    storeName: selectedStore?.storeName || `Store #${selectedStoreId}`,
-                    orderDate,
-                    remarks,
+                    className:       selectedStudent?._className,
+                    storeName:       selectedStore?.storeName || `Store #${selectedStoreId}`,
+                    orderDate, remarks,
+                    paymentMethod:     paymentMethod || null,
+                    transactionNumber: transactionNumber.trim() || null,
                     status: "CONFIRMED",
                     items: orderItems.map((i) => ({
-                        itemId: i.itemId,
-                        itemName: i.itemName,
-                        itemCode: i.itemCode,
-                        itemUnit: i.itemUnit,
-                        quantity: i.quantity,
-                        unitPriceSnapshot: i.unitPriceSnapshot,
-                        lineTotal: i.lineTotal,
+                        itemId: i.itemId, itemName: i.itemName, itemCode: i.itemCode,
+                        itemUnit: i.itemUnit, quantity: i.quantity,
+                        unitPriceSnapshot: i.unitPriceSnapshot, lineTotal: i.lineTotal,
                     })),
                     totalAmount: grandTotal > 0 ? grandTotal : null,
                 },
@@ -750,6 +768,7 @@ export default function CreateStudentOrder() {
                             </div>
                             <p className="text-sm text-gray-500">Review your order before submitting.</p>
 
+                            {/* Student + Store cards */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                                 <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 sm:p-4 space-y-1">
                                     <p className="text-xs text-gray-400 font-medium flex items-center gap-1 mb-2"><User className="w-3.5 h-3.5" /> Student</p>
@@ -764,6 +783,7 @@ export default function CreateStudentOrder() {
                                 </div>
                             </div>
 
+                            {/* Date + Remarks strip */}
                             {(orderDate || remarks) && (
                                 <div className="bg-gray-50 border border-gray-200 rounded-xl px-3 sm:px-4 py-3 space-y-1.5">
                                     {orderDate && <p className="text-xs text-gray-600"><span className="font-semibold text-gray-700">Order Date:</span> {new Date(orderDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</p>}
@@ -771,6 +791,7 @@ export default function CreateStudentOrder() {
                                 </div>
                             )}
 
+                            {/* Items table */}
                             <div>
                                 <p className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-1.5">
                                     <Package className="w-4 h-4 text-gray-400" /> Order Items ({orderItems.length})
@@ -821,6 +842,57 @@ export default function CreateStudentOrder() {
                                             </span>
                                         </div>
                                     )}
+                                </div>
+                            </div>
+
+                            
+                            {/* ── Payment Details (optional) ── */}
+                            <div className="border border-dashed border-gray-200 rounded-xl p-3 sm:p-4 space-y-3 bg-gray-50/50">
+                                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
+                                    <CreditCard className="w-3.5 h-3.5 text-gray-400" />
+                                    Payment Details
+                                </p>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    {/* Payment Method dropdown */}
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-semibold text-gray-600">Payment Method</label>
+                                        <div className="relative">
+                                            {paymentMethodsLoading ? (
+                                                <div className={`${inputCls} flex items-center gap-2 text-gray-400 text-xs`}>
+                                                    <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" /> Loading…
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <select
+                                                        value={paymentMethod}
+                                                        onChange={(e) => setPaymentMethod(e.target.value)}
+                                                        className={`${inputCls} appearance-none pr-8 text-sm`}
+                                                    >
+                                                        <option value="">— Select method —</option>
+                                                        {paymentMethods.map((m) => (
+                                                            <option key={m.id} value={m.value}>{m.label}</option>
+                                                        ))}
+                                                    </select>
+                                                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                                                </>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Transaction Number */}
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-semibold text-gray-600">Transaction / Reference No.</label>
+                                        <div className="relative">
+                                            <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                                            <input
+                                                type="text"
+                                                placeholder="e.g. TXN20260316001"
+                                                value={transactionNumber}
+                                                onChange={(e) => setTransactionNumber(e.target.value)}
+                                                className={`${inputCls} pl-8 text-sm`}
+                                            />
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
