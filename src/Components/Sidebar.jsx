@@ -16,7 +16,6 @@ import {
   Mail,
   Shield,
   ChevronUp,
-  School
 } from 'lucide-react'
 import { useState, useEffect, useContext, useRef } from 'react'
 import { UserContext } from '../ContextAPI/UserContext'
