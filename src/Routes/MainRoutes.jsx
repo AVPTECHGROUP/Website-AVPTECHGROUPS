@@ -61,16 +61,22 @@ import Reports from '../Pages/Transport/Reports/Reports';
 import Student_Allocations from '../Pages/Transport/Student_Allocation/Student_Allocations';
 import Routes_Manage from '../Pages/Transport/Routes_Manage';
 
-// ─── Role Groups (single source of truth) ─────────────────────────────────────
-// Changing a role here automatically applies everywhere it's used below.
-
-/** Full stock access — can manage stores, items, reports, movement history */
+// ─── Role Groups ───────────────────────────────────────────────────────────────
 const STOCK_ACCOUNTANT_ROLES = ['ADMIN', 'SUPER_ADMIN', 'STORE_ACCOUNTANT'];
+const STOCK_SELLER_ROLES     = ['ADMIN', 'SUPER_ADMIN', 'STORE_ACCOUNTANT', 'STORE_SELLER'];
 
-/** Operational stock access — transactions, orders, class config, item view */
-const STOCK_SELLER_ROLES = ['ADMIN', 'SUPER_ADMIN', 'STORE_ACCOUNTANT', 'STORE_SELLER'];
+// ─── Smart root redirect based on role ────────────────────────────────────────
+const RootRedirect = () => {
+  const storedUser = (() => {
+    try { return JSON.parse(localStorage.getItem('user')) } catch { return null }
+  })()
+  const role = storedUser?.userType
+    || (Array.isArray(storedUser?.roles) ? storedUser.roles[0] : null)
 
-// ─────────────────────────────────────────────────────────────────────────────
+  if (role === 'STORE_SELLER') return <Navigate to="/stock/studentOrders" replace />
+  return <Navigate to="/dashboard" replace />
+}
+// ──────────────────────────────────────────────────────────────────────────────
 
 const MainRoutes = () => {
   const isTokenExist = localStorage.getItem('token');
@@ -78,14 +84,28 @@ const MainRoutes = () => {
   return (
     <Routes>
       {/* PUBLIC ROUTE */}
-      <Route path="/login" element={isTokenExist ? <Navigate to="/dashboard" /> : <Login />} />
+      <Route
+        path="/login"
+        element={isTokenExist ? <RootRedirect /> : <Login />}
+      />
 
       {/* PROTECTED ROUTES */}
       <Route element={<ProtectedRoutes />}>
         <Route element={<AppLayout />}>
 
-          {/* ── Shared — all logged-in roles ───────────────────────────────── */}
-          <Route path="/dashboard" element={<Dashboard />} />
+          {/* ── Dashboard — STORE_SELLER blocked, redirected to studentOrders ── */}
+          <Route
+            path="/dashboard"
+            element={
+              <RoleProtectedRoute
+                allowedRoles={['ADMIN', 'TEACHER', 'SUPER_ADMIN', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST', 'PARENT', 'STORE_ACCOUNTANT']}
+                fallback={<Navigate to="/stock/studentOrders" replace />}
+              >
+                <Dashboard />
+              </RoleProtectedRoute>
+            }
+          />
+
           <Route path="/settings" element={<Settings />} />
           <Route path="/leaves/applyLeaves" element={<ApplyLeaves />} />
           <Route path="/leaves/myLeaves" element={<MyLeaves />} />
@@ -123,29 +143,21 @@ const MainRoutes = () => {
             <Route path="/payroll" element={<Payroll />} />
           </Route>
 
-          {/* Stock landing — visible to all stock roles */}
-          <Route element={<RoleProtectedRoute allowedRoles={STOCK_SELLER_ROLES} />}>
-            <Route path="/stock" element={<Stock />} />
-          </Route>
-
-          {/* Stores — STORE_ACCOUNTANT and above only */}
+          {/* ── Stock Dashboard — STORE_SELLER excluded ──────────────────────*/}
           <Route element={<RoleProtectedRoute allowedRoles={STOCK_ACCOUNTANT_ROLES} />}>
+            <Route path="/stock" element={<Stock />} />
             <Route path="/stock/stores" element={<Store />} />
-          </Route>
-
-          {/* Items, Transactions, Class Config, Student Orders — all stock roles */}
-          <Route element={<RoleProtectedRoute allowedRoles={STOCK_SELLER_ROLES} />}>
             <Route path="/stock/items" element={<Items />} />
             <Route path="/stock/classConfig" element={<ClassConfig />} />
+            <Route path="/stock/transactions" element={<Transactions />} />
+            <Route path="/stock/movementHistory" element={<Movement />} />
+          </Route>
+
+          {/* ── Student Orders — STORE_SELLER allowed ────────────────────────*/}
+          <Route element={<RoleProtectedRoute allowedRoles={STOCK_SELLER_ROLES} />}>
             <Route path="/stock/studentOrders" element={<StudentOrders />} />
             <Route path="/stock/studentOrders/addOrder" element={<CreateStudentOrder />} />
             <Route path="/stock/studentOrders/editOrder" element={<EditStudentOrder />} />
-            <Route path="/stock/transactions" element={<Transactions />} />
-          </Route>
-
-          {/* Movement History & Stock Reports — STORE_ACCOUNTANT and above only */}
-          <Route element={<RoleProtectedRoute allowedRoles={STOCK_ACCOUNTANT_ROLES} />}>
-            <Route path="/stock/movementHistory" element={<Movement />} />
           </Route>
 
           {/* ── Transport — ADMIN & SUPER_ADMIN only ────────────────────────── */}
@@ -164,8 +176,8 @@ const MainRoutes = () => {
             <Route path="/leaves" element={<Navigate to="/leaves/myLeaves" replace />} />
           </Route>
 
-          {/* Fallback */}
-          <Route path="*" element={<Navigate to="/dashboard" />} />
+          {/* ── Fallback — role-aware redirect ───────────────────────────────── */}
+          <Route path="*" element={<RootRedirect />} />
 
         </Route>
       </Route>

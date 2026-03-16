@@ -15,7 +15,8 @@ import {
   Phone,
   Mail,
   Shield,
-  ChevronUp
+  ChevronUp,
+  School
 } from 'lucide-react'
 import { useState, useEffect, useContext, useRef } from 'react'
 import { UserContext } from '../ContextAPI/UserContext'
@@ -26,7 +27,7 @@ const menuItems = [
     icon: LayoutDashboard,
     label: 'Dashboard',
     route: '/dashboard',
-    roles: ['ADMIN', 'TEACHER', 'SUPER_ADMIN', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST', 'PARENT', 'STORE_ACCOUNTANT', 'STORE_SELLER'],
+    roles: ['ADMIN', 'TEACHER', 'SUPER_ADMIN', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST', 'PARENT', 'STORE_ACCOUNTANT'],
   },
   {
     id: 'manageUsers',
@@ -102,7 +103,7 @@ const menuItems = [
     icon: Package,
     label: 'Stock',
     route: '/stock',
-    roles: ['ADMIN', 'SUPER_ADMIN', 'STORE_ACCOUNTANT', 'STORE_SELLER'],
+    roles: ['ADMIN', 'SUPER_ADMIN', 'STORE_ACCOUNTANT'],  // ← STORE_SELLER removed
     subItems: [
       {
         label: 'Stores',
@@ -112,22 +113,22 @@ const menuItems = [
       {
         label: 'Items',
         route: '/stock/items',
-        roles: ['ADMIN', 'SUPER_ADMIN', 'STORE_ACCOUNTANT', 'STORE_SELLER'],
+        roles: ['ADMIN', 'SUPER_ADMIN', 'STORE_ACCOUNTANT'],
       },
       {
         label: 'Transactions',
         route: '/stock/transactions',
-        roles: ['ADMIN', 'SUPER_ADMIN', 'STORE_ACCOUNTANT', 'STORE_SELLER'],
+        roles: ['ADMIN', 'SUPER_ADMIN', 'STORE_ACCOUNTANT'],
       },
       {
         label: 'Class Config',
         route: '/stock/classConfig',
-        roles: ['ADMIN', 'SUPER_ADMIN', 'STORE_ACCOUNTANT', 'STORE_SELLER'],
+        roles: ['ADMIN', 'SUPER_ADMIN', 'STORE_ACCOUNTANT'],
       },
       {
         label: 'Student Orders',
         route: '/stock/studentOrders',
-        roles: ['ADMIN', 'SUPER_ADMIN', 'STORE_ACCOUNTANT', 'STORE_SELLER'],
+        roles: ['ADMIN', 'SUPER_ADMIN', 'STORE_ACCOUNTANT'],  // ← STORE_SELLER removed
       },
       {
         label: 'Movement History',
@@ -135,6 +136,14 @@ const menuItems = [
         roles: ['ADMIN', 'SUPER_ADMIN', 'STORE_ACCOUNTANT'],
       }
     ]
+  },
+  // ── STORE_SELLER sees only this top-level item (like Students for ADMIN) ──
+  {
+    id: 'studentOrders',
+    icon: Package,
+    label: 'Student Orders',
+    route: '/stock/studentOrders',
+    roles: ['STORE_SELLER'],
   },
   {
     id: 'transport',
@@ -201,8 +210,8 @@ const roleBadgeStyles = {
   ACCOUNTANT:       'bg-cyan-100 text-cyan-700',
   RECEPTIONIST:     'bg-pink-100 text-pink-700',
   PARENT:           'bg-orange-100 text-orange-700',
-  STORE_ACCOUNTANT: 'bg-teal-100 text-teal-700',  
-  STORE_SELLER:     'bg-indigo-100 text-indigo-700', 
+  STORE_ACCOUNTANT: 'bg-teal-100 text-teal-700',
+  STORE_SELLER:     'bg-indigo-100 text-indigo-700',
 }
 
 const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
@@ -319,7 +328,6 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
   const initials = displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
   const badgeClass = roleBadgeStyles[userRole] || 'bg-gray-100 text-gray-600'
 
-  // ✅ Format role label nicely for display (e.g. STORE_ACCOUNTANT → Store Accountant)
   const formatRoleLabel = (role) => {
     if (!role) return ''
     return role
@@ -443,7 +451,6 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
               <>
                 <div className="flex-1 text-left min-w-0">
                   <p className="text-sm font-semibold text-gray-800 truncate">{displayName}</p>
-                  {/* ✅ Fixed: uses formatRoleLabel so STORE_ACCOUNTANT shows as "Store Accountant" */}
                   <p className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full inline-block mt-0.5 ${badgeClass}`}>
                     {formatRoleLabel(userRole)}
                   </p>
@@ -477,7 +484,6 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
 
               <div className="pt-7 px-4 pb-3 border-b border-gray-100">
                 <p className="font-bold text-gray-900 text-sm">{displayName}</p>
-                {/* ✅ Fixed: uses formatRoleLabel in dropdown too */}
                 <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full inline-block mt-1 ${badgeClass}`}>
                   {formatRoleLabel(userRole)}
                 </span>
