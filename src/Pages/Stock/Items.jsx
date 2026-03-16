@@ -22,26 +22,26 @@ const SEARCH_DEBOUNCE_MS = 400;
 
 const STATUS_OPTIONS = [
     { label: "All Status", api: "" },
-    { label: "Active",     api: "ACTIVE" },
-    { label: "Inactive",   api: "INACTIVE" },
+    { label: "Active", api: "ACTIVE" },
+    { label: "Inactive", api: "INACTIVE" },
 ];
 
 const categoryColors = {
-    STATIONERY:  "bg-gray-100   text-gray-700",
-    LAB:         "bg-purple-100 text-purple-700",
-    SPORTS:      "bg-blue-100   text-blue-700",
-    UNIFORM:     "bg-orange-100 text-orange-700",
-    BOOKS:       "bg-yellow-100 text-yellow-700",
-    FURNITURE:   "bg-amber-100  text-amber-700",
+    STATIONERY: "bg-gray-100   text-gray-700",
+    LAB: "bg-purple-100 text-purple-700",
+    SPORTS: "bg-blue-100   text-blue-700",
+    UNIFORM: "bg-orange-100 text-orange-700",
+    BOOKS: "bg-yellow-100 text-yellow-700",
+    FURNITURE: "bg-amber-100  text-amber-700",
     ELECTRONICS: "bg-cyan-100   text-cyan-700",
-    CLEANING:    "bg-teal-100   text-teal-700",
-    OTHER:       "bg-gray-100   text-gray-500",
+    CLEANING: "bg-teal-100   text-teal-700",
+    OTHER: "bg-gray-100   text-gray-500",
 };
 
 const stockBarColor = (qty, min) => {
     if (!qty || qty === 0) return "bg-red-500";
-    if (qty <= min / 2)   return "bg-red-500";
-    if (qty < min)        return "bg-orange-400";
+    if (qty <= min / 2) return "bg-red-500";
+    if (qty < min) return "bg-orange-400";
     return "bg-blue-500";
 };
 
@@ -49,39 +49,39 @@ const stockBarColor = (qty, min) => {
 export default function Items() {
 
     // ── Table data ─────────────────────────────────────────────
-    const [items,      setItems]      = useState([]);
+    const [items, setItems] = useState([]);
     const [totalItems, setTotalItems] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
 
     // ── Stats ──────────────────────────────────────────────────
-    const [statsData,    setStatsData]    = useState(null);
+    const [statsData, setStatsData] = useState(null);
     const [statsLoading, setStatsLoading] = useState(true);
 
     // ── Categories from LOV ─────────────────────────────────────
     const [categoryOptions, setCategoryOptions] = useState([]);
-    const [catsLoading,     setCatsLoading]     = useState(true);
+    const [catsLoading, setCatsLoading] = useState(true);
 
     // ── Loading / action state ─────────────────────────────────
-    const [loading,     setLoading]     = useState(true);
-    const [saving,      setSaving]      = useState(false);
-    const [togglingId,  setTogglingId]  = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [togglingId, setTogglingId] = useState(null);
     const [noItemFound, setNoItemFound] = useState(false);
-    const [error,       setError]       = useState(null);
+    const [error, setError] = useState(null);
 
     // ── Filters & pagination (1-based display, 0-based API) ────
-    const [search,          setSearch]          = useState("");
+    const [search, setSearch] = useState("");
     const [debouncedSearch, setDebouncedSearch] = useState("");
-    const [categoryFilter,  setCategoryFilter]  = useState("");   // "" = All
-    const [statusFilter,    setStatusFilter]    = useState("Active");
-    const [page,            setPage]            = useState(1);    // 1-based
-    const [rowsPerPage,     setRowsPerPage]     = useState(10);
+    const [categoryFilter, setCategoryFilter] = useState("");   // "" = All
+    const [statusFilter, setStatusFilter] = useState("Active");
+    const [page, setPage] = useState(1);    // 1-based
+    const [rowsPerPage, setRowsPerPage] = useState(10);
 
     const debounceRef = useRef(null);
 
     // ── Modals ─────────────────────────────────────────────────
-    const [isNewItemOpen,  setIsNewItemOpen]  = useState(false);
-    const [editItemData,   setEditItemData]   = useState(null);
-    const [viewItemData,   setViewItemData]   = useState(null);
+    const [isNewItemOpen, setIsNewItemOpen] = useState(false);
+    const [editItemData, setEditItemData] = useState(null);
+    const [viewItemData, setViewItemData] = useState(null);
     const [isViewItemOpen, setIsViewItemOpen] = useState(false);
 
     // ── Debounce search ────────────────────────────────────────
@@ -132,17 +132,17 @@ export default function Items() {
             );
 
             const mapped = (raw ?? []).map((item) => ({
-                id:          item.id,
-                code:        item.itemCode,
-                name:        item.itemName,
-                category:    item.category,
-                unit:        item.unit,
-                price:       item.unitPrice ?? 0,       // unitPrice from API
-                totalStock:  item.totalQuantity ?? 0,
-                minLevel:    item.minimumStockLevel ?? 0,
+                id: item.id,
+                code: item.itemCode,
+                name: item.itemName,
+                category: item.category,
+                unit: item.unit,
+                price: item.unitPrice ?? 0,       // unitPrice from API
+                totalStock: item.totalQuantity ?? 0,
+                minLevel: item.minimumStockLevel ?? 0,
                 description: item.description ?? "",
-                status:      item.status,
-                isBelowMin:  item.isBelowMinimum,
+                status: item.status,
+                isBelowMin: item.isBelowMinimum,
             }));
 
             setItems(mapped);
@@ -164,27 +164,27 @@ export default function Items() {
 
     // ── Stat cards ─────────────────────────────────────────────
     const stats = useMemo(() => [
-        { key: "Total Items",  val: statsData?.totalItems    ?? 0, icon: Package,      txColor: "text-blue-600",   bgColor: "bg-blue-50"   },
-        { key: "Active Items", val: statsData?.activeItems   ?? 0, icon: PackageCheck, txColor: "text-green-600",  bgColor: "bg-green-50"  },
-        { key: "Inactive",     val: statsData?.inactiveItems ?? 0, icon: PackageX,     txColor: "text-red-500",    bgColor: "bg-red-50"    },
-        // { key: "Categories",   val: statsData?.categories ?? statsData?.totalCategories ?? 0, icon: Layers, txColor: "text-purple-600", bgColor: "bg-purple-50" },
+        { key: "Total Items", val: statsData?.totalItems ?? 0, icon: Package, txColor: "text-blue-600", bgColor: "bg-blue-50" },
+        { key: "Active Items", val: statsData?.activeItems ?? 0, icon: PackageCheck, txColor: "text-green-600", bgColor: "bg-green-50" },
+        { key: "Inactive", val: statsData?.inactiveItems ?? 0, icon: PackageX, txColor: "text-red-500", bgColor: "bg-red-50" },
+        { key: "Active Categories",   val: statsData?.categories ?? statsData?.totalCategories ?? 0, icon: Layers, txColor: "text-purple-600", bgColor: "bg-purple-50" },
     ], [statsData]);
 
     const resetPage = () => setPage(1);
 
     // ── Action menu ────────────────────────────────────────────
     const getActionOptions = (item) => [
-        { value: "view",  label: "View",  icon: Eye,  text: "text-blue-600",   bg: "bg-blue-50",   hover: "hover:bg-blue-100"   },
-        { value: "edit",  label: "Edit",  icon: Edit, text: "text-orange-600", bg: "bg-orange-50", hover: "hover:bg-orange-100" },
+        { value: "view", label: "View", icon: Eye, text: "text-blue-600", bg: "bg-blue-50", hover: "hover:bg-blue-100" },
+        { value: "edit", label: "Edit", icon: Edit, text: "text-orange-600", bg: "bg-orange-50", hover: "hover:bg-orange-100" },
         {
             value: "toggleStatus",
             label: togglingId === item.id
                 ? (item.status === "ACTIVE" ? "Deactivating…" : "Activating…")
                 : (item.status === "ACTIVE" ? "Inactive" : "Activate"),
-            icon:     item.status === "ACTIVE" ? MinusCircle : Power,
-            text:     item.status === "ACTIVE" ? "text-red-600"      : "text-green-600",
-            bg:       item.status === "ACTIVE" ? "bg-red-50"         : "bg-green-50",
-            hover:    item.status === "ACTIVE" ? "hover:bg-red-100"  : "hover:bg-green-100",
+            icon: item.status === "ACTIVE" ? MinusCircle : Power,
+            text: item.status === "ACTIVE" ? "text-red-600" : "text-green-600",
+            bg: item.status === "ACTIVE" ? "bg-red-50" : "bg-green-50",
+            hover: item.status === "ACTIVE" ? "hover:bg-red-100" : "hover:bg-green-100",
             disabled: togglingId === item.id,
         },
     ];
@@ -221,14 +221,14 @@ export default function Items() {
             setSaving(true);
             // payload comes from NewItem: { itemCode, itemName, category, unit, unitPrice, minimumStockLevel, status, description }
             const mappedPayload = {
-                itemCode:          payload.itemCode,
-                itemName:          payload.itemName,
-                category:          payload.category,
-                unit:              payload.unit,
-                unitPrice:         payload.unitPrice,          // ← sent to API
+                itemCode: payload.itemCode,
+                itemName: payload.itemName,
+                category: payload.category,
+                unit: payload.unit,
+                unitPrice: payload.unitPrice,          // ← sent to API
                 minimumStockLevel: payload.minimumStockLevel,
-                description:       payload.description ?? "",
-                status:            payload.status ?? "ACTIVE",
+                description: payload.description ?? "",
+                status: payload.status ?? "ACTIVE",
             };
             if (editItemData) {
                 await updateItem(editItemData.id, mappedPayload);
@@ -421,15 +421,15 @@ export default function Items() {
                                 <thead className="border-b border-gray-200">
                                     <tr>
                                         {[
-                                            ["#",           "w-10",  "text-left"],
-                                            ["Item",        "",      "text-left"],
-                                            ["Category",    "",      "text-left"],
-                                            ["Unit",        "",      "text-left"],
-                                            ["Unit Price",  "",      "text-left"],
-                                            ["Stock",       "",      "text-left"],
-                                            ["Min Lvl",     "",      "text-left"],
-                                            ["Status",      "",      "text-left"],
-                                            ["Actions",     "",      "text-center"],
+                                            ["#", "w-10", "text-left"],
+                                            ["Item", "", "text-left"],
+                                            ["Category", "", "text-left"],
+                                            ["Unit", "", "text-left"],
+                                            ["Unit Price", "", "text-left"],
+                                            ["Stock", "", "text-left"],
+                                            ["Min Lvl", "", "text-left"],
+                                            ["Status", "", "text-left"],
+                                            ["Actions", "", "text-center"],
                                         ].map(([label, w, align]) => (
                                             <th key={label}
                                                 className={`px-2 py-3 text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10 ${w} ${align}`}>
@@ -482,11 +482,10 @@ export default function Items() {
 
                                                 <td className={tdStyle}>
                                                     <div className="flex items-center gap-1.5">
-                                                        <span className={`text-sm font-bold w-7 shrink-0 ${
-                                                            item.totalStock < item.minLevel         ? "text-red-500"
-                                                            : item.totalStock < item.minLevel * 1.5 ? "text-orange-500"
-                                                            : "text-gray-800"
-                                                        }`}>
+                                                        <span className={`text-sm font-bold w-7 shrink-0 ${item.totalStock < item.minLevel ? "text-red-500"
+                                                                : item.totalStock < item.minLevel * 1.5 ? "text-orange-500"
+                                                                    : "text-gray-800"
+                                                            }`}>
                                                             {item.totalStock}
                                                         </span>
                                                         <div className="w-16 bg-gray-100 rounded-full h-2 shrink-0">
@@ -503,9 +502,8 @@ export default function Items() {
                                                 </td>
 
                                                 <td className={tdStyle}>
-                                                    <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-sm text-xs font-medium ${
-                                                        item.status === "ACTIVE" ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"
-                                                    }`}>
+                                                    <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-sm text-xs font-medium ${item.status === "ACTIVE" ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"
+                                                        }`}>
                                                         {item.status === "ACTIVE" ? "Active" : "Inactive"}
                                                     </span>
                                                 </td>

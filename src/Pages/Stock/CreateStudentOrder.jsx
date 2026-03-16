@@ -341,7 +341,9 @@ export default function CreateStudentOrder() {
         finally { setPreviewLoading(false); }
     }, [selectedStoreId, orderItems]); // eslint-disable-line
 
+    // ── FIX: clear previewError when items are manually added ────
     const handleItemsAdded = useCallback((newItems) => {
+        setPreviewError(""); // ← FIXED: clears the error so items render properly
         setOrderItems((prev) => {
             const existingIds = new Set(prev.map((i) => String(i.itemId)));
             const merged = [...prev, ...newItems.filter((i) => !existingIds.has(String(i.itemId)))];
@@ -640,7 +642,8 @@ export default function CreateStudentOrder() {
                                 <Loader2 className="w-7 h-7 animate-spin text-blue-500" />
                                 <p className="text-sm">Loading items from preview…</p>
                             </div>
-                        ) : previewError ? (
+                        ) : previewError && orderItems.length === 0 ? (
+                            // ── FIX: only show error if there are truly no items ──
                             <div className="text-center py-10 sm:py-12 border border-dashed border-red-200 rounded-xl text-red-400 space-y-2">
                                 <AlertCircle className="w-8 h-8 mx-auto opacity-40" />
                                 <p className="text-sm font-medium">{previewError}</p>
