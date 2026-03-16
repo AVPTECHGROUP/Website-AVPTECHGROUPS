@@ -142,7 +142,7 @@ export default function PasswordResetModal({ isOpen, onClose, onReset, userName,
           </div>
         )}
 
-        <div className="px-6 py-5 min-h-[250px]">
+        <div className="px-6 py-5 min-h-62.5">
 
           {/* ── SUCCESS ── */}
           {step === "success" && (
@@ -235,7 +235,7 @@ export default function PasswordResetModal({ isOpen, onClose, onReset, userName,
                 <button
                   onClick={handleUpdatePassword}
                   disabled={loading}
-                  className="px-5 py-2.5 rounded-lg bg-green-600 hover:bg-green-700 disabled:opacity-70 text-white text-sm font-semibold flex items-center gap-2 min-w-[140px] justify-center transition-colors"
+                  className="px-5 py-2.5 rounded-lg bg-green-600 hover:bg-green-700 disabled:opacity-70 text-white text-sm font-semibold flex items-center gap-2 min-w-35 justify-center transition-colors"
                 >
                   {loading ? <span className="spinner" /> : <><Key size={14} /> Update Password</>}
                 </button>
@@ -245,7 +245,7 @@ export default function PasswordResetModal({ isOpen, onClose, onReset, userName,
 
           {/* ── GENERATE PASSWORD TAB ── */}
           {step === "form" && tab === "generate" && (
-            <div className="flex flex-col min-h-[250px]">
+            <div className="flex flex-col min-h-62.5">
               <p className="text-sm text-slate-500 leading-relaxed mb-5">
                 This will automatically generate a strong secure password{userLabel} and invalidate their current session.
               </p>
@@ -259,7 +259,7 @@ export default function PasswordResetModal({ isOpen, onClose, onReset, userName,
                 <button
                   onClick={handleGenerate}
                   disabled={loading}
-                  className="px-5 py-2.5 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-semibold flex items-center gap-2 min-w-[150px] justify-center transition-colors disabled:opacity-70"
+                  className="px-5 py-2.5 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-semibold flex items-center gap-2 min-w-37.5 justify-center transition-colors disabled:opacity-70"
                 >
                   {loading ? <span className="spinner" /> : <><RefreshCw size={14} /> Generate Password</>}
                 </button>

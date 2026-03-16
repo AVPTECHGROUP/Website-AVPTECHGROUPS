@@ -7,13 +7,13 @@ import {
 import { getStudentOrderById } from "../../Api/StudentOrder";
 
 const statusConfig = {
-  DRAFT:      { cls: "bg-gray-100   text-gray-600   border-gray-300",   icon: FileText,    label: "Draft"      },
-  PENDING:    { cls: "bg-yellow-100 text-yellow-700 border-yellow-200", icon: Clock,       label: "Pending"    },
-  CONFIRMED:  { cls: "bg-blue-100   text-blue-700   border-blue-200",   icon: CheckCircle, label: "Confirmed"  },
-  APPROVED:   { cls: "bg-blue-100   text-blue-700   border-blue-200",   icon: CheckCircle, label: "Approved"   },
-  DISPATCHED: { cls: "bg-purple-100 text-purple-700 border-purple-200", icon: Truck,       label: "Dispatched" },
-  DELIVERED:  { cls: "bg-green-100  text-green-700  border-green-200",  icon: CheckCircle, label: "Delivered"  },
-  CANCELLED:  { cls: "bg-red-100    text-red-600    border-red-200",    icon: XCircle,     label: "Cancelled"  },
+  DRAFT: { cls: "bg-gray-100   text-gray-600   border-gray-300", icon: FileText, label: "Draft" },
+  PENDING: { cls: "bg-yellow-100 text-yellow-700 border-yellow-200", icon: Clock, label: "Pending" },
+  CONFIRMED: { cls: "bg-blue-100   text-blue-700   border-blue-200", icon: CheckCircle, label: "Confirmed" },
+  APPROVED: { cls: "bg-blue-100   text-blue-700   border-blue-200", icon: CheckCircle, label: "Approved" },
+  DISPATCHED: { cls: "bg-purple-100 text-purple-700 border-purple-200", icon: Truck, label: "Dispatched" },
+  DELIVERED: { cls: "bg-green-100  text-green-700  border-green-200", icon: CheckCircle, label: "Delivered" },
+  CANCELLED: { cls: "bg-red-100    text-red-600    border-red-200", icon: XCircle, label: "Cancelled" },
 };
 
 const fallbackStatus = {
@@ -158,18 +158,18 @@ function buildSlip(o, copyType, items, total, rawStatus, gstNumber) {
   const itemRows = items.length === 0
     ? `<tr><td colspan="4" style="text-align:center;color:#555;padding:4px 0">No items</td></tr>`
     : items.map((item, idx) => {
-        const name      = item.itemName || item.name || `Item #${item.itemId || idx}`;
-        const code      = item.itemCode || item.code || "";
-        const qty       = item.quantity  || item.qty  || 0;
-        const unitPrice = item.unitPriceSnapshot != null ? `₹${Number(item.unitPriceSnapshot).toFixed(2)}` : "—";
-        const lineTotal = item.lineTotal          != null ? `₹${Number(item.lineTotal).toFixed(2)}`         : "—";
-        return `<tr>
+      const name = item.itemName || item.name || `Item #${item.itemId || idx}`;
+      const code = item.itemCode || item.code || "";
+      const qty = item.quantity || item.qty || 0;
+      const unitPrice = item.unitPriceSnapshot != null ? `₹${Number(item.unitPriceSnapshot).toFixed(2)}` : "—";
+      const lineTotal = item.lineTotal != null ? `₹${Number(item.lineTotal).toFixed(2)}` : "—";
+      return `<tr>
           <td>${name}${code ? `<span class="icode">(${code})</span>` : ""}</td>
           <td class="c">${qty}</td>
           <td class="r">${unitPrice}</td>
           <td class="r">${lineTotal}</td>
         </tr>`;
-      }).join("");
+    }).join("");
 
   const orderTotal = o.totalAmount != null ? `₹${Number(o.totalAmount).toFixed(2)}` : "—";
 
@@ -193,7 +193,7 @@ function buildSlip(o, copyType, items, total, rawStatus, gstNumber) {
             <div class="lbl">Student</div>
             <div class="val">${o.studentName || "—"}</div>
             ${o.admissionNumber ? `<div class="sub">ADM: ${o.admissionNumber}</div>` : ""}
-            ${o.className       ? `<div class="sub">Class: ${o.className}</div>`     : ""}
+            ${o.className ? `<div class="sub">Class: ${o.className}</div>` : ""}
           </div>
           <div class="meta-box" style="flex:1">
             <div class="lbl">Firm Name</div>
@@ -249,18 +249,18 @@ function buildSlip(o, copyType, items, total, rawStatus, gstNumber) {
 /* ─── Print orchestrator ────────────────────────────────────────────────────── */
 function printOrder(o, gstNumber) {
   const rawStatus = (o.status || o.orderStatus || "").toUpperCase();
-  const items     = o.items || o.orderItems || [];
-  const total     = items.reduce((a, i) => a + (i.quantity || i.qty || 0), 0);
-  const copies    = ["Accountant", "Admin", "Parent"];
+  const items = o.items || o.orderItems || [];
+  const total = items.reduce((a, i) => a + (i.quantity || i.qty || 0), 0);
+  const copies = ["Accountant", "Admin", "Parent"];
 
   const CUT = `<div class="cut"><span class="cut-label">✂ cut</span></div>`;
 
   const body = `
     <div class="slips-row">
       ${copies.map((copy, idx) =>
-        buildSlip(o, copy, items, total, rawStatus, gstNumber) +
-        (idx < copies.length - 1 ? CUT : "")
-      ).join("")}
+    buildSlip(o, copy, items, total, rawStatus, gstNumber) +
+    (idx < copies.length - 1 ? CUT : "")
+  ).join("")}
     </div>`;
 
   const win = window.open("", "_blank", "width=1100,height=800");
@@ -275,11 +275,11 @@ function printOrder(o, gstNumber) {
 
 /* ─── Main component ────────────────────────────────────────────────────────── */
 export default function ViewStudentOrder({ isOpen, onClose, order }) {
-  const [fullOrder,    setFullOrder]    = useState(null);
+  const [fullOrder, setFullOrder] = useState(null);
   const [fetchLoading, setFetchLoading] = useState(false);
-  const [fetchError,   setFetchError]   = useState("");
-  const [printing,     setPrinting]     = useState(false);
-  const [gstInput,     setGstInput]     = useState("");
+  const [fetchError, setFetchError] = useState("");
+  const [printing, setPrinting] = useState(false);
+  const [gstInput, setGstInput] = useState("");
 
   useEffect(() => {
     document.body.style.overflow = isOpen ? "hidden" : "";
@@ -302,12 +302,12 @@ export default function ViewStudentOrder({ isOpen, onClose, order }) {
 
   if (!isOpen || !order) return null;
 
-  const o          = fullOrder || order;
-  const rawStatus  = (o.status || o.orderStatus || "").toUpperCase();
-  const sc         = statusConfig[rawStatus] || fallbackStatus;
+  const o = fullOrder || order;
+  const rawStatus = (o.status || o.orderStatus || "").toUpperCase();
+  const sc = statusConfig[rawStatus] || fallbackStatus;
   const StatusIcon = sc.icon;
-  const items      = o.items || o.orderItems || [];
-  const total      = items.reduce((a, i) => a + (i.quantity || i.qty || 0), 0);
+  const items = o.items || o.orderItems || [];
+  const total = items.reduce((a, i) => a + (i.quantity || i.qty || 0), 0);
 
   const handlePrint = () => {
     if (fetchLoading) return;
@@ -376,7 +376,7 @@ export default function ViewStudentOrder({ isOpen, onClose, order }) {
               </div>
               <div className="h-4 bg-gray-100 rounded w-3/4" />
               <div className="h-4 bg-gray-100 rounded w-1/2" />
-              {[1,2,3].map(i => <div key={i} className="h-10 bg-gray-100 rounded-lg" />)}
+              {[1, 2, 3].map(i => <div key={i} className="h-10 bg-gray-100 rounded-lg" />)}
             </div>
           ) : (
             <>
@@ -473,11 +473,11 @@ export default function ViewStudentOrder({ isOpen, onClose, order }) {
                     {/* Item rows */}
                     <div className="divide-y divide-gray-100">
                       {items.map((item, idx) => {
-                        const name      = item.itemName || item.name || `Item #${item.itemId || idx}`;
-                        const code      = item.itemCode || item.code || "";
-                        const qty       = item.quantity  || item.qty  || 0;
+                        const name = item.itemName || item.name || `Item #${item.itemId || idx}`;
+                        const code = item.itemCode || item.code || "";
+                        const qty = item.quantity || item.qty || 0;
                         const unitPrice = item.unitPriceSnapshot != null ? fmtRupee(item.unitPriceSnapshot) : "—";
-                        const lineTotal = item.lineTotal          != null ? fmtRupee(item.lineTotal)         : "—";
+                        const lineTotal = item.lineTotal != null ? fmtRupee(item.lineTotal) : "—";
 
                         return (
                           <div key={item.id || item.itemId || idx} className="grid grid-cols-12 items-center py-3">
@@ -530,11 +530,11 @@ export default function ViewStudentOrder({ isOpen, onClose, order }) {
                   <span className="text-sm text-gray-600">
                     <span className="font-bold text-gray-800">{total}</span> total units
                   </span>
-                  {rawStatus === "DELIVERED"  && <span className="flex items-center gap-1.5 text-sm font-semibold text-green-600"><CheckCircle className="w-4 h-4" /> Order delivered</span>}
-                  {rawStatus === "CANCELLED"  && <span className="flex items-center gap-1.5 text-sm font-semibold text-red-500"><XCircle className="w-4 h-4" /> Order cancelled</span>}
+                  {rawStatus === "DELIVERED" && <span className="flex items-center gap-1.5 text-sm font-semibold text-green-600"><CheckCircle className="w-4 h-4" /> Order delivered</span>}
+                  {rawStatus === "CANCELLED" && <span className="flex items-center gap-1.5 text-sm font-semibold text-red-500"><XCircle className="w-4 h-4" /> Order cancelled</span>}
                   {rawStatus === "DISPATCHED" && <span className="flex items-center gap-1.5 text-sm font-semibold text-purple-600"><Truck className="w-4 h-4" /> Out for delivery</span>}
-                  {rawStatus === "CONFIRMED"  && <span className="flex items-center gap-1.5 text-sm font-semibold text-blue-600"><CheckCircle className="w-4 h-4" /> Stock deducted successfully</span>}
-                  {rawStatus === "DRAFT"      && <span className="flex items-center gap-1.5 text-sm font-semibold text-gray-500"><FileText className="w-4 h-4" /> Saved as draft</span>}
+                  {rawStatus === "CONFIRMED" && <span className="flex items-center gap-1.5 text-sm font-semibold text-blue-600"><CheckCircle className="w-4 h-4" /> Stock deducted successfully</span>}
+                  {rawStatus === "DRAFT" && <span className="flex items-center gap-1.5 text-sm font-semibold text-gray-500"><FileText className="w-4 h-4" /> Saved as draft</span>}
                 </div>
                 {o.totalAmount != null && (
                   <span className="text-sm font-bold text-blue-600">
