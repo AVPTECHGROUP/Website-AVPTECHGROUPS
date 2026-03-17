@@ -1,14 +1,46 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { getAllUserRoles } from '../../../Api/userManagementAPI';
 
 const UserPersonalDetailsTab = ({ formData, setFormData, handleInputChange }) => {
     const [enabled, setEnabled] = useState(formData.accountStatus);
-
     // Update parent formData when toggle changes
     const handleToggle = () => {
-        const newValue = !enabled;
-        setEnabled(newValue);
-        setFormData(prev => ({ ...prev, accountStatus: newValue }));
+       setFormData(prev => ({
+        ...prev,
+        accountStatus: !prev.accountStatus
+    }));
     };
+
+    useEffect(() => {
+        setEnabled(formData.accountStatus);
+    }, [formData.accountStatus]);
+
+    //  const [selectedRole, setSelectedRole] = useState('');
+    //for getting the user roles
+    const [roleSelection, setRoleSelection] = useState([]);
+    useEffect(() => {
+        const fetchUserRoles = async () => {
+            try {
+                let roleOpt = [];
+                const rolesRes = await getAllUserRoles();
+                const fetchedRoles = rolesRes.data || [];
+                roleOpt = fetchedRoles
+                    .filter(val => val.name !== 'SUPER_ADMIN' && val.name !== 'TEACHER')
+                    .map(val => ({
+                        key: val.id,
+                        value: val.name,
+                        displayRole: val.displayName
+                    }));
+                setRoleSelection(roleOpt);
+            }
+            catch (e) {
+                console.error('Fetch roles error:', e.message);
+                throw e;
+            }
+        };
+        fetchUserRoles();
+    }, []);
+
 
     return (
         <div>
@@ -20,14 +52,12 @@ const UserPersonalDetailsTab = ({ formData, setFormData, handleInputChange }) =>
                     <button
                         type="button"
                         onClick={handleToggle}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                            enabled ? 'bg-blue-600' : 'bg-gray-200'
-                        }`}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${enabled ? 'bg-blue-600' : 'bg-gray-200'
+                            }`}
                     >
                         <span
-                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                                enabled ? 'translate-x-6' : 'translate-x-1'
-                            }`}
+                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${enabled ? 'translate-x-6' : 'translate-x-1'
+                                }`}
                         />
                     </button>
                 </div>
@@ -58,7 +88,7 @@ const UserPersonalDetailsTab = ({ formData, setFormData, handleInputChange }) =>
                     </div>
 
                     {/* for parent it is disabled field  */}
-                    <div className="">  
+                    <div className="">
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                             Employee Code
                         </label>
@@ -316,6 +346,27 @@ const UserPersonalDetailsTab = ({ formData, setFormData, handleInputChange }) =>
                                 className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                             />
                         </div>
+                    </div>
+
+
+
+                    <div>
+                        <label htmlFor="userRole" className='block font-semibold text-gray-600 text-sm mb-2'>
+                            Select Role<span className="text-red-600 ml-1">*</span>
+                        </label>
+                        <select
+                            name="userRole"
+                            value={formData.userRole}
+                            className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none'
+                            onChange={(e) => { handleInputChange(e); }}
+                            required>
+                            <option value="" disabled>Select User Role</option>
+                            {
+                                roleSelection.map((ele) => (
+                                    <option value={ele.value} key={ele.key}> {ele.displayRole} </option>
+                                ))
+                            }
+                        </select>
                     </div>
                 </div>
             </div>

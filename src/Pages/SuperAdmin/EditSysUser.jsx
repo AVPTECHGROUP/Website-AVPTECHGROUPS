@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, data } from 'react-router-dom';
 import { ChevronLeft, User } from 'lucide-react';
 import { toast } from 'react-toastify';
 import UserPersonalDetailsTab from '../../Components/SuperAdmin/EditTabComponents/UserPersonalDetailsTab';
@@ -131,7 +131,7 @@ function EditSysUser() {
     const [formData, setFormData] = useState({
         name: '', gender: '', mobile: '', email: '', dob: '', address: '',
         empId: '', highestQualification: '', experience: 0, joiningDate: '',
-        loginEmail: '', dessignation: '', accountStatus: false,
+        loginEmail: '', userRole: '', dessignation: '', accountStatus: false,
         salaryType: '', baseSalary: '', leaveDeductionPerDay: '',
         houseRentAllowance: '', travelAllowance: '', dearnessAllowance: '',
         specialAllowance: '', otherAllowances: '', providentFund: '',
@@ -156,7 +156,6 @@ function EditSysUser() {
                 if (!data || typeof data !== 'object') throw new Error('Unexpected response format from server.');
                 const rawRoles = Array.isArray(data.roles) ? data.roles : [];
                 const firstRole = rawRoles[0];
-                // ✅ Fixed: Now checks against the full VALID_ROLES list including STORE_ACCOUNTANT, STORE_SELLER etc.
                 if (!firstRole || !VALID_ROLES.includes(firstRole)) {
                     console.warn(`EditSysUser: unknown role "${firstRole}", defaulting to PARENT.`);
                     setActiveRole('PARENT');
@@ -191,8 +190,9 @@ function EditSysUser() {
                 ? Math.min(MAX_EXPERIENCE, Math.max(0, Number(sysUser.experienceYears))) : 0,
             joiningDate: formatToInputDate(sysUser.joiningDate),
             loginEmail: EMAIL_REGEX.test(sysUser.email || '') ? sysUser.email : '',
+            userRole: sysUser.roles?.[0] || null,
             dessignation: sysUser.designation || '',
-            accountStatus: sysUser.accountAccessStatus === 'ALLOWED',
+            accountStatus: sysUser.status === 'ACTIVE',
         }));
     }, [sysUser]);
 
@@ -225,7 +225,7 @@ function EditSysUser() {
         if (isParentLike) {
             return {
                 email: data.email.trim(),
-                roleNames: [role],
+                roleNames: [data.userRole],
                 personalDetails,
                 accountStatus: 'ACTIVE',
                 // remarks: 'Updated from UI',
@@ -233,7 +233,7 @@ function EditSysUser() {
         }
         return {
             email: data.email.trim(),
-            roleNames: [role],
+            roleNames: [data.userRole],
             personalDetails,
             professionalDetails: {
                 employeeCode: data.empId?.trim() || generateEmployeeCode(),
@@ -241,7 +241,7 @@ function EditSysUser() {
                 experienceYears: Number(data.experience) || 0,
                 joiningDate: data.joiningDate || null,
                 // department: 'GENERAL',
-                // designation: 'USER',
+                 designation: data.dessignation,
             },
             // bankDetails: {
             //     accountHolderName: 'NA',
@@ -255,7 +255,6 @@ function EditSysUser() {
             // remarks: 'Updated from UI',
         };
     };
-
     const handle_updateDetails = async (e) => {
         e.preventDefault();
         if (!id || isNaN(Number(id)) || Number(id) <= 0) {
@@ -273,6 +272,8 @@ function EditSysUser() {
         try {
             const sysUserPayload = buildPayload(formData, activeRole);
             await updateUserById(id, sysUserPayload);
+           console.log(sysUserPayload);
+
             toast.success(`${formData.name.trim()}'s details updated successfully!`);
             navigate('/dashboard/manageUsers');
         } catch (err) {
