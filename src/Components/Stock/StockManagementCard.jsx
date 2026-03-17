@@ -12,37 +12,29 @@ export default function StockManagementCard({
 }) {
     const isStockIn = mode === "in";
 
-    const heading           = isStockIn ? "Add Stock (Inward)" : "Remove Stock (Outward)";
-    const headingIconColor  = isStockIn ? "text-green-600" : "text-red-600";
-    const previewBgColor    = isStockIn ? "bg-green-50" : "bg-red-50";
-    const previewBorderColor= isStockIn ? "border-green-200" : "border-red-200";
-    const previewTextColor  = isStockIn ? "text-green-700" : "text-red-700";
-    const confirmBtnText    = isStockIn ? "Confirm Stock IN" : "Confirm Stock OUT";
-    const confirmBtnBg      = isStockIn ? "bg-green-600" : "bg-red-600";
-    const confirmBtnHover   = isStockIn ? "hover:bg-green-700" : "hover:bg-red-700";
+    const heading = isStockIn ? "Add Stock (Inward)" : "Remove Stock (Outward)";
+    const headingIconColor = isStockIn ? "text-green-600" : "text-red-600";
+    const previewBgColor = isStockIn ? "bg-green-50" : "bg-red-50";
+    const previewBorderColor = isStockIn ? "border-green-200" : "border-red-200";
+    const previewTextColor = isStockIn ? "text-green-700" : "text-red-700";
+    const confirmBtnText = isStockIn ? "Confirm Stock IN" : "Confirm Stock OUT";
+    const confirmBtnBg = isStockIn ? "bg-green-600" : "bg-red-600";
+    const confirmBtnHover = isStockIn ? "hover:bg-green-700" : "hover:bg-red-700";
 
-    const [store,         setStore]         = useState("");
-    const [item,          setItem]          = useState("");
-    const [quantity,      setQuantity]      = useState("");
-    const [reference,     setReference]     = useState("");
+    const [store, setStore] = useState("");
+    const [selectedItems, setSelectedItems] = useState({})
+    const [reference, setReference] = useState("");
     const [removalReason, setRemovalReason] = useState("");
-    const [remarks,       setRemarks]       = useState("");
-    const [errors,        setErrors]        = useState({});
+    const [remarks, setRemarks] = useState("");
+    const [errors, setErrors] = useState({});
 
-    const [storeOptions,  setStoreOptions]  = useState([]);
-    const [itemOptions,   setItemOptions]   = useState([]);
+    const [storeOptions, setStoreOptions] = useState([]);
+    const [itemOptions, setItemOptions] = useState([]);
     const [storeStockMap, setStoreStockMap] = useState({});
     const [loadingStores, setLoadingStores] = useState(false);
-    const [loadingItems,  setLoadingItems]  = useState(false);
-    const [submitting,    setSubmitting]    = useState(false);
-    const [apiError,      setApiError]      = useState("");
-
-    const selectedItem  = itemOptions.find((i) => i.value === item);
-    const parsedQty     = parseInt(quantity) || 0;
-    const availableQty  = selectedItem ? (storeStockMap[selectedItem.value] ?? selectedItem.currentStock) : null;
-    const afterStock    = availableQty !== null
-        ? isStockIn ? availableQty + parsedQty : availableQty - parsedQty
-        : null;
+    const [loadingItems, setLoadingItems] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
+    const [apiError, setApiError] = useState("");
 
     // ── Fetch stores once on open ──────────────────────────────
     useEffect(() => {
@@ -81,9 +73,9 @@ export default function StockManagementCard({
         getItemsList(0, 200, "", "", "ACTIVE")
             .then(({ items }) => {
                 setItemOptions(items.map((i) => ({
-                    value:        String(i.id),
-                    label:        `${i.itemName} (${i.itemCode})`,
-                    unit:         i.unit,
+                    value: String(i.id),
+                    label: `${i.itemName} (${i.itemCode})`,
+                    unit: i.unit,
                     currentStock: i.totalQuantity ?? 0,
                 })));
             })
@@ -98,7 +90,7 @@ export default function StockManagementCard({
             return;
         }
         setLoadingItems(true);
-        setItem("");
+        setSelectedItems({});
         setStoreStockMap({});
         getStoreStock(Number(store))
             .then((stockList) => {
@@ -106,9 +98,9 @@ export default function StockManagementCard({
                 const opts = (stockList || []).map((s) => {
                     map[String(s.itemId)] = s.quantity;
                     return {
-                        value:        String(s.itemId),
-                        label:        `${s.itemName} (${s.itemCode})`,
-                        unit:         s.unit ?? "",
+                        value: String(s.itemId),
+                        label: `${s.itemName} (${s.itemCode})`,
+                        unit: s.unit ?? "",
                         currentStock: s.quantity,
                     };
                 });
@@ -120,15 +112,13 @@ export default function StockManagementCard({
             .finally(() => setLoadingItems(false));
     }, [isOpen, isStockIn, store]);
 
-    // ── Once itemOptions are loaded, auto-select preselected item ──
-    // This handles the async race: item options may not be ready when
-    // the modal first opens, so we watch itemOptions and apply once ready.
     useEffect(() => {
         if (!preselectedItem || itemOptions.length === 0) return;
         const match = itemOptions.find((o) => o.value === String(preselectedItem.id));
         if (match) {
-            setItem(match.value);
-            setQuantity(""); // reset qty so user sets it intentionally
+            setSelectedItems({
+                [match.value]: { quantity: 1 }
+            });
         }
     }, [itemOptions, preselectedItem]);
 
@@ -138,8 +128,31 @@ export default function StockManagementCard({
         return () => { document.body.style.overflow = ""; };
     }, [isOpen]);
 
+    const handleQtyChange = (id, delta) => {
+        setSelectedItems((prev) => {
+            const existing = prev[id];
+            let newQty = (existing?.quantity || 0) + delta;
+
+            if (newQty <= 0) {
+                const copy = { ...prev };
+                delete copy[id];
+                return copy;
+            }
+            if (!isStockIn) {
+                const available = storeStockMap[id] ?? 0;
+                if (newQty > available) return prev;
+            }
+
+            return {
+                ...prev,
+                [id]: { quantity: newQty }
+            };
+        });
+    };
+
     const handleReset = () => {
-        setStore(""); setItem(""); setQuantity(""); setReference("");
+        setStore("");
+        setSelectedItems({}); setReference("");
         setRemovalReason(""); setRemarks(""); setErrors({}); setApiError("");
         setSubmitting(false); setItemOptions([]); setStoreStockMap({});
     };
@@ -148,18 +161,29 @@ export default function StockManagementCard({
 
     const validate = () => {
         const e = {};
-        if (!store)    e.store    = "Store is required";
-        if (!item)     e.item     = "Item is required";
-        if (!quantity) {
-            e.quantity = "Quantity is required";
-        } else if (parseInt(quantity) <= 0) {
-            e.quantity = "Quantity must be greater than 0";
-        } else if (!isStockIn && availableQty !== null && parseInt(quantity) > availableQty) {
-            e.quantity = `Only ${availableQty} units available in this store`;
+        if (!store) e.store = "Store is required";
+        const selectedEntries = Object.entries(selectedItems);
+
+        if (selectedEntries.length === 0) {
+            e.items = "Select at least one item";
         }
-        if (isStockIn && !reference)    e.reference     = "Reference number is required";
+        for (let [id, data] of selectedEntries) {
+            if (data.quantity <= 0) {
+                e.items = "Quantity must be greater than 0";
+                break;
+            }
+
+            if (!isStockIn) {
+                const available = storeStockMap[id] ?? 0;
+                if (data.quantity > available) {
+                    e.items = `Only ${available} units available for some items`;
+                    break;
+                }
+            }
+        }
+        if (isStockIn && !reference) e.reference = "Reference number is required";
         if (!isStockIn && !removalReason) e.removalReason = "Removal reason is required";
-        if (!remarks)  e.remarks  = "Remarks are required";
+        if (!remarks) e.remarks = "Remarks are required";
         setErrors(e);
         return Object.keys(e).length === 0;
     };
@@ -172,13 +196,25 @@ export default function StockManagementCard({
             let result;
             if (isStockIn) {
                 result = await addStockInward({
-                    storeId: parseInt(store), itemId: parseInt(item),
-                    quantity: parsedQty, referenceNumber: reference, remarks,
+                    storeId: parseInt(store),
+                    items: Object.entries(selectedItems)
+                        .filter(([_, data]) => data.quantity > 0)
+                        .map(([id, data]) => ({
+                            itemId: Number(id),
+                            quantity: data.quantity,
+                        })),
+                    referenceNumber: reference,
+                    remarks,
                 });
             } else {
                 result = await removeStockOutward({
-                    storeId: parseInt(store), itemId: parseInt(item),
-                    quantity: parsedQty, removalReason, remarks,
+                    storeId: parseInt(store),
+                    items: Object.entries(selectedItems).map(([id, data]) => ({
+                        itemId: Number(id),
+                        quantity: data.quantity,
+                    })),
+                    removalReason,
+                    remarks,
                 });
             }
             if (onConfirm) onConfirm(result);
@@ -193,16 +229,15 @@ export default function StockManagementCard({
 
     const removalReasonOptions = [
         { value: "ISSUED_TO_STUDENT", label: "Issued to Student" },
-        { value: "ISSUED_TO_STAFF",   label: "Issued to Staff"   },
-        { value: "DAMAGED",           label: "Damaged"           },
-        { value: "EXPIRED",           label: "Expired"           },
-        { value: "LOST",              label: "Lost"              },
-        { value: "OTHER",             label: "Other"             },
+        { value: "ISSUED_TO_STAFF", label: "Issued to Staff" },
+        { value: "DAMAGED", label: "Damaged" },
+        { value: "EXPIRED", label: "Expired" },
+        { value: "LOST", label: "Lost" },
+        { value: "OTHER", label: "Other" },
     ];
 
     const inputCls = (err) =>
-        `w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 transition ${
-            err ? "border-red-400" : "border-gray-200"
+        `w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 transition ${err ? "border-red-400" : "border-gray-200"
         }`;
 
     return (
@@ -272,97 +307,110 @@ export default function StockManagementCard({
                         <label className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
                             <Package className="w-4 h-4 text-gray-400" />
                             Item <span className="text-red-500">*</span>
-                            {!isStockIn && store && (
+                            {store && (
                                 <span className="ml-auto text-xs font-normal text-gray-400">
-                                    {loadingItems ? "Loading store items…" : `${itemOptions.length} item(s) in store`}
+                                    {loadingItems
+                                        ? "Loading items..."
+                                        : `${itemOptions.length} item(s)`}
                                 </span>
                             )}
                         </label>
                         <div className="relative">
-                            <select
-                                value={item}
-                                disabled={loadingItems || (!isStockIn && !store)}
-                                onChange={(e) => { setItem(e.target.value); setQuantity(""); setErrors((p) => ({ ...p, item: "", quantity: "" })); }}
-                                className={`${inputCls(errors.item)} appearance-none pr-8 ${(loadingItems || (!isStockIn && !store)) ? "opacity-60 cursor-not-allowed" : ""}`}
-                            >
-                                <option value="">
-                                    {loadingItems
-                                        ? "Loading items…"
-                                        : !isStockIn && !store
-                                            ? "Select a store first…"
-                                            : "Select an item…"}
-                                </option>
-                                {itemOptions.map((i) => <option key={i.value} value={i.value}>{i.label}</option>)}
-                            </select>
-                            {loadingItems
-                                ? <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 animate-spin pointer-events-none" />
-                                : <svg className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-                            }
-                        </div>
-                        {errors.item && <p className="text-red-500 text-xs mt-0.5">{errors.item}</p>}
-                    </div>
+                            <div className="space-y-2 max-h-64 overflow-y-auto">
+                                {itemOptions.map((itm) => {
+                                    const qty = selectedItems[itm.value]?.quantity || 0;
+                                    const stock = storeStockMap[itm.value] ?? itm.currentStock;
 
-                    {/* Quantity + Reference / Removal Reason */}
-                    <div className="grid grid-cols-2 gap-4">
+                                    return (
+                                        <div
+                                            key={itm.value}
+                                            className="flex items-center justify-between px-3 py-3 rounded-xl border border-gray-200 bg-gray-50 hover:bg-gray-100 transition"
+                                        >
+                                            {/* LEFT */}
+                                            <div className="flex flex-col gap-1">
+                                                <div className="flex items-center gap-2">
+                                                    <p className="text-sm font-semibold text-gray-800">
+                                                        {itm.label}
+                                                    </p>
+
+                                                    {/* Example Tag (optional if you have category) */}
+                                                    {itm.category && (
+                                                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-blue-100 text-blue-600">
+                                                            {itm.category}
+                                                        </span>
+                                                    )}
+                                                </div>
+
+                                                <p className="text-xs text-gray-400">
+                                                    Stock:{" "}
+                                                    <span className="text-orange-500 font-semibold">
+                                                        {stock}
+                                                    </span>
+                                                </p>
+                                            </div>
+
+                                            {/* RIGHT */}
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    onClick={() => handleQtyChange(itm.value, -1)}
+                                                    className="w-8 h-8 rounded-lg border bg-white hover:bg-gray-100 flex items-center justify-center text-gray-600 shadow-sm"
+                                                >
+                                                    −
+                                                </button>
+
+                                                <span className="w-6 text-center font-semibold text-gray-700">
+                                                    {qty}
+                                                </span>
+
+                                                <button
+                                                    onClick={() => handleQtyChange(itm.value, 1)}
+                                                    className="w-8 h-8 rounded-lg border bg-white hover:bg-gray-100 flex items-center justify-center text-gray-600 shadow-sm"
+                                                >
+                                                    +
+                                                </button>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                        {errors.items && <p className="text-red-500 text-xs mt-0.5">{errors.items}</p>}
+                    </div>
+                    {isStockIn ? (
                         <div className="space-y-1.5">
                             <label className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
-                                <Hash className="w-4 h-4 text-gray-400" />
-                                Quantity <span className="text-red-500">*</span>
+                                <FileText className="w-4 h-4 text-gray-400" />
+                                Invoice / Ref No. <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                                type="text"
+                                placeholder="e.g. INV-2026-031"
+                                value={reference}
+                                onChange={(e) => { setReference(e.target.value); setErrors((p) => ({ ...p, reference: "" })); }}
+                                className={inputCls(errors.reference)}
+                            />
+                            {errors.reference && <p className="text-red-500 text-xs mt-0.5">{errors.reference}</p>}
+                        </div>
+                    ) : (
+                        <div className="space-y-1.5">
+                            <label className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+                                <FileText className="w-4 h-4 text-gray-400" />
+                                Removal Reason <span className="text-red-500">*</span>
                             </label>
                             <div className="relative">
-                                <input
-                                    type="number"
-                                    min="1"
-                                    placeholder="e.g. 50"
-                                    value={quantity}
-                                    onChange={(e) => { setQuantity(e.target.value); setErrors((p) => ({ ...p, quantity: "" })); }}
-                                    className={`${inputCls(errors.quantity)} ${selectedItem && availableQty !== null ? "pr-28" : ""}`}
-                                />
-                                {selectedItem && availableQty !== null && (
-                                    <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[11px] font-semibold text-gray-400 whitespace-nowrap pointer-events-none">
-                                        {availableQty} available
-                                    </span>
-                                )}
+                                <select
+                                    value={removalReason}
+                                    onChange={(e) => { setRemovalReason(e.target.value); setErrors((p) => ({ ...p, removalReason: "" })); }}
+                                    className={`${inputCls(errors.removalReason)} appearance-none pr-8`}
+                                >
+                                    <option value="">Select reason…</option>
+                                    {removalReasonOptions.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
+                                </select>
+                                <svg className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
                             </div>
-                            {errors.quantity && <p className="text-red-500 text-xs mt-0.5">{errors.quantity}</p>}
+                            {errors.removalReason && <p className="text-red-500 text-xs mt-0.5">{errors.removalReason}</p>}
                         </div>
-
-                        {isStockIn ? (
-                            <div className="space-y-1.5">
-                                <label className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
-                                    <FileText className="w-4 h-4 text-gray-400" />
-                                    Invoice / Ref No. <span className="text-red-500">*</span>
-                                </label>
-                                <input
-                                    type="text"
-                                    placeholder="e.g. INV-2026-031"
-                                    value={reference}
-                                    onChange={(e) => { setReference(e.target.value); setErrors((p) => ({ ...p, reference: "" })); }}
-                                    className={inputCls(errors.reference)}
-                                />
-                                {errors.reference && <p className="text-red-500 text-xs mt-0.5">{errors.reference}</p>}
-                            </div>
-                        ) : (
-                            <div className="space-y-1.5">
-                                <label className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
-                                    <FileText className="w-4 h-4 text-gray-400" />
-                                    Removal Reason <span className="text-red-500">*</span>
-                                </label>
-                                <div className="relative">
-                                    <select
-                                        value={removalReason}
-                                        onChange={(e) => { setRemovalReason(e.target.value); setErrors((p) => ({ ...p, removalReason: "" })); }}
-                                        className={`${inputCls(errors.removalReason)} appearance-none pr-8`}
-                                    >
-                                        <option value="">Select reason…</option>
-                                        {removalReasonOptions.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
-                                    </select>
-                                    <svg className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-                                </div>
-                                {errors.removalReason && <p className="text-red-500 text-xs mt-0.5">{errors.removalReason}</p>}
-                            </div>
-                        )}
-                    </div>
+                    )}
 
                     {/* Remarks */}
                     <div className="space-y-1.5">
@@ -378,30 +426,6 @@ export default function StockManagementCard({
                             className={`${inputCls(errors.remarks)} resize-none`}
                         />
                         {errors.remarks && <p className="text-red-500 text-xs mt-0.5">{errors.remarks}</p>}
-                    </div>
-
-                    {/* Preview Banner */}
-                    <div className={`flex items-start gap-2.5 ${previewBgColor} border ${previewBorderColor} rounded-xl px-4 py-3`}>
-                        <CheckSquare className={`w-4 h-4 ${previewTextColor} shrink-0 mt-0.5`} />
-                        <div className={`text-sm ${previewTextColor} space-y-0.5`}>
-                            <p>
-                                <span className="font-semibold">Current stock: </span>
-                                <span className="font-bold">
-                                    {selectedItem && availableQty !== null
-                                        ? `${availableQty} ${selectedItem.unit || ""}`
-                                        : "—"}
-                                </span>
-                            </p>
-                            <p>
-                                <span className="font-semibold">After {isStockIn ? "inward" : "outward"}: </span>
-                                <span className={`font-bold ${!isStockIn && afterStock !== null && afterStock < 0 ? "text-red-600" : ""}`}>
-                                    {selectedItem && availableQty !== null && parsedQty > 0
-                                        ? `${afterStock} ${selectedItem.unit || ""}`
-                                        : "—"}
-                                </span>
-                                <span className="font-normal opacity-60 ml-1">(preview)</span>
-                            </p>
-                        </div>
                     </div>
                 </div>
 
@@ -427,6 +451,6 @@ export default function StockManagementCard({
                     </button>
                 </div>
             </div>
-        </div>
+        </div >
     );
 }

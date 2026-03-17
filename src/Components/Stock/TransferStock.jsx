@@ -7,30 +7,23 @@ export default function TransferStock({
     isOpen,
     onClose,
     onConfirm,
-    preselectedItem = null,   // ← NEW prop: item object from the table row
+    preselectedItem = null,
 }) {
-    const [fromStore,  setFromStore]  = useState("");
-    const [toStore,    setToStore]    = useState("");
-    const [item,       setItem]       = useState("");
-    const [quantity,   setQuantity]   = useState("");
-    const [remarks,    setRemarks]    = useState("");
-    const [errors,     setErrors]     = useState({});
-
-    const [storeOptions,  setStoreOptions]  = useState([]);
-    const [itemOptions,   setItemOptions]   = useState([]);
+    const [fromStore, setFromStore] = useState("");
+    const [toStore, setToStore] = useState("");
+    const [selectedItems, setSelectedItems] = useState({});
+    const [remarks, setRemarks] = useState("");
+    const [errors, setErrors] = useState({});
+    const [storeOptions, setStoreOptions] = useState([]);
+    const [itemOptions, setItemOptions] = useState([]);
     const [storeStockMap, setStoreStockMap] = useState({});
     const [loadingStores, setLoadingStores] = useState(false);
-    const [loadingItems,  setLoadingItems]  = useState(false);
-    const [submitting,    setSubmitting]    = useState(false);
-    const [apiError,      setApiError]      = useState("");
-
-    const selectedItem = itemOptions.find((i) => i.value === item);
-    const parsedQty    = parseInt(quantity) || 0;
-    const availableQty = selectedItem ? (storeStockMap[selectedItem.value] ?? selectedItem.currentStock) : null;
-    const fromAfter    = availableQty !== null && parsedQty > 0 ? availableQty - parsedQty : availableQty;
+    const [loadingItems, setLoadingItems] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
+    const [apiError, setApiError] = useState("");
 
     const fromStoreObj = storeOptions.find((s) => s.value === fromStore);
-    const toStoreObj   = storeOptions.find((s) => s.value === toStore);
+    const toStoreObj = storeOptions.find((s) => s.value === toStore);
 
     // ── Fetch stores once on open ──────────────────────────────
     useEffect(() => {
@@ -83,8 +76,7 @@ export default function TransferStock({
             return;
         }
         setLoadingItems(true);
-        setItem("");
-        setQuantity("");
+        setSelectedItems({});
         setStoreStockMap({});
         setItemOptions([]);
         setApiError("");
@@ -95,9 +87,9 @@ export default function TransferStock({
                 const opts = (stockList || []).map((s) => {
                     map[String(s.itemId)] = s.quantity;
                     return {
-                        value:        String(s.itemId),
-                        label:        `${s.itemName} (${s.itemCode})`,
-                        unit:         s.unit ?? "",
+                        value: String(s.itemId),
+                        label: `${s.itemName} (${s.itemCode})`,
+                        unit: s.unit ?? "",
                         currentStock: s.quantity,
                     };
                 });
@@ -112,10 +104,15 @@ export default function TransferStock({
     // ── Once itemOptions are loaded, auto-select preselected item ──
     useEffect(() => {
         if (!preselectedItem || itemOptions.length === 0) return;
-        const match = itemOptions.find((o) => o.value === String(preselectedItem.id));
+
+        const match = itemOptions.find(
+            (o) => o.value === String(preselectedItem.id)
+        );
+
         if (match) {
-            setItem(match.value);
-            setQuantity(""); // user sets qty explicitly
+            setSelectedItems({
+                [match.value]: 1,
+            });
         }
     }, [itemOptions, preselectedItem]);
 
@@ -144,7 +141,7 @@ export default function TransferStock({
     };
 
     const handleReset = () => {
-        setItem(""); setQuantity(""); setRemarks(""); setErrors({}); setApiError("");
+        setSelectedItems({}); setRemarks(""); setErrors({}); setApiError("");
         setSubmitting(false); setItemOptions([]); setStoreStockMap({});
         if (storeOptions.length >= 2) {
             setFromStore(storeOptions[0].value);
@@ -158,15 +155,12 @@ export default function TransferStock({
 
     const validate = () => {
         const e = {};
+
         if (!fromStore) e.fromStore = "Source store is required";
-        if (!toStore)   e.toStore   = "Destination store is required";
-        if (!item)      e.item      = "Item is required";
-        if (!quantity) {
-            e.quantity = "Quantity is required";
-        } else if (parseInt(quantity) <= 0) {
-            e.quantity = "Quantity must be greater than 0";
-        } else if (availableQty !== null && parseInt(quantity) > availableQty) {
-            e.quantity = `Only ${availableQty} units available in source store`;
+        if (!toStore) e.toStore = "Destination store is required";
+
+        if (Object.keys(selectedItems).length === 0) {
+            e.item = "Select at least one item";
         }
         if (!remarks) e.remarks = "Remarks are required";
         setErrors(e);
@@ -179,10 +173,12 @@ export default function TransferStock({
         setApiError("");
         try {
             const result = await transferStock({
-                sourceStoreId:      parseInt(fromStore),
+                sourceStoreId: parseInt(fromStore),
                 destinationStoreId: parseInt(toStore),
-                itemId:             parseInt(item),
-                quantity:           parsedQty,
+                items: Object.entries(selectedItems).map(([itemId, qty]) => ({
+                    itemId: Number(itemId),
+                    quantity: Number(qty),
+                })),
                 remarks,
             });
             if (onConfirm) onConfirm(result);
@@ -196,8 +192,7 @@ export default function TransferStock({
     if (!isOpen) return null;
 
     const inputCls = (err) =>
-        `w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 transition ${
-            err ? "border-red-400" : "border-gray-200"
+        `w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 transition ${err ? "border-red-400" : "border-gray-200"
         }`;
 
     return (
@@ -292,60 +287,97 @@ export default function TransferStock({
                             {errors.toStore && <p className="text-red-500 text-xs mt-1">{errors.toStore}</p>}
                         </div>
                     </div>
-
                     {/* Item — from source store stock */}
                     <div className="space-y-1.5">
-                        <label className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
-                            <Package className="w-4 h-4 text-gray-400" />
-                            Item <span className="text-red-500">*</span>
-                            {fromStore && (
-                                <span className="ml-auto text-xs font-normal text-gray-400">
-                                    {loadingItems ? "Loading store items…" : `${itemOptions.length} item(s) in store`}
-                                </span>
-                            )}
-                        </label>
                         <div className="relative">
-                            <select
-                                value={item}
-                                disabled={loadingItems || !fromStore}
-                                onChange={(e) => { setItem(e.target.value); setQuantity(""); setErrors((p) => ({ ...p, item: "", quantity: "" })); }}
-                                className={`${inputCls(errors.item)} appearance-none pr-8 ${(loadingItems || !fromStore) ? "opacity-60 cursor-not-allowed" : ""}`}
-                            >
-                                <option value="">
-                                    {loadingItems ? "Loading items…" : !fromStore ? "Select a store first…" : "Select an item…"}
-                                </option>
-                                {itemOptions.map((i) => <option key={i.value} value={i.value}>{i.label}</option>)}
-                            </select>
-                            {loadingItems
-                                ? <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 animate-spin pointer-events-none" />
-                                : <svg className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-                            }
+                            {/* Item List with Quantity */}
+                            <div className="space-y-1.5">
+                                <label className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+                                    <Package className="w-4 h-4 text-gray-400" />
+                                    Items <span className="text-red-500">*</span>
+
+                                    {fromStore && (
+                                        <span className="ml-auto text-xs font-normal text-gray-400">
+                                            {loadingItems ? "Loading..." : `${itemOptions.length} item(s)`}
+                                        </span>
+                                    )}
+                                </label>
+
+                                <div className="border border-gray-200 rounded-2xl bg-white shadow-sm overflow-hidden">
+                                    {itemOptions.map((itm) => {
+                                        const qty = selectedItems[itm.value] || 0;
+                                        const stock = storeStockMap[itm.value] ?? itm.currentStock;
+
+                                        return (
+                                            <div key={itm.value} className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition">
+
+                                                {/* LEFT */}
+                                                <div>
+                                                    <p className="text-sm font-semibold text-gray-800">
+                                                        {itm.label}
+                                                    </p>
+                                                    <p className="text-xs text-gray-400">
+                                                        Stock: <span className="text-orange-500 font-semibold">{stock}</span>
+                                                    </p>
+                                                </div>
+
+                                                {/* RIGHT +/- */}
+                                                <div className="flex items-center gap-2">
+                                                    <button
+                                                        disabled={qty === 0}
+                                                        onClick={() => {
+                                                            setSelectedItems((prev) => {
+                                                                const current = prev[itm.value] || 0;
+
+                                                                if (current <= 1) {
+                                                                    const updated = { ...prev };
+                                                                    delete updated[itm.value];
+                                                                    return updated;
+                                                                }
+                                                                return {
+                                                                    ...prev,
+                                                                    [itm.value]: current - 1,
+                                                                };
+                                                            });
+                                                        }}
+                                                        className="w-8 h-8 border border-gray-200 rounded-lg flex items-center justify-center text-gray-600 hover:bg-gray-100 active:scale-95 transition"
+                                                    >
+                                                        −
+                                                    </button>
+
+                                                    <span className="w-8 text-center font-bold text-gray-800">
+                                                        {qty}
+                                                    </span>
+
+                                                    <button
+                                                        disabled={qty >= stock}
+                                                        onClick={() => {
+                                                            setSelectedItems((prev) => {
+                                                                const current = prev[itm.value] || 0;
+                                                                const stock = storeStockMap[itm.value] ?? itm.currentStock;
+
+                                                                if (current < stock) {
+                                                                    return {
+                                                                        ...prev,
+                                                                        [itm.value]: current + 1,
+                                                                    };
+                                                                }
+                                                                return prev;
+                                                            });
+                                                        }}
+                                                        className="w-8 h-8 border border-gray-200 rounded-lg flex items-center justify-center text-gray-600 hover:bg-gray-100 active:scale-95 transition"
+                                                    >
+                                                        +
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                                {errors.item && <p className="text-red-500 text-xs">{errors.item}</p>}
+                            </div>
                         </div>
                         {errors.item && <p className="text-red-500 text-xs mt-0.5">{errors.item}</p>}
-                    </div>
-
-                    {/* Quantity */}
-                    <div className="space-y-1.5">
-                        <label className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
-                            <Hash className="w-4 h-4 text-gray-400" />
-                            Quantity to Transfer <span className="text-red-500">*</span>
-                        </label>
-                        <div className="relative">
-                            <input
-                                type="number"
-                                min="1"
-                                placeholder="e.g. 10"
-                                value={quantity}
-                                onChange={(e) => { setQuantity(e.target.value); setErrors((p) => ({ ...p, quantity: "" })); }}
-                                className={`${inputCls(errors.quantity)} ${selectedItem && availableQty !== null ? "pr-32" : ""}`}
-                            />
-                            {selectedItem && availableQty !== null && (
-                                <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[11px] font-semibold text-gray-400 whitespace-nowrap pointer-events-none">
-                                    {availableQty} available
-                                </span>
-                            )}
-                        </div>
-                        {errors.quantity && <p className="text-red-500 text-xs mt-0.5">{errors.quantity}</p>}
                     </div>
 
                     {/* Remarks */}
@@ -367,25 +399,19 @@ export default function TransferStock({
                     {/* Preview Banner */}
                     <div className="flex items-start gap-2.5 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3">
                         <Info className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
-                        <div className="text-sm text-blue-700 space-y-0.5">
+                        <div className="text-sm text-blue-700 space-y-1">
                             <p>
-                                <span className="font-semibold">{fromStoreObj?.label ?? "Source"} — current: </span>
-                                <span className="font-bold">
-                                    {selectedItem && availableQty !== null
-                                        ? `${availableQty} ${selectedItem.unit || ""}`
-                                        : "—"}
-                                </span>
-                                <span className="mx-1.5 text-blue-300">→</span>
-                                <span className="font-bold">
-                                    {selectedItem && availableQty !== null && parsedQty > 0
-                                        ? `${fromAfter} ${selectedItem.unit || ""}`
-                                        : "—"}
-                                </span>
-                                <span className="font-normal opacity-60 ml-1">(after transfer)</span>
+                                <span className="font-semibold">{fromStoreObj?.label ?? "Source"} → {toStoreObj?.label ?? "Destination"}</span>
                             </p>
-                            <p>
-                                <span className="font-semibold">{toStoreObj?.label ?? "Destination"}: </span>
-                                <span className="font-normal opacity-70">will receive {parsedQty > 0 && selectedItem ? `${parsedQty} ${selectedItem.unit || ""}` : "—"}</span>
+
+                            <p className="opacity-80">
+                                {Object.entries(selectedItems).length === 0
+                                    ? "No items selected"
+                                    : Object.entries(selectedItems).map(([id, qty]) => {
+                                        const item = itemOptions.find(i => i.value === id);
+                                        return `${item?.label} × ${qty}`;
+                                    }).join(", ")
+                                }
                             </p>
                         </div>
                     </div>
