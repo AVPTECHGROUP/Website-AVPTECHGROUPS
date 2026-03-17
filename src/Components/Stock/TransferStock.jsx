@@ -302,7 +302,6 @@ export default function TransferStock({
                                         </span>
                                     )}
                                 </label>
-
                                 <div className="border border-gray-200 rounded-2xl bg-white shadow-sm overflow-hidden">
                                     {itemOptions.map((itm) => {
                                         const qty = selectedItems[itm.value] || 0;
