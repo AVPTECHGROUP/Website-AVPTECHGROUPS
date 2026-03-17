@@ -79,7 +79,7 @@ const StockedInCell = ({ storeNames }) => {
 
     return (
         <div className="flex items-center gap-1.5 flex-wrap" ref={ref}>
-            <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-medium bg-white text-gray-700 border border-gray-300 whitespace-nowrap max-w-[100px] truncate">
+            <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-medium bg-white text-gray-700 border border-gray-300 whitespace-nowrap max-w-25 truncate">
                 {first}
             </span>
             {rest.length > 0 && (
@@ -374,7 +374,7 @@ export default function Transactions() {
 
     // ── Render ─────────────────────────────────────────────────────────────────
     return (
-        <div className="min-h-screen bg-gradient-to-b from-sky-50 to-sky-100">
+        <div className="min-h-screen bg-linear-to-b from-sky-50 to-sky-100">
             {/* Outer padding:
                 Mobile(0-639):     p-2
                 sm(640-767):       p-3
@@ -638,7 +638,7 @@ export default function Transactions() {
                                             {isAllStores && item.storeNames.length > 0 && (
                                                 <div className="flex flex-wrap gap-1">
                                                     {item.storeNames.slice(0, 2).map((name) => (
-                                                        <span key={name} className="inline-block px-2 py-0.5 rounded-full text-[10px] font-medium bg-white text-gray-700 border border-gray-300 max-w-[90px] truncate">{name}</span>
+                                                        <span key={name} className="inline-block px-2 py-0.5 rounded-full text-[10px] font-medium bg-white text-gray-700 border border-gray-300 max-w-22.5 truncate">{name}</span>
                                                     ))}
                                                     {item.storeNames.length > 2 && (
                                                         <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 text-blue-600 border border-blue-200">
@@ -673,7 +673,7 @@ export default function Transactions() {
                                         #
                                     </th>
                                     {/* Item */}
-                                    <th className="px-2 md:px-3 xl:px-4 py-2.5 md:py-3 text-left text-[10px] md:text-xs font-semibold text-gray-500 uppercase tracking-wider min-w-[120px] md:min-w-[150px] xl:min-w-[180px]">
+                                    <th className="px-2 md:px-3 xl:px-4 py-2.5 md:py-3 text-left text-[10px] md:text-xs font-semibold text-gray-500 uppercase tracking-wider min-w-30 md:min-w-37.5 xl:min-w-45">
                                         Item
                                     </th>
                                     {/* Category — hidden on tablet, visible md+ */}
@@ -685,12 +685,12 @@ export default function Transactions() {
                                         Unit
                                     </th>
                                     {/* Qty */}
-                                    <th className="px-2 md:px-3 xl:px-4 py-2.5 md:py-3 text-left text-[10px] md:text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap min-w-[80px]">
+                                    <th className="px-2 md:px-3 xl:px-4 py-2.5 md:py-3 text-left text-[10px] md:text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap min-w-20">
                                         {isAllStores ? "Total Qty" : "Qty"}
                                     </th>
                                     {/* Stocked In — only all stores, hidden on tablet */}
                                     {isAllStores && (
-                                        <th className="hidden lg:table-cell px-2 md:px-3 xl:px-4 py-2.5 md:py-3 text-left text-[10px] md:text-xs font-semibold text-gray-500 uppercase tracking-wider min-w-[120px]">
+                                        <th className="hidden lg:table-cell px-2 md:px-3 xl:px-4 py-2.5 md:py-3 text-left text-[10px] md:text-xs font-semibold text-gray-500 uppercase tracking-wider min-w-30">
                                             Stocked In
                                         </th>
                                     )}
@@ -746,8 +746,8 @@ export default function Transactions() {
 
                                                 {/* Item name + code */}
                                                 <td className="px-2 md:px-3 xl:px-4 py-2 md:py-3">
-                                                    <p className="font-semibold text-gray-800 text-xs md:text-sm truncate max-w-[110px] md:max-w-[140px] xl:max-w-[200px] 2xl:max-w-[260px]">{item.itemName}</p>
-                                                    <p className="text-[10px] md:text-xs text-gray-400 truncate max-w-[110px] md:max-w-[140px] xl:max-w-[200px]">{item.itemCode}</p>
+                                                    <p className="font-semibold text-gray-800 text-xs md:text-sm truncate max-w-27.5 md:max-w-35 xl:max-w-50 2xl:max-w-65">{item.itemName}</p>
+                                                    <p className="text-[10px] md:text-xs text-gray-400 truncate max-w-27.5 md:max-w-35 xl:max-w-50">{item.itemCode}</p>
                                                     {/* Category + Unit inline on tablet (hidden lg) */}
                                                     <div className="flex items-center gap-1 mt-1 lg:hidden">
                                                         <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${categoryColors[item.category] ?? "bg-gray-100 text-gray-600"}`}>{item.category}</span>

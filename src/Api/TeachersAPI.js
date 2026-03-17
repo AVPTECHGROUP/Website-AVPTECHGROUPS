@@ -49,10 +49,11 @@ export const createTeachers = async (teacher) => {
   });
 
   const text = await res.text();
-  console.log("CREATE TEACHER RESPONSE:", text);
+   const data = text ? JSON.parse(text) : {};
+  console.log("CREATE TEACHER RESPONSE:", data);
 
   if (!res.ok) {
-    throw new Error(text || "Failed to create Teacher");
+    throw new Error(data?.message || "Failed to create Teacher");
   }
 
   return text ? JSON.parse(text) : {};

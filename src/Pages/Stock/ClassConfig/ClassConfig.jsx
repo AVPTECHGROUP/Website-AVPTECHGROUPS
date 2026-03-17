@@ -1,57 +1,57 @@
 import React, { useEffect, useState, useCallback } from "react";
 import {
     School, Package, BookOpen, Plus, Edit, Trash2,
-    ChevronRight, LayoutGrid, CheckCircle, XCircle as XCircleIcon,
+    ChevronRight, LayoutGrid,
     Loader2,
 } from "lucide-react";
-import CardComponent from "../../Components/CommonComp/CardComponent";
-import CardLoader from "../../Components/CommonComp/CardLoader";
-import ListLoader from "../../Components/CommonComp/ListLoader";
-import ActionDropDownComp from "../../Components/CommonComp/ActionDropDownComp";
-import AddItemStudent from "../../Components/Stock/AddItemStudent";
+import CardComponent from "../../../Components/CommonComp/CardComponent";
+import CardLoader from "../../../Components/CommonComp/CardLoader";
+import ListLoader from "../../../Components/CommonComp/ListLoader";
+import ActionDropDownComp from "../../../Components/CommonComp/ActionDropDownComp";
+import AddItemClassConfig from "./AddItemClassConfig";
 import {
     getClassItemConfigStats,
     getClassItemConfigs,
-    addOrUpdateClassItemConfig,
-    updateClassItemConfig,
     deleteClassItemConfig,
-} from "../../Api/StudentStoreApi";
-import { getClasses } from "../../Api/TeachersAPI";
+} from "../../../Api/StudentStoreApi";
+import { getClasses } from "../../../Api/TeachersAPI";
 import { toast } from "react-toastify";
+import { saveClassItemConfigsBulk } from "../../../Api/StudentOrder";
 
 const categoryColors = {
-    BOOKS: "bg-blue-100 text-blue-700",
+    BOOKS:      "bg-blue-100 text-blue-700",
     STATIONERY: "bg-gray-100 text-gray-700",
-    LAB: "bg-purple-100 text-purple-700",
-    SPORTS: "bg-green-100 text-green-700",
+    LAB:        "bg-purple-100 text-purple-700",
+    SPORTS:     "bg-green-100 text-green-700",
 };
 
 const actionOptions = [
-    { value: "edit", label: "Edit", icon: Edit, text: "text-blue-600", bg: "bg-white", hover: "hover:bg-blue-50" },
-    { value: "delete", label: "Delete", icon: Trash2, text: "text-red-600", bg: "bg-white", hover: "hover:bg-red-50" },
+    { value: "edit",   label: "Edit",   icon: Edit,   text: "text-blue-600", bg: "bg-white", hover: "hover:bg-blue-50" },
+    { value: "delete", label: "Delete", icon: Trash2, text: "text-red-600",  bg: "bg-white", hover: "hover:bg-red-50"  },
 ];
+
 export default function ClassConfig() {
     // ── Classes list ──
-    const [classes, setClasses] = useState([]);
+    const [classes, setClasses]           = useState([]);
     const [loadingClasses, setLoadingClasses] = useState(true);
-    const [selectedClass, setSelectedClass] = useState(null);
+    const [selectedClass, setSelectedClass]   = useState(null);
 
     // ── Config items for selected class ──
-    const [configItems, setConfigItems] = useState([]);
+    const [configItems, setConfigItems]   = useState([]);
     const [loadingItems, setLoadingItems] = useState(false);
-    const [deletingId, setDeletingId] = useState(null);
+    const [deletingId, setDeletingId]     = useState(null);
 
     // ── Stats ──
     const [statsData, setStatsData] = useState({
-        classesConfigured: 0,
+        classesConfigured:  0,
         totalConfigEntries: 0,
-        totalActiveItems: 0,
+        totalActiveItems:   0,
     });
     const [loadingStats, setLoadingStats] = useState(true);
 
     // ── Modal ──
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editRow, setEditRow] = useState(null);
+    const [editRow, setEditRow]         = useState(null);
 
     // ── Fetch classes ──
     useEffect(() => {
@@ -75,11 +75,8 @@ export default function ClassConfig() {
         try {
             const data = await getClassItemConfigStats();
             setStatsData(data);
-        } catch {
-            /* silent */
-        } finally {
-            setLoadingStats(false);
-        }
+        } catch { /* silent */ }
+        finally { setLoadingStats(false); }
     }, []);
 
     useEffect(() => { fetchStats(); }, [fetchStats]);
@@ -103,9 +100,7 @@ export default function ClassConfig() {
     }, [selectedClass, fetchItems]);
 
     // ── Handle class selection ──
-    const handleSelectClass = (cls) => {
-        setSelectedClass(cls);
-    };
+    const handleSelectClass = (cls) => setSelectedClass(cls);
 
     // ── Delete config item ──
     const handleAction = async (optVal, row) => {
@@ -127,34 +122,40 @@ export default function ClassConfig() {
             }
         }
     };
-    // ── Save (add or edit) ──
-    const handleSave = async ({ itemId, defaultQuantity, remarks }) => {
+
+    // ── Save — bulk upsert (add OR edit both use same endpoint) ──
+    // Receives: { items: [{ itemId, defaultQuantity, remarks }] }
+    const handleSave = async (payload) => {
+        const items = payload?.items;
+        if (!items || items.length === 0) {
+            toast.error("No items to save.");
+            return;
+        }
         try {
-            if (editRow) {
-                // Edit
-                await updateClassItemConfig(editRow.id, {
-                    defaultQuantity,
-                    remarks: remarks || null,
-                });
-                toast.success(`"${editRow.itemName}" updated successfully.`);
-            } else {
-                // Add 
-                await addOrUpdateClassItemConfig({
-                    classId: selectedClass.id,
-                    itemId,
-                    defaultQuantity,
-                    remarks: remarks || null,
-                });
-                toast.success(`Item added to ${selectedClass?.name}.`);
-            }
+            const bulkPayload = {
+                classId: selectedClass.id,
+                remarks: payload.remarks || null,   // shared remarks from step 3
+                items,
+            };
+            console.log("[ClassConfig] saveClassItemConfigsBulk payload →", JSON.stringify(bulkPayload));
+            await saveClassItemConfigsBulk(bulkPayload);
+
+            const count = items.length;
+            toast.success(
+                editRow
+                    ? `"${editRow.itemName}" updated successfully.`
+                    : `${count} item${count > 1 ? "s" : ""} added to ${selectedClass?.name}.`
+            );
+
             setEditRow(null);
             setIsModalOpen(false);
             await fetchItems(selectedClass.id);
             await fetchStats();
         } catch {
-            toast.error(editRow ? "Failed to update item." : "Failed to add item.");
+            toast.error(editRow ? "Failed to update item." : "Failed to add items.");
         }
     };
+
     // ── Derived values ──
     const totalItems = configItems.length;
     const totalUnits = configItems.reduce((acc, i) => acc + (i.defaultQuantity || 0), 0);
@@ -186,12 +187,14 @@ export default function ClassConfig() {
     return (
         <>
             <div className="min-h-screen bg-blue-50 p-4 sm:p-6 lg:p-8 font-sans">
+
                 {/* ── Add / Edit Modal ── */}
-                <AddItemStudent
+                <AddItemClassConfig
                     isOpen={isModalOpen}
                     onClose={() => { setIsModalOpen(false); setEditRow(null); }}
                     onSave={handleSave}
                     editData={editRow}
+                    existingItems={configItems}
                     className={selectedClass?.name ?? ""}
                 />
 
@@ -244,7 +247,6 @@ export default function ClassConfig() {
                             ) : (
                                 classes.map((cls) => {
                                     const isSelected = selectedClass?.id === cls.id;
-                                    // item count badge will just update as configItems loads
                                     return (
                                         <button
                                             key={cls.id}
@@ -281,7 +283,6 @@ export default function ClassConfig() {
                     {/* ── RIGHT: Config Table ── */}
                     <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
 
-                        {/* Table Header */}
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-4 border-b border-gray-100">
                             <div className="flex items-center gap-2 min-w-0">
                                 <BookOpen className="w-5 h-5 text-blue-500 shrink-0" />
@@ -300,7 +301,7 @@ export default function ClassConfig() {
                                 className="flex items-center gap-2 cursor-pointer bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors w-fit shrink-0"
                             >
                                 <Plus className="w-4 h-4" />
-                                Add Item
+                                Add Items
                             </button>
                         </div>
 

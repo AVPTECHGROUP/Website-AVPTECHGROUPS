@@ -201,7 +201,7 @@ function AddnewSystemUser() {
                 roleNames: [data.userRole],
                 personalDetails,
                 accountStatus: 'ACTIVE',
-                remarks: '',
+                // remarks: 'Created from UI',
             };
         }
         return {
@@ -223,7 +223,7 @@ function AddnewSystemUser() {
             //     ifscCode: 'HDFC0123456',
             //     branchName: 'NA',
             // },
-             accountStatus: 'ACTIVE',
+            accountStatus: 'ACTIVE',
             // payrollStatus: 'INCLUDED',
             // remarks: 'Created from UI',
         };

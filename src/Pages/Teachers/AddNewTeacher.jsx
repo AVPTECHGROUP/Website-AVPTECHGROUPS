@@ -47,6 +47,10 @@ function AddNewTeacher() {
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
+        if (name === "mobile") {
+            if (!/^\d*$/.test(value)) return; // allow only digits
+            if (value.length > 10) return; // max 10 digits
+        }
         setFormData(prev => ({
             ...prev,
             [name]: value
@@ -70,6 +74,10 @@ function AddNewTeacher() {
             return;
         }
 
+        if (!/^\d{10}$/.test(formData.mobile)) {
+            toast.error("Mobile number must be exactly 10 digits!");
+            return;
+        }
         setIsSubmitting(true);
         const loadingToast = toast.loading("Adding teacher...");
 
@@ -86,41 +94,41 @@ function AddNewTeacher() {
                     gender: formData.gender.toUpperCase(),
                     dateOfBirth: formData.dob,
                     address: formData.address || "NA",
-                    emergencyContact: "9999999999",
-                    emergencyContactName: "NA",
-                    emergencyContactRelation: "NA"
+                    // emergencyContact: "9999999999",
+                    // emergencyContactName: "NA",
+                    // emergencyContactRelation: "NA"
                 },
                 professionalDetails: {
                     employeeCode: formData.employeeCode || generateEmployeeCode(),
                     qualification: formData.highestQualification || "NA",
                     experienceYears: Number(formData.experience || 1),
                     joiningDate: formData.joiningDate,
-                    department: "GENERAL",
-                    designation: "TEACHER"
+                    // department: "GENERAL",
+                    // designation: "TEACHER"
                 },
-                bankDetails: {
-                    accountHolderName: "NA",
-                    accountNumber: "000000000000",
-                    bankName: "NA",
-                    ifscCode: "HDFC0123456",
-                    branchName: "NA"
-                },
+                // bankDetails: {
+                //     accountHolderName: "NA",
+                //     accountNumber: "000000000000",
+                //     bankName: "NA",
+                //     ifscCode: "HDFC0123456",
+                //     branchName: "NA"
+                // },
                 accountStatus: "ACTIVE",
-                payrollStatus: "INCLUDED",
-                remarks: "Created from UI"
+                // payrollStatus: "INCLUDED",
+                // remarks: "Created from UI"
             };
 
             const response = await createTeachers(apiPayload);
-            
+
             console.log("Create Teacher Response:", response);
 
             // Only update salary if baseSalary AND salaryType are present
             if (response && formData.salaryType && formData.baseSalary) {
                 // Extract teacher ID from response - adjust based on actual response structure
                 const teacherId = response.data?.id || response.id;
-                
+
                 console.log("Teacher ID for salary update:", teacherId);
-                
+
                 if (!teacherId) {
                     console.error("No teacher ID found in response:", response);
                     toast.warn("Teacher created but salary update skipped - no teacher ID");
@@ -213,7 +221,7 @@ function AddNewTeacher() {
         navigate('/teachers');
     };
 
-    const handleNext=()=>{
+    const handleNext = () => {
         setActiveTab('salary')
     }
 
@@ -247,11 +255,10 @@ function AddNewTeacher() {
                                 <button
                                     type="button"
                                     onClick={() => setActiveTab('personal')}
-                                    className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${
-                                        activeTab === 'personal'
+                                    className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'personal'
                                             ? 'border-blue-600 text-blue-600'
                                             : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                                    }`}
+                                        }`}
                                 >
                                     <User size={20} />
                                     <span className="hidden sm:inline">Personal Details</span>
@@ -260,11 +267,10 @@ function AddNewTeacher() {
                                 <button
                                     type="button"
                                     onClick={() => setActiveTab('salary')}
-                                    className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${
-                                        activeTab === 'salary'
+                                    className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'salary'
                                             ? 'border-blue-600 text-blue-600'
                                             : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                                    }`}
+                                        }`}
                                 >
                                     <IndianRupee size={18} />
                                     <span className="hidden sm:inline">Salary Details</span>
@@ -305,29 +311,28 @@ function AddNewTeacher() {
                                     Discard Changes
                                 </button>
                                 {/* Showing next button */}
-                                {activeTab==='personal' &&(
+                                {activeTab === 'personal' && (
                                     <button type='submit' onClick={handleNext} className="px-6 py-2.5 text-sm font-medium rounded-lg bg-blue-500 hover:bg-blue-600 text-white">Next</button>
-                                )} 
+                                )}
                                 {/* Show save button after reaching salaryTab...*/}
-                                {activeTab==='salary' &&(
-                                <button
-                                    disabled={isSubmitting}
-                                    type="submit"
-                                    className={`px-6 py-2.5 text-sm font-medium rounded-lg transition-all ${
-                                        isSubmitting
-                                            ? 'bg-blue-300 cursor-not-allowed text-white'
-                                            : 'bg-blue-500 hover:bg-blue-600 cursor-pointer text-white'
-                                    }`}
-                                >
-                                    {isSubmitting ? (
-                                        <span className="flex items-center justify-center gap-2">
-                                            <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                                            Adding...
-                                        </span>
-                                    ) : (
-                                        'Save Details'
-                                    )}
-                                </button>
+                                {activeTab === 'salary' && (
+                                    <button
+                                        disabled={isSubmitting}
+                                        type="submit"
+                                        className={`px-6 py-2.5 text-sm font-medium rounded-lg transition-all ${isSubmitting
+                                                ? 'bg-blue-300 cursor-not-allowed text-white'
+                                                : 'bg-blue-500 hover:bg-blue-600 cursor-pointer text-white'
+                                            }`}
+                                    >
+                                        {isSubmitting ? (
+                                            <span className="flex items-center justify-center gap-2">
+                                                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                                                Adding...
+                                            </span>
+                                        ) : (
+                                            'Save Details'
+                                        )}
+                                    </button>
                                 )}
                             </div>
                         </div>

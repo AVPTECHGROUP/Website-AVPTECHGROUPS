@@ -226,3 +226,35 @@ export const checkItemAvailability = async (storeId, itemIds) => {
     throw error;
   }
 };
+
+// SAVE CLASS ITEM CONFIGS (Bulk Upsert)
+export const saveClassItemConfigsBulk = async ({
+  classId,
+  remarks,
+  items,
+}) => {
+  try {
+    const res = await authFetch(
+      `${BASE_URL}/stock/class-item-configs`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          classId,
+          remarks,
+          items,
+        }),
+      }
+    );
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data?.message || "Failed to save class item configs");
+    }
+
+    return data;
+  } catch (error) {
+    console.error("saveClassItemConfigsBulk error:", error);
+    throw error;
+  }
+};

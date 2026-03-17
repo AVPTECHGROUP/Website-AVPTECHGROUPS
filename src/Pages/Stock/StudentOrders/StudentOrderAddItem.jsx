@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { X, Search, Loader2, Plus, Check, AlertCircle, AlertTriangle, IndianRupee } from "lucide-react";
-import { getStockItems } from "../../Api/StockApi";
-import { checkItemAvailability } from "../../Api/StudentOrder";
+import { getStockItems } from "../../../Api/StockApi";
+import { checkItemAvailability } from "../../../Api/StudentOrder";
 
 // ─── Category badge colors ────────────────────────────────────────
 const categoryColors = {
