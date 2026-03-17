@@ -191,9 +191,9 @@ function AddnewSystemUser() {
             gender: data.gender.toUpperCase(),
             dateOfBirth: data.dob || null,
             address: data.address?.trim() || 'NA',
-            emergencyContact: '9999999999',
-            emergencyContactName: 'NA',
-            emergencyContactRelation: 'NA',
+            // emergencyContact: '9999999999',
+            // emergencyContactName: 'NA',
+            // emergencyContactRelation: 'NA',
         };
         if (isParentLike) {
             return {
@@ -201,7 +201,7 @@ function AddnewSystemUser() {
                 roleNames: [data.userRole],
                 personalDetails,
                 accountStatus: 'ACTIVE',
-                remarks: 'Created from UI',
+                // remarks: 'Created from UI',
             };
         }
         return {
@@ -213,19 +213,19 @@ function AddnewSystemUser() {
                 qualification: data.highestQualification?.trim() || 'NA',
                 experienceYears: Number(data.experience) || 0,
                 joiningDate: data.joiningDate || null,
-                department: 'GENERAL',
-                designation: 'USER',
+                // department: 'GENERAL',
+                // designation: 'USER',
             },
-            bankDetails: {
-                accountHolderName: 'NA',
-                accountNumber: '000000000000',
-                bankName: 'NA',
-                ifscCode: 'HDFC0123456',
-                branchName: 'NA',
-            },
+            // bankDetails: {
+            //     accountHolderName: 'NA',
+            //     accountNumber: '000000000000',
+            //     bankName: 'NA',
+            //     ifscCode: 'HDFC0123456',
+            //     branchName: 'NA',
+            // },
             accountStatus: 'ACTIVE',
-            payrollStatus: 'INCLUDED',
-            remarks: 'Created from UI',
+            // payrollStatus: 'INCLUDED',
+            // remarks: 'Created from UI',
         };
     };
 
