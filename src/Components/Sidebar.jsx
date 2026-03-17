@@ -175,13 +175,13 @@ const menuItems = [
       }
     ]
   },
-  // {
-  //   id: 'payroll',
-  //   icon: IndianRupee,
-  //   label: 'Payroll',
-  //   route: '/payroll',
-  //   roles: ['ADMIN', 'SUPER_ADMIN', 'ACCOUNTANT'],
-  // },
+  {
+    id: 'Permission',
+    icon: Shield,
+    label: 'Permissions',
+    route: '/accessPermissions',
+    roles: [ 'SUPER_ADMIN'],
+  },
   // {
   //   id: 'settings',
   //   icon: Settings,

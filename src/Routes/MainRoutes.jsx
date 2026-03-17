@@ -60,6 +60,7 @@ import Driver_Attendants from '../Pages/Transport/Driver_Attendants';
 import Reports from '../Pages/Transport/Reports/Reports';
 import Student_Allocations from '../Pages/Transport/Student_Allocation/Student_Allocations';
 import Routes_Manage from '../Pages/Transport/Routes_Manage';
+import RolesPermissionsManagement from '../Pages/RoleBasedPermission/PermissionManagement';
 
 // ─── Role Groups (single source of truth) ─────────────────────────────────────
 // Changing a role here automatically applies everywhere it's used below.
@@ -116,6 +117,9 @@ const MainRoutes = () => {
 
             <Route path="/leaves" element={<Leaves />} />
             <Route path="/leaves/manageHolidays" element={<HolidayManagment />} />
+
+            {/* Permissions configuration */}
+             <Route path="/accessPermissions" element={<RolesPermissionsManagement />} />
           </Route>
 
           {/* ── Payroll ─────────────────────────────────────────────────────── */}
