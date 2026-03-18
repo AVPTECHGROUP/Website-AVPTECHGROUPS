@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import {
   X, User, ShoppingBag, Package, MapPin,
   CheckCircle, Clock, XCircle, Truck, Loader2,
-  FileText, Printer, CreditCard, Hash,
+  FileText, Printer,
 } from "lucide-react";
 import { getStudentOrderById } from "../../../Api/StudentOrder";
 
@@ -30,34 +30,35 @@ function fmtRupee(val) {
   return `₹${Number(val).toFixed(2)}`;
 }
 
-// Humanise payment method value → label
-function fmtPaymentMethod(val) {
-  if (!val) return null;
-  const map = {
-    CASH: "Cash", ONLINE: "Online", UPI: "UPI",
-    CHEQUE: "Cheque", DD: "Demand Draft", CARD: "Card", FREE_ISSUE: "Free Issue",
-  };
-  return map[val.toUpperCase()] || val;
-}
-
-/* ─── Print styles ──────────────────────────────────────────────────────────── */
+/* ─── Print styles ───────────────────────────────────────────────────────────
+   Target: 30 items on a SINGLE A4 landscape page across 3 side-by-side slips
+   A4 landscape usable area ≈ 287mm × 197mm (after 5mm margins)
+   Each slip ≈ 88mm wide
+   Header block  ≈ 28mm
+   Meta block    ≈ 22mm
+   Table header  ≈  5mm
+   30 rows × 4mm ≈ 120mm
+   Footer block  ≈ 10mm
+   Total         ≈ 185mm  →  fits in 197mm with 12mm to spare
+─────────────────────────────────────────────────────────────────────────── */
 const PRINT_STYLES = `
   * { box-sizing: border-box; margin: 0; padding: 0; }
+
   body {
     font-family: 'Segoe UI', Arial, sans-serif;
     background: #fff;
     color: #000;
-    padding: 0;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+    font-size: 8px;
   }
 
+  /* 3 slips side by side filling full width */
   .slips-row {
     display: flex;
     flex-direction: row;
     align-items: flex-start;
     width: 100%;
-    gap: 0;
   }
 
   .slip {
@@ -65,36 +66,34 @@ const PRINT_STYLES = `
     min-width: 0;
     border: 1px solid #999;
     padding: 4px 5px;
-    page-break-inside: avoid;
   }
 
+  /* Cut line */
   .cut {
-    width: 8px;
+    width: 10px;
     align-self: stretch;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
     position: relative;
+    flex-shrink: 0;
   }
   .cut::before {
     content: '';
     position: absolute;
-    top: 0; bottom: 0;
-    left: 50%;
+    top: 0; bottom: 0; left: 50%;
     border-left: 1px dashed #bbb;
   }
   .cut-label {
     writing-mode: vertical-lr;
-    font-size: 5px;
-    color: #aaa;
+    font-size: 5.5px;
+    color: #bbb;
     letter-spacing: 0.1em;
     background: #fff;
     padding: 2px 0;
-    z-index: 1;
-    position: relative;
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
   }
 
+  /* ── Header ── */
   .hdr {
     display: flex;
     align-items: flex-start;
@@ -102,108 +101,131 @@ const PRINT_STYLES = `
     border-bottom: 1.5px solid #000;
     padding-bottom: 3px;
     margin-bottom: 3px;
-    gap: 2px;
   }
-  .order-id  { font-size: 9px; font-weight: 800; color: #000; }
-  .order-sub { font-size: 6px; color: #555; margin-top: 1px; }
+  .order-id  { font-size: 10px; font-weight: 900; color: #000; }
+  .order-sub { font-size: 7px;  color: #555; margin-top: 1px; }
   .hdr-right { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+  .pill  { font-size: 7px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; padding: 1px 5px; border-radius: 999px; border: 1px solid #000; }
+  .chip  { font-size: 6.5px; font-weight: 700; padding: 1px 4px; border-radius: 999px; border: 1px solid #777; color: #333; }
+  .pdate { font-size: 6px; color: #777; }
 
-  .pill  { font-size: 6px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; padding: 1px 4px; border-radius: 999px; border: 1px solid #000; color: #000; display: inline-block; }
-  .chip  { font-size: 6px; font-weight: 700; padding: 1px 4px; border-radius: 999px; border: 1px solid #555; color: #333; display: inline-block; }
-  .pdate { font-size: 5.5px; color: #777; }
-
+  /* ── Meta ── */
   .meta { display: flex; flex-direction: column; gap: 2px; margin-bottom: 3px; }
-  .meta-row { display: flex; flex-direction: row; gap: 2px; }
+  .meta-row { display: flex; gap: 2px; }
   .meta-box {
-    background: #f5f5f5; border: 1px solid #ddd;
+    flex: 1;
+    background: #f5f5f5;
+    border: 1px solid #ddd;
     padding: 2px 4px;
   }
-  .meta-box .lbl { font-size: 5.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; color: #777; margin-bottom: 1px; }
-  .meta-box .val { font-size: 7.5px; font-weight: 700; color: #000; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .meta-box .sub { font-size: 6px; color: #444; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .meta-box .lbl { font-size: 6px;  font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; color: #777; margin-bottom: 1px; }
+  .meta-box .val { font-size: 8px;  font-weight: 700; color: #000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .meta-box .sub { font-size: 6.5px; color: #444; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-  .payment-bar {
-    display: flex;
-    gap: 6px;
-    background: #f0f7ff;
-    border: 1px solid #bfdbfe;
-    padding: 2px 5px;
-    margin-bottom: 3px;
-    align-items: center;
-    flex-wrap: wrap;
-  }
-  .payment-bar .plbl { font-size: 5.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; color: #3b82f6; }
-  .payment-bar .pval { font-size: 7px; font-weight: 700; color: #1e3a5f; }
-  .payment-bar .sep  { font-size: 7px; color: #93c5fd; }
-
+  /* ── Remarks ── */
   .remarks {
     background: #fffbea; border: 1px solid #e5d68a;
     padding: 2px 4px; font-size: 6.5px; color: #333; margin-bottom: 3px;
   }
-  .remarks b { font-weight: 700; }
+  .remarks b { font-weight: 800; }
 
-  .tbl-lbl { font-size: 6px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; color: #555; margin-bottom: 1px; }
+  /* ── Items table ── */
+  .tbl-lbl { font-size: 6.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; color: #555; margin-bottom: 2px; }
+
   table { width: 100%; border-collapse: collapse; }
-  thead tr { background: #222; color: #fff; }
-  thead th { padding: 2px 4px; text-align: left; font-size: 6px; font-weight: 700; text-transform: uppercase; white-space: nowrap; }
+
+  thead tr { background: #1e293b; color: #fff; }
+  thead th {
+    padding: 2.5px 3px;
+    font-size: 6.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    white-space: nowrap;
+    letter-spacing: 0.03em;
+    text-align: left;
+  }
   thead th.c { text-align: center; }
   thead th.r { text-align: right; }
-  tbody tr:nth-child(even) { background: #f7f7f7; }
-  tbody td { padding: 1.5px 4px; border-bottom: 1px solid #e8e8e8; font-size: 7px; color: #000; vertical-align: middle; }
-  tbody td.c { text-align: center; font-weight: 700; }
-  tbody td.r { text-align: right; }
-  .icode { font-size: 6px; color: #666; margin-left: 3px; }
 
-  .foot { display: flex; align-items: flex-end; justify-content: space-between; margin-top: 3px; gap: 4px; }
+  /* alternating row colors */
+  tbody tr:nth-child(even) { background: #f5f7fa; }
+  tbody tr:nth-child(odd)  { background: #fff; }
+
+  tbody td {
+    padding: 3px 4px;           /* tuned for 25 items per page */
+    border-bottom: 1px solid #e8ecf0;
+    font-size: 8px;             /* slightly larger — more readable */
+    color: #000;
+    vertical-align: middle;
+    line-height: 1.25;
+  }
+  tbody td.sno { font-size: 6.5px; color: #999; text-align: center; width: 14px; }
+  tbody td.c   { text-align: center; font-weight: 700; }
+  tbody td.r   { text-align: right; }
+  .icode { font-size: 6px; color: #777; display: block; }
+
+  /* total row */
+  .total-row td {
+    border-top: 1.5px solid #000 !important;
+    font-size: 8px !important;
+    font-weight: 800 !important;
+    padding: 3px !important;
+    background: #eef2f7 !important;
+  }
+  .grand { color: #1d4ed8 !important; font-size: 9px !important; }
+
+  /* ── Footer ── */
+  .foot {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    margin-top: 3px;
+    gap: 4px;
+  }
   .summary {
     background: #f5f5f5; border: 1px solid #ddd;
-    padding: 2px 4px; font-size: 6.5px; color: #333;
+    padding: 2px 5px; font-size: 7px; color: #333; line-height: 1.5;
   }
-  .summary b { color: #000; }
-
-  .sigs { display: flex; gap: 8px; flex: 1; justify-content: flex-end; }
+  .summary b { font-weight: 800; color: #000; }
+  .sigs { display: flex; gap: 10px; flex: 1; justify-content: flex-end; }
   .sig  { text-align: center; min-width: 48px; }
-  .sig-line { border-bottom: 1px solid #555; height: 10px; margin-bottom: 1px; }
-  .sig-lbl  { font-size: 5px; color: #333; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+  .sig-line { border-bottom: 1px solid #666; height: 12px; margin-bottom: 1px; }
+  .sig-lbl  { font-size: 6px; color: #333; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
 
   @media print {
-    @page { margin: 4mm; size: A4 landscape; }
-    body  { padding: 0; }
+    @page {
+      size: A4 landscape;
+      margin: 5mm;
+    }
+    body { padding: 0; }
+    /* Keep each row together but allow slip to span pages if needed */
+    tr     { page-break-inside: avoid; }
+    thead  { display: table-header-group; }
+    .slip  { page-break-inside: avoid; }
   }
 `;
 
-/* ─── Build a single slip ───────────────────────────────────────────────────── */
+/* ─── Build a single slip ──────────────────────────────────────────────────── */
 function buildSlip(o, copyType, items, total, rawStatus, gstNumber) {
-  const sigLabel = copyType === "Parent" ? "Parent / Guardian" : copyType;
-
-  const itemRows = items.length === 0
-    ? `<tr><td colspan="4" style="text-align:center;color:#555;padding:4px 0">No items</td></tr>`
-    : items.map((item, idx) => {
-        const name      = item.itemName || item.name || `Item #${item.itemId || idx}`;
-        const code      = item.itemCode || item.code || "";
-        const qty       = item.quantity || item.qty || 0;
-        const unitPrice = item.unitPriceSnapshot != null ? `₹${Number(item.unitPriceSnapshot).toFixed(2)}` : "—";
-        const lineTotal = item.lineTotal        != null ? `₹${Number(item.lineTotal).toFixed(2)}`        : "—";
-        return `<tr>
-          <td>${name}${code ? `<span class="icode">(${code})</span>` : ""}</td>
-          <td class="c">${qty}</td>
-          <td class="r">${unitPrice}</td>
-          <td class="r">${lineTotal}</td>
-        </tr>`;
-      }).join("");
-
+  const sigLabel  = copyType === "Parent" ? "Parent / Guardian" : copyType;
   const orderTotal = o.totalAmount != null ? `₹${Number(o.totalAmount).toFixed(2)}` : "—";
 
-  // ── Payment bar (only rendered when paymentMethod exists) ──
-  const paymentMethod   = o.paymentMethod   || null;
-  const txnNumber       = o.transactionNumber || null;
-  const paymentBarHtml  = paymentMethod
-    ? `<div class="payment-bar">
-        <span class="plbl">Payment</span>
-        <span class="pval">${fmtPaymentMethod(paymentMethod)}</span>
-        ${txnNumber ? `<span class="sep">|</span><span class="plbl">Ref</span><span class="pval">${txnNumber}</span>` : ""}
-      </div>`
-    : "";
+  const itemRows = items.length === 0
+    ? `<tr><td colspan="5" style="text-align:center;color:#888;padding:6px 0;font-size:7px">No items</td></tr>`
+    : items.map((item, idx) => {
+        const name = item.itemName || item.name || `Item #${item.itemId || idx}`;
+        const code = item.itemCode || item.code || "";
+        const qty  = item.quantity || item.qty  || 0;
+        const up   = item.unitPriceSnapshot != null ? `₹${Number(item.unitPriceSnapshot).toFixed(2)}` : "—";
+        const lt   = item.lineTotal          != null ? `₹${Number(item.lineTotal).toFixed(2)}`        : "—";
+        return `<tr>
+          <td class="sno">${idx + 1}</td>
+          <td>${name}${code ? `<span class="icode">${code}</span>` : ""}</td>
+          <td class="c">${qty}</td>
+          <td class="r">${up}</td>
+          <td class="r">${lt}</td>
+        </tr>`;
+      }).join("");
 
   return `
     <div class="slip">
@@ -221,20 +243,20 @@ function buildSlip(o, copyType, items, total, rawStatus, gstNumber) {
 
       <div class="meta">
         <div class="meta-row">
-          <div class="meta-box" style="flex:1">
+          <div class="meta-box">
             <div class="lbl">Student</div>
             <div class="val">${o.studentName || "—"}</div>
             ${o.admissionNumber ? `<div class="sub">ADM: ${o.admissionNumber}</div>` : ""}
             ${o.className       ? `<div class="sub">Class: ${o.className}</div>`     : ""}
           </div>
-          <div class="meta-box" style="flex:1">
-            <div class="lbl">Firm Name</div>
+          <div class="meta-box">
+            <div class="lbl">Firm</div>
             <div class="val">LEELA ENTERPRISES</div>
             <div class="sub">GST: ${gstNumber || "—"}</div>
           </div>
         </div>
         <div class="meta-row">
-          <div class="meta-box" style="flex:1">
+          <div class="meta-box">
             <div class="lbl">Issued By</div>
             <div class="val">${o.issuedByName || "—"}</div>
             <div class="sub">Date: ${fmtDate(o.orderDate || o.createdAt)}</div>
@@ -242,36 +264,35 @@ function buildSlip(o, copyType, items, total, rawStatus, gstNumber) {
         </div>
       </div>
 
-      ${paymentBarHtml}
-
-      ${o.remarks ? `<div class="remarks"><b>Remarks:</b> ${o.remarks}</div>` : ""}
+      ${o.remarks ? `<div class="remarks"><b>Note:</b> ${o.remarks}</div>` : ""}
 
       <div class="tbl-lbl">Items (${items.length})</div>
       <table>
         <thead>
           <tr>
+            <th class="c">#</th>
             <th>Item Name</th>
             <th class="c">Qty</th>
-            <th class="r">Unit Price</th>
-            <th class="r">Line Total</th>
+            <th class="r">Rate</th>
+            <th class="r">Amount</th>
           </tr>
         </thead>
         <tbody>
           ${itemRows}
-          <tr style="border-top:1.5px solid #000;">
-            <td style="font-weight:800">Order Total</td>
-            <td class="c" style="font-weight:800">${total}</td>
+          <tr class="total-row">
             <td></td>
-            <td class="r" style="font-weight:800;color:#1d4ed8">${orderTotal}</td>
+            <td><b>Order Total</b></td>
+            <td class="c"><b>${total}</b></td>
+            <td></td>
+            <td class="r grand"><b>${orderTotal}</b></td>
           </tr>
         </tbody>
       </table>
 
       <div class="foot">
         <div class="summary">
-          <span><b>${items.length}</b> type${items.length !== 1 ? "s" : ""}</span>
-          <span><b>${total}</b> units</span>
-          <span>Total: <b>${orderTotal}</b></span>
+          <div><b>${items.length}</b> types &nbsp;·&nbsp; <b>${total}</b> units</div>
+          <div>Total: <b>${orderTotal}</b></div>
         </div>
         <div class="sigs">
           <div class="sig"><div class="sig-line"></div><div class="sig-lbl">${sigLabel}</div></div>
@@ -280,14 +301,13 @@ function buildSlip(o, copyType, items, total, rawStatus, gstNumber) {
     </div>`;
 }
 
-/* ─── Print orchestrator ────────────────────────────────────────────────────── */
+/* ─── Print orchestrator ─────────────────────────────────────────────────── */
 function printOrder(o, gstNumber) {
   const rawStatus = (o.status || o.orderStatus || "").toUpperCase();
   const items     = o.items || o.orderItems || [];
   const total     = items.reduce((a, i) => a + (i.quantity || i.qty || 0), 0);
   const copies    = ["Accountant", "Admin", "Parent"];
-
-  const CUT = `<div class="cut"><span class="cut-label">✂ cut</span></div>`;
+  const CUT       = `<div class="cut"><span class="cut-label">✂ cut</span></div>`;
 
   const body = `
     <div class="slips-row">
@@ -297,7 +317,7 @@ function printOrder(o, gstNumber) {
       ).join("")}
     </div>`;
 
-  const win = window.open("", "_blank", "width=1100,height=800");
+  const win = window.open("", "_blank", "width=1200,height=900");
   win.document.write(`<!DOCTYPE html><html><head>
     <title>Order #${o.id} – Print Copies</title>
     <style>${PRINT_STYLES}</style>
@@ -307,7 +327,7 @@ function printOrder(o, gstNumber) {
   setTimeout(() => { win.print(); win.close(); }, 450);
 }
 
-/* ─── Main component ────────────────────────────────────────────────────────── */
+/* ─── Main component ─────────────────────────────────────────────────────── */
 export default function ViewStudentOrder({ isOpen, onClose, order }) {
   const [fullOrder,    setFullOrder]    = useState(null);
   const [fetchLoading, setFetchLoading] = useState(false);
@@ -342,9 +362,6 @@ export default function ViewStudentOrder({ isOpen, onClose, order }) {
   const StatusIcon = sc.icon;
   const items      = o.items || o.orderItems || [];
   const total      = items.reduce((a, i) => a + (i.quantity || i.qty || 0), 0);
-
-  const paymentMethodLabel = fmtPaymentMethod(o.paymentMethod);
-  const txnNumber          = o.transactionNumber || null;
 
   const handlePrint = () => {
     if (fetchLoading) return;
@@ -387,10 +404,7 @@ export default function ViewStudentOrder({ isOpen, onClose, order }) {
                 <StatusIcon className="w-3.5 h-3.5" /> {sc.label}
               </span>
             )}
-            <button
-              onClick={onClose}
-              className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
-            >
+            <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
               <X className="w-5 h-5" />
             </button>
           </div>
@@ -410,13 +424,11 @@ export default function ViewStudentOrder({ isOpen, onClose, order }) {
                 <div className="h-24 bg-gray-100 rounded-xl" />
                 <div className="h-24 bg-gray-100 rounded-xl" />
               </div>
-              <div className="h-4 bg-gray-100 rounded w-3/4" />
-              <div className="h-4 bg-gray-100 rounded w-1/2" />
-              {[1, 2, 3].map(i => <div key={i} className="h-10 bg-gray-100 rounded-lg" />)}
+              {[1,2,3,4].map(i => <div key={i} className="h-10 bg-gray-100 rounded-lg" />)}
             </div>
           ) : (
             <>
-              {/* Student & Store cards */}
+              {/* Student & Store */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-1">
                   <p className="text-xs text-gray-400 font-medium flex items-center gap-1 mb-2">
@@ -447,45 +459,18 @@ export default function ViewStudentOrder({ isOpen, onClose, order }) {
                 </div>
               </div>
 
-              {/* Order date row */}
+              {/* Order date */}
               {o.orderDate && (
                 <div className="flex items-center gap-4 text-xs text-gray-500 bg-gray-50 border border-gray-100 rounded-xl px-4 py-2.5">
                   <span>📅 <span className="font-semibold text-gray-700">Order Date:</span> {fmtDate(o.orderDate)}</span>
                 </div>
               )}
 
-              {/* ── Payment Details (shown only if paymentMethod exists) ── */}
-              {paymentMethodLabel && (
-                <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 flex flex-wrap items-center gap-x-5 gap-y-2">
-                  <div className="flex items-center gap-2">
-                    <CreditCard className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-                    <div>
-                      <p className="text-[10px] text-blue-400 font-bold uppercase tracking-widest leading-none mb-0.5">Payment Method</p>
-                      <p className="text-sm font-bold text-blue-800">{paymentMethodLabel}</p>
-                    </div>
-                  </div>
-                  {txnNumber && (
-                    <>
-                      <div className="w-px h-8 bg-blue-200 hidden sm:block" />
-                      <div className="flex items-center gap-2">
-                        <Hash className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-                        <div>
-                          <p className="text-[10px] text-blue-400 font-bold uppercase tracking-widest leading-none mb-0.5">Transaction / Ref No.</p>
-                          <p className="text-sm font-bold text-blue-800 font-mono">{txnNumber}</p>
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
-
-              {/* Firm name + GST input */}
+              {/* Firm + GST */}
               <div className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 space-y-2">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-widest mb-0.5">Firm Name</p>
-                    <p className="text-sm font-extrabold text-gray-800 tracking-wide">LEELA ENTERPRISES</p>
-                  </div>
+                <div>
+                  <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-widest mb-0.5">Firm Name</p>
+                  <p className="text-sm font-extrabold text-gray-800 tracking-wide">LEELA ENTERPRISES</p>
                 </div>
                 <div>
                   <label className="block text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-1">
@@ -497,7 +482,7 @@ export default function ViewStudentOrder({ isOpen, onClose, order }) {
                     onChange={(e) => setGstInput(e.target.value.toUpperCase())}
                     placeholder="e.g. 22AAAAA0000A1Z5"
                     maxLength={15}
-                    className="w-full text-sm font-mono border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent bg-white placeholder-gray-300 tracking-widest"
+                    className="w-full text-sm font-mono border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white placeholder-gray-300 tracking-widest"
                   />
                 </div>
               </div>
@@ -515,7 +500,6 @@ export default function ViewStudentOrder({ isOpen, onClose, order }) {
                 <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">
                   Items ({items.length})
                 </p>
-
                 {items.length === 0 ? (
                   <div className="text-center py-6 text-gray-400 border border-dashed border-gray-200 rounded-xl">
                     <Package className="w-8 h-8 mx-auto text-gray-200 mb-1" />
@@ -524,38 +508,38 @@ export default function ViewStudentOrder({ isOpen, onClose, order }) {
                 ) : (
                   <>
                     <div className="grid grid-cols-12 border-b border-gray-200 pb-2 text-xs font-bold text-gray-400 uppercase tracking-wider">
-                      <span className="col-span-5">Item</span>
+                      <span className="col-span-1 text-center">#</span>
+                      <span className="col-span-4">Item</span>
                       <span className="col-span-2 text-center">Qty</span>
-                      <span className="col-span-2 text-right">Unit Price</span>
-                      <span className="col-span-3 text-right">Line Total</span>
+                      <span className="col-span-2 text-right">Rate</span>
+                      <span className="col-span-3 text-right">Amount</span>
                     </div>
-
                     <div className="divide-y divide-gray-100">
                       {items.map((item, idx) => {
-                        const name      = item.itemName || item.name || `Item #${item.itemId || idx}`;
-                        const code      = item.itemCode || item.code || "";
-                        const qty       = item.quantity || item.qty || 0;
-                        const unitPrice = item.unitPriceSnapshot != null ? fmtRupee(item.unitPriceSnapshot) : "—";
-                        const lineTotal = item.lineTotal         != null ? fmtRupee(item.lineTotal)         : "—";
-
+                        const name = item.itemName || item.name || `Item #${item.itemId || idx}`;
+                        const code = item.itemCode || item.code || "";
+                        const qty  = item.quantity  || item.qty  || 0;
+                        const up   = item.unitPriceSnapshot != null ? fmtRupee(item.unitPriceSnapshot) : "—";
+                        const lt   = item.lineTotal          != null ? fmtRupee(item.lineTotal)         : "—";
                         return (
-                          <div key={item.id || item.itemId || idx} className="grid grid-cols-12 items-center py-3">
-                            <div className="col-span-5">
+                          <div key={item.id || item.itemId || idx} className="grid grid-cols-12 items-center py-2.5">
+                            <div className="col-span-1 text-center text-xs text-gray-400">{idx + 1}</div>
+                            <div className="col-span-4">
                               <p className="text-sm font-semibold text-gray-800">{name}</p>
                               {code && <p className="text-xs text-gray-400">{code}</p>}
                             </div>
                             <div className="col-span-2 text-center">
-                              <span className="text-sm font-bold text-gray-800 bg-gray-100 px-2 py-1 rounded-lg">{qty}</span>
+                              <span className="text-sm font-bold text-gray-800 bg-gray-100 px-2 py-0.5 rounded-lg">{qty}</span>
                             </div>
-                            <div className="col-span-2 text-right text-sm text-gray-700">{unitPrice}</div>
-                            <div className="col-span-3 text-right text-sm font-bold text-gray-800">{lineTotal}</div>
+                            <div className="col-span-2 text-right text-sm text-gray-700">{up}</div>
+                            <div className="col-span-3 text-right text-sm font-bold text-gray-800">{lt}</div>
                           </div>
                         );
                       })}
                     </div>
-
                     <div className="grid grid-cols-12 items-center pt-3 mt-1 border-t-2 border-gray-200">
-                      <div className="col-span-5 text-sm font-bold text-gray-800">Order Total</div>
+                      <div className="col-span-1" />
+                      <div className="col-span-4 text-sm font-bold text-gray-800">Order Total</div>
                       <div className="col-span-2 text-center text-sm font-bold text-gray-800">{total}</div>
                       <div className="col-span-2" />
                       <div className="col-span-3 text-right text-sm font-bold text-blue-600">
@@ -566,20 +550,16 @@ export default function ViewStudentOrder({ isOpen, onClose, order }) {
                 )}
               </div>
 
-              {/* Footer summary bar */}
+              {/* Summary bar */}
               <div className="flex items-center justify-between bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 flex-wrap gap-3">
                 <div className="flex items-center gap-4 flex-wrap">
-                  <span className="text-sm text-gray-600">
-                    <span className="font-bold text-gray-800">{items.length}</span> item type{items.length !== 1 ? "s" : ""}
-                  </span>
-                  <span className="text-sm text-gray-600">
-                    <span className="font-bold text-gray-800">{total}</span> total units
-                  </span>
-                  {rawStatus === "DELIVERED"  && <span className="flex items-center gap-1.5 text-sm font-semibold text-green-600"><CheckCircle className="w-4 h-4" /> Order delivered</span>}
-                  {rawStatus === "CANCELLED"  && <span className="flex items-center gap-1.5 text-sm font-semibold text-red-500"><XCircle className="w-4 h-4" /> Order cancelled</span>}
-                  {rawStatus === "DISPATCHED" && <span className="flex items-center gap-1.5 text-sm font-semibold text-purple-600"><Truck className="w-4 h-4" /> Out for delivery</span>}
-                  {rawStatus === "CONFIRMED"  && <span className="flex items-center gap-1.5 text-sm font-semibold text-blue-600"><CheckCircle className="w-4 h-4" /> Stock deducted successfully</span>}
-                  {rawStatus === "DRAFT"      && <span className="flex items-center gap-1.5 text-sm font-semibold text-gray-500"><FileText className="w-4 h-4" /> Saved as draft</span>}
+                  <span className="text-sm text-gray-600"><span className="font-bold text-gray-800">{items.length}</span> item type{items.length !== 1 ? "s" : ""}</span>
+                  <span className="text-sm text-gray-600"><span className="font-bold text-gray-800">{total}</span> total units</span>
+                  {rawStatus === "DELIVERED"  && <span className="flex items-center gap-1.5 text-sm font-semibold text-green-600"><CheckCircle className="w-4 h-4" /> Delivered</span>}
+                  {rawStatus === "CANCELLED"  && <span className="flex items-center gap-1.5 text-sm font-semibold text-red-500"><XCircle className="w-4 h-4" /> Cancelled</span>}
+                  {rawStatus === "DISPATCHED" && <span className="flex items-center gap-1.5 text-sm font-semibold text-purple-600"><Truck className="w-4 h-4" /> Dispatched</span>}
+                  {rawStatus === "CONFIRMED"  && <span className="flex items-center gap-1.5 text-sm font-semibold text-blue-600"><CheckCircle className="w-4 h-4" /> Confirmed</span>}
+                  {rawStatus === "DRAFT"      && <span className="flex items-center gap-1.5 text-sm font-semibold text-gray-500"><FileText className="w-4 h-4" /> Draft</span>}
                 </div>
                 {o.totalAmount != null && (
                   <span className="text-sm font-bold text-blue-600">Total: {fmtRupee(o.totalAmount)}</span>
@@ -592,7 +572,7 @@ export default function ViewStudentOrder({ isOpen, onClose, order }) {
         {/* ── Footer ── */}
         <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 shrink-0">
           <p className="text-[10px] text-gray-400 hidden sm:block">
-            🖨️ Prints 3 copies side-by-side on A4 Landscape — Accountant · Admin · Parent
+            🖨️ 3 copies · A4 Landscape · up to 25 items per page
           </p>
           <div className="flex items-center gap-2 ml-auto">
             <button
@@ -604,10 +584,7 @@ export default function ViewStudentOrder({ isOpen, onClose, order }) {
                 ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Preparing...</>
                 : <><Printer className="w-3.5 h-3.5" /> Print</>}
             </button>
-            <button
-              onClick={onClose}
-              className="px-4 py-2 cursor-pointer text-sm font-semibold text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
-            >
+            <button onClick={onClose} className="px-4 py-2 cursor-pointer text-sm font-semibold text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors">
               Close
             </button>
           </div>
