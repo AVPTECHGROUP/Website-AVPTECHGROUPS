@@ -59,6 +59,7 @@ export default function ClassConfig() {
             setLoadingClasses(true);
             try {
                 const data = await getClasses();
+console.log("API called", data);
                 setClasses(data || []);
                 if (data?.length > 0) setSelectedClass(data[0]);
             } catch {

@@ -265,7 +265,7 @@ export const deleteTeacherAssignment = async (assignmentId) => {
 // Get All Classes
 export const getClasses = async () => {
   try {
-    const res = await authFetch(`${BASE_URL}/classes`);
+    const res = await authFetch(`${BASE_URL}/classes/school/1`);
     if (!res.ok) {
       throw new Error('Failed to fetch classes');
     }
