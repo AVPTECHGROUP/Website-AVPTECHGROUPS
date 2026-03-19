@@ -49,7 +49,7 @@ export const createTeachers = async (teacher) => {
   });
 
   const text = await res.text();
-   const data = text ? JSON.parse(text) : {};
+  const data = text ? JSON.parse(text) : {};
   console.log("CREATE TEACHER RESPONSE:", data);
 
   if (!res.ok) {
@@ -265,7 +265,11 @@ export const deleteTeacherAssignment = async (assignmentId) => {
 // Get All Classes
 export const getClasses = async () => {
   try {
-    const res = await authFetch(`${BASE_URL}/classes/school/1`);
+    // ✅ FIX: Read schoolId from stored user, fallback to 1 for SUPER_ADMIN
+    const user = JSON.parse(localStorage.getItem("user"));
+    const schoolId = user?.schoolId || 1;
+
+    const res = await authFetch(`${BASE_URL}/classes/school/${schoolId}`);
     if (!res.ok) {
       throw new Error('Failed to fetch classes');
     }

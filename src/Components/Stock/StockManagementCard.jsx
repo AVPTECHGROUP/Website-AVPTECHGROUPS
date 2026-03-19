@@ -8,7 +8,7 @@ export default function StockManagementCard({
     onClose,
     mode = "in",
     onConfirm,
-    preselectedItem = null,   // ← NEW prop: item object from the table row
+    preselectedItem = null,  
 }) {
     const isStockIn = mode === "in";
 
@@ -70,7 +70,7 @@ export default function StockManagementCard({
     useEffect(() => {
         if (!isOpen || !isStockIn) return;
         setLoadingItems(true);
-        getItemsList(0, 200, "", "", "ACTIVE")
+        getItemsList(0, 500, "", "", "ACTIVE")
             .then(({ items }) => {
                 setItemOptions(items.map((i) => ({
                     value: String(i.id),
