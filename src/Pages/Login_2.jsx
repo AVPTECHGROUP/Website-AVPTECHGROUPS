@@ -4,7 +4,7 @@ import worker_1 from '../assets/Images/worker_1.jpg'
 import { useNavigate } from 'react-router-dom'
 import { loginAPI } from '../Api/AuthApi'
 import { UserContext } from '../ContextAPI/UserContext'
-
+import dpisBG from "../assets/Images/dpisBG.png";
 const Login_2 = ({ onLoginSuccess }) => {
 
     const [email, setemail] = useState('')
@@ -44,10 +44,9 @@ const Login_2 = ({ onLoginSuccess }) => {
         if (!validateForm()) return;
 
         setIsLoading(true);
-        setLoginError(''); // Clear previous errors
+        setLoginError('');
         try {
             const res = await loginAPI({ email, password });
-            // Handle different response structures
             const token = res.data?.token || res.token;
             const user = res.data?.user || res.user;
 
@@ -55,25 +54,22 @@ const Login_2 = ({ onLoginSuccess }) => {
                 throw new Error('Invalid response from server. Please try again.');
             }
 
-            // store token & user
             localStorage.setItem("token", token);
             if (user) {
                 console.log('logged user is :', user.id, user.roles[0], user.email);
                 localStorage.setItem("user", JSON.stringify(user));
                 setUser({
-                id: user.id,
-                userType: user.roles?.[0],
-                email: user.email,
-                permissions: user.permissions,
-            })
+                    id: user.id,
+                    userType: user.roles?.[0],
+                    email: user.email,
+                    permissions: user.permissions,
+                })
             }
 
             if (onLoginSuccess) onLoginSuccess(token);
 
-            // navigate to dashboard
             navigate("/dashboard");
         } catch (err) {
-            // Set error message for display on UI
             setLoginError(err.message || "Invalid email or password. Please try again.");
         } finally {
             setIsLoading(false);
@@ -84,7 +80,10 @@ const Login_2 = ({ onLoginSuccess }) => {
         <>
             <div className={`min-h-screen relative flex items-center flex-col justify-center p-4 transition-colors duration-300 ${isDark ? 'bg-gray-900' : 'bg-blue-100'}`}>
 
-                <h1 className={`text-center font-bold sm:p-8 p-5 sm:text-3xl text-[16px] transition-colors duration-300 ${isDark ? 'text-blue-400' : 'text-black'}`}>School Management Portal</h1>
+                {/* Logo pehle, phir heading */}
+                <h1 className={`text-center font-bold sm:pb-3 pb-5 sm:text-3xl text-[16px] transition-colors duration-300 ${isDark ? 'text-blue-400' : 'text-black'}`}>School Management Portal</h1>
+                <img src={dpisBG} className='w-20 h-20 mb-3' alt="" />
+
                 <div className='flex flex-col sm:flex-row'>
 
                     <div className={`sm:w-full max-w-md shadow-xl sm:p-1 sm:mt-0 mt-4 p-5 flex items-center flex-col pt-10 sm:rounded-tl-xl sm:rounded-bl-xl rounded-tl-xl transition-colors duration-300 ${isDark ? 'bg-gray-800' : 'bg-blue-50'}`}>
@@ -93,17 +92,14 @@ const Login_2 = ({ onLoginSuccess }) => {
 
                     <div className={`w-full sm:h-full max-w-md sm:rounded-tr-xl sm:rounded-br-xl rounded-br-xl shadow-xl p-8 transition-colors duration-300 ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
 
-                        {/* Heading of the form */}
                         <h1 className={`text-center text-2xl font-bold tracking-wide leading-tight mb-2 transition-colors duration-300 ${isDark ? 'text-white' : 'text-gray-900'}`}>System Login</h1>
 
-                        {/* Login Error Message */}
                         {loginError && (
                             <div className="mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg">
                                 <p className="text-sm text-center">{loginError}</p>
                             </div>
                         )}
 
-                        {/* Form details */}
                         <form onSubmit={onSubmitHandler} className='space-y-4'>
                             <div>
                                 <label className={`block text-[16px] font-medium transition-colors duration-300 mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Email Address</label>
@@ -113,7 +109,7 @@ const Login_2 = ({ onLoginSuccess }) => {
                                         value={email}
                                         onChange={(e) => {
                                             setemail(e.target.value);
-                                            setLoginError(''); // Clear login error when typing
+                                            setLoginError('');
                                         }}
                                         className={`w-full pl-10 px-2 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 transition-colors duration-300 ${isDark ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-gray-900'}`}
                                         type="email"
@@ -134,7 +130,7 @@ const Login_2 = ({ onLoginSuccess }) => {
                                         value={password}
                                         onChange={(e) => {
                                             setpassword(e.target.value);
-                                            setLoginError(''); // Clear login error when typing
+                                            setLoginError('');
                                         }}
                                         className={`w-full pl-10 px-2 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 transition-colors duration-300 ${isDark ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-gray-900'}`}
                                         type={showPassword ? 'text' : 'password'}
@@ -143,15 +139,9 @@ const Login_2 = ({ onLoginSuccess }) => {
                                     <LockKeyhole size={19} className={`absolute left-3 bottom-0 -translate-y-1/2 transition-colors duration-300 ${isDark ? 'text-gray-400' : 'text-gray-700'}`} />
                                     <button type='button' onClick={() => setshowPassword(!showPassword)} className='absolute right-3 top-3'>
                                         {showPassword ? (
-                                            <Eye
-                                                size={20}
-                                                className={`cursor-pointer ${errors?.password ? "text-red-500" : ""}`}
-                                            />
+                                            <Eye size={20} className={`cursor-pointer ${errors?.password ? "text-red-500" : ""}`} />
                                         ) : (
-                                            <EyeOff
-                                                size={20}
-                                                className={`cursor-pointer ${errors?.password ? "text-red-500" : ""}`}
-                                            />
+                                            <EyeOff size={20} className={`cursor-pointer ${errors?.password ? "text-red-500" : ""}`} />
                                         )}
                                     </button>
                                 </div>

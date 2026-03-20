@@ -1,23 +1,18 @@
 /**
- * Printorderutil.js
+ * printOrderUtil.js
  * Shared print logic — import this in ViewStudentOrder, CreateStudentOrder, EditStudentOrder.
  *
- * PRINT_STYLES, buildSlip, and printOrder are copied EXACTLY from
- * ViewStudentOrder.jsx's inline implementation so the output is identical.
+ * Usage:
+ *   import { printOrder } from "../../../utils/printOrderUtil";
+ *   printOrder(orderObject, gstNumber);
  */
 
-// ── Helpers ───────────────────────────────────────────────────────
+/* ─── Helpers ────────────────────────────────────────────────────────────── */
 function fmtDate(d) {
   if (!d) return "—";
   return new Date(d).toLocaleDateString("en-IN", {
     day: "2-digit", month: "short", year: "numeric",
   });
-}
-
-function escapeHtml(str) {
-  return String(str || "")
-    .replace(/&/g, "&amp;").replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
 function fmtPaymentMethod(val) {
@@ -29,7 +24,10 @@ function fmtPaymentMethod(val) {
   return map[(val || "").toUpperCase()] || val;
 }
 
-// ── Exact copy of PRINT_STYLES from ViewStudentOrder.jsx ─────────
+/* ─── Print styles ────────────────────────────────────────────────────────────
+   A4 landscape usable area = 287mm × 200mm (5mm margins all around).
+   .slips-row hard-locked to 200mm — nothing ever overflows to page 2.
+──────────────────────────────────────────────────────────────────────────── */
 const PRINT_STYLES = `
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -115,7 +113,7 @@ const PRINT_STYLES = `
   .chip  { font-size: 7px; font-weight: 800; padding: 0.2mm 1.5mm; border-radius: 999px; border: 1px solid #000; color: #000; }
   .pdate { font-size: 6.5px; font-weight: 600; color: #000; }
 
-  /* ── Meta — ALL THREE BOXES IN ONE ROW to save vertical space ── */
+  /* ── Meta — ALL THREE BOXES IN ONE ROW ── */
   .meta      { display: flex; flex-direction: row; gap: 1.5mm; flex-shrink: 0; }
   .meta-box  {
     flex: 1;
@@ -126,6 +124,35 @@ const PRINT_STYLES = `
   .meta-box .lbl { font-size: 6px;  font-weight: 900; text-transform: uppercase; letter-spacing: 0.06em; color: #000; line-height: 1.2; }
   .meta-box .val { font-size: 9px;  font-weight: 800; color: #000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3; }
   .meta-box .sub { font-size: 7px;  font-weight: 600; color: #000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3; }
+
+  /* ── Payment bar ── */
+  .payment-bar {
+    display: flex;
+    align-items: center;
+    gap: 4mm;
+    background: #e8f0fe;
+    border: 1px solid #000;
+    padding: 0.8mm 2mm;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+  }
+  .payment-bar .plbl {
+    font-size: 6px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: #000;
+  }
+  .payment-bar .pval {
+    font-size: 9px;
+    font-weight: 800;
+    color: #000;
+  }
+  .payment-bar .psep {
+    font-size: 8px;
+    color: #555;
+    margin: 0 1mm;
+  }
 
   /* ── Remarks ── */
   .remarks {
@@ -167,7 +194,6 @@ const PRINT_STYLES = `
   tbody tr:nth-child(even) { background: #f0f0f0; }
   tbody tr:nth-child(odd)  { background: #fff; }
 
-  /* ── ALL body cells: uniform 9px / 600 ── */
   tbody td {
     padding: 0.7mm 1mm;
     border-bottom: 0.5px solid #ccc;
@@ -179,21 +205,12 @@ const PRINT_STYLES = `
     text-align: left;
   }
 
-  /* S.No — narrow, centered */
   thead th.sno { text-align: center; width: 6mm; }
   tbody  td.sno { text-align: center; }
-
-  /* Item Code — left, same weight as rest */
   thead th.code { text-align: left; }
   tbody  td.code { text-align: left; white-space: nowrap; }
-
-  /* Item Name */
   tbody td.name { font-weight: 700; }
-
-  /* Qty */
   tbody td.c { text-align: center; }
-
-  /* Rate & Amount */
   tbody td.r { text-align: right; }
 
   /* Total row */
@@ -243,23 +260,33 @@ const PRINT_STYLES = `
   }
 `;
 
-// ── Exact copy of buildSlip from ViewStudentOrder.jsx ─────────────
+/* ─── Build a single slip ──────────────────────────────────────────────────── */
 function buildSlip(o, copyType, items, total, rawStatus, gstNumber) {
   const sigLabel   = copyType === "Parent" ? "Parent / Guardian" : copyType;
   const orderTotal = o.totalAmount != null ? `₹${Number(o.totalAmount).toFixed(2)}` : "—";
 
-  // BUG FIX: escape HTML in item names/codes
+  // ── Payment bar HTML — only rendered when paymentMethod is present ──
+  const pmLabel = fmtPaymentMethod(o.paymentMethod);
+  const txnNo   = o.transactionNumber || null;
+  const paymentBarHtml = pmLabel
+    ? `<div class="payment-bar">
+        <span class="plbl">Payment</span>
+        <span class="pval">${pmLabel}</span>
+        ${txnNo
+          ? `<span class="psep">|</span><span class="plbl">Ref / Txn</span><span class="pval">${txnNo}</span>`
+          : ""}
+      </div>`
+    : "";
+
+  // ── Item rows ──
   const itemRows = items.length === 0
     ? `<tr><td colspan="6" style="text-align:center;padding:4mm 0;">No items</td></tr>`
     : items.map((item, idx) => {
-        const name = escapeHtml(item.itemName || item.name || `Item #${item.itemId || idx}`);
-        const code = escapeHtml(item.itemCode || item.code || "—");
+        const name = item.itemName || item.name || `Item #${item.itemId || idx}`;
+        const code = item.itemCode || item.code || "—";
         const qty  = item.quantity || item.qty  || 0;
         const up   = item.unitPriceSnapshot != null ? `₹${Number(item.unitPriceSnapshot).toFixed(2)}` : "—";
-        const lt   = item.lineTotal != null
-          ? `₹${Number(item.lineTotal).toFixed(2)}`
-          : (item.unitPriceSnapshot != null
-              ? `₹${(Number(item.unitPriceSnapshot) * qty).toFixed(2)}` : "—");
+        const lt   = item.lineTotal          != null ? `₹${Number(item.lineTotal).toFixed(2)}`        : "—";
         return `<tr>
           <td class="sno">${idx + 1}</td>
           <td class="code">${code}</td>
@@ -270,28 +297,17 @@ function buildSlip(o, copyType, items, total, rawStatus, gstNumber) {
         </tr>`;
       }).join("");
 
-  // Payment bar (bonus: not in original ViewStudentOrder but harmless when absent)
-  const pmLabel = fmtPaymentMethod(o.paymentMethod);
-  const txnNo   = o.transactionNumber || null;
-  const paymentBarHtml = pmLabel
-    ? `<div style="display:flex;align-items:center;gap:5px;background:#eff6ff;border:1px solid #bfdbfe;padding:0.5mm 2mm;flex-shrink:0;flex-wrap:wrap;">
-        <span style="font-size:5.5px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#3b82f6;">Payment</span>
-        <span style="font-size:7px;font-weight:700;color:#1e3a5f;">${escapeHtml(pmLabel)}</span>
-        ${txnNo ? `<span style="font-size:7px;color:#93c5fd;margin:0 1px;">|</span><span style="font-size:5.5px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#3b82f6;">Ref</span><span style="font-size:7px;font-weight:700;color:#1e3a5f;">${escapeHtml(txnNo)}</span>` : ""}
-      </div>`
-    : "";
-
   return `
     <div class="slip">
 
       <div class="hdr">
         <div>
-          <div class="order-id">Order #${escapeHtml(String(o.id || "—"))}</div>
+          <div class="order-id">Order #${o.id || "—"}</div>
           <div class="order-sub">${fmtDate(o.orderDate || o.createdAt)}</div>
         </div>
         <div class="hdr-right">
-          <span class="pill-copy">${escapeHtml(copyType)} Copy</span>
-          <span class="chip">${escapeHtml(rawStatus || "—")}</span>
+          <span class="pill-copy">${copyType} Copy</span>
+          <span class="chip">${rawStatus || "—"}</span>
           <span class="pdate">Printed: ${new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</span>
         </div>
       </div>
@@ -299,24 +315,24 @@ function buildSlip(o, copyType, items, total, rawStatus, gstNumber) {
       <div class="meta">
         <div class="meta-box">
           <div class="lbl">Student</div>
-          <div class="val">${escapeHtml(o.studentName || "—")}</div>
-          ${o.admissionNumber ? `<div class="sub">ADM: ${escapeHtml(o.admissionNumber)}</div>` : ""}
-          ${o.className       ? `<div class="sub">Class: ${escapeHtml(o.className)}</div>`     : ""}
+          <div class="val">${o.studentName || "—"}</div>
+          ${o.admissionNumber ? `<div class="sub">ADM: ${o.admissionNumber}</div>` : ""}
+          ${o.className       ? `<div class="sub">Class: ${o.className}</div>`     : ""}
         </div>
         <div class="meta-box">
           <div class="lbl">Firm</div>
           <div class="val">LEELA ENTERPRISES</div>
-          <div class="sub">GST: ${escapeHtml(gstNumber || "—")}</div>
+          <div class="sub">GST: ${gstNumber || "—"}</div>
         </div>
         <div class="meta-box">
           <div class="lbl">Issued By</div>
-          <div class="val">${escapeHtml(o.issuedByName || "—")}</div>
+          <div class="val">${o.issuedByName || "—"}</div>
           <div class="sub">Date: ${fmtDate(o.orderDate || o.createdAt)}</div>
         </div>
       </div>
 
       ${paymentBarHtml}
-      ${o.remarks ? `<div class="remarks"><b>Note:</b> ${escapeHtml(o.remarks)}</div>` : ""}
+      ${o.remarks ? `<div class="remarks"><b>Note:</b> ${o.remarks}</div>` : ""}
 
       <div class="table-area">
         <div class="tbl-lbl">Items (${items.length})</div>
@@ -353,7 +369,7 @@ function buildSlip(o, copyType, items, total, rawStatus, gstNumber) {
         <div class="sigs">
           <div class="sig">
             <div class="sig-line"></div>
-            <div class="sig-lbl">${escapeHtml(sigLabel)}</div>
+            <div class="sig-lbl">${sigLabel}</div>
           </div>
         </div>
       </div>
@@ -363,21 +379,11 @@ function buildSlip(o, copyType, items, total, rawStatus, gstNumber) {
 
 /**
  * Opens a print window with 3 copies (Accountant, Admin, Parent) side-by-side on A4 Landscape.
- * Output is identical to the inline printOrder() inside ViewStudentOrder.jsx.
- *
- * @param {object} order      – order data object
- * @param {string} gstNumber  – GST number string (can be empty "")
+ * @param {object} order      - full order data object
+ * @param {string} gstNumber  - GST number string (can be empty "")
  */
 export function printOrder(order, gstNumber = "") {
-  const o = order || {};
-
-  // BUG FIX: guard against pop-up blocker
-  const win = window.open("", "_blank", "width=1400,height=900");
-  if (!win) {
-    alert("Pop-up blocked. Please allow pop-ups for this site to print.");
-    return;
-  }
-
+  const o         = order || {};
   const rawStatus = (o.status || o.orderStatus || "").toUpperCase();
   const items     = o.items || o.orderItems || [];
   const total     = items.reduce((a, i) => a + (i.quantity || i.qty || 0), 0);
@@ -392,25 +398,13 @@ export function printOrder(order, gstNumber = "") {
       ).join("")}
     </div>`;
 
-  const safeId = String(o.id || "").replace(/[<>"']/g, "");
-
+  const win = window.open("", "_blank", "width=1400,height=900");
   win.document.write(`<!DOCTYPE html><html><head>
     <meta charset="utf-8"/>
-    <title>Order #${safeId} – Print Copies</title>
+    <title>Order #${o.id} – Print Copies</title>
     <style>${PRINT_STYLES}</style>
   </head><body>${body}</body></html>`);
   win.document.close();
   win.focus();
-
-  // BUG FIX: use load event with fallback instead of fixed 450ms
-  const doprint = () => {
-    try { win.print(); win.close(); } catch (_) { /* ignore */ }
-  };
-
-  if (win.document.readyState === "complete") {
-    setTimeout(doprint, 150);
-  } else {
-    win.addEventListener("load", doprint, { once: true });
-    setTimeout(doprint, 500);
-  }
+  setTimeout(() => { win.print(); win.close(); }, 450);
 }
