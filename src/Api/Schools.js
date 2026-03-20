@@ -71,3 +71,57 @@ export const switchSchool = async (schoolId) => {
     throw error;
   }
 };
+
+ // ==================== MY SCHOOLS (School Picker) ====================
+
+export const getMySchools = async (
+  page = 0,
+  size = 12,
+  search = "",
+  board = "",
+  isActive
+) => {
+  try {
+    let url = `${BASE_URL}/schools/my-schools?page=${page}&size=${size}`;
+
+    if (search) url += `&search=${encodeURIComponent(search)}`;
+    if (board) url += `&board=${encodeURIComponent(board)}`;
+    if (isActive !== undefined) url += `&isActive=${isActive}`;
+
+    const res = await authFetch(url, {
+      method: "GET",
+    });
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(errorText || "Failed to fetch my schools");
+    }
+
+    const data = await res.json();
+    return data; // keep full response (pagination important)
+  } catch (error) {
+    console.error("getMySchools error:", error.message);
+    throw error;
+  }
+};
+
+ // ==================== MY SCHOOL STATS ====================
+
+export const getMySchoolStats = async () => {
+  try {
+    const res = await authFetch(`${BASE_URL}/schools/my-stats`, {
+      method: "GET",
+    });
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(errorText || "Failed to fetch my school stats");
+    }
+
+    const data = await res.json();
+    return data.data; // return only useful part
+  } catch (error) {
+    console.error("getMySchoolStats error:", error.message);
+    throw error;
+  }
+};

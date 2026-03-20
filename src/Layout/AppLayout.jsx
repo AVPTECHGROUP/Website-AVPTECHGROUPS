@@ -4,21 +4,21 @@ import { Menu } from 'lucide-react';
 import Sidebar from '../Components/Sidebar';
 import { getCurrUserDetails } from '../utils/getCurrUserDetails';
 
+// ✅ Roles that require school selection before accessing dashboard
+const SCHOOL_SELECTION_ROLES = ['SUPER_ADMIN', 'GLOBAL_ADMIN'];
+
 const AppLayout = () => {
-  const [sidebarOpen,       setSidebarOpen]       = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
-  // ── SUPER_ADMIN guard — redirect to school picker if no schoolId in token ──
   const decoded = getCurrUserDetails();
-  const role    = decoded?.roles?.[0];
+  const role = decoded?.roles?.[0];
 
-  if (role === 'SUPER_ADMIN' && !decoded?.schoolId) {
+  // ── Guard: if role requires school selection and no schoolId in token → redirect to picker
+  if (SCHOOL_SELECTION_ROLES.includes(role) && !decoded?.schoolId) {
     return <Navigate to="/superAdmin" replace />;
   }
 
-  // ── School name for mobile header ─────────────────────────────────────────
-  // ✅ Default = "Delhi Public International School"
-  // After switchSchool API → reads from localStorage 'school'
   const schoolInfo = (() => {
     try { return JSON.parse(localStorage.getItem('school')); }
     catch { return null; }
@@ -59,7 +59,6 @@ const AppLayout = () => {
           >
             <Menu className="w-5 h-5 text-gray-700" />
           </button>
-          {/* ✅ Dynamic school name — default Delhi Public International School */}
           <h1 className="text-lg font-bold truncate">{schoolDisplayName}</h1>
         </header>
 

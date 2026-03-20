@@ -8,51 +8,55 @@ import {
 import { useState, useEffect, useContext, useRef } from 'react'
 import { UserContext } from '../ContextAPI/UserContext'
 
+// ✅ Roles that can switch school
+const SCHOOL_SWITCHER_ROLES = ['SUPER_ADMIN', 'GLOBAL_ADMIN'];
+const ADMIN_ROLES = ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'];
+
 const menuItems = [
   {
     id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', route: '/dashboard',
-    roles: ['ADMIN', 'TEACHER', 'SUPER_ADMIN', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST', 'PARENT', 'STORE_ACCOUNTANT'],
+    roles: ['ADMIN', 'TEACHER', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST', 'PARENT', 'STORE_ACCOUNTANT'],
   },
   {
     id: 'manageUsers', icon: UserCog, label: 'Manage Users', route: '/dashboard/manageUsers',
-    roles: ['ADMIN', 'SUPER_ADMIN'],
+    roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'],
   },
   {
     id: 'teachers', icon: Users, label: 'Teachers', route: '/teachers',
-    roles: ['ADMIN', 'SUPER_ADMIN', 'PRINCIPAL'],
+    roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'PRINCIPAL'],
   },
   {
     id: 'attendance', icon: Calendar, label: 'Attendance', route: '/attendance',
-    roles: ['ADMIN', 'SUPER_ADMIN', 'TEACHER', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST'],
+    roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'TEACHER', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST'],
     subItems: [
-      { label: 'Mark Attendance',         route: '/attendance/markUserAttendance', roles: ['SUPER_ADMIN', 'ADMIN', 'TEACHER', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST'] },
-      { label: 'Attendance Registration', route: '/attendance/attendanceImgReg',   roles: ['SUPER_ADMIN', 'ADMIN'] },
-      { label: 'Pending Approvals',       route: '/attendance/usersAttendance',    roles: ['SUPER_ADMIN', 'ADMIN'] },
+      { label: 'Mark Attendance', route: '/attendance/markUserAttendance', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'TEACHER', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST'] },
+      { label: 'Attendance Registration', route: '/attendance/attendanceImgReg', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN'] },
+      { label: 'Pending Approvals', route: '/attendance/usersAttendance', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN'] },
     ]
   },
   {
     id: 'students', icon: Users, label: 'Students', route: '/students',
-    roles: ['ADMIN', 'SUPER_ADMIN'],
+    roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'],
   },
   {
     id: 'leaves', icon: FileText, label: 'Manage Leaves', route: '/leaves',
-    roles: ['ADMIN', 'SUPER_ADMIN', 'TEACHER', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST'],
+    roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'TEACHER', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST'],
     subItems: [
-      { label: 'Apply Leave',        route: '/leaves/applyLeaves',    roles: ['ADMIN', 'TEACHER', 'SUPER_ADMIN', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST'] },
-      { label: 'My Leaves',          route: '/leaves/myLeaves',       roles: ['ADMIN', 'TEACHER', 'SUPER_ADMIN', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST'] },
-      { label: 'Holiday Management', route: '/leaves/manageHolidays', roles: ['ADMIN', 'SUPER_ADMIN'] },
+      { label: 'Apply Leave', route: '/leaves/applyLeaves', roles: ['ADMIN', 'TEACHER', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST'] },
+      { label: 'My Leaves', route: '/leaves/myLeaves', roles: ['ADMIN', 'TEACHER', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST'] },
+      { label: 'Holiday Management', route: '/leaves/manageHolidays', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'] },
     ]
   },
   {
     id: 'stock', icon: Package, label: 'Stock', route: '/stock',
-    roles: ['ADMIN', 'SUPER_ADMIN', 'STORE_ACCOUNTANT'],
+    roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'STORE_ACCOUNTANT'],
     subItems: [
-      { label: 'Stores',           route: '/stock/stores',          roles: ['ADMIN', 'SUPER_ADMIN', 'STORE_ACCOUNTANT'] },
-      { label: 'Items',            route: '/stock/items',           roles: ['ADMIN', 'SUPER_ADMIN', 'STORE_ACCOUNTANT'] },
-      { label: 'Transactions',     route: '/stock/transactions',    roles: ['ADMIN', 'SUPER_ADMIN', 'STORE_ACCOUNTANT'] },
-      { label: 'Class Config',     route: '/stock/classConfig',     roles: ['ADMIN', 'SUPER_ADMIN', 'STORE_ACCOUNTANT'] },
-      { label: 'Student Orders',   route: '/stock/studentOrders',   roles: ['ADMIN', 'SUPER_ADMIN', 'STORE_ACCOUNTANT'] },
-      { label: 'Movement History', route: '/stock/movementHistory', roles: ['ADMIN', 'SUPER_ADMIN', 'STORE_ACCOUNTANT'] },
+      { label: 'Stores', route: '/stock/stores', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'STORE_ACCOUNTANT'] },
+      { label: 'Items', route: '/stock/items', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'STORE_ACCOUNTANT'] },
+      { label: 'Transactions', route: '/stock/transactions', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'STORE_ACCOUNTANT'] },
+      { label: 'Class Config', route: '/stock/classConfig', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'STORE_ACCOUNTANT'] },
+      { label: 'Student Orders', route: '/stock/studentOrders', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'STORE_ACCOUNTANT'] },
+      { label: 'Movement History', route: '/stock/movementHistory', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'STORE_ACCOUNTANT'] },
     ]
   },
   {
@@ -61,37 +65,36 @@ const menuItems = [
   },
   {
     id: 'transport', icon: Bus, label: 'Transport', route: '/route',
-    roles: ['ADMIN', 'SUPER_ADMIN', 'PRINCIPAL'],
+    roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'PRINCIPAL'],
     subItems: [
-      { label: 'Vehicles',            route: '/route/vehicles',           roles: ['ADMIN', 'SUPER_ADMIN'] },
-      { label: 'Driver & Attendants', route: '/route/Driver&Attendants',  roles: ['ADMIN', 'SUPER_ADMIN'] },
-      { label: 'Routes',              route: '/route/routes_management',  roles: ['ADMIN', 'SUPER_ADMIN'] },
-      { label: 'Student Allocations', route: '/route/studentAllocations', roles: ['ADMIN', 'SUPER_ADMIN'] },
-      { label: 'Fee Plans',           route: '/route/feePlans',           roles: ['ADMIN', 'SUPER_ADMIN'] },
-      { label: 'Reports',             route: '/route/reports',            roles: ['ADMIN', 'SUPER_ADMIN'] },
+      { label: 'Vehicles', route: '/route/vehicles', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'] },
+      { label: 'Driver & Attendants', route: '/route/Driver&Attendants', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'] },
+      { label: 'Routes', route: '/route/routes_management', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'] },
+      { label: 'Student Allocations', route: '/route/studentAllocations', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'] },
+      { label: 'Fee Plans', route: '/route/feePlans', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'] },
+      { label: 'Reports', route: '/route/reports', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'] },
     ]
   },
 ]
 
-const ADMIN_ROLES = ['ADMIN', 'SUPER_ADMIN']
-
 const roleBadgeStyles = {
-  SUPER_ADMIN:      'bg-purple-100 text-purple-700',
-  ADMIN:            'bg-blue-100 text-blue-700',
-  TEACHER:          'bg-green-100 text-green-700',
-  PRINCIPAL:        'bg-amber-100 text-amber-700',
-  ACCOUNTANT:       'bg-cyan-100 text-cyan-700',
-  RECEPTIONIST:     'bg-pink-100 text-pink-700',
-  PARENT:           'bg-orange-100 text-orange-700',
+  SUPER_ADMIN: 'bg-purple-100 text-purple-700',
+  GLOBAL_ADMIN: 'bg-indigo-100 text-indigo-700',
+  ADMIN: 'bg-blue-100 text-blue-700',
+  TEACHER: 'bg-green-100 text-green-700',
+  PRINCIPAL: 'bg-amber-100 text-amber-700',
+  ACCOUNTANT: 'bg-cyan-100 text-cyan-700',
+  RECEPTIONIST: 'bg-pink-100 text-pink-700',
+  PARENT: 'bg-orange-100 text-orange-700',
   STORE_ACCOUNTANT: 'bg-teal-100 text-teal-700',
-  STORE_SELLER:     'bg-indigo-100 text-indigo-700',
+  STORE_SELLER: 'bg-indigo-100 text-indigo-700',
 }
 
 const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
-  const navigate   = useNavigate()
-  const location   = useLocation()
+  const navigate = useNavigate()
+  const location = useLocation()
   const [openDropdowns, setOpenDropdowns] = useState({})
-  const [profileOpen,   setProfileOpen]   = useState(false)
+  const [profileOpen, setProfileOpen] = useState(false)
   const profileRef = useRef(null)
 
   const { user: ctxUser } = useContext(UserContext)
@@ -103,7 +106,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
   const user = storedUser || ctxUser
 
   const userRole = ctxUser?.userType
-    || (Array.isArray(ctxUser?.roles)    ? ctxUser.roles[0]    : null)
+    || (Array.isArray(ctxUser?.roles) ? ctxUser.roles[0] : null)
     || (Array.isArray(storedUser?.roles) ? storedUser.roles[0] : null)
     || null
 
@@ -115,7 +118,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
   const schoolDisplayName = schoolInfo?.schoolName || 'Delhi Public International School'
   const schoolDisplayCode = schoolInfo?.schoolCode || ''
 
-  // ✅ Switch School — clears school from localStorage → AppLayout guard → /superAdmin
+  // ✅ Switch School — works for both SUPER_ADMIN and GLOBAL_ADMIN
   const handleSwitchSchool = () => {
     localStorage.removeItem('school')
     navigate('/superAdmin')
@@ -156,25 +159,25 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
     const newDropdowns = {}
     filteredMenuItems.forEach(item => {
       if (item.subItems) {
-        const isSubActive  = item.subItems.some(s => location.pathname.startsWith(s.route))
+        const isSubActive = item.subItems.some(s => location.pathname.startsWith(s.route))
         const isMainActive = location.pathname === item.route
         if (isSubActive || isMainActive) newDropdowns[item.id] = true
       }
     })
     setOpenDropdowns(prev => {
       const merged = { ...prev, ...newDropdowns }
-      const same   = Object.keys(merged).length === Object.keys(prev).length &&
-                     Object.keys(merged).every(k => prev[k] === merged[k])
+      const same = Object.keys(merged).length === Object.keys(prev).length &&
+        Object.keys(merged).every(k => prev[k] === merged[k])
       return same ? prev : merged
     })
   }, [location.pathname])
 
-  const toggleDropdown     = (id)    => setOpenDropdowns(prev => ({ ...prev, [id]: !prev[id] }))
-  const handleLogoClick    = ()      => {
+  const toggleDropdown = (id) => setOpenDropdowns(prev => ({ ...prev, [id]: !prev[id] }))
+  const handleLogoClick = () => {
     if (window.innerWidth >= 1024) setSidebarOpen(!sidebarOpen)
     else setMobileSidebarOpen(false)
   }
-  const handleMenuClick    = (item)  => {
+  const handleMenuClick = (item) => {
     navigate(item.route)
     if (item.subItems?.length > 0 && sidebarOpen) toggleDropdown(item.id)
     if (window.innerWidth < 1024) setMobileSidebarOpen(false)
@@ -192,15 +195,18 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
     [user?.firstName, user?.lastName].filter(Boolean).join(' ') ||
     user?.name || user?.username || 'User'
 
-  const userPhone  = user?.phone || user?.phoneNumber || null
+  const userPhone = user?.phone || user?.phoneNumber || null
   const userStatus = user?.status
     ? user.status.charAt(0) + user.status.slice(1).toLowerCase()
     : 'Active'
-  const initials   = displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+  const initials = displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
   const badgeClass = roleBadgeStyles[userRole] || 'bg-gray-100 text-gray-600'
   const formatRoleLabel = (role) => role
     ? role.split('_').map(w => w.charAt(0) + w.slice(1).toLowerCase()).join(' ')
     : ''
+
+  // ✅ Show switch school button for SUPER_ADMIN and GLOBAL_ADMIN
+  const canSwitchSchool = SCHOOL_SWITCHER_ROLES.includes(userRole)
 
   return (
     <div className={`bg-[#F8FAFC] border-r border-gray-200 flex flex-col transition-all duration-300 h-full
@@ -212,7 +218,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
           <button onClick={handleLogoClick} className="shrink-0">
             <img
               src={dpis}
-              className="w-12 h-12 cursor-pointer rounded-lg object-cover"
+              className="w-12 h-12 cursor-pointer object-cover"
               alt="School Logo"
             />
           </button>
@@ -226,8 +232,8 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
                 {schoolDisplayCode ? `${schoolDisplayCode} · ` : ''}Management System
               </p>
 
-              {/* ✅ Switch School button — right below school name, only for SUPER_ADMIN */}
-              {userRole === 'SUPER_ADMIN' && (
+              {/* ✅ Switch School button — for SUPER_ADMIN and GLOBAL_ADMIN */}
+              {canSwitchSchool && (
                 <button
                   onClick={handleSwitchSchool}
                   className="flex items-center gap-1 cursor-pointer text-[12px] font-semibold text-purple-600
@@ -242,7 +248,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
           )}
 
           {/* Collapsed sidebar — show icon button only */}
-          {!sidebarOpen && userRole === 'SUPER_ADMIN' && (
+          {!sidebarOpen && canSwitchSchool && (
             <div className="absolute left-0 right-0 flex justify-center" style={{ top: '72px' }}>
               <button
                 onClick={handleSwitchSchool}
@@ -260,10 +266,10 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
       {/* ── Navigation ── */}
       <nav className="flex-1 p-2 overflow-y-auto sidebar-scroll">
         {filteredMenuItems.map((item) => {
-          const Icon        = item.icon
-          const isActive    = isRouteActive(item)
+          const Icon = item.icon
+          const isActive = isRouteActive(item)
           const hasSubItems = item.subItems && item.subItems.length > 0
-          const isOpen      = openDropdowns[item.id]
+          const isOpen = openDropdowns[item.id]
 
           return (
             <div key={item.id} className="mb-0.5">

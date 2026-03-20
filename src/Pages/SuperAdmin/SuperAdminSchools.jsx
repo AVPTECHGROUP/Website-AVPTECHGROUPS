@@ -1,14 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Search, Users, MapPin, User, ChevronLeft, ChevronRight,
+  Search, Users, MapPin, ChevronLeft, ChevronRight,
   CheckCircle, LogOut, ArrowRight, GraduationCap,
-  RefreshCw, School, TrendingUp, AlertTriangle, ServerCrash,
+  School, TrendingUp, AlertTriangle, ServerCrash,
 } from "lucide-react";
-import CardComponent from "../../Components/CommonComp/CardComponent";
 import CardLoader from "../../Components/CommonComp/CardLoader";
 import SchoolSelectedCard from "../../Components/SuperAdmin/SchoolSelectedCard";
-import { getSchools, getSchoolStats } from "../../Api/Schools";
+import { getMySchools, getMySchoolStats } from "../../Api/Schools";
 import dpis from "../../assets/Images/dpis.jpg";
 
 const borderAccents = [
@@ -28,15 +27,117 @@ const boardBadge = (board) => {
 const buildStats = (stats) => {
   const boardWise = stats?.boardWiseCount ?? {};
   return [
-    { keyName: "Total Schools", val: stats?.totalSchools ?? 0, IconName: School, iconTxColor: "text-blue-600", iconBgColor: "bg-blue-50" },
-    { keyName: "Active", val: stats?.activeSchools ?? 0, IconName: CheckCircle, iconTxColor: "text-emerald-600", iconBgColor: "bg-emerald-50" },
-    { keyName: "Inactive", val: stats?.inactiveSchools ?? 0, IconName: AlertTriangle, iconTxColor: "text-slate-500", iconBgColor: "bg-slate-100" },
-    { keyName: "CBSE", val: boardWise["CBSE"] ?? 0, IconName: GraduationCap, iconTxColor: "text-blue-600", iconBgColor: "bg-blue-50" },
-    { keyName: "ICSE", val: boardWise["ICSE"] ?? 0, IconName: GraduationCap, iconTxColor: "text-amber-600", iconBgColor: "bg-amber-50" },
-    { keyName: "State Board", val: boardWise["STATE BOARD"] ?? boardWise["State Board"] ?? 0, IconName: TrendingUp, iconTxColor: "text-purple-600", iconBgColor: "bg-purple-50" },
+    {
+      keyName: "Total Schools",
+      val: stats?.totalSchools ?? 0,
+      IconName: School,
+      accentBar: "bg-blue-500",
+      iconBg: "bg-blue-50",
+      iconColor: "text-blue-600",
+      sub: "All registered",
+    },
+    {
+      keyName: "Active",
+      val: stats?.activeSchools ?? 0,
+      IconName: CheckCircle,
+      accentBar: "bg-emerald-500",
+      iconBg: "bg-emerald-50",
+      iconColor: "text-emerald-600",
+      sub: "Currently operating",
+      pulse: true,
+    },
+    {
+      keyName: "Inactive",
+      val: stats?.inactiveSchools ?? 0,
+      IconName: AlertTriangle,
+      accentBar: "bg-slate-400",
+      iconBg: "bg-slate-50",
+      iconColor: "text-slate-500",
+      sub: "Not operating",
+    },
+    {
+      keyName: "CBSE",
+      val: boardWise["CBSE"] ?? 0,
+      IconName: GraduationCap,
+      accentBar: "bg-blue-500",
+      iconBg: "bg-blue-50",
+      iconColor: "text-blue-600",
+      sub: "Central board",
+    },
+    {
+      keyName: "ICSE",
+      val: boardWise["ICSE"] ?? 0,
+      IconName: GraduationCap,
+      accentBar: "bg-amber-400",
+      iconBg: "bg-amber-50",
+      iconColor: "text-amber-600",
+      sub: "Indian certificate",
+    },
+    {
+      keyName: "State Board",
+      val: boardWise["STATE BOARD"] ?? boardWise["State Board"] ?? 0,
+      IconName: TrendingUp,
+      accentBar: "bg-violet-500",
+      iconBg: "bg-violet-50",
+      iconColor: "text-violet-600",
+      sub: "State curriculum",
+    },
   ];
 };
 
+const getRoleMeta = (role) => {
+  if (role === "GLOBAL_ADMIN")
+    return {
+      label: "Global Admin Console",
+      badge: "bg-indigo-100 text-indigo-700 border-indigo-200",
+      roleTag: "GLOBAL ADMIN",
+    };
+  return {
+    label: "Super Admin Console",
+    badge: "bg-blue-100 text-blue-700 border-blue-200",
+    roleTag: "SUPER ADMIN",
+  };
+};
+
+/* ── Stat Card Skeleton ── */
+const StatCardSkeleton = () => (
+  <div className="relative bg-white rounded-xl border border-gray-100 overflow-hidden animate-pulse">
+    <div className="absolute top-0 left-0 right-0 h-[3px] bg-gray-200" />
+    <div className="py-4 px-4 flex items-center gap-3">
+      <div className="w-11 h-11 rounded-xl bg-gray-100 shrink-0" />
+      <div className="space-y-2 flex-1">
+        <div className="h-6 w-12 bg-gray-100 rounded" />
+        <div className="h-3 w-20 bg-gray-100 rounded" />
+        <div className="h-2.5 w-16 bg-gray-100 rounded" />
+      </div>
+    </div>
+  </div>
+);
+
+/* ── Beautiful Stat Card ── */
+const StatCard = ({ keyName, val, IconName, accentBar, iconBg, iconColor, sub, pulse }) => (
+  <div className="relative bg-white rounded-xl border border-gray-100 overflow-hidden hover:border-gray-200 hover:shadow-sm transition-all duration-200 group">
+    {/* top accent bar */}
+    <div className={`absolute top-0 left-0 right-0 h-[3px] ${accentBar}`} />
+    <div className="py-4 px-4 flex items-center gap-4">
+      {/* Icon */}
+      <div className={`w-11 h-11 rounded-xl ${iconBg} flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-200`}>
+        <IconName size={22} className={iconColor} />
+      </div>
+      {/* Text */}
+      <div className="min-w-0">
+        <p className="text-2xl font-bold text-gray-900 leading-none mb-1 tabular-nums">{val.toLocaleString()}</p>
+        <p className="text-sm font-semibold text-gray-600 truncate">{keyName}</p>
+        <div className="flex items-center gap-1.5 mt-0.5">
+          {pulse && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />}
+          <p className="text-xs text-gray-400 truncate">{sub}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+/* ── School Card Skeleton ── */
 const SchoolCardSkeleton = () => (
   <div className="bg-white rounded-2xl border-t-4 border-t-gray-200 border border-gray-200 shadow-sm p-5 space-y-3 animate-pulse">
     <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-gray-200 mx-auto" />
@@ -55,7 +156,7 @@ const SchoolCardSkeleton = () => (
   </div>
 );
 
-// Compact pagination that avoids overflow on small screens
+/* ── Pagination ── */
 const PaginationButtons = ({ page, totalPages, setPage }) => {
   const getVisiblePages = () => {
     if (totalPages <= 5) return Array.from({ length: totalPages }, (_, i) => i);
@@ -116,6 +217,9 @@ const PaginationButtons = ({ page, totalPages, setPage }) => {
   );
 };
 
+/* ════════════════════════════════════════════
+   Main Component
+════════════════════════════════════════════ */
 export default function SuperAdminSchools() {
   const navigate = useNavigate();
 
@@ -124,12 +228,26 @@ export default function SuperAdminSchools() {
     catch { return null; }
   })();
 
+  const userRole =
+    storedUser?.userType ||
+    (Array.isArray(storedUser?.roles) ? storedUser.roles[0] : null) ||
+    null;
+
+  const roleMeta = getRoleMeta(userRole);
+
   const displayName =
     storedUser?.fullName ||
     [storedUser?.firstName, storedUser?.lastName].filter(Boolean).join(" ") ||
-    storedUser?.name || storedUser?.email || "User";
+    storedUser?.name ||
+    storedUser?.email ||
+    "User";
 
-  const initials = displayName.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
+  const initials = displayName
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
 
   const handleSignOut = () => {
     localStorage.removeItem("token");
@@ -159,30 +277,51 @@ export default function SuperAdminSchools() {
 
   useEffect(() => {
     clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => { setSearch(searchInput); setPage(0); }, 400);
+    debounceRef.current = setTimeout(() => {
+      setSearch(searchInput);
+      setPage(0);
+    }, 400);
     return () => clearTimeout(debounceRef.current);
   }, [searchInput]);
 
   useEffect(() => { setPage(0); }, [boardFilter, statusFilter]);
 
   const fetchSchools = useCallback(async () => {
-    setLoading(true); setError(null);
+    setLoading(true);
+    setError(null);
     try {
-      const isActive = statusFilter === "ACTIVE" ? true : statusFilter === "INACTIVE" ? false : undefined;
-      const res = await getSchools(page, PAGE_SIZE, search, isActive, boardFilter);
+      const isActive =
+        statusFilter === "ACTIVE" ? true :
+        statusFilter === "INACTIVE" ? false :
+        undefined;
+
+      const res = await getMySchools(page, PAGE_SIZE, search, boardFilter, isActive);
+
       if (res?.success && res?.data) {
         const { content = [], totalElements: te = 0, totalPages: tp = 1 } = res.data;
-        setSchools(content); setTotalElements(te); setTotalPages(tp);
-      } else { setSchools([]); }
-    } catch (err) { setError(err.message || "Failed to load schools"); setSchools([]); }
-    finally { setLoading(false); }
+        setSchools(content);
+        setTotalElements(te);
+        setTotalPages(tp);
+      } else {
+        setSchools([]);
+      }
+    } catch (err) {
+      setError(err.message || "Failed to load schools");
+      setSchools([]);
+    } finally {
+      setLoading(false);
+    }
   }, [page, search, boardFilter, statusFilter]);
 
   const fetchStats = useCallback(async () => {
     setStatsLoading(true);
-    try { setStatsData(buildStats(await getSchoolStats())); }
-    catch { setStatsData(buildStats(null)); }
-    finally { setStatsLoading(false); }
+    try {
+      setStatsData(buildStats(await getMySchoolStats()));
+    } catch {
+      setStatsData(buildStats(null));
+    } finally {
+      setStatsLoading(false);
+    }
   }, []);
 
   useEffect(() => { fetchStats(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -209,14 +348,13 @@ export default function SuperAdminSchools() {
             <div className="flex items-center gap-2 min-w-0">
               <img src={dpis} alt="School Logo" className="w-7 h-7 sm:w-10 sm:h-10 object-cover shadow shrink-0" />
               <span className="font-bold text-gray-800 md:text-lg tracking-wide truncate">SchoolSpine</span>
-              <span className="hidden md:inline text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 uppercase tracking-widest border border-blue-200 whitespace-nowrap">
-                Super Admin Console
+              <span className={`hidden md:inline text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-widest border whitespace-nowrap ${roleMeta.badge}`}>
+                {roleMeta.label}
               </span>
             </div>
 
             {/* Right: User info + sign out */}
             <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
-              {/* Avatar + name — name hidden on very small screens */}
               <div className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-xl bg-gray-100 border border-gray-200">
                 <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-[10px] font-bold text-white shrink-0">
                   {initials}
@@ -224,7 +362,6 @@ export default function SuperAdminSchools() {
                 <span className="hidden sm:inline text-sm font-medium text-gray-700 max-w-fit text-nowrap">{displayName}</span>
               </div>
 
-              {/* Sign out */}
               <button
                 onClick={handleSignOut}
                 className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-xl text-xs text-gray-500 hover:text-red-600 hover:bg-red-50 transition-all duration-200 border cursor-pointer border-transparent hover:border-red-100"
@@ -246,30 +383,22 @@ export default function SuperAdminSchools() {
               </h1>
               <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
                 Select a school to operate. Logged in as{" "}
-                <span className="text-blue-600 font-semibold">SUPER ADMIN</span>.
+                <span className="text-blue-600 font-semibold">{roleMeta.roleTag}</span>.
               </p>
             </div>
           </div>
 
           {/* ── Stat Cards ── */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 sm:gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {statsLoading
-              ? Array.from({ length: 6 }).map((_, i) => <CardLoader key={i} />)
+              ? Array.from({ length: 6 }).map((_, i) => <StatCardSkeleton key={i} />)
               : statsData.map((s) => (
-                <CardComponent
-                  key={s.keyName}
-                  IconName={s.IconName}
-                  keyName={s.keyName}
-                  val={s.val}
-                  iconTxColor={s.iconTxColor}
-                  iconBgColor={s.iconBgColor}
-                />
-              ))}
+                  <StatCard key={s.keyName} {...s} />
+                ))}
           </div>
 
           {/* ── Search + Filters ── */}
           <div className="bg-white rounded-2xl border border-gray-200 p-3 sm:p-4 shadow-sm flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
-            {/* Search input — grows to fill available space */}
             <div className="relative flex-1 min-w-0">
               <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
               <input
@@ -281,7 +410,6 @@ export default function SuperAdminSchools() {
               />
             </div>
 
-            {/* Board filter */}
             <select
               value={boardFilter}
               onChange={(e) => setBoardFilter(e.target.value)}
@@ -293,7 +421,6 @@ export default function SuperAdminSchools() {
               <option value="STATE BOARD">State Board</option>
             </select>
 
-            {/* Status filter */}
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
@@ -304,7 +431,6 @@ export default function SuperAdminSchools() {
               <option value="INACTIVE">Inactive only</option>
             </select>
 
-            {/* Count */}
             <span className="text-xs text-gray-400 whitespace-nowrap font-medium text-center sm:text-left">
               {loading ? "Loading…" : `${totalElements} school${totalElements !== 1 ? "s" : ""}`}
             </span>
@@ -318,7 +444,10 @@ export default function SuperAdminSchools() {
                 <p className="font-semibold">Failed to load schools</p>
                 <p className="text-xs text-red-500 mt-0.5 wrap-break-word">{error}</p>
               </div>
-              <button onClick={handleRefresh} className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-red-100 hover:bg-red-200 transition-colors whitespace-nowrap">
+              <button
+                onClick={handleRefresh}
+                className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-red-100 hover:bg-red-200 transition-colors whitespace-nowrap"
+              >
                 Retry
               </button>
             </div>
@@ -330,97 +459,99 @@ export default function SuperAdminSchools() {
               ? Array.from({ length: 8 }).map((_, i) => <SchoolCardSkeleton key={i} />)
               : schools.length === 0
                 ? (
-                  <div className="col-span-full flex flex-col items-center justify-center py-12 sm:py-16 text-gray-400 gap-3">
-                    <School size={36} className="text-gray-300 sm:w-10 sm:h-10" />
-                    <p className="font-semibold text-gray-500 text-sm sm:text-base">No schools found</p>
-                    <p className="text-xs sm:text-sm text-center px-4">Try adjusting your search or filters</p>
-                  </div>
-                )
+                    <div className="col-span-full flex flex-col items-center justify-center py-12 sm:py-16 text-gray-400 gap-3">
+                      <School size={36} className="text-gray-300 sm:w-10 sm:h-10" />
+                      <p className="font-semibold text-gray-500 text-sm sm:text-base">No schools found</p>
+                      <p className="text-xs sm:text-sm text-center px-4">Try adjusting your search or filters</p>
+                    </div>
+                  )
                 : schools.map((school, idx) => {
-                  const accent = borderAccents[idx % borderAccents.length];
-                  const isSelected = selectedId === school.id;
-                  const badge = getStatusBadge(school);
-                  return (
-                    <div
-                      key={school.id}
-                      onClick={() => setSelectedId(school.id)}
-                      className={`relative bg-white rounded-2xl border-t-4 cursor-pointer group transition-all duration-200 overflow-hidden
+                    const accent = borderAccents[idx % borderAccents.length];
+                    const isSelected = selectedId === school.id;
+                    const badge = getStatusBadge(school);
+                    return (
+                      <div
+                        key={school.id}
+                        onClick={() => setSelectedId(school.id)}
+                        className={`relative bg-white rounded-2xl border-t-4 cursor-pointer group transition-all duration-200 overflow-hidden
                           ${accent}
                           ${isSelected
-                          ? "border border-blue-300 shadow-xl shadow-blue-100 ring-2 ring-blue-200 scale-[1.02]"
-                          : "border border-gray-200 shadow-sm hover:shadow-xl hover:-translate-y-1 hover:border-gray-300"
-                        }`}
-                    >
-                      <div className="p-4 sm:p-5">
+                            ? "border border-blue-300 shadow-xl shadow-blue-100 ring-2 ring-blue-200 scale-[1.02]"
+                            : "border border-gray-200 shadow-sm hover:shadow-xl hover:-translate-y-1 hover:border-gray-300"
+                          }`}
+                      >
+                        <div className="p-4 sm:p-5">
 
-                        {/* Status badge */}
-                        <div className="absolute top-3 right-3 sm:top-4 sm:right-4">
-                          <span className={`flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border ${badge.cls}`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${badge.dot} ${badge.dot === "bg-emerald-500" ? "animate-pulse" : ""}`} />
-                            {badge.label}
-                          </span>
-                        </div>
-
-                        {/* School logo */}
-                        <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 transition-transform duration-200 group-hover:scale-105 drop-shadow-md">
-                          <img
-                            src={dpis}
-                            alt={school.name}
-                            className="w-full h-full object-cover border-2 border-gray-100 shadow"
-                          />
-                        </div>
-
-                        {/* Name */}
-                        <h3 className="font-bold text-xs sm:text-sm text-gray-900 leading-tight mb-1.5 text-center line-clamp-2">{school.name}</h3>
-
-                        {/* Code + Board */}
-                        <div className="flex items-center justify-center gap-2 mb-3 sm:mb-4 flex-wrap">
-                          <span className="text-[10px] text-gray-400 font-mono bg-gray-50 border border-gray-200 px-1.5 py-0.5 rounded">
-                            {school.code}
-                          </span>
-                          {school.board && (
-                            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-lg ${boardBadge(school.board)}`}>
-                              {school.board}
+                          {/* Status badge */}
+                          <div className="absolute top-3 right-3 sm:top-4 sm:right-4">
+                            <span className={`flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border ${badge.cls}`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${badge.dot} ${badge.dot === "bg-emerald-500" ? "animate-pulse" : ""}`} />
+                              {badge.label}
                             </span>
-                          )}
+                          </div>
+
+                          {/* School logo */}
+                          <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 transition-transform duration-200 group-hover:scale-105 drop-shadow-md">
+                            <img
+                              src={dpis}
+                              alt={school.name}
+                              className="w-full h-full object-cover border-2 border-gray-100 shadow"
+                            />
+                          </div>
+
+                          {/* Name */}
+                          <h3 className="font-bold text-xs sm:text-sm text-gray-900 leading-tight mb-1.5 text-center line-clamp-2">
+                            {school.name}
+                          </h3>
+
+                          {/* Code + Board */}
+                          <div className="flex items-center justify-center gap-2 mb-3 sm:mb-4 flex-wrap">
+                            <span className="text-[10px] text-gray-400 font-mono bg-gray-50 border border-gray-200 px-1.5 py-0.5 rounded">
+                              {school.code}
+                            </span>
+                            {school.board && (
+                              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-lg ${boardBadge(school.board)}`}>
+                                {school.board}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="border-t border-gray-100 mb-2.5 sm:mb-3" />
+
+                          {/* Details */}
+                          <div className="space-y-1 sm:space-y-1.5 text-xs text-gray-500 mb-3 sm:mb-4">
+                            {(school.city || school.state) && (
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <MapPin size={11} className="text-gray-400 shrink-0" />
+                                <span className="truncate">{[school.city, school.state].filter(Boolean).join(", ")}</span>
+                              </div>
+                            )}
+                            {school.establishedYear && (
+                              <div className="flex items-center gap-1.5">
+                                <School size={11} className="text-gray-400 shrink-0" />
+                                Est. {school.establishedYear}
+                              </div>
+                            )}
+                            {school.phone && (
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <Users size={11} className="text-gray-400 shrink-0" />
+                                <span className="truncate">{school.phone}</span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* CTA */}
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setModalSchool(school); }}
+                            className="w-full flex items-center justify-center gap-2 py-2 sm:py-2.5 rounded-xl bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 active:scale-95 cursor-pointer transition-all duration-200 touch-manipulation"
+                          >
+                            Enter School <ArrowRight size={13} />
+                          </button>
+
                         </div>
-
-                        <div className="border-t border-gray-100 mb-2.5 sm:mb-3" />
-
-                        {/* Details */}
-                        <div className="space-y-1 sm:space-y-1.5 text-xs text-gray-500 mb-3 sm:mb-4">
-                          {(school.city || school.state) && (
-                            <div className="flex items-center gap-1.5 min-w-0">
-                              <MapPin size={11} className="text-gray-400 shrink-0" />
-                              <span className="truncate">{[school.city, school.state].filter(Boolean).join(", ")}</span>
-                            </div>
-                          )}
-                          {school.establishedYear && (
-                            <div className="flex items-center gap-1.5">
-                              <School size={11} className="text-gray-400 shrink-0" />
-                              Est. {school.establishedYear}
-                            </div>
-                          )}
-                          {school.phone && (
-                            <div className="flex items-center gap-1.5 min-w-0">
-                              <Users size={11} className="text-gray-400 shrink-0" />
-                              <span className="truncate">{school.phone}</span>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* CTA */}
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setModalSchool(school); }}
-                          className="w-full flex items-center justify-center gap-2 py-2 sm:py-2.5 rounded-xl bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 active:scale-95 cursor-pointer transition-all duration-200 touch-manipulation"
-                        >
-                          Enter School <ArrowRight size={13} />
-                        </button>
-
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
           </div>
 
           {/* ── Pagination ── */}
