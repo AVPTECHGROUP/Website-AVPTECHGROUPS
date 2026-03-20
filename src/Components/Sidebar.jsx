@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, Calendar, FileText, Users, LogOut,
   ChevronDown, UserCog, Package, Bus, Phone, Mail,
-  Shield, ChevronUp,
+  Shield, ChevronUp, ArrowLeftRight,
 } from 'lucide-react'
 import { useState, useEffect, useContext, useRef } from 'react'
 import { UserContext } from '../ContextAPI/UserContext'
@@ -107,16 +107,19 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
     || (Array.isArray(storedUser?.roles) ? storedUser.roles[0] : null)
     || null
 
-  // ✅ School info from localStorage — set by switchSchool API
-  // { schoolId, schoolName, schoolCode }
   const schoolInfo = (() => {
     try { return JSON.parse(localStorage.getItem('school')) || null }
     catch { return null }
   })()
 
-  // ✅ School name: from switchSchool API response, fallback to hardcoded
   const schoolDisplayName = schoolInfo?.schoolName || 'Delhi Public International School'
   const schoolDisplayCode = schoolInfo?.schoolCode || ''
+
+  // ✅ Switch School — clears school from localStorage → AppLayout guard → /superAdmin
+  const handleSwitchSchool = () => {
+    localStorage.removeItem('school')
+    navigate('/superAdmin')
+  }
 
   const filteredMenuItems = menuItems
     .filter(item => item.roles.includes(userRole))
@@ -166,12 +169,12 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
     })
   }, [location.pathname])
 
-  const toggleDropdown     = (id)   => setOpenDropdowns(prev => ({ ...prev, [id]: !prev[id] }))
-  const handleLogoClick    = ()     => {
+  const toggleDropdown     = (id)    => setOpenDropdowns(prev => ({ ...prev, [id]: !prev[id] }))
+  const handleLogoClick    = ()      => {
     if (window.innerWidth >= 1024) setSidebarOpen(!sidebarOpen)
     else setMobileSidebarOpen(false)
   }
-  const handleMenuClick    = (item) => {
+  const handleMenuClick    = (item)  => {
     navigate(item.route)
     if (item.subItems?.length > 0 && sidebarOpen) toggleDropdown(item.id)
     if (window.innerWidth < 1024) setMobileSidebarOpen(false)
@@ -203,26 +206,52 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
     <div className={`bg-[#F8FAFC] border-r border-gray-200 flex flex-col transition-all duration-300 h-full
       ${sidebarOpen ? 'w-64' : 'w-20'}`}
     >
-      {/* ── Logo ── */}
+      {/* ── Logo + School Name + Switch School ── */}
       <div className="p-5 border-b border-gray-200 shrink-0">
         <div className="flex items-center gap-3">
           <button onClick={handleLogoClick} className="shrink-0">
             <img
               src={dpis}
-              className="w-12 h-12 cursor-pointer object-cover"
+              className="w-12 h-12 cursor-pointer rounded-lg object-cover"
               alt="School Logo"
             />
           </button>
 
           {sidebarOpen && (
-            <div className="min-w-0">
-              {/* ✅ Dynamic school name from switchSchool API */}
-              <h2 className="font-semibold text-gray-900 text-sm leading-tight">
+            <div className="min-w-0 flex-1">
+              <h2 className="font-semibold text-gray-900 text-sm leading-tight truncate">
                 {schoolDisplayName}
               </h2>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-gray-500 mb-1.5">
                 {schoolDisplayCode ? `${schoolDisplayCode} · ` : ''}Management System
               </p>
+
+              {/* ✅ Switch School button — right below school name, only for SUPER_ADMIN */}
+              {userRole === 'SUPER_ADMIN' && (
+                <button
+                  onClick={handleSwitchSchool}
+                  className="flex items-center gap-1 cursor-pointer text-[12px] font-semibold text-purple-600
+                    bg-purple-50 hover:bg-purple-100 border border-purple-200 hover:border-purple-300
+                    px-2 py-0.5 rounded-full transition-all duration-150"
+                >
+                  <ArrowLeftRight size={12} />
+                  Switch School
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Collapsed sidebar — show icon button only */}
+          {!sidebarOpen && userRole === 'SUPER_ADMIN' && (
+            <div className="absolute left-0 right-0 flex justify-center" style={{ top: '72px' }}>
+              <button
+                onClick={handleSwitchSchool}
+                title="Switch School"
+                className="w-8 h-8 rounded-lg bg-purple-50 hover:bg-purple-100 border border-purple-200
+                  flex items-center justify-center text-purple-600 transition-all duration-150"
+              >
+                <ArrowLeftRight size={14} />
+              </button>
             </div>
           )}
         </div>
@@ -304,7 +333,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
               ${!sidebarOpen ? 'justify-center' : ''}`}
             title={!sidebarOpen ? displayName : ''}
           >
-            <div className="shrink-0 w-9 h-9 rounded-full bg-linear-to-br from-blue-500 to-blue-700
+            <div className="shrink-0 w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-blue-700
               flex items-center justify-center text-white font-bold text-sm shadow-sm">
               {initials}
             </div>
@@ -330,10 +359,10 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
                 ${sidebarOpen ? 'left-0 right-0' : 'left-0 w-64'}`}
               style={{ animation: 'slideUp 0.18s ease-out' }}
             >
-              <div className="h-12 bg-linear-to-r from-blue-600 to-blue-500 relative">
+              <div className="h-12 bg-gradient-to-r from-blue-600 to-blue-500 relative">
                 <div className="absolute -bottom-5 left-4">
                   <div className="w-10 h-10 rounded-full bg-white p-0.5 shadow-md">
-                    <div className="w-full h-full rounded-full bg-linear-to-br from-blue-500 to-blue-700
+                    <div className="w-full h-full rounded-full bg-gradient-to-br from-blue-500 to-blue-700
                       flex items-center justify-center text-white font-bold text-sm">
                       {initials}
                     </div>
