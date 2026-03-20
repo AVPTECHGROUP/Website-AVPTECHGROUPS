@@ -1,11 +1,29 @@
 import { useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, Navigate } from 'react-router-dom';
 import { Menu } from 'lucide-react';
 import Sidebar from '../Components/Sidebar';
+import { getCurrUserDetails } from '../utils/getCurrUserDetails';
 
 const AppLayout = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen,       setSidebarOpen]       = useState(true);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
+  // ── SUPER_ADMIN guard — redirect to school picker if no schoolId in token ──
+  const decoded = getCurrUserDetails();
+  const role    = decoded?.roles?.[0];
+
+  if (role === 'SUPER_ADMIN' && !decoded?.schoolId) {
+    return <Navigate to="/superAdmin" replace />;
+  }
+
+  // ── School name for mobile header ─────────────────────────────────────────
+  // ✅ Default = "Delhi Public International School"
+  // After switchSchool API → reads from localStorage 'school'
+  const schoolInfo = (() => {
+    try { return JSON.parse(localStorage.getItem('school')); }
+    catch { return null; }
+  })();
+  const schoolDisplayName = schoolInfo?.schoolName || 'Delhi Public International School';
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#edf0f3]">
@@ -21,8 +39,8 @@ const AppLayout = () => {
       {/* Sidebar */}
       <div
         className={`fixed lg:static z-50 h-full transition-transform duration-300
-        ${mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-        lg:translate-x-0`}
+          ${mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+          lg:translate-x-0`}
       >
         <Sidebar
           sidebarOpen={sidebarOpen}
@@ -41,10 +59,8 @@ const AppLayout = () => {
           >
             <Menu className="w-5 h-5 text-gray-700" />
           </button>
-
-          <h1 className="text-lg font-bold">
-            Delhi Public International School
-          </h1>
+          {/* ✅ Dynamic school name — default Delhi Public International School */}
+          <h1 className="text-lg font-bold truncate">{schoolDisplayName}</h1>
         </header>
 
         <main className="overflow-auto">

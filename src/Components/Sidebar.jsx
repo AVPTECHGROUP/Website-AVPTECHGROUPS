@@ -1,202 +1,76 @@
 import dpis from '../assets/Images/dpis.jpg'
 import { useNavigate, useLocation } from 'react-router-dom'
 import {
-  LayoutDashboard,
-  Calendar,
-  FileText,
-  Users,
-  Settings,
-  LogOut,
-  IndianRupee,
-  ChevronDown,
-  UserCog,
-  Package,
-  Bus,
-  Phone,
-  Mail,
-  Shield,
-  ChevronUp,
+  LayoutDashboard, Calendar, FileText, Users, LogOut,
+  ChevronDown, UserCog, Package, Bus, Phone, Mail,
+  Shield, ChevronUp,
 } from 'lucide-react'
 import { useState, useEffect, useContext, useRef } from 'react'
 import { UserContext } from '../ContextAPI/UserContext'
 
 const menuItems = [
   {
-    id: 'dashboard',
-    icon: LayoutDashboard,
-    label: 'Dashboard',
-    route: '/dashboard',
+    id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', route: '/dashboard',
     roles: ['ADMIN', 'TEACHER', 'SUPER_ADMIN', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST', 'PARENT', 'STORE_ACCOUNTANT'],
   },
   {
-    id: 'manageUsers',
-    icon: UserCog,
-    label: 'Manage Users',
-    route: '/dashboard/manageUsers',
+    id: 'manageUsers', icon: UserCog, label: 'Manage Users', route: '/dashboard/manageUsers',
     roles: ['ADMIN', 'SUPER_ADMIN'],
   },
   {
-    id: 'teachers',
-    icon: Users,
-    label: 'Teachers',
-    route: '/teachers',
+    id: 'teachers', icon: Users, label: 'Teachers', route: '/teachers',
     roles: ['ADMIN', 'SUPER_ADMIN', 'PRINCIPAL'],
   },
   {
-    id: 'attendance',
-    icon: Calendar,
-    label: 'Attendance',
-    route: '/attendance',
+    id: 'attendance', icon: Calendar, label: 'Attendance', route: '/attendance',
     roles: ['ADMIN', 'SUPER_ADMIN', 'TEACHER', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST'],
     subItems: [
-      {
-        label: 'Mark Attendance',
-        route: '/attendance/markUserAttendance',
-        roles: ['SUPER_ADMIN', 'ADMIN', 'TEACHER', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST'],
-      },
-      {
-        label: 'Attendance Registration',
-        route: '/attendance/attendanceImgReg',
-        roles: ['SUPER_ADMIN', 'ADMIN'],
-      },
-      {
-        label: 'Pending Approvals',
-        route: '/attendance/usersAttendance',
-        roles: ['SUPER_ADMIN', 'ADMIN'],
-      }
+      { label: 'Mark Attendance',         route: '/attendance/markUserAttendance', roles: ['SUPER_ADMIN', 'ADMIN', 'TEACHER', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST'] },
+      { label: 'Attendance Registration', route: '/attendance/attendanceImgReg',   roles: ['SUPER_ADMIN', 'ADMIN'] },
+      { label: 'Pending Approvals',       route: '/attendance/usersAttendance',    roles: ['SUPER_ADMIN', 'ADMIN'] },
     ]
   },
   {
-    id: 'students',
-    icon: Users,
-    label: 'Students',
-    route: '/students',
+    id: 'students', icon: Users, label: 'Students', route: '/students',
     roles: ['ADMIN', 'SUPER_ADMIN'],
   },
   {
-    id: 'leaves',
-    icon: FileText,
-    label: 'Manage Leaves',
-    route: '/leaves',
+    id: 'leaves', icon: FileText, label: 'Manage Leaves', route: '/leaves',
     roles: ['ADMIN', 'SUPER_ADMIN', 'TEACHER', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST'],
     subItems: [
-      {
-        label: 'Apply Leave',
-        route: '/leaves/applyLeaves',
-        roles: ['ADMIN', 'TEACHER', 'SUPER_ADMIN', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST'],
-      },
-      {
-        label: 'My Leaves',
-        route: '/leaves/myLeaves',
-        roles: ['ADMIN', 'TEACHER', 'SUPER_ADMIN', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST'],
-      },
-      {
-        label: 'Holiday Management',
-        route: '/leaves/manageHolidays',
-        roles: ['ADMIN', 'SUPER_ADMIN'],
-      }
+      { label: 'Apply Leave',        route: '/leaves/applyLeaves',    roles: ['ADMIN', 'TEACHER', 'SUPER_ADMIN', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST'] },
+      { label: 'My Leaves',          route: '/leaves/myLeaves',       roles: ['ADMIN', 'TEACHER', 'SUPER_ADMIN', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST'] },
+      { label: 'Holiday Management', route: '/leaves/manageHolidays', roles: ['ADMIN', 'SUPER_ADMIN'] },
     ]
   },
   {
-    id: 'stock',
-    icon: Package,
-    label: 'Stock',
-    route: '/stock',
-    roles: ['ADMIN', 'SUPER_ADMIN', 'STORE_ACCOUNTANT'],  // ← STORE_SELLER removed
+    id: 'stock', icon: Package, label: 'Stock', route: '/stock',
+    roles: ['ADMIN', 'SUPER_ADMIN', 'STORE_ACCOUNTANT'],
     subItems: [
-      {
-        label: 'Stores',
-        route: '/stock/stores',
-        roles: ['ADMIN', 'SUPER_ADMIN', 'STORE_ACCOUNTANT'],
-      },
-      {
-        label: 'Items',
-        route: '/stock/items',
-        roles: ['ADMIN', 'SUPER_ADMIN', 'STORE_ACCOUNTANT'],
-      },
-      {
-        label: 'Transactions',
-        route: '/stock/transactions',
-        roles: ['ADMIN', 'SUPER_ADMIN', 'STORE_ACCOUNTANT'],
-      },
-      {
-        label: 'Class Config',
-        route: '/stock/classConfig',
-        roles: ['ADMIN', 'SUPER_ADMIN', 'STORE_ACCOUNTANT'],
-      },
-      {
-        label: 'Student Orders',
-        route: '/stock/studentOrders',
-        roles: ['ADMIN', 'SUPER_ADMIN', 'STORE_ACCOUNTANT'],  // ← STORE_SELLER removed
-      },
-      {
-        label: 'Movement History',
-        route: '/stock/movementHistory',
-        roles: ['ADMIN', 'SUPER_ADMIN', 'STORE_ACCOUNTANT'],
-      }
+      { label: 'Stores',           route: '/stock/stores',          roles: ['ADMIN', 'SUPER_ADMIN', 'STORE_ACCOUNTANT'] },
+      { label: 'Items',            route: '/stock/items',           roles: ['ADMIN', 'SUPER_ADMIN', 'STORE_ACCOUNTANT'] },
+      { label: 'Transactions',     route: '/stock/transactions',    roles: ['ADMIN', 'SUPER_ADMIN', 'STORE_ACCOUNTANT'] },
+      { label: 'Class Config',     route: '/stock/classConfig',     roles: ['ADMIN', 'SUPER_ADMIN', 'STORE_ACCOUNTANT'] },
+      { label: 'Student Orders',   route: '/stock/studentOrders',   roles: ['ADMIN', 'SUPER_ADMIN', 'STORE_ACCOUNTANT'] },
+      { label: 'Movement History', route: '/stock/movementHistory', roles: ['ADMIN', 'SUPER_ADMIN', 'STORE_ACCOUNTANT'] },
     ]
   },
-  // ── STORE_SELLER sees only this top-level item (like Students for ADMIN) ──
   {
-    id: 'studentOrders',
-    icon: Package,
-    label: 'Student Orders',
-    route: '/stock/studentOrders',
+    id: 'studentOrders', icon: Package, label: 'Student Orders', route: '/stock/studentOrders',
     roles: ['STORE_SELLER'],
   },
   {
-    id: 'transport',
-    icon: Bus,
-    label: 'Transport',
-    route: '/route',
+    id: 'transport', icon: Bus, label: 'Transport', route: '/route',
     roles: ['ADMIN', 'SUPER_ADMIN', 'PRINCIPAL'],
     subItems: [
-      {
-        label: 'Vehicles',
-        route: '/route/vehicles',
-        roles: ['ADMIN', 'SUPER_ADMIN'],
-      },
-      {
-        label: 'Driver & Attendants',
-        route: '/route/Driver&Attendants',
-        roles: ['ADMIN', 'SUPER_ADMIN'],
-      },
-      {
-        label: 'Routes',
-        route: '/route/routes_management',
-        roles: ['ADMIN', 'SUPER_ADMIN'],
-      },
-      {
-        label: 'Student Allocations',
-        route: '/route/studentAllocations',
-        roles: ['ADMIN', 'SUPER_ADMIN'],
-      },
-      {
-        label: 'Fee Plans',
-        route: '/route/feePlans',
-        roles: ['ADMIN', 'SUPER_ADMIN'],
-      },
-      {
-        label: 'Reports',
-        route: '/route/reports',
-        roles: ['ADMIN', 'SUPER_ADMIN'],
-      }
+      { label: 'Vehicles',            route: '/route/vehicles',           roles: ['ADMIN', 'SUPER_ADMIN'] },
+      { label: 'Driver & Attendants', route: '/route/Driver&Attendants',  roles: ['ADMIN', 'SUPER_ADMIN'] },
+      { label: 'Routes',              route: '/route/routes_management',  roles: ['ADMIN', 'SUPER_ADMIN'] },
+      { label: 'Student Allocations', route: '/route/studentAllocations', roles: ['ADMIN', 'SUPER_ADMIN'] },
+      { label: 'Fee Plans',           route: '/route/feePlans',           roles: ['ADMIN', 'SUPER_ADMIN'] },
+      { label: 'Reports',             route: '/route/reports',            roles: ['ADMIN', 'SUPER_ADMIN'] },
     ]
   },
-  // {
-  //   id: 'payroll',
-  //   icon: IndianRupee,
-  //   label: 'Payroll',
-  //   route: '/payroll',
-  //   roles: ['ADMIN', 'SUPER_ADMIN', 'ACCOUNTANT'],
-  // },
-  // {
-  //   id: 'settings',
-  //   icon: Settings,
-  //   label: 'Settings',
-  //   route: '/settings',
-  //   roles: ['ADMIN', 'TEACHER', 'SUPER_ADMIN', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST', 'PARENT', 'STORE_ACCOUNTANT', 'STORE_SELLER'],
-  // },
 ]
 
 const ADMIN_ROLES = ['ADMIN', 'SUPER_ADMIN']
@@ -214,27 +88,35 @@ const roleBadgeStyles = {
 }
 
 const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
-  const navigate = useNavigate()
-  const location = useLocation()
+  const navigate   = useNavigate()
+  const location   = useLocation()
   const [openDropdowns, setOpenDropdowns] = useState({})
-  const [profileOpen, setProfileOpen] = useState(false)
+  const [profileOpen,   setProfileOpen]   = useState(false)
   const profileRef = useRef(null)
 
   const { user: ctxUser } = useContext(UserContext)
 
   const storedUser = (() => {
-    try {
-      const raw = localStorage.getItem('user')
-      return raw ? JSON.parse(raw) : null
-    } catch { return null }
+    try { return JSON.parse(localStorage.getItem('user')) || null }
+    catch { return null }
   })()
-
   const user = storedUser || ctxUser
 
   const userRole = ctxUser?.userType
-    || (Array.isArray(ctxUser?.roles) ? ctxUser.roles[0] : null)
+    || (Array.isArray(ctxUser?.roles)    ? ctxUser.roles[0]    : null)
     || (Array.isArray(storedUser?.roles) ? storedUser.roles[0] : null)
     || null
+
+  // ✅ School info from localStorage — set by switchSchool API
+  // { schoolId, schoolName, schoolCode }
+  const schoolInfo = (() => {
+    try { return JSON.parse(localStorage.getItem('school')) || null }
+    catch { return null }
+  })()
+
+  // ✅ School name: from switchSchool API response, fallback to hardcoded
+  const schoolDisplayName = schoolInfo?.schoolName || 'Delhi Public International School'
+  const schoolDisplayCode = schoolInfo?.schoolCode || ''
 
   const filteredMenuItems = menuItems
     .filter(item => item.roles.includes(userRole))
@@ -253,62 +135,51 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
   const onLogout = () => {
     localStorage.removeItem('token')
     localStorage.removeItem('user')
+    localStorage.removeItem('school')
     window.location.reload()
   }
 
-  /* Close profile dropdown on outside click */
   useEffect(() => {
     const handleOutsideClick = (e) => {
-      if (profileRef.current && !profileRef.current.contains(e.target)) {
+      if (profileRef.current && !profileRef.current.contains(e.target))
         setProfileOpen(false)
-      }
     }
     document.addEventListener('mousedown', handleOutsideClick)
     return () => document.removeEventListener('mousedown', handleOutsideClick)
   }, [])
 
-  /* Auto-open the accordion for whichever route is currently active */
   useEffect(() => {
     if (location.pathname === '/login') return
     const newDropdowns = {}
     filteredMenuItems.forEach(item => {
       if (item.subItems) {
-        const isSubActive = item.subItems.some(s => location.pathname.startsWith(s.route))
+        const isSubActive  = item.subItems.some(s => location.pathname.startsWith(s.route))
         const isMainActive = location.pathname === item.route
         if (isSubActive || isMainActive) newDropdowns[item.id] = true
       }
     })
     setOpenDropdowns(prev => {
       const merged = { ...prev, ...newDropdowns }
-      const same =
-        Object.keys(merged).length === Object.keys(prev).length &&
-        Object.keys(merged).every(k => prev[k] === merged[k])
+      const same   = Object.keys(merged).length === Object.keys(prev).length &&
+                     Object.keys(merged).every(k => prev[k] === merged[k])
       return same ? prev : merged
     })
   }, [location.pathname])
 
-  const toggleDropdown = (itemId) => {
-    setOpenDropdowns(prev => ({ ...prev, [itemId]: !prev[itemId] }))
+  const toggleDropdown     = (id)   => setOpenDropdowns(prev => ({ ...prev, [id]: !prev[id] }))
+  const handleLogoClick    = ()     => {
+    if (window.innerWidth >= 1024) setSidebarOpen(!sidebarOpen)
+    else setMobileSidebarOpen(false)
   }
-
-  const handleMenuClick = (item) => {
+  const handleMenuClick    = (item) => {
     navigate(item.route)
-    if (item.subItems && item.subItems.length > 0 && sidebarOpen) {
-      toggleDropdown(item.id)
-    }
+    if (item.subItems?.length > 0 && sidebarOpen) toggleDropdown(item.id)
     if (window.innerWidth < 1024) setMobileSidebarOpen(false)
   }
-
   const handleSubItemClick = (route) => {
     navigate(route)
     if (window.innerWidth < 1024) setMobileSidebarOpen(false)
   }
-
-  const handleLogoClick = () => {
-    if (window.innerWidth >= 1024) setSidebarOpen(!sidebarOpen)
-    else setMobileSidebarOpen(false)
-  }
-
   const isRouteActive = (item) =>
     location.pathname === item.route ||
     (item.subItems && item.subItems.some(s => location.pathname.startsWith(s.route)))
@@ -316,58 +187,57 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
   const displayName =
     user?.fullName ||
     [user?.firstName, user?.lastName].filter(Boolean).join(' ') ||
-    user?.name ||
-    user?.username ||
-    'User'
+    user?.name || user?.username || 'User'
 
-  const userPhone = user?.phone || user?.phoneNumber || null
+  const userPhone  = user?.phone || user?.phoneNumber || null
   const userStatus = user?.status
     ? user.status.charAt(0) + user.status.slice(1).toLowerCase()
     : 'Active'
-  const initials = displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+  const initials   = displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
   const badgeClass = roleBadgeStyles[userRole] || 'bg-gray-100 text-gray-600'
-
-  const formatRoleLabel = (role) => {
-    if (!role) return ''
-    return role
-      .split('_')
-      .map(word => word.charAt(0) + word.slice(1).toLowerCase())
-      .join(' ')
-  }
+  const formatRoleLabel = (role) => role
+    ? role.split('_').map(w => w.charAt(0) + w.slice(1).toLowerCase()).join(' ')
+    : ''
 
   return (
-    <div
-      className={`bg-[#F8FAFC] border-r border-gray-200 flex flex-col transition-all duration-300 h-full
-        ${sidebarOpen ? 'w-64' : 'w-20'}`}
+    <div className={`bg-[#F8FAFC] border-r border-gray-200 flex flex-col transition-all duration-300 h-full
+      ${sidebarOpen ? 'w-64' : 'w-20'}`}
     >
       {/* ── Logo ── */}
       <div className="p-5 border-b border-gray-200 shrink-0">
         <div className="flex items-center gap-3">
           <button onClick={handleLogoClick} className="shrink-0">
-            <img src={dpis} className="w-12 h-12 cursor-pointer rounded-lg" alt="DPIS Logo" />
+            <img
+              src={dpis}
+              className="w-12 h-12 cursor-pointer object-cover"
+              alt="School Logo"
+            />
           </button>
+
           {sidebarOpen && (
-            <div>
-              <h2 className="font-semibold text-gray-900 text-sm text-nowrap">
-                Delhi Public International <br /> School
+            <div className="min-w-0">
+              {/* ✅ Dynamic school name from switchSchool API */}
+              <h2 className="font-semibold text-gray-900 text-sm leading-tight">
+                {schoolDisplayName}
               </h2>
-              <p className="text-xs text-gray-500">Management System</p>
+              <p className="text-xs text-gray-500">
+                {schoolDisplayCode ? `${schoolDisplayCode} · ` : ''}Management System
+              </p>
             </div>
           )}
         </div>
       </div>
 
-      {/* ── Navigation — scrollable, scrollbar hidden ── */}
+      {/* ── Navigation ── */}
       <nav className="flex-1 p-2 overflow-y-auto sidebar-scroll">
         {filteredMenuItems.map((item) => {
-          const Icon = item.icon
-          const isActive = isRouteActive(item)
+          const Icon        = item.icon
+          const isActive    = isRouteActive(item)
           const hasSubItems = item.subItems && item.subItems.length > 0
-          const isOpen = openDropdowns[item.id]
+          const isOpen      = openDropdowns[item.id]
 
           return (
             <div key={item.id} className="mb-0.5">
-              {/* Parent row */}
               <button
                 onClick={() => handleMenuClick(item)}
                 title={!sidebarOpen ? item.label : ''}
@@ -375,26 +245,21 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
                   transition-all duration-200 select-none
                   ${isActive
                     ? 'bg-blue-600 text-white'
-                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                  }
+                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'}
                   ${!sidebarOpen ? 'justify-center' : 'justify-between'}`}
               >
                 <div className="flex items-center gap-3 min-w-0">
                   <Icon className="w-5 h-5 shrink-0" />
-                  {sidebarOpen && (
-                    <span className="font-medium text-sm truncate">{item.label}</span>
-                  )}
+                  {sidebarOpen && <span className="font-medium text-sm truncate">{item.label}</span>}
                 </div>
                 {sidebarOpen && hasSubItems && (
-                  <ChevronDown
-                    className={`w-4 h-4 shrink-0 transition-transform duration-300
-                      ${isActive ? 'text-blue-100' : 'text-gray-400'}
-                      ${isOpen ? 'rotate-180' : 'rotate-0'}`}
+                  <ChevronDown className={`w-4 h-4 shrink-0 transition-transform duration-300
+                    ${isActive ? 'text-blue-100' : 'text-gray-400'}
+                    ${isOpen ? 'rotate-180' : 'rotate-0'}`}
                   />
                 )}
               </button>
 
-              {/* ── Inline accordion sub-items ── */}
               {sidebarOpen && hasSubItems && (
                 <div
                   style={{ maxHeight: isOpen ? `${item.subItems.length * 48}px` : '0px' }}
@@ -411,12 +276,10 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
                             text-sm transition-all duration-150 text-left
                             ${isSubActive
                               ? 'bg-blue-50 text-blue-600 font-semibold'
-                              : 'text-gray-500 hover:bg-gray-100 hover:text-gray-800'
-                            }`}
+                              : 'text-gray-500 hover:bg-gray-100 hover:text-gray-800'}`}
                         >
-                          <span
-                            className={`w-1.5 h-1.5 rounded-full shrink-0 transition-all duration-200
-                              ${isSubActive ? 'bg-blue-500' : 'bg-gray-300'}`}
+                          <span className={`w-1.5 h-1.5 rounded-full shrink-0 transition-all duration-200
+                            ${isSubActive ? 'bg-blue-500' : 'bg-gray-300'}`}
                           />
                           <span className="truncate">{subItem.label}</span>
                         </button>
@@ -433,7 +296,6 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
       {/* ── Profile Section ── */}
       <div className="p-3 border-t border-gray-200 shrink-0" ref={profileRef}>
         <div className="relative">
-          {/* Trigger button */}
           <button
             onClick={() => setProfileOpen(prev => !prev)}
             className={`w-full flex items-center cursor-pointer gap-3 px-3 py-2.5 rounded-xl
@@ -454,15 +316,13 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
                     {formatRoleLabel(userRole)}
                   </p>
                 </div>
-                <ChevronUp
-                  className={`w-4 h-4 text-gray-400 transition-transform duration-200 shrink-0
-                    ${profileOpen ? 'rotate-0' : 'rotate-180'}`}
+                <ChevronUp className={`w-4 h-4 text-gray-400 transition-transform duration-200 shrink-0
+                  ${profileOpen ? 'rotate-0' : 'rotate-180'}`}
                 />
               </>
             )}
           </button>
 
-          {/* Dropdown panel — opens upward */}
           {profileOpen && (
             <div
               className={`absolute bottom-full mb-2 bg-white rounded-2xl shadow-xl border border-gray-100
@@ -495,9 +355,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
                   </div>
                   <div className="min-w-0">
                     <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wide">Email</p>
-                    <p className="text-xs text-gray-700 font-medium truncate">
-                      {user?.email || 'Not provided'}
-                    </p>
+                    <p className="text-xs text-gray-700 font-medium truncate">{user?.email || 'Not provided'}</p>
                   </div>
                 </div>
 
@@ -507,9 +365,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
                   </div>
                   <div className="min-w-0">
                     <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wide">Phone</p>
-                    <p className="text-xs text-gray-700 font-medium">
-                      {userPhone || 'Not provided'}
-                    </p>
+                    <p className="text-xs text-gray-700 font-medium">{userPhone || 'Not provided'}</p>
                   </div>
                 </div>
 
@@ -534,8 +390,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
                     bg-red-50 hover:bg-red-100 text-red-600 font-semibold text-sm
                     transition-colors duration-150 border border-red-100 hover:border-red-200"
                 >
-                  <LogOut className="w-4 h-4" />
-                  Sign Out
+                  <LogOut className="w-4 h-4" /> Sign Out
                 </button>
               </div>
             </div>

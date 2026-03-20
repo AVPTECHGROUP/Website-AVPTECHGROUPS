@@ -32,6 +32,7 @@ import EditSysUser from '../Pages/SuperAdmin/EditSysUser';
 import ManageAllUsers from '../Pages/SuperAdmin/ManageAllUsers';
 import ApplyLeaves from '../Pages/Leaves/ApplyLeaves';
 import MyLeaves from '../Pages/Leaves/MyLeaves';
+import SuperAdminSchools from '../Pages/SuperAdmin/SuperAdminSchools'; // ✅ school picker
 
 // Students
 import Student from '../Pages/Students/Students';
@@ -83,17 +84,30 @@ const MainRoutes = () => {
 
   return (
     <Routes>
-      {/* PUBLIC ROUTE */}
-      <Route
-        path="/login"
-        element={isTokenExist ? <RootRedirect /> : <Login />}
-      />
+      {/* PUBLIC */}
+      <Route path="/login" element={isTokenExist ? <RootRedirect /> : <Login />} />
 
-      {/* PROTECTED ROUTES */}
+      {/* PROTECTED */}
       <Route element={<ProtectedRoutes />}>
+
+        {/* ✅ SUPER_ADMIN school picker — NO AppLayout, NO Sidebar
+            This route is intentionally OUTSIDE <AppLayout> so the sidebar
+            never appears on the school selection screen.
+            AppLayout itself also guards: if SUPER_ADMIN + no schoolId in token
+            it redirects back here automatically. */}
+        <Route
+          path="/superAdmin"
+          element={
+            <RoleProtectedRoute allowedRoles={['SUPER_ADMIN', 'ADMIN']}>
+              <SuperAdminSchools />
+            </RoleProtectedRoute>
+          }
+        />
+
+        {/* All other routes — wrapped in AppLayout (has Sidebar) */}
         <Route element={<AppLayout />}>
 
-          {/* ── Dashboard — STORE_SELLER blocked, redirected to studentOrders ── */}
+          {/* Dashboard */}
           <Route
             path="/dashboard"
             element={
@@ -106,77 +120,76 @@ const MainRoutes = () => {
             }
           />
 
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/leaves/applyLeaves" element={<ApplyLeaves />} />
-          <Route path="/leaves/myLeaves" element={<MyLeaves />} />
+          <Route path="/settings"                    element={<Settings />} />
+          <Route path="/leaves/applyLeaves"          element={<ApplyLeaves />} />
+          <Route path="/leaves/myLeaves"             element={<MyLeaves />} />
           <Route path="/attendance/markUserAttendance" element={<MarkUserAttendance />} />
 
-          {/* ── User Management — ADMIN & SUPER_ADMIN only ─────────────────── */}
+          {/* ADMIN & SUPER_ADMIN */}
           <Route element={<RoleProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN']} />}>
-            <Route path="/dashboard/addUser" element={<AddnewSystemUser />} />
-            <Route path="/dashboard/editUser/:id" element={<EditSysUser />} />
-            <Route path="/dashboard/manageUsers" element={<ManageAllUsers />} />
+            <Route path="/dashboard/addUser"             element={<AddnewSystemUser />} />
+            <Route path="/dashboard/editUser/:id"        element={<EditSysUser />} />
+            <Route path="/dashboard/manageUsers"         element={<ManageAllUsers />} />
 
-            <Route path="/attendance" element={<Attendance />} />
-            <Route path="/attendance/attendanceImgReg" element={<AttendanceImgReg />} />
-            <Route path="/attendance/usersAttendance" element={<UsersAttendance />} />
+            <Route path="/attendance"                    element={<Attendance />} />
+            <Route path="/attendance/attendanceImgReg"   element={<AttendanceImgReg />} />
+            <Route path="/attendance/usersAttendance"    element={<UsersAttendance />} />
             <Route path="/attendance/usersAttendance/warning" element={<WarningVerificationFailed />} />
-            <Route path="/attendance/usersAttendance/manual" element={<ManualAttendance />} />
+            <Route path="/attendance/usersAttendance/manual"  element={<ManualAttendance />} />
 
-            <Route path="/teachers" element={<Teachers />} />
-            <Route path="/teachers/addTeacher" element={<AddNewTeacher />} />
-            <Route path="/teachers/editTeacher/:id" element={<EditTeachersDetails />} />
+            <Route path="/teachers"                      element={<Teachers />} />
+            <Route path="/teachers/addTeacher"           element={<AddNewTeacher />} />
+            <Route path="/teachers/editTeacher/:id"      element={<EditTeachersDetails />} />
             <Route path="/teachers/classAssignment/:teacherId" element={<ClassAssignment />} />
-            <Route path="/teachers/:id" element={<DetailsView />} />
+            <Route path="/teachers/:id"                  element={<DetailsView />} />
 
-            <Route path="/students" element={<Student />} />
-            <Route path="/students/addStudents" element={<AddNewStudent />} />
-            <Route path="/students/:id" element={<StudentDetails />} />
-            <Route path="/students/editStudent/:id" element={<EditStudentDetails />} />
+            <Route path="/students"                      element={<Student />} />
+            <Route path="/students/addStudents"          element={<AddNewStudent />} />
+            <Route path="/students/:id"                  element={<StudentDetails />} />
+            <Route path="/students/editStudent/:id"      element={<EditStudentDetails />} />
 
-            <Route path="/leaves" element={<Leaves />} />
-            <Route path="/leaves/manageHolidays" element={<HolidayManagment />} />
+            <Route path="/leaves"                        element={<Leaves />} />
+            <Route path="/leaves/manageHolidays"         element={<HolidayManagment />} />
           </Route>
 
-          {/* ── Payroll ─────────────────────────────────────────────────────── */}
+          {/* Payroll */}
           <Route element={<RoleProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'ACCOUNTANT']} />}>
             <Route path="/payroll" element={<Payroll />} />
           </Route>
 
-          {/* ── Stock Dashboard — STORE_SELLER excluded ──────────────────────*/}
+          {/* Stock */}
           <Route element={<RoleProtectedRoute allowedRoles={STOCK_ACCOUNTANT_ROLES} />}>
-            <Route path="/stock" element={<Stock />} />
-            <Route path="/stock/stores" element={<Store />} />
-            <Route path="/stock/items" element={<Items />} />
-            <Route path="/stock/classConfig" element={<ClassConfig />} />
-            <Route path="/stock/transactions" element={<Transactions />} />
-            <Route path="/stock/movementHistory" element={<Movement />} />
+            <Route path="/stock"                   element={<Stock />} />
+            <Route path="/stock/stores"            element={<Store />} />
+            <Route path="/stock/items"             element={<Items />} />
+            <Route path="/stock/classConfig"       element={<ClassConfig />} />
+            <Route path="/stock/transactions"      element={<Transactions />} />
+            <Route path="/stock/movementHistory"   element={<Movement />} />
           </Route>
 
-          {/* ── Student Orders — STORE_SELLER allowed ────────────────────────*/}
           <Route element={<RoleProtectedRoute allowedRoles={STOCK_SELLER_ROLES} />}>
-            <Route path="/stock/studentOrders" element={<StudentOrders />} />
-            <Route path="/stock/studentOrders/addOrder" element={<CreateStudentOrder />} />
+            <Route path="/stock/studentOrders"           element={<StudentOrders />} />
+            <Route path="/stock/studentOrders/addOrder"  element={<CreateStudentOrder />} />
             <Route path="/stock/studentOrders/editOrder" element={<EditStudentOrder />} />
           </Route>
 
-          {/* ── Transport — ADMIN & SUPER_ADMIN only ────────────────────────── */}
+          {/* Transport */}
           <Route element={<RoleProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN']} />}>
-            <Route path="/route" element={<Transport_Management />} />
-            <Route path="/route/vehicles" element={<Vehicles />} />
-            <Route path="/route/Driver&Attendants" element={<Driver_Attendants />} />
-            <Route path="/route/routes_management" element={<Routes_Manage />} />
-            <Route path="/route/studentAllocations" element={<Student_Allocations />} />
-            <Route path="/route/feePlans" element={<Fee_Plans />} />
-            <Route path="/route/reports" element={<Reports />} />
+            <Route path="/route"                        element={<Transport_Management />} />
+            <Route path="/route/vehicles"               element={<Vehicles />} />
+            <Route path="/route/Driver&Attendants"      element={<Driver_Attendants />} />
+            <Route path="/route/routes_management"      element={<Routes_Manage />} />
+            <Route path="/route/studentAllocations"     element={<Student_Allocations />} />
+            <Route path="/route/feePlans"               element={<Fee_Plans />} />
+            <Route path="/route/reports"                element={<Reports />} />
           </Route>
 
-          {/* ── Leaves redirect for non-admin roles ─────────────────────────── */}
+          {/* Leaves redirect for non-admin */}
           <Route element={<RoleProtectedRoute allowedRoles={['TEACHER', 'PRINCIPAL', 'RECEPTIONIST', 'ACCOUNTANT']} />}>
             <Route path="/leaves" element={<Navigate to="/leaves/myLeaves" replace />} />
           </Route>
 
-          {/* ── Fallback — role-aware redirect ───────────────────────────────── */}
+          {/* Fallback */}
           <Route path="*" element={<RootRedirect />} />
 
         </Route>
