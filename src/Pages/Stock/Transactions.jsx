@@ -812,10 +812,6 @@ export default function Transactions() {
                         </table>
                     </div>
 
-                    {/* ── Pagination (shared across all screen sizes) ──────────────────
-                        On mobile it's full width stacked
-                        On md+ it's a flex row
-                    ─────────────────────────────────────────────────────────────── */}
                     <div className="border-t border-gray-200 px-3 sm:px-4 md:px-5 xl:px-6 py-3 md:py-4">
                         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
 
