@@ -95,7 +95,8 @@ const AddStudentFamilyDetails = ({ formData, setFormData, handleInputChange, err
                     </div>
                     <div>
                         <label className='block font-semibold text-gray-600 text-sm mb-2'>
-                            Mother's Occupation<span className="text-red-500 ml-1">*</span>
+                            Mother's Occupation
+                            <span className="text-gray-400 text-xs font-normal ml-2">(optional)</span>
                         </label>
                         <input type="text" name="motherOccupation" value={formData.motherOccupation} onChange={handleInputChange}
                             placeholder="Enter mother's occupation" className={inputClass('motherOccupation')} />
@@ -103,7 +104,8 @@ const AddStudentFamilyDetails = ({ formData, setFormData, handleInputChange, err
                     </div>
                     <div>
                         <label className='block font-semibold text-gray-600 text-sm mb-2'>
-                            Mother's Phone<span className="text-red-500 ml-1">*</span>
+                            Mother's Phone
+                            <span className="text-gray-400 text-xs font-normal ml-2">(optional)</span>
                         </label>
                         <input type="tel" name="motherPhone" value={formData.motherPhone} onChange={handleInputChange}
                             placeholder='10 digit phone number' maxLength={10} className={inputClass('motherPhone')} />
@@ -158,7 +160,8 @@ const AddStudentFamilyDetails = ({ formData, setFormData, handleInputChange, err
                 <div className="grid lg:grid-cols-2 sm:grid-cols-1 gap-4">
                     <div>
                         <label className='block font-semibold text-gray-600 text-sm mb-2'>
-                            Guardian's Name<span className="text-red-500 ml-1">*</span>
+                            Guardian's Name
+                            <span className="text-gray-400 text-xs font-normal ml-2">(optional)</span>
                         </label>
                         <input
                             type="text" name="guardianName" value={formData.guardianName}
@@ -170,7 +173,8 @@ const AddStudentFamilyDetails = ({ formData, setFormData, handleInputChange, err
                     </div>
                     <div>
                         <label className='block font-semibold text-gray-600 text-sm mb-2'>
-                            Relation to Student<span className="text-red-500 ml-1">*</span>
+                            Relation to Student
+                            <span className="text-gray-400 text-xs font-normal ml-2">(optional)</span>
                         </label>
                         {guardianSource ? (
                             <input
@@ -195,7 +199,8 @@ const AddStudentFamilyDetails = ({ formData, setFormData, handleInputChange, err
                     </div>
                     <div>
                         <label className='block font-semibold text-gray-600 text-sm mb-2'>
-                            Guardian's Phone<span className="text-red-500 ml-1">*</span>
+                            Guardian's Phone
+                            <span className="text-gray-400 text-xs font-normal ml-2">(optional)</span>
                         </label>
                         <input
                             type="tel" name="guardianPhone" value={formData.guardianPhone}
@@ -221,7 +226,8 @@ const AddStudentFamilyDetails = ({ formData, setFormData, handleInputChange, err
                     </div>
                     <div>
                         <label className='block font-semibold text-gray-600 text-sm mb-2'>
-                            Emergency Contact Number<span className="text-red-500 ml-1">*</span>
+                            Emergency Contact Number
+                            <span className="text-gray-400 text-xs font-normal ml-2">(optional)</span>
                         </label>
                         <input type="tel" name="emergencyContact" value={formData.emergencyContact} onChange={handleInputChange}
                             placeholder='10 digit emergency contact' maxLength={10} className={inputClass('emergencyContact')} />
