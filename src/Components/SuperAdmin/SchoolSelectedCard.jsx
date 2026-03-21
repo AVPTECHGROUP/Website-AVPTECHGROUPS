@@ -14,11 +14,15 @@ export default function SchoolSelectedCard({ school, onClose }) {
         setLoading(true);
         setError(null);
         try {
-            // 1. Call switch-school API
             const result = await switchSchool(school.id);
-
-            // 2. Update token in UserContext (triggers Sidebar re-render)
             saveToken(result.token);
+
+            localStorage.setItem('school', JSON.stringify({
+                schoolId: school.id,
+                schoolName: school.name,
+                schoolCode: school.code,
+                logoUrl: school.logoUrl || null,
+            }));
 
             navigate("/dashboard", { replace: true });
 

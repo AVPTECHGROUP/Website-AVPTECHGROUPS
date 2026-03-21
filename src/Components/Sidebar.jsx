@@ -117,6 +117,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
 
   const schoolDisplayName = schoolInfo?.schoolName || 'Delhi Public International School'
   const schoolDisplayCode = schoolInfo?.schoolCode || ''
+  const schoolLogoUrl = schoolInfo?.logoUrl || dpis
 
   // ✅ Switch School — works for both SUPER_ADMIN and GLOBAL_ADMIN
   const handleSwitchSchool = () => {
@@ -217,9 +218,10 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
         <div className="flex items-center gap-3">
           <button onClick={handleLogoClick} className="shrink-0">
             <img
-              src={dpis}
-              className="w-12 h-12 cursor-pointer object-cover"
+              src={schoolLogoUrl}
+              className="w-12 h-12 cursor-pointer object-contain rounded-lg bg-white border border-gray-100"
               alt="School Logo"
+              onError={(e) => { e.currentTarget.src = dpis }}
             />
           </button>
 
