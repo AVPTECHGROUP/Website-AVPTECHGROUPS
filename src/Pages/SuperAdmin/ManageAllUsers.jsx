@@ -100,15 +100,32 @@ const ManageAllUsers = () => {
                 set_noUserFound(false);
                 const filters = {};
                 if (debouncedSearch.trim()) filters.searchTerm = debouncedSearch.trim();
-                if (statusFilter !== 'All Status') filters.status = statusFilter.toUpperCase();
+
+                // ── FIX: Always send status filter explicitly, never omit it ──
+                if (statusFilter !== 'All Status') {
+                    filters.status = statusFilter.toUpperCase();
+                }
+
                 if (roleFilter !== 'All Roles') filters.role = roleFilter;
+
                 const res = await allUserFilter(filters, page - 1, rowsPerpage, sorting);
-                const sys_userArray = res.data || [];
+                let sys_userArray = res.data || [];
+
+                // ── FIX: Client-side guard — enforce status filter on returned data ──
+                // This prevents the backend from leaking wrong-status users when
+                // both a search term and a status filter are active simultaneously.
+                if (statusFilter !== 'All Status') {
+                    sys_userArray = sys_userArray.filter(
+                        u => u.status?.toUpperCase() === statusFilter.toUpperCase()
+                    );
+                }
+
                 if (sys_userArray.length === 0) {
                     set_noUserFound(true);
                 } else {
                     set_noUserFound(false);
                 }
+
                 setsysUsers(sys_userArray.map((sys_user) => ({
                     id: sys_user.id,
                     email: sys_user.email,
@@ -122,6 +139,7 @@ const ManageAllUsers = () => {
                     designation: sys_user.designation,
                     status: sys_user.status,
                 })));
+
                 setTotalElements(res.pagination?.totalElements || 0);
                 setTotalPages(res.pagination?.totalPages || 0);
             } catch (err) {
@@ -154,13 +172,27 @@ const ManageAllUsers = () => {
             setRefressStat(prev => prev + 1);
             toast.success(`${messageStatus.message} : ${name}`);
             const newStatus = isStatus === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
-            setsysUsers(prev => prev.map(u => u.id === id ? { ...u, status: newStatus } : u));
+            setsysUsers(prev => {
+                // ── FIX: If a status filter is active, remove the toggled user from
+                // the list immediately since it no longer matches the filter. ──
+                if (statusFilter !== 'All Status') {
+                    return prev.filter(u => u.id !== id);
+                }
+                return prev.map(u => u.id === id ? { ...u, status: newStatus } : u);
+            });
+            // If removing the user empties the list, show "no users found"
+            if (statusFilter !== 'All Status') {
+                set_noUserFound(prev => {
+                    const remaining = sysUsers.filter(u => u.id !== id);
+                    return remaining.length === 0;
+                });
+            }
         } catch (error) {
             toast.error(error.message || 'Status update failed');
         }
     };
 
-    // ── Smart Pagination (matches Student.jsx) ────────────────────────────────
+    // ── Smart Pagination ────────────────────────────────────────────────────
     const renderPageButtons = () => {
         if (totalPages <= 1) return null;
         const base = 'min-w-[32px] h-8 px-2 rounded text-sm transition-all font-medium';
@@ -209,7 +241,7 @@ const ManageAllUsers = () => {
             <ChevronRight className="w-4 h-4" />
         </button>
     );
-    // ─────────────────────────────────────────────────────────────────────────
+    // ────────────────────────────────────────────────────────────────────────
 
     const cardsArray = [
         { IconName: UsersIcon, keyName: "Total Users", val: statistics.totalUsers, iconTxColor: "text-blue-600", iconBgColor: "bg-blue-50" },
@@ -226,7 +258,9 @@ const ManageAllUsers = () => {
     ];
 
     const filteredOptions = actionOptions.filter(option =>
-        user.userType === 'SUPER_ADMIN' ? true : option.value !== "resetPassword"
+        (user.userType === 'SUPER_ADMIN' || user.userType === 'GLOBAL_ADMIN')
+            ? true
+            : option.value !== "resetPassword"
     );
 
     const callAllActions = async (optVal, user) => {
