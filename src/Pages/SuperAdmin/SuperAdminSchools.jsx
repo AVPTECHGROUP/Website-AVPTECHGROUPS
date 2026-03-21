@@ -5,7 +5,6 @@ import {
   CheckCircle, LogOut, ArrowRight, GraduationCap,
   School, TrendingUp, AlertTriangle, ServerCrash,
 } from "lucide-react";
-import CardLoader from "../../Components/CommonComp/CardLoader";
 import SchoolSelectedCard from "../../Components/SuperAdmin/SchoolSelectedCard";
 import { getMySchools, getMySchoolStats } from "../../Api/Schools";
 import dpis from "../../assets/Images/dpis.jpg";
@@ -292,8 +291,8 @@ export default function SuperAdminSchools() {
     try {
       const isActive =
         statusFilter === "ACTIVE" ? true :
-        statusFilter === "INACTIVE" ? false :
-        undefined;
+          statusFilter === "INACTIVE" ? false :
+            undefined;
 
       const res = await getMySchools(page, PAGE_SIZE, search, boardFilter, isActive);
 
@@ -393,8 +392,8 @@ export default function SuperAdminSchools() {
             {statsLoading
               ? Array.from({ length: 6 }).map((_, i) => <StatCardSkeleton key={i} />)
               : statsData.map((s) => (
-                  <StatCard key={s.keyName} {...s} />
-                ))}
+                <StatCard key={s.keyName} {...s} />
+              ))}
           </div>
 
           {/* ── Search + Filters ── */}
@@ -459,99 +458,100 @@ export default function SuperAdminSchools() {
               ? Array.from({ length: 8 }).map((_, i) => <SchoolCardSkeleton key={i} />)
               : schools.length === 0
                 ? (
-                    <div className="col-span-full flex flex-col items-center justify-center py-12 sm:py-16 text-gray-400 gap-3">
-                      <School size={36} className="text-gray-300 sm:w-10 sm:h-10" />
-                      <p className="font-semibold text-gray-500 text-sm sm:text-base">No schools found</p>
-                      <p className="text-xs sm:text-sm text-center px-4">Try adjusting your search or filters</p>
-                    </div>
-                  )
+                  <div className="col-span-full flex flex-col items-center justify-center py-12 sm:py-16 text-gray-400 gap-3">
+                    <School size={36} className="text-gray-300 sm:w-10 sm:h-10" />
+                    <p className="font-semibold text-gray-500 text-sm sm:text-base">No schools found</p>
+                    <p className="text-xs sm:text-sm text-center px-4">Try adjusting your search or filters</p>
+                  </div>
+                )
                 : schools.map((school, idx) => {
-                    const accent = borderAccents[idx % borderAccents.length];
-                    const isSelected = selectedId === school.id;
-                    const badge = getStatusBadge(school);
-                    return (
-                      <div
-                        key={school.id}
-                        onClick={() => setSelectedId(school.id)}
-                        className={`relative bg-white rounded-2xl border-t-4 cursor-pointer group transition-all duration-200 overflow-hidden
+                  const accent = borderAccents[idx % borderAccents.length];
+                  const isSelected = selectedId === school.id;
+                  const badge = getStatusBadge(school);
+                  return (
+                    <div
+                      key={school.id}
+                      onClick={() => setSelectedId(school.id)}
+                      className={`relative bg-white rounded-2xl border-t-4 cursor-pointer group transition-all duration-200 overflow-hidden
                           ${accent}
                           ${isSelected
-                            ? "border border-blue-300 shadow-xl shadow-blue-100 ring-2 ring-blue-200 scale-[1.02]"
-                            : "border border-gray-200 shadow-sm hover:shadow-xl hover:-translate-y-1 hover:border-gray-300"
-                          }`}
-                      >
-                        <div className="p-4 sm:p-5">
+                          ? "border border-blue-300 shadow-xl shadow-blue-100 ring-2 ring-blue-200 scale-[1.02]"
+                          : "border border-gray-200 shadow-sm hover:shadow-xl hover:-translate-y-1 hover:border-gray-300"
+                        }`}
+                    >
+                      <div className="p-4 sm:p-5">
 
-                          {/* Status badge */}
-                          <div className="absolute top-3 right-3 sm:top-4 sm:right-4">
-                            <span className={`flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border ${badge.cls}`}>
-                              <span className={`w-1.5 h-1.5 rounded-full ${badge.dot} ${badge.dot === "bg-emerald-500" ? "animate-pulse" : ""}`} />
-                              {badge.label}
-                            </span>
-                          </div>
-
-                          {/* School logo */}
-                          <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 transition-transform duration-200 group-hover:scale-105 drop-shadow-md">
-                            <img
-                              src={dpis}
-                              alt={school.name}
-                              className="w-full h-full object-cover border-2 border-gray-100 shadow"
-                            />
-                          </div>
-
-                          {/* Name */}
-                          <h3 className="font-bold text-xs sm:text-sm text-gray-900 leading-tight mb-1.5 text-center line-clamp-2">
-                            {school.name}
-                          </h3>
-
-                          {/* Code + Board */}
-                          <div className="flex items-center justify-center gap-2 mb-3 sm:mb-4 flex-wrap">
-                            <span className="text-[10px] text-gray-400 font-mono bg-gray-50 border border-gray-200 px-1.5 py-0.5 rounded">
-                              {school.code}
-                            </span>
-                            {school.board && (
-                              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-lg ${boardBadge(school.board)}`}>
-                                {school.board}
-                              </span>
-                            )}
-                          </div>
-
-                          <div className="border-t border-gray-100 mb-2.5 sm:mb-3" />
-
-                          {/* Details */}
-                          <div className="space-y-1 sm:space-y-1.5 text-xs text-gray-500 mb-3 sm:mb-4">
-                            {(school.city || school.state) && (
-                              <div className="flex items-center gap-1.5 min-w-0">
-                                <MapPin size={11} className="text-gray-400 shrink-0" />
-                                <span className="truncate">{[school.city, school.state].filter(Boolean).join(", ")}</span>
-                              </div>
-                            )}
-                            {school.establishedYear && (
-                              <div className="flex items-center gap-1.5">
-                                <School size={11} className="text-gray-400 shrink-0" />
-                                Est. {school.establishedYear}
-                              </div>
-                            )}
-                            {school.phone && (
-                              <div className="flex items-center gap-1.5 min-w-0">
-                                <Users size={11} className="text-gray-400 shrink-0" />
-                                <span className="truncate">{school.phone}</span>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* CTA */}
-                          <button
-                            onClick={(e) => { e.stopPropagation(); setModalSchool(school); }}
-                            className="w-full flex items-center justify-center gap-2 py-2 sm:py-2.5 rounded-xl bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 active:scale-95 cursor-pointer transition-all duration-200 touch-manipulation"
-                          >
-                            Enter School <ArrowRight size={13} />
-                          </button>
-
+                        {/* Status badge */}
+                        <div className="absolute top-3 right-3 sm:top-4 sm:right-4">
+                          <span className={`flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border ${badge.cls}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${badge.dot} ${badge.dot === "bg-emerald-500" ? "animate-pulse" : ""}`} />
+                            {badge.label}
+                          </span>
                         </div>
+
+                        {/* School logo */}
+                        <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 transition-transform duration-200 group-hover:scale-105 drop-shadow-md">
+                          <img
+                            src={school.logoUrl || dpis}
+                            alt={school.name}
+                            className="w-full h-full object-contain p-1 bg-white border-2 border-gray-100 shadow rounded"
+                            onError={(e) => { e.currentTarget.src = dpis; }}
+                          />
+                        </div>
+
+                        {/* Name */}
+                        <h3 className="font-bold text-xs sm:text-sm text-gray-900 leading-tight mb-1.5 text-center line-clamp-2">
+                          {school.name}
+                        </h3>
+
+                        {/* Code + Board */}
+                        <div className="flex items-center justify-center gap-2 mb-3 sm:mb-4 flex-wrap">
+                          <span className="text-[10px] text-gray-400 font-mono bg-gray-50 border border-gray-200 px-1.5 py-0.5 rounded">
+                            {school.code}
+                          </span>
+                          {school.board && (
+                            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-lg ${boardBadge(school.board)}`}>
+                              {school.board}
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="border-t border-gray-100 mb-2.5 sm:mb-3" />
+
+                        {/* Details */}
+                        <div className="space-y-1 sm:space-y-1.5 text-xs text-gray-500 mb-3 sm:mb-4">
+                          {(school.city || school.state) && (
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <MapPin size={11} className="text-gray-400 shrink-0" />
+                              <span className="truncate">{[school.city, school.state].filter(Boolean).join(", ")}</span>
+                            </div>
+                          )}
+                          {school.establishedYear && (
+                            <div className="flex items-center gap-1.5">
+                              <School size={11} className="text-gray-400 shrink-0" />
+                              Est. {school.establishedYear}
+                            </div>
+                          )}
+                          {school.phone && (
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <Users size={11} className="text-gray-400 shrink-0" />
+                              <span className="truncate">{school.phone}</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* CTA */}
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setModalSchool(school); }}
+                          className="w-full flex items-center justify-center gap-2 py-2 sm:py-2.5 rounded-xl bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 active:scale-95 cursor-pointer transition-all duration-200 touch-manipulation"
+                        >
+                          Enter School <ArrowRight size={13} />
+                        </button>
+
                       </div>
-                    );
-                  })}
+                    </div>
+                  );
+                })}
           </div>
 
           {/* ── Pagination ── */}
