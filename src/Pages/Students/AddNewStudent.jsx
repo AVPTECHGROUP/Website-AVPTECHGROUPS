@@ -13,7 +13,7 @@ function AddNewStudent() {
     const [familyErrors, setFamilyErrors] = useState({});
     const [sections, setSections] = useState([]);
     const [sectionsLoading, setSectionsLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState('family');
+    const [activeTab, setActiveTab] = useState('personal');
     const [guardianSource, setGuardianSource] = useState(null);
 
     const [formData, setFormData] = useState({
