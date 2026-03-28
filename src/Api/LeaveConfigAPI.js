@@ -5,9 +5,13 @@ const BASE_URL = `${import.meta.env.VITE_API_BASE}/leave/config`;
 // ==================== LEAVE CONFIG ENDPOINTS ====================
 
 // 1. Get all leave configurations
-export const getAllLeaveConfigs = async () => {
+// isActive: undefined = all | true = active only | false = inactive only
+export const getAllLeaveConfigs = async (isActive) => {
   try {
-    const res = await authFetch(BASE_URL, { method: "GET" });
+    const params = new URLSearchParams();
+    if (isActive !== undefined) params.append('isActive', isActive);
+    const url = params.toString() ? `${BASE_URL}?${params.toString()}` : BASE_URL;
+    const res = await authFetch(url, { method: "GET" });
     if (!res.ok) {
       const errorText = await res.text();
       throw new Error(errorText || "Failed to fetch leave configurations");
