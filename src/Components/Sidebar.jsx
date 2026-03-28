@@ -45,6 +45,7 @@ const menuItems = [
       { label: 'Apply Leave', route: '/leaves/applyLeaves', roles: ['ADMIN', 'TEACHER', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST'] },
       { label: 'My Leaves', route: '/leaves/myLeaves', roles: ['ADMIN', 'TEACHER', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST'] },
       { label: 'Holiday Management', route: '/leaves/manageHolidays', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'] },
+      { label: 'Leave Config', route: '/leaves/leaveConfig', roles: ['GLOBAL_ADMIN', 'SUPER_ADMIN', 'PRINCIPAL'] },
     ]
   },
   {
