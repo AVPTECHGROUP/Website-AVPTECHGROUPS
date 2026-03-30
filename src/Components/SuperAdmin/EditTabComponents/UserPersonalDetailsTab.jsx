@@ -5,10 +5,10 @@ const UserPersonalDetailsTab = ({ formData, setFormData, handleInputChange }) =>
     const [enabled, setEnabled] = useState(formData.accountStatus);
     // Update parent formData when toggle changes
     const handleToggle = () => {
-       setFormData(prev => ({
-        ...prev,
-        accountStatus: !prev.accountStatus
-    }));
+        setFormData(prev => ({
+            ...prev,
+            accountStatus: !prev.accountStatus
+        }));
     };
 
     useEffect(() => {
@@ -25,7 +25,7 @@ const UserPersonalDetailsTab = ({ formData, setFormData, handleInputChange }) =>
                 const rolesRes = await getAllUserRoles();
                 const fetchedRoles = rolesRes.data || [];
                 roleOpt = fetchedRoles
-                    .filter(val => val.name !== 'SUPER_ADMIN' && val.name !== 'TEACHER')
+                    .filter(val => val.name !== 'SUPER_ADMIN' && val.name !== 'TEACHER' && val.name !== 'GLOBAL_ADMIN')
                     .map(val => ({
                         key: val.id,
                         value: val.name,

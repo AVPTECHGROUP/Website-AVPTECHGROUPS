@@ -1,70 +1,46 @@
 import { authFetch } from "../Authfetch/Authfetch";
+import { getCurrUserDetails } from "../utils/getCurrUserDetails";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_V1;
 
 // ==================== TEACHER ENDPOINTS ====================
 
-// List all statistics
 export const getTeacherStatistics = async () => {
   try {
-    const res = await authFetch(`${BASE_URL}/teachers/statistics`, {
-      method: "GET",
-    });
-    if (!res.ok) {
-      const errorText = await res.text();
-      throw new Error(errorText || "Failed to fetch statistics");
-    }
-    const data = await res.json();
-    return data;
+    const res = await authFetch(`${BASE_URL}/teachers/statistics`, { method: "GET" });
+    if (!res.ok) throw new Error((await res.text()) || "Failed to fetch statistics");
+    return await res.json();
   } catch (error) {
     console.error("get statistics error:", error.message);
     throw error;
   }
-}
+};
 
-// List All Teacher with pagination
 export const getTeachers = async (page = 0, size = 10, sort = 'id') => {
   try {
     const res = await authFetch(
       `${BASE_URL}/teachers/paginated?page=${page}&size=${size}&sort=${sort}`,
       { method: "GET" }
     );
-    if (!res.ok) {
-      const errorText = await res.text();
-      throw new Error(errorText || "Failed to fetch teachers");
-    }
-    const data = await res.json();
-    return data;
+    if (!res.ok) throw new Error((await res.text()) || "Failed to fetch teachers");
+    return await res.json();
   } catch (error) {
     console.error("getTeachers error:", error.message);
     throw error;
   }
 };
 
-// Creating a Teacher
 export const createTeachers = async (teacher) => {
-  const res = await authFetch(`${BASE_URL}/teachers`, {
-    method: "POST",
-    body: JSON.stringify(teacher),
-  });
-
+  const res  = await authFetch(`${BASE_URL}/teachers`, { method: "POST", body: JSON.stringify(teacher) });
   const text = await res.text();
-   const data = text ? JSON.parse(text) : {};
-  console.log("CREATE TEACHER RESPONSE:", data);
-
-  if (!res.ok) {
-    throw new Error(data?.message || "Failed to create Teacher");
-  }
-
-  return text ? JSON.parse(text) : {};
+  const data = text ? JSON.parse(text) : {};
+  if (!res.ok) throw new Error(data?.message || "Failed to create Teacher");
+  return data;
 };
 
-// Get Teacher by Id
 export const getTeacherById = async (id) => {
   try {
-    const res = await authFetch(`${BASE_URL}/teachers/${id}`, {
-      method: "GET",
-    });
+    const res = await authFetch(`${BASE_URL}/teachers/${id}`, { method: "GET" });
     if (!res.ok) throw new Error("Failed to fetch Teacher");
     const data = await res.json();
     return data.data || data;
@@ -74,13 +50,9 @@ export const getTeacherById = async (id) => {
   }
 };
 
-// Updating a Teacher
 export const updateTeacher = async (id, updatedTeacher) => {
   try {
-    const res = await authFetch(`${BASE_URL}/teachers/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(updatedTeacher),
-    });
+    const res = await authFetch(`${BASE_URL}/teachers/${id}`, { method: 'PUT', body: JSON.stringify(updatedTeacher) });
     if (!res.ok) throw new Error('Failed to update Teacher');
     return res.json();
   } catch (error) {
@@ -89,32 +61,24 @@ export const updateTeacher = async (id, updatedTeacher) => {
   }
 };
 
-// Search Teachers
 export const searchTeachers = async (filters = {}, page, size = 10, sort = 'id') => {
   try {
-    const res = await authFetch(`${BASE_URL}/teachers/search/paginated?page=${page}&size=${size}&sort=${sort}`, {
-      method: 'POST',
-      body: JSON.stringify(filters),
-    });
-    if (!res.ok) {
-      const errorText = await res.text();
-      throw new Error(errorText || 'Failed to Search Teachers...');
-    }
-    const data = await res.json();
-    return data;
+    const res = await authFetch(
+      `${BASE_URL}/teachers/search/paginated?page=${page}&size=${size}&sort=${sort}`,
+      { method: 'POST', body: JSON.stringify(filters) }
+    );
+    if (!res.ok) throw new Error((await res.text()) || 'Failed to Search Teachers...');
+    return await res.json();
   } catch (error) {
     console.error('searchTeachers error:', error.message);
     throw error;
   }
 };
 
-// Get Teacher Salary
 export const getTeacherSalary = async (id) => {
   try {
     const res = await authFetch(`${BASE_URL}/teachers/${id}/salary-structure`);
-    if (!res.ok) {
-      throw new Error('Failed to get the teachers salary.');
-    }
+    if (!res.ok) throw new Error('Failed to get the teachers salary.');
     const result = await res.json();
     return result.data;
   } catch (error) {
@@ -123,63 +87,45 @@ export const getTeacherSalary = async (id) => {
   }
 };
 
-// Update Teacher Salary
 export const updateSalary = async (id, updatedSalary) => {
   try {
-    const res = await authFetch(`${BASE_URL}/teachers/${id}/salary-structure`, {
-      method: 'POST',
-      body: JSON.stringify(updatedSalary),
-    });
-    if (!res.ok) {
-      throw new Error('Failed to update the Teachers Salary.');
-    }
-    const data = await res.json();
-    return data;
+    const res = await authFetch(`${BASE_URL}/teachers/${id}/salary-structure`, { method: 'POST', body: JSON.stringify(updatedSalary) });
+    if (!res.ok) throw new Error('Failed to update the Teachers Salary.');
+    return await res.json();
   } catch (error) {
     console.error('updateSalary error:', error.message);
     throw error;
   }
 };
 
-// Activate teacher status
 export const activateStatus = async (id) => {
   try {
-    const res = await authFetch(`${BASE_URL}/teachers/${id}/activate`, {
-      method: 'PATCH',
-    });
+    const res = await authFetch(`${BASE_URL}/teachers/${id}/activate`, { method: 'PATCH' });
     if (!res.ok) throw new Error('Failed to Activate Teacher');
-    const data = await res.json();
-    return data;
+    return await res.json();
   } catch (error) {
     console.error('Activate Status error:', error.message);
     throw error;
   }
-}
+};
 
-// Deactivate teacher status
 export const deactivateStatus = async (id) => {
   try {
-    const res = await authFetch(`${BASE_URL}/teachers/${id}/deactivate`, {
-      method: 'PATCH',
-    });
+    const res = await authFetch(`${BASE_URL}/teachers/${id}/deactivate`, { method: 'PATCH' });
     if (!res.ok) throw new Error('Failed to Deactivate Teacher');
-    const data = await res.json();
-    return data;
+    return await res.json();
   } catch (error) {
     console.error('Deactivate error:', error.message);
     throw error;
   }
-}
+};
 
 // ==================== ASSIGNMENTS API ====================
 
-// Get Teacher Assignments
 export const getTeacherAssignment = async (teacherId) => {
   try {
     const res = await authFetch(`${BASE_URL}/teachers/${teacherId}/assignments`);
-    if (!res.ok) {
-      throw new Error('Failed to fetch assignments');
-    }
+    if (!res.ok) throw new Error('Failed to fetch assignments');
     const data = await res.json();
     return data.data || data;
   } catch (error) {
@@ -188,18 +134,11 @@ export const getTeacherAssignment = async (teacherId) => {
   }
 };
 
-// Create Teacher Assignment
 export const createTeacherAssignment = async (teacherId, assignmentData) => {
   try {
-    console.log("Creating assignment with data:", assignmentData);
-    const res = await authFetch(`${BASE_URL}/teachers/${teacherId}/assignments`, {
-      method: 'POST',
-      body: JSON.stringify(assignmentData),
-    });
+    const res  = await authFetch(`${BASE_URL}/teachers/${teacherId}/assignments`, { method: 'POST', body: JSON.stringify(assignmentData) });
     const data = await res.json();
-    if (!res.ok) {
-      throw new Error(data.message || "Request failed");
-    }
+    if (!res.ok) throw new Error(data.message || "Request failed");
     return data;
   } catch (error) {
     console.error('createTeacherAssignment error:', error.message);
@@ -207,15 +146,10 @@ export const createTeacherAssignment = async (teacherId, assignmentData) => {
   }
 };
 
-// Get teachers active assignments
 export const getTeachersActiveAssignments = async (teacherId) => {
   try {
-    const res = await authFetch(`${BASE_URL}/teachers/${teacherId}/assignments/active`, {
-      method: "GET",
-    });
-    if (!res.ok) {
-      throw new Error('Failed to fetch assignments');
-    }
+    const res = await authFetch(`${BASE_URL}/teachers/${teacherId}/assignments/active`, { method: "GET" });
+    if (!res.ok) throw new Error('Failed to fetch assignments');
     const data = await res.json();
     return data.data || data;
   } catch (error) {
@@ -224,17 +158,10 @@ export const getTeachersActiveAssignments = async (teacherId) => {
   }
 };
 
-// Update Teacher Assignment
 export const updateTeacherAssignment = async (assignmentId, updatedAssignment) => {
   try {
-    const res = await authFetch(`${BASE_URL}/teachers/assignments/${assignmentId}`, {
-      method: 'PUT',
-      body: JSON.stringify(updatedAssignment),
-    });
-    if (!res.ok) {
-      const errorText = await res.text();
-      throw new Error(errorText || 'Failed to update assignment');
-    }
+    const res = await authFetch(`${BASE_URL}/teachers/assignments/${assignmentId}`, { method: 'PUT', body: JSON.stringify(updatedAssignment) });
+    if (!res.ok) throw new Error((await res.text()) || 'Failed to update assignment');
     const data = await res.json();
     return data.data || data;
   } catch (error) {
@@ -243,16 +170,10 @@ export const updateTeacherAssignment = async (assignmentId, updatedAssignment) =
   }
 };
 
-// Delete Teacher Assignment
 export const deleteTeacherAssignment = async (assignmentId) => {
   try {
-    const res = await authFetch(`${BASE_URL}/teachers/assignments/${assignmentId}`, {
-      method: 'DELETE',
-    });
-    if (!res.ok) {
-      const errorText = await res.text();
-      throw new Error(errorText || 'Failed to delete assignment');
-    }
+    const res = await authFetch(`${BASE_URL}/teachers/assignments/${assignmentId}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error((await res.text()) || 'Failed to delete assignment');
     return { success: true };
   } catch (error) {
     console.error('deleteTeacherAssignment error:', error.message);
@@ -262,36 +183,43 @@ export const deleteTeacherAssignment = async (assignmentId) => {
 
 // ==================== CLASSES API ====================
 
-// Get All Classes
+// ✅ FIXED: schoolId ab JWT token se aata hai (getCurrUserDetails)
+// Switch school ke baad naye token mein schoolId embedded hota hai
+// e.g. school 1 select → token mein schoolId: 1
+//      school 2 select → token mein schoolId: 2
 export const getClasses = async () => {
   try {
-    const res = await authFetch(`${BASE_URL}/classes`);
-    if (!res.ok) {
-      throw new Error('Failed to fetch classes');
-    }
-    const data = await res.json();
-    console.log("Classes API response:", data);
-    if (data.data && Array.isArray(data.data)) {
-      return data.data;
-    } else if (Array.isArray(data)) {
-      return data;
-    } else {
-      console.warn("Unexpected classes response format:", data);
+    const decoded  = getCurrUserDetails();       // JWT token decode
+    const schoolId = decoded?.schoolId ?? null;  // schoolId from token
+
+    if (!schoolId) {
+      console.warn("getClasses: schoolId not found in token. Switch school first.");
       return [];
     }
+
+    console.log("getClasses: using schoolId from token →", schoolId);
+
+    const res = await authFetch(`${BASE_URL}/classes/school/${schoolId}`);
+    if (!res.ok) throw new Error('Failed to fetch classes');
+
+    const data = await res.json();
+    console.log("Classes API response:", data);
+
+    if (data.data && Array.isArray(data.data)) return data.data;
+    if (Array.isArray(data)) return data;
+
+    console.warn("Unexpected classes response format:", data);
+    return [];
   } catch (error) {
     console.error('getClasses error:', error.message);
     throw error;
   }
 };
 
-// Get Class by ID
 export const getClassById = async (classId) => {
   try {
     const res = await authFetch(`${BASE_URL}/classes/${classId}`);
-    if (!res.ok) {
-      throw new Error('Failed to fetch class');
-    }
+    if (!res.ok) throw new Error('Failed to fetch class');
     const data = await res.json();
     return data.data || data;
   } catch (error) {
@@ -300,16 +228,10 @@ export const getClassById = async (classId) => {
   }
 };
 
-// Create Class
 export const createClass = async (classData) => {
   try {
-    const res = await authFetch(`${BASE_URL}/classes`, {
-      method: 'POST',
-      body: JSON.stringify(classData),
-    });
-    if (!res.ok) {
-      throw new Error('Failed to create class');
-    }
+    const res = await authFetch(`${BASE_URL}/classes`, { method: 'POST', body: JSON.stringify(classData) });
+    if (!res.ok) throw new Error('Failed to create class');
     const data = await res.json();
     return data.data || data;
   } catch (error) {
@@ -318,16 +240,10 @@ export const createClass = async (classData) => {
   }
 };
 
-// Update Class
 export const updateClass = async (classId, classData) => {
   try {
-    const res = await authFetch(`${BASE_URL}/classes/${classId}`, {
-      method: 'PUT',
-      body: JSON.stringify(classData),
-    });
-    if (!res.ok) {
-      throw new Error('Failed to update class');
-    }
+    const res = await authFetch(`${BASE_URL}/classes/${classId}`, { method: 'PUT', body: JSON.stringify(classData) });
+    if (!res.ok) throw new Error('Failed to update class');
     const data = await res.json();
     return data.data || data;
   } catch (error) {
@@ -338,36 +254,25 @@ export const updateClass = async (classId, classData) => {
 
 // ==================== SECTIONS API ====================
 
-// Get Sections for a Class
 export const getSectionsByClass = async (classId) => {
   try {
     const res = await authFetch(`${BASE_URL}/sections/class/${classId}`);
-    if (!res.ok) {
-      throw new Error('Failed to fetch sections');
-    }
+    if (!res.ok) throw new Error('Failed to fetch sections');
     const data = await res.json();
-    console.log("Sections API response:", data);
-    if (data.data && Array.isArray(data.data)) {
-      return data.data;
-    } else if (Array.isArray(data)) {
-      return data;
-    } else {
-      console.warn("Unexpected sections response format:", data);
-      return [];
-    }
+    if (data.data && Array.isArray(data.data)) return data.data;
+    if (Array.isArray(data)) return data;
+    console.warn("Unexpected sections response format:", data);
+    return [];
   } catch (error) {
     console.error('getSectionsByClass error:', error.message);
     throw error;
   }
 };
 
-// Get Section by ID
 export const getSectionById = async (sectionId) => {
   try {
     const res = await authFetch(`${BASE_URL}/sections/${sectionId}`);
-    if (!res.ok) {
-      throw new Error('Failed to fetch section');
-    }
+    if (!res.ok) throw new Error('Failed to fetch section');
     const data = await res.json();
     return data.data || data;
   } catch (error) {
@@ -376,16 +281,10 @@ export const getSectionById = async (sectionId) => {
   }
 };
 
-// Create Section
 export const createSection = async (sectionData) => {
   try {
-    const res = await authFetch(`${BASE_URL}/sections`, {
-      method: 'POST',
-      body: JSON.stringify(sectionData),
-    });
-    if (!res.ok) {
-      throw new Error('Failed to create section');
-    }
+    const res = await authFetch(`${BASE_URL}/sections`, { method: 'POST', body: JSON.stringify(sectionData) });
+    if (!res.ok) throw new Error('Failed to create section');
     const data = await res.json();
     return data.data || data;
   } catch (error) {
@@ -394,16 +293,10 @@ export const createSection = async (sectionData) => {
   }
 };
 
-// Update Section
 export const updateSection = async (sectionId, sectionData) => {
   try {
-    const res = await authFetch(`${BASE_URL}/sections/${sectionId}`, {
-      method: 'PUT',
-      body: JSON.stringify(sectionData),
-    });
-    if (!res.ok) {
-      throw new Error('Failed to update section');
-    }
+    const res = await authFetch(`${BASE_URL}/sections/${sectionId}`, { method: 'PUT', body: JSON.stringify(sectionData) });
+    if (!res.ok) throw new Error('Failed to update section');
     const data = await res.json();
     return data.data || data;
   } catch (error) {
@@ -412,18 +305,11 @@ export const updateSection = async (sectionId, sectionData) => {
   }
 };
 
-// Get all sections
 export const getAllSections = async () => {
   try {
-    const res = await authFetch(`${BASE_URL}/sections`, {
-      method: "GET",
-    });
-    if (!res.ok) {
-      const errorText = await res.text();
-      throw new Error(errorText || "Failed to fetch sections");
-    }
-    const data = await res.json();
-    return data;
+    const res = await authFetch(`${BASE_URL}/sections`, { method: "GET" });
+    if (!res.ok) throw new Error((await res.text()) || "Failed to fetch sections");
+    return await res.json();
   } catch (error) {
     console.error("getAllSections error:", error.message);
     throw error;
@@ -432,62 +318,44 @@ export const getAllSections = async () => {
 
 // ==================== SUBJECTS API ====================
 
-// Get Subjects for a Section
 export const getSubjectsBySection = async (sectionId) => {
   try {
     const res = await authFetch(`${BASE_URL}/section-subjects/section/${sectionId}`);
     if (!res.ok) throw new Error('Failed to fetch subjects');
-
     const data = await res.json();
-    console.log("API Response:", data);
-
-    if (data && data.data && Array.isArray(data.data)) {
-      const subjects = data.data.map(mapping => ({
-        id: mapping.subjectId,
+    if (data?.data && Array.isArray(data.data)) {
+      return data.data.map(mapping => ({
+        id:   mapping.subjectId,
         name: mapping.subjectName,
-        code: mapping.subjectCode
+        code: mapping.subjectCode,
       }));
-      console.log("Subjects extracted:", subjects);
-      return subjects;
     }
-
     return [];
   } catch (error) {
-    console.error('Error:', error.message);
+    console.error('getSubjectsBySection error:', error.message);
     throw error;
   }
 };
 
-// Get All Subjects
 export const getAllSubjects = async () => {
   try {
     const res = await authFetch(`${BASE_URL}/subjects`);
-    if (!res.ok) {
-      throw new Error('Failed to fetch subjects');
-    }
+    if (!res.ok) throw new Error('Failed to fetch subjects');
     const data = await res.json();
-    console.log("All subjects API response:", data);
-    if (data.data && Array.isArray(data.data)) {
-      return data.data;
-    } else if (Array.isArray(data)) {
-      return data;
-    } else {
-      console.warn("Unexpected all subjects response format:", data);
-      return [];
-    }
+    if (data.data && Array.isArray(data.data)) return data.data;
+    if (Array.isArray(data)) return data;
+    console.warn("Unexpected all subjects response format:", data);
+    return [];
   } catch (error) {
     console.error('getAllSubjects error:', error.message);
     throw error;
   }
 };
 
-// Get Subject by ID
 export const getSubjectById = async (subjectId) => {
   try {
     const res = await authFetch(`${BASE_URL}/subjects/${subjectId}`);
-    if (!res.ok) {
-      throw new Error('Failed to fetch subject');
-    }
+    if (!res.ok) throw new Error('Failed to fetch subject');
     const data = await res.json();
     return data.data || data;
   } catch (error) {
@@ -496,16 +364,10 @@ export const getSubjectById = async (subjectId) => {
   }
 };
 
-// Create Subject
 export const createSubject = async (subjectData) => {
   try {
-    const res = await authFetch(`${BASE_URL}/subjects`, {
-      method: 'POST',
-      body: JSON.stringify(subjectData),
-    });
-    if (!res.ok) {
-      throw new Error('Failed to create subject');
-    }
+    const res = await authFetch(`${BASE_URL}/subjects`, { method: 'POST', body: JSON.stringify(subjectData) });
+    if (!res.ok) throw new Error('Failed to create subject');
     const data = await res.json();
     return data.data || data;
   } catch (error) {
@@ -514,16 +376,10 @@ export const createSubject = async (subjectData) => {
   }
 };
 
-// Update Subject
 export const updateSubject = async (subjectId, subjectData) => {
   try {
-    const res = await authFetch(`${BASE_URL}/subjects/${subjectId}`, {
-      method: 'PUT',
-      body: JSON.stringify(subjectData),
-    });
-    if (!res.ok) {
-      throw new Error('Failed to update subject');
-    }
+    const res = await authFetch(`${BASE_URL}/subjects/${subjectId}`, { method: 'PUT', body: JSON.stringify(subjectData) });
+    if (!res.ok) throw new Error('Failed to update subject');
     const data = await res.json();
     return data.data || data;
   } catch (error) {

@@ -88,6 +88,23 @@ function fmtAmount(val) {
   return `₹${Number(val).toFixed(2)}`;
 }
 
+// ── Smart Pagination Helper ───────────────────────────────────────
+// Returns array like: [1, 2, 3, "...", 10]  or  [1, "...", 4, 5, 6, "...", 20]
+function getPageNumbers(currentPage, totalPages) {
+  if (totalPages <= 7) {
+    return Array.from({ length: totalPages }, (_, i) => i + 1);
+  }
+  const pages = [];
+  pages.push(1);
+  if (currentPage > 3) pages.push("...");
+  const start = Math.max(2, currentPage - 1);
+  const end = Math.min(totalPages - 1, currentPage + 1);
+  for (let i = start; i <= end; i++) pages.push(i);
+  if (currentPage < totalPages - 2) pages.push("...");
+  pages.push(totalPages);
+  return pages;
+}
+
 function buildActionOptions(status) {
   const s = (status || "").toUpperCase();
   if (s === "DRAFT") {
@@ -100,6 +117,36 @@ function buildActionOptions(status) {
   return [
     { value: "view", label: "View", icon: Eye, text: "text-blue-600", bg: "bg-blue-50", hover: "hover:bg-blue-100" },
   ];
+}
+
+// ── Shared Page Buttons ───────────────────────────────────────────
+function PageButtons({ page, totalPages, onPageChange }) {
+  return (
+    <>
+      {getPageNumbers(page, totalPages).map((p, i) =>
+        p === "..." ? (
+          <span
+            key={`ellipsis-${i}`}
+            className="px-2 py-1 text-gray-400 select-none"
+          >
+            …
+          </span>
+        ) : (
+          <button
+            key={p}
+            onClick={() => onPageChange(p)}
+            className={`px-3 py-1 rounded transition-all ${
+              page === p
+                ? "bg-blue-500 text-white"
+                : "text-gray-600 hover:bg-gray-100"
+            }`}
+          >
+            {p}
+          </button>
+        )
+      )}
+    </>
+  );
 }
 
 // ── Main Component ────────────────────────────────────────────────
@@ -169,6 +216,7 @@ export default function StudentOrders() {
   useEffect(() => { fetchStats(); }, [fetchStats]);
 
   // ── Fetch orders ──────────────────────────────────────────────
+  // FIX 2: sort by createdAt desc so newest confirmed orders appear at top
   const fetchOrders = useCallback(async () => {
     setLoading(true);
     setNoOrderFound(false);
@@ -178,6 +226,7 @@ export default function StudentOrders() {
         size: rowsPerPage,
         searchTerm: search,
         status: statusFilter,
+        sort: "createdAt,desc",   // ← newest first
       });
       const list = res.orders || [];
       setOrders(list);
@@ -343,7 +392,6 @@ export default function StudentOrders() {
                         <p><span className="font-medium text-gray-500">Store:</span><span className="ml-2 text-gray-700">{storeName}</span></p>
                         <p><span className="font-medium text-gray-500">Date:</span><span className="ml-2 text-gray-700">{fmtDate(order.orderDate || order.createdAt)}</span></p>
                         <p><span className="font-medium text-gray-500">Items:</span><span className="ml-2 text-gray-700">{items.length}</span></p>
-                        {/* Total Amount on mobile */}
                         <div className="flex items-center gap-1">
                           <IndianRupee className="w-3.5 h-3.5 text-green-600 shrink-0" />
                           <span className="font-bold text-green-700 text-sm">{fmtAmount(totalAmt)}</span>
@@ -373,7 +421,6 @@ export default function StudentOrders() {
                       <th className="px-2 py-3 text-center text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10">Store</th>
                       <th className="px-2 py-3 text-center text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10">Items</th>
                       <th className="px-2 py-3 text-left   text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10 whitespace-nowrap">Order Date</th>
-                      {/* ── Total Amount column ── */}
                       <th className="px-2 py-3 text-left   text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10 whitespace-nowrap">
                         <span className="flex items-center gap-1">
                           <IndianRupee className="w-3.5 h-3.5" />
@@ -404,7 +451,7 @@ export default function StudentOrders() {
                         const storeName = order.storeName || order.store?.storeName || order.store?.name || "—";
                         const items = order.items || order.orderItems || [];
                         const orderDate = order.orderDate || order.createdAt || order.date;
-                        const totalAmt = order.totalAmount;   // from API
+                        const totalAmt = order.totalAmount;
                         return (
                           <tr key={order.id} className="hover:bg-blue-50/40 transition-colors">
 
@@ -446,7 +493,6 @@ export default function StudentOrders() {
                               <span className="text-gray-600 whitespace-nowrap">{fmtDate(orderDate)}</span>
                             </td>
 
-                            {/* ── Total Amount ── */}
                             <td className={tdStyle}>
                               <div className="flex items-center gap-1">
                                 <IndianRupee className="w-3.5 h-3.5 text-green-600 shrink-0" />
@@ -479,7 +525,7 @@ export default function StudentOrders() {
                 </table>
               </div>
 
-              {/* Desktop Pagination */}
+              {/* ── Desktop Pagination (FIX 1) ── */}
               <div className="px-6 py-4 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div className="flex flex-col sm:flex-row items-center gap-4">
                   <span className="text-sm text-gray-700">
@@ -500,26 +546,30 @@ export default function StudentOrders() {
                     </select>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1 || loading}
-                    className="px-3 py-1 text-gray-600 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all">
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page === 1 || loading}
+                    className="px-3 py-1 text-gray-600 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  >
                     <ChevronLeft className="w-4 h-4" />
                   </button>
-                  {[...Array(totalPages)].map((_, idx) => (
-                    <button key={idx + 1} onClick={() => setPage(idx + 1)}
-                      className={`px-3 py-1 rounded transition-all ${page === idx + 1 ? "bg-blue-500 text-white" : "text-gray-600 hover:bg-gray-100"}`}>
-                      {idx + 1}
-                    </button>
-                  ))}
-                  <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages || totalPages === 0 || loading}
-                    className="px-3 py-1 text-gray-600 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all">
+
+                  {/* Smart page buttons */}
+                  <PageButtons page={page} totalPages={totalPages} onPageChange={setPage} />
+
+                  <button
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={page === totalPages || totalPages === 0 || loading}
+                    className="px-3 py-1 text-gray-600 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  >
                     <ChevronRight className="w-4 h-4" />
                   </button>
                 </div>
               </div>
             </div>
 
-            {/* Mobile Pagination */}
+            {/* ── Mobile Pagination (FIX 1) ── */}
             <div className="lg:hidden border-t border-gray-200 px-4 py-4">
               <div className="flex flex-col gap-4">
                 <div className="text-center text-sm text-gray-700">
@@ -529,40 +579,33 @@ export default function StudentOrders() {
                 </div>
                 <div className="flex items-center justify-center gap-2">
                   <span className="text-sm text-gray-700">Rows:</span>
-                  <select value={rowsPerPage} onChange={(e) => { setRowsPerPage(Number(e.target.value)); resetPage(); }}
-                    className="px-3 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <select
+                    value={rowsPerPage}
+                    onChange={(e) => { setRowsPerPage(Number(e.target.value)); resetPage(); }}
+                    className="px-3 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
                     <option value={10}>10</option>
                     <option value={25}>25</option>
                     <option value={50}>50</option>
                   </select>
                 </div>
-                <div className="flex items-center justify-center gap-2">
-                  <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1 || loading}
-                    className="px-4 py-2 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all">
+                <div className="flex items-center justify-center gap-1 flex-wrap">
+                  <button
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page === 1 || loading}
+                    className="px-4 py-2 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  >
                     <ChevronLeft className="w-4 h-4" />
                   </button>
-                  <div className="flex items-center gap-1">
-                    {totalPages <= 5 ? (
-                      [...Array(totalPages)].map((_, idx) => (
-                        <button key={idx + 1} onClick={() => setPage(idx + 1)}
-                          className={`px-3 py-1 rounded transition-all ${page === idx + 1 ? "bg-blue-500 text-white" : "text-gray-600 hover:bg-gray-100"}`}>
-                          {idx + 1}
-                        </button>
-                      ))
-                    ) : (
-                      <>
-                        <button onClick={() => setPage(1)} className={`px-3 py-1 rounded transition-all ${page === 1 ? "bg-blue-500 text-white" : "text-gray-600 hover:bg-gray-100"}`}>1</button>
-                        {page > 3 && <span className="px-2 text-gray-400">...</span>}
-                        {page > 2 && page < totalPages - 1 && (
-                          <button onClick={() => setPage(page)} className="px-3 py-1 rounded bg-blue-500 text-white">{page}</button>
-                        )}
-                        {page < totalPages - 2 && <span className="px-2 text-gray-400">...</span>}
-                        <button onClick={() => setPage(totalPages)} className={`px-3 py-1 rounded transition-all ${page === totalPages ? "bg-blue-500 text-white" : "text-gray-600 hover:bg-gray-100"}`}>{totalPages}</button>
-                      </>
-                    )}
-                  </div>
-                  <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages || totalPages === 0 || loading}
-                    className="px-4 py-2 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all">
+
+                  {/* Smart page buttons — same helper */}
+                  <PageButtons page={page} totalPages={totalPages} onPageChange={setPage} />
+
+                  <button
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={page === totalPages || totalPages === 0 || loading}
+                    className="px-4 py-2 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  >
                     <ChevronRight className="w-4 h-4" />
                   </button>
                 </div>

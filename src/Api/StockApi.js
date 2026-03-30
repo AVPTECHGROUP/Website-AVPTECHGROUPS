@@ -3,7 +3,7 @@ import { authFetch } from "../Authfetch/Authfetch";
 const BASE_URL = import.meta.env.VITE_API_BASE_V1;
 
 // Get Items List (with pagination, search, filters)
-export const getItemsList = async (page = 0, size = 20, searchTerm = "", category = "", status = "") => {
+export const getItemsList = async (page = 0, size = 500, searchTerm = "", category = "", status = "") => {
   try {
     const params = new URLSearchParams({ page, size, searchTerm, category, status });
     const res = await authFetch(`${BASE_URL}/stock/items?${params}`, {
@@ -26,7 +26,7 @@ export const getItemsList = async (page = 0, size = 20, searchTerm = "", categor
 export const getStockItems = async (
   { searchTerm = "", category = "", status = "" } = {},
   page = 0,
-  size = 20
+  size = 500
 ) => {
   try {
     let query = `page=${page}&size=${size}`;
@@ -148,10 +148,19 @@ export const addStockInward = async (payload) => {
   try {
     const res = await authFetch(`${BASE_URL}/stock/inward`, {
       method: "POST",
-      body: JSON.stringify(payload)
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
     });
-    if (!res.ok) throw new Error("Failed to add inward stock");
-    return await res.json();
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data?.message || "Failed to add inward stock");
+    }
+
+    return data;
   } catch (error) {
     console.error("addStockInward error:", error);
     throw error;
@@ -163,10 +172,19 @@ export const removeStockOutward = async (payload) => {
   try {
     const res = await authFetch(`${BASE_URL}/stock/outward`, {
       method: "POST",
-      body: JSON.stringify(payload)
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
     });
-    if (!res.ok) throw new Error("Failed to remove stock");
-    return await res.json();
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data?.message || "Failed to remove stock");
+    }
+
+    return data;
   } catch (error) {
     console.error("removeStockOutward error:", error);
     throw error;
@@ -176,7 +194,7 @@ export const removeStockOutward = async (payload) => {
 // Transfer Stock Between Stores
 export const transferStock = async (payload) => {
   try {
-    const res = await authFetch(`${BASE_URL}/stock/transfer`, {
+    const res = await authFetch(`${BASE_URL}/stock/transfer`,{
       method: "POST",
       headers: {
         "Content-Type": "application/json",

@@ -14,12 +14,12 @@ function AddNewStudent() {
     const [sections, setSections] = useState([]);
     const [sectionsLoading, setSectionsLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('personal');
-    const [guardianSource, setGuardianSource] = useState(null); // 'father' | 'mother' | null
+    const [guardianSource, setGuardianSource] = useState(null);
 
     const [formData, setFormData] = useState({
         name: "", gender: "", email: "", mobile: "", address: "", dob: "",
         admissionNumber: "", admissionDate: "", academicYear: "2025-2026",
-        rollNumber: "",  // ✅ Added rollNumber
+        rollNumber: "",
         status: "ACTIVE", bloodGroup: "", previousSchool: "", profileImageUrl: "",
         sectionId: "", fatherName: "", fatherOccupation: "", fatherPhone: "",
         fatherEmail: "", motherName: "", motherOccupation: "", motherPhone: "",
@@ -80,7 +80,6 @@ function AddNewStudent() {
                 guardianName: '', guardianRelation: '', guardianPhone: '', guardianEmail: '',
             }));
         }
-
         setFamilyErrors(prev => {
             const n = { ...prev };
             delete n.guardianName; delete n.guardianRelation;
@@ -114,26 +113,26 @@ function AddNewStudent() {
 
     const buildFamilyErrors = (data) => {
         const e = {};
+
+        // Father - required
         if (!data.fatherName.trim()) e.fatherName = "Father's name is required";
         if (!data.fatherOccupation.trim()) e.fatherOccupation = "Father's occupation is required";
         if (!data.fatherPhone) e.fatherPhone = "Father's phone is required";
         else if (!phoneRegex.test(data.fatherPhone)) e.fatherPhone = "Must be exactly 10 digits";
         if (data.fatherEmail && !emailRegex.test(data.fatherEmail)) e.fatherEmail = "Invalid email format";
 
+        // Mother - name required only, rest optional
         if (!data.motherName.trim()) e.motherName = "Mother's name is required";
-        if (!data.motherOccupation.trim()) e.motherOccupation = "Mother's occupation is required";
-        if (!data.motherPhone) e.motherPhone = "Mother's phone is required";
-        else if (!phoneRegex.test(data.motherPhone)) e.motherPhone = "Must be exactly 10 digits";
+        if (data.motherPhone && !phoneRegex.test(data.motherPhone)) e.motherPhone = "Must be exactly 10 digits";
         if (data.motherEmail && !emailRegex.test(data.motherEmail)) e.motherEmail = "Invalid email format";
 
-        if (!data.guardianName.trim()) e.guardianName = "Guardian's name is required";
-        if (!data.guardianRelation) e.guardianRelation = "Relation is required";
-        if (!data.guardianPhone) e.guardianPhone = "Guardian's phone is required";
-        else if (!phoneRegex.test(data.guardianPhone)) e.guardianPhone = "Must be exactly 10 digits";
+        // Guardian - all optional, only format-validate if filled
+        if (data.guardianPhone && !phoneRegex.test(data.guardianPhone)) e.guardianPhone = "Must be exactly 10 digits";
         if (data.guardianEmail && !emailRegex.test(data.guardianEmail)) e.guardianEmail = "Invalid email format";
 
-        if (!data.emergencyContact) e.emergencyContact = "Emergency contact is required";
-        else if (!phoneRegex.test(data.emergencyContact)) e.emergencyContact = "Must be exactly 10 digits";
+        // Emergency contact - optional, only format-validate if filled
+        if (data.emergencyContact && !phoneRegex.test(data.emergencyContact)) e.emergencyContact = "Must be exactly 10 digits";
+
         return e;
     };
 
@@ -162,7 +161,7 @@ function AddNewStudent() {
                 : `DPIS-${Math.floor(10000 + Math.random() * 90000)}`;
             const apiPayload = {
                 admissionNumber: generatedAdmissionNumber,
-                rollNumber: formData.rollNumber.trim() || null,  // ✅ Included in payload
+                rollNumber: formData.rollNumber.trim() || null,
                 firstName, lastName,
                 personalDetails: {
                     fullName: formData.name.trim(), mobile: formData.mobile,
@@ -239,7 +238,6 @@ function AddNewStudent() {
                                         handleInputChange={handleInputChange}
                                         sections={sections} sectionsLoading={sectionsLoading}
                                     />
-                                    {/* ✅ Roll Number — placed directly below admission number */}
                                     <div className="grid lg:grid-cols-2 sm:grid-cols-1 gap-4 mt-4">
                                         <div>
                                             <label htmlFor="rollNumber" className='block font-semibold text-gray-600 text-sm mb-2'>

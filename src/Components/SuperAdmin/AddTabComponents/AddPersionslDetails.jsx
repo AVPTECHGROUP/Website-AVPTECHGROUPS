@@ -11,8 +11,8 @@ const AddPersonalDetails = ({ formData, setFormData, handleInputChange }) => {
                 let roleOpt = [];
                 const rolesRes = await getAllUserRoles();
                 const fetchedRoles = rolesRes.data || [];
-                 roleOpt = fetchedRoles
-                    .filter(val => val.name !== 'SUPER_ADMIN' && val.name !== 'TEACHER')
+                roleOpt = fetchedRoles
+                    .filter(val => val.name !== 'SUPER_ADMIN' && val.name !== 'TEACHER' && val.name !== 'GLOBAL_ADMIN')
                     .map(val => ({
                         key: val.id,
                         value: val.name,
@@ -21,7 +21,7 @@ const AddPersonalDetails = ({ formData, setFormData, handleInputChange }) => {
                 setRoleSelection(roleOpt);
             }
             catch (e) {
-                console.error('Fetch roles error:', e.message); 
+                console.error('Fetch roles error:', e.message);
                 throw e;
             }
         };

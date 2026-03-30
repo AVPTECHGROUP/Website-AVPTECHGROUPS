@@ -26,12 +26,13 @@ import AddNewTeacher from '../Pages/Teachers/AddNewTeacher';
 import EditTeachersDetails from '../Pages/Teachers/EditTeachersDetaills';
 import ClassAssignment from '../Pages/Teachers/ClassAssignment';
 
-// Super Admin
+// Super Admin / Global Admin
 import AddnewSystemUser from '../Pages/SuperAdmin/AddnewSystemUser';
 import EditSysUser from '../Pages/SuperAdmin/EditSysUser';
 import ManageAllUsers from '../Pages/SuperAdmin/ManageAllUsers';
 import ApplyLeaves from '../Pages/Leaves/ApplyLeaves';
 import MyLeaves from '../Pages/Leaves/MyLeaves';
+import SuperAdminSchools from '../Pages/SuperAdmin/SuperAdminSchools'; // ✅ school picker (shared for SUPER_ADMIN + GLOBAL_ADMIN)
 
 // Students
 import Student from '../Pages/Students/Students';
@@ -61,22 +62,26 @@ import Reports from '../Pages/Transport/Reports/Reports';
 import Student_Allocations from '../Pages/Transport/Student_Allocation/Student_Allocations';
 import Routes_Manage from '../Pages/Transport/Routes_Manage';
 import RolesPermissionsManagement from '../Pages/RoleBasedPermission/PermissionManagement';
+import SectionSubjectAssignment from '../Pages/SubjectManagement/SectionSubjectAssignment';
 
 // ─── Role Groups ───────────────────────────────────────────────────────────────
-const STOCK_ACCOUNTANT_ROLES = ['ADMIN', 'SUPER_ADMIN', 'STORE_ACCOUNTANT'];
-const STOCK_SELLER_ROLES     = ['ADMIN', 'SUPER_ADMIN', 'STORE_ACCOUNTANT', 'STORE_SELLER'];
+const STOCK_ACCOUNTANT_ROLES = ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'STORE_ACCOUNTANT'];
+const STOCK_SELLER_ROLES = ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'STORE_ACCOUNTANT', 'STORE_SELLER'];
+
+// ✅ Roles that see the school picker (requiresSchoolSelection: true)
+const SCHOOL_PICKER_ROLES = ['SUPER_ADMIN', 'GLOBAL_ADMIN'];
 
 // ─── Smart root redirect based on role ────────────────────────────────────────
 const RootRedirect = () => {
   const storedUser = (() => {
     try { return JSON.parse(localStorage.getItem('user')) } catch { return null }
-  })()
+  })();
   const role = storedUser?.userType
-    || (Array.isArray(storedUser?.roles) ? storedUser.roles[0] : null)
+    || (Array.isArray(storedUser?.roles) ? storedUser.roles[0] : null);
 
-  if (role === 'STORE_SELLER') return <Navigate to="/stock/studentOrders" replace />
-  return <Navigate to="/dashboard" replace />
-}
+  if (role === 'STORE_SELLER') return <Navigate to="/stock/studentOrders" replace />;
+  return <Navigate to="/dashboard" replace />;
+};
 // ──────────────────────────────────────────────────────────────────────────────
 
 const MainRoutes = () => {
@@ -84,22 +89,33 @@ const MainRoutes = () => {
 
   return (
     <Routes>
-      {/* PUBLIC ROUTE */}
-      <Route
-        path="/login"
-        element={isTokenExist ? <RootRedirect /> : <Login />}
-      />
+      {/* PUBLIC */}
+      <Route path="/login" element={isTokenExist ? <RootRedirect /> : <Login />} />
 
-      {/* PROTECTED ROUTES */}
+      {/* PROTECTED */}
       <Route element={<ProtectedRoutes />}>
+
+        {/* ✅ School Picker — shared for SUPER_ADMIN + GLOBAL_ADMIN
+            NO AppLayout, NO Sidebar on this screen.
+            AppLayout also guards: if role is in SCHOOL_PICKER_ROLES and no schoolId → redirects here. */}
+        <Route
+          path="/superAdmin"
+          element={
+            <RoleProtectedRoute allowedRoles={SCHOOL_PICKER_ROLES}>
+              <SuperAdminSchools />
+            </RoleProtectedRoute>
+          }
+        />
+
+        {/* All other routes — wrapped in AppLayout (has Sidebar) */}
         <Route element={<AppLayout />}>
 
-          {/* ── Dashboard — STORE_SELLER blocked, redirected to studentOrders ── */}
+          {/* Dashboard */}
           <Route
             path="/dashboard"
             element={
               <RoleProtectedRoute
-                allowedRoles={['ADMIN', 'TEACHER', 'SUPER_ADMIN', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST', 'PARENT', 'STORE_ACCOUNTANT']}
+                allowedRoles={['ADMIN', 'TEACHER', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST', 'PARENT', 'STORE_ACCOUNTANT']}
                 fallback={<Navigate to="/stock/studentOrders" replace />}
               >
                 <Dashboard />
@@ -112,8 +128,8 @@ const MainRoutes = () => {
           <Route path="/leaves/myLeaves" element={<MyLeaves />} />
           <Route path="/attendance/markUserAttendance" element={<MarkUserAttendance />} />
 
-          {/* ── User Management — ADMIN & SUPER_ADMIN only ─────────────────── */}
-          <Route element={<RoleProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN']} />}>
+          {/* ADMIN, SUPER_ADMIN & GLOBAL_ADMIN */}
+          <Route element={<RoleProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN']} />}>
             <Route path="/dashboard/addUser" element={<AddnewSystemUser />} />
             <Route path="/dashboard/editUser/:id" element={<EditSysUser />} />
             <Route path="/dashboard/manageUsers" element={<ManageAllUsers />} />
@@ -139,15 +155,18 @@ const MainRoutes = () => {
             <Route path="/leaves/manageHolidays" element={<HolidayManagment />} />
 
             {/* Permissions configuration */}
-             <Route path="/accessPermissions" element={<RolesPermissionsManagement />} />
+            <Route path="/accessPermissions" element={<RolesPermissionsManagement />} />
+
+            {/* Subject Section Assignment */}
+            <Route path="/sectionSubjectAssignment" element={<SectionSubjectAssignment />} />
           </Route>
 
-          {/* ── Payroll ─────────────────────────────────────────────────────── */}
-          <Route element={<RoleProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'ACCOUNTANT']} />}>
+          {/* Payroll */}
+          <Route element={<RoleProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'ACCOUNTANT']} />}>
             <Route path="/payroll" element={<Payroll />} />
           </Route>
 
-          {/* ── Stock Dashboard — STORE_SELLER excluded ──────────────────────*/}
+          {/* Stock */}
           <Route element={<RoleProtectedRoute allowedRoles={STOCK_ACCOUNTANT_ROLES} />}>
             <Route path="/stock" element={<Stock />} />
             <Route path="/stock/stores" element={<Store />} />
@@ -157,15 +176,14 @@ const MainRoutes = () => {
             <Route path="/stock/movementHistory" element={<Movement />} />
           </Route>
 
-          {/* ── Student Orders — STORE_SELLER allowed ────────────────────────*/}
           <Route element={<RoleProtectedRoute allowedRoles={STOCK_SELLER_ROLES} />}>
             <Route path="/stock/studentOrders" element={<StudentOrders />} />
             <Route path="/stock/studentOrders/addOrder" element={<CreateStudentOrder />} />
             <Route path="/stock/studentOrders/editOrder" element={<EditStudentOrder />} />
           </Route>
 
-          {/* ── Transport — ADMIN & SUPER_ADMIN only ────────────────────────── */}
-          <Route element={<RoleProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN']} />}>
+          {/* Transport */}
+          <Route element={<RoleProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN']} />}>
             <Route path="/route" element={<Transport_Management />} />
             <Route path="/route/vehicles" element={<Vehicles />} />
             <Route path="/route/Driver&Attendants" element={<Driver_Attendants />} />
@@ -175,12 +193,12 @@ const MainRoutes = () => {
             <Route path="/route/reports" element={<Reports />} />
           </Route>
 
-          {/* ── Leaves redirect for non-admin roles ─────────────────────────── */}
+          {/* Leaves redirect for non-admin */}
           <Route element={<RoleProtectedRoute allowedRoles={['TEACHER', 'PRINCIPAL', 'RECEPTIONIST', 'ACCOUNTANT']} />}>
             <Route path="/leaves" element={<Navigate to="/leaves/myLeaves" replace />} />
           </Route>
 
-          {/* ── Fallback — role-aware redirect ───────────────────────────────── */}
+          {/* Fallback */}
           <Route path="*" element={<RootRedirect />} />
 
         </Route>
