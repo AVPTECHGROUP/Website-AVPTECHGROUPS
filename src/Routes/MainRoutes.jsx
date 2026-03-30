@@ -15,10 +15,13 @@ import Settings from '../Pages/Settings';
 
 // Attendance
 import UsersAttendance from '../Pages/Attendance/UsersAttendance';
-import AttendanceImgReg from '../Pages/Attendance/AttendanceImgReg';
 import MarkUserAttendance from '../Pages/Attendance/MarkUserAttendance';
 import WarningVerificationFailed from '../Components/UserAttendance/WarningVerificationFailed';
 import ManualAttendance from '../Components/UserAttendance/ManualAttendanceRequest';
+import ExamConfiguration from '../Pages/Exams/ExamConfiguration';
+import StudentAttendance from '../Pages/Attendance/StudentAttendance/StudentAttendance';
+import StaffAttendanceRegistration from '../Pages/Attendance/StaffAttendanceRegistration';
+import StudentAttendanceRegistration from '../Pages/Attendance/StudentAttendanceRegistration';
 
 // Teachers
 import DetailsView from '../Pages/Teachers/DetailsView';
@@ -32,7 +35,7 @@ import EditSysUser from '../Pages/SuperAdmin/EditSysUser';
 import ManageAllUsers from '../Pages/SuperAdmin/ManageAllUsers';
 import ApplyLeaves from '../Pages/Leaves/ApplyLeaves';
 import MyLeaves from '../Pages/Leaves/MyLeaves';
-import SuperAdminSchools from '../Pages/SuperAdmin/SuperAdminSchools'; // ✅ school picker (shared for SUPER_ADMIN + GLOBAL_ADMIN)
+import SuperAdminSchools from '../Pages/SuperAdmin/SuperAdminSchools'; 
 
 // Students
 import Student from '../Pages/Students/Students';
@@ -61,6 +64,10 @@ import Driver_Attendants from '../Pages/Transport/Driver_Attendants';
 import Reports from '../Pages/Transport/Reports/Reports';
 import Student_Allocations from '../Pages/Transport/Student_Allocation/Student_Allocations';
 import Routes_Manage from '../Pages/Transport/Routes_Manage';
+import Exams from '../Pages/Exams/Exams';
+import MarksEntry from '../Pages/Exams/MarksEntry';
+import ReportCards from '../Pages/Exams/ReportCards';
+import Analytics from '../Pages/Exams/Analytics';
 import RolesPermissionsManagement from '../Pages/RoleBasedPermission/PermissionManagement';
 import SectionSubjectAssignment from '../Pages/SubjectManagement/SectionSubjectAssignment';
 
@@ -135,10 +142,18 @@ const MainRoutes = () => {
             <Route path="/dashboard/manageUsers" element={<ManageAllUsers />} />
 
             <Route path="/attendance" element={<Attendance />} />
-            <Route path="/attendance/attendanceImgReg" element={<AttendanceImgReg />} />
+            <Route path="/attendance/staffImgReg" element={<StaffAttendanceRegistration />} />
+            <Route path="/attendance/studentImgReg" element={<StudentAttendanceRegistration />} />
             <Route path="/attendance/usersAttendance" element={<UsersAttendance />} />
+            <Route path="/attendance/studentAttendance" element={<StudentAttendance />} />
             <Route path="/attendance/usersAttendance/warning" element={<WarningVerificationFailed />} />
             <Route path="/attendance/usersAttendance/manual" element={<ManualAttendance />} />
+
+            <Route path="/exams" element={<Exams />} />
+            <Route path="/exams/marksEntry" element={<MarksEntry />} />
+            <Route path="/exams/reportCard" element={<ReportCards/>} />
+            <Route path="/exams/analytics" element={<Analytics />} />
+            <Route path="/exams/examConfig" element={<ExamConfiguration />} />
 
             <Route path="/teachers" element={<Teachers />} />
             <Route path="/teachers/addTeacher" element={<AddNewTeacher />} />

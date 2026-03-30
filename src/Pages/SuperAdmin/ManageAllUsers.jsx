@@ -104,7 +104,6 @@ const ManageAllUsers = () => {
                 const filters = {};
                 if (debouncedSearch.trim()) filters.searchTerm = debouncedSearch.trim();
 
-                // ── FIX: Always send status filter explicitly, never omit it ──
                 if (statusFilter !== 'All Status') {
                     filters.status = statusFilter.toUpperCase();
                 }
@@ -114,9 +113,6 @@ const ManageAllUsers = () => {
                 const res = await allUserFilter(filters, page - 1, rowsPerpage, sorting);
                 let sys_userArray = res.data || [];
 
-                // ── FIX: Client-side guard — enforce status filter on returned data ──
-                // This prevents the backend from leaking wrong-status users when
-                // both a search term and a status filter are active simultaneously.
                 if (statusFilter !== 'All Status') {
                     sys_userArray = sys_userArray.filter(
                         u => u.status?.toUpperCase() === statusFilter.toUpperCase()
@@ -176,14 +172,12 @@ const ManageAllUsers = () => {
             toast.success(`${messageStatus.message} : ${name}`);
             const newStatus = isStatus === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
             setsysUsers(prev => {
-                // ── FIX: If a status filter is active, remove the toggled user from
-                // the list immediately since it no longer matches the filter. ──
                 if (statusFilter !== 'All Status') {
                     return prev.filter(u => u.id !== id);
                 }
+                // ✅ Instant optimistic update — status flips immediately in state
                 return prev.map(u => u.id === id ? { ...u, status: newStatus } : u);
             });
-            // If removing the user empties the list, show "no users found"
             if (statusFilter !== 'All Status') {
                 set_noUserFound(prev => {
                     const remaining = sysUsers.filter(u => u.id !== id);
@@ -254,22 +248,33 @@ const ManageAllUsers = () => {
 
     const tabledataItemsStyle = 'px-2 py-2 text-left text-gray-700 text-sm';
 
-    const actionOptions = [
-        { value: "editUser", label: "Edit", icon: UserPenIcon, text: "text-blue-600", bg: "bg-blue-50", hover: "hover:bg-blue-100" },
-        { value: "toogleStatus", label: "Toggle Status", icon: Power, text: "text-yellow-600", bg: "bg-yellow-50", hover: "hover:bg-yellow-100" },
-        { value: "resetPassword", label: "Password Reset", icon: KeyIcon, text: "text-green-600", bg: "bg-green-50", hover: "hover:bg-green-100" },
-    ];
+    // ✅ Build dynamic action options per user based on their current status
+    const getActionOptions = (sys_user) => {
+        const baseOptions = [
+            { value: "editUser", label: "Edit", icon: UserPenIcon, text: "text-blue-600", bg: "bg-blue-50", hover: "hover:bg-blue-100" },
+            {
+                value: "toogleStatus",
+                // ✅ Dynamic label: "Deactivate" if ACTIVE, "Activate" if INACTIVE
+                label: sys_user.status === 'ACTIVE' ? 'Deactivate' : 'Activate',
+                icon: Power,
+                text: sys_user.status === 'ACTIVE' ? "text-red-600" : "text-green-600",
+                bg: sys_user.status === 'ACTIVE' ? "bg-red-50" : "bg-green-50",
+                hover: sys_user.status === 'ACTIVE' ? "hover:bg-red-100" : "hover:bg-green-100",
+            },
+            { value: "resetPassword", label: "Password Reset", icon: KeyIcon, text: "text-green-600", bg: "bg-green-50", hover: "hover:bg-green-100" },
+        ];
 
-    const filteredOptions = actionOptions.filter(option =>
-        (user.userType === 'SUPER_ADMIN' || user.userType === 'GLOBAL_ADMIN')
-            ? true
-            : option.value !== "resetPassword"
-    );
+        return baseOptions.filter(option =>
+            (user.userType === 'SUPER_ADMIN' || user.userType === 'GLOBAL_ADMIN')
+                ? true
+                : option.value !== "resetPassword"
+        );
+    };
 
-    const callAllActions = async (optVal, user) => {
-        if (optVal === 'editUser') navigate(`/dashboard/editUser/${user.id}`);
-        else if (optVal === 'resetPassword') { setSelectedUser(user); setisResetOpen(true); }
-        else if (optVal === 'toogleStatus') handleToggleStatus(user.id, user.name, user.status);
+    const callAllActions = async (optVal, sys_user) => {
+        if (optVal === 'editUser') navigate(`/dashboard/editUser/${sys_user.id}`);
+        else if (optVal === 'resetPassword') { setSelectedUser(sys_user); setisResetOpen(true); }
+        else if (optVal === 'toogleStatus') handleToggleStatus(sys_user.id, sys_user.name, sys_user.status);
     };
 
     return (
@@ -369,13 +374,15 @@ const ManageAllUsers = () => {
                                     <p><span className="font-medium text-gray-600">Contact:</span><span className="text-gray-800 ml-4">{sys_user.mobile}</span></p>
                                     <p>
                                         <span className="font-medium text-gray-600">Status:</span>
+                                        {/* ✅ Status badge updates instantly via optimistic state update */}
                                         <span className={`inline-flex size-fit items-center gap-1 px-3 py-1 ml-6 rounded-sm text-xs font-medium ${sys_user.status === "ACTIVE" ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}>
                                             <span className={`w-1.5 h-1.5 rounded-full ${sys_user.status === "ACTIVE" ? "bg-green-700" : "bg-red-700"}`} />
                                             {sys_user.status}
                                         </span>
                                     </p>
                                     <div className='flex justify-start items-center'>
-                                        <ActionDropDownComp actionOptions={filteredOptions} onAction={(optVal) => callAllActions(optVal, sys_user)} />
+                                        {/* ✅ Dynamic options per user card */}
+                                        <ActionDropDownComp actionOptions={getActionOptions(sys_user)} onAction={(optVal) => callAllActions(optVal, sys_user)} />
                                     </div>
                                 </div>
                             </div>
@@ -451,12 +458,14 @@ const ManageAllUsers = () => {
                                             <td className={tabledataItemsStyle}>{sys_user.email}</td>
                                             <td className={tabledataItemsStyle}>{sys_user.mobile}</td>
                                             <td className={tabledataItemsStyle}>
+                                                {/* ✅ Status badge updates instantly via optimistic state */}
                                                 <span className={`inline-flex size-fit items-center gap-1 px-3 py-1 rounded-sm text-xs font-medium ${sys_user.status === "ACTIVE" ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}>
                                                     {sys_user.status}
                                                 </span>
                                             </td>
                                             <td className={tabledataItemsStyle}>
-                                                <ActionDropDownComp actionOptions={filteredOptions} onAction={(optVal) => callAllActions(optVal, sys_user)} />
+                                                {/* ✅ Dynamic options per row — label & color reflect current status */}
+                                                <ActionDropDownComp actionOptions={getActionOptions(sys_user)} onAction={(optVal) => callAllActions(optVal, sys_user)} />
                                             </td>
                                         </tr>
                                     ))}

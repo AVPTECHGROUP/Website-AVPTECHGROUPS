@@ -616,9 +616,9 @@ export default function CreateStudentOrder() {
                                 </div>
                                 <div className="space-y-1.5">
                                     <label className="text-sm font-semibold text-gray-700">
-                                        Remarks <span className="text-gray-400 font-normal text-xs">(optional)</span>
+                                        Parents 
                                     </label>
-                                    <input type="text" placeholder="e.g. AY 2025-26 opening kit" value={remarks}
+                                    <input type="text" placeholder="Parents Name" value={remarks}
                                         onChange={(e) => setRemarks(e.target.value)} className={inputCls} />
                                 </div>
                             </div>
@@ -787,7 +787,7 @@ export default function CreateStudentOrder() {
                             {(orderDate || remarks) && (
                                 <div className="bg-gray-50 border border-gray-200 rounded-xl px-3 sm:px-4 py-3 space-y-1.5">
                                     {orderDate && <p className="text-xs text-gray-600"><span className="font-semibold text-gray-700">Order Date:</span> {new Date(orderDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</p>}
-                                    {remarks && <p className="text-xs text-gray-600"><span className="font-semibold text-gray-700">Remarks:</span> {remarks}</p>}
+                                    {remarks && <p className="text-xs text-gray-600"><span className="font-semibold text-gray-700">Parents:</span> {remarks}</p>}
                                 </div>
                             )}
 

@@ -194,7 +194,9 @@ const AddSalaryDetails = ({ formData, setFormData, handleInputChange }) => {
                                         }))}
                                         className="w-full pl-8 pr-24 py-3 border border-gray-300 rounded-lg text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     />
-                                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-gray-500">INR / MONTH</span>
+                                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-gray-500">
+                                        {formData.salaryType === 'PER_DAY' ? 'INR / DAY' : 'INR / MONTH'}
+                                    </span>
                                 </div>
                                 <p className="text-xs text-gray-500 mt-2">Calculated based on a 22-day working month</p>
                             </div>
@@ -450,7 +452,9 @@ const AddSalaryDetails = ({ formData, setFormData, handleInputChange }) => {
                         <div className="text-sm font-medium text-blue-700 mb-2">TOTAL ESTIMATED NET</div>
                         <div className="text-3xl font-bold text-black-900 mb-1">
                             ₹{calculateNet().toLocaleString()}
-                            <span className="text-lg font-normal text-gray-700">/mo</span>
+                            <span className="text-lg font-normal text-gray-700">
+                                {formData.salaryType === 'PER_DAY' ? '/day' : '/month'}
+                            </span>
                         </div>
                         <p className="text-xs text-gray-600">After all active allowances and average penalties are applied</p>
                     </div>
