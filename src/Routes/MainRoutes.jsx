@@ -15,10 +15,13 @@ import Settings from '../Pages/Settings';
 
 // Attendance
 import UsersAttendance from '../Pages/Attendance/UsersAttendance';
-import AttendanceImgReg from '../Pages/Attendance/AttendanceImgReg';
 import MarkUserAttendance from '../Pages/Attendance/MarkUserAttendance';
 import WarningVerificationFailed from '../Components/UserAttendance/WarningVerificationFailed';
 import ManualAttendance from '../Components/UserAttendance/ManualAttendanceRequest';
+import ExamConfiguration from '../Pages/Exams/ExamConfiguration';
+import StudentAttendance from '../Pages/Attendance/StudentAttendance/StudentAttendance';
+import StaffAttendanceRegistration from '../Pages/Attendance/StaffAttendanceRegistration';
+import StudentAttendanceRegistration from '../Pages/Attendance/StudentAttendanceRegistration';
 
 // Teachers
 import DetailsView from '../Pages/Teachers/DetailsView';
@@ -32,7 +35,7 @@ import EditSysUser from '../Pages/SuperAdmin/EditSysUser';
 import ManageAllUsers from '../Pages/SuperAdmin/ManageAllUsers';
 import ApplyLeaves from '../Pages/Leaves/ApplyLeaves';
 import MyLeaves from '../Pages/Leaves/MyLeaves';
-import SuperAdminSchools from '../Pages/SuperAdmin/SuperAdminSchools'; // ✅ school picker (shared for SUPER_ADMIN + GLOBAL_ADMIN)
+import SuperAdminSchools from '../Pages/SuperAdmin/SuperAdminSchools'; 
 
 // Students
 import Student from '../Pages/Students/Students';
@@ -65,10 +68,15 @@ import Routes_Manage from '../Pages/Transport/Routes_Manage';
 import SubjectsMaster from '../Components/Subject/subject';
 import RolesPermissionsManagement from '../Pages/RoleBasedPermission/PermissionManagement';
 import SectionSubjectAssignment from '../Pages/SubjectManagement/SectionSubjectAssignment';
+import Exams from '../Pages/Exams/Exams';
+import MarksEntry from '../Pages/Exams/MarksEntry';
+import ReportCards from '../Pages/Exams/ReportCards';
+import Analytics from '../Pages/Exams/Analytics';
+import ExamConfiguration from '../Pages/Exams/ExamConfiguration';
 
 // ─── Role Groups ───────────────────────────────────────────────────────────────
 const STOCK_ACCOUNTANT_ROLES = ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'STORE_ACCOUNTANT'];
-const STOCK_SELLER_ROLES     = ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'STORE_ACCOUNTANT', 'STORE_SELLER'];
+const STOCK_SELLER_ROLES = ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'STORE_ACCOUNTANT', 'STORE_SELLER'];
 
 // ✅ Roles that see the school picker (requiresSchoolSelection: true)
 const SCHOOL_PICKER_ROLES = ['SUPER_ADMIN', 'GLOBAL_ADMIN'];
@@ -125,33 +133,41 @@ const MainRoutes = () => {
             }
           />
 
-          <Route path="/settings"                      element={<Settings />} />
-          <Route path="/leaves/applyLeaves"            element={<ApplyLeaves />} />
-          <Route path="/leaves/myLeaves"               element={<MyLeaves />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="/leaves/applyLeaves" element={<ApplyLeaves />} />
+          <Route path="/leaves/myLeaves" element={<MyLeaves />} />
           <Route path="/attendance/markUserAttendance" element={<MarkUserAttendance />} />
 
           {/* ADMIN, SUPER_ADMIN & GLOBAL_ADMIN */}
           <Route element={<RoleProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN']} />}>
-            <Route path="/dashboard/addUser"              element={<AddnewSystemUser />} />
-            <Route path="/dashboard/editUser/:id"         element={<EditSysUser />} />
-            <Route path="/dashboard/manageUsers"          element={<ManageAllUsers />} />
+            <Route path="/dashboard/addUser" element={<AddnewSystemUser />} />
+            <Route path="/dashboard/editUser/:id" element={<EditSysUser />} />
+            <Route path="/dashboard/manageUsers" element={<ManageAllUsers />} />
 
-            <Route path="/attendance"                     element={<Attendance />} />
-            <Route path="/attendance/attendanceImgReg"    element={<AttendanceImgReg />} />
-            <Route path="/attendance/usersAttendance"     element={<UsersAttendance />} />
+            <Route path="/attendance" element={<Attendance />} />
+            <Route path="/attendance/staffImgReg" element={<StaffAttendanceRegistration />} />
+            <Route path="/attendance/studentImgReg" element={<StudentAttendanceRegistration />} />
+            <Route path="/attendance/usersAttendance" element={<UsersAttendance />} />
+            <Route path="/attendance/studentAttendance" element={<StudentAttendance />} />
             <Route path="/attendance/usersAttendance/warning" element={<WarningVerificationFailed />} />
-            <Route path="/attendance/usersAttendance/manual"  element={<ManualAttendance />} />
+            <Route path="/attendance/usersAttendance/manual" element={<ManualAttendance />} />
 
-            <Route path="/teachers"                       element={<Teachers />} />
-            <Route path="/teachers/addTeacher"            element={<AddNewTeacher />} />
-            <Route path="/teachers/editTeacher/:id"       element={<EditTeachersDetails />} />
+            <Route path="/exams" element={<Exams />} />
+            <Route path="/exams/marksEntry" element={<MarksEntry />} />
+            <Route path="/exams/reportCard" element={<ReportCards/>} />
+            <Route path="/exams/analytics" element={<Analytics />} />
+            <Route path="/exams/examConfig" element={<ExamConfiguration />} />
+
+            <Route path="/teachers" element={<Teachers />} />
+            <Route path="/teachers/addTeacher" element={<AddNewTeacher />} />
+            <Route path="/teachers/editTeacher/:id" element={<EditTeachersDetails />} />
             <Route path="/teachers/classAssignment/:teacherId" element={<ClassAssignment />} />
-            <Route path="/teachers/:id"                   element={<DetailsView />} />
+            <Route path="/teachers/:id" element={<DetailsView />} />
 
-            <Route path="/students"                       element={<Student />} />
-            <Route path="/students/addStudents"           element={<AddNewStudent />} />
-            <Route path="/students/:id"                   element={<StudentDetails />} />
-            <Route path="/students/editStudent/:id"       element={<EditStudentDetails />} />
+            <Route path="/students" element={<Student />} />
+            <Route path="/students/addStudents" element={<AddNewStudent />} />
+            <Route path="/students/:id" element={<StudentDetails />} />
+            <Route path="/students/editStudent/:id" element={<EditStudentDetails />} />
 
             <Route path="/leaves"                         element={<Leaves />} />
             <Route path="/leaves/manageHolidays"          element={<HolidayManagment />} />
@@ -161,6 +177,13 @@ const MainRoutes = () => {
 
             {/* Subject Section Assignment */}
             <Route path="/sectionSubjectAssignment" element={<SectionSubjectAssignment />} />
+
+            {/* Exams */}
+            <Route path="/exams" element={<Exams />} />
+            <Route path="/exams/marksEntry" element={<MarksEntry />} />
+            <Route path="/exams/reportCard" element={<ReportCards />} />
+            <Route path="/exams/analytics" element={<Analytics />} />
+            <Route path="/exams/examConfig" element={<ExamConfiguration />} />
           </Route>
 
           {/* Leave Config — GLOBAL_ADMIN, SUPER_ADMIN, PRINCIPAL */}
@@ -176,29 +199,29 @@ const MainRoutes = () => {
 
           {/* Stock */}
           <Route element={<RoleProtectedRoute allowedRoles={STOCK_ACCOUNTANT_ROLES} />}>
-            <Route path="/stock"                 element={<Stock />} />
-            <Route path="/stock/stores"          element={<Store />} />
-            <Route path="/stock/items"           element={<Items />} />
-            <Route path="/stock/classConfig"     element={<ClassConfig />} />
-            <Route path="/stock/transactions"    element={<Transactions />} />
+            <Route path="/stock" element={<Stock />} />
+            <Route path="/stock/stores" element={<Store />} />
+            <Route path="/stock/items" element={<Items />} />
+            <Route path="/stock/classConfig" element={<ClassConfig />} />
+            <Route path="/stock/transactions" element={<Transactions />} />
             <Route path="/stock/movementHistory" element={<Movement />} />
           </Route>
 
           <Route element={<RoleProtectedRoute allowedRoles={STOCK_SELLER_ROLES} />}>
-            <Route path="/stock/studentOrders"           element={<StudentOrders />} />
-            <Route path="/stock/studentOrders/addOrder"  element={<CreateStudentOrder />} />
+            <Route path="/stock/studentOrders" element={<StudentOrders />} />
+            <Route path="/stock/studentOrders/addOrder" element={<CreateStudentOrder />} />
             <Route path="/stock/studentOrders/editOrder" element={<EditStudentOrder />} />
           </Route>
 
           {/* Transport */}
           <Route element={<RoleProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN']} />}>
-            <Route path="/route"                    element={<Transport_Management />} />
-            <Route path="/route/vehicles"           element={<Vehicles />} />
-            <Route path="/route/Driver&Attendants"  element={<Driver_Attendants />} />
-            <Route path="/route/routes_management"  element={<Routes_Manage />} />
+            <Route path="/route" element={<Transport_Management />} />
+            <Route path="/route/vehicles" element={<Vehicles />} />
+            <Route path="/route/Driver&Attendants" element={<Driver_Attendants />} />
+            <Route path="/route/routes_management" element={<Routes_Manage />} />
             <Route path="/route/studentAllocations" element={<Student_Allocations />} />
-            <Route path="/route/feePlans"           element={<Fee_Plans />} />
-            <Route path="/route/reports"            element={<Reports />} />
+            <Route path="/route/feePlans" element={<Fee_Plans />} />
+            <Route path="/route/reports" element={<Reports />} />
           </Route>
 
           {/* Leaves redirect for non-admin */}

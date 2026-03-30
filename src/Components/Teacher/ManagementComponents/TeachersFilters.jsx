@@ -9,11 +9,19 @@ const TeachersFilters = ({
   setClassFilter,
   salaryFilter,
   setSalaryFilter,
-  setPage
+  setPage,
+  classes = []
 }) => {
+  const classOptions = [
+    { label: 'All Classes', value: 'All Classes' },
+    ...classes.map((c) => ({
+      label: c.name,
+      value: c.id,
+    })),
+  ];
   return (
     <div className="bg-white grid lg:grid-cols-3 gap-2 px-4 py-2 rounded-xl border border-gray-200 mb-4">
-      
+
       <div className="flex col-span-2 items-center gap-2 border rounded-lg border-gray-200 bg-gray-100 px-2 py-1 focus-within:shadow-sm focus-within:shadow-blue-200">
         <SearchIcon className="w-5 h-5 text-gray-500" />
         <input
@@ -29,7 +37,7 @@ const TeachersFilters = ({
 
       {/* FILTER DROPDOWNS - Takes 1 column on large screens */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        
+
         {/* Status Filter */}
         <select
           value={statusFilter}
@@ -53,15 +61,11 @@ const TeachersFilters = ({
           }}
           className="px-4 py-2 border border-gray-200 bg-gray-100 rounded-lg focus:outline-none focus:shadow-sm focus:shadow-blue-200 text-sm"
         >
-          <option value="All Classes">All Classes</option>
-          <option value="Class-5">Class-5</option>
-          <option value="Class-6">Class-6</option>
-          <option value="Class-7">Class-7</option>
-          <option value="Class-8">Class-8</option>
-          <option value="Class-9">Class-9</option>
-          <option value="Class-10">Class-10</option>
-          <option value="Class-11">Class-11</option>
-          <option value="Class-12">Class-12</option>
+          {classOptions.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
         </select>
 
         {/* Salary Type Filter */}

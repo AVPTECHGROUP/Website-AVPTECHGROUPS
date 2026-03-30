@@ -64,7 +64,8 @@ function exportToCSV(reportData) {
   rows.push(["Driver", `${reportData.driverName} · ${reportData.driverContact}`]);
   rows.push(["Attendant", `${reportData.attendantName} · ${reportData.attendantContact}`]);
   rows.push(["Pickup / Drop", `${reportData.startTime} → ${reportData.returnTime}`]);
-  rows.push(["Utilisation", `${reportData.totalAllocated}/${reportData.vehicleCapacity} (${reportData.utilizationPercent}%)`]);
+  const pct = Math.round(reportData.utilizationPercent);
+  rows.push(["Utilisation", `${reportData.totalAllocated}/${reportData.vehicleCapacity} (${pct}%)`]);
   rows.push([]);
   rows.push(["Stop Order", "Stop Name", "Stop Address", "Student ID", "Student Name", "Class", "Section", "Roll No", "Pickup/Drop", "Fee Plan", "Fee Amount", "Fee Frequency", "Effective From", "Effective To"]);
 
@@ -178,7 +179,7 @@ function RouteStudentList() {
       {/* Header */}
       <div className="px-4 sm:px-6 py-4 sm:py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100">
         <h2 className="font-bold text-gray-900 flex items-center gap-2 text-sm sm:text-base">
-           Route-wise Student List
+          Route-wise Student List
         </h2>
         <button
           onClick={() => {
@@ -351,7 +352,7 @@ function TabIcon({ icon, color }) {
     <span className={`inline-flex items-center justify-center w-7 h-7 rounded-lg shrink-0 ${colorMap[color] ?? colorMap.blue}`}>
       {icon}
     </span>
-  );  
+  );
 }
 
 const TABS = [
