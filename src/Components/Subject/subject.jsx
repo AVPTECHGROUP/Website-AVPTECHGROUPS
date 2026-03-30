@@ -5,6 +5,7 @@ import {
 } from "../../Api/subject";
 import { getSubjectCategoryLov } from "../../Api/ListOfValues";
 import AddNewSubject from "./AddnewSubject";
+import SectionSubjectAssignment from "../../Pages/SubjectManagement/SectionSubjectAssignment";
 
 /* ═══════════════════════════════════════════
    CONSTANTS
@@ -221,6 +222,9 @@ export default function SubjectsMaster() {
   const [modal,        setModal]        = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
 
+  //for switch tabs
+  const [activeTab , setActiveTab] = useState('materSubject');
+
   const fetchSubjects = useCallback(async () => {
     setLoading(true); setError("");
     try {
@@ -297,21 +301,46 @@ export default function SubjectsMaster() {
               Subjects &amp; Section Assignment
             </h1>
             {/* Tabs */}
-            <div className="sm-tabs mt-3 flex overflow-x-auto border-b border-slate-200 -mb-px gap-0">
-              <button className="flex-shrink-0 flex items-center gap-1.5 px-3 sm:px-4 pb-3 text-xs sm:text-sm font-semibold text-indigo-600 border-b-2 border-indigo-600 whitespace-nowrap">
-                Subjects Master
-              </button>
-              <button className="flex-shrink-0 flex items-center gap-1.5 px-3 sm:px-4 pb-3 text-xs sm:text-sm font-medium text-slate-400 hover:text-slate-600 border-b-2 border-transparent whitespace-nowrap transition-colors">
-                
-                <span className="hidden sm:inline">Section–Subject Assignment</span>
-                <span className="sm:hidden">Assignment</span>
-              </button>
-            </div>
+<div className="sm-tabs mt-3 flex overflow-x-auto border-b border-slate-200 -mb-px gap-0">
+
+  {/* Subjects Master */}
+  <button
+    onClick={() => setActiveTab("materSubject")}
+    className={`flex-shrink-0 flex items-center gap-1.5 px-3 sm:px-4 pb-3 text-xs sm:text-sm font-semibold whitespace-nowrap transition-colors border-b-2
+      ${
+        activeTab === "materSubject"
+          ? "text-indigo-600 border-indigo-600"
+          : "text-slate-400 border-transparent hover:text-slate-600"
+      }`}
+  >
+    Subjects Master
+  </button>
+
+  {/* Section Assignment */}
+  <button
+    onClick={() => setActiveTab("assignment")}
+    className={`flex-shrink-0 flex items-center gap-1.5 px-3 sm:px-4 pb-3 text-xs sm:text-sm font-semibold whitespace-nowrap transition-colors border-b-2
+      ${
+        activeTab === "assignment"
+          ? "text-indigo-600 border-indigo-600"
+          : "text-slate-400 border-transparent hover:text-slate-600"
+      }`}
+  >
+    <span className="hidden sm:inline">Section–Subject Assignment</span>
+    <span className="sm:hidden">Assignment</span>
+  </button>
+
+</div>
           </div>
         </div>
 
+        {/* second contetn tab */}
+        <div className={`${activeTab === 'materSubject' ? "hidden" : ""}`}>
+            <SectionSubjectAssignment />
+        </div>
+
         {/* ── CONTENT ── */}
-        <div className="px-3 sm:px-4 md:px-6 py-3 sm:py-4">
+        <div className={`${activeTab === 'assignment' ? "hidden" : ""} px-3 sm:px-4 md:px-6 py-3 sm:py-4`}>
           <div className="w-full bg-white rounded-xl xl:rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
 
             {/* ── TOOLBAR ── */}
@@ -523,6 +552,7 @@ export default function SubjectsMaster() {
             )}
 
           </div>
+        
         </div>
       </div>
 

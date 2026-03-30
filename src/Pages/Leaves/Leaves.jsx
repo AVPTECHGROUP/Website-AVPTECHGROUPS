@@ -57,11 +57,20 @@ const Leaves = () => {
     let fetchListOfValues = async () => {
       try {
         const leaveTypeRes = await getListOfValues('LEAVE_TYPE');
-        const formattedLeaveType = leaveTypeRes.map(item => ({
-          id: item.id,
-          value: item.value,
-          label: item.label
-        }));
+        // const formattedLeaveType = leaveTypeRes.map(item => ({
+        //   id: item.id,
+        //   value: item.value,
+        //   label: item.label
+        // }));
+
+        const formattedLeaveType = leaveTypeRes
+          .filter(item => item.isActive === true)
+          .map(item => ({
+            id: item.id,
+            value: item.value,
+            label: item.label
+          }));
+
         setListofLeavetype(formattedLeaveType);
 
         const leaveStatusRes = await getListOfValues('LEAVE_STATUS');
@@ -86,7 +95,7 @@ const Leaves = () => {
   }
 
   const [refressStat, setRefressStat] = useState(0);
-  const [statLoading, setStatLoading] = useState(true); 
+  const [statLoading, setStatLoading] = useState(true);
   const [refressfeth, setRefressfetch] = useState(0);
 
   useEffect(() => {
@@ -230,17 +239,17 @@ const Leaves = () => {
   }, [page, rowsPerpage, resetFiltersCallApiDependency, refressfeth]);
 
   const cardsArray = [
-    { IconName: ClockIcon,       keyName: "Pending request",      val: statistics.pendingRequests,    iconTxColor: "text-orange-600", iconBgColor: "bg-orange-50" },
-    { IconName: ThumbsUpIcon,    keyName: "Approved Leaves month", val: statistics.approvedThisMonth,  iconTxColor: "text-green-600",  iconBgColor: "bg-green-50"  },
-    { IconName: CalendarX2,      keyName: "Rejected leaves month", val: statistics.rejectedThisMonth,  iconTxColor: "text-red-600",    iconBgColor: "bg-red-50"    },
-    { IconName: CalendarRange,   keyName: "Total leaves month",    val: statistics.totalThisMonth,     iconTxColor: "text-blue-600",   iconBgColor: "bg-blue-50"   },
-    { IconName: CalendarDaysIcon, keyName: "Total leaves week",    val: statistics.totalLeavesThisWeek, iconTxColor: "text-yellow-600", iconBgColor: "bg-yellow-50" },
+    { IconName: ClockIcon, keyName: "Pending request", val: statistics.pendingRequests, iconTxColor: "text-orange-600", iconBgColor: "bg-orange-50" },
+    { IconName: ThumbsUpIcon, keyName: "Approved Leaves month", val: statistics.approvedThisMonth, iconTxColor: "text-green-600", iconBgColor: "bg-green-50" },
+    { IconName: CalendarX2, keyName: "Rejected leaves month", val: statistics.rejectedThisMonth, iconTxColor: "text-red-600", iconBgColor: "bg-red-50" },
+    { IconName: CalendarRange, keyName: "Total leaves month", val: statistics.totalThisMonth, iconTxColor: "text-blue-600", iconBgColor: "bg-blue-50" },
+    { IconName: CalendarDaysIcon, keyName: "Total leaves week", val: statistics.totalLeavesThisWeek, iconTxColor: "text-yellow-600", iconBgColor: "bg-yellow-50" },
   ];
 
   const statusStyles = {
-    PENDING:   'bg-yellow-50 text-yellow-800',
-    APPROVED:  'bg-green-50 text-green-800',
-    REJECTED:  'bg-red-50 text-red-800',
+    PENDING: 'bg-yellow-50 text-yellow-800',
+    APPROVED: 'bg-green-50 text-green-800',
+    REJECTED: 'bg-red-50 text-red-800',
     CANCELLED: 'bg-orange-50 text-orange-800',
     WITHDRAWN: 'bg-gray-50 text-gray-800'
   };
@@ -305,15 +314,15 @@ const Leaves = () => {
             {statLoading
               ? cardsArray.map((_, i) => <CardLoader key={i} />)       // shimmer placeholders
               : cardsArray.map((card) => (
-                  <CardComponent
-                    key={card.keyName}
-                    IconName={card.IconName}
-                    keyName={card.keyName.toUpperCase()}
-                    val={card.val}
-                    iconTxColor={card.iconTxColor}
-                    iconBgColor={card.iconBgColor}
-                  />
-                ))
+                <CardComponent
+                  key={card.keyName}
+                  IconName={card.IconName}
+                  keyName={card.keyName.toUpperCase()}
+                  val={card.val}
+                  iconTxColor={card.iconTxColor}
+                  iconBgColor={card.iconBgColor}
+                />
+              ))
             }
           </div>
 

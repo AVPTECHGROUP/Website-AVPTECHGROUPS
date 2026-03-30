@@ -80,13 +80,16 @@ const ManageAllUsers = () => {
         debouncedSearch.trim() !== '' || statusFilter !== 'All Status' || roleFilter !== 'All Roles'
     ), [debouncedSearch, statusFilter, roleFilter]);
 
+    const [isStatLoading, setStatLoading] = useState(false);
     useEffect(() => {
         const fetchStatistics = async () => {
             try {
+                setStatLoading(true);
                 const statistics_res = await getUsersStatistics();
                 setstatistics(statistics_res.data);
             } catch (e) {
                 console.error("get statistics error:", e.message);
+            }finally {                setStatLoading(false);
             }
         };
         fetchStatistics();
@@ -285,7 +288,7 @@ const ManageAllUsers = () => {
 
                     {/* Cards */}
                     <div className='grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 text-sm mt-5'>
-                        {loading
+                        {isStatLoading
                             ? cardsArray.map((_, i) => <CardLoader key={i} />)
                             : cardsArray.map((card) => (
                                 <CardComponent key={card.keyName} IconName={card.IconName} keyName={card.keyName.toUpperCase()}

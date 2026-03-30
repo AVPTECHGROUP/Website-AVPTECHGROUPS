@@ -8,7 +8,7 @@ import { createUser, updateUserById } from '../../Api/userManagementAPI';
 // ─── Constants ────────────────────────────────────────────────────────────────
 const VALID_GENDERS = ['MALE', 'FEMALE', 'OTHER'];
 
-// ✅ All 9 roles from the API — was previously missing PRINCIPAL, RECEPTIONIST, STORE_ACCOUNTANT, STORE_SELLER
+//  All 9 roles from the API — was previously missing PRINCIPAL, RECEPTIONIST, STORE_ACCOUNTANT, STORE_SELLER
 const VALID_ROLES = [
     'SUPER_ADMIN',
     'ADMIN',
@@ -147,7 +147,7 @@ function AddnewSystemUser() {
         highestQualification: '',
         experience: 0,
         joiningDate: '',
-        payrollStatus: 'ACTIVE',
+        payrollStatus: '',
         accountStatus: false,
         userRole: '',
         salaryType: '',
