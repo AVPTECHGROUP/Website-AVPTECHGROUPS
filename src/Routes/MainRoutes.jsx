@@ -43,6 +43,7 @@ import AddNewStudent from '../Pages/Students/AddNewStudent';
 import EditStudentDetails from '../Pages/Students/EditStudentDetails';
 import StudentDetails from '../Pages/Students/StudentDetails';
 import HolidayManagment from '../Pages/Leaves/Holiday/HolidayManagement';
+import LeaveConfig from '../Pages/Leaves/LeaveConfig';
 import RoleProtectedRoute from '../utils/RoleProtectedRoute';
 
 // Stock Routes
@@ -174,6 +175,11 @@ const MainRoutes = () => {
 
             {/* Subject Section Assignment */}
             <Route path="/sectionSubjectAssignment" element={<SectionSubjectAssignment />} />
+          </Route>
+
+          {/* Leave Config — GLOBAL_ADMIN, SUPER_ADMIN, PRINCIPAL */}
+          <Route element={<RoleProtectedRoute allowedRoles={['GLOBAL_ADMIN', 'SUPER_ADMIN', 'PRINCIPAL']} />}>
+            <Route path="/leaves/leaveConfig" element={<LeaveConfig />} />
           </Route>
 
           {/* Payroll */}
