@@ -49,7 +49,7 @@ const WarningVerificationFailed = () => {
                 </svg>
               </div>
               <div  className='flex gap-1'>
-                <strong className='text-sm'>Having trouble?</strong><p className='text-blue-600 text-sm cursor-pointer font-medium'>Contact System Administrator</p>
+                <strong className='text-sm'>Having trouble? Contact System Administrator</strong>
               </div>  
             </div>
           </div>

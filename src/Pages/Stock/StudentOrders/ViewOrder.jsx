@@ -244,7 +244,7 @@ export default function ViewStudentOrder({ isOpen, onClose, order }) {
               {/* Remarks */}
               {o.remarks && (
                 <div className="bg-yellow-50 border border-yellow-200 rounded-xl px-4 py-3">
-                  <p className="text-xs text-gray-400 font-medium mb-1">Remarks</p>
+                  <p className="text-xs text-gray-400 font-medium mb-1">Parent</p>
                   <p className="text-sm text-gray-700">{o.remarks}</p>
                 </div>
               )}

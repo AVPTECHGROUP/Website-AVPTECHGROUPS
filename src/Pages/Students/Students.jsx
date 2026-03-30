@@ -11,11 +11,11 @@ import {
     UserPlus,
     Info,
 } from 'lucide-react';
-import ActionDropDownComp from '../../Components/CommonComp/ActionDropDownComp';
 import CardComponent from '../../Components/CommonComp/CardComponent';
 import { getStudents, searchStudents } from '../../Api/StudentsApi';
 import CardLoader from '../../Components/CommonComp/CardLoader';
 import ListLoader from '../../Components/CommonComp/ListLoader';
+import ActionDropDownComp from '../../Components/CommonComp/ActionDropDownComp';
 import TooltipComponent from '../../Components/CommonComp/Tooltip_comp/TooltipComp';
 
 const Student = () => {
@@ -186,7 +186,7 @@ const Student = () => {
                     </div>
 
                     {/* Cards */}
-                    <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 text-sm">
+                    <div className="flex flex-wrap gap-4">
                         {loading
                             ? cardsArray.map((_, i) => <CardLoader key={i} />)
                             : cardsArray.map((card) => (
@@ -219,7 +219,7 @@ const Student = () => {
                             <input
                                 value={search}
                                 onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                                placeholder="Search by name, email or ID.."
+                                placeholder="Search by name.."
                                 className="text-sm font-normal focus:outline-none text-gray-600 w-full bg-transparent placeholder:text-gray-400"
                             />
                             {search && (

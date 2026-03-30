@@ -269,6 +269,25 @@ export const getSectionsByClass = async (classId) => {
   }
 };
 
+export const getSectionSubjectsByClass = async (classId) => {
+  try {
+    const res = await authFetch(`${BASE_URL}/section-subjects/class/${classId}`);
+    
+    if (!res.ok) throw new Error('Failed to fetch class subject mappings');
+
+    const data = await res.json();
+
+    if (data.data && Array.isArray(data.data)) {
+      return data.data; // Isme 'id' field hi 'sectionSubjectId' hai
+    }
+    
+    return [];
+  } catch (error) {
+    console.error('getSectionSubjectsByClass error:', error.message);
+    throw error;
+  }
+};
+
 export const getSectionById = async (sectionId) => {
   try {
     const res = await authFetch(`${BASE_URL}/sections/${sectionId}`);
