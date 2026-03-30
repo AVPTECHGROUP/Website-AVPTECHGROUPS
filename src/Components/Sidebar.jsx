@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, Calendar, FileText, Users, LogOut,
   ChevronDown, UserCog, Package, Bus, Phone, Mail,
-  Shield, ChevronUp, ArrowLeftRight,
+  Shield, ChevronUp, ArrowLeftRight,BookOpenText
 } from 'lucide-react'
 import { useState, useEffect, useContext, useRef } from 'react'
 import { UserContext } from '../ContextAPI/UserContext'
@@ -36,6 +36,10 @@ const menuItems = [
   },
   {
     id: 'students', icon: Users, label: 'Students', route: '/students',
+    roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'],
+  },
+   {
+    id: 'subjects & Sections', icon: BookOpenText, label: 'Subjects', route: '/subjectsmaster',
     roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'],
   },
   {

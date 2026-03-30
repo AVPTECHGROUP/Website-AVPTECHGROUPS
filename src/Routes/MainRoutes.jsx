@@ -61,6 +61,7 @@ import Driver_Attendants from '../Pages/Transport/Driver_Attendants';
 import Reports from '../Pages/Transport/Reports/Reports';
 import Student_Allocations from '../Pages/Transport/Student_Allocation/Student_Allocations';
 import Routes_Manage from '../Pages/Transport/Routes_Manage';
+import SubjectsMaster from '../Components/Subject/subject';
 
 // ─── Role Groups ───────────────────────────────────────────────────────────────
 const STOCK_ACCOUNTANT_ROLES = ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'STORE_ACCOUNTANT'];
@@ -151,6 +152,7 @@ const MainRoutes = () => {
 
             <Route path="/leaves"                         element={<Leaves />} />
             <Route path="/leaves/manageHolidays"          element={<HolidayManagment />} />
+            <Route path='/subjectsmaster' element={<SubjectsMaster/>}/>
           </Route>
 
           {/* Payroll */}
