@@ -72,7 +72,6 @@ import Exams from '../Pages/Exams/Exams';
 import MarksEntry from '../Pages/Exams/MarksEntry';
 import ReportCards from '../Pages/Exams/ReportCards';
 import Analytics from '../Pages/Exams/Analytics';
-import ExamConfiguration from '../Pages/Exams/ExamConfiguration';
 
 // ─── Role Groups ───────────────────────────────────────────────────────────────
 const STOCK_ACCOUNTANT_ROLES = ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'STORE_ACCOUNTANT'];
@@ -177,13 +176,6 @@ const MainRoutes = () => {
 
             {/* Subject Section Assignment */}
             <Route path="/sectionSubjectAssignment" element={<SectionSubjectAssignment />} />
-
-            {/* Exams */}
-            <Route path="/exams" element={<Exams />} />
-            <Route path="/exams/marksEntry" element={<MarksEntry />} />
-            <Route path="/exams/reportCard" element={<ReportCards />} />
-            <Route path="/exams/analytics" element={<Analytics />} />
-            <Route path="/exams/examConfig" element={<ExamConfiguration />} />
           </Route>
 
           {/* Leave Config — GLOBAL_ADMIN, SUPER_ADMIN, PRINCIPAL */}
