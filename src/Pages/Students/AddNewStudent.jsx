@@ -103,6 +103,10 @@ function AddNewStudent() {
         const today = new Date(); today.setHours(0, 0, 0, 0);
         const dobDate = new Date(formData.dob);
         if (dobDate >= today) { toast.error("Date of birth cannot be today or in the future!"); return false; }
+        const age = today.getFullYear() - dobDate.getFullYear();
+        const monthDiff = today.getMonth() - dobDate.getMonth();
+        const actualAge = (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dobDate.getDate())) ? age - 1 : age;
+        if (actualAge < 3) { toast.error("Student must be at least 3 years old!"); return false; }
         if (new Date(formData.admissionDate) > today) { toast.error("Admission date cannot be in the future!"); return false; }
         return true;
     };

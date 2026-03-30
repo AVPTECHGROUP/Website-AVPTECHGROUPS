@@ -107,34 +107,3 @@ export const searchStudents = async (filters = {}, page, size = 10, sort = 'id')
     throw error;
   }
 };
-
-// Get Students by Section (with optional status filter)
-export const getStudentsBySection = async (sectionId, status = "ACTIVE") => {
-  try {
-    if (!sectionId) {
-      throw new Error("sectionId is required");
-    }
-
-    const query = status ? `?status=${status}` : "";
-
-    const res = await authFetch(
-      `${BASE_URL}/students/section/${sectionId}${query}`,
-      {
-        method: "GET",
-      }
-    );
-
-    if (!res.ok) {
-      const errorText = await res.text();
-      throw new Error(errorText || "Failed to fetch students by section");
-    }
-
-    const data = await res.json();
-
-    // return only data array (consistent with your other APIs)
-    return data?.data || [];
-  } catch (error) {
-    console.error("getStudentsBySection error:", error.message);
-    throw error;
-  }
-};

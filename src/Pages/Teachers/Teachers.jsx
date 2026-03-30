@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { getTeachers, getTeacherStatistics, searchTeachers } from '../../Api/TeachersAPI';
-import { getClasses } from '../../Api/TeachersAPI';
 import TeachersHeader from '../../Components/Teacher/ManagementComponents/TeachersHeader';
 import QuickActions from '../../Components/Teacher/ManagementComponents/QuickActions';
 import TeachersFilters from '../../Components/Teacher/ManagementComponents/TeachersFilters';
@@ -27,9 +26,6 @@ const Teachers = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Classes State
-  const [classes, setClasses] = useState([]);
-
   // Statistics State
   const [statistics, setStatistics] = useState({
     totalTeachers: 0,
@@ -41,9 +37,6 @@ const Teachers = () => {
 
   const [classAssignTeacherId, setClassAssignTeacherId] = useState(null);
 
-  // Ref for scroll-to-top on page change
-  const scrollContainerRef = useRef(null);
-
   // DEBOUNCED SEARCH
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -51,13 +44,6 @@ const Teachers = () => {
     }, 500);
     return () => clearTimeout(timer);
   }, [search]);
-
-  // SCROLL TO TOP WHEN PAGE CHANGES
-  useEffect(() => {
-    if (scrollContainerRef.current) {
-      scrollContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  }, [page]);
 
   // CHECK IF FILTERS ARE ACTIVE
   const hasActiveFilters = useMemo(() => {
@@ -68,16 +54,6 @@ const Teachers = () => {
       salaryFilter !== 'All Salary Types'
     );
   }, [debouncedSearch, statusFilter, classFilter, salaryFilter]);
-
-  // FETCH CLASSES FROM API
-  const fetchClasses = async () => {
-    try {
-      const data = await getClasses();
-      setClasses(data);
-    } catch (e) {
-      console.error('fetchClasses error:', e.message);
-    }
-  };
 
   // FETCH TEACHERS
   const fetchTeachers = async () => {
@@ -91,17 +67,10 @@ const Teachers = () => {
         const filters = {};
         if (debouncedSearch.trim()) filters.searchTerm = debouncedSearch.trim();
         if (statusFilter !== 'All Status') filters.status = statusFilter.toUpperCase();
-        if (classFilter !== 'All Classes') {
-          filters.classId = Number(classFilter);
-        }
+        if (classFilter !== 'All Classes') filters.assignedClasses = classFilter;
         if (salaryFilter !== 'All Salary Types') {
-          const salaryMap = {
-            'Monthly': 'MONTHLY',
-            'Per Day': 'PER_DAY',
-          };
-          filters.salaryType = salaryMap[salaryFilter];
+          filters.salaryType = salaryFilter === 'Monthly' ? 'MONTHLY' : 'PER_DAY';
         }
-
         res = await searchTeachers(filters, page - 1, rowsPerPage);
       } else {
         res = await getTeachers(page - 1, rowsPerPage);
@@ -135,7 +104,17 @@ const Teachers = () => {
         joiningDate: teacher.joiningDate || 'N/A',
       }));
 
-      setTeachers(mappedTeachers);
+      const filteredTeachers = mappedTeachers.filter((t) => {
+        if (classFilter !== 'All Classes' && !t.classes.includes(classFilter)) return false;
+        if (
+          salaryFilter !== 'All Salary Types' &&
+          t.salaryType !== (salaryFilter === 'Monthly' ? 'MONTHLY' : 'PER_DAY')
+        )
+          return false;
+        return true;
+      });
+
+      setTeachers(filteredTeachers);
       setTotalElements(res.pagination?.totalElements || 0);
       setTotalPages(res.pagination?.totalPages || 0);
     } catch (err) {
@@ -160,37 +139,14 @@ const Teachers = () => {
     }
   };
 
-  // ✅ OPTIMISTIC STATISTICS UPDATE — called by TeachersTable on toggle
-  // Updates active/inactive counts instantly without any API call or loading
-  const updateStatisticsOptimistically = (prevStatus) => {
-    setStatistics((prev) => {
-      if (prevStatus === 'ACTIVE') {
-        // Was ACTIVE → now INACTIVE: active--, inactive++
-        return {
-          ...prev,
-          activeTeachers: Math.max(0, prev.activeTeachers - 1),
-          inactiveTeachers: prev.inactiveTeachers + 1,
-        };
-      } else {
-        // Was INACTIVE → now ACTIVE: inactive--, active++
-        return {
-          ...prev,
-          activeTeachers: prev.activeTeachers + 1,
-          inactiveTeachers: Math.max(0, prev.inactiveTeachers - 1),
-        };
-      }
-    });
-  };
-
   // FETCH ON DEPENDENCY CHANGE
   useEffect(() => {
     fetchTeachers();
   }, [page, rowsPerPage, debouncedSearch, statusFilter, classFilter, salaryFilter, hasActiveFilters]);
 
-  // FETCH STATISTICS AND CLASSES ONCE ON MOUNT
+  // FETCH STATISTICS ONCE ON MOUNT
   useEffect(() => {
     fetchStatistics();
-    fetchClasses();
   }, []);
 
   // BUILD STATS OBJECT
@@ -215,7 +171,7 @@ const Teachers = () => {
 
   return (
     <div className="flex h-screen overflow-hidden bg-linear-to-b from-sky-50 to-sky-100">
-      <div ref={scrollContainerRef} className="flex-1 overflow-auto w-0">
+      <div className="flex-1 overflow-auto w-0">
 
         {/* COMPONENT 1: Header with Stats */}
         <TeachersHeader stats={stats} loading={statsLoading} />
@@ -237,11 +193,9 @@ const Teachers = () => {
             salaryFilter={salaryFilter}
             setSalaryFilter={setSalaryFilter}
             setPage={setPage}
-            classes={classes}
           />
 
           {/* COMPONENT 4: Table and Pagination */}
-          {/* ✅ Pass optimistic updater down to TeachersTable */}
           <TeachersTable
             assignTeacherId={setClassAssignTeacherId}
             teachers={teachers}
@@ -255,7 +209,6 @@ const Teachers = () => {
             totalElements={totalElements}
             totalPages={totalPages}
             fetchTeachers={fetchTeachers}
-            onStatusToggle={updateStatisticsOptimistically}
           />
         </div>
       </div>

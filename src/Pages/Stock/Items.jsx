@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo, useRef } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
     Package, PackageCheck, PackageX, Layers, Plus,
     ChevronLeft, ChevronRight, Eye, Edit, SearchIcon,
@@ -71,7 +71,7 @@ export default function Items() {
     // ── Filters & pagination (1-based display, 0-based API) ────
     const [search, setSearch] = useState("");
     const [debouncedSearch, setDebouncedSearch] = useState("");
-    const [categoryFilter, setCategoryFilter] = useState("");   // "" = All
+    const [categoryFilter, setCategoryFilter] = useState("");
     const [statusFilter, setStatusFilter] = useState("Active");
     const [page, setPage] = useState(1);    // 1-based
     const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -137,7 +137,7 @@ export default function Items() {
                 name: item.itemName,
                 category: item.category,
                 unit: item.unit,
-                price: item.unitPrice ?? 0,       // unitPrice from API
+                price: item.unitPrice ?? 0,
                 totalStock: item.totalQuantity ?? 0,
                 minLevel: item.minimumStockLevel ?? 0,
                 description: item.description ?? "",
@@ -167,7 +167,7 @@ export default function Items() {
         { key: "Total Items", val: statsData?.totalItems ?? 0, icon: Package, txColor: "text-blue-600", bgColor: "bg-blue-50" },
         { key: "Active Items", val: statsData?.activeItems ?? 0, icon: PackageCheck, txColor: "text-green-600", bgColor: "bg-green-50" },
         { key: "Inactive", val: statsData?.inactiveItems ?? 0, icon: PackageX, txColor: "text-red-500", bgColor: "bg-red-50" },
-        { key: "Active Categories",   val: statsData?.categories ?? statsData?.totalCategories ?? 0, icon: Layers, txColor: "text-purple-600", bgColor: "bg-purple-50" },
+        { key: "Active Categories", val: statsData?.categories ?? statsData?.totalCategories ?? 0, icon: Layers, txColor: "text-purple-600", bgColor: "bg-purple-50" },
     ], [statsData]);
 
     const resetPage = () => setPage(1);
@@ -214,18 +214,17 @@ export default function Items() {
         }
     };
 
-    // ── Save handler — POST / PUT ───────────────────────────────
+    // ── Save handler ───────────────────────────────────────────
     const handleSaveItem = async (payload) => {
         if (saving) return;
         try {
             setSaving(true);
-            // payload comes from NewItem: { itemCode, itemName, category, unit, unitPrice, minimumStockLevel, status, description }
             const mappedPayload = {
                 itemCode: payload.itemCode,
                 itemName: payload.itemName,
                 category: payload.category,
                 unit: payload.unit,
-                unitPrice: payload.unitPrice,          // ← sent to API
+                unitPrice: payload.unitPrice,
                 minimumStockLevel: payload.minimumStockLevel,
                 description: payload.description ?? "",
                 status: payload.status ?? "ACTIVE",
@@ -248,6 +247,46 @@ export default function Items() {
             setSaving(false);
         }
     };
+
+    // ── Shared Pagination Component ────────────────────────────
+    const PaginationButtons = () => (
+        <div className="flex items-center gap-1 flex-wrap justify-center">
+            <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1 || loading}
+                className="p-1.5 text-gray-600 hover:bg-gray-100 rounded cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            >
+                <ChevronLeft className="w-4 h-4" />
+            </button>
+
+            {totalPages <= 7 ? (
+                [...Array(totalPages)].map((_, i) => (
+                    <button key={i + 1} onClick={() => setPage(i + 1)}
+                        className={`w-8 h-8 rounded text-sm font-semibold cursor-pointer transition-all ${page === i + 1 ? "bg-blue-500 text-white" : "text-gray-600 hover:bg-gray-100"}`}>
+                        {i + 1}
+                    </button>
+                ))
+            ) : (
+                <>
+                    <button onClick={() => setPage(1)} className={`w-8 h-8 rounded text-sm font-semibold cursor-pointer transition-all ${page === 1 ? "bg-blue-500 text-white" : "text-gray-600 hover:bg-gray-100"}`}>1</button>
+                    {page > 3 && <span className="px-1 text-gray-400 text-sm">…</span>}
+                    {[page - 1, page, page + 1].filter(p => p > 1 && p < totalPages).map(p => (
+                        <button key={p} onClick={() => setPage(p)} className={`w-8 h-8 rounded text-sm font-semibold cursor-pointer transition-all ${page === p ? "bg-blue-500 text-white" : "text-gray-600 hover:bg-gray-100"}`}>{p}</button>
+                    ))}
+                    {page < totalPages - 2 && <span className="px-1 text-gray-400 text-sm">…</span>}
+                    <button onClick={() => setPage(totalPages)} className={`w-8 h-8 rounded text-sm font-semibold cursor-pointer transition-all ${page === totalPages ? "bg-blue-500 text-white" : "text-gray-600 hover:bg-gray-100"}`}>{totalPages}</button>
+                </>
+            )}
+
+            <button
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages || totalPages === 0 || loading}
+                className="p-1.5 text-gray-600 hover:bg-gray-100 rounded cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            >
+                <ChevronRight className="w-4 h-4" />
+            </button>
+        </div>
+    );
 
     const tdStyle = "px-2 py-2 text-left text-gray-700 text-sm";
 
@@ -473,7 +512,6 @@ export default function Items() {
                                                     <span className="text-gray-600 whitespace-nowrap">{item.unit}</span>
                                                 </td>
 
-                                                {/* Unit Price */}
                                                 <td className={tdStyle}>
                                                     <span className="text-gray-700 font-semibold whitespace-nowrap">
                                                         ₹{Number(item.price).toFixed(2)}
@@ -483,8 +521,8 @@ export default function Items() {
                                                 <td className={tdStyle}>
                                                     <div className="flex items-center gap-1.5">
                                                         <span className={`text-sm font-bold w-7 shrink-0 ${item.totalStock < item.minLevel ? "text-red-500"
-                                                                : item.totalStock < item.minLevel * 1.5 ? "text-orange-500"
-                                                                    : "text-gray-800"
+                                                            : item.totalStock < item.minLevel * 1.5 ? "text-orange-500"
+                                                                : "text-gray-800"
                                                             }`}>
                                                             {item.totalStock}
                                                         </span>
@@ -521,94 +559,60 @@ export default function Items() {
                             </table>
                         </div>
 
-                        {/* Desktop Pagination */}
-                        <div className="px-6 py-4 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-4">
-                            <div className="flex flex-col sm:flex-row items-center gap-4">
-                                <span className="text-sm text-gray-700">
-                                    {totalItems === 0
-                                        ? "No items"
-                                        : `Showing ${(page - 1) * rowsPerPage + 1} to ${Math.min(page * rowsPerPage, totalItems)} of ${totalItems}`}
-                                </span>
-                                <div className="flex items-center gap-2">
-                                    <span className="text-sm text-gray-700">Rows per page:</span>
-                                    <select
-                                        value={rowsPerPage}
-                                        onChange={(e) => { setRowsPerPage(Number(e.target.value)); resetPage(); }}
-                                        className="px-3 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    >
-                                        <option value={10}>10</option>
-                                        <option value={25}>25</option>
-                                        <option value={50}>50</option>
-                                    </select>
+                        {/* ── Desktop Pagination ── */}
+                        <div className="px-6 py-4 border-t border-gray-200">
+                            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                                <div className="flex flex-col xs:flex-row items-center justify-center md:justify-start gap-3">
+                                    <span className="text-xs sm:text-sm text-gray-700">
+                                        {totalItems === 0
+                                            ? "No items"
+                                            : `Showing ${(page - 1) * rowsPerPage + 1}–${Math.min(page * rowsPerPage, totalItems)} of ${totalItems}`}
+                                    </span>
+                                    <div className="flex items-center gap-2 shrink-0">
+                                        <span className="text-xs sm:text-sm text-gray-500 whitespace-nowrap">Rows:</span>
+                                        <select
+                                            value={rowsPerPage}
+                                            onChange={(e) => { setRowsPerPage(Number(e.target.value)); resetPage(); }}
+                                            className="px-2 py-1 border border-gray-300 rounded text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                                        >
+                                            <option value={10}>10</option>
+                                            <option value={25}>25</option>
+                                            <option value={50}>50</option>
+                                        </select>
+                                    </div>
                                 </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1 || loading}
-                                    className="px-3 py-1 text-gray-600 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all">
-                                    <ChevronLeft className="w-4 h-4" />
-                                </button>
-                                {[...Array(totalPages)].map((_, idx) => (
-                                    <button key={idx + 1} onClick={() => setPage(idx + 1)}
-                                        className={`px-3 py-1 rounded transition-all ${page === idx + 1 ? "bg-blue-500 text-white" : "text-gray-600 hover:bg-gray-100"}`}>
-                                        {idx + 1}
-                                    </button>
-                                ))}
-                                <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages || totalPages === 0 || loading}
-                                    className="px-3 py-1 text-gray-600 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all">
-                                    <ChevronRight className="w-4 h-4" />
-                                </button>
+                                <div className="flex flex-col items-center gap-1">
+                                    <PaginationButtons />
+                                    <span className="text-[11px] text-gray-400">Page {page} of {totalPages || 1}</span>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    {/* Mobile Pagination */}
+                    {/* ── Mobile Pagination ── */}
                     <div className="lg:hidden border-t border-gray-200 px-4 py-4">
-                        <div className="flex flex-col gap-4">
+                        <div className="flex flex-col gap-3">
                             <div className="text-center text-sm text-gray-700">
                                 {totalItems === 0
                                     ? "No items"
-                                    : `Showing ${(page - 1) * rowsPerPage + 1} to ${Math.min(page * rowsPerPage, totalItems)} of ${totalItems}`}
+                                    : `Showing ${(page - 1) * rowsPerPage + 1}–${Math.min(page * rowsPerPage, totalItems)} of ${totalItems}`}
                             </div>
                             <div className="flex items-center justify-center gap-2">
-                                <span className="text-sm text-gray-700">Rows:</span>
-                                <select value={rowsPerPage} onChange={(e) => { setRowsPerPage(Number(e.target.value)); resetPage(); }}
-                                    className="px-3 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <span className="text-sm text-gray-500">Rows:</span>
+                                <select
+                                    value={rowsPerPage}
+                                    onChange={(e) => { setRowsPerPage(Number(e.target.value)); resetPage(); }}
+                                    className="px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                                >
                                     <option value={10}>10</option>
                                     <option value={25}>25</option>
                                     <option value={50}>50</option>
                                 </select>
                             </div>
-                            <div className="flex items-center justify-center gap-2">
-                                <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1 || loading}
-                                    className="px-4 py-2 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all">
-                                    <ChevronLeft className="w-4 h-4" />
-                                </button>
-                                <div className="flex items-center gap-1">
-                                    {totalPages <= 5 ? (
-                                        [...Array(totalPages)].map((_, idx) => (
-                                            <button key={idx + 1} onClick={() => setPage(idx + 1)}
-                                                className={`px-3 py-1 rounded transition-all ${page === idx + 1 ? "bg-blue-500 text-white" : "text-gray-600 hover:bg-gray-100"}`}>
-                                                {idx + 1}
-                                            </button>
-                                        ))
-                                    ) : (
-                                        <>
-                                            <button onClick={() => setPage(1)} className={`px-3 py-1 rounded transition-all ${page === 1 ? "bg-blue-500 text-white" : "text-gray-600 hover:bg-gray-100"}`}>1</button>
-                                            {page > 3 && <span className="px-2 text-gray-400">...</span>}
-                                            {page > 2 && page < totalPages - 1 && (
-                                                <button onClick={() => setPage(page)} className="px-3 py-1 rounded bg-blue-500 text-white">{page}</button>
-                                            )}
-                                            {page < totalPages - 2 && <span className="px-2 text-gray-400">...</span>}
-                                            <button onClick={() => setPage(totalPages)} className={`px-3 py-1 rounded transition-all ${page === totalPages ? "bg-blue-500 text-white" : "text-gray-600 hover:bg-gray-100"}`}>{totalPages}</button>
-                                        </>
-                                    )}
-                                </div>
-                                <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages || totalPages === 0 || loading}
-                                    className="px-4 py-2 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all">
-                                    <ChevronRight className="w-4 h-4" />
-                                </button>
+                            <div className="flex flex-col items-center gap-1">
+                                <PaginationButtons />
+                                <span className="text-[11px] text-gray-400">Page {page} of {totalPages || 1}</span>
                             </div>
-                            <div className="text-center text-sm text-gray-600">Page {page} of {totalPages}</div>
                         </div>
                     </div>
 

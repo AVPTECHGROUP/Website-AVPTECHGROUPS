@@ -2,71 +2,42 @@ import { authFetch } from "../Authfetch/Authfetch";
 
 const BASE_URL = import.meta.env.VITE_API_BASE;
 
-// Enroll Face (Upload 5 Images)
-export const enrollUserFaces = async ({
-  userId,
-  userType,
-  classId,
-  sectionId,
-  images, // array of 5 files
-}) => {
+export const attendanceEnroll = async ({ userId, userType, images }) => {
   try {
-    // 🔹 Validation (important)
-    if (!images || images.length !== 5) {
-      throw new Error("Exactly 5 images are required for enrollment");
+    if (!userId || !userType) {
+      throw new Error("User ID and User Type are required");
     }
 
+    if (!images || images.length !== 5) {
+      throw new Error("Exactly 5 images are required");
+    }
     const formData = new FormData();
-
-    // append all 5 images
-    images.forEach((img) => {
-      formData.append("images", img);
-    });
-
-    // query params
-    const query = new URLSearchParams({
-      user_id: userId,
-      ...(userType && { user_type: userType }),
-      ...(userType === "STUDENT" && { class_id: classId }),
-      ...(userType === "STUDENT" && { section_id: sectionId }),
-    }).toString();
+    images.forEach(img => formData.append("images", img));
 
     const res = await authFetch(
-      `${BASE_URL}/attendance/enroll?${query}`,
+      `${BASE_URL}/attendance/enroll?user_id=${userId}&user_type=${userType}`,
       {
         method: "POST",
         body: formData,
       }
     );
 
-    const rawText = await res.text();
-
-    let data;
-    try {
-      data = JSON.parse(rawText);
-    } catch {
-      throw new Error(`Server returned non-JSON response: ${rawText.slice(0, 200)}`);
-    }
+    const data = await res.json();
 
     if (!res.ok) {
-      const errMsg =
-        data?.message ||
-        data?.error ||
-        "Face enrollment failed";
-      throw new Error(errMsg);
+      throw new Error(data?.message || "Enrollment failed");
     }
 
     return data;
   } catch (error) {
-    console.error("enrollUserFaces error:", error.message);
+    console.error("Attendance Enroll Error:", error);
     throw error;
   }
 };
+
+// Marked User Attendance
 export const markAttendanceByFace = async ({
   imageFile,
-  user_type,
-  class_id,
-  section_id,
   gpsLatitude = "28.6139",
   gpsLongitude = "77.209",
 }) => {
@@ -74,7 +45,7 @@ export const markAttendanceByFace = async ({
     const formData = new FormData();
     formData.append("image", imageFile);
 
-    const url = `${BASE_URL}/attendance/mark?user_type=${user_type}&class_id=${class_id}&section_id=${section_id}&gps_latitude=${gpsLatitude}&gps_longitude=${gpsLongitude}`;
+    const url = `${BASE_URL}/attendance/mark?gps_latitude=${gpsLatitude}&gps_longitude=${gpsLongitude}`;
 
     const res = await authFetch(url, {
       method: "POST",
@@ -248,260 +219,3 @@ export const allAttendanceDetails = async ({
     throw error
   }
 }
-
-// Get Attendance Roster (Full table for UI)
-export const getAttendanceRoster = async (classId, sectionId, date = null) => {
-  try {
-    if (!classId || !sectionId) {
-      throw new Error("classId and sectionId are required");
-    }
-
-    const query = new URLSearchParams({
-      class_id: classId,
-      section_id: sectionId,
-      ...(date && { date }),
-    }).toString();
-
-    const res = await authFetch(
-      `${BASE_URL}/attendance/students/roster?${query}`,
-      { method: "GET" }
-    );
-
-    if (!res.ok) {
-      const errText = await res.text();
-      throw new Error(errText || "Failed to fetch attendance roster");
-    }
-
-    const data = await res.json();
-    return data?.data || {};
-  } catch (error) {
-    console.error("getAttendanceRoster error:", error.message);
-    throw error;
-  }
-};
-
-// Manually mark attendance
-export const manualMarkAttendance = async (payload) => {
-  try {
-    const res = await authFetch(
-      `${BASE_URL}/attendance/students/manual-mark`,
-      {
-        method: "POST",
-        body: JSON.stringify(payload),
-      }
-    );
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      throw new Error(data?.message || "Failed to mark attendance");
-    }
-
-    return data;
-  } catch (error) {
-    console.error("manualMarkAttendance error:", error.message);
-    throw error;
-  }
-};
-
-// Remove attendance record (hard delete)
-export const unmarkAttendance = async (attendanceId, reason) => {
-  try {
-    if (!attendanceId) {
-      throw new Error("attendanceId is required");
-    }
-
-    const res = await authFetch(
-      `${BASE_URL}/attendance/students/${attendanceId}/unmark`,
-      {
-        method: "DELETE",
-        body: JSON.stringify({ reason }),
-      }
-    );
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      throw new Error(data?.message || "Failed to unmark attendance");
-    }
-
-    return data;
-  } catch (error) {
-    console.error("unmarkAttendance error:", error.message);
-    throw error;
-  }
-};
-
-// ===============================
-// 📸 Group Photo Attendance
-// ===============================
-export const groupMarkAttendance = async ({
-  classId,
-  sectionId,
-  image,
-  gps_latitude,
-  gps_longitude,
-}) => {
-  try {
-    const formData = new FormData();
-    formData.append("image", image);
-
-    const query = new URLSearchParams({
-      class_id: classId,
-      section_id: sectionId,
-      ...(gps_latitude && { gps_latitude }),
-      ...(gps_longitude && { gps_longitude }),
-    }).toString();
-
-    const res = await authFetch(
-      `${BASE_URL}/attendance/students/group-mark?${query}`,
-      {
-        method: "POST",
-        body: formData,
-      }
-    );
-
-    if (!res.ok) {
-      const errorText = await res.text();
-      throw new Error(errorText || "Failed to process group photo");
-    }
-
-    return await res.json();
-  } catch (error) {
-    console.error("groupMarkAttendance error:", error.message);
-    throw error;
-  }
-};
-
-//  Remove Face Enrollment
-export const removeEnrollment = async ({
-  userId,
-  userType,
-  classId,
-  sectionId,
-}) => {
-  try {
-    const query = new URLSearchParams({
-      user_type: userType,
-      ...(userType === "STUDENT" && { class_id: classId }),
-      ...(userType === "STUDENT" && { section_id: sectionId }),
-    }).toString();
-
-    const res = await authFetch(
-      `${BASE_URL}/attendance/enrollment/${userId}?${query}`,
-      {
-        method: "DELETE",
-      }
-    );
-
-    if (!res.ok) {
-      const errorText = await res.text();
-      throw new Error(errorText || "Failed to remove enrollment");
-    }
-
-    return await res.json();
-  } catch (error) {
-    console.error("removeEnrollment error:", error.message);
-    throw error;
-  }
-};
-
-//  Staff Enrollment List
-export const getStaffEnrollment = async (
-  page = 0,
-  size = 10,
-  sort = "id",
-  status
-) => {
-  try {
-    const query = new URLSearchParams({
-      page,
-      size,
-      sort,
-      ...(status && { status }),
-    }).toString();
-
-    const res = await authFetch(
-      `${BASE_URL}/attendance/enrollment/staff?${query}`,
-      {
-        method: "GET",
-      }
-    );
-
-    if (!res.ok) {
-      const errorText = await res.text();
-      throw new Error(errorText || "Failed to fetch staff enrollment");
-    }
-
-    return await res.json();
-  } catch (error) {
-    console.error("getStaffEnrollment error:", error.message);
-    throw error;
-  }
-};
-
-// ===============================
-// 📊 Enrollment Stats
-// ===============================
-export const getEnrollmentStats = async () => {
-  try {
-    const res = await authFetch(
-      `${BASE_URL}/attendance/enrollment/stats`,
-      {
-        method: "GET",
-      }
-    );
-
-    if (!res.ok) throw new Error("Failed to fetch stats");
-
-    return await res.json();
-  } catch (error) {
-    console.error("getEnrollmentStats error:", error.message);
-    throw error;
-  }
-};
-
-// ===============================
-// 📊 Section Stats
-// ===============================
-export const getSectionEnrollmentStats = async (sectionId) => {
-  try {
-    const res = await authFetch(
-      `${BASE_URL}/attendance/enrollment/stats/section/${sectionId}`,
-      {
-        method: "GET",
-      }
-    );
-
-    if (!res.ok) throw new Error("Failed to fetch section stats");
-
-    return await res.json();
-  } catch (error) {
-    console.error("getSectionEnrollmentStats error:", error.message);
-    throw error;
-  }
-};
-
-// ===============================
-// 🎓 Student Enrollment List
-// ===============================
-export const getStudentEnrollment = async (sectionId) => {
-  try {
-    const res = await authFetch(
-      `${BASE_URL}/attendance/enrollment/students?section_id=${sectionId}`,
-      {
-        method: "GET",
-      }
-    );
-
-    if (!res.ok) {
-      const errorText = await res.text();
-      throw new Error(errorText || "Failed to fetch student enrollment");
-    }
-
-    return await res.json();
-  } catch (error) {
-    console.error("getStudentEnrollment error:", error.message);
-    throw error;
-  }
-};
