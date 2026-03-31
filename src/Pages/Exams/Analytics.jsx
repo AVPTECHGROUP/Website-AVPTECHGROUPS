@@ -41,7 +41,6 @@ const RANK_CARD_BG = [
     "from-orange-50 to-amber-50 border-orange-200",
 ];
 
-// ─── Exam options (replace with real data / context as needed) ────────────────
 const EXAM_OPTIONS = [
     { label: "Mid Term — Class 10 — 2025-26", id: 1 },
     { label: "Unit Test 1 — Class 10 — 2025-26", id: 2 },
@@ -51,13 +50,10 @@ const EXAM_OPTIONS = [
 const SECTION_OPTIONS = ["Section 10-A", "Section 10-B", "Section 10-C"];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-/** Pick a stable color for a subject based on its index */
 function subjectColor(index) {
     return SUBJECT_COLORS[index % SUBJECT_COLORS.length];
 }
 
-/** Grade badge style from grade string */
 function gradeBadgeBg(grade = "") {
     if (grade.startsWith("A")) return "bg-emerald-100 text-emerald-700";
     if (grade.startsWith("B")) return "bg-blue-100 text-blue-700";
@@ -66,8 +62,13 @@ function gradeBadgeBg(grade = "") {
     return "bg-gray-100 text-gray-600";
 }
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
+/** Safely format a number to fixed decimals, returns fallback if not a valid number */
+function safeFixed(val, decimals = 1, fallback = "—") {
+    const n = Number(val);
+    return isNaN(n) ? fallback : n.toFixed(decimals);
+}
 
+// ─── Sub-components ───────────────────────────────────────────────────────────
 function Select({ value, onChange, options, className = "" }) {
     return (
         <div className={`relative ${className}`}>
@@ -98,7 +99,6 @@ function SubjectBarChart({ subjectStats, loading }) {
                 <TrendingUp className="w-4 h-4 text-blue-600 shrink-0" />
                 <h2 className="text-sm font-semibold text-gray-800">Subject-wise Average %</h2>
             </div>
-
             <div className="flex items-center gap-4 mb-4 sm:mb-5">
                 <div className="flex items-center gap-1.5">
                     <span className="w-3 h-3 rounded-full bg-indigo-500 inline-block" />
@@ -109,7 +109,6 @@ function SubjectBarChart({ subjectStats, loading }) {
                     <span className="text-xs text-gray-500 font-medium">Pass line ({PASS_LINE}%)</span>
                 </div>
             </div>
-
             {loading ? (
                 <div className="space-y-3">
                     {[1, 2, 3, 4, 5].map((i) => (
@@ -120,7 +119,8 @@ function SubjectBarChart({ subjectStats, loading }) {
                 <div className="space-y-3 sm:space-y-3.5">
                     {subjectStats.map((sub, idx) => {
                         const { color } = subjectColor(idx);
-                        const barWidth = `${Math.min((sub.avgPercentage / maxVal) * 100, 100)}%`;
+                        const avg = Number(sub.avgPercentage);
+                        const barWidth = `${Math.min(isNaN(avg) ? 0 : (avg / maxVal) * 100, 100)}%`;
                         return (
                             <div key={sub.subjectId ?? sub.subjectName} className="flex items-center gap-2 sm:gap-3">
                                 <span className="text-xs text-gray-500 font-medium w-16 sm:w-20 text-right shrink-0 truncate">
@@ -136,7 +136,7 @@ function SubjectBarChart({ subjectStats, loading }) {
                                             }}
                                         >
                                             <span className="text-white text-[10px] sm:text-[11px] font-bold whitespace-nowrap">
-                                                {Number(sub.avgPercentage).toFixed(1)}%
+                                                {safeFixed(sub.avgPercentage)}%
                                             </span>
                                         </div>
                                         <div
@@ -167,10 +167,7 @@ function PassFailTable({ subjectStats, loading }) {
                     <thead>
                         <tr className="bg-gray-50 border-b border-gray-100">
                             {["Subject", "Pass", "Fail", "Absent", "Pass %"].map((h) => (
-                                <th
-                                    key={h}
-                                    className="text-left px-4 sm:px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap"
-                                >
+                                <th key={h} className="text-left px-4 sm:px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
                                     {h}
                                 </th>
                             ))}
@@ -181,30 +178,30 @@ function PassFailTable({ subjectStats, loading }) {
                             <ListLoader rows={5} avatar={false} colSpanSet={5} />
                         ) : (
                             subjectStats.map((sub, i) => {
-                                const passRate = sub.totalStudents > 0
-                                    ? Math.round((sub.passedStudents / sub.totalStudents) * 100)
+                                const total = Number(sub.totalStudents);
+                                const passed = Number(sub.passedStudents);
+                                const passRate = total > 0 && !isNaN(total) && !isNaN(passed)
+                                    ? Math.round((passed / total) * 100)
                                     : 0;
                                 return (
                                     <tr
                                         key={sub.subjectId ?? sub.subjectName}
                                         className={`border-b border-gray-50 hover:bg-blue-50/20 transition-colors ${i % 2 === 0 ? "" : "bg-gray-50/30"}`}
                                     >
-                                        <td className="px-4 sm:px-5 py-3 font-semibold text-gray-800 whitespace-nowrap">
-                                            {sub.subjectName}
-                                        </td>
+                                        <td className="px-4 sm:px-5 py-3 font-semibold text-gray-800 whitespace-nowrap">{sub.subjectName}</td>
                                         <td className="px-4 sm:px-5 py-3">
                                             <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-green-100 text-green-700 text-xs font-bold">
-                                                {sub.passedStudents}
+                                                {sub.passedStudents ?? 0}
                                             </span>
                                         </td>
                                         <td className="px-4 sm:px-5 py-3">
                                             <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-red-100 text-red-600 text-xs font-bold">
-                                                {sub.failedStudents}
+                                                {sub.failedStudents ?? 0}
                                             </span>
                                         </td>
                                         <td className="px-4 sm:px-5 py-3">
                                             <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-gray-100 text-gray-500 text-xs font-bold">
-                                                {sub.absentStudents}
+                                                {sub.absentStudents ?? 0}
                                             </span>
                                         </td>
                                         <td className="px-4 sm:px-5 py-3">
@@ -250,16 +247,13 @@ function TopStudents({ toppers, loading }) {
                             key={s.studentId}
                             className={`flex items-center gap-3 sm:gap-4 p-3 sm:p-3.5 rounded-xl border-2 bg-gradient-to-r ${RANK_CARD_BG[i]}`}
                         >
-                            <div
-                                className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shrink-0 shadow-md ${RANK_MEDAL[i].bg} ${RANK_MEDAL[i].text} ${RANK_MEDAL[i].shadow}`}
-                            >
+                            <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shrink-0 shadow-md ${RANK_MEDAL[i].bg} ${RANK_MEDAL[i].text} ${RANK_MEDAL[i].shadow}`}>
                                 {i === 0 ? (
                                     <Medal className="w-4 h-4 sm:w-5 sm:h-5" />
                                 ) : (
                                     <span className="text-sm font-extrabold">{s.classRank}</span>
                                 )}
                             </div>
-
                             <div className="flex-1 min-w-0">
                                 <p className="text-sm font-bold text-gray-900 truncate">{s.studentName}</p>
                                 <p className="text-xs text-gray-400 truncate">
@@ -267,10 +261,9 @@ function TopStudents({ toppers, loading }) {
                                     <span className="hidden sm:inline"> · {s.sectionName}</span>
                                 </p>
                             </div>
-
                             <div className="text-right shrink-0">
                                 <p className="text-lg sm:text-xl font-extrabold text-gray-900">
-                                    {Number(s.percentage).toFixed(1)}%
+                                    {safeFixed(s.percentage)}%
                                 </p>
                                 <span className={`inline-block px-2 py-0.5 rounded-full text-[11px] font-bold ${gradeBadgeBg(s.overallGrade)}`}>
                                     {s.overallGrade}
@@ -302,10 +295,7 @@ function FailedStudents({ failedStudents, loading }) {
             ) : (
                 <div className="space-y-3">
                     {failedStudents.map((s) => (
-                        <div
-                            key={s.studentId}
-                            className="rounded-xl border-2 border-red-200 bg-gradient-to-br from-red-50 to-rose-50 p-4"
-                        >
+                        <div key={s.studentId} className="rounded-xl border-2 border-red-200 bg-gradient-to-br from-red-50 to-rose-50 p-4">
                             <div className="flex items-start justify-between gap-3">
                                 <div>
                                     <p className="text-sm font-bold text-gray-900">{s.studentName}</p>
@@ -317,7 +307,7 @@ function FailedStudents({ failedStudents, loading }) {
                                 </div>
                                 <div className="text-right shrink-0">
                                     <p className="text-xl font-extrabold text-red-600">
-                                        {Number(s.percentage).toFixed(1)}%
+                                        {safeFixed(s.percentage)}%
                                     </p>
                                     <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-bold bg-red-100 text-red-600">
                                         {s.overallGrade}
@@ -328,10 +318,7 @@ function FailedStudents({ failedStudents, loading }) {
                                 <p className="text-[11px] font-semibold text-gray-400 mb-1.5">Failed subjects:</p>
                                 <div className="flex flex-wrap gap-1.5">
                                     {(s.failedSubjects || []).map((sub) => (
-                                        <span
-                                            key={sub}
-                                            className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-red-100 text-red-700 border border-red-200"
-                                        >
+                                        <span key={sub} className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-red-100 text-red-700 border border-red-200">
                                             {sub}
                                         </span>
                                     ))}
@@ -350,7 +337,6 @@ export default function Analytics() {
     const [selectedExam, setSelectedExam] = useState(EXAM_OPTIONS[0]);
     const [section, setSection] = useState(SECTION_OPTIONS[0]);
 
-    // API state
     const [classSummary, setClassSummary] = useState(null);
     const [subjectStats, setSubjectStats] = useState([]);
     const [toppers, setToppers] = useState([]);
@@ -359,10 +345,14 @@ export default function Analytics() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
-    // ── Fetch all data when exam changes ──────────────────────────────────────
     const fetchAll = useCallback(async (examId) => {
         setLoading(true);
         setError(null);
+        // Clear previous data so old values don't show while loading
+        setClassSummary(null);
+        setSubjectStats([]);
+        setToppers([]);
+        setFailedStudents([]);
         try {
             const [summary, subjects, toppersData, failed] = await Promise.all([
                 getClassResultSummary(examId),
@@ -385,32 +375,38 @@ export default function Analytics() {
         fetchAll(selectedExam.id);
     }, [selectedExam.id, fetchAll]);
 
-    // ── Handle exam dropdown change ───────────────────────────────────────────
     const handleExamChange = (label) => {
         const found = EXAM_OPTIONS.find((e) => e.label === label);
         if (found) setSelectedExam(found);
     };
 
-    // ── Derive stats cards from classSummary ──────────────────────────────────
+    // ── Safely derive all stats ───────────────────────────────────────────────
     const topTopper = toppers[0];
-    const passRate = classSummary
-        ? ((classSummary.passedStudents / classSummary.totalStudents) * 100).toFixed(1)
-        : "—";
-    const failRate = classSummary
-        ? `${classSummary.failedStudents} — ${((classSummary.failedStudents / classSummary.totalStudents) * 100).toFixed(1)}%`
-        : "—";
+
+    const total = Number(classSummary?.totalStudents);
+    const passedCount = Number(classSummary?.passedStudents);
+    const failedCount = Number(classSummary?.failedStudents);
+    const avgPct = Number(classSummary?.classAvgPercentage);
+
+    const passRate = classSummary && total > 0 && !isNaN(total) && !isNaN(passedCount)
+        ? ((passedCount / total) * 100).toFixed(1)
+        : null;
+
+    const failRate = classSummary && total > 0 && !isNaN(total) && !isNaN(failedCount)
+        ? `${failedCount} — ${((failedCount / total) * 100).toFixed(1)}%`
+        : null;
 
     const STATS = [
         {
             key: "Class Average",
-            val: classSummary ? `${Number(classSummary.classAvgPercentage).toFixed(1)}%` : "—",
+            val: classSummary && !isNaN(avgPct) ? `${avgPct.toFixed(1)}%` : "—",
             icon: BarChart2,
             iconBgColor: "bg-blue-50",
             iconTxColor: "text-blue-600",
         },
         {
             key: "Highest Score",
-            val: topTopper
+            val: topTopper && !isNaN(Number(topTopper.percentage))
                 ? `${Number(topTopper.percentage).toFixed(1)}% — ${topTopper.studentName}`
                 : "—",
             icon: Trophy,
@@ -419,14 +415,14 @@ export default function Analytics() {
         },
         {
             key: "Failed Students",
-            val: classSummary ? failRate : "—",
+            val: failRate ?? "—",
             icon: AlertTriangle,
             iconBgColor: "bg-red-50",
             iconTxColor: "text-red-500",
         },
         {
             key: "Pass Rate",
-            val: classSummary ? `${passRate}%` : "—",
+            val: passRate != null ? `${passRate}%` : "—",
             icon: CheckSquare,
             iconBgColor: "bg-green-50",
             iconTxColor: "text-green-600",
@@ -436,7 +432,6 @@ export default function Analytics() {
     return (
         <div className="min-h-screen bg-[#f3f6fb] p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6">
 
-            {/* Page Title */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">
                     <TooltipComponent message="Efficiently manage analytics." direction="right" color="nocolor">
@@ -445,7 +440,6 @@ export default function Analytics() {
                 </h2>
             </div>
 
-            {/* Error Banner */}
             {error && (
                 <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3 flex items-center gap-2">
                     <AlertTriangle className="w-4 h-4 shrink-0" />
@@ -453,7 +447,6 @@ export default function Analytics() {
                 </div>
             )}
 
-            {/* Filter Bar */}
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm px-4 sm:px-5 py-4">
                 <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3">
                     <Select
@@ -471,7 +464,6 @@ export default function Analytics() {
                 </div>
             </div>
 
-            {/* Stats Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                 {loading
                     ? Array(4).fill(0).map((_, i) => <CardLoader key={i} />)
@@ -487,13 +479,11 @@ export default function Analytics() {
                     ))}
             </div>
 
-            {/* Charts Row */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                 <SubjectBarChart subjectStats={subjectStats} loading={loading} />
                 <PassFailTable subjectStats={subjectStats} loading={loading} />
             </div>
 
-            {/* Bottom Row */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                 <TopStudents toppers={toppers} loading={loading} />
                 <FailedStudents failedStudents={failedStudents} loading={loading} />
