@@ -295,7 +295,7 @@ export default function SubjectsMaster() {
         <div className="w-full bg-white border-b border-slate-200">
           <div className="px-3 sm:px-4 xl:px-6 pt-4 pb-0">
             <p className="text-[11px] text-slate-400 font-medium uppercase tracking-wider mb-0.5">
-              Academic → Subjects
+             {activeTab === 'materSubject' ? 'Academic → Subjects' : 'Academic → Section Assignment'}
             </p>
             <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-slate-800 tracking-tight">
               Subjects &amp; Section Assignment
@@ -313,7 +313,7 @@ export default function SubjectsMaster() {
           : "text-slate-400 border-transparent hover:text-slate-600"
       }`}
   >
-    Subjects Master
+    Subjects 
   </button>
 
   {/* Section Assignment */}

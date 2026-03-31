@@ -52,7 +52,7 @@ const menuItems = [
     roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'],
   },
    {
-    id: 'subjects & Sections', icon: BookOpenText, label: 'Subjects', route: '/subjectsmaster',
+    id: 'subjects & Sections', icon: BookOpenText, label: 'Academics', route: '/subjectsmaster',
     roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'],
   },
   {
@@ -97,8 +97,8 @@ const menuItems = [
     id: 'Permission',
     icon: Shield,
     label: 'Permissions',
-    route: '/accessPermissions',
-    roles: [ 'SUPER_ADMIN'],
+    route: '/rolesPermissions',
+    roles: [ 'GLOBAL_ADMIN'],
   },
 ]
 
