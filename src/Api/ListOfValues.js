@@ -23,3 +23,24 @@ export const getListOfValues = async (lovType = "") => {
     throw error;
   }
 };
+
+// Get Subject Category LOV
+export const getSubjectCategoryLov = async () => {
+  try {
+    const res = await authFetch(`${LOV_BASE_URL}/SUBJECT_CATEGORY`, {
+      method: "GET",
+    });
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(errorText || "Failed to fetch subject categories");
+    }
+
+    const data = await res.json();
+
+    return data?.data || [];
+  } catch (error) {
+    console.error("getSubjectCategoryLov error:", error.message);
+    throw error;
+  }
+};

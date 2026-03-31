@@ -65,12 +65,13 @@ import Driver_Attendants from '../Pages/Transport/Driver_Attendants';
 import Reports from '../Pages/Transport/Reports/Reports';
 import Student_Allocations from '../Pages/Transport/Student_Allocation/Student_Allocations';
 import Routes_Manage from '../Pages/Transport/Routes_Manage';
+import SubjectsMaster from '../Components/Subject/subject';
+import RolesPermissionsManagement from '../Pages/RoleBasedPermission/PermissionManagement';
+import SectionSubjectAssignment from '../Pages/SubjectManagement/SectionSubjectAssignment';
 import Exams from '../Pages/Exams/Exams';
 import MarksEntry from '../Pages/Exams/MarksEntry';
 import ReportCards from '../Pages/Exams/ReportCards';
 import Analytics from '../Pages/Exams/Analytics';
-import RolesPermissionsManagement from '../Pages/RoleBasedPermission/PermissionManagement';
-import SectionSubjectAssignment from '../Pages/SubjectManagement/SectionSubjectAssignment';
 
 // ─── Role Groups ───────────────────────────────────────────────────────────────
 const STOCK_ACCOUNTANT_ROLES = ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'STORE_ACCOUNTANT'];
@@ -172,8 +173,8 @@ const MainRoutes = () => {
             <Route path="/students/:id" element={<StudentDetails />} />
             <Route path="/students/editStudent/:id" element={<EditStudentDetails />} />
 
-            <Route path="/leaves" element={<Leaves />} />
-            <Route path="/leaves/manageHolidays" element={<HolidayManagment />} />
+            <Route path="/leaves"                         element={<Leaves />} />
+            <Route path="/leaves/manageHolidays"          element={<HolidayManagment />} />
 
             {/* Subject Section Assignment */}
             <Route path="/sectionSubjectAssignment" element={<SectionSubjectAssignment />} />
@@ -182,6 +183,7 @@ const MainRoutes = () => {
           {/* Leave Config — GLOBAL_ADMIN, SUPER_ADMIN, PRINCIPAL */}
           <Route element={<RoleProtectedRoute allowedRoles={['GLOBAL_ADMIN', 'SUPER_ADMIN', 'PRINCIPAL']} />}>
             <Route path="/leaves/leaveConfig" element={<LeaveConfig />} />
+            <Route path='/subjectsmaster' element={<SubjectsMaster/>}/>
           </Route>
 
           {/* Payroll */}
