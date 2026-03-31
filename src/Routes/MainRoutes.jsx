@@ -136,6 +136,11 @@ const MainRoutes = () => {
           <Route path="/leaves/myLeaves" element={<MyLeaves />} />
           <Route path="/attendance/markUserAttendance" element={<MarkUserAttendance />} />
 
+          {/* ONLY GLOBAL_ADMIN */}
+          <Route element={<RoleProtectedRoute allowedRoles={['GLOBAL_ADMIN']} />}>
+            <Route path="/rolesPermissions" element={<RolesPermissionsManagement />} />
+          </Route>
+
           {/* ADMIN, SUPER_ADMIN & GLOBAL_ADMIN */}
           <Route element={<RoleProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN']} />}>
             <Route path="/dashboard/addUser" element={<AddnewSystemUser />} />
@@ -169,9 +174,6 @@ const MainRoutes = () => {
 
             <Route path="/leaves" element={<Leaves />} />
             <Route path="/leaves/manageHolidays" element={<HolidayManagment />} />
-
-            {/* Permissions configuration */}
-            <Route path="/accessPermissions" element={<RolesPermissionsManagement />} />
 
             {/* Subject Section Assignment */}
             <Route path="/sectionSubjectAssignment" element={<SectionSubjectAssignment />} />
