@@ -466,7 +466,7 @@ export default function StaffAttendanceRegistration() {
                 </div>
             </div>
 
-            <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
 
                 {/* ── Stat Cards ── */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -495,7 +495,7 @@ export default function StaffAttendanceRegistration() {
                                     placeholder="Search by name or employee code..."
                                     className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-200 bg-gray-50 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400" />
                             </div>
-                            <div className="space-y-2 max-h-[420px] overflow-y-auto pr-1">
+                            <div className="space-y-2 max-h-105 overflow-y-auto pr-1">
                                 {usersLoading ? (
                                     <div className="flex items-center justify-center py-10">
                                         <RefreshCw className="w-5 h-5 animate-spin text-blue-400" />

@@ -150,7 +150,7 @@ function SectionEnrollmentTable({
             ) : enrollmentList.length === 0 ? (
                 <p className="text-xs text-gray-400 text-center py-8">No students found</p>
             ) : (
-                <div className={`divide-y divide-gray-50 transition-all ${showAll ? "max-h-none" : "max-h-[400px] overflow-y-auto"}`}>
+                <div className={`divide-y divide-gray-50 transition-all ${showAll ? "max-h-none" : "max-h-100 overflow-y-auto"}`}>
                     {displayed.map((s, idx) => (
                         <div key={s.userId} onClick={() => onSelectStudent(s)}
                             className={`grid grid-cols-12 px-4 py-2.5 items-center cursor-pointer transition-colors hover:bg-blue-50/40 ${selectedStudent?.userId === s.userId ? "bg-blue-50/70" : ""}`}>
@@ -615,7 +615,7 @@ export default function StudentAttendanceRegistration() {
                                     <div className="xl:col-span-7 bg-white rounded-xl border border-gray-200 shadow-sm p-5 space-y-4">
 
                                         {/* Student Info Banner */}
-                                        <div className="flex items-center gap-4 p-4 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100">
+                                        <div className="flex items-center gap-4 p-4 rounded-xl bg-linear-to-r from-blue-50 to-indigo-50 border border-blue-100">
                                             <div className="w-14 h-14 rounded-full bg-blue-600 text-white text-base font-bold flex items-center justify-center shrink-0 shadow">
                                                 {getInitials(studentName)}
                                             </div>

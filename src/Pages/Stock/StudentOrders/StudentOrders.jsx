@@ -170,6 +170,8 @@ export default function StudentOrders() {
   const [classes, setClasses] = useState([]);
   const [classesFilter, setClassesFilter] = useState("");
   const [classesLoading, setClassesLoading] = useState(false);
+  const [fromDate, setFromDate] = useState("")
+  const [toDate, setToDate] = useState("")
   const [noOrderFound, setNoOrderFound] = useState(false);
 
   const [viewOrder, setViewOrder] = useState(null);
@@ -208,7 +210,7 @@ export default function StudentOrders() {
         setClassesLoading(true);
         const res = await getClasses();
 
-        console.log("API response:", res); 
+        console.log("API response:", res);
         setClasses(res || []);
       } catch (err) {
         console.error("Failed to fetch classes", err);
@@ -249,6 +251,8 @@ export default function StudentOrders() {
         searchTerm: search,
         status: statusFilter,
         classId: classesFilter || undefined,
+        fromDate: fromDate || undefined,
+        toDate: toDate || undefined,
         sort: "createdAt,desc",
       });
       const list = res.orders || [];
@@ -261,7 +265,7 @@ export default function StudentOrders() {
     } finally {
       setLoading(false);
     }
-  }, [page, rowsPerPage, search, statusFilter, classesFilter]);
+  }, [page, rowsPerPage, search, statusFilter, classesFilter, fromDate, toDate]);
 
   useEffect(() => { fetchOrders(); }, [fetchOrders]);
   const totalItems = pagination?.totalElements ?? orders.length;
@@ -293,7 +297,7 @@ export default function StudentOrders() {
   ];
 
   const tdStyle = "px-2 py-2 text-left text-gray-700 text-sm";
-  
+
 
   return (
     <>
@@ -386,6 +390,37 @@ export default function StudentOrders() {
                   </option>
                 ))}
               </select>
+              <div className="flex items-center gap-3 mb-5">
+                <div className="flex flex-col">
+                  <label className="text-xs text-gray-500 mb-1">From</label>
+                  <input
+                    type="date"
+                    value={fromDate}
+                    max={toDate || undefined}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setFromDate(value);
+                      setPage(1);
+                    }}
+                    className="px-3 py-2 border border-gray-200 bg-gray-50 rounded-lg text-sm"
+                  />
+                </div>
+
+                <div className="flex flex-col">
+                  <label className="text-xs text-gray-500 mb-1">To</label>
+                  <input
+                    type="date"
+                    value={toDate}
+                    min={fromDate || undefined} 
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setToDate(value);
+                      setPage(1);
+                    }}
+                    className="px-3 py-2 border border-gray-200 bg-gray-50 rounded-lg text-sm"
+                  />
+                </div>
+              </div>
             </div>
 
             {/* ── MOBILE / TABLET CARDS ── */}

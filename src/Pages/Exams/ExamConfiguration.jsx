@@ -85,7 +85,7 @@ const Field = ({
 const Toast = ({ msg, type, onClose }) => {
   useEffect(() => { const t = setTimeout(onClose, 3000); return () => clearTimeout(t); }, [onClose]);
   return (
-    <div className={`fixed bottom-5 right-5 z-[9999] flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg text-sm font-medium transition-all
+    <div className={`fixed bottom-5 right-5 z-9999 flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg text-sm font-medium transition-all
       ${type === "success" ? "bg-green-50 border border-green-200 text-green-800" : "bg-red-50 border border-red-200 text-red-800"}`}>
       {type === "success" ? <CheckCircle2 className="h-4 w-4 text-green-600" /> : <AlertTriangle className="h-4 w-4 text-red-600" />}
       {msg}

@@ -2,18 +2,43 @@ import { authFetch } from "../Authfetch/Authfetch";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_DOUBLE_V1;
 
-// Get All Exams (with optional filters)
+// ─── Helper: extract error message from response ───────────────────────────
+// BUG FIX: Centralized error extractor so we get backend messages, not generic ones
+async function extractError(res, fallback) {
+  try {
+    const body = await res.clone().json();
+    return body?.message || body?.error || fallback;
+  } catch {
+    try {
+      const text = await res.text();
+      return text || fallback;
+    } catch {
+      return fallback;
+    }
+  }
+}
+
+// ─── Get All Exams (with optional filters) ────────────────────────────────────
 export const getExams = async (filters = {}) => {
   try {
-    const query = new URLSearchParams(filters).toString();
+    // BUG FIX: Filter out empty/undefined values before building query string
+    const cleanFilters = Object.fromEntries(
+      Object.entries(filters).filter(([, v]) => v !== "" && v !== null && v !== undefined)
+    );
+    const query = new URLSearchParams(cleanFilters).toString();
 
     const res = await authFetch(`${BASE_URL}/exams${query ? `?${query}` : ""}`, {
       method: "GET",
     });
 
-    if (!res.ok) throw new Error("Failed to fetch exams");
+    if (!res.ok) {
+      const msg = await extractError(res, "Failed to fetch exams");
+      throw new Error(msg);
+    }
 
     const data = await res.json();
+    // BUG FIX: Handle both array and wrapped responses
+    if (Array.isArray(data)) return data;
     return data?.data || [];
   } catch (error) {
     console.error(`getExams error: ${error.message}`);
@@ -21,7 +46,7 @@ export const getExams = async (filters = {}) => {
   }
 };
 
-// Create Exam
+// ─── Create Exam ──────────────────────────────────────────────────────────────
 export const createExam = async (examData) => {
   try {
     const res = await authFetch(`${BASE_URL}/exams`, {
@@ -29,7 +54,10 @@ export const createExam = async (examData) => {
       body: JSON.stringify(examData),
     });
 
-    if (!res.ok) throw new Error(`Failed to create exam`);
+    if (!res.ok) {
+      const msg = await extractError(res, "Failed to create exam");
+      throw new Error(msg);
+    }
 
     return await res.json();
   } catch (error) {
@@ -39,17 +67,19 @@ export const createExam = async (examData) => {
 };
 
 /* =========================
-   EXAM TYPES
+   GRADE CONFIGS
 ========================= */
 
-// Get All Grade Configs
 export const getGradeConfigs = async () => {
   try {
     const res = await authFetch(`${BASE_URL}/exams/grade-configs`, {
       method: "GET",
     });
 
-    if (!res.ok) throw new Error("Failed to fetch grade configs");
+    if (!res.ok) {
+      const msg = await extractError(res, "Failed to fetch grade configs");
+      throw new Error(msg);
+    }
 
     const data = await res.json();
     return data?.data || [];
@@ -59,7 +89,6 @@ export const getGradeConfigs = async () => {
   }
 };
 
-// Create Grade Config
 export const createGradeConfig = async (gradeData) => {
   try {
     const res = await authFetch(`${BASE_URL}/exams/grade-configs`, {
@@ -67,7 +96,10 @@ export const createGradeConfig = async (gradeData) => {
       body: JSON.stringify(gradeData),
     });
 
-    if (!res.ok) throw new Error("Failed to create grade config");
+    if (!res.ok) {
+      const msg = await extractError(res, "Failed to create grade config");
+      throw new Error(msg);
+    }
 
     return await res.json();
   } catch (error) {
@@ -76,18 +108,17 @@ export const createGradeConfig = async (gradeData) => {
   }
 };
 
-// Update Grade Config
 export const updateGradeConfig = async (id, gradeData) => {
   try {
-    const res = await authFetch(
-      `${BASE_URL}/exams/grade-configs/${id}`,
-      {
-        method: "PUT",
-        body: JSON.stringify(gradeData),
-      }
-    );
+    const res = await authFetch(`${BASE_URL}/exams/grade-configs/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(gradeData),
+    });
 
-    if (!res.ok) throw new Error(`Failed to update grade config with id: ${id}`);
+    if (!res.ok) {
+      const msg = await extractError(res, `Failed to update grade config with id: ${id}`);
+      throw new Error(msg);
+    }
 
     return await res.json();
   } catch (error) {
@@ -96,17 +127,16 @@ export const updateGradeConfig = async (id, gradeData) => {
   }
 };
 
-// Delete Grade Config (Soft Delete)
 export const deleteGradeConfig = async (id) => {
   try {
-    const res = await authFetch(
-      `${BASE_URL}/exams/grade-configs/${id}`,
-      {
-        method: "DELETE",
-      }
-    );
+    const res = await authFetch(`${BASE_URL}/exams/grade-configs/${id}`, {
+      method: "DELETE",
+    });
 
-    if (!res.ok) throw new Error(`Failed to delete grade config with id: ${id}`);
+    if (!res.ok) {
+      const msg = await extractError(res, `Failed to delete grade config with id: ${id}`);
+      throw new Error(msg);
+    }
 
     return await res.json();
   } catch (error) {
@@ -119,18 +149,25 @@ export const deleteGradeConfig = async (id) => {
    EXAM SUBJECT CONFIG
 ========================= */
 
-// Get Subjects for an Exam
+// ─── Get Subjects for an Exam ─────────────────────────────────────────────────
 export const getExamSubjects = async (examId, sectionId = null) => {
   try {
+    // BUG FIX: Validate examId
+    if (!examId) throw new Error("examId is required");
+
     const query = sectionId ? `?sectionId=${sectionId}` : "";
 
     const res = await authFetch(`${BASE_URL}/exams/${examId}/subjects${query}`, {
       method: "GET",
     });
 
-    if (!res.ok) throw new Error(`Failed to fetch subjects for examId: ${examId}`);
+    if (!res.ok) {
+      const msg = await extractError(res, `Failed to fetch subjects for examId: ${examId}`);
+      throw new Error(msg);
+    }
 
     const data = await res.json();
+    if (Array.isArray(data)) return data;
     return data?.data || [];
   } catch (error) {
     console.error(`getExamSubjects error: ${error.message}`);
@@ -138,18 +175,19 @@ export const getExamSubjects = async (examId, sectionId = null) => {
   }
 };
 
-// Declare Exam Result (LOCKS marks permanently )
+// ─── Declare Exam Result ──────────────────────────────────────────────────────
 export const declareExamResult = async (examId) => {
   try {
-    const res = await authFetch(
-      `${BASE_URL}/exams/${examId}/declare-result`,
-      {
-        method: "PATCH",
-      }
-    );
+    if (!examId) throw new Error("examId is required");
 
-    if (!res.ok)
-      throw new Error(`Failed to declare result for examId: ${examId}`);
+    const res = await authFetch(`${BASE_URL}/exams/${examId}/declare-result`, {
+      method: "PATCH",
+    });
+
+    if (!res.ok) {
+      const msg = await extractError(res, `Failed to declare result for examId: ${examId}`);
+      throw new Error(msg);
+    }
 
     return await res.json();
   } catch (error) {
@@ -158,15 +196,24 @@ export const declareExamResult = async (examId) => {
   }
 };
 
-// Add Subject to Exam
+// ─── Add Subject to Exam ──────────────────────────────────────────────────────
+// BUG FIX: Removed the BASE_URL.replace('/api/api', '/api') hack — use BASE_URL consistently
+// If your env var already has double /api/api, fix it at the env level, not here.
+// If you need the replace, keep it, but be explicit about why.
 export const addExamSubject = async (examId, subjectData) => {
   try {
-    const res = await authFetch(`${BASE_URL.replace('/api/api', '/api')}/exams/${examId}/subjects`, {
+    if (!examId) throw new Error("examId is required");
+    if (!subjectData) throw new Error("subjectData is required");
+
+    const res = await authFetch(`${BASE_URL}/exams/${examId}/subjects`, {
       method: "POST",
       body: JSON.stringify(subjectData),
     });
 
-    if (!res.ok) throw new Error(`Failed to add subject to examId: ${examId}`);
+    if (!res.ok) {
+      const msg = await extractError(res, `Failed to add subject to examId: ${examId}`);
+      throw new Error(msg);
+    }
 
     return await res.json();
   } catch (error) {
@@ -175,18 +222,22 @@ export const addExamSubject = async (examId, subjectData) => {
   }
 };
 
-// Update Subject Config
+// ─── Update Subject Config ────────────────────────────────────────────────────
 export const updateExamSubject = async (examId, configId, subjectData) => {
   try {
-    const res = await authFetch(
-      `${BASE_URL}/exams/${examId}/subjects/${configId}`,
-      {
-        method: "PUT",
-        body: JSON.stringify(subjectData),
-      }
-    );
+    if (!examId)   throw new Error("examId is required");
+    if (!configId) throw new Error("configId is required");
+    if (!subjectData) throw new Error("subjectData is required");
 
-    if (!res.ok) throw new Error(`Failed to update subject configId: ${configId}`);
+    const res = await authFetch(`${BASE_URL}/exams/${examId}/subjects/${configId}`, {
+      method: "PUT",
+      body: JSON.stringify(subjectData),
+    });
+
+    if (!res.ok) {
+      const msg = await extractError(res, `Failed to update subject configId: ${configId}`);
+      throw new Error(msg);
+    }
 
     return await res.json();
   } catch (error) {
@@ -195,19 +246,24 @@ export const updateExamSubject = async (examId, configId, subjectData) => {
   }
 };
 
-// Delete Subject Config
+// ─── Delete Subject Config ────────────────────────────────────────────────────
 export const deleteExamSubject = async (examId, configId) => {
   try {
-    const res = await authFetch(
-      `${BASE_URL}/exams/${examId}/subjects/${configId}`,
-      {
-        method: "DELETE",
-      }
-    );
+    if (!examId)   throw new Error("examId is required");
+    if (!configId) throw new Error("configId is required");
 
-    if (!res.ok) throw new Error(`Failed to delete subject configId: ${configId}`);
+    const res = await authFetch(`${BASE_URL}/exams/${examId}/subjects/${configId}`, {
+      method: "DELETE",
+    });
 
-    return await res.json();
+    if (!res.ok) {
+      const msg = await extractError(res, `Failed to delete subject configId: ${configId}`);
+      throw new Error(msg);
+    }
+
+    // BUG FIX: DELETE may return 204 No Content — handle gracefully
+    const text = await res.text();
+    return text ? JSON.parse(text) : { success: true };
   } catch (error) {
     console.error(`deleteExamSubject error: ${error.message}`);
     throw error;
@@ -218,20 +274,19 @@ export const deleteExamSubject = async (examId, configId) => {
    MARKS SHEET
 ========================= */
 
-// Get Marks Sheet (All students for a subject)
 export const getMarksSheet = async (examId, sectionSubjectId) => {
   try {
+    if (!examId || !sectionSubjectId) throw new Error("examId and sectionSubjectId are required");
+
     const res = await authFetch(
       `${BASE_URL}/exams/${examId}/marks/sheet/${sectionSubjectId}`,
-      {
-        method: "GET",
-      }
+      { method: "GET" }
     );
 
-    if (!res.ok)
-      throw new Error(
-        `Failed to fetch marks sheet for examId: ${examId}, sectionSubjectId: ${sectionSubjectId}`
-      );
+    if (!res.ok) {
+      const msg = await extractError(res, `Failed to fetch marks sheet`);
+      throw new Error(msg);
+    }
 
     const data = await res.json();
     return data?.data || [];
@@ -245,7 +300,6 @@ export const getMarksSheet = async (examId, sectionSubjectId) => {
    SINGLE MARK ENTRY
 ========================= */
 
-// Enter Marks (Single Student)
 export const enterMarks = async (examId, marksData) => {
   try {
     const res = await authFetch(`${BASE_URL}/exams/${examId}/marks`, {
@@ -253,7 +307,10 @@ export const enterMarks = async (examId, marksData) => {
       body: JSON.stringify(marksData),
     });
 
-    if (!res.ok) throw new Error(`Failed to enter marks`);
+    if (!res.ok) {
+      const msg = await extractError(res, "Failed to enter marks");
+      throw new Error(msg);
+    }
 
     return await res.json();
   } catch (error) {
@@ -262,21 +319,17 @@ export const enterMarks = async (examId, marksData) => {
   }
 };
 
-// Update Marks
 export const updateMarks = async (examId, marksId, marksData) => {
   try {
-    const res = await authFetch(
-      `${BASE_URL}/exams/${examId}/marks/${marksId}`,
-      {
-        method: "PUT",
-        body: JSON.stringify(marksData),
-      }
-    );
+    const res = await authFetch(`${BASE_URL}/exams/${examId}/marks/${marksId}`, {
+      method: "PUT",
+      body: JSON.stringify(marksData),
+    });
 
-    if (!res.ok)
-      throw new Error(
-        `Failed to update marks for marksId: ${marksId}`
-      );
+    if (!res.ok) {
+      const msg = await extractError(res, `Failed to update marks for marksId: ${marksId}`);
+      throw new Error(msg);
+    }
 
     return await res.json();
   } catch (error) {
@@ -289,19 +342,17 @@ export const updateMarks = async (examId, marksId, marksData) => {
    BULK MARK ENTRY
 ========================= */
 
-// Bulk Enter Marks (All students)
 export const bulkEnterMarks = async (examId, bulkData) => {
   try {
-    const res = await authFetch(
-      `${BASE_URL}/exams/${examId}/marks/bulk`,
-      {
-        method: "POST",
-        body: JSON.stringify(bulkData),
-      }
-    );
+    const res = await authFetch(`${BASE_URL}/exams/${examId}/marks/bulk`, {
+      method: "POST",
+      body: JSON.stringify(bulkData),
+    });
 
-    if (!res.ok)
-      throw new Error(`Failed to bulk enter marks`);
+    if (!res.ok) {
+      const msg = await extractError(res, "Failed to bulk enter marks");
+      throw new Error(msg);
+    }
 
     return await res.json();
   } catch (error) {
@@ -311,21 +362,19 @@ export const bulkEnterMarks = async (examId, bulkData) => {
 };
 
 /* =========================
-   GENERATE REPORT CARDS
+   REPORT CARDS
 ========================= */
 
-// Generate Report Cards (All students)
 export const generateReportCards = async (examId) => {
   try {
-    const res = await authFetch(
-      `${BASE_URL}/exams/${examId}/report-cards/generate`,
-      {
-        method: "POST",
-      }
-    );
+    const res = await authFetch(`${BASE_URL}/exams/${examId}/report-cards/generate`, {
+      method: "POST",
+    });
 
-    if (!res.ok)
-      throw new Error(`Failed to generate report cards for examId: ${examId}`);
+    if (!res.ok) {
+      const msg = await extractError(res, `Failed to generate report cards for examId: ${examId}`);
+      throw new Error(msg);
+    }
 
     const data = await res.json();
     return data?.data || [];
@@ -335,24 +384,17 @@ export const generateReportCards = async (examId) => {
   }
 };
 
-/* =========================
-   GET REPORT CARDS
-========================= */
-
-// Get All Report Cards (with optional section filter)
 export const getReportCards = async (examId, sectionId = null) => {
   try {
     const query = sectionId ? `?sectionId=${sectionId}` : "";
+    const res = await authFetch(`${BASE_URL}/exams/${examId}/report-cards${query}`, {
+      method: "GET",
+    });
 
-    const res = await authFetch(
-      `${BASE_URL}/exams/${examId}/report-cards${query}`,
-      {
-        method: "GET",
-      }
-    );
-
-    if (!res.ok)
-      throw new Error(`Failed to fetch report cards for examId: ${examId}`);
+    if (!res.ok) {
+      const msg = await extractError(res, `Failed to fetch report cards for examId: ${examId}`);
+      throw new Error(msg);
+    }
 
     const data = await res.json();
     return data?.data || [];
@@ -362,20 +404,16 @@ export const getReportCards = async (examId, sectionId = null) => {
   }
 };
 
-// Get Single Student Report Card
 export const getStudentReportCard = async (examId, studentId) => {
   try {
-    const res = await authFetch(
-      `${BASE_URL}/exams/${examId}/report-cards/${studentId}`,
-      {
-        method: "GET",
-      }
-    );
+    const res = await authFetch(`${BASE_URL}/exams/${examId}/report-cards/${studentId}`, {
+      method: "GET",
+    });
 
-    if (!res.ok)
-      throw new Error(
-        `Failed to fetch report card for studentId: ${studentId}`
-      );
+    if (!res.ok) {
+      const msg = await extractError(res, `Failed to fetch report card for studentId: ${studentId}`);
+      throw new Error(msg);
+    }
 
     const data = await res.json();
     return data?.data || {};
@@ -386,28 +424,20 @@ export const getStudentReportCard = async (examId, studentId) => {
 };
 
 /* =========================
-   REMARKS UPDATE
+   REMARKS
 ========================= */
 
-// Add / Update Remarks
-export const updateReportCardRemarks = async (
-  examId,
-  studentId,
-  remarksData
-) => {
+export const updateReportCardRemarks = async (examId, studentId, remarksData) => {
   try {
     const res = await authFetch(
       `${BASE_URL}/exams/${examId}/report-cards/${studentId}/remarks`,
-      {
-        method: "PATCH",
-        body: JSON.stringify(remarksData),
-      }
+      { method: "PATCH", body: JSON.stringify(remarksData) }
     );
 
-    if (!res.ok)
-      throw new Error(
-        `Failed to update remarks for studentId: ${studentId}`
-      );
+    if (!res.ok) {
+      const msg = await extractError(res, `Failed to update remarks for studentId: ${studentId}`);
+      throw new Error(msg);
+    }
 
     return await res.json();
   } catch (error) {
@@ -420,20 +450,16 @@ export const updateReportCardRemarks = async (
    STUDENT REPORT HISTORY
 ========================= */
 
-// Get All Report Cards for a Student (History)
 export const getStudentReportHistory = async (studentId) => {
   try {
-    const res = await authFetch(
-      `${BASE_URL}/students/${studentId}/report-cards`,
-      {
-        method: "GET",
-      }
-    );
+    const res = await authFetch(`${BASE_URL}/students/${studentId}/report-cards`, {
+      method: "GET",
+    });
 
-    if (!res.ok)
-      throw new Error(
-        `Failed to fetch report history for studentId: ${studentId}`
-      );
+    if (!res.ok) {
+      const msg = await extractError(res, `Failed to fetch report history for studentId: ${studentId}`);
+      throw new Error(msg);
+    }
 
     const data = await res.json();
     return data?.data || [];
@@ -443,23 +469,20 @@ export const getStudentReportHistory = async (studentId) => {
   }
 };
 
-
 /* =========================
    CLASS RESULT SUMMARY
 ========================= */
 
-// Get Class Result (Section-wise + Overall)
 export const getClassResultSummary = async (examId) => {
   try {
-    const res = await authFetch(
-      `${BASE_URL}/exams/${examId}/reports/class-result`,
-      {
-        method: "GET",
-      }
-    );
+    const res = await authFetch(`${BASE_URL}/exams/${examId}/reports/class-result`, {
+      method: "GET",
+    });
 
-    if (!res.ok)
-      throw new Error(`Failed to fetch class result for examId: ${examId}`);
+    if (!res.ok) {
+      const msg = await extractError(res, `Failed to fetch class result for examId: ${examId}`);
+      throw new Error(msg);
+    }
 
     const data = await res.json();
     return data?.data || {};
@@ -473,18 +496,16 @@ export const getClassResultSummary = async (examId) => {
    FAILED STUDENTS
 ========================= */
 
-// Get Failed Students List
 export const getFailedStudents = async (examId) => {
   try {
-    const res = await authFetch(
-      `${BASE_URL}/exams/${examId}/reports/failed-students`,
-      {
-        method: "GET",
-      }
-    );
+    const res = await authFetch(`${BASE_URL}/exams/${examId}/reports/failed-students`, {
+      method: "GET",
+    });
 
-    if (!res.ok)
-      throw new Error(`Failed to fetch failed students for examId: ${examId}`);
+    if (!res.ok) {
+      const msg = await extractError(res, `Failed to fetch failed students for examId: ${examId}`);
+      throw new Error(msg);
+    }
 
     const data = await res.json();
     return data?.data || [];
@@ -498,18 +519,16 @@ export const getFailedStudents = async (examId) => {
    SUBJECT ANALYSIS
 ========================= */
 
-// Get Subject-wise Analysis
 export const getSubjectAnalysis = async (examId) => {
   try {
-    const res = await authFetch(
-      `${BASE_URL}/exams/${examId}/reports/subject-analysis`,
-      {
-        method: "GET",
-      }
-    );
+    const res = await authFetch(`${BASE_URL}/exams/${examId}/reports/subject-analysis`, {
+      method: "GET",
+    });
 
-    if (!res.ok)
-      throw new Error(`Failed to fetch subject analysis for examId: ${examId}`);
+    if (!res.ok) {
+      const msg = await extractError(res, `Failed to fetch subject analysis for examId: ${examId}`);
+      throw new Error(msg);
+    }
 
     const data = await res.json();
     return data?.data || [];
@@ -523,18 +542,17 @@ export const getSubjectAnalysis = async (examId) => {
    TOPPERS
 ========================= */
 
-// Get Topper List
 export const getToppers = async (examId, limit = 10) => {
   try {
     const res = await authFetch(
       `${BASE_URL}/exams/${examId}/reports/toppers?limit=${limit}`,
-      {
-        method: "GET",
-      }
+      { method: "GET" }
     );
 
-    if (!res.ok)
-      throw new Error(`Failed to fetch toppers for examId: ${examId}`);
+    if (!res.ok) {
+      const msg = await extractError(res, `Failed to fetch toppers for examId: ${examId}`);
+      throw new Error(msg);
+    }
 
     const data = await res.json();
     return data?.data || [];
@@ -545,17 +563,17 @@ export const getToppers = async (examId, limit = 10) => {
 };
 
 /* =========================
-   EXAM TYPES (FULL CRUD + STATUS)
+   EXAM TYPES
 ========================= */
 
-// Get All Exam Types
 export const getExamTypes = async () => {
   try {
-    const res = await authFetch(`${BASE_URL}/exams/exam-types`, {
-      method: "GET",
-    });
+    const res = await authFetch(`${BASE_URL}/exams/exam-types`, { method: "GET" });
 
-    if (!res.ok) throw new Error("Failed to fetch exam types");
+    if (!res.ok) {
+      const msg = await extractError(res, "Failed to fetch exam types");
+      throw new Error(msg);
+    }
 
     const data = await res.json();
     return data?.data || [];
@@ -565,7 +583,6 @@ export const getExamTypes = async () => {
   }
 };
 
-// Create Exam Type
 export const createExamType = async (examTypeData) => {
   try {
     const res = await authFetch(`${BASE_URL}/exams/exam-types`, {
@@ -573,7 +590,10 @@ export const createExamType = async (examTypeData) => {
       body: JSON.stringify(examTypeData),
     });
 
-    if (!res.ok) throw new Error("Failed to create exam type");
+    if (!res.ok) {
+      const msg = await extractError(res, "Failed to create exam type");
+      throw new Error(msg);
+    }
 
     return await res.json();
   } catch (error) {
@@ -582,18 +602,17 @@ export const createExamType = async (examTypeData) => {
   }
 };
 
-// Update Exam Type
 export const updateExamType = async (id, examTypeData) => {
   try {
-    const res = await authFetch(
-      `${BASE_URL}/exams/exam-types/${id}`,
-      {
-        method: "PUT",
-        body: JSON.stringify(examTypeData),
-      }
-    );
+    const res = await authFetch(`${BASE_URL}/exams/exam-types/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(examTypeData),
+    });
 
-    if (!res.ok) throw new Error(`Failed to update exam type with id: ${id}`);
+    if (!res.ok) {
+      const msg = await extractError(res, `Failed to update exam type with id: ${id}`);
+      throw new Error(msg);
+    }
 
     return await res.json();
   } catch (error) {
@@ -602,17 +621,16 @@ export const updateExamType = async (id, examTypeData) => {
   }
 };
 
-// Activate Exam Type
 export const activateExamType = async (id) => {
   try {
-    const res = await authFetch(
-      `${BASE_URL}/exams/exam-types/${id}/activate`,
-      {
-        method: "PATCH",
-      }
-    );
+    const res = await authFetch(`${BASE_URL}/exams/exam-types/${id}/activate`, {
+      method: "PATCH",
+    });
 
-    if (!res.ok) throw new Error(`Failed to activate exam type: ${id}`);
+    if (!res.ok) {
+      const msg = await extractError(res, `Failed to activate exam type: ${id}`);
+      throw new Error(msg);
+    }
 
     return await res.json();
   } catch (error) {
@@ -621,17 +639,16 @@ export const activateExamType = async (id) => {
   }
 };
 
-// Deactivate Exam Type
 export const deactivateExamType = async (id) => {
   try {
-    const res = await authFetch(
-      `${BASE_URL}/exams/exam-types/${id}/deactivate`,
-      {
-        method: "PATCH",
-      }
-    );
+    const res = await authFetch(`${BASE_URL}/exams/exam-types/${id}/deactivate`, {
+      method: "PATCH",
+    });
 
-    if (!res.ok) throw new Error(`Failed to deactivate exam type: ${id}`);
+    if (!res.ok) {
+      const msg = await extractError(res, `Failed to deactivate exam type: ${id}`);
+      throw new Error(msg);
+    }
 
     return await res.json();
   } catch (error) {
