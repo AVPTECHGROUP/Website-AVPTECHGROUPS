@@ -421,7 +421,7 @@ export default function ReportCards() {
                     <button
                         onClick={handleGenerate}
                         disabled={!selectedExamId || generating}
-                        className="flex items-center justify-center gap-2 w-full sm:w-auto px-4 sm:px-5 py-2 text-sm font-semibold text-white bg-linear-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700 rounded-lg transition-all shadow-sm active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
+                        className="flex items-center justify-center gap-2 w-full sm:w-auto px-4 sm:px-5 py-2 text-sm font-semibold text-white bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700 rounded-lg transition-all shadow-sm active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
                     >
                         {generating
                             ? <Loader2 className="w-4 h-4 animate-spin" />

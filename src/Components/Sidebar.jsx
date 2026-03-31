@@ -31,6 +31,7 @@ const menuItems = [
     roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'],
     subItems: [
       { label: 'Subjects', route: '/subjectsmaster', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'] },
+      { label: 'Exams', route: '/exams', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN'] },
       { label: 'Marks Entry', route: '/exams/marksEntry', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN'] },
       { label: 'Report Cards', route: '/exams/reportCard', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN'] },
       { label: 'Analytics', route: '/exams/analytics', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN'] },
@@ -355,7 +356,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
               ${!sidebarOpen ? 'justify-center' : ''}`}
             title={!sidebarOpen ? displayName : ''}
           >
-            <div className="shrink-0 w-9 h-9 rounded-full bg-linear-to-br from-blue-500 to-blue-700
+            <div className="shrink-0 w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-blue-700
               flex items-center justify-center text-white font-bold text-sm shadow-sm">
               {initials}
             </div>
@@ -381,10 +382,10 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
                 ${sidebarOpen ? 'left-0 right-0' : 'left-0 w-64'}`}
               style={{ animation: 'slideUp 0.18s ease-out' }}
             >
-              <div className="h-12 bg-linear-to-r from-blue-600 to-blue-500 relative">
+              <div className="h-12 bg-gradient-to-r from-blue-600 to-blue-500 relative">
                 <div className="absolute -bottom-5 left-4">
                   <div className="w-10 h-10 rounded-full bg-white p-0.5 shadow-md">
-                    <div className="w-full h-full rounded-full bg-linear-to-br from-blue-500 to-blue-700
+                    <div className="w-full h-full rounded-full bg-gradient-to-br from-blue-500 to-blue-700
                       flex items-center justify-center text-white font-bold text-sm">
                       {initials}
                     </div>
