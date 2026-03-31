@@ -8,11 +8,11 @@ import SectionSubjectService from "../../Api/SectionSubjectService";
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const INPUT_CLS =
   "border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 bg-white " +
-  "focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-300 transition w-full";
+  "focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-300 transition w-full";
 
 const BTN_PRIMARY =
-  "flex items-center justify-center gap-1.5 px-4 py-2 text-sm rounded-xl bg-indigo-600 text-white " +
-  "hover:bg-indigo-700 active:scale-95 transition font-medium shadow-sm " +
+  "flex items-center justify-center gap-1.5 px-4 py-2 text-sm rounded-xl bg-blue-600 text-white " +
+  "hover:bg-blue-700 active:scale-95 transition font-medium shadow-sm " +
   "disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100";
 
 const BTN_GHOST =
@@ -27,14 +27,14 @@ const BTN_DANGER =
 
 const Badge = ({ children, variant = "default" }) => {
   const cls = {
-    default:   "bg-slate-100 text-slate-500",
-    code:      "bg-indigo-50 text-indigo-600 font-mono text-[11px] tracking-wide",
+    default: "bg-slate-100 text-slate-500",
+    code: "bg-blue-50 text-blue-600 font-mono text-[11px] tracking-wide",
     mandatory: "bg-violet-50 text-violet-600 border border-violet-100",
-    optional:  "bg-slate-50 text-slate-400 border border-slate-100",
-    active:    "bg-emerald-50 text-emerald-600 border border-emerald-100",
-    inactive:  "bg-rose-50 text-rose-400 border border-rose-100",
-    hours:     "bg-sky-50 text-sky-600 border border-sky-100",
-    count:     "bg-indigo-100 text-indigo-700 font-semibold",
+    optional: "bg-slate-50 text-slate-400 border border-slate-100",
+    active: "bg-emerald-50 text-emerald-600 border border-emerald-100",
+    inactive: "bg-rose-50 text-rose-400 border border-rose-100",
+    hours: "bg-sky-50 text-sky-600 border border-sky-100",
+    count: "bg-blue-100 text-blue-700 font-semibold",
   };
   return (
     <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-xs font-medium ${cls[variant]}`}>
@@ -45,13 +45,13 @@ const Badge = ({ children, variant = "default" }) => {
 
 const IconBtn = ({ onClick, title, variant = "red" }) => {
   const cls = {
-    red:    "text-slate-300 hover:text-rose-500 hover:bg-rose-50",
-    indigo: "text-slate-300 hover:text-indigo-500 hover:bg-indigo-50",
+    red: "text-slate-300 hover:text-rose-500 hover:bg-rose-50",
+    blue: "text-slate-300 hover:text-blue-500 hover:bg-blue-50",
   };
   return (
     <button onClick={onClick} title={title}
       className={`p-2 rounded-lg transition-all active:scale-90 touch-manipulation ${cls[variant]}`}>
-      {variant === "indigo" ? <PencilIcon /> : <TrashIcon />}
+      {variant === "blue" ? <PencilIcon /> : <TrashIcon />}
     </button>
   );
 };
@@ -114,8 +114,8 @@ const SubjectCard = ({ row, onEdit, onRemove }) => (
         </div>
       </div>
       <div className="flex items-center gap-0.5 shrink-0">
-        <IconBtn variant="indigo" title="Edit"   onClick={() => onEdit(row)} />
-        <IconBtn variant="red"    title="Remove" onClick={() => onRemove(row)} />
+        <IconBtn variant="blue" title="Edit" onClick={() => onEdit(row)} />
+        <IconBtn variant="red" title="Remove" onClick={() => onRemove(row)} />
       </div>
     </div>
   </div>
@@ -186,13 +186,13 @@ const AssignModal = ({ sectionId, allSubjects, assignedSubjectIds, onClose, onAs
       <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-xl overflow-hidden animate-slideUp">
 
         {/* Header */}
-        <div className="bg-gradient-to-r from-indigo-600 to-indigo-500 px-5 py-4 flex items-center justify-between">
+        <div className="bg-gradient-to-r from-blue-600 to-blue-500 px-5 py-4 flex items-center justify-between">
           <div>
-            <p className="text-indigo-200 text-xs font-medium uppercase tracking-widest">Section Subjects</p>
+            <p className="text-blue-200 text-xs font-medium uppercase tracking-widest">Section Subjects</p>
             <h3 className="text-white font-semibold text-base mt-0.5">Assign Subjects</h3>
           </div>
           <button onClick={onClose}
-            className="text-indigo-200 hover:text-white transition text-xl w-9 h-9 flex items-center justify-center rounded-lg hover:bg-white/10 touch-manipulation">
+            className="text-blue-200 hover:text-white transition text-xl w-9 h-9 flex items-center justify-center rounded-lg hover:bg-white/10 touch-manipulation">
             ✕
           </button>
         </div>
@@ -223,26 +223,24 @@ const AssignModal = ({ sectionId, allSubjects, assignedSubjectIds, onClose, onAs
                   <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Hrs/wk</label>
                   <input type="number" min={1} max={40} value={row.weeklyHours}
                     onChange={e => setRow(i, "weeklyHours", Number(e.target.value))}
-                    className="border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300 w-full" />
+                    className="border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-300 w-full" />
                 </div>
 
                 {/* Mandatory */}
                 <button type="button" onClick={() => setRow(i, "isMandatory", !row.isMandatory)}
-                  className={`px-3 py-2 rounded-xl border text-xs font-medium transition-all touch-manipulation ${
-                    row.isMandatory
-                      ? "bg-violet-50 border-violet-200 text-violet-700"
-                      : "bg-white border-slate-200 text-slate-400"
-                  }`}>
+                  className={`px-3 py-2 rounded-xl border text-xs font-medium transition-all touch-manipulation ${row.isMandatory
+                    ? "bg-violet-50 border-violet-200 text-violet-700"
+                    : "bg-white border-slate-200 text-slate-400"
+                    }`}>
                   {row.isMandatory ? "Mandatory" : "Optional"}
                 </button>
 
                 {/* Status */}
                 <button type="button" onClick={() => setRow(i, "status", row.status === "ACTIVE" ? "INACTIVE" : "ACTIVE")}
-                  className={`px-3 py-2 rounded-xl border text-xs font-medium transition-all touch-manipulation ${
-                    row.status === "ACTIVE"
-                      ? "bg-emerald-50 border-emerald-200 text-emerald-700"
-                      : "bg-white border-slate-200 text-slate-400"
-                  }`}>
+                  className={`px-3 py-2 rounded-xl border text-xs font-medium transition-all touch-manipulation ${row.status === "ACTIVE"
+                    ? "bg-emerald-50 border-emerald-200 text-emerald-700"
+                    : "bg-white border-slate-200 text-slate-400"
+                    }`}>
                   {row.status === "ACTIVE" ? "Active" : "Inactive"}
                 </button>
 
@@ -258,7 +256,7 @@ const AssignModal = ({ sectionId, allSubjects, assignedSubjectIds, onClose, onAs
           ))}
 
           <button onClick={addRow}
-            className="w-full py-2.5 rounded-xl border border-dashed border-slate-200 text-sm text-slate-400 hover:border-indigo-300 hover:text-indigo-500 transition flex items-center justify-center gap-1.5 touch-manipulation">
+            className="w-full py-2.5 rounded-xl border border-dashed border-slate-200 text-sm text-slate-400 hover:border-blue-300 hover:text-blue-500 transition flex items-center justify-center gap-1.5 touch-manipulation">
             <PlusIcon /> Add another subject
           </button>
         </div>
@@ -280,10 +278,10 @@ const AssignModal = ({ sectionId, allSubjects, assignedSubjectIds, onClose, onAs
 // ─────────────────────────────────────────────────────────────────────────────
 const EditModal = ({ row, onClose, onSave }) => {
   const [form, setForm] = useState({
-    subjectId:   row.subjectId,
+    subjectId: row.subjectId,
     weeklyHours: row.weeklyHours ?? 1,
     isMandatory: row.isMandatory ?? false,
-    status:      row.status === "ACTIVE" ? "ACTIVE" : "INACTIVE",
+    status: row.status === "ACTIVE" ? "ACTIVE" : "INACTIVE",
   });
 
   const set = (key, value) => setForm(prev => ({ ...prev, [key]: value }));
@@ -292,13 +290,13 @@ const EditModal = ({ row, onClose, onSave }) => {
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-0 sm:p-4">
       <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md overflow-hidden animate-slideUp">
 
-        <div className="bg-gradient-to-r from-indigo-600 to-indigo-500 px-5 py-4 flex items-center justify-between">
+        <div className="bg-gradient-to-r from-blue-600 to-blue-500 px-5 py-4 flex items-center justify-between">
           <div>
-            <p className="text-indigo-200 text-xs font-medium uppercase tracking-widest">Edit Assignment</p>
+            <p className="text-blue-200 text-xs font-medium uppercase tracking-widest">Edit Assignment</p>
             <h3 className="text-white font-semibold text-base mt-0.5 truncate max-w-[220px]">{row.subjectName}</h3>
           </div>
           <button onClick={onClose}
-            className="text-indigo-200 hover:text-white transition text-xl w-9 h-9 flex items-center justify-center rounded-lg hover:bg-white/10 touch-manipulation">
+            className="text-blue-200 hover:text-white transition text-xl w-9 h-9 flex items-center justify-center rounded-lg hover:bg-white/10 touch-manipulation">
             ✕
           </button>
         </div>
@@ -308,26 +306,24 @@ const EditModal = ({ row, onClose, onSave }) => {
             <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Weekly Hours</label>
             <input type="number" min={1} max={40} value={form.weeklyHours}
               onChange={e => set("weeklyHours", Number(e.target.value))}
-              className="border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300 w-full" />
+              className="border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-300 w-full" />
           </div>
 
           <div className="flex gap-3">
             <button type="button" onClick={() => set("isMandatory", !form.isMandatory)}
-              className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-medium transition-all touch-manipulation ${
-                form.isMandatory
-                  ? "bg-indigo-50 border-indigo-200 text-indigo-700"
-                  : "bg-slate-50 border-slate-200 text-slate-400"
-              }`}>
-              <span className={`w-2 h-2 rounded-full shrink-0 ${form.isMandatory ? "bg-indigo-500" : "bg-slate-300"}`} />
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-medium transition-all touch-manipulation ${form.isMandatory
+                ? "bg-blue-50 border-blue-200 text-blue-700"
+                : "bg-slate-50 border-slate-200 text-slate-400"
+                }`}>
+              <span className={`w-2 h-2 rounded-full shrink-0 ${form.isMandatory ? "bg-blue-500" : "bg-slate-300"}`} />
               Mandatory
             </button>
 
             <button type="button" onClick={() => set("status", form.status === "ACTIVE" ? "INACTIVE" : "ACTIVE")}
-              className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-medium transition-all touch-manipulation ${
-                form.status === "ACTIVE"
-                  ? "bg-emerald-50 border-emerald-200 text-emerald-700"
-                  : "bg-slate-50 border-slate-200 text-slate-400"
-              }`}>
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-medium transition-all touch-manipulation ${form.status === "ACTIVE"
+                ? "bg-emerald-50 border-emerald-200 text-emerald-700"
+                : "bg-slate-50 border-slate-200 text-slate-400"
+                }`}>
               <span className={`w-2 h-2 rounded-full shrink-0 ${form.status === "ACTIVE" ? "bg-emerald-500" : "bg-slate-300"}`} />
               {form.status === "ACTIVE" ? "Active" : "Inactive"}
             </button>
@@ -371,24 +367,24 @@ const ConfirmDialog = ({ message, onConfirm, onCancel }) => (
 // ─────────────────────────────────────────────────────────────────────────────
 export default function SectionSubjectAssignment() {
 
-  const [classes,     setClasses]     = useState([]);
-  const [sections,    setSections]    = useState([]);
-  const [subjects,    setSubjects]    = useState([]);
+  const [classes, setClasses] = useState([]);
+  const [sections, setSections] = useState([]);
+  const [subjects, setSubjects] = useState([]);
   const [allSubjects, setAllSubjects] = useState([]);
 
-  const [selectedClassId,   setSelectedClassId]   = useState("");
+  const [selectedClassId, setSelectedClassId] = useState("");
   const [selectedSectionId, setSelectedSectionId] = useState("");
 
-  const [classesLoading,  setClassesLoading]  = useState(false);
+  const [classesLoading, setClassesLoading] = useState(false);
   const [sectionsLoading, setSectionsLoading] = useState(false);
-  const [tableLoading,    setTableLoading]    = useState(false);
+  const [tableLoading, setTableLoading] = useState(false);
 
   const [filterStatus, setFilterStatus] = useState("all");
-  const [search,       setSearch]       = useState("");
+  const [search, setSearch] = useState("");
 
-  const [editRow,    setEditRow]    = useState(null);
+  const [editRow, setEditRow] = useState(null);
   const [showAssign, setShowAssign] = useState(false);
-  const [confirmDg,  setConfirmDg]  = useState(null);
+  const [confirmDg, setConfirmDg] = useState(null);
 
   // ─── Loaders ──────────────────────────────────────────────────────────────
 
@@ -468,9 +464,9 @@ export default function SectionSubjectAssignment() {
 
   // ─── Derived ──────────────────────────────────────────────────────────────
 
-  const selectedClassName   = classes.find(c  => String(c.id) === selectedClassId)?.name   ?? "";
+  const selectedClassName = classes.find(c => String(c.id) === selectedClassId)?.name ?? "";
   const selectedSectionName = sections.find(s => String(s.id) === selectedSectionId)?.name ?? "";
-  const assignedSubjectIds  = subjects.map(s => String(s.subjectId));
+  const assignedSubjectIds = subjects.map(s => String(s.subjectId));
 
   const filteredSubjects = subjects.filter(s => {
     if (!search) return true;
@@ -493,14 +489,14 @@ export default function SectionSubjectAssignment() {
         .animate-slideUp { animation: slideUp .22s ease; }
       `}</style>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-5 sm:py-8 space-y-4 sm:space-y-5">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-5 sm:pb-8 space-y-4 sm:space-y-5">
 
         {/* ── Page header ─────────────────────────────────────────────────── */}
         <div>
-          <p className="text-xs text-slate-400 uppercase tracking-widest mb-1">Academic → Subjects</p>
+          {/* <p className="text-xs text-slate-400 uppercase tracking-widest mb-1">Academic → Subjects</p>
           <h1 className="text-xl sm:text-2xl font-bold text-slate-800 tracking-tight">
             Section–Subject Assignment
-          </h1>
+          </h1> */}
         </div>
 
         {/* ── Class & Section selector ─────────────────────────────────────── */}
@@ -581,7 +577,7 @@ export default function SectionSubjectAssignment() {
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder="Search…"
-                className="pl-8 pr-3 py-2 text-xs border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300 w-full"
+                className="pl-8 pr-3 py-2 text-xs border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-300 w-full"
               />
             </div>
           </div>
@@ -590,20 +586,20 @@ export default function SectionSubjectAssignment() {
           <div className="md:hidden">
             {tableLoading
               ? <div className="py-12 flex flex-col items-center gap-2">
-                  <SpinnerIcon />
-                  <p className="text-xs text-slate-400">Loading subjects…</p>
-                </div>
+                <SpinnerIcon />
+                <p className="text-xs text-slate-400">Loading subjects…</p>
+              </div>
               : filteredSubjects.length === 0
                 ? <div className="flex flex-col items-center justify-center py-12 gap-3">
-                    <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-2xl">📚</div>
-                    <p className="text-sm text-slate-400 text-center px-4">
-                      {!selectedSectionId
-                        ? "Select a section to view subjects."
-                        : subjects.length === 0
-                          ? "No subjects assigned to this section."
-                          : "No results match your search."}
-                    </p>
-                  </div>
+                  <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-2xl">📚</div>
+                  <p className="text-sm text-slate-400 text-center px-4">
+                    {!selectedSectionId
+                      ? "Select a section to view subjects."
+                      : subjects.length === 0
+                        ? "No subjects assigned to this section."
+                        : "No results match your search."}
+                  </p>
+                </div>
                 : filteredSubjects.map(row => (
                   <SubjectCard key={row.id} row={row}
                     onEdit={setEditRow}
@@ -630,12 +626,12 @@ export default function SectionSubjectAssignment() {
                   ? [...Array(4)].map((_, i) => <SkeletonRow key={i} cols={6} />)
                   : filteredSubjects.length === 0
                     ? <EmptyState cols={6} message={
-                        !selectedSectionId
-                          ? "Select a section to view subjects."
-                          : subjects.length === 0
-                            ? "No subjects assigned to this section."
-                            : "No results match your search."
-                      } />
+                      !selectedSectionId
+                        ? "Select a section to view subjects."
+                        : subjects.length === 0
+                          ? "No subjects assigned to this section."
+                          : "No results match your search."
+                    } />
                     : filteredSubjects.map(row => (
                       <tr key={row.id} className="row-hover transition-colors fade-row">
                         <td className="px-6 py-3.5 font-semibold text-slate-800 whitespace-nowrap">{row.subjectName}</td>
@@ -653,8 +649,8 @@ export default function SectionSubjectAssignment() {
                         </td>
                         <td className="px-6 py-3.5">
                           <div className="flex items-center gap-0.5">
-                            <IconBtn variant="indigo" title="Edit"   onClick={() => setEditRow(row)} />
-                            <IconBtn variant="red"    title="Remove" onClick={() => handleRemove(row)} />
+                            <IconBtn variant="blue" title="Edit" onClick={() => setEditRow(row)} />
+                            <IconBtn variant="red" title="Remove" onClick={() => handleRemove(row)} />
                           </div>
                         </td>
                       </tr>
