@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import {
     ClipboardList,
     CheckSquare,
@@ -13,6 +14,7 @@ import {
     CheckCircle,
     Trash2,
     AlertCircle,
+    RefreshCw,
 } from "lucide-react";
 
 import ActionDropDownComp from "../../Components/CommonComp/ActionDropDownComp";
@@ -24,7 +26,7 @@ import AddSubjectForm from "./AddSubjectForm";
 import TooltipComponent from "../../Components/CommonComp/Tooltip_comp/TooltipComp";
 
 import { getExams, getExamSubjects, deleteExamSubject, declareExamResult } from "../../Api/Exams";
-import { getClasses } from "../../Api/TeachersAPI"; // ✅ Removed: getAllSections (no longer needed)
+import { getClasses } from "../../Api/TeachersAPI";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -32,9 +34,9 @@ function getExamTypeBg(typeName) {
     const map = {
         "Unit Test 1": "bg-purple-100 text-purple-700",
         "Unit Test 2": "bg-violet-100 text-violet-700",
-        "Mid Term":    "bg-blue-100 text-blue-700",
-        "Final Term":  "bg-orange-100 text-orange-700",
-        "Pre-Board":   "bg-pink-100 text-pink-700",
+        "Mid Term": "bg-blue-100 text-blue-700",
+        "Final Term": "bg-orange-100 text-orange-700",
+        "Pre-Board": "bg-pink-100 text-pink-700",
     };
     return map[typeName] ?? "bg-gray-100 text-gray-700";
 }
@@ -49,43 +51,59 @@ function formatDateRange(startDate, endDate) {
 }
 
 function getExamActions(exam) {
+    if (!exam) return [];
     if (!exam.resultDeclared) {
         return [
-            { label: "Enter Marks", value: "enter_marks", icon: LogIn,
-              bg: "bg-white", text: "text-gray-700", hover: "hover:bg-gray-50", disabled: false },
-            { label: "Declare", value: "declare", icon: CheckCircle,
-              bg: "bg-orange-500", text: "text-white", hover: "hover:bg-orange-600", disabled: false },
+            {
+                label: "Enter Marks", value: "enter_marks", icon: LogIn,
+                bg: "bg-white", text: "text-gray-700", hover: "hover:bg-gray-50", disabled: false,
+            },
+            {
+                label: "Declare", value: "declare", icon: CheckCircle,
+                bg: "bg-orange-500", text: "text-white", hover: "hover:bg-orange-600", disabled: false,
+            },
         ];
     }
     return [
-        { label: "Marks",   value: "marks",   icon: Edit2,    bg: "bg-white",    text: "text-gray-700", hover: "hover:bg-gray-50",  disabled: false },
-        { label: "Reports", value: "reports", icon: FileText, bg: "bg-blue-600", text: "text-white",    hover: "hover:bg-blue-700", disabled: false },
+        { label: "Marks", value: "marks", icon: Edit2, bg: "bg-white", text: "text-gray-700", hover: "hover:bg-gray-50", disabled: false },
+        { label: "Reports", value: "reports", icon: FileText, bg: "bg-blue-600", text: "text-white", hover: "hover:bg-blue-700", disabled: false },
     ];
 }
 
 function buildStats(exams) {
-    const total    = exams.length;
+    // BUG FIX: Defensive check
+    if (!Array.isArray(exams) || exams.length === 0) return null;
+    const total = exams.length;
     const declared = exams.filter((e) => e.resultDeclared).length;
-    const pending  = total - declared;
+    const pending = total - declared;
     const classSet = new Set(exams.map((e) => e.schoolClassName).filter(Boolean));
-    const ayLabel  = exams[0]?.academicYearLabel ?? "—";
+    // BUG FIX: Use academicYearLabel from multiple exams, not just first
+    const ayLabels = [...new Set(exams.map((e) => e.academicYearLabel).filter(Boolean))];
+    const ayLabel = ayLabels.join(", ") || "—";
     return [
-        { key: "Total Exams",      val: `${total} — AY ${ayLabel}`,                              icon: ClipboardList, iconBgColor: "bg-blue-50",   iconTxColor: "text-blue-600"   },
-        { key: "Results Declared", val: `${declared} — Marks Locked`,                            icon: CheckSquare,  iconBgColor: "bg-green-50",  iconTxColor: "text-green-600"  },
-        { key: "Pending Result",   val: `${pending} — Pending`,                                  icon: Clock,        iconBgColor: "bg-yellow-50", iconTxColor: "text-yellow-600" },
-        { key: "Classes Covered",  val: `${classSet.size} — ${[...classSet].join(", ") || "—"}`, icon: School,       iconBgColor: "bg-indigo-50", iconTxColor: "text-indigo-600" },
+        { key: "Total Exams", val: `${total} — AY ${ayLabel}`, icon: ClipboardList, iconBgColor: "bg-blue-50", iconTxColor: "text-blue-600" },
+        { key: "Results Declared", val: `${declared} — Marks Locked`, icon: CheckSquare, iconBgColor: "bg-green-50", iconTxColor: "text-green-600" },
+        { key: "Pending Result", val: `${pending} — Pending`, icon: Clock, iconBgColor: "bg-yellow-50", iconTxColor: "text-yellow-600" },
+        { key: "Classes Covered", val: `${classSet.size} — ${[...classSet].join(", ") || "—"}`, icon: School, iconBgColor: "bg-indigo-50", iconTxColor: "text-indigo-600" },
     ];
 }
 
 // ─── Exam Card (mobile) ───────────────────────────────────────────────────────
-function ExamCard({ exam, onAction }) {
-    const typeBg   = getExamTypeBg(exam.examTypeName);
+function ExamCard({ exam, onAction, isSelected, onClick }) {
+    const typeBg = getExamTypeBg(exam.examTypeName);
     const resultBg = exam.resultDeclared ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700";
     return (
-        <div className="p-4 border-b border-gray-100 last:border-0 hover:bg-blue-50/20 transition-colors">
+        // BUG FIX: Added onClick and isSelected highlight to mobile card too
+        <div
+            onClick={onClick}
+            className={`p-4 border-b border-gray-100 last:border-0 transition-colors cursor-pointer ${isSelected ? "bg-blue-50/50 border-l-2 border-l-blue-500" : "hover:bg-blue-50/20"}`}
+        >
             <div className="flex items-start justify-between gap-2 mb-3">
                 <p className="text-sm font-semibold text-gray-800 leading-tight">{exam.name}</p>
-                <ActionDropDownComp actionOptions={getExamActions(exam)} onAction={(a) => onAction(exam.id, a)} />
+                {/* BUG FIX: Stop propagation so dropdown click doesn't trigger row select */}
+                <div onClick={(e) => e.stopPropagation()}>
+                    <ActionDropDownComp actionOptions={getExamActions(exam)} onAction={(a) => onAction(exam.id, a)} />
+                </div>
             </div>
             <div className="flex flex-wrap gap-2">
                 <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${typeBg}`}>{exam.examTypeName}</span>
@@ -104,6 +122,12 @@ function ExamCard({ exam, onAction }) {
 
 // ─── Delete Confirm Modal ─────────────────────────────────────────────────────
 function DeleteConfirmModal({ subjectName, onConfirm, onCancel, loading }) {
+    // BUG FIX: Prevent background scroll when modal open
+    useEffect(() => {
+        document.body.style.overflow = "hidden";
+        return () => { document.body.style.overflow = ""; };
+    }, []);
+
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6">
@@ -119,14 +143,15 @@ function DeleteConfirmModal({ subjectName, onConfirm, onCancel, loading }) {
                 <div className="flex gap-3 justify-end">
                     <button
                         onClick={onCancel} disabled={loading}
-                        className="px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-all"
+                        className="px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-all disabled:opacity-60"
                     >
                         Cancel
                     </button>
                     <button
                         onClick={onConfirm} disabled={loading}
-                        className="px-4 py-2 text-sm font-semibold text-white bg-red-500 rounded-lg hover:bg-red-600 active:scale-95 transition-all disabled:opacity-60"
+                        className="px-4 py-2 text-sm font-semibold text-white bg-red-500 rounded-lg hover:bg-red-600 active:scale-95 transition-all disabled:opacity-60 flex items-center gap-2"
                     >
+                        {loading && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
                         {loading ? "Removing..." : "Remove"}
                     </button>
                 </div>
@@ -137,6 +162,12 @@ function DeleteConfirmModal({ subjectName, onConfirm, onCancel, loading }) {
 
 // ─── Declare Confirm Modal ────────────────────────────────────────────────────
 function DeclareConfirmModal({ examName, onConfirm, onCancel, loading }) {
+    // BUG FIX: Prevent background scroll when modal open
+    useEffect(() => {
+        document.body.style.overflow = "hidden";
+        return () => { document.body.style.overflow = ""; };
+    }, []);
+
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6">
@@ -156,14 +187,15 @@ function DeclareConfirmModal({ examName, onConfirm, onCancel, loading }) {
                 <div className="flex gap-3 justify-end">
                     <button
                         onClick={onCancel} disabled={loading}
-                        className="px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-all"
+                        className="px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-all disabled:opacity-60"
                     >
                         Cancel
                     </button>
                     <button
                         onClick={onConfirm} disabled={loading}
-                        className="px-4 py-2 text-sm font-semibold text-white bg-orange-500 rounded-lg hover:bg-orange-600 active:scale-95 transition-all disabled:opacity-60"
+                        className="px-4 py-2 text-sm font-semibold text-white bg-orange-500 rounded-lg hover:bg-orange-600 active:scale-95 transition-all disabled:opacity-60 flex items-center gap-2"
                     >
+                        {loading && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
                         {loading ? "Declaring..." : "Yes, Declare"}
                     </button>
                 </div>
@@ -172,59 +204,81 @@ function DeclareConfirmModal({ examName, onConfirm, onCancel, loading }) {
     );
 }
 
+// ─── Delete Subject Error Toast ───────────────────────────────────────────────
+function ErrorToast({ message, onClose }) {
+    useEffect(() => {
+        const t = setTimeout(onClose, 4000);
+        return () => clearTimeout(t);
+    }, [onClose]);
+    return (
+        <div className="fixed bottom-4 right-4 z-50 bg-red-500 text-white text-sm font-medium px-4 py-3 rounded-xl shadow-lg flex items-center gap-2 animate-in slide-in-from-bottom-2">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            {message}
+            <button onClick={onClose} className="ml-2 text-white/80 hover:text-white text-lg leading-none">×</button>
+        </div>
+    );
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function Exams() {
+    const navigate = useNavigate();
 
     // ── Meta ──────────────────────────────────────────────────────────────────
-    const [classes,     setClasses]     = useState([]);
+    const [classes, setClasses] = useState([]);
     const [loadingMeta, setLoadingMeta] = useState(true);
+    const [errorMeta, setErrorMeta] = useState(null);
 
     // ── Filters ───────────────────────────────────────────────────────────────
-    const [selectedClassId,        setSelectedClassId]        = useState(null);
+    const [selectedClassId, setSelectedClassId] = useState(null);
     const [selectedAcademicYearId, setSelectedAcademicYearId] = useState("");
-    const [selectedExamTypeLabel,  setSelectedExamTypeLabel]  = useState("");
+    const [selectedExamTypeLabel, setSelectedExamTypeLabel] = useState("");
 
     // ── Data ──────────────────────────────────────────────────────────────────
-    const [exams,    setExams]    = useState([]);
+    const [exams, setExams] = useState([]);
     const [subjects, setSubjects] = useState([]);
     const [selectedExamForSubjects, setSelectedExamForSubjects] = useState(null);
 
     // ── Loading / error ───────────────────────────────────────────────────────
-    const [loadingExams,    setLoadingExams]    = useState(false);
+    const [loadingExams, setLoadingExams] = useState(false);
     const [loadingSubjects, setLoadingSubjects] = useState(false);
-    const [errorExams,      setErrorExams]      = useState(null);
-    const [errorSubjects,   setErrorSubjects]   = useState(null);
+    const [errorExams, setErrorExams] = useState(null);
+    const [errorSubjects, setErrorSubjects] = useState(null);
+    const [deleteError, setDeleteError] = useState(null);
 
     // ── Modal state ───────────────────────────────────────────────────────────
-    const [showNewExam,     setShowNewExam]     = useState(false);
-    const [showAddSubject,  setShowAddSubject]  = useState(false);
-    const [editSubject,     setEditSubject]     = useState(null);
-    const [deleteTarget,    setDeleteTarget]    = useState(null);
+    const [showNewExam, setShowNewExam] = useState(false);
+    const [showAddSubject, setShowAddSubject] = useState(false);
+    const [editSubject, setEditSubject] = useState(null);
+    const [deleteTarget, setDeleteTarget] = useState(null);
     const [deletingSubject, setDeletingSubject] = useState(false);
 
     // ── Declare state ─────────────────────────────────────────────────────────
-    const [declareTarget, setDeclareTarget] = useState(null); // { id, name }
+    const [declareTarget, setDeclareTarget] = useState(null);
     const [declaringExam, setDeclaringExam] = useState(false);
-    const [declareError,  setDeclareError]  = useState(null);
+    const [declareError, setDeclareError] = useState(null);
+    const hasAutoSelectedExam = useRef(false);
 
-    // ── Derived ───────────────────────────────────────────────────────────────
     const academicYears = [...new Map(
-        exams.map((e) => [e.academicYearId, { id: e.academicYearId, label: e.academicYearLabel }])
+        exams
+            .filter((e) => e.academicYearId && e.academicYearLabel)
+            .map((e) => [e.academicYearId, { id: e.academicYearId, label: e.academicYearLabel }])
     ).values()];
 
     const examTypeNames = [...new Set(exams.map((e) => e.examTypeName).filter(Boolean))];
 
-    // ── 1. Load classes on mount ───────────────────────────────────────────────
     useEffect(() => {
         const loadMeta = async () => {
             setLoadingMeta(true);
+            setErrorMeta(null);
             try {
-                // ✅ Only fetch classes — sections no longer needed here
                 const cls = await getClasses();
-                setClasses(cls);
-                if (cls.length > 0) setSelectedClassId(cls[0].id);
+                setClasses(Array.isArray(cls) ? cls : []);
+                if (Array.isArray(cls) && cls.length > 0) {
+                    setSelectedClassId(cls[0].id);
+                }
             } catch (err) {
                 console.error("Exams meta load error:", err);
+                setErrorMeta("Failed to load classes. Please refresh the page.");
             } finally {
                 setLoadingMeta(false);
             }
@@ -232,7 +286,16 @@ export default function Exams() {
         loadMeta();
     }, []);
 
-    // ── 2. Load exams when class / academic-year filter changes ───────────────
+    const handleClassChange = (newClassId) => {
+        setSelectedClassId(Number(newClassId));
+        setSelectedExamForSubjects(null);
+        setSubjects([]);
+        setExams([]);
+        setSelectedExamTypeLabel("");
+        setSelectedAcademicYearId("");
+        hasAutoSelectedExam.current = false;
+    };
+
     const fetchExams = useCallback(async () => {
         if (!selectedClassId) return;
         setLoadingExams(true);
@@ -241,32 +304,49 @@ export default function Exams() {
             const filters = { classId: selectedClassId };
             if (selectedAcademicYearId) filters.academicYearId = selectedAcademicYearId;
             const data = await getExams(filters);
-            setExams(data);
-            if (data.length > 0 && !selectedExamForSubjects) {
-                setSelectedExamForSubjects(data[0]);
+            const examList = Array.isArray(data) ? data : [];
+            setExams(examList);
+
+            // BUG FIX: Only auto-select first exam once per class load, not on every filter change
+            if (examList.length > 0 && !hasAutoSelectedExam.current) {
+                setSelectedExamForSubjects(examList[0]);
+                hasAutoSelectedExam.current = true;
+            } else if (examList.length === 0) {
+                // BUG FIX: Clear selected exam and subjects when no exams found
+                setSelectedExamForSubjects(null);
+                setSubjects([]);
+            } else if (selectedExamForSubjects) {
+                // BUG FIX: Refresh selectedExamForSubjects from new data (e.g. after declare)
+                const refreshed = examList.find((e) => e.id === selectedExamForSubjects.id);
+                if (refreshed) setSelectedExamForSubjects(refreshed);
             }
-        } catch {
+        } catch (err) {
+            console.error("fetchExams error:", err);
             setErrorExams("Failed to load exams. Please try again.");
+            setExams([]);
         } finally {
             setLoadingExams(false);
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedClassId, selectedAcademicYearId]);
 
     useEffect(() => { fetchExams(); }, [fetchExams]);
 
     // ── 3. Load subjects for selected exam ────────────────────────────────────
-    // ✅ Removed selectedSectionId param — AddSubjectForm handles section-subject
-    //    scoping internally via getSectionSubjectsByClass(classId)
     const fetchSubjects = useCallback(async () => {
-        if (!selectedExamForSubjects?.id) return;
+        if (!selectedExamForSubjects?.id) {
+            setSubjects([]); // BUG FIX: Clear subjects when no exam selected
+            return;
+        }
         setLoadingSubjects(true);
         setErrorSubjects(null);
         try {
-            // Pass no sectionId — fetch all subjects for this exam
             const data = await getExamSubjects(selectedExamForSubjects.id);
-            setSubjects(data);
-        } catch {
-            setErrorSubjects("Failed to load subjects.");
+            setSubjects(Array.isArray(data) ? data : []);
+        } catch (err) {
+            console.error("fetchSubjects error:", err);
+            setErrorSubjects("Failed to load subjects. Please try again.");
+            setSubjects([]);
         } finally {
             setLoadingSubjects(false);
         }
@@ -274,35 +354,55 @@ export default function Exams() {
 
     useEffect(() => { fetchSubjects(); }, [fetchSubjects]);
 
-    // ── Handlers ──────────────────────────────────────────────────────────────
     const handleExamAction = (examId, action) => {
         if (action === "declare") {
             const exam = exams.find((e) => e.id === examId);
-            if (exam) setDeclareTarget({ id: exam.id, name: exam.name });
+            if (exam) {
+                if (exam.resultDeclared) return;
+                setDeclareTarget({ id: exam.id, name: exam.name });
+            }
             return;
         }
-        // TODO: wire up enter_marks / marks / reports flows
-        console.log("Exam action:", examId, action);
+        if (action === "enter_marks") {
+            navigate(`/exams/marksEntry`, { state: { examId } });
+            return;
+        }
+        if (action === "marks") {
+            navigate(`/exams/marksEntry`, { state: { examId } });
+            return;
+        }
+        if (action === "reports") {
+            navigate(`/exams/reportCard`, { state: { examId } });
+            return;
+        }
     };
-
+    
     const handleDeclareConfirm = async () => {
         if (!declareTarget) return;
         setDeclaringExam(true);
         setDeclareError(null);
         try {
             const res = await declareExamResult(declareTarget.id);
-            const updatedExam = res?.data;
+            // BUG FIX: Handle both res.data and direct response shapes
+            const updatedExam = res?.data ?? res ?? {};
 
             setExams((prev) =>
-                prev.map((e) => (e.id === declareTarget.id ? { ...e, ...updatedExam } : e))
+                prev.map((e) =>
+                    e.id === declareTarget.id
+                        ? { ...e, resultDeclared: true, ...updatedExam }
+                        : e
+                )
             );
             setSelectedExamForSubjects((prev) =>
-                prev?.id === declareTarget.id ? { ...prev, ...updatedExam } : prev
+                prev?.id === declareTarget.id
+                    ? { ...prev, resultDeclared: true, ...updatedExam }
+                    : prev
             );
             setDeclareTarget(null);
         } catch (err) {
             console.error("Declare result error:", err);
-            setDeclareError("Failed to declare result. Please try again.");
+            // BUG FIX: Show error inside modal, not as external banner that persists
+            setDeclareError(err?.message || "Failed to declare result. Please try again.");
         } finally {
             setDeclaringExam(false);
         }
@@ -310,6 +410,8 @@ export default function Exams() {
 
     const handleNewExamSuccess = () => {
         setShowNewExam(false);
+        // BUG FIX: Allow auto-select to pick the potentially new exam
+        hasAutoSelectedExam.current = false;
         fetchExams();
     };
 
@@ -317,6 +419,8 @@ export default function Exams() {
         setShowAddSubject(false);
         setEditSubject(null);
         fetchSubjects();
+        // BUG FIX: Also refresh exam list to update subjectConfigCount badge
+        fetchExams();
     };
 
     const handleEditSubject = (subConfig) => {
@@ -331,28 +435,41 @@ export default function Exams() {
             await deleteExamSubject(selectedExamForSubjects.id, deleteTarget.configId);
             setDeleteTarget(null);
             fetchSubjects();
+            // BUG FIX: Refresh exam list to update subjectConfigCount
+            fetchExams();
         } catch (err) {
             console.error("Delete subject error:", err);
+            // BUG FIX: Show error as toast instead of silently failing
+            setDeleteError(err?.message || "Failed to remove subject. Please try again.");
+            setDeleteTarget(null); // Close confirm modal even on error
         } finally {
             setDeletingSubject(false);
         }
     };
 
+    const handleExamRowClick = (exam) => {
+        setSelectedExamForSubjects(exam);
+        setSubjects([]);
+    };
+
     // ── Derived ───────────────────────────────────────────────────────────────
-    const stats = exams.length > 0 ? buildStats(exams) : null;
+    const stats = buildStats(exams);
 
     const filteredExams = selectedExamTypeLabel
         ? exams.filter((e) => e.examTypeName === selectedExamTypeLabel)
         : exams;
 
     const selectedClassName = classes.find((c) => c.id === selectedClassId)?.name ?? "";
-    const selectedAYLabel   = academicYears.find((y) => y.id === Number(selectedAcademicYearId))?.label ?? "";
+    const selectedAYLabel = academicYears.find((y) => y.id === Number(selectedAcademicYearId))?.label ?? "";
 
-    // ── Resolve classId to pass to AddSubjectForm ─────────────────────────────
-    // ✅ Try both field names the backend might return
     const examClassId = selectedExamForSubjects
-        ? (selectedExamForSubjects.schoolClassId || selectedExamForSubjects.classId || selectedClassId)
-        : null;
+        ? (
+            selectedExamForSubjects.schoolClassId ||
+            selectedExamForSubjects.classId ||
+            selectedExamForSubjects.class_id ||
+            selectedClassId
+        )
+        : selectedClassId;
 
     // ─────────────────────────────────────────────────────────────────────────
     return (
@@ -367,8 +484,22 @@ export default function Exams() {
                 </h2>
             </div>
 
-            {/* Declare Error Banner */}
-            {declareError && (
+            {/* BUG FIX: Meta error banner (class load failure) */}
+            {errorMeta && (
+                <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3 flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    {errorMeta}
+                    <button
+                        onClick={() => window.location.reload()}
+                        className="ml-auto text-red-600 hover:text-red-800 text-xs font-medium underline"
+                    >
+                        Refresh
+                    </button>
+                </div>
+            )}
+
+            {/* Declare Error Banner — shown outside modal for persistence */}
+            {declareError && !declareTarget && (
                 <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3 flex items-center gap-2">
                     <AlertCircle className="w-4 h-4 shrink-0" />
                     {declareError}
@@ -382,19 +513,23 @@ export default function Exams() {
             )}
 
             {/* ── Stats Row ── */}
+            {/* BUG FIX: Show loaders only when genuinely loading, show empty state when no data */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                {loadingExams || loadingMeta || !stats
+                {(loadingExams || loadingMeta)
                     ? Array(4).fill(0).map((_, i) => <CardLoader key={i} />)
-                    : stats.map((s) => (
-                        <CardComponent
-                            key={s.key}
-                            IconName={s.icon}
-                            keyName={s.key}
-                            val={s.val}
-                            iconBgColor={s.iconBgColor}
-                            iconTxColor={s.iconTxColor}
-                        />
-                    ))}
+                    : stats
+                        ? stats.map((s) => (
+                            <CardComponent
+                                key={s.key}
+                                IconName={s.icon}
+                                keyName={s.key}
+                                val={s.val}
+                                iconBgColor={s.iconBgColor}
+                                iconTxColor={s.iconTxColor}
+                            />
+                        ))
+                        : Array(4).fill(0).map((_, i) => <CardLoader key={i} />) // BUG FIX: Show skeleton on no data too (still loading state)
+                }
             </div>
 
             {/* ── Filters + New Exam ── */}
@@ -405,27 +540,28 @@ export default function Exams() {
                     <div className="relative w-full sm:w-auto">
                         <select
                             value={selectedClassId ?? ""}
-                            onChange={(e) => {
-                                setSelectedClassId(Number(e.target.value));
-                                setSelectedExamForSubjects(null);
-                            }}
-                            disabled={loadingMeta}
-                            className="appearance-none w-full bg-white border border-gray-200 rounded-lg pl-3 pr-8 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer disabled:opacity-60"
+                            onChange={(e) => handleClassChange(e.target.value)}
+                            disabled={loadingMeta || !!errorMeta}
+                            className="appearance-none w-full bg-white border border-gray-200 rounded-lg pl-3 pr-8 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                         >
-                            {loadingMeta
-                                ? <option>Loading...</option>
-                                : classes.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)
-                            }
+                            {loadingMeta ? (
+                                <option>Loading classes...</option>
+                            ) : classes.length === 0 ? (
+                                <option value="">No classes available</option>
+                            ) : (
+                                classes.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)
+                            )}
                         </select>
                         <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                     </div>
 
-                    {/* Academic Year */}
+                    {/* Academic Year — BUG FIX: disable when no exams loaded */}
                     <div className="relative w-full sm:w-auto">
                         <select
                             value={selectedAcademicYearId}
                             onChange={(e) => setSelectedAcademicYearId(e.target.value)}
-                            className="appearance-none w-full bg-white border border-gray-200 rounded-lg pl-3 pr-8 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                            disabled={loadingExams || academicYears.length === 0}
+                            className="appearance-none w-full bg-white border border-gray-200 rounded-lg pl-3 pr-8 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                         >
                             <option value="">All Years</option>
                             {academicYears.map((y) => (
@@ -435,12 +571,13 @@ export default function Exams() {
                         <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                     </div>
 
-                    {/* Exam Type */}
+                    {/* Exam Type — BUG FIX: disable when no exams loaded */}
                     <div className="relative w-full sm:w-auto">
                         <select
                             value={selectedExamTypeLabel}
                             onChange={(e) => setSelectedExamTypeLabel(e.target.value)}
-                            className="appearance-none w-full bg-white border border-gray-200 rounded-lg pl-3 pr-8 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                            disabled={loadingExams || examTypeNames.length === 0}
+                            className="appearance-none w-full bg-white border border-gray-200 rounded-lg pl-3 pr-8 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                         >
                             <option value="">All Types</option>
                             {examTypeNames.map((name) => (
@@ -454,7 +591,9 @@ export default function Exams() {
 
                     <button
                         onClick={() => setShowNewExam(true)}
-                        className="flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-all shadow-sm active:scale-95"
+                        // BUG FIX: Disable new exam when no class is selected or meta is loading
+                        disabled={loadingMeta || !selectedClassId}
+                        className="flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-all shadow-sm active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
                     >
                         <Plus className="w-4 h-4" />
                         New Exam
@@ -474,40 +613,55 @@ export default function Exams() {
                         )}
                     </h2>
                     <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2.5 py-1 rounded-full shrink-0">
-                        {filteredExams.length} exam{filteredExams.length !== 1 ? "s" : ""}
+                        {loadingExams ? "..." : `${filteredExams.length} exam${filteredExams.length !== 1 ? "s" : ""}`}
                     </span>
                 </div>
 
                 {errorExams && (
                     <div className="px-6 py-4 text-sm text-red-600 bg-red-50 flex items-center gap-2">
-                        <AlertCircle className="w-4 h-4 shrink-0" /> {errorExams}
+                        <AlertCircle className="w-4 h-4 shrink-0" />
+                        {errorExams}
+                        {/* BUG FIX: Retry button */}
+                        <button
+                            onClick={fetchExams}
+                            className="ml-auto text-blue-600 hover:text-blue-800 text-xs font-medium underline"
+                        >
+                            Retry
+                        </button>
                     </div>
                 )}
 
                 {/* Mobile */}
                 <div className="block md:hidden">
-                    {loadingExams
-                        ? (
-                            <div className="divide-y divide-gray-100">
-                                {Array(3).fill(0).map((_, i) => (
-                                    <div key={i} className="p-4 space-y-2 animate-pulse">
-                                        <div className="h-4 bg-gray-200 rounded w-2/3" />
-                                        <div className="flex gap-2">
-                                            <div className="h-6 bg-gray-100 rounded-full w-20" />
-                                            <div className="h-6 bg-gray-100 rounded-full w-16" />
-                                            <div className="h-6 bg-gray-100 rounded-full w-20" />
-                                        </div>
-                                        <div className="h-3 bg-gray-100 rounded w-1/3" />
+                    {loadingExams ? (
+                        <div className="divide-y divide-gray-100">
+                            {Array(3).fill(0).map((_, i) => (
+                                <div key={i} className="p-4 space-y-2 animate-pulse">
+                                    <div className="h-4 bg-gray-200 rounded w-2/3" />
+                                    <div className="flex gap-2">
+                                        <div className="h-6 bg-gray-100 rounded-full w-20" />
+                                        <div className="h-6 bg-gray-100 rounded-full w-16" />
+                                        <div className="h-6 bg-gray-100 rounded-full w-20" />
                                     </div>
-                                ))}
-                            </div>
-                        )
-                        : filteredExams.length === 0
-                            ? <p className="text-sm text-gray-400 text-center py-10">No exams found.</p>
-                            : filteredExams.map((exam) => (
-                                <ExamCard key={exam.id} exam={exam} onAction={handleExamAction} />
-                            ))
-                    }
+                                    <div className="h-3 bg-gray-100 rounded w-1/3" />
+                                </div>
+                            ))}
+                        </div>
+                    ) : filteredExams.length === 0 ? (
+                        <p className="text-sm text-gray-400 text-center py-10">
+                            {exams.length > 0 ? "No exams match the selected filter." : "No exams found for this class."}
+                        </p>
+                    ) : (
+                        filteredExams.map((exam) => (
+                            <ExamCard
+                                key={exam.id}
+                                exam={exam}
+                                onAction={handleExamAction}
+                                isSelected={selectedExamForSubjects?.id === exam.id}
+                                onClick={() => handleExamRowClick(exam)}
+                            />
+                        ))
+                    )}
                 </div>
 
                 {/* Desktop table */}
@@ -515,7 +669,8 @@ export default function Exams() {
                     <table className="w-full text-sm">
                         <thead>
                             <tr className="bg-gray-50 border-y border-gray-100">
-                                {["Exam Name", "Type", "Class", "Date Range", "Subjects", "Status", "Result", "Actions"].map((h) => (
+                                {/* BUG FIX: Added # column for row numbering */}
+                                {["#", "Exam Name", "Type", "Class", "Date Range", "Subjects", "Status", "Result", "Actions"].map((h) => (
                                     <th
                                         key={h}
                                         className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap"
@@ -527,28 +682,34 @@ export default function Exams() {
                         </thead>
                         <tbody>
                             {loadingExams ? (
-                                <ListLoader rows={3} avatar={false} colSpanSet={8} />
+                                // BUG FIX: colSpanSet updated to match 9 columns now
+                                <ListLoader rows={3} avatar={false} colSpanSet={9} />
                             ) : filteredExams.length === 0 ? (
                                 <tr>
-                                    <td colSpan={8} className="text-center text-sm text-gray-400 py-10">
-                                        No exams found.
+                                    <td colSpan={9} className="text-center text-sm text-gray-400 py-10">
+                                        {exams.length > 0
+                                            ? "No exams match the selected filter."
+                                            : "No exams found for this class."
+                                        }
                                     </td>
                                 </tr>
-                            ) : filteredExams.map((exam) => {
-                                const typeBg     = getExamTypeBg(exam.examTypeName);
-                                const resultBg   = exam.resultDeclared ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700";
+                            ) : filteredExams.map((exam, idx) => {
+                                const typeBg = getExamTypeBg(exam.examTypeName);
+                                const resultBg = exam.resultDeclared ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700";
                                 const isSelected = selectedExamForSubjects?.id === exam.id;
                                 return (
                                     <tr
                                         key={exam.id}
-                                        onClick={() => setSelectedExamForSubjects(exam)}
-                                        className={`border-b border-gray-50 hover:bg-blue-50/30 transition-colors cursor-pointer ${isSelected ? "bg-blue-50/40 border-l-2 border-l-blue-500" : ""}`}
+                                        onClick={() => handleExamRowClick(exam)}
+                                        className={`border-b border-gray-50 hover:bg-blue-50/30 transition-colors cursor-pointer ${isSelected ? "bg-blue-50/40 border-l-4 border-l-blue-500" : ""}`}
                                     >
+                                        {/* BUG FIX: Row number */}
+                                        <td className="px-4 py-3 text-gray-400 text-xs font-medium">{idx + 1}</td>
                                         <td className="px-4 py-3 font-semibold text-gray-800 whitespace-nowrap">{exam.name}</td>
                                         <td className="px-4 py-3">
-                                            <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${typeBg}`}>{exam.examTypeName}</span>
+                                            <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${typeBg}`}>{exam.examTypeName ?? "—"}</span>
                                         </td>
-                                        <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{exam.schoolClassName}</td>
+                                        <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{exam.schoolClassName ?? "—"}</td>
                                         <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{formatDateRange(exam.startDate, exam.endDate)}</td>
                                         <td className="px-4 py-3">
                                             <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700">
@@ -556,9 +717,10 @@ export default function Exams() {
                                             </span>
                                         </td>
                                         <td className="px-4 py-3">
-                                            {exam.isActive && (
-                                                <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-green-50 text-green-700">Active</span>
-                                            )}
+                                            {/* BUG FIX: Show "Inactive" badge too, not just hide */}
+                                            <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${exam.isActive ? "bg-green-50 text-green-700" : "bg-gray-100 text-gray-500"}`}>
+                                                {exam.isActive ? "Active" : "Inactive"}
+                                            </span>
                                         </td>
                                         <td className="px-4 py-3">
                                             <span className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold w-fit ${resultBg}`}>
@@ -595,10 +757,9 @@ export default function Exams() {
                         )}
                     </div>
 
-                    {/* ✅ Removed: section filter dropdown — no longer needed */}
                     <button
                         onClick={() => { setEditSubject(null); setShowAddSubject(true); }}
-                        disabled={!selectedExamForSubjects}
+                        disabled={!selectedExamForSubjects || loadingExams}
                         className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-all shadow-sm active:scale-95 whitespace-nowrap disabled:opacity-60 disabled:cursor-not-allowed w-full sm:w-auto justify-center"
                     >
                         <Plus className="w-4 h-4" />
@@ -608,7 +769,15 @@ export default function Exams() {
 
                 {errorSubjects && (
                     <div className="px-6 py-3 text-sm text-red-600 bg-red-50 flex items-center gap-2">
-                        <AlertCircle className="w-4 h-4 shrink-0" /> {errorSubjects}
+                        <AlertCircle className="w-4 h-4 shrink-0" />
+                        {errorSubjects}
+                        {/* BUG FIX: Retry button for subjects */}
+                        <button
+                            onClick={fetchSubjects}
+                            className="ml-auto text-blue-600 hover:text-blue-800 text-xs font-medium underline"
+                        >
+                            Retry
+                        </button>
                     </div>
                 )}
 
@@ -633,7 +802,7 @@ export default function Exams() {
                         </div>
                     ) : subjects.length === 0 ? (
                         <p className="text-sm text-gray-400 text-center py-10">
-                            {selectedExamForSubjects ? "No subjects configured." : "Select an exam to view subjects."}
+                            {selectedExamForSubjects ? "No subjects configured for this exam." : "Select an exam to view subjects."}
                         </p>
                     ) : subjects.map((sub) => (
                         <div key={sub.id} className="p-4 flex items-start justify-between gap-3">
@@ -644,7 +813,7 @@ export default function Exams() {
                                     <span className="text-xs text-gray-400 font-mono shrink-0">{sub.subjectCode}</span>
                                 </div>
                                 <div className="flex flex-wrap gap-2 mt-2">
-                                    <span className="text-xs text-gray-500">Section: <b>{sub.sectionName}</b></span>
+                                    <span className="text-xs text-gray-500">Section: <b>{sub.sectionName ?? "—"}</b></span>
                                     <span className="text-xs text-gray-500">Max: <b>{sub.maxMarks}</b></span>
                                     <span className="text-xs text-gray-500">Pass: <b>{sub.passingMarks}</b></span>
                                 </div>
@@ -707,8 +876,8 @@ export default function Exams() {
                                             {sub.subjectName}
                                         </div>
                                     </td>
-                                    <td className="px-4 lg:px-6 py-3 text-gray-500 font-mono text-xs">{sub.subjectCode}</td>
-                                    <td className="px-4 lg:px-6 py-3 text-gray-600">{sub.sectionName}</td>
+                                    <td className="px-4 lg:px-6 py-3 text-gray-500 font-mono text-xs">{sub.subjectCode ?? "—"}</td>
+                                    <td className="px-4 lg:px-6 py-3 text-gray-600">{sub.sectionName ?? "—"}</td>
                                     <td className="px-4 lg:px-6 py-3 font-bold text-gray-800">{sub.maxMarks}</td>
                                     <td className="px-4 lg:px-6 py-3 text-gray-600">{sub.passingMarks}</td>
                                     <td className="px-4 lg:px-6 py-3">
@@ -749,15 +918,13 @@ export default function Exams() {
                 <NewExamForm
                     onClose={() => setShowNewExam(false)}
                     onSuccess={handleNewExamSuccess}
+                    // BUG FIX: Pass selectedClassId so NewExamForm can pre-select the class
+                    defaultClassId={selectedClassId}
                 />
             )}
 
-            {/* ✅ Fixed AddSubjectForm call:
-                - Removed: defaultSectionId (prop no longer exists)
-                - classId uses examClassId which falls back to selectedClassId
-                  in case the exam object doesn't have schoolClassId/classId field
-            */}
-            {showAddSubject && selectedExamForSubjects && (
+            {/* BUG FIX: Guard: only render AddSubjectForm when we have both examId and classId */}
+            {showAddSubject && selectedExamForSubjects && examClassId && (
                 <AddSubjectForm
                     onClose={() => { setShowAddSubject(false); setEditSubject(null); }}
                     onSuccess={handleSubjectSuccess}
@@ -780,10 +947,15 @@ export default function Exams() {
             {declareTarget && (
                 <DeclareConfirmModal
                     examName={declareTarget.name}
-                    onConfirm={handleDeclareConfirm}
+                    onConfirm={handleDeclareConfirm} x
                     onCancel={() => { setDeclareTarget(null); setDeclareError(null); }}
                     loading={declaringExam}
                 />
+            )}
+
+            {/* BUG FIX: Delete error toast */}
+            {deleteError && (
+                <ErrorToast message={deleteError} onClose={() => setDeleteError(null)} />
             )}
         </div>
     );

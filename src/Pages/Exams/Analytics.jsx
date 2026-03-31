@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import {
     BarChart2, Trophy, AlertTriangle, CheckSquare,
-    ChevronDown, Medal, TrendingUp,
+    ChevronDown, Medal, TrendingUp, RefreshCw,
 } from "lucide-react";
 
 import CardComponent from "../../Components/CommonComp/CardComponent";
@@ -9,6 +9,7 @@ import CardLoader from "../../Components/CommonComp/CardLoader";
 import ListLoader from "../../Components/CommonComp/ListLoader";
 import TooltipComponent from "../../Components/CommonComp/Tooltip_comp/TooltipComp";
 import {
+    getExams,
     getClassResultSummary,
     getFailedStudents,
     getSubjectAnalysis,
@@ -41,23 +42,11 @@ const RANK_CARD_BG = [
     "from-orange-50 to-amber-50 border-orange-200",
 ];
 
-// ─── Exam options (replace with real data / context as needed) ────────────────
-const EXAM_OPTIONS = [
-    { label: "Mid Term — Class 10 — 2025-26", id: 1 },
-    { label: "Unit Test 1 — Class 10 — 2025-26", id: 2 },
-    { label: "Final Term — Class 10 — 2025-26", id: 3 },
-];
-
-const SECTION_OPTIONS = ["Section 10-A", "Section 10-B", "Section 10-C"];
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-/** Pick a stable color for a subject based on its index */
 function subjectColor(index) {
     return SUBJECT_COLORS[index % SUBJECT_COLORS.length];
 }
 
-/** Grade badge style from grade string */
 function gradeBadgeBg(grade = "") {
     if (grade.startsWith("A")) return "bg-emerald-100 text-emerald-700";
     if (grade.startsWith("B")) return "bg-blue-100 text-blue-700";
@@ -67,20 +56,30 @@ function gradeBadgeBg(grade = "") {
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
+function ExamSelect({ value, onChange, options, loading, className = "" }) {
+    if (loading) {
+        return (
+            <div className={`h-9 rounded-lg bg-gray-100 animate-pulse ${className}`} />
+        );
+    }
 
-function Select({ value, onChange, options, className = "" }) {
     return (
         <div className={`relative ${className}`}>
             <select
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
                 className="appearance-none w-full bg-white border border-gray-200 rounded-lg pl-3 pr-8 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                disabled={options.length === 0}
             >
-                {options.map((o) => (
-                    <option key={typeof o === "string" ? o : o.label}>
-                        {typeof o === "string" ? o : o.label}
-                    </option>
-                ))}
+                {options.length === 0 ? (
+                    <option>No exams available</option>
+                ) : (
+                    options.map((exam) => (
+                        <option key={exam.id} value={exam.id}>
+                            {exam.label}
+                        </option>
+                    ))
+                )}
             </select>
             <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
         </div>
@@ -116,6 +115,8 @@ function SubjectBarChart({ subjectStats, loading }) {
                         <div key={i} className="h-6 rounded-full bg-gray-100 animate-pulse" />
                     ))}
                 </div>
+            ) : subjectStats.length === 0 ? (
+                <p className="text-sm text-gray-400 text-center py-6">No subject data available.</p>
             ) : (
                 <div className="space-y-3 sm:space-y-3.5">
                     {subjectStats.map((sub, idx) => {
@@ -179,6 +180,12 @@ function PassFailTable({ subjectStats, loading }) {
                     <tbody>
                         {loading ? (
                             <ListLoader rows={5} avatar={false} colSpanSet={5} />
+                        ) : subjectStats.length === 0 ? (
+                            <tr>
+                                <td colSpan={5} className="text-center py-8 text-sm text-gray-400">
+                                    No data available.
+                                </td>
+                            </tr>
                         ) : (
                             subjectStats.map((sub, i) => {
                                 const passRate = sub.totalStudents > 0
@@ -243,6 +250,8 @@ function TopStudents({ toppers, loading }) {
                         <div key={i} className="h-16 rounded-xl bg-gray-100 animate-pulse" />
                     ))}
                 </div>
+            ) : toppers.length === 0 ? (
+                <p className="text-sm text-gray-400 text-center py-8">No topper data available.</p>
             ) : (
                 <div className="space-y-3">
                     {toppers.slice(0, 3).map((s, i) => (
@@ -259,7 +268,6 @@ function TopStudents({ toppers, loading }) {
                                     <span className="text-sm font-extrabold">{s.classRank}</span>
                                 )}
                             </div>
-
                             <div className="flex-1 min-w-0">
                                 <p className="text-sm font-bold text-gray-900 truncate">{s.studentName}</p>
                                 <p className="text-xs text-gray-400 truncate">
@@ -267,7 +275,6 @@ function TopStudents({ toppers, loading }) {
                                     <span className="hidden sm:inline"> · {s.sectionName}</span>
                                 </p>
                             </div>
-
                             <div className="text-right shrink-0">
                                 <p className="text-lg sm:text-xl font-extrabold text-gray-900">
                                     {Number(s.percentage).toFixed(1)}%
@@ -347,10 +354,10 @@ function FailedStudents({ failedStudents, loading }) {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function Analytics() {
-    const [selectedExam, setSelectedExam] = useState(EXAM_OPTIONS[0]);
-    const [section, setSection] = useState(SECTION_OPTIONS[0]);
+    const [examOptions, setExamOptions] = useState([]);
+    const [examsLoading, setExamsLoading] = useState(true);
+    const [selectedExamId, setSelectedExamId] = useState(null);
 
-    // API state
     const [classSummary, setClassSummary] = useState(null);
     const [subjectStats, setSubjectStats] = useState([]);
     const [toppers, setToppers] = useState([]);
@@ -359,8 +366,33 @@ export default function Analytics() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
-    // ── Fetch all data when exam changes ──────────────────────────────────────
-    const fetchAll = useCallback(async (examId) => {
+    // ── Fetch exam list on mount ───────────────────────────────────────────────
+    useEffect(() => {
+        const fetchExams = async () => {
+            setExamsLoading(true);
+            try {
+                const data = await getExams();
+                // Always stringify IDs so <select> value matching works correctly
+                const normalized = data.map((exam) => ({
+                    id: String(exam.id ?? exam._id),
+                    label: exam.name ?? exam.title ?? exam.examName ?? `Exam #${exam.id ?? exam._id}`,
+                }));
+                setExamOptions(normalized);
+                if (normalized.length > 0) {
+                    setSelectedExamId(normalized[0].id);
+                }
+            } catch (err) {
+                setError("Failed to load exam list.");
+            } finally {
+                setExamsLoading(false);
+            }
+        };
+        fetchExams();
+    }, []);
+
+    // ── Fetch analytics when exam changes ────────────────────────────────────
+    const fetchAnalytics = useCallback(async (examId) => {
+        if (!examId) return;
         setLoading(true);
         setError(null);
         try {
@@ -382,16 +414,13 @@ export default function Analytics() {
     }, []);
 
     useEffect(() => {
-        fetchAll(selectedExam.id);
-    }, [selectedExam.id, fetchAll]);
+        if (selectedExamId) fetchAnalytics(selectedExamId);
+    }, [selectedExamId, fetchAnalytics]);
 
-    // ── Handle exam dropdown change ───────────────────────────────────────────
-    const handleExamChange = (label) => {
-        const found = EXAM_OPTIONS.find((e) => e.label === label);
-        if (found) setSelectedExam(found);
-    };
+    // ── No type conversion — id is always a string from <select> ─────────────
+    const handleExamChange = (id) => setSelectedExamId(id);
 
-    // ── Derive stats cards from classSummary ──────────────────────────────────
+    // ── Derived stats ─────────────────────────────────────────────────────────
     const topTopper = toppers[0];
     const passRate = classSummary
         ? ((classSummary.passedStudents / classSummary.totalStudents) * 100).toFixed(1)
@@ -450,23 +479,24 @@ export default function Analytics() {
                 <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3 flex items-center gap-2">
                     <AlertTriangle className="w-4 h-4 shrink-0" />
                     {error}
+                    <button
+                        onClick={() => fetchAnalytics(selectedExamId)}
+                        className="ml-auto flex items-center gap-1 text-xs font-medium underline hover:no-underline"
+                    >
+                        <RefreshCw className="w-3 h-3" /> Retry
+                    </button>
                 </div>
             )}
 
             {/* Filter Bar */}
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm px-4 sm:px-5 py-4">
                 <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3">
-                    <Select
-                        value={selectedExam.label}
+                    <ExamSelect
+                        value={selectedExamId ?? ""}
                         onChange={handleExamChange}
-                        options={EXAM_OPTIONS.map((e) => e.label)}
-                        className="w-full sm:w-64"
-                    />
-                    <Select
-                        value={section}
-                        onChange={setSection}
-                        options={SECTION_OPTIONS}
-                        className="w-full sm:w-36"
+                        options={examOptions}
+                        loading={examsLoading}
+                        className="w-full sm:w-72"
                     />
                 </div>
             </div>
@@ -498,7 +528,6 @@ export default function Analytics() {
                 <TopStudents toppers={toppers} loading={loading} />
                 <FailedStudents failedStudents={failedStudents} loading={loading} />
             </div>
-
         </div>
     );
 }

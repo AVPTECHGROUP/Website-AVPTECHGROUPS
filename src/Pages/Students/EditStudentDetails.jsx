@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ChevronLeft, User } from 'lucide-react';
+import { ChevronLeft, User, Camera, X } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { getStudentById, updateStudent } from '../../Api/StudentsApi';
 import { getAllSections } from '../../Api/TeachersAPI';
@@ -15,6 +15,47 @@ function EditStudentDetails() {
   const [sections, setSections] = useState([]);
   const [sectionsLoading, setSectionsLoading] = useState(true);
 
+  // ── Image state ────────────────────────────────────────────────────────────
+  // profileImage  → new File selected by the user (null = no change)
+  // imagePreview  → data-URL shown in the <img> tag
+  // existingImageUrl → URL already stored on the server (loaded from API)
+  const [profileImage, setProfileImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [existingImageUrl, setExistingImageUrl] = useState(null);
+  const fileInputRef = useRef(null);
+
+  // ── Image handlers ─────────────────────────────────────────────────────────
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+    if (!validTypes.includes(file.type)) {
+      toast.error("Only JPEG or PNG images are allowed!");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Image must be smaller than 10 MB!");
+      return;
+    }
+
+    setProfileImage(file);
+    const reader = new FileReader();
+    reader.onloadend = () => setImagePreview(reader.result);
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveImage = () => {
+    setProfileImage(null);
+    setImagePreview(null);
+    setExistingImageUrl(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  // Displayed src: new local preview takes priority, then existing server URL
+  const displayedImage = imagePreview || existingImageUrl;
+
+  // ── Fetch sections ─────────────────────────────────────────────────────────
   useEffect(() => {
     const fetchSections = async () => {
       try {
@@ -34,12 +75,17 @@ function EditStudentDetails() {
     fetchSections();
   }, []);
 
+  // ── Fetch student ──────────────────────────────────────────────────────────
   useEffect(() => {
     const fetchStudent = async () => {
       try {
         setLoading(true);
-        const res = await getStudentById(id);
-        const student = res.data || res;
+        const student = await getStudentById(id);
+
+        // ── Pre-fill image preview from existing URL ──
+        if (student.profileImageUrl) {
+          setExistingImageUrl(student.profileImageUrl);
+        }
 
         setFormData({
           name: student.fullName,
@@ -137,7 +183,10 @@ function EditStudentDetails() {
     const loadingToast = toast.loading("Updating student...");
     try {
       const payload = buildUpdatePayload();
-      const res = await updateStudent(id, payload);
+      // Pass profileImage (File or null) as 3rd argument.
+      // If null, the API function won't append the "image" part and the
+      // existing photo on the server is left unchanged.
+      const res = await updateStudent(id, payload, profileImage);
       toast.dismiss(loadingToast);
       toast.success(res.message || "Student updated successfully ✅");
       navigate("/students");
@@ -197,6 +246,102 @@ function EditStudentDetails() {
 
             <div className="p-4 sm:p-6 lg:p-8">
               <div className="space-y-6">
+
+                {/* ── Profile Photo Upload ── */}
+                <div>
+                  <div className="flex justify-start items-center mb-4 pb-3 border-b border-gray-200">
+                    <Camera className="text-blue-500 mr-3 w-6 h-6" />
+                    <h2 className='text-xl font-medium text-gray-700'>Profile Photo</h2>
+                  </div>
+
+                  <div className="flex items-center gap-5">
+                    {/* Avatar preview */}
+                    <div className="relative shrink-0">
+                      <div className="w-20 h-20 rounded-full overflow-hidden bg-blue-100 border-2 border-blue-200 flex items-center justify-center">
+                        {displayedImage ? (
+                          <img
+                            src={displayedImage}
+                            alt="Profile"
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                              setExistingImageUrl(null);
+                            }}
+                          />
+                        ) : (
+                          <User className="w-8 h-8 text-blue-400" />
+                        )}
+                      </div>
+                      {/* Camera overlay */}
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="absolute bottom-0 right-0 w-6 h-6 bg-blue-500 hover:bg-blue-600 rounded-full flex items-center justify-center shadow transition-colors"
+                      >
+                        <Camera className="w-3.5 h-3.5 text-white" />
+                      </button>
+                    </div>
+
+                    {/* Upload area */}
+                    <div className="flex-1">
+                      {!displayedImage ? (
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="w-full border-2 border-dashed border-blue-300 hover:border-blue-500 bg-blue-50 hover:bg-blue-100 rounded-lg p-4 text-center transition-colors cursor-pointer"
+                        >
+                          <Camera className="w-5 h-5 text-blue-400 mx-auto mb-1" />
+                          <p className="text-sm font-medium text-blue-600">Click to upload new photo</p>
+                          <p className="text-xs text-gray-400 mt-0.5">JPEG or PNG, max 10 MB</p>
+                        </button>
+                      ) : (
+                        <div className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                          <div className="flex-1 min-w-0">
+                            {profileImage ? (
+                              <>
+                                <p className="text-sm font-medium text-green-700 truncate">{profileImage.name}</p>
+                                <p className="text-xs text-green-500 mt-0.5">
+                                  {(profileImage.size / 1024).toFixed(1)} KB — new photo selected
+                                </p>
+                              </>
+                            ) : (
+                              <>
+                                <p className="text-sm font-medium text-green-700 truncate">Current profile photo</p>
+                                <p className="text-xs text-green-500 mt-0.5">Click "Change" to replace</p>
+                              </>
+                            )}
+                          </div>
+                          <div className="flex gap-2 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => fileInputRef.current?.click()}
+                              className="text-xs px-2.5 py-1 bg-white border border-green-300 text-green-700 rounded-md hover:bg-green-50 transition-colors"
+                            >
+                              Change
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleRemoveImage}
+                              className="w-7 h-7 flex items-center justify-center bg-white border border-red-200 text-red-500 rounded-md hover:bg-red-50 transition-colors"
+                              title="Remove photo"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Hidden file input */}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/jpg,image/png"
+                    onChange={handleImageChange}
+                    className="hidden"
+                  />
+                </div>
 
                 {/* Personal Details Section */}
                 <div>
@@ -267,7 +412,7 @@ function EditStudentDetails() {
                       />
                     </div>
 
-                    {/* ✅ NEW: Section Field */}
+                    {/* Section Field */}
                     <div>
                       <label className='block font-semibold text-gray-600 text-sm mb-2'>
                         Section<span className="text-red-600 ml-1">*</span>

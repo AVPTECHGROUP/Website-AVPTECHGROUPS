@@ -15,49 +15,52 @@ const StudentDetails = () => {
         setLoading(true);
         const data = await getStudentById(id);
 
-        // ── API → UI mapping (top-level fields; personalDetails may be null) ──
+        // ── API → UI mapping ──────────────────────────────────────────────────
         const pd = data.personalDetails || {};
 
         const mappedStudent = {
-          id:               data.id,
+          id: data.id,
 
           // Identity
-          name:             data.fullName?.trim() || `${data.firstName || ''} ${data.lastName || ''}`.trim() || 'N/A',
-          email:            pd.email             || data.fatherEmail || 'N/A',
-          mobile:           pd.mobile            || data.fatherPhone || 'N/A',
-          gender:           pd.gender            || 'N/A',
-          dob:              pd.dateOfBirth        || 'N/A',
-          address:          pd.address           || 'N/A',
-          bloodGroup:       data.bloodGroup       || 'N/A',
+          name: data.fullName?.trim() || `${data.firstName || ''} ${data.lastName || ''}`.trim() || 'N/A',
+          email: pd.email || data.fatherEmail || 'N/A',
+          mobile: pd.mobile || data.fatherPhone || 'N/A',
+          gender: pd.gender || 'N/A',
+          dob: pd.dateOfBirth || 'N/A',
+          address: pd.address || 'N/A',
+          bloodGroup: data.bloodGroup || 'N/A',
+
+          // ── Profile image — FIXED: was missing from the original mapping ──
+          profileImageUrl: data.profileImageUrl || null,
 
           // Academic
-          admissionNumber:  data.admissionNumber  || 'N/A',
-          rollNumber:       data.rollNumber        || 'N/A',
-          admissionDate:    data.admissionDate     || 'N/A',
-          academicYear:     data.academicYear      || 'N/A',
-          status:           data.status            || 'N/A',
-          className:        data.className         || 'N/A',
-          sectionName:      data.sectionName       || 'N/A',
-          previousSchool:   data.previousSchool    || 'N/A',
+          admissionNumber: data.admissionNumber || 'N/A',
+          rollNumber: data.rollNumber || 'N/A',
+          admissionDate: data.admissionDate || 'N/A',
+          academicYear: data.academicYear || 'N/A',
+          status: data.status || 'N/A',
+          className: data.className || 'N/A',
+          sectionName: data.sectionName || 'N/A',
+          previousSchool: data.previousSchool || 'N/A',
 
           // Parents
-          fatherName:       data.fatherName        || 'N/A',
-          fatherPhone:      data.fatherPhone        || 'N/A',
-          fatherOccupation: data.fatherOccupation   || 'N/A',
-          motherName:       data.motherName         || 'N/A',
-          motherPhone:      data.motherPhone        || 'N/A',
-          motherOccupation: data.motherOccupation   || 'N/A',
-          guardianName:     data.guardianName       || 'N/A',
-          guardianPhone:    data.guardianPhone      || 'N/A',
-          guardianRelation: data.guardianRelation   || 'N/A',
-          emergencyContact: pd.emergencyContact     || data.guardianPhone || 'N/A',
+          fatherName: data.fatherName || 'N/A',
+          fatherPhone: data.fatherPhone || 'N/A',
+          fatherOccupation: data.fatherOccupation || 'N/A',
+          motherName: data.motherName || 'N/A',
+          motherPhone: data.motherPhone || 'N/A',
+          motherOccupation: data.motherOccupation || 'N/A',
+          guardianName: data.guardianName || 'N/A',
+          guardianPhone: data.guardianPhone || 'N/A',
+          guardianRelation: data.guardianRelation || 'N/A',
+          emergencyContact: pd.emergencyContact || data.guardianPhone || 'N/A',
 
           // Facilities
-          hostelRequired:    data.hostelRequired    || false,
+          hostelRequired: data.hostelRequired || false,
           transportRequired: data.transportRequired || false,
 
           // Remarks
-          remarks:          data.remarks            || '',
+          remarks: data.remarks || '',
         };
 
         setStudent(mappedStudent);
@@ -95,6 +98,28 @@ const StudentDetails = () => {
       ? 'bg-green-100 text-green-700'
       : 'bg-red-100 text-red-700';
 
+  const AvatarContent = () => {
+    const [imgError, setImgError] = useState(false);
+    const initial = student.name?.[0]?.toUpperCase() || 'S';
+
+    if (student.profileImageUrl && !imgError) {
+      return (
+        <img
+          src={student.profileImageUrl}
+          alt={student.name}
+          className="w-full h-full object-cover object-center"
+          onError={() => setImgError(true)}
+        />
+      );
+    }
+
+    return (
+      <span className="text-white text-2xl font-bold flex items-center justify-center w-full h-full">
+        {initial}
+      </span>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-linear-to-b from-sky-50 to-sky-100 p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
@@ -115,11 +140,13 @@ const StudentDetails = () => {
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6 mb-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
 
-            {/* Avatar */}
-            <div className="w-16 h-16 rounded-full bg-blue-500 flex items-center justify-center text-white text-2xl font-bold shrink-0">
-              {student.name?.[0]?.toUpperCase() || 'S'}
+            {/* Avatar — renders profile photo or falls back to initials */}
+            <div className="w-32 h-32 rounded-xl overflow-hidden 
+                bg-blue-500 flex items-center justify-center 
+                text-white text-2xl font-bold shrink-0 
+                border-2 border-blue-200">
+              <AvatarContent />
             </div>
-
             <div className="flex-1 min-w-0">
               {/* Name + status */}
               <div className="flex flex-wrap items-center gap-2 mb-1">
@@ -139,7 +166,6 @@ const StudentDetails = () => {
 
               {/* Quick info chips */}
               <div className="flex flex-wrap gap-2 sm:gap-4 text-sm text-gray-600">
-                {/* Class + Section chip */}
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 text-blue-700 rounded-lg font-medium text-xs">
                   <BookOpen className="w-3.5 h-3.5" />
                   Class {student.className} — {student.sectionName}
@@ -175,13 +201,13 @@ const StudentDetails = () => {
               <h3 className="text-base font-bold text-gray-900">Personal Details</h3>
             </div>
             <div>
-              <Row label="Full Name"     value={student.name} />
-              <Row label="Gender"        value={student.gender} />
+              <Row label="Full Name" value={student.name} />
+              <Row label="Gender" value={student.gender} />
               <Row label="Date of Birth" value={student.dob} />
-              <Row label="Blood Group"   value={student.bloodGroup} />
+              <Row label="Blood Group" value={student.bloodGroup} />
               <Row label="Email Address" value={student.email} />
               <Row label="Mobile Number" value={student.mobile} />
-              <Row label="Address"       value={student.address} />
+              <Row label="Address" value={student.address} />
             </div>
           </div>
 
@@ -195,10 +221,10 @@ const StudentDetails = () => {
             </div>
             <div>
               <Row label="Admission Number" value={student.admissionNumber} />
-              <Row label="Roll Number"      value={student.rollNumber} />
-              <Row label="Admission Date"   value={student.admissionDate} />
-              <Row label="Academic Year"    value={student.academicYear} />
-              <Row label="Previous School"  value={student.previousSchool} />
+              <Row label="Roll Number" value={student.rollNumber} />
+              <Row label="Admission Date" value={student.admissionDate} />
+              <Row label="Academic Year" value={student.academicYear} />
+              <Row label="Previous School" value={student.previousSchool} />
 
               {/* Class + Section — highlighted row */}
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-2.5 border-b border-gray-50 gap-1 sm:gap-4">
@@ -229,15 +255,15 @@ const StudentDetails = () => {
               <h3 className="text-base font-bold text-gray-900">Parent / Guardian Details</h3>
             </div>
             <div>
-              <Row label="Father's Name"       value={student.fatherName} />
-              <Row label="Father's Phone"      value={student.fatherPhone} />
+              <Row label="Father's Name" value={student.fatherName} />
+              <Row label="Father's Phone" value={student.fatherPhone} />
               <Row label="Father's Occupation" value={student.fatherOccupation} />
-              <Row label="Mother's Name"       value={student.motherName} />
-              <Row label="Mother's Phone"      value={student.motherPhone} />
+              <Row label="Mother's Name" value={student.motherName} />
+              <Row label="Mother's Phone" value={student.motherPhone} />
               <Row label="Mother's Occupation" value={student.motherOccupation} />
-              <Row label="Guardian Name"       value={student.guardianName} />
-              <Row label="Guardian Relation"   value={student.guardianRelation} />
-              <Row label="Emergency Contact"   value={student.emergencyContact} />
+              <Row label="Guardian Name" value={student.guardianName} />
+              <Row label="Guardian Relation" value={student.guardianRelation} />
+              <Row label="Emergency Contact" value={student.emergencyContact} />
             </div>
           </div>
 

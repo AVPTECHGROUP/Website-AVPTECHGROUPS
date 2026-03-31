@@ -16,9 +16,9 @@ import {
     getReportCards,
     getStudentReportCard,
     updateReportCardRemarks,
-} from "../../Api/Exams";                          // adjust path if needed
+} from "../../Api/Exams";                       
 import { getExams } from "../../Api/Exams";
-import { getClasses, getAllSections } from "../../Api/TeachersAPI"; // adjust path if needed
+import { getClasses, getAllSections } from "../../Api/TeachersAPI";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function getGrade(pct, absent) {
