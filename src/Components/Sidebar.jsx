@@ -91,9 +91,12 @@ const menuItems = [
       { label: 'Reports', route: '/route/reports', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'] },
     ]
   },
-  {
-    id: 'Permission', icon: Shield, label: 'Permissions', route: '/accessPermissions',
-    roles: ['SUPER_ADMIN'],
+    {
+    id: 'Permission',
+    icon: Shield,
+    label: 'Permissions',
+    route: '/rolesPermissions',
+    roles: [ 'GLOBAL_ADMIN'],
   },
 ]
 

@@ -38,8 +38,8 @@ const DetailsView = () => {
         status: t.status,
         loginAccess: t.attendanceAccessStatus === "ALLOWED",
         attendanceAccess: t.attendanceAccessStatus === "ALLOWED",
-        classes: t.assignments?.map(a => `Class ${a.classId}`) || [],
-        subjects: t.assignments?.map(a => a.subjectName || "") || [],
+        classes: t.assignments?.map(a => `${a.className} - ${a.sectionName} (${a.subjectName})`) || [],
+        //subjects: t.assignments?.map(a => a.subjectName || "") || [],
       };
 
       setTeacher(filteredTeacher);
@@ -260,7 +260,7 @@ const DetailsView = () => {
                 </div>
               </div>
 
-              <div>
+              {/* <div>
                 <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Subjects Specialized</h4>
                 <div className="flex flex-wrap gap-2">
                   {teacher.subjects.map((subject, index) => (
@@ -275,7 +275,7 @@ const DetailsView = () => {
                     </span>
                   ))}
                 </div>
-              </div>
+              </div> */}
             </div>
           </div>
         </div>
