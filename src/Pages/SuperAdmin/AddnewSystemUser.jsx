@@ -51,9 +51,9 @@ const validateFormData = (formData) => {
     const isParentLike = PARENT_LIKE_ROLES.includes(formData.userRole);
 
     // Role
-    if (!formData.userRole || !VALID_ROLES.includes(formData.userRole)) {
-        errors.push('Please select a valid user role.');
-    }
+    // if (!formData.userRole || !VALID_ROLES.includes(formData.userRole)) {
+    //     errors.push('Please select a valid user role.');
+    // }
 
     // Name
     const trimmedName = (formData.name || '').trim();

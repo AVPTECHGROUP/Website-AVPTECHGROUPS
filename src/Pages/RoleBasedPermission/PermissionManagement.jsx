@@ -839,14 +839,15 @@ export default function RolesPermissionsManagement() {
                 <Edit className="w-3.5 h-3.5" />
                 Edit Role
               </button>
-              <button
+              
+              {/* <button
                 onClick={() => setShowDeleteModal(true)}
                 disabled={!selectedRole || selectedRole?.isSystemRole}
                 className="flex items-center gap-1.5 bg-red-50 text-red-600 hover:bg-red-100 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 Delete
-              </button>
+              </button> */}
             </div>
           </div>
 
