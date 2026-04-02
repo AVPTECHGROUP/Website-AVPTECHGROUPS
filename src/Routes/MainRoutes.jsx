@@ -19,6 +19,7 @@ import MarkUserAttendance from '../Pages/Attendance/MarkUserAttendance';
 import WarningVerificationFailed from '../Components/UserAttendance/WarningVerificationFailed';
 import ManualAttendance from '../Components/UserAttendance/ManualAttendanceRequest';
 import ExamConfiguration from '../Pages/Exams/ExamConfiguration';
+import ClassSectionConfig from '../Pages/Academics/ClassSectionConfig';
 import StudentAttendance from '../Pages/Attendance/StudentAttendance/StudentAttendance';
 import StaffAttendanceRegistration from '../Pages/Attendance/StaffAttendanceRegistration';
 import StudentAttendanceRegistration from '../Pages/Attendance/StudentAttendanceRegistration';
@@ -156,6 +157,7 @@ const MainRoutes = () => {
             <Route path="/exams/reportCard" element={<ReportCards/>} />
             <Route path="/exams/analytics" element={<Analytics />} />
             <Route path="/exams/examConfig" element={<ExamConfiguration />} />
+            <Route path="/academics/classSections" element={<ClassSectionConfig />} />
 
             <Route path="/teachers" element={<Teachers />} />
             <Route path="/teachers/addTeacher" element={<AddNewTeacher />} />
