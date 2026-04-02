@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getTeacherById, updateTeacher, updateSalary } from '../../Api/TeachersAPI';
+import { getTeacherById, updateTeacher, upsertTeacherSalary } from '../../Api/TeachersAPI';
 import { ChevronLeft, IndianRupee, User } from 'lucide-react';
 import PersonalDetailsTab from '../../Components/Teacher/EditTabComponents/PersonalDetailsTab';
 import SalaryStructureTab from '../../Components/Teacher/EditTabComponents/SalaryStructureTab';
@@ -38,6 +38,8 @@ function EditTeachersDetails() {
         professionalTax: '',
         incomeTax: '',
         otherDeductions: '',
+        lateArrivalPenalty: '',
+        salaryId: null,
     });
 
     // Utility function
@@ -90,7 +92,6 @@ function EditTeachersDetails() {
         e.preventDefault();
         setIsLoading(true);
 
-        // Teacher personal/professional payload
         const teacherPayload = {
             personalDetails: {
                 fullName: formData.name,
@@ -111,46 +112,44 @@ function EditTeachersDetails() {
         };
 
         try {
-            // Personal/professional details update
             await updateTeacher(id, teacherPayload);
 
-            // Only update salary if baseSalary AND salaryType are present
             if (formData.salaryType && formData.baseSalary) {
                 const baseSalary = Number(formData.baseSalary) || 0;
-                const allowanceTotal =
-                    (Number(formData.houseRentAllowance) || 0) +
-                    (Number(formData.travelAllowance) || 0) +
-                    (Number(formData.dearnessAllowance) || 0) +
-                    (Number(formData.specialAllowance) || 0) +
-                    (Number(formData.otherAllowances) || 0) +
-                    (Number(formData.providentFund) || 0);
+                const hra = Number(formData.houseRentAllowance) || 0;
+                const ta = Number(formData.travelAllowance) || 0;
+                const da = Number(formData.dearnessAllowance) || 0;
+                const sa = Number(formData.specialAllowance) || 0;
+                const oa = Number(formData.otherAllowances) || 0;
+                const pf = Number(formData.providentFund) || 0;
+                const profTax = Number(formData.professionalTax) || 0;
+                const incomeTax = Number(formData.incomeTax) || 0;
+                const otherDed = Number(formData.otherDeductions) || 0;
+                const leaveDeduction = Number(formData.leaveDeductionPerDay) || 0;
 
-                const deductionTotal =
-                    (Number(formData.professionalTax) || 0) +
-                    (Number(formData.incomeTax) || 0) +
-                    (Number(formData.otherDeductions) || 0) +
-                    (Number(formData.leaveDeductionPerDay) || 0);
-
-                const grossSalary = baseSalary + allowanceTotal;
-                const totalDeductions = deductionTotal;
+                const grossSalary = baseSalary + hra + ta + da + sa + oa + pf;
+                const totalDeductions = profTax + incomeTax + otherDed + leaveDeduction;
                 const netSalary = grossSalary - totalDeductions;
 
+                const today = new Date().toISOString().split('T')[0];
+                const effectiveTo = `${new Date().getFullYear()}-12-31`;
+
                 const salaryPayload = {
-                    id: formData.salaryId || undefined,
+                    ...(formData.salaryId && { id: formData.salaryId }),
                     salaryType: formData.salaryType,
                     baseSalary,
-                    houseRentAllowance: Number(formData.houseRentAllowance) || 0,
-                    travelAllowance: Number(formData.travelAllowance) || 0,
-                    dearnessAllowance: Number(formData.dearnessAllowance) || 0,
-                    specialAllowance: Number(formData.specialAllowance) || 0,
-                    otherAllowances: Number(formData.otherAllowances) || 0,
-                    providentFund: Number(formData.providentFund) || 0,
-                    professionalTax: Number(formData.professionalTax) || 0,
-                    incomeTax: Number(formData.incomeTax) || 0,
-                    otherDeductions: Number(formData.otherDeductions) || 0,
-                    leaveDeductionPerDay: Number(formData.leaveDeductionPerDay) || 0,
-                    effectiveFrom: new Date().toISOString().split('T')[0],
-                    effectiveTo: new Date().toISOString().split('T')[0],
+                    houseRentAllowance: hra,
+                    travelAllowance: ta,
+                    dearnessAllowance: da,
+                    specialAllowance: sa,
+                    otherAllowances: oa,
+                    providentFund: pf,
+                    professionalTax: profTax,
+                    incomeTax,
+                    otherDeductions: otherDed,
+                    leaveDeductionPerDay: leaveDeduction,
+                    effectiveFrom: today,
+                    effectiveTo,          
                     payrollEligible: true,
                     remarks: "Updated via EditTeacherDetails",
                     grossSalary,
@@ -158,16 +157,36 @@ function EditTeachersDetails() {
                     netSalary
                 };
 
-                await updateSalary(id, salaryPayload);
+                const salaryRes = await upsertTeacherSalary(id, salaryPayload);
+
+                if (salaryRes?.data) {
+                    const d = salaryRes.data;
+                    setFormData(prev => ({
+                        ...prev,
+                        salaryId: d.id,
+                        salaryType: d.salaryType || '',
+                        baseSalary: d.baseSalary || '',
+                        houseRentAllowance: d.houseRentAllowance || 0,
+                        travelAllowance: d.travelAllowance || 0,
+                        dearnessAllowance: d.dearnessAllowance || 0,
+                        specialAllowance: d.specialAllowance || 0,
+                        otherAllowances: d.otherAllowances || 0,
+                        providentFund: d.providentFund || 0,
+                        professionalTax: d.professionalTax || 0,
+                        incomeTax: d.incomeTax || 0,
+                        otherDeductions: d.otherDeductions || 0,
+                        leaveDeductionPerDay: d.leaveDeductionPerDay || 0,
+                    }));
+                }
             }
 
             toast.success("Teacher details updated successfully!");
             navigate("/teachers");
+
         } catch (err) {
             console.error(err);
             toast.error("Failed to update teacher or salary. Please try again.");
-        }
-        finally{
+        } finally {
             setIsLoading(false);
         }
     }
