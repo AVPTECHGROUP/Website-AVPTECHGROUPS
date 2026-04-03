@@ -100,23 +100,45 @@ function ResultCard({ result, type }) {
     );
 }
 
-// ─── WebcamModal (FIXED: landscape 16:9 for group photos) ────────────────────
+// ─── WebcamModal (FIXED: adaptive portrait on mobile, landscape on desktop) ──
 function WebcamModal({ onClose, onCapture, processing }) {
     const webcamRef = useRef(null);
     const [camError, setCamError] = useState(false);
     const [captured, setCaptured] = useState(null);
-    const [facingMode, setFacingMode] = useState("environment"); // default back cam for group
+    const [facingMode, setFacingMode] = useState("environment");
+    const [isMobile, setIsMobile] = useState(false);
 
-    // ✅ FIX: Landscape 16:9 constraints — wide enough to fit 10 people
-    const videoConstraints = {
-        facingMode,
-        width: { ideal: 1920 },
-        height: { ideal: 1080 },
-        aspectRatio: 16 / 9,
-    };
+    // Detect mobile on mount
+    useEffect(() => {
+        const checkMobile = () => setIsMobile(window.innerWidth < 768);
+        checkMobile();
+        window.addEventListener("resize", checkMobile);
+        return () => window.removeEventListener("resize", checkMobile);
+    }, []);
+
+    // ✅ KEY FIX: On mobile portrait → let camera use its natural aspect ratio
+    // On desktop/tablet → force 16:9 landscape for wide group shots
+    const videoConstraints = isMobile
+        ? {
+            facingMode,
+            // Don't force aspect ratio on mobile — let it breathe naturally
+            width: { ideal: 1280 },
+            height: { ideal: 960 },
+        }
+        : {
+            facingMode,
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+            aspectRatio: 16 / 9,
+        };
+
+    // ✅ KEY FIX: Screenshot dimensions match the camera's natural output
+    const screenshotDims = isMobile
+        ? { width: 1280, height: 960 }
+        : { width: 1920, height: 1080 };
 
     const handleCapture = useCallback(() => {
-        const imageSrc = webcamRef.current?.getScreenshot({ width: 1920, height: 1080 });
+        const imageSrc = webcamRef.current?.getScreenshot(screenshotDims);
         if (!imageSrc) { alert("Could not capture. Try again."); return; }
 
         const [header, base64] = imageSrc.split(",");
@@ -127,7 +149,7 @@ function WebcamModal({ onClose, onCapture, processing }) {
         const file = new File([new Blob([arr], { type: mime })], "group_photo.jpg", { type: mime });
 
         setCaptured({ dataUrl: imageSrc, file });
-    }, []);
+    }, [screenshotDims]);
 
     const handleConfirm = () => {
         if (captured) onCapture(captured.file, captured.dataUrl);
@@ -140,8 +162,12 @@ function WebcamModal({ onClose, onCapture, processing }) {
         setFacingMode(prev => prev === "user" ? "environment" : "user");
     };
 
+    // ✅ KEY FIX: Camera area aspect ratio is adaptive
+    // Mobile: use 3/4 (portrait-ish, fits naturally in hand)
+    // Desktop: use 16/9 (landscape for group shots)
+    const cameraAspectRatio = isMobile ? "4/3" : "16/9";
+
     return (
-        // ✅ FIX: Full-screen landscape modal, max-w-5xl
         <div className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-2 sm:p-4">
             <div className="bg-white rounded-2xl overflow-hidden shadow-2xl w-full max-w-5xl flex flex-col">
                 {/* Header */}
@@ -152,8 +178,8 @@ function WebcamModal({ onClose, onCapture, processing }) {
                             {captured ? "Review Group Photo" : "Take Group Photo"}
                         </span>
                         {!captured && (
-                            <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
-                                Wide-angle · Fit all students
+                            <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full hidden sm:inline">
+                                {isMobile ? "Portrait · Fit all students" : "Wide-angle · Fit all students"}
                             </span>
                         )}
                     </div>
@@ -170,8 +196,8 @@ function WebcamModal({ onClose, onCapture, processing }) {
                     </div>
                 </div>
 
-                {/* ✅ FIX: Camera area — 16:9 landscape aspect ratio */}
-                <div className="relative bg-black" style={{ aspectRatio: "16/9" }}>
+                {/* ✅ KEY FIX: Camera area uses adaptive aspect ratio */}
+                <div className="relative bg-black" style={{ aspectRatio: cameraAspectRatio }}>
                     {captured ? (
                         <img src={captured.dataUrl} alt="Captured" className="w-full h-full object-contain bg-black" />
                     ) : camError ? (
@@ -191,7 +217,6 @@ function WebcamModal({ onClose, onCapture, processing }) {
                                 className="w-full h-full object-cover"
                                 mirrored={facingMode === "user"}
                             />
-                            {/* ✅ FIX: Wide group frame guide instead of single face oval */}
                             <div className="absolute inset-0 pointer-events-none">
                                 {/* Subtle vignette */}
                                 <div className="absolute inset-0 bg-black/15" style={{
@@ -199,11 +224,12 @@ function WebcamModal({ onClose, onCapture, processing }) {
                                     WebkitMaskImage: "radial-gradient(ellipse 85% 75% at 50% 50%, transparent 55%, black 100%)"
                                 }} />
 
-                                {/* Wide rectangular group frame */}
+                                {/* ✅ Adaptive frame guide */}
                                 <div className="absolute" style={{
                                     left: "50%", top: "50%",
                                     transform: "translate(-50%, -50%)",
-                                    width: "88%", height: "75%",
+                                    width: isMobile ? "85%" : "88%",
+                                    height: isMobile ? "80%" : "75%",
                                     border: "2px dashed rgba(96, 165, 250, 0.85)",
                                     borderRadius: "10px",
                                 }}>
@@ -213,17 +239,17 @@ function WebcamModal({ onClose, onCapture, processing }) {
                                     <div className="absolute -bottom-0.5 -left-0.5 w-6 h-6 border-b-2 border-l-2 border-blue-400 rounded-bl-lg" />
                                     <div className="absolute -bottom-0.5 -right-0.5 w-6 h-6 border-b-2 border-r-2 border-blue-400 rounded-br-lg" />
 
-                                    {/* Center label inside frame */}
+                                    {/* Center label */}
                                     <div className="absolute top-3 left-1/2 -translate-x-1/2">
-                                        <div className="bg-blue-600/70 backdrop-blur-sm text-white text-xs px-3 py-1 rounded-full flex items-center gap-1.5">
+                                        <div className="bg-blue-600/70 backdrop-blur-sm text-white text-xs px-3 py-1 rounded-full flex items-center gap-1.5 whitespace-nowrap">
                                             <Users className="w-3 h-3" />
                                             Fit all students in this frame
                                         </div>
                                     </div>
 
-                                    {/* Person silhouette guides — 10 slots */}
+                                    {/* Person silhouette guides */}
                                     <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5 px-4">
-                                        {Array.from({ length: 10 }).map((_, i) => (
+                                        {Array.from({ length: isMobile ? 5 : 10 }).map((_, i) => (
                                             <div key={i} className="flex flex-col items-center gap-0.5 opacity-40">
                                                 <div className="w-4 h-4 rounded-full border border-white/60" />
                                                 <div className="w-3 h-3 rounded-sm border border-white/60" />
@@ -234,9 +260,12 @@ function WebcamModal({ onClose, onCapture, processing }) {
 
                                 {/* Bottom tip */}
                                 <div className="absolute bottom-3 left-0 right-0 flex justify-center">
-                                    <div className="bg-black/60 backdrop-blur-sm text-white text-xs px-4 py-2 rounded-full flex items-center gap-2">
+                                    <div className="bg-black/60 backdrop-blur-sm text-white text-xs px-3 py-1.5 rounded-full flex items-center gap-2">
                                         <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse shrink-0" />
-                                        Hold phone horizontal · Everyone faces camera · Good lighting
+                                        {isMobile
+                                            ? "Step back · Everyone faces camera · Good lighting"
+                                            : "Hold phone horizontal · Everyone faces camera · Good lighting"
+                                        }
                                     </div>
                                 </div>
                             </div>
@@ -347,7 +376,7 @@ function UploadTab({ selectedClass, selectedSection, groupError, processing, cap
                             <div className="bg-white rounded-2xl px-5 py-4 flex flex-col items-center gap-2 shadow-lg">
                                 <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
                                 <p className="text-sm font-semibold text-gray-700">Detecting faces...</p>
-                                <p className="text-xs text-gray-400">AI is scanning the group photo</p>
+                                <p className="text-xs text-gray-400">Scanning the group photo...</p>
                             </div>
                         </div>
                     </div>
@@ -410,8 +439,8 @@ function UploadTab({ selectedClass, selectedSection, groupError, processing, cap
 // ─── Tab 1: Review Results ────────────────────────────────────────────────────
 function ReviewTab({ groupResult, capturedPreview, onUploadAnother, onConfirm }) {
     const results = groupResult?.results ?? [];
-    const markedNow      = results.filter(r => r.markStatus === "MARKED_NOW");
-    const alreadyMarked  = results.filter(r => r.markStatus === "ALREADY_MARKED");
+    const markedNow = results.filter(r => r.markStatus === "MARKED_NOW");
+    const alreadyMarked = results.filter(r => r.markStatus === "ALREADY_MARKED");
     const belowThreshold = results.filter(r => r.markStatus === "BELOW_THRESHOLD");
     const noFaces = (groupResult.totalFacesDetected ?? 0) === 0;
 
@@ -653,11 +682,10 @@ export default function GroupPhotoView({ onBack, selectedClass, selectedSection 
                                     else if (i === 1 && groupResult) setTab(1);
                                     else if (i === 2 && groupResult) setTab(2);
                                 }}
-                                className={`flex-1 min-w-max px-3 sm:px-4 py-3 text-xs sm:text-sm font-semibold border-b-2 transition-colors whitespace-nowrap ${
-                                    tab === i ? "border-blue-600 text-blue-600 bg-blue-50 cursor-pointer"
-                                    : i > 0 && !groupResult ? "border-transparent text-gray-300 cursor-not-allowed"
-                                    : "border-transparent text-gray-500 hover:text-gray-700 cursor-pointer"
-                                }`}>
+                                className={`flex-1 min-w-max px-3 sm:px-4 py-3 text-xs sm:text-sm font-semibold border-b-2 transition-colors whitespace-nowrap ${tab === i ? "border-blue-600 text-blue-600 bg-blue-50 cursor-pointer"
+                                        : i > 0 && !groupResult ? "border-transparent text-gray-300 cursor-not-allowed"
+                                            : "border-transparent text-gray-500 hover:text-gray-700 cursor-pointer"
+                                    }`}>
                                 {t}
                             </button>
                         ))}
