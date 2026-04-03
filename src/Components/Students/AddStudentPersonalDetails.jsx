@@ -1,33 +1,6 @@
-import React, { useRef } from 'react';
+import React from 'react';
 
 const AddStudentPersonalDetails = ({ formData, setFormData, handleInputChange, sections = [], sectionsLoading = false }) => {
-    const imageInputRef = useRef(null);
-
-    const handleImageChange = (e) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-
-        const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-        if (!validTypes.includes(file.type)) {
-            alert('Only JPG, PNG, WEBP or GIF files are allowed.');
-            return;
-        }
-        if (file.size > 5 * 1024 * 1024) {
-            alert('Image size must be under 5MB.');
-            return;
-        }
-
-        const reader = new FileReader();
-        reader.onload = () => {
-            setFormData(prev => ({ ...prev, profileImageUrl: reader.result }));
-        };
-        reader.readAsDataURL(file);
-        e.target.value = '';
-    };
-
-    const handleRemoveImage = () => {
-        setFormData(prev => ({ ...prev, profileImageUrl: '' }));
-    };
 
     // Group sections by className for the <optgroup> UX
     const groupedSections = sections.reduce((acc, section) => {
@@ -39,80 +12,6 @@ const AddStudentPersonalDetails = ({ formData, setFormData, handleInputChange, s
 
     return (
         <div className="space-y-8">
-
-            {/* ─── Profile Photo Section ─── */}
-            <div>
-                <div className="flex justify-start items-center mb-4 pb-3 border-b border-gray-200">
-                    <i className="fa-solid fa-image text-xl lg:text-2xl text-blue-500 mr-3"></i>
-                    <h2 className='text-xl font-medium text-gray-700'>Profile Photo</h2>
-                </div>
-
-                <div className="flex items-center gap-6">
-                    <div className="relative w-24 h-24 shrink-0 group">
-                        <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-gray-200 bg-gray-100 flex items-center justify-center">
-                            {formData.profileImageUrl ? (
-                                <img
-                                    src={formData.profileImageUrl}
-                                    alt="Profile preview"
-                                    className="w-full h-full object-cover"
-                                />
-                            ) : (
-                                <i className="fa-solid fa-user text-4xl text-gray-300" />
-                            )}
-                        </div>
-                        {formData.profileImageUrl && (
-                            <div
-                                onClick={() => imageInputRef.current?.click()}
-                                className="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                            >
-                                <i className="fa-solid fa-camera text-white text-lg" />
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="flex flex-col gap-2">
-                        <input
-                            ref={imageInputRef}
-                            type="file"
-                            accept="image/jpeg,image/png,image/webp,image/gif"
-                            onChange={handleImageChange}
-                            className="hidden"
-                        />
-
-                        {!formData.profileImageUrl ? (
-                            <button
-                                type="button"
-                                onClick={() => imageInputRef.current?.click()}
-                                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 border border-blue-300 rounded-lg hover:bg-blue-100 transition-colors"
-                            >
-                                <i className="fa-solid fa-upload" />
-                                Upload Photo
-                            </button>
-                        ) : (
-                            <div className="flex gap-2 flex-wrap">
-                                <button
-                                    type="button"
-                                    onClick={() => imageInputRef.current?.click()}
-                                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 border border-blue-300 rounded-lg hover:bg-blue-100 transition-colors"
-                                >
-                                    <i className="fa-solid fa-pen" />
-                                    Change
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={handleRemoveImage}
-                                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 bg-red-50 border border-red-300 rounded-lg hover:bg-red-100 transition-colors"
-                                >
-                                    <i className="fa-solid fa-trash" />
-                                    Remove
-                                </button>
-                            </div>
-                        )}
-
-                        <p className="text-xs text-gray-400">JPG, PNG, WEBP or GIF &nbsp;·&nbsp; Max 5MB</p>
-                    </div>
-                </div>
-            </div>
 
             {/* ─── Personal Details Section ─── */}
             <div>

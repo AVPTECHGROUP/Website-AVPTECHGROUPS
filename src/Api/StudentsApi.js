@@ -19,42 +19,36 @@ export const getStudents = async (page = 0, size = 10, sort = 'id') => {
     throw error;
   }
 };
-
-// Create new Student
-export const createStudents = async (studentData) => {
+// Create Students
+export const createStudents = async (studentData, imageFile) => {
   try {
-    console.log("Sending to:", `${BASE_URL}/students`);
-    console.log("Payload:", JSON.stringify(studentData, null, 2));
+    const formData = new FormData();
 
-    const res = await authFetch(`${BASE_URL}/students`, {
-      method: 'POST',
-      body: JSON.stringify(studentData),
-    });
+    formData.append(
+      "data",
+      new Blob([JSON.stringify(studentData)], {
+        type: "application/json",
+      })
+    );
 
-    const rawText = await res.text();
-    console.log("RAW SERVER RESPONSE:", rawText);
-
-    let data;
-    try {
-      data = JSON.parse(rawText);
-    } catch {
-      throw new Error(`Server returned non-JSON response: ${rawText.slice(0, 200)}`);
+    if (imageFile) {
+      formData.append("image", imageFile);
     }
 
-    console.log("PARSED RESPONSE:", data);
+    const res = await authFetch(`${BASE_URL}/students`, {
+      method: "POST",
+      body: formData,
+    });
+
+    const data = await res.json();
 
     if (!res.ok) {
-      const errMsg =
-        data?.message ||
-        data?.error ||
-        data?.errors?.join(", ") ||
-        `Request failed with status ${res.status}`;
-      throw new Error(errMsg);
+      throw new Error(data?.message || "Failed to create student");
     }
 
     return data;
   } catch (error) {
-    console.error('CREATE STUDENT ERROR:', error.message);
+    console.error("CREATE STUDENT ERROR:", error.message);
     throw error;
   }
 };
@@ -65,35 +59,58 @@ export const getStudentById = async (id) => {
     const res = await authFetch(`${BASE_URL}/students/${id}`, {
       method: "GET",
     });
-    if (!res.ok) throw new Error("Failed to fetch Student");
     const data = await res.json();
-    return data.data || data;
+    if (!res.ok) {
+      throw new Error(
+        data?.message || data?.error || "Failed to fetch student"
+      );
+    }
+    return data?.data; 
   } catch (error) {
-    console.error("getStudentsByID error:", error.message);
+    console.error("getStudentById error:", error.message);
     throw error;
   }
 };
 
-// Updating a Student
-export const updateStudent = async (id, updatedStudent) => {
+export const updateStudent = async (id, updatedStudent, imageFile) => {
   try {
+    const formData = new FormData();
+
+    formData.append(
+      "data",
+      new Blob([JSON.stringify(updatedStudent)], {
+        type: "application/json",
+      })
+    );
+
+    if (imageFile) {
+      formData.append("image", imageFile);
+    }
+
     const res = await authFetch(`${BASE_URL}/students/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(updatedStudent),
+      method: "PUT",
+      body: formData,
     });
-    if (!res.ok) throw new Error('Failed to update Student');
-    return res.json();
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data?.message || "Failed to update student");
+    }
+
+    return data;
   } catch (error) {
-    console.error("UpdateStudent error:", error.message);
+    console.error("UPDATE STUDENT ERROR:", error.message);
     throw error;
   }
 };
-
-// Search Student
 export const searchStudents = async (filters = {}, page, size = 10, sort = 'id') => {
   try {
     const res = await authFetch(`${BASE_URL}/students/search/paginated?page=${page}&size=${size}&sort=${sort}`, {
       method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify(filters),
     });
     if (!res.ok) {
@@ -104,6 +121,37 @@ export const searchStudents = async (filters = {}, page, size = 10, sort = 'id')
     return data;
   } catch (error) {
     console.error('searchStudents error:', error.message);
+    throw error;
+  }
+};
+
+// Get Students by Section (with optional status filter)
+export const getStudentsBySection = async (sectionId, status = "ACTIVE") => {
+  try {
+    if (!sectionId) {
+      throw new Error("sectionId is required");
+    }
+
+    const query = status ? `?status=${status}` : "";
+
+    const res = await authFetch(
+      `${BASE_URL}/students/section/${sectionId}${query}`,
+      {
+        method: "GET",
+      }
+    );
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(errorText || "Failed to fetch students by section");
+    }
+
+    const data = await res.json();
+
+    // return only data array (consistent with your other APIs)
+    return data?.data || [];
+  } catch (error) {
+    console.error("getStudentsBySection error:", error.message);
     throw error;
   }
 };

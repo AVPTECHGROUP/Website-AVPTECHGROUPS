@@ -3,12 +3,12 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, Calendar, FileText, Users, LogOut,
   ChevronDown, UserCog, Package, Bus, Phone, Mail,
-  Shield, ChevronUp, ArrowLeftRight,BookOpenText
+  Shield, ChevronUp, ArrowLeftRight, BookOpenText,
+  GraduationCap,
 } from 'lucide-react'
 import { useState, useEffect, useContext, useRef } from 'react'
 import { UserContext } from '../ContextAPI/UserContext'
 
-// ✅ Roles that can switch school
 const SCHOOL_SWITCHER_ROLES = ['SUPER_ADMIN', 'GLOBAL_ADMIN'];
 const ADMIN_ROLES = ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'];
 
@@ -25,21 +25,32 @@ const menuItems = [
     id: 'teachers', icon: Users, label: 'Teachers', route: '/teachers',
     roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'PRINCIPAL'],
   },
+  // ── Academics (Exams + Subjects merged) ──────────────────────────────────
+  {
+    id: 'academics', icon: GraduationCap, label: 'Academics', route: '/subjectsmaster',
+    roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'],
+    subItems: [
+      { label: 'Subjects', route: '/subjectsmaster', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'] },
+      { label: 'Exams', route: '/exams', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN'] },
+      { label: 'Marks Entry', route: '/exams/marksEntry', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN'] },
+      { label: 'Report Cards', route: '/exams/reportCard', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN'] },
+      { label: 'Analytics', route: '/exams/analytics', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN'] },
+      { label: 'Exam Configuration', route: '/exams/examConfig', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN'] },
+    ]
+  },
   {
     id: 'attendance', icon: Calendar, label: 'Attendance', route: '/attendance',
     roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'TEACHER', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST'],
     subItems: [
       { label: 'Mark Attendance', route: '/attendance/markUserAttendance', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'TEACHER', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST'] },
-      { label: 'Attendance Registration', route: '/attendance/attendanceImgReg', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN'] },
+      { label: 'Staff Enrollment', route: '/attendance/staffImgReg', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN'] },
+      { label: 'Student Enrollment', route: '/attendance/studentImgReg', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'TEACHER'] },
       { label: 'Pending Approvals', route: '/attendance/usersAttendance', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN'] },
+      { label: 'Student Attendance', route: '/attendance/studentAttendance', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'TEACHER'] },
     ]
   },
   {
     id: 'students', icon: Users, label: 'Students', route: '/students',
-    roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'],
-  },
-   {
-    id: 'subjects & Sections', icon: BookOpenText, label: 'Subjects', route: '/subjectsmaster',
     roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'],
   },
   {
@@ -84,8 +95,8 @@ const menuItems = [
     id: 'Permission',
     icon: Shield,
     label: 'Permissions',
-    route: '/accessPermissions',
-    roles: [ 'SUPER_ADMIN'],
+    route: '/rolesPermissions',
+    roles: [ 'GLOBAL_ADMIN'],
   },
 ]
 
@@ -131,7 +142,6 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
   const schoolDisplayCode = schoolInfo?.schoolCode || ''
   const schoolLogoUrl = schoolInfo?.logoUrl || dpis
 
-  // ✅ Switch School — works for both SUPER_ADMIN and GLOBAL_ADMIN
   const handleSwitchSchool = () => {
     localStorage.removeItem('school')
     navigate('/superAdmin')
@@ -218,7 +228,6 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
     ? role.split('_').map(w => w.charAt(0) + w.slice(1).toLowerCase()).join(' ')
     : ''
 
-  // ✅ Show switch school button for SUPER_ADMIN and GLOBAL_ADMIN
   const canSwitchSchool = SCHOOL_SWITCHER_ROLES.includes(userRole)
 
   return (
@@ -245,8 +254,6 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
               <p className="text-xs text-gray-500 mb-1.5">
                 {schoolDisplayCode ? `${schoolDisplayCode} · ` : ''}Management System
               </p>
-
-              {/* ✅ Switch School button — for SUPER_ADMIN and GLOBAL_ADMIN */}
               {canSwitchSchool && (
                 <button
                   onClick={handleSwitchSchool}
@@ -261,7 +268,6 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
             </div>
           )}
 
-          {/* Collapsed sidebar — show icon button only */}
           {!sidebarOpen && canSwitchSchool && (
             <div className="absolute left-0 right-0 flex justify-center" style={{ top: '72px' }}>
               <button

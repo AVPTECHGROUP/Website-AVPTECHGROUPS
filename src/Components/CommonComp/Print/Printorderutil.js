@@ -332,7 +332,7 @@ function buildSlip(o, copyType, items, total, rawStatus, gstNumber) {
       </div>
 
       ${paymentBarHtml}
-      ${o.remarks ? `<div class="remarks"><b>Note:</b> ${o.remarks}</div>` : ""}
+      ${o.remarks ? `<div class="remarks"><b>Parent:</b> ${o.remarks}</div>` : ""}
 
       <div class="table-area">
         <div class="tbl-lbl">Items (${items.length})</div>

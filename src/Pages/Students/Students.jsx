@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     ChevronRight,
@@ -11,7 +11,6 @@ import {
     UserPlus,
     Info,
 } from 'lucide-react';
-import ActionDropDownComp from '../../Components/CommonComp/ActionDropDownComp';
 import CardComponent from '../../Components/CommonComp/CardComponent';
 import { getStudents, searchStudents } from '../../Api/StudentsApi';
 import CardLoader from '../../Components/CommonComp/CardLoader';
@@ -28,22 +27,56 @@ const Student = () => {
     const [page, setPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const navigate = useNavigate();
-    const [search, setSearch] = useState('');
+
+    // ── Debounce: searchInput is what the user types (instant),
+    //             debouncedSearch is what triggers the API call (delayed)
+    const [searchInput, setSearchInput] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
+    const debounceTimer = useRef(null);
+
     const [statusFilter, setStatusFilter] = useState('All Status');
 
+    // Debounce handler — fires API only 500ms after user stops typing
+    const handleSearchChange = (e) => {
+    const value = e.target.value;
+    setSearchInput(value);               
+
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    debounceTimer.current = setTimeout(() => {
+        setDebouncedSearch(value);       
+        setPage(1);                      
+    }, 500);
+};
+
+    const handleClearSearch = () => {
+        setSearchInput('');
+        setDebouncedSearch('');
+        setPage(1);
+        if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    };
+
+    // Cleanup timer on unmount
+    useEffect(() => {
+        return () => {
+            if (debounceTimer.current) clearTimeout(debounceTimer.current);
+        };
+    }, []);
+
+    // ── Fetch students — depends on debouncedSearch (NOT searchInput) ──
     useEffect(() => {
         const fetchStudents = async () => {
             setLoading(true);
             setError(null);
             try {
                 const hasFilters =
-                    search.trim() !== '' ||
+                    debouncedSearch.trim() !== '' ||
                     (statusFilter && statusFilter !== 'All Status');
 
                 let res;
                 if (hasFilters) {
                     const filters = {
-                        searchTerm: search || undefined,
+                        // Single searchTerm covers name, email & admissionNumber on backend
+                        searchTerm: debouncedSearch.trim() || undefined,
                         status:
                             statusFilter && statusFilter !== 'All Status'
                                 ? statusFilter
@@ -65,11 +98,13 @@ const Student = () => {
                             id: stu.id,
                             avatar: (stu.fullName || 'U')[0].toUpperCase(),
                             image:
+                                stu.profileImageUrl ||
                                 stu.imageUrl ||
-                                stu.profileImage ||
                                 `https://ui-avatars.com/api/?name=${encodeURIComponent(stu.fullName)}&background=random`,
                             name: stu.fullName || `${stu.firstName} ${stu.lastName}`,
+                            admissionNumber: stu.admissionNumber,
                             mobile: stu.personalDetails?.mobile || 'N/A',
+                            email: stu.personalDetails?.email || 'N/A',
                             status: stu.status,
                             className: stu.className || '',
                             sectionName: stu.sectionName || '',
@@ -84,8 +119,9 @@ const Student = () => {
                 setLoading(false);
             }
         };
+
         fetchStudents();
-    }, [page, rowsPerPage, search, statusFilter]);
+    }, [page, rowsPerPage, debouncedSearch, statusFilter]); // ← debouncedSearch, not searchInput
 
     const getAvatarColor = (name) => {
         const colors = [
@@ -158,18 +194,8 @@ const Student = () => {
         },
     ];
 
-    // ✅ Updated: 5 columns now — added Class and Section
-    const tableHeadItems = ['Student Name', 'Mobile Number', 'Class', 'Section', 'Status'];
+    const tableHeadItems = ['Student Name', 'Mobile Number', 'Email', 'Class', 'Section', 'Status'];
     const tdStyle = 'px-6 py-3 text-center text-gray-700 text-sm';
-
-    // ✅ Updated: only Edit Student action remains
-    const actionOptions = [
-        { value: 'editStudent', label: 'Edit Student', icon: UserPenIcon, text: 'text-blue-600', bg: 'bg-blue-50', hover: 'hover:bg-blue-100' },
-    ];
-
-    const callAllActions = async (optVal, student) => {
-        if (optVal === 'editStudent') navigate(`/students/editStudent/${student.id}`);
-    };
 
     return (
         <div className="flex flex-col h-screen overflow-hidden bg-linear-to-b from-sky-50 to-sky-100">
@@ -186,7 +212,7 @@ const Student = () => {
                     </div>
 
                     {/* Cards */}
-                    <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 text-sm">
+                    <div className="flex flex-wrap gap-4">
                         {loading
                             ? cardsArray.map((_, i) => <CardLoader key={i} />)
                             : cardsArray.map((card) => (
@@ -217,14 +243,19 @@ const Student = () => {
                         <div className="flex-1 flex items-center gap-2 border border-gray-200 rounded-lg bg-gray-100 px-2 py-2.5 focus-within:shadow-sm focus-within:shadow-blue-200 transition-all">
                             <SearchIcon className="w-4 h-4 text-gray-500 shrink-0" />
                             <input
-                                value={search}
-                                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                                placeholder="Search by name, email or ID.."
+                                value={searchInput}
+                                onChange={handleSearchChange}
+                                // ↓ Updated placeholder to reflect all 3 searchable fields
+                                placeholder="Search by name, email or admission no..."
                                 className="text-sm font-normal focus:outline-none text-gray-600 w-full bg-transparent placeholder:text-gray-400"
                             />
-                            {search && (
+                            {/* Subtle spinner shown while debounce is pending */}
+                            {searchInput && searchInput !== debouncedSearch && (
+                                <div className="w-3.5 h-3.5 border-2 border-blue-400 border-t-transparent rounded-full animate-spin shrink-0" />
+                            )}
+                            {searchInput && (
                                 <button
-                                    onClick={() => { setSearch(''); setPage(1); }}
+                                    onClick={handleClearSearch}
                                     className="w-4 h-4 rounded-full bg-gray-300 hover:bg-gray-400 flex items-center justify-center shrink-0 text-gray-600 text-xs font-bold transition-colors"
                                     aria-label="Clear search"
                                 >
@@ -265,20 +296,22 @@ const Student = () => {
                         ) : (
                             students.map((student) => (
                                 <div key={student.id} className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
-                                    <div className="flex items-center gap-3 mb-3">
-                                        <div className={`w-12 h-12 rounded-full ${getAvatarColor(student.name)} flex items-center justify-center text-white font-semibold`}>
-                                            {student.avatar}
+                                    <td className={tdStyle}>
+                                        <div className="flex items-center gap-3">
+                                            <div className={`w-9 h-9 rounded-full ${getAvatarColor(student.name)} flex items-center justify-center text-white text-sm font-semibold shrink-0`}>
+                                                {student.avatar}
+                                            </div>
+                                            <div className="flex flex-col">
+                                                <span className="font-medium text-gray-900">{student.name}</span>
+                                                <span className="text-xs text-gray-500">{student.admissionNumber}</span>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <p className="font-medium text-gray-900">{student.name}</p>
-                                        </div>
-                                    </div>
+                                    </td>
                                     <div className="space-y-2 text-sm">
                                         <p>
                                             <span className="font-medium text-gray-600">Contact:</span>
                                             <span className="text-gray-800 ml-4">{student.mobile}</span>
                                         </p>
-                                        {/* ✅ Separate Class and Section fields in mobile card */}
                                         <p>
                                             <span className="font-medium text-gray-600">Class:</span>
                                             <span className="text-gray-800 ml-4">
@@ -304,7 +337,6 @@ const Student = () => {
                                                 {student.status}
                                             </span>
                                         </p>
-                                        {/* Edit + View buttons */}
                                         <div className="flex items-center gap-2 pt-1">
                                             <button
                                                 onClick={() => navigate(`/students/editStudent/${student.id}`)}
@@ -329,13 +361,12 @@ const Student = () => {
 
                     {/* DESKTOP TABLE */}
                     <div className="hidden lg:flex lg:flex-col flex-1 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden min-h-0">
-
                         <div className="flex-1 overflow-auto">
                             <table className="w-full">
                                 <thead className="border-b border-gray-100">
                                     <tr>
                                         {tableHeadItems.map((h) => (
-                                            <th key={h} className="px-6 py-3 text=center text-xs font-semibold text-gray-500 uppercase tracking-wider sticky top-0 bg-gray-50 z-50">
+                                            <th key={h} className="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider sticky top-0 bg-gray-50 z-50">
                                                 {h}
                                             </th>
                                         ))}
@@ -349,7 +380,7 @@ const Student = () => {
                                         <ListLoader />
                                     ) : error ? (
                                         <tr>
-                                            <td colSpan="6" className="px-6 py-8 text-center">
+                                            <td colSpan="7" className="px-6 py-8 text-center">
                                                 <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                                                     <UserRoundXIcon className="w-6 h-6 text-red-600" />
                                                 </div>
@@ -362,7 +393,7 @@ const Student = () => {
                                         </tr>
                                     ) : noUserFound ? (
                                         <tr>
-                                            <td colSpan="6" className="px-6 py-12 text-center">
+                                            <td colSpan="7" className="px-6 py-12 text-center">
                                                 <div className="w-14 h-14 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-3">
                                                     <UserSearch className="w-7 h-7 text-blue-500" />
                                                 </div>
@@ -373,44 +404,37 @@ const Student = () => {
                                     ) : (
                                         students.map((student) => (
                                             <tr key={student.id} className="hover:bg-gray-50 transition-colors">
-                                                {/* Student Name */}
-                                                <td className={tdStyle}>
+                                                <td className='px-6 py-3 text-gray-700 text-sm'>
                                                     <div className="flex items-center gap-3">
                                                         <div className={`w-9 h-9 rounded-full ${getAvatarColor(student.name)} flex items-center justify-center text-white text-sm font-semibold shrink-0`}>
                                                             {student.avatar}
                                                         </div>
-                                                        <p className="font-medium text-gray-900">{student.name}</p>
+                                                        <div className="flex flex-col">
+                                                            <span className="font-medium text-gray-900">{student.name}</span>
+                                                            <span className="text-xs text-gray-500">{student.admissionNumber}</span>
+                                                        </div>
                                                     </div>
                                                 </td>
-
-                                                {/* Mobile Number */}
                                                 <td className={`${tdStyle} text-center`}>{student.mobile}</td>
-
-                                                {/* ✅ Class — separate column */}
+                                                <td className={`${tdStyle} text-center`}>{student.email}</td>
                                                 <td className={tdStyle}>
                                                     {student.className
                                                         ? <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-blue-50 text-blue-700 text-xs font-medium">{student.className}</span>
                                                         : <span className="text-gray-400 text-xs">—</span>
                                                     }
                                                 </td>
-
-                                                {/* ✅ Section — separate column */}
                                                 <td className={tdStyle}>
                                                     {student.sectionName
                                                         ? <span className="inline-flex items-center justify-center px-2.5 py-1 rounded-md bg-purple-50 text-purple-700 text-xs font-medium">{student.sectionName}</span>
                                                         : <span className="text-gray-400 text-xs">—</span>
                                                     }
                                                 </td>
-
-                                                {/* Status */}
                                                 <td className={tdStyle}>
                                                     <span className={`inline-flex items-center justify-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${student.status === 'ACTIVE' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
                                                         <span className={`w-1.5 h-1.5 rounded-full ${student.status === 'ACTIVE' ? 'bg-green-500' : 'bg-red-500'}`} />
                                                         {student.status}
                                                     </span>
                                                 </td>
-
-                                                {/* Edit + View action buttons */}
                                                 <td className='text-center'>
                                                     <div className="flex items-center justify-center gap-2">
                                                         <button

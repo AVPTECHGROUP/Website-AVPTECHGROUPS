@@ -13,6 +13,8 @@ import ListLoader from "../../../Components/CommonComp/ListLoader";
 import ActionDropDownComp from "../../../Components/CommonComp/ActionDropDownComp";
 import ViewStudentOrder from "./ViewOrder";
 import { getOrderStats, getStudentOrders, cancelStudentOrder } from "../../../Api/StudentOrder";
+import { getClasses } from "../../../Api/TeachersAPI";
+
 import { toast } from "react-toastify";
 
 const STATUS_OPTIONS = [
@@ -135,11 +137,10 @@ function PageButtons({ page, totalPages, onPageChange }) {
           <button
             key={p}
             onClick={() => onPageChange(p)}
-            className={`px-3 py-1 rounded transition-all ${
-              page === p
-                ? "bg-blue-500 text-white"
-                : "text-gray-600 hover:bg-gray-100"
-            }`}
+            className={`px-3 py-1 rounded transition-all ${page === p
+              ? "bg-blue-500 text-white"
+              : "text-gray-600 hover:bg-gray-100"
+              }`}
           >
             {p}
           </button>
@@ -166,7 +167,11 @@ export default function StudentOrders() {
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
-
+  const [classes, setClasses] = useState([]);
+  const [classesFilter, setClassesFilter] = useState("");
+  const [classesLoading, setClassesLoading] = useState(false);
+  const [fromDate, setFromDate] = useState("")
+  const [toDate, setToDate] = useState("")
   const [noOrderFound, setNoOrderFound] = useState(false);
 
   const [viewOrder, setViewOrder] = useState(null);
@@ -174,6 +179,7 @@ export default function StudentOrders() {
   const [cancelling, setCancelling] = useState(false);
 
   const resetPage = () => setPage(1);
+
 
   // ── Handle return from Create/Edit page ──────────────────────
   useEffect(() => {
@@ -196,7 +202,25 @@ export default function StudentOrders() {
     return () => clearTimeout(t);
   }, [searchInput]);
 
-  useEffect(() => { resetPage(); }, [statusFilter]);
+  useEffect(() => { resetPage(); }, [statusFilter, classesFilter]);
+
+  useEffect(() => {
+    const fetchClasses = async () => {
+      try {
+        setClassesLoading(true);
+        const res = await getClasses();
+
+        console.log("API response:", res);
+        setClasses(res || []);
+      } catch (err) {
+        console.error("Failed to fetch classes", err);
+      } finally {
+        setClassesLoading(false);
+      }
+    };
+
+    fetchClasses();
+  }, []);
 
   // ── Fetch stats ───────────────────────────────────────────────
   const fetchStats = useCallback(() => {
@@ -226,7 +250,10 @@ export default function StudentOrders() {
         size: rowsPerPage,
         searchTerm: search,
         status: statusFilter,
-        sort: "createdAt,desc",   // ← newest first
+        classId: classesFilter || undefined,
+        fromDate: fromDate || undefined,
+        toDate: toDate || undefined,
+        sort: "createdAt,desc",
       });
       const list = res.orders || [];
       setOrders(list);
@@ -238,9 +265,9 @@ export default function StudentOrders() {
     } finally {
       setLoading(false);
     }
-  }, [page, rowsPerPage, search, statusFilter]);
-  useEffect(() => { fetchOrders(); }, [fetchOrders]);
+  }, [page, rowsPerPage, search, statusFilter, classesFilter, fromDate, toDate]);
 
+  useEffect(() => { fetchOrders(); }, [fetchOrders]);
   const totalItems = pagination?.totalElements ?? orders.length;
   const totalPages = pagination?.totalPages ?? Math.max(1, Math.ceil(totalItems / rowsPerPage));
 
@@ -270,6 +297,7 @@ export default function StudentOrders() {
   ];
 
   const tdStyle = "px-2 py-2 text-left text-gray-700 text-sm";
+
 
   return (
     <>
@@ -346,6 +374,53 @@ export default function StudentOrders() {
               >
                 {STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
+              <select
+                value={classesFilter}
+                onChange={(e) => {
+                  setClassesFilter(e.target.value);
+                  resetPage();
+                }}
+                className="px-3 py-2 border border-gray-200 bg-gray-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-200 text-sm text-gray-700 w-36 shrink-0">
+                <option value="">
+                  {classesLoading ? "Loading..." : "All Classes"}
+                </option>
+                {classes.map((cls) => (
+                  <option key={cls.id} value={cls.id}>
+                    {cls.name}
+                  </option>
+                ))}
+              </select>
+              <div className="flex items-center gap-3 mb-5">
+                <div className="flex flex-col">
+                  <label className="text-xs text-gray-500 mb-1">From</label>
+                  <input
+                    type="date"
+                    value={fromDate}
+                    max={toDate || undefined}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setFromDate(value);
+                      setPage(1);
+                    }}
+                    className="px-3 py-2 border border-gray-200 bg-gray-50 rounded-lg text-sm"
+                  />
+                </div>
+
+                <div className="flex flex-col">
+                  <label className="text-xs text-gray-500 mb-1">To</label>
+                  <input
+                    type="date"
+                    value={toDate}
+                    min={fromDate || undefined} 
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setToDate(value);
+                      setPage(1);
+                    }}
+                    className="px-3 py-2 border border-gray-200 bg-gray-50 rounded-lg text-sm"
+                  />
+                </div>
+              </div>
             </div>
 
             {/* ── MOBILE / TABLET CARDS ── */}

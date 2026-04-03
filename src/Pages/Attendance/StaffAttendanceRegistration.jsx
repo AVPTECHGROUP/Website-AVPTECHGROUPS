@@ -1,0 +1,731 @@
+import { useState, useRef, useEffect, useCallback } from "react";
+import {
+    Users,
+    UserCheck,
+    UserX,
+    Search,
+    CheckCircle,
+    AlertTriangle,
+    RefreshCw,
+    ChevronLeft,
+    ChevronRight,
+    Trash2,
+    X,
+    FileText,
+    Zap,
+    Shield,
+    Camera,
+    AlertCircle,
+} from "lucide-react";
+import CardComponent from "../../Components/CommonComp/CardComponent";
+import CardLoader from "../../Components/CommonComp/CardLoader";
+import {
+    getEnrollmentStats,
+    getStaffEnrollment,
+    enrollUserFaces,
+    removeEnrollment,
+} from "../../Api/AttendanceApi";
+import { getAllUsers } from "../../Api/userManagementAPI";
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+const AVATAR_COLORS = [
+    "bg-blue-500",
+    "bg-purple-500",
+    "bg-emerald-500",
+    "bg-rose-500",
+    "bg-amber-500",
+];
+
+const ROLE_COLORS = {
+    TEACHER: "bg-blue-100 text-blue-700",
+    ADMIN: "bg-purple-100 text-purple-700",
+    ACCOUNTANT: "bg-amber-100 text-amber-700",
+    PRINCIPAL: "bg-teal-100 text-teal-700",
+    RECEPTIONIST: "bg-pink-100 text-pink-700",
+    SUPER_ADMIN: "bg-gray-100 text-gray-700",
+};
+
+function getInitials(name = "") {
+    return name.split(" ").filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join("");
+}
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
+function StatusBadge({ status, photos }) {
+    if (status === "ENROLLED")
+        return (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-semibold border border-emerald-200">
+                <CheckCircle className="w-3.5 h-3.5" /> Enrolled
+            </span>
+        );
+    if (status === "PARTIAL")
+        return (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 text-xs font-semibold border border-amber-200">
+                <AlertTriangle className="w-3.5 h-3.5" /> Partial {photos}/5
+            </span>
+        );
+    return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-50 text-red-600 text-xs font-semibold border border-red-200">
+            <AlertTriangle className="w-3.5 h-3.5" /> Not Enrolled
+        </span>
+    );
+}
+
+function PhotoDots({ count, max = 5 }) {
+    return (
+        <div className="flex gap-1">
+            {Array.from({ length: max }).map((_, i) => (
+                <div key={i} className={`w-3 h-3 rounded-full ${i < count ? "bg-emerald-500" : "bg-gray-200"}`} />
+            ))}
+        </div>
+    );
+}
+
+function ActionButton({ status, onEnroll, onReEnroll }) {
+    if (status === "ENROLLED")
+        return (
+            <button onClick={onReEnroll} className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold transition-colors border border-gray-200">
+                <RefreshCw className="w-3.5 h-3.5" /> Re-enroll
+            </button>
+        );
+    if (status === "PARTIAL")
+        return (
+            <button onClick={onEnroll} className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold transition-colors">
+                <Camera className="w-3.5 h-3.5" /> Complete
+            </button>
+        );
+    return (
+        <button onClick={onEnroll} className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold transition-colors">
+            <Zap className="w-3.5 h-3.5" /> Enroll
+        </button>
+    );
+}
+
+function ReEnrollModal({ staff, onConfirm, onCancel, loading }) {
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
+            <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full border border-gray-200">
+                <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
+                        <AlertCircle className="w-5 h-5 text-amber-600" />
+                    </div>
+                    <div>
+                        <h3 className="text-base font-bold text-gray-900">Re-enroll Staff?</h3>
+                        <p className="text-xs text-gray-500 mt-0.5">This will remove all existing face data</p>
+                    </div>
+                </div>
+                <div className="bg-gray-50 rounded-xl p-3 mb-5 border border-gray-100">
+                    <p className="text-sm font-semibold text-gray-700">{staff?.name || staff?.fullName}</p>
+                    <p className="text-xs text-gray-400">{staff?.code} · {staff?.roles?.[0]}</p>
+                </div>
+                <p className="text-sm text-gray-600 mb-5 leading-relaxed">
+                    All <span className="font-semibold text-amber-600">existing face embeddings</span> will be permanently deleted. Staff will need to be re-enrolled.
+                </p>
+                <div className="flex gap-3">
+                    <button onClick={onCancel} disabled={loading} className="cursor-pointer flex-1 py-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 text-sm font-semibold transition-colors">
+                        Cancel
+                    </button>
+                    <button onClick={onConfirm} disabled={loading} className="cursor-pointer flex-1 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-sm font-semibold transition-colors flex items-center justify-center gap-2">
+                        {loading ? <><RefreshCw className="w-4 h-4 animate-spin" /> Removing...</> : "Yes, Re-enroll"}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function PhotoSlot({ index, file, onAdd, onRemove }) {
+    const inputRef = useRef();
+    const preview = file ? URL.createObjectURL(file) : null;
+    return (
+        <div className="relative">
+            <div
+                onClick={() => !file && inputRef.current?.click()}
+                className={`w-full aspect-square rounded-xl border-2 flex flex-col items-center justify-center transition-all overflow-hidden
+          ${file ? "border-emerald-400 bg-emerald-50" : "border-dashed border-gray-300 bg-gray-50 hover:border-blue-400 hover:bg-blue-50 cursor-pointer"}`}
+            >
+                {file
+                    ? <img src={preview} alt={`F${index + 1}`} className="w-full h-full object-cover" />
+                    : <><Camera className="w-6 h-6 text-gray-400 mb-1" /><span className="text-xs text-gray-500 font-medium">F{index + 1}</span></>
+                }
+                <input ref={inputRef} type="file" accept="image/*" className="hidden"
+                    onChange={(e) => e.target.files[0] && onAdd(index, e.target.files[0])} />
+            </div>
+            {file && (
+                <button onClick={() => onRemove(index)} className="cursor-pointer absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition-colors z-10">
+                    <X className="w-3 h-3" />
+                </button>
+            )}
+            {file && (
+                <div className="absolute bottom-1 left-1 right-1 flex justify-center">
+                    <span className="text-[10px] bg-emerald-600 text-white px-1.5 py-0.5 rounded font-semibold">✓ Good</span>
+                </div>
+            )}
+        </div>
+    );
+}
+
+function Toast({ message, type, onClose }) {
+    useEffect(() => { const t = setTimeout(onClose, 3500); return () => clearTimeout(t); }, [onClose]);
+    return (
+        <div className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg text-sm font-semibold
+      ${type === "success" ? "bg-emerald-600 text-white" : "bg-red-600 text-white"}`}>
+            {type === "success" ? <CheckCircle className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+            {message}
+            <button onClick={onClose} className="cursor-pointer ml-2 opacity-70 hover:opacity-100"><X className="w-3.5 h-3.5" /></button>
+        </div>
+    );
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
+export default function StaffAttendanceRegistration() {
+
+    const [stats, setStats] = useState(null);
+    const [statsLoading, setStatsLoading] = useState(true);
+
+    const [allUsers, setAllUsers] = useState([]);
+    const [usersLoading, setUsersLoading] = useState(true);
+    const [userSearch, setUserSearch] = useState("");
+
+    // ✅ KEY: a userId → enrollmentRecord map built from getStaffEnrollment
+    // This is the single source of truth for enrollment status across both panels
+    const [enrollmentMap, setEnrollmentMap] = useState({});
+
+    const [staffList, setStaffList] = useState([]);
+    const [staffLoading, setStaffLoading] = useState(true);
+    const [tablePage, setTablePage] = useState(0);
+    const [tablePageSize] = useState(10);
+    const [tableTotalPages, setTableTotalPages] = useState(1);
+    const [filterStatus, setFilterStatus] = useState("");
+
+    const [selectedStaff, setSelectedStaff] = useState(null);
+    const [photos, setPhotos] = useState(Array(5).fill(null));
+    const [activeStep, setActiveStep] = useState(1);
+
+    const [enrolling, setEnrolling] = useState(false);
+    const [reEnrollTarget, setReEnrollTarget] = useState(null);
+    const [reEnrollLoading, setReEnrollLoading] = useState(false);
+    const [toast, setToast] = useState(null);
+
+    const uploadPanelRef = useRef(null);
+
+    // ── Build enrollment map (fetch all records, not just one page) ───────────
+    const buildEnrollmentMap = useCallback(async () => {
+        try {
+            // Fetch a large page to cover all staff; increase size if school is larger
+            const res = await getStaffEnrollment(0, 500, "id", undefined);
+            const records = res.data || [];
+            const map = {};
+            records.forEach((r) => { map[r.userId] = r; });
+            setEnrollmentMap(map);
+            return map; // return so callers can use it immediately
+        } catch (e) {
+            console.error("buildEnrollmentMap failed:", e);
+            return {};
+        }
+    }, []);
+
+    const fetchStats = useCallback(async () => {
+        try {
+            setStatsLoading(true);
+            const res = await getEnrollmentStats();
+            setStats(res.data);
+        } catch (e) { console.error(e); }
+        finally { setStatsLoading(false); }
+    }, []);
+
+    const fetchAllUsers = useCallback(async () => {
+        try {
+            setUsersLoading(true);
+            const res = await getAllUsers(0, 100, "id");
+            const users = (res.data || []).filter(
+                (u) => !u.roles?.includes("STUDENT") && !u.roles?.includes("PARENT")
+            );
+            setAllUsers(users);
+        } catch (e) { console.error(e); }
+        finally { setUsersLoading(false); }
+    }, []);
+
+    const fetchStaffTable = useCallback(async (page = 0, status = "") => {
+        try {
+            setStaffLoading(true);
+            const res = await getStaffEnrollment(page, tablePageSize, "id", status || undefined);
+            setStaffList(res.data || []);
+            setTableTotalPages(res.pagination?.totalPages || 1);
+        } catch (e) { console.error(e); }
+        finally { setStaffLoading(false); }
+    }, [tablePageSize]);
+
+    // ── Initial load ──────────────────────────────────────────────────────────
+    useEffect(() => {
+        fetchStats();
+        fetchAllUsers();
+        buildEnrollmentMap();
+    }, [fetchStats, fetchAllUsers, buildEnrollmentMap]);
+
+    useEffect(() => {
+        fetchStaffTable(tablePage, filterStatus);
+    }, [fetchStaffTable, tablePage, filterStatus]);
+
+    // ── Sync selectedStaff status whenever enrollmentMap refreshes ───────────
+    // This is the reactive link: map updates → selectedStaff panel updates automatically
+    useEffect(() => {
+        if (!selectedStaff?.userId) return;
+        const live = enrollmentMap[selectedStaff.userId];
+        if (!live) return;
+        setSelectedStaff((prev) => {
+            // Only update if something actually changed to avoid infinite loops
+            if (
+                prev.enrollmentStatus === live.enrollmentStatus &&
+                prev.photosCount === (live.photosCount || 0)
+            ) return prev;
+            return {
+                ...prev,
+                enrollmentStatus: live.enrollmentStatus,
+                photosCount: live.photosCount || 0,
+                fullyEnrolled: live.fullyEnrolled,
+            };
+        });
+    }, [enrollmentMap]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // ── refreshAll: re-fetches stats + table + map, then syncs selectedStaff ──
+    const refreshAll = useCallback(async (targetUserId) => {
+        const [freshMap] = await Promise.all([
+            buildEnrollmentMap(),
+            fetchStats(),
+            fetchStaffTable(tablePage, filterStatus),
+        ]);
+        // Immediately sync selectedStaff from the freshMap (don't wait for useEffect)
+        if (targetUserId && freshMap[targetUserId]) {
+            const live = freshMap[targetUserId];
+            setSelectedStaff((prev) =>
+                prev?.userId === targetUserId
+                    ? { ...prev, enrollmentStatus: live.enrollmentStatus, photosCount: live.photosCount || 0, fullyEnrolled: live.fullyEnrolled }
+                    : prev
+            );
+        }
+    }, [buildEnrollmentMap, fetchStats, fetchStaffTable, tablePage, filterStatus]);
+
+    const showToast = (message, type = "success") => setToast({ message, type });
+
+    const scrollToUpload = () =>
+        setTimeout(() => uploadPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
+
+    // ── Select from LEFT panel (getAllUsers) ──────────────────────────────────
+    // ✅ FIX: look up real enrollment status from enrollmentMap instead of hardcoding NOT_ENROLLED
+    const handleSelectStaff = (user) => {
+        const name = user.fullName || `${user.firstName || ""} ${user.lastName || ""}`.trim() || "Unknown";
+        const role = user.roles?.[0] || "TEACHER";
+        const code = user.employeeCode || "—";
+        const live = enrollmentMap[user.id]; // real record or undefined
+
+        setSelectedStaff({
+            userId: user.id,
+            name,
+            code,
+            roles: user.roles,
+            userType: role,
+            enrollmentStatus: live?.enrollmentStatus ?? "NOT_ENROLLED",
+            photosCount: live?.photosCount ?? 0,
+            fullyEnrolled: live?.fullyEnrolled ?? false,
+        });
+
+        setPhotos(Array(5).fill(null));
+        setActiveStep(2);
+        scrollToUpload();
+    };
+
+    // ── Select from TABLE (Enroll / Complete buttons) ─────────────────────────
+    // Table rows already have real enrollment data from the API
+    const handleTableEnroll = (staff) => {
+        setSelectedStaff({
+            userId: staff.userId,
+            name: staff.name,
+            code: staff.code,
+            roles: staff.roles,
+            userType: staff.userType || staff.roles?.[0] || "TEACHER",
+            enrollmentStatus: staff.enrollmentStatus,
+            photosCount: staff.photosCount || 0,
+            fullyEnrolled: staff.fullyEnrolled,
+        });
+        setPhotos(Array(5).fill(null));
+        setActiveStep(2);
+        scrollToUpload();
+    };
+
+    const handleTableReEnroll = (staff) => setReEnrollTarget(staff);
+
+    // ── Re-enroll confirm ─────────────────────────────────────────────────────
+    const confirmReEnroll = async () => {
+        if (!reEnrollTarget) return;
+
+        const targetId = reEnrollTarget.userId;
+
+        console.log("ReEnroll Payload:", {
+            userId: targetId,
+            userType: reEnrollTarget.userType,
+            mapData: enrollmentMap[targetId],
+        });
+
+
+        const existing = enrollmentMap[targetId];
+
+        if (!existing) {
+            showToast("No enrollment found for this user", "error");
+            setReEnrollTarget(null);
+            return;
+        }
+
+        try {
+            setReEnrollLoading(true);
+
+            await removeEnrollment({
+                userId: targetId,
+                userType: existing?.roles?.[0] || reEnrollTarget?.roles?.[0],
+            });
+
+            showToast("Enrollment removed successfully");
+
+            setReEnrollTarget(null);
+            await refreshAll(targetId);
+
+        } catch (e) {
+            showToast(e.message || "Failed to remove enrollment", "error");
+        } finally {
+            setReEnrollLoading(false);
+        }
+    };
+    // ── Photo handlers ────────────────────────────────────────────────────────
+    const handleAddPhoto = (index, file) => {
+        const updated = [...photos]; updated[index] = file; setPhotos(updated);
+        if (activeStep < 3) setActiveStep(3);
+    };
+    const handleRemovePhoto = (index) => {
+        const updated = [...photos]; updated[index] = null; setPhotos(updated);
+    };
+    const handleClearAll = () => setPhotos(Array(5).fill(null));
+
+    // ── Enroll ────────────────────────────────────────────────────────────────
+    const handleEnroll = async () => {
+        if (uploadedCount < 5 || !selectedStaff) return;
+        const enrolledId = selectedStaff.userId;
+        try {
+            setEnrolling(true);
+            await enrollUserFaces({
+                userId: enrolledId,
+                userType: selectedStaff.userType || selectedStaff.roles?.[0] || "TEACHER",
+                images: photos,
+            });
+
+            showToast(`${selectedStaff.name} enrolled successfully!`);
+            setActiveStep(4);
+            setPhotos(Array(5).fill(null));
+
+            // ✅ Optimistic update: flip status immediately in the panel
+            setSelectedStaff((prev) => ({
+                ...prev,
+                enrollmentStatus: "ENROLLED",
+                photosCount: 5,
+                fullyEnrolled: true,
+            }));
+
+            // Then refresh everything in the background to sync table + map + stats
+            await refreshAll(enrolledId);
+        } catch (e) {
+            showToast(e.message || "Enrollment failed", "error");
+        } finally {
+            setEnrolling(false);
+        }
+    };
+
+    // ── Derived ───────────────────────────────────────────────────────────────
+    const uploadedCount = photos.filter(Boolean).length;
+
+    const filteredUsers = allUsers.filter((u) => {
+        const name = u.fullName || `${u.firstName || ""} ${u.lastName || ""}`.trim();
+        const code = u.employeeCode || "";
+        const q = userSearch.toLowerCase();
+        return name.toLowerCase().includes(q) || code.toLowerCase().includes(q);
+    });
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    return (
+        <div className="min-h-screen bg-[#EBF0F5] font-sans">
+            {reEnrollTarget && (
+                <ReEnrollModal staff={reEnrollTarget} onConfirm={confirmReEnroll}
+                    onCancel={() => setReEnrollTarget(null)} loading={reEnrollLoading} />
+            )}
+            {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+
+            {/* ── Header ── */}
+            <div className="px-4 sm:px-6 lg:px-8 py-4">
+                <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div>
+                        <h1 className="text-xl sm:text-3xl font-bold text-gray-900">Staff Face Enrollment</h1>
+                        <p className="text-sm text-gray-500 mt-0.5">Register staff faces for automated attendance recognition</p>
+                    </div>
+                </div>
+            </div>
+
+            <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+                {/* ── Stat Cards ── */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {statsLoading ? Array(4).fill(0).map((_, i) => <CardLoader key={i} />) : (
+                        <>
+                            <CardComponent IconName={Shield} keyName="Total Staff" val={`${stats?.totalStaff ?? 0} registered`} iconTxColor="text-blue-600" iconBgColor="bg-blue-100" />
+                            <CardComponent IconName={UserCheck} keyName="Staff Enrolled" val={`${stats?.staffEnrolled ?? 0} of ${stats?.totalStaff ?? 0}`} iconTxColor="text-emerald-600" iconBgColor="bg-emerald-100" />
+                            <CardComponent IconName={UserX} keyName="Not Enrolled" val={`${(stats?.totalStaff ?? 0) - (stats?.staffEnrolled ?? 0)} pending`} iconTxColor="text-red-500" iconBgColor="bg-red-100" />
+                            <CardComponent IconName={Users} keyName="Enrollment %" val={`${stats?.enrollmentPercentage ?? 0}% complete`} iconTxColor="text-purple-600" iconBgColor="bg-purple-100" />
+                        </>
+                    )}
+                </div>
+
+                {/* ── Staff List + Table ── */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+                    {/* Left: getAllUsers list */}
+                    <div className="lg:col-span-1">
+                        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 h-full">
+                            <h2 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
+                                <Users className="w-4 h-4 text-blue-500" /> Select Staff Member
+                            </h2>
+                            <div className="relative mb-3">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                <input value={userSearch} onChange={(e) => setUserSearch(e.target.value)}
+                                    placeholder="Search by name or employee code..."
+                                    className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-200 bg-gray-50 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                            </div>
+                            <div className="space-y-2 max-h-[420px] overflow-y-auto pr-1">
+                                {usersLoading ? (
+                                    <div className="flex items-center justify-center py-10">
+                                        <RefreshCw className="w-5 h-5 animate-spin text-blue-400" />
+                                    </div>
+                                ) : filteredUsers.length === 0 ? (
+                                    <p className="text-xs text-gray-400 text-center py-8">No staff found</p>
+                                ) : filteredUsers.map((user, idx) => {
+                                    const name = user.fullName || `${user.firstName || ""} ${user.lastName || ""}`.trim() || "Unknown";
+                                    const role = user.roles?.[0] || "—";
+                                    const code = user.employeeCode || "—";
+                                    const isSelected = selectedStaff?.userId === user.id;
+
+                                    // ✅ Show real-time status indicator in left panel
+                                    const live = enrollmentMap[user.id];
+                                    const liveStatus = live?.enrollmentStatus ?? "NOT_ENROLLED";
+
+                                    return (
+                                        <button key={user.id} onClick={() => handleSelectStaff(user)}
+                                            className={`cursor-pointer w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${isSelected ? "border-blue-400 bg-blue-50 shadow-sm" : "border-gray-100 bg-white hover:border-gray-300 hover:bg-gray-50"
+                                                }`}>
+                                            <div className={`w-9 h-9 rounded-full ${AVATAR_COLORS[idx % AVATAR_COLORS.length]} text-white text-xs font-bold flex items-center justify-center shrink-0`}>
+                                                {getInitials(name) || "?"}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-sm font-semibold text-gray-800 truncate">{name}</p>
+                                                <p className="text-xs text-gray-500">{code} · {role}</p>
+                                            </div>
+                                            {/* ✅ Live status indicator */}
+                                            {liveStatus === "ENROLLED"
+                                                ? <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0" />
+                                                : liveStatus === "PARTIAL"
+                                                    ? <span className="text-[10px] font-bold text-amber-500 shrink-0">{live?.photosCount}/5</span>
+                                                    : <AlertTriangle className="w-3.5 h-3.5 text-gray-300 shrink-0" />}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Right: enrollment table */}
+                    <div className="lg:col-span-2">
+                        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden h-full flex flex-col">
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-5 py-4 border-b border-gray-100">
+                                <h2 className="text-sm font-bold text-gray-700 flex items-center gap-2">
+                                    <FileText className="w-4 h-4 text-blue-500" /> Staff Enrollment Status
+                                </h2>
+                                <select value={filterStatus} onChange={(e) => { setFilterStatus(e.target.value); setTablePage(0); }}
+                                    className="cursor-pointer text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-400 self-start sm:self-auto">
+                                    <option value="">All Status</option>
+                                    <option value="ENROLLED">Enrolled</option>
+                                    <option value="NOT_ENROLLED">Not Enrolled</option>
+                                    <option value="PARTIAL">Partial</option>
+                                </select>
+                            </div>
+
+                            <div className="overflow-x-auto flex-1">
+                                {staffLoading ? (
+                                    <div className="flex items-center justify-center py-16">
+                                        <RefreshCw className="w-6 h-6 animate-spin text-blue-400" />
+                                    </div>
+                                ) : (
+                                    <table className="w-full text-sm">
+                                        <thead>
+                                            <tr className="bg-gray-50 border-b border-gray-100">
+                                                {["Staff Member", "Role", "Photos", "Status", "Actions"].map((h) => (
+                                                    <th key={h} className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3 whitespace-nowrap">{h}</th>
+                                                ))}
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-50">
+                                            {staffList.length === 0 ? (
+                                                <tr><td colSpan={5} className="text-center py-12 text-sm text-gray-400">No staff members found</td></tr>
+                                            ) : staffList.map((staff, idx) => {
+                                                const role = staff.roles?.[0] || staff.userType || "—";
+                                                return (
+                                                    <tr key={staff.userId} className={`hover:bg-blue-50/40 transition-colors ${selectedStaff?.userId === staff.userId ? "bg-blue-50/60" : ""}`}>
+                                                        <td className="px-4 py-3">
+                                                            <div className="flex items-center gap-2.5">
+                                                                <div className={`w-8 h-8 rounded-full ${AVATAR_COLORS[idx % AVATAR_COLORS.length]} text-white text-xs font-bold flex items-center justify-center shrink-0`}>
+                                                                    {getInitials(staff.name)}
+                                                                </div>
+                                                                <div>
+                                                                    <p className="font-semibold text-gray-800 text-xs leading-tight">{staff.name}</p>
+                                                                    <p className="text-gray-400 text-[11px]">{staff.code}</p>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-4 py-3">
+                                                            <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${ROLE_COLORS[role] || "bg-gray-100 text-gray-600"}`}>{role}</span>
+                                                        </td>
+                                                        <td className="px-4 py-3"><PhotoDots count={staff.photosCount || 0} /></td>
+                                                        <td className="px-4 py-3"><StatusBadge status={staff.enrollmentStatus} photos={staff.photosCount} /></td>
+                                                        <td className="px-4 py-3">
+                                                            <ActionButton status={staff.enrollmentStatus}
+                                                                onEnroll={() => handleTableEnroll(staff)}
+                                                                onReEnroll={() => handleTableReEnroll(staff)} />
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                )}
+                            </div>
+
+                            {/* Pagination */}
+                            <div className="flex items-center justify-between px-5 py-3 border-t border-gray-100 bg-gray-50 flex-wrap gap-2">
+                                <span className="text-xs text-gray-500">Page {tablePage + 1} of {tableTotalPages}</span>
+                                <div className="flex items-center gap-1">
+                                    <button onClick={() => setTablePage((p) => Math.max(0, p - 1))} disabled={tablePage === 0}
+                                        className="cursor-pointer w-7 h-7 rounded-lg flex items-center justify-center border border-gray-200 bg-white hover:bg-gray-100 disabled:opacity-40 transition-colors">
+                                        <ChevronLeft className="w-4 h-4 text-gray-600" />
+                                    </button>
+                                    {Array.from({ length: Math.min(tableTotalPages, 5) }).map((_, i) => (
+                                        <button key={i} onClick={() => setTablePage(i)}
+                                            className={`cursor-pointer w-7 h-7 rounded-lg text-xs font-semibold border transition-colors ${tablePage === i ? "bg-blue-600 text-white border-blue-600" : "bg-white text-gray-600 border-gray-200 hover:bg-gray-100"}`}>
+                                            {i + 1}
+                                        </button>
+                                    ))}
+                                    <button onClick={() => setTablePage((p) => Math.min(tableTotalPages - 1, p + 1))} disabled={tablePage >= tableTotalPages - 1}
+                                        className="cursor-pointer w-7 h-7 rounded-lg flex items-center justify-center border border-gray-200 bg-white hover:bg-gray-100 disabled:opacity-40 transition-colors">
+                                        <ChevronRight className="w-4 h-4 text-gray-600" />
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* ── Upload Panel ── */}
+                {selectedStaff && (
+                    <div ref={uploadPanelRef} className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+                        {/* Steps */}
+                        <div className="flex items-center gap-1 mb-5 text-xs font-semibold overflow-x-auto pb-1">
+                            {["Select Staff", "Review Info", "Upload Photos", "Enroll"].map((step, i) => (
+                                <div key={step} className="flex items-center shrink-0">
+                                    <div className={`px-3 py-1.5 rounded-full ${activeStep > i + 1 ? "bg-blue-600 text-white"
+                                            : activeStep === i + 1 ? "bg-blue-100 text-blue-700 border border-blue-300"
+                                                : "bg-gray-100 text-gray-400"
+                                        }`}>{i + 1} · {step}</div>
+                                    {i < 3 && <div className="w-8 h-px bg-gray-300 mx-1" />}
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-start">
+
+                            {/* Staff Info — ✅ now always shows live status */}
+                            <div className="md:col-span-3">
+                                <div className="flex items-start gap-3 p-4 rounded-xl bg-blue-50 border border-blue-100 h-full">
+                                    <div className="w-12 h-12 rounded-full bg-blue-600 text-white text-sm font-bold flex items-center justify-center shrink-0">
+                                        {getInitials(selectedStaff.name)}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-bold text-gray-800 leading-tight">{selectedStaff.name}</p>
+                                        <p className="text-xs text-gray-500 mt-0.5">{selectedStaff.code} · {selectedStaff.roles?.[0] || "—"}</p>
+                                        <p className="text-xs text-gray-400 mt-0.5">Group: school-staff</p>
+                                        <p className="text-xs text-gray-400">User ID: {selectedStaff.userId}</p>
+                                        <div className="mt-2">
+                                            <StatusBadge status={selectedStaff.enrollmentStatus} photos={selectedStaff.photosCount} />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Photos */}
+                            <div className="md:col-span-6">
+                                <div className="flex items-center justify-between mb-2">
+                                    <p className="text-xs font-bold text-gray-700 uppercase tracking-wide">
+                                        Upload 5 Face Photos <span className="text-red-500">(REQUIRED)</span>
+                                    </p>
+                                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${uploadedCount === 5 ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"}`}>
+                                        {uploadedCount}/5
+                                    </span>
+                                </div>
+                                <div className="grid grid-cols-5 gap-2">
+                                    {Array(5).fill(0).map((_, i) => (
+                                        <PhotoSlot key={i} index={i} file={photos[i]} onAdd={handleAddPhoto} onRemove={handleRemovePhoto} />
+                                    ))}
+                                </div>
+                                <div className="mt-3">
+                                    <div className="flex justify-between text-xs text-gray-500 mb-1">
+                                        <span>Photos uploaded</span><span>{uploadedCount} / 5</span>
+                                    </div>
+                                    <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                        <div className={`h-full rounded-full transition-all duration-500 ${uploadedCount === 5 ? "bg-emerald-500" : "bg-blue-500"}`}
+                                            style={{ width: `${(uploadedCount / 5) * 100}%` }} />
+                                    </div>
+                                    <p className="text-[11px] text-right mt-1 text-gray-400">
+                                        {uploadedCount === 5 ? "✅ All photos ready to enroll" : `${5 - uploadedCount} more photo${5 - uploadedCount !== 1 ? "s" : ""} needed`}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Guidelines + Actions */}
+                            <div className="md:col-span-3 flex flex-col gap-3">
+                                <div className="bg-gray-50 rounded-xl p-4 text-xs text-gray-600 space-y-2 border border-gray-100">
+                                    <p className="font-bold text-gray-700 text-sm mb-2">Photo guidelines:</p>
+                                    {[
+                                        { ok: true, text: "Face clearly visible, well-lit, centered" },
+                                        { ok: true, text: "Different angles: front, left, right, up, down" },
+                                        { ok: false, text: "No sunglasses, masks or heavy shadows" },
+                                        { ok: false, text: "Min 200×200 px · Max 5 MB each" },
+                                    ].map((g, i) => (
+                                        <div key={i} className="flex items-start gap-2">
+                                            <span className="shrink-0 mt-0.5">{g.ok ? "✅" : "❌"}</span>
+                                            <span className="leading-relaxed">{g.text}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                                <button onClick={handleClearAll}
+                                    className="cursor-pointer w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-600 text-sm font-semibold transition-colors">
+                                    <Trash2 className="w-4 h-4" /> Clear All
+                                </button>
+                                <button onClick={handleEnroll} disabled={uploadedCount < 5 || enrolling}
+                                    className={`cursor-pointer w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-white text-sm font-semibold transition-all ${uploadedCount === 5 && !enrolling ? "bg-blue-600 hover:bg-blue-700 shadow-sm" : "bg-gray-300 cursor-not-allowed"
+                                        }`}>
+                                    {enrolling ? <><RefreshCw className="w-4 h-4 animate-spin" /> Enrolling...</> : <><Zap className="w-4 h-4" /> Enroll Staff</>}
+                                </button>
+                                {uploadedCount < 5 && (
+                                    <p className="text-[11px] text-center text-gray-400">
+                                        {5 - uploadedCount} more photo{5 - uploadedCount !== 1 ? "s" : ""} needed
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}

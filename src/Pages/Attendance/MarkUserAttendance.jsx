@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Camera, Sun, Frame, ShieldOff, User } from 'lucide-react';
 import { toast } from 'react-toastify';
 import Webcam from 'react-webcam';
-import { markAttendanceByFace } from '../../Api/AttendanceApi';
+import { markAttendanceByStafffFace} from '../../Api/AttendanceApi';
 import { useNavigate } from 'react-router-dom';
 
 const MarkUserAttendance = () => {
@@ -47,7 +47,7 @@ const MarkUserAttendance = () => {
     try {
       const imageFile = base64ToFile(imageSrc, "attendance.jpg");
 
-      const response = await markAttendanceByFace({
+      const response = await markAttendanceByStafffFace({
         imageFile,
         gpsLatitude: "28.6139",
         gpsLongitude: "77.209",
@@ -173,7 +173,7 @@ const MarkUserAttendance = () => {
         </div>
         {/* Camera Section */}
         <div className="bg-gray-50 rounded-xl p-6 md:p-5 mb-6">
-          <div 
+          <div
             className="relative w-full max-w-xl mx-auto bg-white rounded-lg border-2 border-dashed border-blue-200 flex items-center justify-center overflow-hidden"
             style={{
               aspectRatio: active && window.innerWidth < 420 ? '9/16' : '3/2'

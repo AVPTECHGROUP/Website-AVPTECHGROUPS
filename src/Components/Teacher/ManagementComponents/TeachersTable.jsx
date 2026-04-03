@@ -27,16 +27,14 @@ const TeachersTable = ({
   totalElements,
   totalPages,
   fetchTeachers,
-  actionOptions: propActionOptions, // Accept action options as prop
-  callAllActions: propCallAllActions, // Accept action handler as prop
-  isUserTable = false // Flag to determine if this is for users or teachers
+  actionOptions: propActionOptions,
+  callAllActions: propCallAllActions,
+  isUserTable = false,
+  onStatusToggle, // ✅ NEW: optimistic stat updater from Teachers.jsx
 }) => {
   const navigate = useNavigate();
   const [assignId, setAssignTeacherId] = useState(null);
 
-  // HELPER FUNCTIONS
-
-  // Get avatar color based on name
   const getAvatarColor = (name) => {
     const colors = [
       'bg-blue-500',
@@ -50,18 +48,21 @@ const TeachersTable = ({
     return colors[index];
   };
 
-  // Toggle teacher/user active/inactive status
   const handleToggleStatus = async (teacher) => {
+    // ✅ 1. Optimistically flip the row status badge instantly
     setTeachers(prev =>
       prev.map(t =>
         t.id === teacher.id
-          ? {
-            ...t,
-            status: t.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE'
-          }
+          ? { ...t, status: t.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE' }
           : t
       )
     );
+
+    // ✅ 2. Optimistically update stat cards instantly (no loading, no API wait)
+    if (onStatusToggle) {
+      onStatusToggle(teacher.status);
+    }
+
     try {
       if (teacher.status === 'ACTIVE') {
         await deactivateStatus(teacher.id);
@@ -72,7 +73,12 @@ const TeachersTable = ({
       }
     } catch (err) {
       toast.error('Status update failed');
-      fetchTeachers(); // rollback from server
+      // ✅ 3. On API failure: rollback row from server AND reverse the stat update
+      fetchTeachers();
+      if (onStatusToggle) {
+        // Pass the already-flipped status to reverse back to original
+        onStatusToggle(teacher.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE');
+      }
     }
   };
 
@@ -88,42 +94,43 @@ const TeachersTable = ({
     </div>
   );
 
-  // Use prop action handler if provided, otherwise use default
   const callAllActions = propCallAllActions || (async (optVal, teacher) => {
     if (optVal === 'view') navigate(`/teachers/${teacher.id}`);
     else if (optVal === 'editTeacher') navigate(`/teachers/editTeacher/${teacher.id}`);
     else if (optVal === 'toogleStatus' || optVal === 'toggleStatus') handleToggleStatus(teacher);
   });
 
-  // Use prop action options if provided, otherwise use default
-  const actionOptions = propActionOptions || [
-    {
-      value: "view",
-      label: "View",
-      icon: Eye,
-      text: "text-gray-600",
-      bg: "bg-blue-50",
-      hover: "hover:bg-gray-200",
-    },
-    {
-      value: "editTeacher",
-      label: "Edit",
-      icon: Edit,
-      text: "text-blue-600",
-      bg: "bg-blue-50",
-      hover: "hover:bg-blue-100",
-    },
-    {
-      value: "toogleStatus",
-      label: "Toggle Status",
-      icon: Power,
-      text: "text-yellow-600",
-      bg: "bg-yellow-50",
-      hover: "hover:bg-yellow-100",
-    },
-  ];
+  // ✅ Dynamic action options per teacher — label & color reflect current status
+  const getActionOptions = (teacher) => {
+    if (propActionOptions) return propActionOptions;
+    return [
+      {
+        value: "view",
+        label: "View",
+        icon: Eye,
+        text: "text-gray-600",
+        bg: "bg-blue-50",
+        hover: "hover:bg-gray-200",
+      },
+      {
+        value: "editTeacher",
+        label: "Edit",
+        icon: Edit,
+        text: "text-blue-600",
+        bg: "bg-blue-50",
+        hover: "hover:bg-blue-100",
+      },
+      {
+        value: "toogleStatus",
+        label: teacher.status === 'ACTIVE' ? 'Deactivate' : 'Activate',
+        icon: Power,
+        text: teacher.status === 'ACTIVE' ? "text-red-600" : "text-green-600",
+        bg: teacher.status === 'ACTIVE' ? "bg-red-50" : "bg-green-50",
+        hover: teacher.status === 'ACTIVE' ? "hover:bg-red-100" : "hover:bg-green-100",
+      },
+    ];
+  };
 
-  // MOBILE/TABLET CARDS VIEW 
   return (
     <>
       {/* Mobile Cards (visible below 1024px) */}
@@ -261,29 +268,28 @@ const TeachersTable = ({
               <div className='flex items-center align-middle'>
                 <span className='text-sm text-gray-500 pb-1.5 pr-2'>Select Teacher </span>
                 <div className="flex items-center justify-evenly gap-2 px-1">
-                <button
-                  onClick={() => {
-                    if (isUserTable) return;
-                    setAssignTeacherId(assignId === teacher.id ? null : teacher.id);
-                    if (assignId !== teacher.id) assignTeacherId(teacher.id);
-                  }}
-                  className={`relative inline-flex items-center w-11 h-6 rounded-full transition-colors duration-300 focus:outline-none ${assignId === teacher.id ? 'bg-blue-600' : 'bg-gray-300'
-                    }`}
-                >
-                  {/* Sliding dot */}
-                  <span
-                    className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform duration-300 ${assignId === teacher.id ? 'translate-x-5' : 'translate-x-0'
+                  <button
+                    onClick={() => {
+                      if (isUserTable) return;
+                      setAssignTeacherId(assignId === teacher.id ? null : teacher.id);
+                      if (assignId !== teacher.id) assignTeacherId(teacher.id);
+                    }}
+                    className={`relative inline-flex items-center w-11 h-6 rounded-full transition-colors duration-300 focus:outline-none ${assignId === teacher.id ? 'bg-blue-600' : 'bg-gray-300'
                       }`}
-                  />
-                </button>
-              </div>
+                  >
+                    <span
+                      className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform duration-300 ${assignId === teacher.id ? 'translate-x-5' : 'translate-x-0'
+                        }`}
+                    />
+                  </button>
+                </div>
               </div>
 
               {/* Actions */}
               <div className="flex items-center gap-2 pt-3 border-t border-gray-100">
                 <div className="flex-1">
                   <ActionDropDownComp
-                    actionOptions={actionOptions}
+                    actionOptions={getActionOptions(teacher)}
                     onAction={(optVal) => callAllActions(optVal, teacher)}
                   />
                 </div>
@@ -299,11 +305,6 @@ const TeachersTable = ({
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                {/* {!isUserTable && (
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Employee Code
-                  </th>
-                )} */}
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   {isUserTable ? 'User Name' : 'Full Name'}
                 </th>
@@ -311,14 +312,9 @@ const TeachersTable = ({
                   Mobile Number
                 </th>
                 {!isUserTable && (
-                  <>
-                    {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Assigned Classes
-                    </th> */}
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Salary Type
-                    </th>
-                  </>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Salary Type
+                  </th>
                 )}
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
@@ -378,11 +374,6 @@ const TeachersTable = ({
                     key={teacher.id}
                     className={`${assignId === teacher.id && !isUserTable ? "bg-blue-50" : ""}`}
                   >
-                    {/* {!isUserTable && (
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {teacher.employeeCode}
-                      </td>
-                    )} */}
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-3">
                         <img src={teacher.image} className="w-10 h-10 rounded-full" alt="" />
@@ -396,30 +387,16 @@ const TeachersTable = ({
                       {teacher.mobile}
                     </td>
                     {!isUserTable && (
-                      <>
-                        {/* <td className="px-6 py-4">
-                          <div className="flex flex-wrap gap-1">
-                            {(teacher.classes || []).map((cls, idx) => (
-                              <span
-                                key={idx}
-                                className="inline-block px-2 py-1 text-xs bg-blue-50 text-blue-600 rounded"
-                              >
-                                {cls}
-                              </span>
-                            ))}
-                          </div>
-                        </td> */}
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span
-                            className={`inline-block px-3 py-1 text-xs rounded-full ${teacher.salaryType === 'MONTHLY'
-                              ? 'bg-teal-50 text-teal-700'
-                              : 'bg-yellow-50 text-yellow-700'
-                              }`}
-                          >
-                            {teacher.salaryType}
-                          </span>
-                        </td>
-                      </>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span
+                          className={`inline-block px-3 py-1 text-xs rounded-full ${teacher.salaryType === 'MONTHLY'
+                            ? 'bg-teal-50 text-teal-700'
+                            : 'bg-yellow-50 text-yellow-700'
+                            }`}
+                        >
+                          {teacher.salaryType}
+                        </span>
+                      </td>
                     )}
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
@@ -464,7 +441,7 @@ const TeachersTable = ({
                     )}
                     <td className="px-6 py-4 whitespace-nowrap">
                       <ActionDropDownComp
-                        actionOptions={actionOptions}
+                        actionOptions={getActionOptions(teacher)}
                         onAction={(optVal) => callAllActions(optVal, teacher)}
                       />
                     </td>
@@ -483,7 +460,6 @@ const TeachersTable = ({
                 const safeTotalElements = Number(totalElements) || 0;
                 const safeRowsPerPage = Number(rowsPerPage) || 10;
                 const safePage = Number(page) || 1;
-
                 return (
                   <>
                     Showing {(safePage - 1) * safeRowsPerPage + 1} to{' '}
@@ -547,7 +523,6 @@ const TeachersTable = ({
               const safeTotalElements = Number(totalElements) || 0;
               const safeRowsPerPage = Number(rowsPerPage) || 10;
               const safePage = Number(page) || 1;
-
               return (
                 <>
                   Showing {(safePage - 1) * safeRowsPerPage + 1} to{' '}
@@ -598,32 +573,13 @@ const TeachersTable = ({
                 ))
               ) : (
                 <>
-                  <button
-                    onClick={() => setPage(1)}
-                    className={`px-3 py-1 rounded transition-all ${page === 1 ? 'bg-blue-500 text-white' : 'text-gray-600 hover:bg-gray-100'
-                      }`}
-                  >
-                    1
-                  </button>
+                  <button onClick={() => setPage(1)} className={`px-3 py-1 rounded transition-all ${page === 1 ? 'bg-blue-500 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>1</button>
                   {page > 3 && <span className="px-2 text-gray-400">...</span>}
                   {page > 2 && page < totalPages - 1 && (
-                    <button
-                      onClick={() => setPage(page)}
-                      className="px-3 py-1 rounded bg-blue-500 text-white"
-                    >
-                      {page}
-                    </button>
+                    <button onClick={() => setPage(page)} className="px-3 py-1 rounded bg-blue-500 text-white">{page}</button>
                   )}
                   {page < totalPages - 2 && <span className="px-2 text-gray-400">...</span>}
-                  <button
-                    onClick={() => setPage(totalPages)}
-                    className={`px-3 py-1 rounded transition-all ${page === totalPages
-                      ? 'bg-blue-500 text-white'
-                      : 'text-gray-600 hover:bg-gray-100'
-                      }`}
-                  >
-                    {totalPages}
-                  </button>
+                  <button onClick={() => setPage(totalPages)} className={`px-3 py-1 rounded transition-all ${page === totalPages ? 'bg-blue-500 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>{totalPages}</button>
                 </>
               )}
             </div>

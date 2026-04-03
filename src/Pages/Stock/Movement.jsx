@@ -266,7 +266,7 @@ export default function Movement() {
       const filters = {};
       if (storeId) filters.storeId = Number(storeId);
       if (typeFilter) filters.movementType = typeFilter;
-      if (debouncedSearch) filters.search = debouncedSearch;
+      if (debouncedSearch) filters.searchTerm = debouncedSearch;
       if (dateFrom) filters.fromDate = `${dateFrom}T00:00:00.000Z`;
       if (dateTo) filters.toDate = `${dateTo}T23:59:59.999Z`;
 
@@ -346,7 +346,7 @@ export default function Movement() {
                 <Search className="w-4 h-4 text-gray-400 shrink-0" />
                 <input
                   type="text"
-                  placeholder="Search item, store, user..."
+                  placeholder="Search item name, item code..."
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
                   className="text-sm focus:outline-none text-gray-600 w-full bg-transparent"
