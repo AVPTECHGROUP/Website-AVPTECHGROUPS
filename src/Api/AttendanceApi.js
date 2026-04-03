@@ -62,6 +62,40 @@ export const enrollUserFaces = async ({
     throw error;
   }
 };
+
+
+export const markAttendanceByStafffFace = async ({
+  imageFile,
+  gpsLatitude = "28.6139",
+  gpsLongitude = "77.209",
+}) => {
+  try {
+    const formData = new FormData();
+    formData.append("image", imageFile);
+
+    // ✅ URL me bhejna hai toh yahan daal
+    const url = `${BASE_URL}/attendance/mark?gps_latitude=${gpsLatitude}&gps_longitude=${gpsLongitude}`;
+
+    console.log("Calling API:", url);
+
+    const res = await authFetch(url, {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(err || "Face verification failed");
+    }
+
+    return await res.json();
+
+  } catch (error) {
+    console.error("Attendance Mark Error:", error);
+    throw error;
+  }
+};
+
 export const markAttendanceByFace = async ({
   imageFile,
   user_type,

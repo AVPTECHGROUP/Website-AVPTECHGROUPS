@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
     Users, CheckSquare, XCircle, UserMinus,
     ChevronDown, Sparkles, Download, Eye, Medal,
@@ -16,9 +16,9 @@ import {
     getReportCards,
     getStudentReportCard,
     updateReportCardRemarks,
-} from "../../Api/Exams";                          // adjust path if needed
+} from "../../Api/Exams";                       
 import { getExams } from "../../Api/Exams";
-import { getClasses, getAllSections } from "../../Api/TeachersAPI"; // adjust path if needed
+import { getClasses, getAllSections } from "../../Api/TeachersAPI";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function getGrade(pct, absent) {
@@ -56,6 +56,65 @@ function getRankDisplay(rank) {
             {rank}
         </span>
     );
+}
+
+// ─── CSV Export ───────────────────────────────────────────────────────────────
+function exportStudentsCSV({ students, examName, sectionLabel }) {
+    try {
+        const esc = (val) => `"${String(val ?? "").replace(/"/g, '""')}"`;
+        const row = (arr) => arr.map(esc).join(",");
+
+        const lines = [];
+
+        // Meta header
+        lines.push(row(["Report Cards Export"]));
+        if (examName) lines.push(row(["Exam", examName]));
+        if (sectionLabel) lines.push(row(["Section", sectionLabel]));
+        lines.push(row(["Total Students", students.length]));
+        lines.push("");
+
+        // Column headers
+        lines.push(row([
+            "Rank", "Student Name", "Roll No.", "Admission No.",
+            "Section", "Marks Obtained", "Max Marks",
+            "Percentage", "Grade", "Status"
+        ]));
+
+        // Data rows
+        students.forEach((s) => {
+            const pct = s.percentage ?? 0;
+            const grade = getGrade(pct, s.isAbsent);
+            const status = getStatus(s);
+            lines.push(row([
+                s.classRank ?? "",
+                s.studentName ?? "",
+                s.rollNumber ?? "",
+                s.admissionNumber ?? "",
+                s.sectionName ?? "",
+                s.totalMarksObtained ?? "",
+                s.totalMaxMarks ?? "",
+                s.isAbsent ? "ABSENT" : `${pct.toFixed(1)}%`,
+                s.isAbsent ? "AB" : (s.overallGrade || grade.label),
+                status.label,
+            ]));
+        });
+
+        const csvString = lines.join("\r\n");
+        const dataUri = "data:text/csv;charset=utf-8,\uFEFF" + encodeURIComponent(csvString);
+        const fileName = `report_cards_${examName ?? "export"}_${sectionLabel ?? "all"}.csv`
+            .replace(/[^a-z0-9_.\-]/gi, "_");
+
+        const link = document.createElement("a");
+        link.href = dataUri;
+        link.download = fileName;
+        link.style.visibility = "hidden";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    } catch (err) {
+        console.error("CSV export failed:", err);
+        alert("Export failed: " + err.message);
+    }
 }
 
 // ─── Reusable Select ──────────────────────────────────────────────────────────
@@ -139,6 +198,7 @@ export default function ReportCards() {
 
     // ── Report cards data ─────────────────────────────────────────────────────
     const [students, setStudents] = useState([]);
+    const studentsRef = useRef([]); // ← always holds latest students for export
     const [loadingCards, setLoadingCards] = useState(false);
     const [cardsError, setCardsError] = useState(null);
     const [cardsLoaded, setCardsLoaded] = useState(false);
@@ -149,7 +209,7 @@ export default function ReportCards() {
     const [generateMsg, setGenerateMsg] = useState(null);
 
     // ── View single student ───────────────────────────────────────────────────
-    const [selectedStudent, setSelectedStudent] = useState(null); // full report card object
+    const [selectedStudent, setSelectedStudent] = useState(null);
     const [loadingStudentCard, setLoadingStudentCard] = useState(false);
     const [studentCardError, setStudentCardError] = useState(null);
 
@@ -159,26 +219,12 @@ export default function ReportCards() {
     const absent = students.filter((s) => s.isAbsent).length;
 
     const STATS = [
-        {
-            key: "Total Students", val: students.length,
-            icon: Users, iconBgColor: "bg-blue-50", iconTxColor: "text-blue-600"
-        },
-        {
-            key: "Passed",
-            val: students.length ? `${passed} — ${((passed / students.length) * 100).toFixed(1)}%` : "0",
-            icon: CheckSquare, iconBgColor: "bg-green-50", iconTxColor: "text-green-600"
-        },
-        {
-            key: "Failed", val: failed,
-            icon: XCircle, iconBgColor: "bg-red-50", iconTxColor: "text-red-500"
-        },
-        {
-            key: "Absent (All)", val: absent,
-            icon: UserMinus, iconBgColor: "bg-gray-100", iconTxColor: "text-gray-500"
-        },
+        { key: "Total Students", val: students.length, icon: Users, iconBgColor: "bg-blue-50", iconTxColor: "text-blue-600" },
+        { key: "Passed", val: students.length ? `${passed} — ${((passed / students.length) * 100).toFixed(1)}%` : "0", icon: CheckSquare, iconBgColor: "bg-green-50", iconTxColor: "text-green-600" },
+        { key: "Failed", val: failed, icon: XCircle, iconBgColor: "bg-red-50", iconTxColor: "text-red-500" },
+        { key: "Absent (All)", val: absent, icon: UserMinus, iconBgColor: "bg-gray-100", iconTxColor: "text-gray-500" },
     ];
 
-    // ── sectionLabel helper ───────────────────────────────────────────────────
     const sectionLabel = (s) => {
         if (!s) return "—";
         if (s.schoolClassName) return `${s.schoolClassName} — ${s.name}`;
@@ -215,9 +261,9 @@ export default function ReportCards() {
             setSelectedExamId("");
             setCardsLoaded(false);
             setStudents([]);
+            studentsRef.current = [];
             try {
                 const data = await getExams({ classId: selectedClassId });
-                // Only show exams with declared results
                 const declared = data.filter((e) => e.resultDeclared);
                 setExams(declared);
                 if (declared.length > 0) setSelectedExamId(String(declared[0].id));
@@ -237,12 +283,14 @@ export default function ReportCards() {
         setCardsError(null);
         setCardsLoaded(false);
         setStudents([]);
+        studentsRef.current = [];
         try {
             const data = await getReportCards(
                 Number(selectedExamId),
                 selectedSectionId ? Number(selectedSectionId) : null
             );
             setStudents(data);
+            studentsRef.current = data; // ← keep ref in sync
             setCardsLoaded(true);
         } catch (err) {
             setCardsError("Failed to load report cards. Click Generate All first if not yet generated.");
@@ -251,7 +299,6 @@ export default function ReportCards() {
         }
     }, [selectedExamId, selectedSectionId]);
 
-    // Auto-load when exam changes
     useEffect(() => {
         if (selectedExamId) loadReportCards();
     }, [loadReportCards]);
@@ -265,7 +312,6 @@ export default function ReportCards() {
         try {
             await generateReportCards(Number(selectedExamId));
             setGenerateMsg("Report cards generated successfully!");
-            // Reload the list after generation
             await loadReportCards();
         } catch (err) {
             setGenerateError(err.message ?? "Failed to generate report cards.");
@@ -281,10 +327,7 @@ export default function ReportCards() {
         setStudentCardError(null);
         setSelectedStudent(null);
         try {
-            const data = await getStudentReportCard(
-                Number(selectedExamId),
-                student.studentId
-            );
+            const data = await getStudentReportCard(Number(selectedExamId), student.studentId);
             setSelectedStudent(data);
         } catch (err) {
             setStudentCardError(`Failed to load report card for ${student.studentName}.`);
@@ -293,15 +336,29 @@ export default function ReportCards() {
         }
     };
 
-    // ── Update remarks (called from StudentReportCard modal) ──────────────────
+    // ── Update remarks ────────────────────────────────────────────────────────
     const handleUpdateRemarks = async (studentId, remarksData) => {
         if (!selectedExamId) return;
         await updateReportCardRemarks(Number(selectedExamId), studentId, remarksData);
-        // Refresh the single student card with updated remarks
         const updated = await getStudentReportCard(Number(selectedExamId), studentId);
         setSelectedStudent(updated);
-        // Also refresh the list so remarks show inline if needed
         loadReportCards();
+    };
+
+    // ── Handle Export ─────────────────────────────────────────────────────────
+    const handleExport = () => {
+        const data = studentsRef.current;
+        if (!data || data.length === 0) {
+            alert("No data to export. Please load the report cards first.");
+            return;
+        }
+        const selectedExamObj = exams.find((e) => String(e.id) === selectedExamId);
+        const selectedSectionObj = sections.find((s) => String(s.id) === selectedSectionId);
+        exportStudentsCSV({
+            students: data,
+            examName: selectedExamObj?.name ?? "",
+            sectionLabel: selectedSectionObj ? sectionLabel(selectedSectionObj) : "",
+        });
     };
 
     const selectedSectionObj = sections.find((s) => String(s.id) === selectedSectionId);
@@ -324,7 +381,6 @@ export default function ReportCards() {
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm px-4 sm:px-5 py-4">
                 <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3">
 
-                    {/* Class */}
                     <Select
                         value={selectedClassId}
                         onChange={(v) => { setSelectedClassId(v); setCardsLoaded(false); }}
@@ -333,7 +389,6 @@ export default function ReportCards() {
                         className="w-full sm:w-40"
                     />
 
-                    {/* Section — "ClassName — SectionName" */}
                     <Select
                         value={selectedSectionId}
                         onChange={(v) => { setSelectedSectionId(v); }}
@@ -342,7 +397,6 @@ export default function ReportCards() {
                         className="w-full sm:w-52"
                     />
 
-                    {/* Exam — only result-declared exams */}
                     <Select
                         value={selectedExamId}
                         onChange={(v) => setSelectedExamId(v)}
@@ -351,7 +405,6 @@ export default function ReportCards() {
                         className="w-full sm:w-72"
                     />
 
-                    {/* Reload button */}
                     <button
                         onClick={loadReportCards}
                         disabled={!selectedExamId || loadingCards}
@@ -365,7 +418,6 @@ export default function ReportCards() {
 
                     <div className="hidden sm:block flex-1" />
 
-                    {/* Generate All */}
                     <button
                         onClick={handleGenerate}
                         disabled={!selectedExamId || generating}
@@ -377,13 +429,17 @@ export default function ReportCards() {
                         {generating ? "Generating..." : "Generate All"}
                     </button>
 
-                    <button className="flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2 text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-all">
+                    {/* ← Export button now wired up */}
+                    <button
+                        onClick={handleExport}
+                        disabled={!cardsLoaded || students.length === 0}
+                        className="flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2 text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
                         <Download className="w-4 h-4" />
-                        Export
+                        Export CSV
                     </button>
                 </div>
 
-                {/* Generate feedback banners */}
                 {generateMsg && (
                     <div className="mt-3 px-4 py-2.5 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700 flex items-center gap-2">
                         <CheckSquare className="w-4 h-4 shrink-0" />
@@ -414,7 +470,6 @@ export default function ReportCards() {
                     ))}
             </div>
 
-            {/* ── Student card loading error from view button ── */}
             {studentCardError && (
                 <div className="bg-red-50 border border-red-200 rounded-2xl px-6 py-4 flex items-center gap-3 text-sm text-red-600">
                     <AlertCircle className="w-4 h-4 shrink-0" />
@@ -422,7 +477,6 @@ export default function ReportCards() {
                 </div>
             )}
 
-            {/* ── Loading spinner while opening a student card ── */}
             {loadingStudentCard && (
                 <div className="bg-white rounded-2xl border border-gray-200 shadow-sm px-6 py-8 flex items-center justify-center gap-3 text-sm text-gray-500">
                     <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
@@ -452,7 +506,6 @@ export default function ReportCards() {
                     </span>
                 </div>
 
-                {/* Cards error */}
                 {cardsError && (
                     <div className="px-6 py-4 text-sm text-amber-700 bg-amber-50 flex items-center gap-2 border-b border-amber-100">
                         <AlertCircle className="w-4 h-4 shrink-0" />
@@ -460,7 +513,7 @@ export default function ReportCards() {
                     </div>
                 )}
 
-                {/* Mobile card layout */}
+                {/* Mobile */}
                 <div className="block md:hidden">
                     {loadingCards ? (
                         <div className="p-4 space-y-3">
@@ -474,16 +527,12 @@ export default function ReportCards() {
                         </p>
                     ) : (
                         students.map((student) => (
-                            <StudentCard
-                                key={student.studentId}
-                                student={student}
-                                onView={handleViewStudent}
-                            />
+                            <StudentCard key={student.studentId} student={student} onView={handleViewStudent} />
                         ))
                     )}
                 </div>
 
-                {/* Desktop table */}
+                {/* Desktop */}
                 <div className="hidden md:block overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead>
@@ -552,7 +601,6 @@ export default function ReportCards() {
                 </div>
             </div>
 
-            {/* ── Report Card Modal ── */}
             {selectedStudent && (
                 <StudentReportCard
                     student={selectedStudent}
