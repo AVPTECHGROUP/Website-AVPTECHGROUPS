@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, GraduationCap, IndianRupee, User } from 'lucide-react';
 import { toast } from 'react-toastify';
-import { createTeachers, updateSalary } from '../../Api/TeachersAPI';
+import { createTeachers, upsertTeacherSalary } from '../../Api/TeachersAPI';
 import PersonalDetailsTab from '../../Components/Teacher/AddTabComponents/AddPersonalInfo';
 import SalaryDetailsTab from '../../Components/Teacher/AddTabComponents/AddSalaryDetails';
 
@@ -28,6 +28,7 @@ function AddNewTeacher() {
         salaryType: '',
         baseSalary: '',
         leaveDeductionPerDay: '',
+        lateArrivalPenalty: '',
         houseRentAllowance: '',
         travelAllowance: '',
         dearnessAllowance: '',
@@ -124,50 +125,45 @@ function AddNewTeacher() {
 
             // Only update salary if baseSalary AND salaryType are present
             if (response && formData.salaryType && formData.baseSalary) {
-                // Extract teacher ID from response - adjust based on actual response structure
                 const teacherId = response.data?.id || response.id;
 
-                console.log("Teacher ID for salary update:", teacherId);
-
                 if (!teacherId) {
-                    console.error("No teacher ID found in response:", response);
                     toast.warn("Teacher created but salary update skipped - no teacher ID");
                 } else {
                     const baseSalary = Number(formData.baseSalary) || 0;
-                    const allowanceTotal =
-                        (Number(formData.houseRentAllowance) || 0) +
-                        (Number(formData.travelAllowance) || 0) +
-                        (Number(formData.dearnessAllowance) || 0) +
-                        (Number(formData.specialAllowance) || 0) +
-                        (Number(formData.otherAllowances) || 0) +
-                        (Number(formData.providentFund) || 0);
+                    const hra = Number(formData.houseRentAllowance) || 0;
+                    const ta = Number(formData.travelAllowance) || 0;
+                    const da = Number(formData.dearnessAllowance) || 0;
+                    const sa = Number(formData.specialAllowance) || 0;
+                    const oa = Number(formData.otherAllowances) || 0;
+                    const pf = Number(formData.providentFund) || 0;
+                    const profTax = Number(formData.professionalTax) || 0;
+                    const incomeTax = Number(formData.incomeTax) || 0;
+                    const otherDed = Number(formData.otherDeductions) || 0;
+                    const leaveDeduction = Number(formData.leaveDeductionPerDay) || 0;
 
-                    const deductionTotal =
-                        (Number(formData.professionalTax) || 0) +
-                        (Number(formData.incomeTax) || 0) +
-                        (Number(formData.otherDeductions) || 0) +
-                        (Number(formData.leaveDeductionPerDay) || 0);
-
-                    const grossSalary = baseSalary + allowanceTotal;
-                    const totalDeductions = deductionTotal;
+                    const grossSalary = baseSalary + hra + ta + da + sa + oa + pf;
+                    const totalDeductions = profTax + incomeTax + otherDed + leaveDeduction;
                     const netSalary = grossSalary - totalDeductions;
 
+                    const today = new Date().toISOString().split('T')[0];
+                    const effectiveTo = `${new Date().getFullYear()}-12-31`;
+
                     const salaryPayload = {
-                        // Remove id field for new salary creation
                         salaryType: formData.salaryType,
                         baseSalary,
-                        houseRentAllowance: Number(formData.houseRentAllowance) || 0,
-                        travelAllowance: Number(formData.travelAllowance) || 0,
-                        dearnessAllowance: Number(formData.dearnessAllowance) || 0,
-                        specialAllowance: Number(formData.specialAllowance) || 0,
-                        otherAllowances: Number(formData.otherAllowances) || 0,
-                        providentFund: Number(formData.providentFund) || 0,
-                        professionalTax: Number(formData.professionalTax) || 0,
-                        incomeTax: Number(formData.incomeTax) || 0,
-                        otherDeductions: Number(formData.otherDeductions) || 0,
-                        leaveDeductionPerDay: Number(formData.leaveDeductionPerDay) || 0,
-                        effectiveFrom: new Date().toISOString().split('T')[0],
-                        effectiveTo: new Date().toISOString().split('T')[0],
+                        houseRentAllowance: hra,
+                        travelAllowance: ta,
+                        dearnessAllowance: da,
+                        specialAllowance: sa,
+                        otherAllowances: oa,
+                        providentFund: pf,
+                        professionalTax: profTax,
+                        incomeTax,
+                        otherDeductions: otherDed,
+                        leaveDeductionPerDay: leaveDeduction,
+                        effectiveFrom: today,
+                        effectiveTo,
                         payrollEligible: true,
                         remarks: "Created via AddNewTeacher",
                         grossSalary,
@@ -175,11 +171,8 @@ function AddNewTeacher() {
                         netSalary
                     };
 
-                    console.log("Salary Payload:", salaryPayload);
-                    console.log("Calling updateSalary with teacherId:", teacherId);
-
                     try {
-                        const salaryResponse = await updateSalary(teacherId, salaryPayload);
+                        const salaryResponse = await upsertTeacherSalary(teacherId, salaryPayload);
                         console.log("Salary Update Response:", salaryResponse);
                     } catch (salaryError) {
                         console.error("Salary update failed:", salaryError);
@@ -256,8 +249,8 @@ function AddNewTeacher() {
                                     type="button"
                                     onClick={() => setActiveTab('personal')}
                                     className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'personal'
-                                            ? 'border-blue-600 text-blue-600'
-                                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                        ? 'border-blue-600 text-blue-600'
+                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                                         }`}
                                 >
                                     <User size={20} />
@@ -268,8 +261,8 @@ function AddNewTeacher() {
                                     type="button"
                                     onClick={() => setActiveTab('salary')}
                                     className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'salary'
-                                            ? 'border-blue-600 text-blue-600'
-                                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                        ? 'border-blue-600 text-blue-600'
+                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                                         }`}
                                 >
                                     <IndianRupee size={18} />
@@ -320,8 +313,8 @@ function AddNewTeacher() {
                                         disabled={isSubmitting}
                                         type="submit"
                                         className={`px-6 py-2.5 text-sm font-medium rounded-lg transition-all ${isSubmitting
-                                                ? 'bg-blue-300 cursor-not-allowed text-white'
-                                                : 'bg-blue-500 hover:bg-blue-600 cursor-pointer text-white'
+                                            ? 'bg-blue-300 cursor-not-allowed text-white'
+                                            : 'bg-blue-500 hover:bg-blue-600 cursor-pointer text-white'
                                             }`}
                                     >
                                         {isSubmitting ? (

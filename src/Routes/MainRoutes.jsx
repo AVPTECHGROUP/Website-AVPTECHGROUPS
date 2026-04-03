@@ -43,6 +43,7 @@ import AddNewStudent from '../Pages/Students/AddNewStudent';
 import EditStudentDetails from '../Pages/Students/EditStudentDetails';
 import StudentDetails from '../Pages/Students/StudentDetails';
 import HolidayManagment from '../Pages/Leaves/Holiday/HolidayManagement';
+import LeaveConfig from '../Pages/Leaves/LeaveConfig';
 import RoleProtectedRoute from '../utils/RoleProtectedRoute';
 
 // Stock Routes
@@ -64,6 +65,9 @@ import Driver_Attendants from '../Pages/Transport/Driver_Attendants';
 import Reports from '../Pages/Transport/Reports/Reports';
 import Student_Allocations from '../Pages/Transport/Student_Allocation/Student_Allocations';
 import Routes_Manage from '../Pages/Transport/Routes_Manage';
+import SubjectsMaster from '../Components/Subject/subject';
+import RolesPermissionsManagement from '../Pages/RoleBasedPermission/PermissionManagement';
+import SectionSubjectAssignment from '../Pages/SubjectManagement/SectionSubjectAssignment';
 import Exams from '../Pages/Exams/Exams';
 import MarksEntry from '../Pages/Exams/MarksEntry';
 import ReportCards from '../Pages/Exams/ReportCards';
@@ -133,6 +137,11 @@ const MainRoutes = () => {
           <Route path="/leaves/myLeaves" element={<MyLeaves />} />
           <Route path="/attendance/markUserAttendance" element={<MarkUserAttendance />} />
 
+          {/* ONLY GLOBAL_ADMIN */}
+          <Route element={<RoleProtectedRoute allowedRoles={['GLOBAL_ADMIN']} />}>
+            <Route path="/rolesPermissions" element={<RolesPermissionsManagement />} />
+          </Route>
+
           {/* ADMIN, SUPER_ADMIN & GLOBAL_ADMIN */}
           <Route element={<RoleProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN']} />}>
             <Route path="/dashboard/addUser" element={<AddnewSystemUser />} />
@@ -164,8 +173,17 @@ const MainRoutes = () => {
             <Route path="/students/:id" element={<StudentDetails />} />
             <Route path="/students/editStudent/:id" element={<EditStudentDetails />} />
 
-            <Route path="/leaves" element={<Leaves />} />
-            <Route path="/leaves/manageHolidays" element={<HolidayManagment />} />
+            <Route path="/leaves"                         element={<Leaves />} />
+            <Route path="/leaves/manageHolidays"          element={<HolidayManagment />} />
+
+            {/* Subject Section Assignment */}
+            <Route path="/sectionSubjectAssignment" element={<SectionSubjectAssignment />} />
+          </Route>
+
+          {/* Leave Config — GLOBAL_ADMIN, SUPER_ADMIN, PRINCIPAL */}
+          <Route element={<RoleProtectedRoute allowedRoles={['GLOBAL_ADMIN', 'SUPER_ADMIN', 'PRINCIPAL']} />}>
+            <Route path="/leaves/leaveConfig" element={<LeaveConfig />} />
+            <Route path='/subjectsmaster' element={<SubjectsMaster/>}/>
           </Route>
 
           {/* Payroll */}
