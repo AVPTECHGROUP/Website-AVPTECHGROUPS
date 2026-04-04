@@ -81,7 +81,7 @@ const MarkUserAttendance = () => {
       toast.error("Something went wrong. Please try again.");
       navigate("/attendance/usersAttendance/warning");
     } finally {
-      setIsCapturing(false); // 🔓 button unlock
+      setIsCapturing(false); 
       setActive(false);
     }
   };
@@ -165,7 +165,7 @@ const MarkUserAttendance = () => {
         {/* Header */}
         <div className="text-center">
           <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
-            Mark Attendance
+            Staff Attendance
           </h1>
           <p className="text-sm md:text-base text-gray-600">
             Please position your face within the frame for live capture to verify your identity.

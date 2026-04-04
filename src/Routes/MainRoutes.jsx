@@ -35,7 +35,7 @@ import EditSysUser from '../Pages/SuperAdmin/EditSysUser';
 import ManageAllUsers from '../Pages/SuperAdmin/ManageAllUsers';
 import ApplyLeaves from '../Pages/Leaves/ApplyLeaves';
 import MyLeaves from '../Pages/Leaves/MyLeaves';
-import SuperAdminSchools from '../Pages/SuperAdmin/SuperAdminSchools'; 
+import SuperAdminSchools from '../Pages/SuperAdmin/SuperAdminSchools';
 
 // Students
 import Student from '../Pages/Students/Students';
@@ -72,6 +72,7 @@ import Exams from '../Pages/Exams/Exams';
 import MarksEntry from '../Pages/Exams/MarksEntry';
 import ReportCards from '../Pages/Exams/ReportCards';
 import Analytics from '../Pages/Exams/Analytics';
+import SchoolConfig from '../Pages/Schools/SchoolConfig';
 
 // ─── Role Groups ───────────────────────────────────────────────────────────────
 const STOCK_ACCOUNTANT_ROLES = ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'STORE_ACCOUNTANT'];
@@ -158,7 +159,7 @@ const MainRoutes = () => {
 
             <Route path="/exams" element={<Exams />} />
             <Route path="/exams/marksEntry" element={<MarksEntry />} />
-            <Route path="/exams/reportCard" element={<ReportCards/>} />
+            <Route path="/exams/reportCard" element={<ReportCards />} />
             <Route path="/exams/analytics" element={<Analytics />} />
             <Route path="/exams/examConfig" element={<ExamConfiguration />} />
 
@@ -173,8 +174,8 @@ const MainRoutes = () => {
             <Route path="/students/:id" element={<StudentDetails />} />
             <Route path="/students/editStudent/:id" element={<EditStudentDetails />} />
 
-            <Route path="/leaves"                         element={<Leaves />} />
-            <Route path="/leaves/manageHolidays"          element={<HolidayManagment />} />
+            <Route path="/leaves" element={<Leaves />} />
+            <Route path="/leaves/manageHolidays" element={<HolidayManagment />} />
 
             {/* Subject Section Assignment */}
             <Route path="/sectionSubjectAssignment" element={<SectionSubjectAssignment />} />
@@ -183,7 +184,7 @@ const MainRoutes = () => {
           {/* Leave Config — GLOBAL_ADMIN, SUPER_ADMIN, PRINCIPAL */}
           <Route element={<RoleProtectedRoute allowedRoles={['GLOBAL_ADMIN', 'SUPER_ADMIN', 'PRINCIPAL']} />}>
             <Route path="/leaves/leaveConfig" element={<LeaveConfig />} />
-            <Route path='/subjectsmaster' element={<SubjectsMaster/>}/>
+            <Route path='/subjectsmaster' element={<SubjectsMaster />} />
           </Route>
 
           {/* Payroll */}
@@ -221,6 +222,10 @@ const MainRoutes = () => {
           {/* Leaves redirect for non-admin */}
           <Route element={<RoleProtectedRoute allowedRoles={['TEACHER', 'PRINCIPAL', 'RECEPTIONIST', 'ACCOUNTANT']} />}>
             <Route path="/leaves" element={<Navigate to="/leaves/myLeaves" replace />} />
+          </Route>
+          {/* Schools Management */}
+          <Route element={<RoleProtectedRoute allowedRoles={['SUPER_ADMIN', 'GLOBAL_ADMIN']} />}>
+            <Route path="/schoolConfig" element={<SchoolConfig/>} />
           </Route>
 
           {/* Fallback */}

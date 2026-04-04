@@ -161,10 +161,7 @@ function WebcamModal({ onClose, onCapture, processing }) {
         setCaptured(null);
         setFacingMode(prev => prev === "user" ? "environment" : "user");
     };
-
-    // ✅ KEY FIX: Camera area aspect ratio is adaptive
-    // Mobile: use 3/4 (portrait-ish, fits naturally in hand)
-    // Desktop: use 16/9 (landscape for group shots)
+    
     const cameraAspectRatio = isMobile ? "4/3" : "16/9";
 
     return (

@@ -5,8 +5,8 @@ import {
   Clock, Info, UserCheck, Wifi, WifiOff,
 } from "lucide-react";
 import CardComponent from "../../Components/CommonComp/CardComponent";
-import CardLoader    from "../../Components/CommonComp/CardLoader";
-import ListLoader    from "../../Components/CommonComp/ListLoader";
+import CardLoader from "../../Components/CommonComp/CardLoader";
+import ListLoader from "../../Components/CommonComp/ListLoader";
 import {
   getActiveRoutes,
   getActiveVehicles,
@@ -158,18 +158,18 @@ function AlertItem({ type, msg }) {
 
 function fmtTime(t) {
   if (!t) return "–";
-  return t.slice(0, 5); 
+  return t.slice(0, 5);
 }
 
 export default function Transport_Management() {
-  const [routes, setRoutes]               = useState([]);
-  const [vehicles, setVehicles]           = useState([]);
-  const [staff, setStaff]                 = useState([]);
-  const [allocations, setAllocations]     = useState({ allocations: [], pagination: null });
+  const [routes, setRoutes] = useState([]);
+  const [vehicles, setVehicles] = useState([]);
+  const [staff, setStaff] = useState([]);
+  const [allocations, setAllocations] = useState({ allocations: [], pagination: null });
   const [capacityReport, setCapacityReport] = useState([]);
-  const [loadingStats, setLoadingStats]     = useState(true);
+  const [loadingStats, setLoadingStats] = useState(true);
   const [loadingCapacity, setLoadingCapacity] = useState(true);
-  const [loadingRoutes, setLoadingRoutes]   = useState(true);
+  const [loadingRoutes, setLoadingRoutes] = useState(true);
 
   useEffect(() => {
     // Stat cards
@@ -198,13 +198,13 @@ export default function Transport_Management() {
     if (!loadingStats) setLoadingRoutes(false);
   }, [loadingStats]);
 
-  const totalVehicles     = vehicles.length;
-  const activeRoutes      = routes.length;
-  const totalStops        = routes.reduce((acc, r) => acc + (r.totalStops || 0), 0);
+  const totalVehicles = vehicles.length;
+  const activeRoutes = routes.length;
+  const totalStops = routes.reduce((acc, r) => acc + (r.totalStops || 0), 0);
   const studentsAllocated = allocations.pagination?.totalElements ?? allocations.allocations.length;
-  const totalCapacity     = vehicles.reduce((acc, v) => acc + (v.capacity || 0), 0);
-  const driverCount       = staff.filter((s) => s.staffRole === "DRIVER").length;
-  const attendantCount    = staff.filter((s) => s.staffRole === "ATTENDANT").length;
+  const totalCapacity = vehicles.reduce((acc, v) => acc + (v.capacity || 0), 0);
+  const driverCount = staff.filter((s) => s.staffRole === "DRIVER").length;
+  const attendantCount = staff.filter((s) => s.staffRole === "ATTENDANT").length;
 
   const alerts = buildAlerts(capacityReport, staff);
 
@@ -213,7 +213,7 @@ export default function Transport_Management() {
 
       {/* Page Header */}
       <div className="px-4 sm:px-6 lg:px-8 pt-8 pb-2">
-        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">🚌 Transport Management</h1>
+        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Transport Management</h1>
         <p className="text-gray-500 text-xs sm:text-sm mt-1">Monitor vehicles, routes, drivers and compliance across your fleet.</p>
       </div>
 
@@ -288,7 +288,7 @@ export default function Transport_Management() {
                 <table className="w-full"><tbody><ListLoader rows={3} avatar={false} /></tbody></table>
               ) : (
                 capacityReport.map((v) => {
-                  const pct      = v.totalCapacity > 0 ? Math.round((v.totalStudentsAllocated / v.totalCapacity) * 100) : 0;
+                  const pct = v.totalCapacity > 0 ? Math.round((v.totalStudentsAllocated / v.totalCapacity) * 100) : 0;
                   const barColor = pct === 100 ? "bg-red-500" : pct >= 80 ? "bg-orange-400" : pct > 0 ? "bg-blue-500" : "bg-gray-200";
 
                   return (
@@ -411,10 +411,10 @@ export default function Transport_Management() {
               </>
             ) : (
               routes.map((r) => {
-                const pct         = r.vehicleCapacity > 0 ? Math.round((r.allocatedStudents / r.vehicleCapacity) * 100) : 0;
-                const barColor    = pct === 100 ? "bg-red-500"       : pct >= 80 ? "bg-orange-400"    : "bg-blue-500";
-                const borderColor = pct === 100 ? "border-red-200"   : pct >= 80 ? "border-orange-200" : "border-blue-200";
-                const bgColor     = pct === 100 ? "bg-red-50"        : pct >= 80 ? "bg-orange-50"     : "bg-blue-50";
+                const pct = r.vehicleCapacity > 0 ? Math.round((r.allocatedStudents / r.vehicleCapacity) * 100) : 0;
+                const barColor = pct === 100 ? "bg-red-500" : pct >= 80 ? "bg-orange-400" : "bg-blue-500";
+                const borderColor = pct === 100 ? "border-red-200" : pct >= 80 ? "border-orange-200" : "border-blue-200";
+                const bgColor = pct === 100 ? "bg-red-50" : pct >= 80 ? "bg-orange-50" : "bg-blue-50";
                 return (
                   <div key={r.id} className={`rounded-xl border-2 ${borderColor} ${bgColor} p-4`}>
                     {/* Route name + status */}
