@@ -116,14 +116,14 @@ function WebcamModal({ onClose, onCapture, processing }) {
         return () => window.removeEventListener("resize", checkMobile);
     }, []);
 
-    // ✅ KEY FIX: On mobile portrait → let camera use its natural aspect ratio
-    // On desktop/tablet → force 16:9 landscape for wide group shots
+    //On m obile: let the camera use its natural aspect ratio — no forced dims
+    // On desktop: request 16:9 for wide group shots
     const videoConstraints = isMobile
         ? {
             facingMode,
-            // Don't force aspect ratio on mobile — let it breathe naturally
-            width: { ideal: 1280 },
-            height: { ideal: 960 },
+            // Only hint the width; let the browser/camera decide height to
+            // avoid delivering a mismatched aspect ratio that causes distortion.
+            width: { ideal: 1920 },
         }
         : {
             facingMode,
@@ -132,13 +132,11 @@ function WebcamModal({ onClose, onCapture, processing }) {
             aspectRatio: 16 / 9,
         };
 
-    // ✅ KEY FIX: Screenshot dimensions match the camera's natural output
-    const screenshotDims = isMobile
-        ? { width: 1280, height: 960 }
-        : { width: 1920, height: 1080 };
-
     const handleCapture = useCallback(() => {
-        const imageSrc = webcamRef.current?.getScreenshot(screenshotDims);
+        // No forced dimensions — capture at the camera's native resolution
+        // Passing explicit width/height to getScreenshot() stretches the canvas
+        // to those dims regardless of the video's actual aspect ratio, causing distortion.
+        const imageSrc = webcamRef.current?.getScreenshot();
         if (!imageSrc) { alert("Could not capture. Try again."); return; }
 
         const [header, base64] = imageSrc.split(",");
@@ -149,7 +147,7 @@ function WebcamModal({ onClose, onCapture, processing }) {
         const file = new File([new Blob([arr], { type: mime })], "group_photo.jpg", { type: mime });
 
         setCaptured({ dataUrl: imageSrc, file });
-    }, [screenshotDims]);
+    }, []);
 
     const handleConfirm = () => {
         if (captured) onCapture(captured.file, captured.dataUrl);
@@ -162,10 +160,10 @@ function WebcamModal({ onClose, onCapture, processing }) {
         setFacingMode(prev => prev === "user" ? "environment" : "user");
     };
 
-    // ✅ KEY FIX: Camera area aspect ratio is adaptive
-    // Mobile: use 3/4 (portrait-ish, fits naturally in hand)
-    // Desktop: use 16/9 (landscape for group shots)
-    const cameraAspectRatio = isMobile ? "4/3" : "16/9";
+    // On mobile: use "auto" so the container naturally follows the camera's
+    // actual delivered aspect ratio — avoids the live-preview vs capture mismatch.
+    // On desktop: lock to 16/9 for wide group shots.
+    const cameraAspectRatio = isMobile ? "auto" : "16/9";
 
     return (
         <div className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-2 sm:p-4">
