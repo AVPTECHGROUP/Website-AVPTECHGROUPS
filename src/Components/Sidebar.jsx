@@ -48,8 +48,7 @@ const menuItems = [
       { label: 'Staff Attendance', route: '/attendance/markUserAttendance', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'TEACHER', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST'] },
       { label: 'Student Enrollment', route: '/attendance/studentImgReg', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'TEACHER'] },
       { label: 'Student Attendance', route: '/attendance/studentAttendance', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'TEACHER'] },
-      { label: 'Pending Approvals', route: '/attendance/usersAttendance', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN'] },
-    ]
+     ]
   },
   {
     id: 'students', icon: Users, label: 'Students', route: '/students',
@@ -126,7 +125,29 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
   const [profileOpen, setProfileOpen] = useState(false)
   const profileRef = useRef(null)
 
-  const { user: ctxUser } = useContext(UserContext)
+
+  const { user: ctxUser, schoolInfo: ctxSchoolInfo } = useContext(UserContext)
+
+  const [schoolInfo, setSchoolInfo] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('school')) || null }
+    catch { return null }
+  })
+
+  useEffect(() => {
+    const syncSchool = () => {
+      try {
+        const latest = JSON.parse(localStorage.getItem('school')) || null
+        setSchoolInfo(latest)
+      } catch { setSchoolInfo(null) }
+    }
+
+    window.addEventListener('storage', syncSchool)
+    return () => window.removeEventListener('storage', syncSchool)
+  }, [])
+
+  useEffect(() => {
+    if (ctxSchoolInfo) setSchoolInfo(ctxSchoolInfo)
+  }, [ctxSchoolInfo])
 
   const storedUser = (() => {
     try { return JSON.parse(localStorage.getItem('user')) || null }
@@ -138,11 +159,6 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
     || (Array.isArray(ctxUser?.roles) ? ctxUser.roles[0] : null)
     || (Array.isArray(storedUser?.roles) ? storedUser.roles[0] : null)
     || null
-
-  const schoolInfo = (() => {
-    try { return JSON.parse(localStorage.getItem('school')) || null }
-    catch { return null }
-  })()
 
   const schoolDisplayName = schoolInfo?.schoolName || 'Delhi Public International School'
   const schoolDisplayCode = schoolInfo?.schoolCode || ''

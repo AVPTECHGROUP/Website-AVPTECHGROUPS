@@ -4,9 +4,9 @@ import {
   Pencil, ToggleLeft, ToggleRight, Plus, SlidersHorizontal,
   XCircle, Phone, CheckCircle, XCircle as XCircleIcon,
 } from "lucide-react";
-import AddStaffCard       from "../../Components/Transport/AddStaffCard";
+import AddStaffCard from "../../Components/Transport/AddStaffCard";
 import ActionDropDownComp from "../../Components/CommonComp/ActionDropDownComp";
-import ListLoader         from "../../Components/CommonComp/ListLoader";
+import ListLoader from "../../Components/CommonComp/ListLoader";
 import {
   getTransportStaff,
   activateTransportStaff,
@@ -14,18 +14,18 @@ import {
 } from "../../Api/TransportAPI";
 
 const ROLE_OPTIONS = [
-  { value: "",          label: "All Roles"  },
-  { value: "DRIVER",    label: "Driver"     },
-  { value: "ATTENDANT", label: "Attendant"  },
+  { value: "", label: "All Roles" },
+  { value: "DRIVER", label: "Driver" },
+  { value: "ATTENDANT", label: "Attendant" },
 ];
 const STATUS_OPTIONS = [
-  { value: "",         label: "All Status" },
-  { value: "ACTIVE",   label: "Active"     },
-  { value: "INACTIVE", label: "Inactive"   },
+  { value: "", label: "All Status" },
+  { value: "ACTIVE", label: "Active" },
+  { value: "INACTIVE", label: "Inactive" },
 ];
 const ITEMS_PER_PAGE = 10;
 const roleColors = {
-  DRIVER:    "bg-blue-100 text-blue-700",
+  DRIVER: "bg-blue-100 text-blue-700",
   ATTENDANT: "bg-teal-100 text-teal-700",
 };
 
@@ -33,7 +33,7 @@ const roleColors = {
 let _setToasts = null;
 const toast = {
   success: (msg) => _setToasts?.((p) => [...p, { id: Date.now(), type: "success", msg }]),
-  error:   (msg) => _setToasts?.((p) => [...p, { id: Date.now(), type: "error",   msg }]),
+  error: (msg) => _setToasts?.((p) => [...p, { id: Date.now(), type: "error", msg }]),
 };
 function ToastContainer() {
   const [toasts, setToasts] = useState([]);
@@ -78,7 +78,7 @@ function isExpired(dateStr) {
 // ─── Mobile Staff Card ────────────────────────────────────────────
 function StaffCard({ s, onAction }) {
   const licExpired = isExpired(s.licenseExpiryDate);
-  const licWarn    = !licExpired && isExpiringSoon(s.licenseExpiryDate);
+  const licWarn = !licExpired && isExpiringSoon(s.licenseExpiryDate);
   return (
     <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 flex flex-col gap-3">
       <div className="flex items-start justify-between gap-2">
@@ -139,19 +139,19 @@ function StaffCard({ s, onAction }) {
 
 // ─── Main ─────────────────────────────────────────────────────────
 export default function Driver_Attendants() {
-  const [allStaff, setAllStaff]         = useState([]);
-  const [pagination, setPagination]     = useState(null);
-  const [loading, setLoading]           = useState(true);
-  const [togglingId, setTogglingId]     = useState(null);
+  const [allStaff, setAllStaff] = useState([]);
+  const [pagination, setPagination] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [togglingId, setTogglingId] = useState(null);
 
-  const [searchInput, setSearchInput]   = useState("");
-  const [search, setSearch]             = useState("");
-  const [roleFilter, setRoleFilter]     = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
-  const [page, setPage]                 = useState(0);
+  const [page, setPage] = useState(0);
 
-  const [showModal, setShowModal]       = useState(false);
-  const [editStaff, setEditStaff]       = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  const [editStaff, setEditStaff] = useState(null);
 
   // Debounce search
   useEffect(() => {
@@ -261,8 +261,8 @@ export default function Driver_Attendants() {
               </div>
               <div className="flex gap-2 sm:gap-3">
                 {[
-                  { val: roleFilter,   set: setRoleFilter,   opts: ROLE_OPTIONS   },
-                  { val: statusFilter, set: setStatusFilter, opts: STATUS_OPTIONS  },
+                  { val: roleFilter, set: setRoleFilter, opts: ROLE_OPTIONS },
+                  { val: statusFilter, set: setStatusFilter, opts: STATUS_OPTIONS },
                 ].map(({ val, set, opts }, fi) => (
                   <div key={fi} className="relative flex-1 sm:flex-none">
                     <select value={val} onChange={(e) => set(e.target.value)}
@@ -311,11 +311,11 @@ export default function Driver_Attendants() {
                     </tr>
                   ) : allStaff.map((s, idx) => {
                     const licExpired = isExpired(s.licenseExpiryDate);
-                    const licWarn    = !licExpired && isExpiringSoon(s.licenseExpiryDate);
-                    const isBusy     = togglingId === s.id;
+                    const licWarn = !licExpired && isExpiringSoon(s.licenseExpiryDate);
+                    const isBusy = togglingId === s.id;
                     return (
                       <tr key={s.id} className="hover:bg-teal-50/20 transition-colors">
-                         <td className="px-4 py-4">
+                        <td className="px-4 py-4">
                           <p className="font-bold text-gray-900 whitespace-nowrap">{s.fullName}</p>
                           {s.address && <p className="text-xs text-gray-400 mt-0.5 truncate max-w-40">{s.address}</p>}
                         </td>
@@ -328,13 +328,26 @@ export default function Driver_Attendants() {
                         <td className="px-4 py-4 text-gray-500 text-sm">{s.alternateContact || <span className="text-gray-300">—</span>}</td>
                         <td className="px-4 py-4 text-gray-600 font-mono text-xs">{s.licenseNumber || <span className="text-gray-300">—</span>}</td>
                         <td className="px-4 py-4 whitespace-nowrap">
-                          {!s.licenseExpiryDate ? <span className="text-gray-300">—</span>
-                            : licExpired
-                              ? <span className="inline-flex items-center gap-1.5 text-xs font-bold text-red-600">{fmtDate(s.licenseExpiryDate)}<span className="inline-flex items-center gap-1 bg-red-100 text-red-600 px-1.5 py-0.5 rounded text-xs font-bold"><XCircle className="w-3 h-3" />EXPIRED</span></span>
-                              : licWarn
-                                ? <span className="inline-flex items-center gap-1 text-orange-600 text-xs font-semibold"><AlertTriangle className="w-3.5 h-3.5 shrink-0" />{fmtDate(s.licenseExpiryDate)}</span>
-                                : <span className="text-gray-600 text-sm">{fmtDate(s.licenseExpiryDate)}</span>
-                          }
+                          {!s.licenseExpiryDate ? (
+                            <span className="text-gray-300">—</span>
+                          ) : licExpired ? (
+                            <div className="flex flex-col text-xs font-bold text-red-600">
+                              <span>{fmtDate(s.licenseExpiryDate)}</span>
+                              <span className="inline-flex items-center gap-1 bg-red-100 text-red-600 px-1.5 py-0.5 rounded w-fit mt-0.5">
+                                <XCircle className="w-3 h-3" />
+                                EXPIRED
+                              </span>
+                            </div>
+                          ) : licWarn ? (
+                            <span className="inline-flex items-center gap-1 text-orange-600 text-xs font-semibold">
+                              <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                              {fmtDate(s.licenseExpiryDate)}
+                            </span>
+                          ) : (
+                            <span className="text-gray-600 text-sm">
+                              {fmtDate(s.licenseExpiryDate)}
+                            </span>
+                          )}
                         </td>
                         <td className="px-4 py-4 text-gray-600 text-sm whitespace-nowrap">{fmtDate(s.joiningDate)}</td>
                         <td className="px-4 py-4">

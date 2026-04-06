@@ -247,3 +247,43 @@ export const updateUserById = async (id, updatedUser) => {
     throw error;
   }
 };
+
+//  Get Users Summary List
+export const getUsersSummary = async ({
+  search,
+  role,
+  page = 0,
+  size = 200,
+  sort = "firstName,asc",
+} = {}) => {
+  try {
+    const params = new URLSearchParams();
+
+    if (search) params.append("search", search);
+    if (role) params.append("role", role);
+
+    params.append("page", page);
+    params.append("size", size);
+    params.append("sort", sort);
+
+    const res = await authFetch(
+      `${BASE_URL}/users/summary?${params.toString()}`,
+      {
+        method: "GET",
+      }
+    );
+
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(errText || "Failed to fetch users summary");
+    }
+
+    const data = await res.json();
+
+    return data;
+
+  } catch (error) {
+    console.error("getUsersSummary error:", error.message);
+    throw error;
+  }
+};

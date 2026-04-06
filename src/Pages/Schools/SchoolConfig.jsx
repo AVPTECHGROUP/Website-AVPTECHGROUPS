@@ -108,8 +108,6 @@ function validateAttendance(data) {
       errors.schoolLongitude = "Longitude is required when GPS is enabled";
     else if (isNaN(data.schoolLongitude) || data.schoolLongitude < -180 || data.schoolLongitude > 180)
       errors.schoolLongitude = "Longitude must be between -180 and 180";
-    if (!data.allowedRadiusMeters || data.allowedRadiusMeters <= 0)
-      errors.allowedRadiusMeters = "Radius must be greater than 0";
     if (data.allowedRadiusMeters > 10000)
       errors.allowedRadiusMeters = "Radius cannot exceed 10,000 metres";
   }
@@ -365,7 +363,6 @@ export default function SchoolConfig() {
     if (attErrors[k]) setAttErrors(prev => ({ ...prev, [k]: undefined }));
   };
 
-  // ── Save: School ───────────────────────────────────────────────────────────
   const handleSaveSchool = async () => {
     if (!schoolId) return;
     const errors = validateSchool(schoolData);
@@ -412,6 +409,14 @@ export default function SchoolConfig() {
         affiliationNumber: s.affiliationNumber || "",
         logoUrl: s.logoUrl || "",
       });
+      const currentSchool = JSON.parse(localStorage.getItem("school") || "{}");
+      localStorage.setItem("school", JSON.stringify({
+        ...currentSchool,
+        schoolName: s.name,
+        schoolCode: s.code,
+        logoUrl: s.logoUrl || currentSchool.logoUrl,
+      }));
+      window.dispatchEvent(new Event("storage"));
       setSchoolSaveState("saved");
       setTimeout(() => setSchoolSaveState("idle"), 2500);
     } catch (err) {
@@ -466,7 +471,6 @@ export default function SchoolConfig() {
     }
   };
 
-  // ── Upload: Logo ───────────────────────────────────────────────────────────
   const handleUploadLogo = async () => {
     if (!schoolId) return;
     setLogoError(null);
@@ -479,7 +483,7 @@ export default function SchoolConfig() {
       setLogoSaveState("saved");
       toast.info("Logo uploaded! It may take a few seconds to reflect.");
 
-      let attempts = 0; 
+      let attempts = 0;
       const poll = async () => {
         attempts++;
         try {
@@ -490,6 +494,14 @@ export default function SchoolConfig() {
             setLogoFile(null);
             setLogoPreview(newLogoUrl);
             toast.success("Logo updated successfully!");
+
+            const currentSchool = JSON.parse(localStorage.getItem("school") || "{}");
+            localStorage.setItem("school", JSON.stringify({
+              ...currentSchool,
+              logoUrl: newLogoUrl,  
+            }));
+            window.dispatchEvent(new Event("storage"));
+
           } else if (attempts < 3) {
             setTimeout(poll, 3000);
           }
@@ -499,7 +511,6 @@ export default function SchoolConfig() {
       setTimeout(() => setLogoSaveState("idle"), 3000);
     } catch (err) {
       console.error("Logo upload error:", err);
-      setLogoError(err.message || "Upload failed. Please try again.");
       setLogoSaveState("error");
       setTimeout(() => setLogoSaveState("idle"), 3000);
     }
@@ -581,7 +592,7 @@ export default function SchoolConfig() {
             {/* Logo / Avatar */}
             <div className="relative shrink-0">
               {schoolData.logoUrl ? (
-                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl overflow-hidden border border-blue-100 shadow-md bg-white">
+                <div className="w-14 h-14 sm:w-16 sm:h-16 overflow-hidden border border-blue-100 shadow-md bg-white">
                   <img
                     src={schoolData.logoUrl}
                     alt={schoolData.name}
@@ -650,9 +661,7 @@ export default function SchoolConfig() {
         </div>
       </div>
 
-      {/* ══ TAB BAR — style from Reports.jsx ══ */}
       <div className="px-4 sm:px-6 lg:px-8 mt-5">
-
         {/* Mobile: grid */}
         <div className="grid grid-cols-3 gap-2 sm:hidden">
           {TABS.map(tab => {
@@ -1070,9 +1079,10 @@ export default function SchoolConfig() {
                             <TextInput
                               type="number"
                               value={attendanceData.schoolLatitude ?? ""}
-                              onChange={v => handleAttendanceChange("schoolLatitude", parseFloat(v) || null)}
+                              onChange={() => { }}
                               placeholder="28.61"
                               hasError={!!attErrors.schoolLatitude}
+                              disabled={true}
                             />
                             <FieldError error={attErrors.schoolLatitude} />
                           </div>
@@ -1081,9 +1091,10 @@ export default function SchoolConfig() {
                             <TextInput
                               type="number"
                               value={attendanceData.schoolLongitude ?? ""}
-                              onChange={v => handleAttendanceChange("schoolLongitude", parseFloat(v) || null)}
+                              onChange={() => { }}
                               placeholder="77.20"
                               hasError={!!attErrors.schoolLongitude}
+                              disabled={true}
                             />
                             <FieldError error={attErrors.schoolLongitude} />
                           </div>
@@ -1099,6 +1110,40 @@ export default function SchoolConfig() {
                             <FieldError error={attErrors.allowedRadiusMeters} />
                           </div>
                         </div>
+
+                        {/* Capture Location Button */}
+                        <button
+                          onClick={() => {
+                            if (!navigator.geolocation) {
+                              toast.error("Geolocation is not supported by your browser.");
+                              return;
+                            }
+                            toast.info("Fetching your location…");
+                            navigator.geolocation.getCurrentPosition(
+                              (pos) => {
+                                handleAttendanceChange("schoolLatitude", parseFloat(pos.coords.latitude.toFixed(6)));
+                                handleAttendanceChange("schoolLongitude", parseFloat(pos.coords.longitude.toFixed(6)));
+                                if (!attendanceData.allowedRadiusMeters || attendanceData.allowedRadiusMeters === 0) {
+                                  handleAttendanceChange("allowedRadiusMeters", 200);
+                                }
+                                toast.success("Location captured successfully!");
+                              },
+                              (err) => {
+                                const messages = {
+                                  1: "Location permission denied. Please allow access in browser settings.",
+                                  2: "Location unavailable. Try again.",
+                                  3: "Location request timed out. Try again.",
+                                };
+                                toast.error(messages[err.code] || "Failed to get location.");
+                              },
+                              { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                            );
+                          }}
+                          className="cursor-pointer w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-sm font-bold transition-all shadow-sm mt-1"
+                        >
+                          <Navigation className="w-4 h-4" />
+                          Capture Current Location
+                        </button>
                       </div>
                     )}
                   </div>
