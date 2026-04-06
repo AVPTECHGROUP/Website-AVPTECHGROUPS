@@ -323,7 +323,7 @@ export default function SuperAdminSchools() {
     }
   }, []);
 
-  useEffect(() => { fetchStats(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { fetchStats(); }, []); 
   useEffect(() => { fetchSchools(); }, [fetchSchools]);
 
   const handleRefresh = () => Promise.all([fetchSchools(), fetchStats()]);

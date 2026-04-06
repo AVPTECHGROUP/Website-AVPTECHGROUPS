@@ -6,7 +6,7 @@ import { UserContext } from "../../ContextAPI/UserContext";
 
 export default function SchoolSelectedCard({ school, onClose }) {
     const navigate = useNavigate();
-    const { saveToken } = useContext(UserContext);
+    const { saveToken, saveSchool } = useContext(UserContext);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
@@ -17,12 +17,12 @@ export default function SchoolSelectedCard({ school, onClose }) {
             const result = await switchSchool(school.id);
             saveToken(result.token);
 
-            localStorage.setItem('school', JSON.stringify({
+            saveSchool({
                 schoolId: school.id,
                 schoolName: school.name,
                 schoolCode: school.code,
                 logoUrl: school.logoUrl || null,
-            }));
+            });
 
             navigate("/dashboard", { replace: true });
 

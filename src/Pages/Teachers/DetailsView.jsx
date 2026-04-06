@@ -9,62 +9,85 @@ const DetailsView = () => {
 
   const [teacher, setTeacher] = useState(null);
   useEffect(() => {
-  const fetchTeacher = async () => {
-    try {
-      const res = await getTeacherById(id);
-      console.log("API response:", res);
+    const fetchTeacher = async () => {
+      try {
+        const res = await getTeacherById(id);
+        console.log("API response:", res);
 
-      const t = res; 
-      if (!t) {
-        console.error("Teacher data not found!");
-        return;
+        const t = res;
+        if (!t) {
+          console.error("Teacher data not found!");
+          return;
+        }
+
+        const filteredTeacher = {
+          id: t.id,
+          name: t.fullName,
+          profileImageUrl: t.profileImageUrl || null,
+          email: t.email,
+          mobile: t.mobile,
+          gender: t.gender,
+          dob: t.dateOfBirth,
+          address: t.address,
+          highestQualification: t.qualification,
+          experience: t.experienceYears,
+          joiningDate: t.joiningDate,
+          salaryType: t.salaryStructure?.salaryType,
+          baseSalary: t.salaryStructure?.baseSalary,
+          totalAllowances: t.salaryStructure ? t.salaryStructure.grossSalary - t.salaryStructure.baseSalary : 0,
+          payroll: t.payrollStatus,
+          status: t.status,
+          loginAccess: t.attendanceAccessStatus === "ALLOWED",
+          attendanceAccess: t.attendanceAccessStatus === "ALLOWED",
+          classes: t.assignments?.map(a => `${a.className} - ${a.sectionName} (${a.subjectName})`) || [],
+          //subjects: t.assignments?.map(a => a.subjectName || "") || [],
+        };
+
+        setTeacher(filteredTeacher);
+      } catch (error) {
+        console.error("Failed to fetch teacher:", error);
       }
+    };
+    if (id) fetchTeacher();
+  }, [id]);
 
-      const filteredTeacher = {
-        id: t.id,
-        name: t.fullName,
-        email: t.email,
-        mobile: t.mobile,
-        gender: t.gender,
-        dob: t.dateOfBirth,
-        address: t.address,
-        highestQualification: t.qualification,
-        experience: t.experienceYears,
-        joiningDate: t.joiningDate,
-        salaryType: t.salaryStructure?.salaryType,
-        baseSalary: t.salaryStructure?.baseSalary,
-        totalAllowances: t.salaryStructure ? t.salaryStructure.grossSalary - t.salaryStructure.baseSalary : 0,
-        payroll: t.payrollStatus,
-        status: t.status,
-        loginAccess: t.attendanceAccessStatus === "ALLOWED",
-        attendanceAccess: t.attendanceAccessStatus === "ALLOWED",
-        classes: t.assignments?.map(a => `${a.className} - ${a.sectionName} (${a.subjectName})`) || [],
-        //subjects: t.assignments?.map(a => a.subjectName || "") || [],
-      };
+  const AvatarContent = () => {
+    const [imgError, setImgError] = useState(false);
+    const initial = teacher.name?.[0]?.toUpperCase() || 'T';
 
-      setTeacher(filteredTeacher);
-    } catch (error) {
-      console.error("Failed to fetch teacher:", error);
+    if (teacher.profileImageUrl && !imgError) {
+      return (
+        <img
+          src={teacher.profileImageUrl}
+          alt={teacher.name}
+          className="w-full h-full object-cover object-center"
+          onError={() => setImgError(true)}
+        />
+      );
     }
+
+    return (
+      <span className="text-white text-2xl font-bold flex items-center justify-center w-full h-full">
+        {initial}
+      </span>
+    );
   };
-  if (id) fetchTeacher();
-}, [id]);
 
 
   const navigate = useNavigate()
 
- if (!teacher) {
-         return (
-             <div className='min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8'>
-                 <div className="flex items-center justify-center py-8 relative">
-                     <div className="flex flex-col items-center justify-center absolute lg:top-75">
-                         <div className="w-7 h-7 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                         <p className="text-gray-600 lg:text-xl font-medium">Loading teachers...</p>
-                     </div>
-                 </div>
-             </div>
-         );
-     }
+  if (!teacher) {
+    return (
+      <div className='min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8'>
+        <div className="flex items-center justify-center py-8 relative">
+          <div className="flex flex-col items-center justify-center absolute lg:top-75">
+            <div className="w-7 h-7 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-gray-600 lg:text-xl font-medium">Loading teachers...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">
@@ -81,13 +104,8 @@ const DetailsView = () => {
         {/* Profile Header Card */}
         <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6 mb-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-            <div className="relative">
-              {/* <img 
-                src={teacher.avtar} 
-                alt={teacher.name}
-                className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg object-cover"
-              /> */}
-              {/* <div className="absolute bottom-0 right-0 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div> */}
+            <div className="w-32 h-32 rounded-xl overflow-hidden bg-blue-500 flex items-center justify-center text-white text-2xl font-bold shrink-0 border-2 border-blue-200">
+              <AvatarContent />
             </div>
             <div className="flex-1">
               <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-2">
