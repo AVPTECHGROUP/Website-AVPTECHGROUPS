@@ -1,10 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { KeyIcon } from 'lucide-react';
+import { toast } from 'react-toastify';
 import { getTeachers, getTeacherStatistics, searchTeachers } from '../../Api/TeachersAPI';
 import { getClasses } from '../../Api/TeachersAPI';
 import TeachersHeader from '../../Components/Teacher/ManagementComponents/TeachersHeader';
 import QuickActions from '../../Components/Teacher/ManagementComponents/QuickActions';
 import TeachersFilters from '../../Components/Teacher/ManagementComponents/TeachersFilters';
 import TeachersTable from '../../Components/Teacher/ManagementComponents/TeachersTable';
+import PasswordResetModal from '../../Components/PopupResetPassword/ResetPasswordComponent';
+import { resetUserPassword } from '../../Api/userManagementAPI';
 
 
 const Teachers = () => {
@@ -39,7 +43,14 @@ const Teachers = () => {
   });
   const [statsLoading, setStatsLoading] = useState(false);
 
-  const [classAssignTeacherId, setClassAssignTeacherId] = useState(null);
+  // ── Single Row Selection ──────────────────────────────────────────────────
+  // selectedTeacher holds the full teacher object of the currently selected row.
+  // Clicking the same row again → deselects (null).
+  // Clicking a different row → replaces previous selection (single-select).
+  const [selectedTeacher, setSelectedTeacher] = useState(null);
+
+  // ── Reset Password Modal ──────────────────────────────────────────────────
+  const [isResetOpen, setIsResetOpen] = useState(false);
 
   // Ref for scroll-to-top on page change
   const scrollContainerRef = useRef(null);
@@ -160,19 +171,16 @@ const Teachers = () => {
     }
   };
 
-  // ✅ OPTIMISTIC STATISTICS UPDATE — called by TeachersTable on toggle
-  // Updates active/inactive counts instantly without any API call or loading
+  // OPTIMISTIC STATISTICS UPDATE — called by TeachersTable on toggle
   const updateStatisticsOptimistically = (prevStatus) => {
     setStatistics((prev) => {
       if (prevStatus === 'ACTIVE') {
-        // Was ACTIVE → now INACTIVE: active--, inactive++
         return {
           ...prev,
           activeTeachers: Math.max(0, prev.activeTeachers - 1),
           inactiveTeachers: prev.inactiveTeachers + 1,
         };
       } else {
-        // Was INACTIVE → now ACTIVE: inactive--, active++
         return {
           ...prev,
           activeTeachers: prev.activeTeachers + 1,
@@ -180,6 +188,21 @@ const Teachers = () => {
         };
       }
     });
+  };
+
+  // ── Row Selection Handler ─────────────────────────────────────────────────
+  // Single-select: same row clicked again → deselect. Different row → replace.
+  const handleRowSelect = (teacher) => {
+    setSelectedTeacher((prev) => (prev?.id === teacher.id ? null : teacher));
+  };
+
+  // ── Reset Password API (same pattern as ManageAllUsers) ───────────────────
+  const resetPassword = async (id) => {
+    try {
+      return await resetUserPassword(id);
+    } catch (err) {
+      toast.error(err.message || 'Reset password failed');
+    }
   };
 
   // FETCH ON DEPENDENCY CHANGE
@@ -212,7 +235,7 @@ const Teachers = () => {
     payrollIncluded,
     attendanceBlocked,
   };
-
+  
   return (
     <div className="flex h-screen overflow-hidden bg-linear-to-b from-sky-50 to-sky-100">
       <div ref={scrollContainerRef} className="flex-1 overflow-auto w-0">
@@ -223,8 +246,13 @@ const Teachers = () => {
         {/* Page Content */}
         <div className="flex-1 overflow-auto p-4 sm:p-5 lg:p-4">
 
-          {/* COMPONENT 2: Quick Actions */}
-          <QuickActions teacherId={classAssignTeacherId} />
+          <div className="flex items-center gap-3 mb-4">
+
+            <QuickActions
+              teacherId={selectedTeacher?.id ?? null}
+              onResetPassword={() => setIsResetOpen(true)}  
+            />
+          </div>
 
           {/* COMPONENT 3: Filters with Search */}
           <TeachersFilters
@@ -240,10 +268,10 @@ const Teachers = () => {
             classes={classes}
           />
 
-          {/* COMPONENT 4: Table and Pagination */}
-          {/* ✅ Pass optimistic updater down to TeachersTable */}
           <TeachersTable
-            assignTeacherId={setClassAssignTeacherId}
+            selectedTeacherId={selectedTeacher?.id ?? null}
+            onRowSelect={handleRowSelect}
+            assignTeacherId={() => { }}   // kept for backward compat
             teachers={teachers}
             setTeachers={setTeachers}
             loading={loading}
@@ -258,6 +286,17 @@ const Teachers = () => {
             onStatusToggle={updateStatisticsOptimistically}
           />
         </div>
+
+        {/* ── Reset Password Modal ────────────────────────────────────────── */}
+        {/* Exact same integration as ManageAllUsers.jsx */}
+        <PasswordResetModal
+          isOpen={isResetOpen}
+          onClose={() => setIsResetOpen(false)}
+          userName={selectedTeacher?.name}
+          onReset={() => resetPassword(selectedTeacher?.id)}
+          currUserId={selectedTeacher?.id}
+        />
+
       </div>
     </div>
   );

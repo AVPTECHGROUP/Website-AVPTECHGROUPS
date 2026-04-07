@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, GraduationCap, IndianRupee, User } from 'lucide-react';
+import { ChevronLeft, IndianRupee, User, Camera, X } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { createTeachers, upsertTeacherSalary } from '../../Api/TeachersAPI';
 import PersonalDetailsTab from '../../Components/Teacher/AddTabComponents/AddPersonalInfo';
@@ -10,6 +10,9 @@ function AddNewTeacher() {
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('personal');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [profileImage, setProfileImage] = useState(null);
+    const [imagePreview, setImagePreview] = useState(null);
+    const fileInputRef = useRef(null);
     const [formData, setFormData] = useState({
         name: "",
         gender: "",
@@ -56,6 +59,29 @@ function AddNewTeacher() {
             ...prev,
             [name]: value
         }));
+    };
+    const handleImageChange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+        if (!validTypes.includes(file.type)) {
+            toast.error("Only JPEG or PNG images are allowed!");
+            return;
+        }
+        if (file.size > 10 * 1024 * 1024) {
+            toast.error("Image must be smaller than 10 MB!");
+            return;
+        }
+        setProfileImage(file);
+        const reader = new FileReader();
+        reader.onloadend = () => setImagePreview(reader.result);
+        reader.readAsDataURL(file);
+    };
+
+    const handleRemoveImage = () => {
+        setProfileImage(null);
+        setImagePreview(null);
+        if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
     const handleSubmit = async (e) => {
@@ -276,11 +302,83 @@ function AddNewTeacher() {
                         {/* Content */}
                         <div className="p-4 sm:p-6 lg:p-8">
                             {activeTab === 'personal' && (
-                                <PersonalDetailsTab
-                                    formData={formData}
-                                    setFormData={setFormData}
-                                    handleInputChange={handleInputChange}
-                                />
+                                <>
+                                    <div className="mb-6">
+                                        <label className="block font-semibold text-gray-600 text-sm mb-3">
+                                            Profile Photo <span className="text-gray-400 text-xs font-normal ml-1">(optional)</span>
+                                        </label>
+                                        <div className="flex items-center gap-5">
+                                            <div className="relative shrink-0">
+                                                <div className="w-20 h-20 rounded-full overflow-hidden bg-blue-100 border-2 border-blue-200 flex items-center justify-center">
+                                                    {imagePreview ? (
+                                                        <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <User className="w-8 h-8 text-blue-400" />
+                                                    )}
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => fileInputRef.current?.click()}
+                                                    className="absolute bottom-0 right-0 w-6 h-6 bg-blue-500 hover:bg-blue-600 rounded-full flex items-center justify-center shadow transition-colors"
+                                                >
+                                                    <Camera className="w-3.5 h-3.5 text-white" />
+                                                </button>
+                                            </div>
+
+                                            <div className="flex-1">
+                                                {!imagePreview ? (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => fileInputRef.current?.click()}
+                                                        className="w-full border-2 border-dashed border-blue-300 hover:border-blue-500 bg-blue-50 hover:bg-blue-100 rounded-lg p-4 text-center transition-colors cursor-pointer"
+                                                    >
+                                                        <Camera className="w-5 h-5 text-blue-400 mx-auto mb-1" />
+                                                        <p className="text-sm font-medium text-blue-600">Click to upload photo</p>
+                                                        <p className="text-xs text-gray-400 mt-0.5">JPEG or PNG, max 10 MB</p>
+                                                    </button>
+                                                ) : (
+                                                    <div className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="text-sm font-medium text-green-700 truncate">{profileImage?.name}</p>
+                                                            <p className="text-xs text-green-500 mt-0.5">
+                                                                {profileImage ? (profileImage.size / 1024).toFixed(1) + ' KB' : ''}
+                                                            </p>
+                                                        </div>
+                                                        <div className="flex gap-2 shrink-0">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => fileInputRef.current?.click()}
+                                                                className="text-xs px-2.5 py-1 bg-white border border-green-300 text-green-700 rounded-md hover:bg-green-50 transition-colors"
+                                                            >
+                                                                Change
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={handleRemoveImage}
+                                                                className="w-7 h-7 flex items-center justify-center bg-white border border-red-200 text-red-500 rounded-md hover:bg-red-50 transition-colors"
+                                                            >
+                                                                <X className="w-3.5 h-3.5" />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <input
+                                            ref={fileInputRef}
+                                            type="file"
+                                            accept="image/jpeg,image/jpg,image/png"
+                                            onChange={handleImageChange}
+                                            className="hidden"
+                                        />
+                                    </div>
+
+                                    <PersonalDetailsTab
+                                        formData={formData}
+                                        setFormData={setFormData}
+                                        handleInputChange={handleInputChange}
+                                    />
+                                </>
                             )}
 
                             {activeTab === 'salary' && (
@@ -290,7 +388,6 @@ function AddNewTeacher() {
                                     handleInputChange={handleInputChange}
                                 />
                             )}
-
                         </div>
 
                         {/* Footer Buttons */}

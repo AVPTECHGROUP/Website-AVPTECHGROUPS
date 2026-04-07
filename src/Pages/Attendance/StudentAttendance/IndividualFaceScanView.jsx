@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import Webcam from "react-webcam";
 import {
     Camera, ScanFace, CheckCircle2, XCircle, AlertTriangle,
@@ -87,6 +87,15 @@ const INITIAL_SCAN_STATE = {
     message: null,        // for error state text OR detected role for non_student
 };
 
+// MediaPipe CDN — loaded once, cached in ref. No npm install, no Vite WASM config needed.
+const MEDIAPIPE_CDN = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.34/vision_bundle.mjs";
+const WASM_BASE  = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.34/wasm";
+const MODEL_URL  = "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task";
+const BLINK_THRESHOLD  = 0.45; // 0–1 blend shape score; 0.45 catches a natural blink without triggering on squinting
+const BLINK_MIN_FRAMES = 2;    // consecutive frames above threshold → real blink (not a single-frame brightness spike)
+const BLINK_OPEN_RESET = 0.25; // score must drop below this after blink peak to confirm eyes reopened
+const BLINK_PEAK_MIN   = 0.65; // peak MUST reach this to pass — screens/photos produce shallow scores (0.45–0.60)
+
 export default function IndividualFaceScanView({ onBack, selectedClass, selectedSection }) {
     const webcamRef = useRef(null);
     const fileInputRef = useRef(null);
@@ -95,6 +104,21 @@ export default function IndividualFaceScanView({ onBack, selectedClass, selected
     const [capturedImage, setCapturedImage] = useState(null);
     const [camError, setCamError] = useState(false);
     const [unmarkLoading, setUnmarkLoading] = useState(false);
+
+    // ── Blink liveness ───────────────────────────────────────────────────────
+    // "idle" | "loading" | "waiting" | "detected"
+    const [blinkPhase, setBlinkPhase] = useState("idle");
+    const landmarkerRef   = useRef(null); // cached FaceLandmarker instance
+    const rafRef          = useRef(null); // requestAnimationFrame id
+    const blinkCapturedRef    = useRef(false); // guard against double-fire
+    const blinkFrameCountRef  = useRef(0);     // consecutive above-threshold frames
+    const blinkPeakRef        = useRef(false); // true once BLINK_MIN_FRAMES reached
+    const blinkPeakScoreRef   = useRef(0);     // max score this cycle — screen detection gate
+
+    // Cancel RAF loop on unmount
+    useEffect(() => () => {
+        if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    }, []);
 
     const submitScan = useCallback(async (imageBlob) => {
 
@@ -151,12 +175,85 @@ export default function IndividualFaceScanView({ onBack, selectedClass, selected
         }
     }, [selectedClass, selectedSection]);
 
-    const handleCapture = useCallback(() => {
+    // Direct capture — called automatically after blink is confirmed, or via Skip
+    const doCapture = useCallback(() => {
         const imageSrc = webcamRef.current?.getScreenshot();
         if (!imageSrc) return;
         setCapturedImage(imageSrc);
         submitScan(dataURLtoBlob(imageSrc));
     }, [submitScan]);
+
+    // Load the FaceLandmarker from CDN once, then cache it in landmarkerRef
+    const loadLandmarker = useCallback(async () => {
+        if (landmarkerRef.current) return landmarkerRef.current;
+        // Dynamic import bypasses Vite bundler — model + WASM served from CDN
+        const { FaceLandmarker, FilesetResolver } = await import(/* @vite-ignore */ MEDIAPIPE_CDN);
+        const fs = await FilesetResolver.forVisionTasks(WASM_BASE);
+        const lm = await FaceLandmarker.createFromOptions(fs, {
+            baseOptions: { modelAssetPath: MODEL_URL, delegate: "GPU" },
+            outputFaceBlendshapes: true,
+            runningMode: "VIDEO",
+            numFaces: 1,
+        });
+        landmarkerRef.current = lm;
+        return lm;
+    }, []);
+
+    // Start blink-liveness loop: load model → wait for blink → auto-capture
+    const startBlinkCheck = useCallback(async () => {
+        if (camError) { doCapture(); return; }
+        setBlinkPhase("loading");
+        blinkCapturedRef.current  = false;
+        blinkFrameCountRef.current = 0;
+        blinkPeakRef.current       = false;
+        blinkPeakScoreRef.current  = 0;
+        try {
+            const lm = await loadLandmarker();
+            setBlinkPhase("waiting");
+
+            const loop = () => {
+                if (blinkCapturedRef.current) return; // already fired
+                const video = webcamRef.current?.video;
+                if (!video || video.readyState < 2) {
+                    rafRef.current = requestAnimationFrame(loop);
+                    return;
+                }
+                const result = lm.detectForVideo(video, performance.now());
+                const shapes = result?.faceBlendshapes?.[0]?.categories;
+                if (shapes) {
+                    const L = shapes.find(s => s.categoryName === "eyeBlinkLeft")?.score  ?? 0;
+                    const R = shapes.find(s => s.categoryName === "eyeBlinkRight")?.score ?? 0;
+                    const score = Math.max(L, R);
+                    if (score > BLINK_THRESHOLD) {
+                        blinkFrameCountRef.current++;
+                        if (score > blinkPeakScoreRef.current) blinkPeakScoreRef.current = score;
+                        if (blinkFrameCountRef.current >= BLINK_MIN_FRAMES) blinkPeakRef.current = true;
+                    } else {
+                        if (blinkPeakRef.current && score < BLINK_OPEN_RESET) {
+                            if (blinkPeakScoreRef.current >= BLINK_PEAK_MIN) {
+                                // Deep blink confirmed — real face, not a screen or photo
+                                blinkCapturedRef.current = true;
+                                setBlinkPhase("detected");
+                                doCapture();
+                                return;
+                            }
+                            // Shallow peak → likely screen/video replay — silently reset for retry
+                            blinkFrameCountRef.current = 0;
+                            blinkPeakRef.current       = false;
+                            blinkPeakScoreRef.current  = 0;
+                        }
+                        if (!blinkPeakRef.current) blinkFrameCountRef.current = 0;
+                    }
+                }
+                rafRef.current = requestAnimationFrame(loop);
+            };
+            rafRef.current = requestAnimationFrame(loop);
+        } catch (err) {
+            console.error("Blink detection error:", err);
+            setBlinkPhase("idle");
+            doCapture(); // fallback: skip blink check if CDN/model fails
+        }
+    }, [camError, loadLandmarker, doCapture]);
 
     const handleFileUpload = useCallback((file) => {
         if (!file) return;
@@ -165,6 +262,13 @@ export default function IndividualFaceScanView({ onBack, selectedClass, selected
     }, [submitScan]);
 
     const handleRetake = useCallback(() => {
+        // Cancel any active blink-detection loop
+        if (rafRef.current) cancelAnimationFrame(rafRef.current);
+        blinkCapturedRef.current  = true; // stop loop if it somehow fires after cancel
+        blinkFrameCountRef.current = 0;
+        blinkPeakRef.current       = false;
+        blinkPeakScoreRef.current  = 0;
+        setBlinkPhase("idle");
         setScanState(INITIAL_SCAN_STATE);
         setCapturedImage(null);
     }, []);
@@ -193,8 +297,9 @@ export default function IndividualFaceScanView({ onBack, selectedClass, selected
     }, [scanState.data, handleRetake]);
 
     const { status, data, confidence, threshold, message } = scanState;
-    const isScanning = status === "scanning";
-    const isTerminal = status !== "idle" && status !== "scanning";
+    const isScanning  = status === "scanning";
+    const isTerminal  = status !== "idle" && status !== "scanning";
+    const isBlinkActive = blinkPhase === "loading" || blinkPhase === "waiting";
     const confidencePct = data?.faceConfidenceScore ? Math.round(data.faceConfidenceScore * 100) : null;
     const resultInitials = getInitials(data?.userName || "");
 
@@ -240,6 +345,7 @@ export default function IndividualFaceScanView({ onBack, selectedClass, selected
                                 className="w-full h-full object-cover" />
                         )}
 
+                        {/* Scanning overlay */}
                         {isScanning && (
                             <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center gap-3">
                                 <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-500 rounded-full animate-spin" />
@@ -247,7 +353,47 @@ export default function IndividualFaceScanView({ onBack, selectedClass, selected
                             </div>
                         )}
 
-                        {!isScanning && !capturedImage && !camError && (
+                        {/* Blink loading overlay */}
+                        {blinkPhase === "loading" && !capturedImage && (
+                            <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center gap-3">
+                                <div className="w-10 h-10 border-4 border-purple-300 border-t-purple-500 rounded-full animate-spin" />
+                                <p className="text-xs text-white font-semibold bg-black/40 px-3 py-1.5 rounded-full">Loading liveness check…</p>
+                            </div>
+                        )}
+
+                        {/* Blink waiting overlay */}
+                        {blinkPhase === "waiting" && !capturedImage && (
+                            <div className="absolute inset-0 pointer-events-none">
+                                {/* Corner brackets — pulse amber when waiting */}
+                                <div className="absolute top-3 left-3 w-8 h-8 border-t-2 border-l-2 border-amber-400 rounded-tl-md animate-pulse" />
+                                <div className="absolute top-3 right-3 w-8 h-8 border-t-2 border-r-2 border-amber-400 rounded-tr-md animate-pulse" />
+                                <div className="absolute bottom-3 left-3 w-8 h-8 border-b-2 border-l-2 border-amber-400 rounded-bl-md animate-pulse" />
+                                <div className="absolute bottom-3 right-3 w-8 h-8 border-b-2 border-r-2 border-amber-400 rounded-br-md animate-pulse" />
+                                {/* Eye icon + instruction */}
+                                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-2">
+                                    <div className="text-4xl animate-pulse select-none">👁</div>
+                                    <p className="text-sm font-bold text-white bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded-full whitespace-nowrap">
+                                        Blink your eyes to capture
+                                    </p>
+                                </div>
+                                {/* Dot pulse bar at bottom */}
+                                <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5">
+                                    {[0,1,2].map(i => (
+                                        <div key={i} className="w-2 h-2 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Blink detected flash */}
+                        {blinkPhase === "detected" && !capturedImage && (
+                            <div className="absolute inset-0 bg-green-400/30 flex items-center justify-center">
+                                <p className="text-sm font-bold text-white bg-green-600/80 px-4 py-2 rounded-full">✓ Blink detected!</p>
+                            </div>
+                        )}
+
+                        {/* Default idle frame guide */}
+                        {!isScanning && !isBlinkActive && blinkPhase !== "detected" && !capturedImage && !camError && (
                             <div className="absolute inset-0 pointer-events-none">
                                 <div className="absolute top-3 left-3 w-8 h-8 border-t-2 border-l-2 border-blue-400 rounded-tl-md" />
                                 <div className="absolute top-3 right-3 w-8 h-8 border-t-2 border-r-2 border-blue-400 rounded-tr-md" />
@@ -260,15 +406,36 @@ export default function IndividualFaceScanView({ onBack, selectedClass, selected
                         )}
                     </div>
 
-                    {status === "idle" && (
+                    {status === "idle" && blinkPhase === "idle" && (
                         <div className="mt-4 flex flex-col sm:flex-row gap-2">
-                            <button onClick={handleCapture} disabled={camError}
+                            <button onClick={startBlinkCheck} disabled={camError}
                                 className="flex-1 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white py-3 rounded-xl text-sm font-semibold cursor-pointer transition-colors shadow-sm">
                                 <Camera className="w-4 h-4" /> Capture & Verify
                             </button>
                             <button onClick={() => fileInputRef.current?.click()}
                                 className="flex-1 flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 rounded-xl text-sm font-semibold cursor-pointer transition-colors">
                                 <Upload className="w-4 h-4" /> Upload Photo
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Blink loading state */}
+                    {status === "idle" && blinkPhase === "loading" && (
+                        <div className="mt-4 flex items-center justify-center gap-2 py-3 text-sm text-purple-600 bg-purple-50 rounded-xl border border-purple-100">
+                            <Loader2 className="w-4 h-4 animate-spin" /> Loading liveness check…
+                        </div>
+                    )}
+
+                    {/* Blink waiting state */}
+                    {status === "idle" && blinkPhase === "waiting" && (
+                        <div className="mt-4 space-y-2">
+                            <div className="flex items-center justify-center gap-2 py-3 text-sm text-amber-700 bg-amber-50 rounded-xl border border-amber-200 animate-pulse font-semibold">
+                                <span className="text-base">👁</span> Blink your eyes to capture
+                            </div>
+                            <button
+                                onClick={() => { blinkCapturedRef.current = true; cancelAnimationFrame(rafRef.current); setBlinkPhase("idle"); doCapture(); }}
+                                className="w-full text-xs text-gray-400 hover:text-gray-600 py-1.5 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer">
+                                Skip blink check (manual capture)
                             </button>
                         </div>
                     )}
@@ -297,12 +464,50 @@ export default function IndividualFaceScanView({ onBack, selectedClass, selected
                         <CheckCircle2 className="w-4 h-4 text-green-600" /> Scan Result
                     </h3>
 
-                    {/* idle */}
-                    {status === "idle" && (
+                    {/* idle — waiting to start */}
+                    {status === "idle" && blinkPhase === "idle" && (
                         <div className="flex flex-col items-center justify-center py-12 text-gray-400 gap-3">
                             <ScanFace className="w-14 h-14 text-gray-200" />
                             <p className="text-sm text-center">Capture or upload a photo to verify and mark attendance</p>
                             <p className="text-xs text-blue-400 bg-blue-50 px-3 py-1 rounded-full">Only student faces will be accepted</p>
+                        </div>
+                    )}
+
+                    {/* Blink loading — model fetching from CDN */}
+                    {status === "idle" && blinkPhase === "loading" && (
+                        <div className="flex flex-col items-center justify-center py-10 gap-4">
+                            <div className="w-16 h-16 rounded-full bg-purple-50 border-2 border-purple-200 flex items-center justify-center">
+                                <Loader2 className="w-8 h-8 text-purple-500 animate-spin" />
+                            </div>
+                            <div className="text-center">
+                                <p className="text-sm font-bold text-gray-700">Setting Up Liveness Check</p>
+                                <p className="text-xs text-gray-400 mt-1">Loading face detection model…</p>
+                            </div>
+                            <div className="bg-purple-50 border border-purple-200 rounded-xl p-3 w-full text-xs text-purple-700 text-center">
+                                This happens only once per session
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Blink waiting — watching for blink */}
+                    {status === "idle" && blinkPhase === "waiting" && (
+                        <div className="flex flex-col items-center justify-center py-8 gap-4">
+                            <div className="w-20 h-20 rounded-full bg-amber-50 border-2 border-amber-300 flex items-center justify-center animate-pulse">
+                                <span className="text-4xl select-none">👁</span>
+                            </div>
+                            <div className="text-center">
+                                <p className="text-base font-black text-gray-800">Liveness Check</p>
+                                <p className="text-sm text-amber-600 font-semibold mt-1">Please blink your eyes naturally</p>
+                                <p className="text-xs text-gray-400 mt-1">Photo will be captured automatically</p>
+                            </div>
+                            <div className="w-full bg-amber-50 border border-amber-200 rounded-xl p-3 space-y-1.5">
+                                <p className="text-xs font-bold text-amber-700">Tips for best result:</p>
+                                <ul className="text-xs text-amber-600 space-y-1 list-disc list-inside">
+                                    <li>Face the camera directly</li>
+                                    <li>Blink slowly and naturally</li>
+                                    <li>Ensure good lighting on your face</li>
+                                </ul>
+                            </div>
                         </div>
                     )}
 

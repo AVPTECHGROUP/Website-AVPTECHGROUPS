@@ -15,10 +15,6 @@ function EditStudentDetails() {
   const [sections, setSections] = useState([]);
   const [sectionsLoading, setSectionsLoading] = useState(true);
 
-  // ── Image state ────────────────────────────────────────────────────────────
-  // profileImage  → new File selected by the user (null = no change)
-  // imagePreview  → data-URL shown in the <img> tag
-  // existingImageUrl → URL already stored on the server (loaded from API)
   const [profileImage, setProfileImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [existingImageUrl, setExistingImageUrl] = useState(null);
@@ -183,12 +179,16 @@ function EditStudentDetails() {
     const loadingToast = toast.loading("Updating student...");
     try {
       const payload = buildUpdatePayload();
-      // Pass profileImage (File or null) as 3rd argument.
-      // If null, the API function won't append the "image" part and the
-      // existing photo on the server is left unchanged.
       const res = await updateStudent(id, payload, profileImage);
       toast.dismiss(loadingToast);
       toast.success(res.message || "Student updated successfully ✅");
+      
+      if (profileImage) {
+        toast.info("Profile photo may take a few seconds to reflect.", {
+          autoClose: 4000,
+        });
+      }
+
       navigate("/students");
     } catch (error) {
       toast.dismiss(loadingToast);
