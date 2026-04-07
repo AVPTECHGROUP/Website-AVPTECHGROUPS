@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, User } from 'lucide-react';
+import { ChevronLeft, User, Camera, X } from 'lucide-react';
 import { toast } from 'react-toastify';
 import AddPersonalDetails from '../../Components/SuperAdmin/AddTabComponents/AddPersionslDetails';
 import { createUser, updateUserById } from '../../Api/userManagementAPI';
@@ -8,7 +8,6 @@ import { createUser, updateUserById } from '../../Api/userManagementAPI';
 // ─── Constants ────────────────────────────────────────────────────────────────
 const VALID_GENDERS = ['MALE', 'FEMALE', 'OTHER'];
 
-//  All 9 roles from the API — was previously missing PRINCIPAL, RECEPTIONIST, STORE_ACCOUNTANT, STORE_SELLER
 const VALID_ROLES = [
     'SUPER_ADMIN',
     'ADMIN',
@@ -21,7 +20,6 @@ const VALID_ROLES = [
     'STORE_SELLER',
 ];
 
-// Roles that don't need professional / bank details in the payload
 const PARENT_LIKE_ROLES = ['PARENT'];
 
 const MOBILE_REGEX = /^[6-9]\d{9}$/;
@@ -50,12 +48,10 @@ const validateFormData = (formData) => {
     const errors = [];
     const isParentLike = PARENT_LIKE_ROLES.includes(formData.userRole);
 
-    // Role
     if (!formData.userRole || !VALID_ROLES.includes(formData.userRole)) {
         errors.push('Please select a valid user role.');
     }
 
-    // Name
     const trimmedName = (formData.name || '').trim();
     if (!trimmedName) {
         errors.push('Full name is required.');
@@ -67,17 +63,14 @@ const validateFormData = (formData) => {
         errors.push('Full name contains invalid characters.');
     }
 
-    // Gender
     if (!formData.gender || !VALID_GENDERS.includes(formData.gender.toUpperCase())) {
         errors.push('Please select a valid gender.');
     }
 
-    // Email
     if (!formData.email || !EMAIL_REGEX.test(formData.email.trim())) {
         errors.push('Please enter a valid email address.');
     }
 
-    // Mobile
     const mobileTrimmed = (formData.mobile || '').replace(/\s/g, '');
     if (!mobileTrimmed) {
         errors.push('Mobile number is required.');
@@ -85,7 +78,6 @@ const validateFormData = (formData) => {
         errors.push('Mobile number must be a valid 10-digit Indian mobile number.');
     }
 
-    // DOB
     if (formData.dob) {
         if (!isValidPastDate(formData.dob)) {
             errors.push('Date of birth must be a valid past date.');
@@ -96,12 +88,10 @@ const validateFormData = (formData) => {
         }
     }
 
-    // Address
     if (formData.address && formData.address.trim().length > MAX_ADDRESS_LENGTH) {
         errors.push(`Address cannot exceed ${MAX_ADDRESS_LENGTH} characters.`);
     }
 
-    // Non-PARENT fields
     if (!isParentLike) {
         if (formData.employeeCode && !EMP_CODE_REGEX.test(formData.employeeCode.trim())) {
             errors.push('Employee code must be 2–20 alphanumeric characters.');
@@ -119,7 +109,6 @@ const validateFormData = (formData) => {
         }
     }
 
-    // Account status
     if (!formData.accountStatus) {
         errors.push('Please enable account status before saving.');
     }
@@ -134,6 +123,11 @@ function AddnewSystemUser() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [fieldErrors, setFieldErrors] = useState({});
     const createdUserIdRef = useRef(null);
+
+    // ── Image upload state ──────────────────────────────────────────────────
+    const [profileImage, setProfileImage] = useState(null);
+    const [imagePreview, setImagePreview] = useState(null);
+    const fileInputRef = useRef(null);
 
     const [formData, setFormData] = useState({
         name: '',
@@ -169,6 +163,31 @@ function AddnewSystemUser() {
         isClassTeacher: false,
     });
 
+    // ── Image handlers ──────────────────────────────────────────────────────
+    const handleImageChange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+        if (!validTypes.includes(file.type)) {
+            toast.error("Only JPEG or PNG images are allowed!");
+            return;
+        }
+        if (file.size > 10 * 1024 * 1024) {
+            toast.error("Image must be smaller than 10 MB!");
+            return;
+        }
+        setProfileImage(file);
+        const reader = new FileReader();
+        reader.onloadend = () => setImagePreview(reader.result);
+        reader.readAsDataURL(file);
+    };
+
+    const handleRemoveImage = () => {
+        setProfileImage(null);
+        setImagePreview(null);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+
     const handleInputChange = (e) => {
         const { name, value } = e.target;
         if (fieldErrors[name]) {
@@ -191,9 +210,6 @@ function AddnewSystemUser() {
             gender: data.gender.toUpperCase(),
             dateOfBirth: data.dob || null,
             address: data.address?.trim() || 'NA',
-            // emergencyContact: '9999999999',
-            // emergencyContactName: 'NA',
-            // emergencyContactRelation: 'NA',
         };
         if (isParentLike) {
             return {
@@ -201,7 +217,6 @@ function AddnewSystemUser() {
                 roleNames: [data.userRole],
                 personalDetails,
                 accountStatus: 'ACTIVE',
-                // remarks: 'Created from UI',
             };
         }
         return {
@@ -213,19 +228,8 @@ function AddnewSystemUser() {
                 qualification: data.highestQualification?.trim() || 'NA',
                 experienceYears: Number(data.experience) || 0,
                 joiningDate: data.joiningDate || null,
-                // department: 'GENERAL',
-                // designation: 'USER',
             },
-            // bankDetails: {
-            //     accountHolderName: 'NA',
-            //     accountNumber: '000000000000',
-            //     bankName: 'NA',
-            //     ifscCode: 'HDFC0123456',
-            //     branchName: 'NA',
-            // },
             accountStatus: 'ACTIVE',
-            // payrollStatus: 'INCLUDED',
-            // remarks: 'Created from UI',
         };
     };
 
@@ -258,14 +262,17 @@ function AddnewSystemUser() {
             const apiPayload = buildPayload(formData);
             let response;
             if (!createdUserIdRef.current) {
-                response = await createUser(apiPayload);
+                response = await createUser(apiPayload, profileImage);
                 if (!response?.data?.id) throw new Error('Invalid response: user ID not returned from server.');
                 createdUserIdRef.current = response.data.id;
             } else {
                 response = await updateUserById(createdUserIdRef.current, apiPayload);
             }
             toast.dismiss(loadingToast);
-            toast.success(`${formData.name.trim()} : ${response?.message ?? 'User added successfully'}`);
+            toast.success(`${formData.name.trim()} : ${response?.message ?? 'User added successfully ✅'}`);
+            if (profileImage) {
+                toast.info("Profile photo may take a few seconds to reflect.", { autoClose: 4000 });  // ← ADD THIS
+            }
             navigate('/dashboard/manageUsers');
         } catch (err) {
             toast.dismiss(loadingToast);
@@ -299,16 +306,91 @@ function AddnewSystemUser() {
                                 </button>
                             </nav>
                         </div>
+
                         <div className="p-4 sm:p-6 lg:p-8">
                             {activeTab === 'personal' && (
-                                <AddPersonalDetails
-                                    formData={formData}
-                                    setFormData={setFormData}
-                                    handleInputChange={handleInputChange}
-                                    fieldErrors={fieldErrors}
-                                />
+                                <>
+                                    {/* ── Profile Photo ── */}
+                                    <div className="mb-6">
+                                        <label className="block font-semibold text-gray-600 text-sm mb-3">
+                                            Profile Photo <span className="text-gray-400 text-xs font-normal ml-1">(optional)</span>
+                                        </label>
+                                        <div className="flex items-center gap-5">
+                                            <div className="relative shrink-0">
+                                                <div className="w-20 h-20 rounded-full overflow-hidden bg-blue-100 border-2 border-blue-200 flex items-center justify-center">
+                                                    {imagePreview ? (
+                                                        <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <User className="w-8 h-8 text-blue-400" />
+                                                    )}
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => fileInputRef.current?.click()}
+                                                    className="absolute bottom-0 right-0 w-6 h-6 bg-blue-500 hover:bg-blue-600 rounded-full flex items-center justify-center shadow transition-colors"
+                                                >
+                                                    <Camera className="w-3.5 h-3.5 text-white" />
+                                                </button>
+                                            </div>
+
+                                            <div className="flex-1">
+                                                {!imagePreview ? (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => fileInputRef.current?.click()}
+                                                        className="w-full border-2 border-dashed border-blue-300 hover:border-blue-500 bg-blue-50 hover:bg-blue-100 rounded-lg p-4 text-center transition-colors cursor-pointer"
+                                                    >
+                                                        <Camera className="w-5 h-5 text-blue-400 mx-auto mb-1" />
+                                                        <p className="text-sm font-medium text-blue-600">Click to upload photo</p>
+                                                        <p className="text-xs text-gray-400 mt-0.5">JPEG or PNG, max 10 MB</p>
+                                                    </button>
+                                                ) : (
+                                                    <div className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="text-sm font-medium text-green-700 truncate">{profileImage?.name}</p>
+                                                            <p className="text-xs text-green-500 mt-0.5">
+                                                                {profileImage ? (profileImage.size / 1024).toFixed(1) + ' KB' : ''}
+                                                            </p>
+                                                        </div>
+                                                        <div className="flex gap-2 shrink-0">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => fileInputRef.current?.click()}
+                                                                className="text-xs px-2.5 py-1 bg-white border border-green-300 text-green-700 rounded-md hover:bg-green-50 transition-colors"
+                                                            >
+                                                                Change
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={handleRemoveImage}
+                                                                className="w-7 h-7 flex items-center justify-center bg-white border border-red-200 text-red-500 rounded-md hover:bg-red-50 transition-colors"
+                                                            >
+                                                                <X className="w-3.5 h-3.5" />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <input
+                                            ref={fileInputRef}
+                                            type="file"
+                                            accept="image/jpeg,image/jpg,image/png"
+                                            onChange={handleImageChange}
+                                            className="hidden"
+                                        />
+                                    </div>
+
+                                    <AddPersonalDetails
+                                        formData={formData}
+                                        setFormData={setFormData}
+                                        handleInputChange={handleInputChange}
+                                        fieldErrors={fieldErrors}
+                                    />
+                                </>
                             )}
                         </div>
+
                         <div className="border-t border-gray-200 px-4 sm:px-6 lg:px-8 py-4 bg-gray-50 rounded-b-lg">
                             <div className="flex flex-col sm:flex-row justify-end gap-3">
                                 <button type="button" onClick={() => navigate('/dashboard/manageUsers')}

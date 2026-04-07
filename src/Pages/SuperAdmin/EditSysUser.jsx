@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate, data } from 'react-router-dom';
-import { ChevronLeft, User } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { ChevronLeft, User, Camera, X } from 'lucide-react';
 import { toast } from 'react-toastify';
 import UserPersonalDetailsTab from '../../Components/SuperAdmin/EditTabComponents/UserPersonalDetailsTab';
 import ParentPersonalDetailsTab from '../../Components/SuperAdmin/EditTabComponents/ParentPersonalDetailsTab';
@@ -9,7 +9,6 @@ import { getUserById, updateUserById } from '../../Api/userManagementAPI';
 // ─── Constants ────────────────────────────────────────────────────────────────
 const VALID_GENDERS = ['MALE', 'FEMALE', 'OTHER'];
 
-// ✅ All 9 roles from the API — was previously missing PRINCIPAL, RECEPTIONIST, STORE_ACCOUNTANT, STORE_SELLER
 const VALID_ROLES = [
     'SUPER_ADMIN',
     'ADMIN',
@@ -22,7 +21,6 @@ const VALID_ROLES = [
     'STORE_SELLER',
 ];
 
-// Roles that don't need professional / bank details in the payload
 const PARENT_LIKE_ROLES = ['PARENT'];
 
 const MOBILE_REGEX = /^[6-9]\d{9}$/;
@@ -61,29 +59,24 @@ const validateFormData = (formData, activeRole) => {
 
     const addError = (field, msg) => { errors.push(msg); fieldMap[field] = msg; };
 
-    // Name
     const trimmedName = (formData.name || '').trim();
     if (!trimmedName) addError('name', 'Full name is required.');
     else if (trimmedName.length < 2) addError('name', 'Full name must be at least 2 characters.');
     else if (trimmedName.length > MAX_NAME_LENGTH) addError('name', `Full name cannot exceed ${MAX_NAME_LENGTH} characters.`);
     else if (!/^[a-zA-Z\s'.,-]+$/.test(trimmedName)) addError('name', 'Full name contains invalid characters.');
 
-    // Gender
     if (!formData.gender || !VALID_GENDERS.includes(formData.gender.toUpperCase())) {
         addError('gender', 'Please select a valid gender.');
     }
 
-    // Email
     if (!formData.email || !EMAIL_REGEX.test(formData.email.trim())) {
         addError('email', 'Please enter a valid email address.');
     }
 
-    // Mobile
     const mobileTrimmed = (formData.mobile || '').replace(/\s/g, '');
     if (!mobileTrimmed) addError('mobile', 'Mobile number is required.');
     else if (!MOBILE_REGEX.test(mobileTrimmed)) addError('mobile', 'Mobile must be a valid 10-digit Indian number.');
 
-    // DOB
     if (formData.dob) {
         if (!isValidPastDate(formData.dob)) {
             addError('dob', 'Date of birth must be a valid past date.');
@@ -94,12 +87,10 @@ const validateFormData = (formData, activeRole) => {
         }
     }
 
-    // Address
     if (formData.address && formData.address.trim().length > MAX_ADDRESS_LENGTH) {
         addError('address', `Address cannot exceed ${MAX_ADDRESS_LENGTH} characters.`);
     }
 
-    // Non-PARENT fields
     if (!isParentLike) {
         if (formData.empId && !EMP_CODE_REGEX.test(formData.empId.trim())) {
             addError('empId', 'Employee code must be 2–20 alphanumeric characters.');
@@ -128,6 +119,12 @@ function EditSysUser() {
     const [activeRole, setActiveRole] = useState('');
     const [fieldErrors, setFieldErrors] = useState({});
 
+    // ── Image upload state ──────────────────────────────────────────────────
+    const [profileImage, setProfileImage] = useState(null);
+    const [imagePreview, setImagePreview] = useState(null);
+    const [existingImageUrl, setExistingImageUrl] = useState(null);
+    const fileInputRef = useRef(null);
+
     const [formData, setFormData] = useState({
         name: '', gender: '', mobile: '', email: '', dob: '', address: '',
         empId: '', highestQualification: '', experience: 0, joiningDate: '',
@@ -137,6 +134,35 @@ function EditSysUser() {
         specialAllowance: '', otherAllowances: '', providentFund: '',
         professionalTax: '', incomeTax: '', otherDeductions: '',
     });
+
+    // ── Image handlers ──────────────────────────────────────────────────────
+    const handleImageChange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+        if (!validTypes.includes(file.type)) {
+            toast.error("Only JPEG or PNG images are allowed!");
+            return;
+        }
+        if (file.size > 10 * 1024 * 1024) {
+            toast.error("Image must be smaller than 10 MB!");
+            return;
+        }
+        setProfileImage(file);
+        const reader = new FileReader();
+        reader.onloadend = () => setImagePreview(reader.result);
+        reader.readAsDataURL(file);
+    };
+
+    const handleRemoveImage = () => {
+        setProfileImage(null);
+        setImagePreview(null);
+        setExistingImageUrl(null);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+
+    // displayedImage: new preview takes priority, else existing URL from API
+    const displayedImage = imagePreview || existingImageUrl;
 
     // Validate id param
     useEffect(() => {
@@ -173,7 +199,7 @@ function EditSysUser() {
         fetchsysUser();
     }, [id]);
 
-    // Populate form
+    // Populate form + set existing profile image
     useEffect(() => {
         if (!sysUser) return;
         setFormData((prev) => ({
@@ -194,6 +220,10 @@ function EditSysUser() {
             dessignation: sysUser.designation || '',
             accountStatus: sysUser.status === 'ACTIVE',
         }));
+        // Set existing profile photo if present
+        if (sysUser.profileImageUrl) {
+            setExistingImageUrl(sysUser.profileImageUrl);
+        }
     }, [sysUser]);
 
     const handleInputChange = useCallback((e) => {
@@ -218,9 +248,6 @@ function EditSysUser() {
             gender: data.gender.toUpperCase(),
             dateOfBirth: data.dob || null,
             address: data.address?.trim() || 'NA',
-            // emergencyContact: '9999999999',
-            // emergencyContactName: 'NA',
-            // emergencyContactRelation: 'NA',
         };
         if (isParentLike) {
             return {
@@ -228,7 +255,6 @@ function EditSysUser() {
                 roleNames: [data.userRole],
                 personalDetails,
                 accountStatus: 'ACTIVE',
-                // remarks: 'Updated from UI',
             };
         }
         return {
@@ -240,21 +266,12 @@ function EditSysUser() {
                 qualification: data.highestQualification?.trim() || 'NA',
                 experienceYears: Number(data.experience) || 0,
                 joiningDate: data.joiningDate || null,
-                // department: 'GENERAL',
-                 designation: data.dessignation,
+                designation: data.dessignation,
             },
-            // bankDetails: {
-            //     accountHolderName: 'NA',
-            //     accountNumber: '000000000000',
-            //     bankName: 'NA',
-            //     ifscCode: 'HDFC0123456',
-            //     branchName: 'NA',
-            // },
             accountStatus: 'ACTIVE',
-            // payrollStatus: 'INCLUDED',
-            // remarks: 'Updated from UI',
         };
     };
+
     const handle_updateDetails = async (e) => {
         e.preventDefault();
         if (!id || isNaN(Number(id)) || Number(id) <= 0) {
@@ -269,14 +286,20 @@ function EditSysUser() {
         }
         setFieldErrors({});
         setIsLoading(true);
+        const loadingToast = toast.loading("Updating user...");
         try {
             const sysUserPayload = buildPayload(formData, activeRole);
-            await updateUserById(id, sysUserPayload);
-           console.log(sysUserPayload);
+            await updateUserById(id, sysUserPayload, profileImage);
+            console.log(sysUserPayload);
 
-            toast.success(`${formData.name.trim()}'s details updated successfully!`);
+            toast.dismiss(loadingToast);   
+            toast.success(`${formData.name.trim()}'s details updated successfully! ✅`);
+            if (profileImage) {
+                toast.info("Profile photo may take a few seconds to reflect.", { autoClose: 4000 });  // ← ADD THIS
+            }
             navigate('/dashboard/manageUsers');
         } catch (err) {
+            toast.dismiss(loadingToast);
             console.error('EditSysUser update error:', err);
             toast.error(err?.message || 'Failed to update user. Please try again.');
         } finally {
@@ -319,7 +342,6 @@ function EditSysUser() {
         );
     }
 
-    // ✅ Fixed: isParentRole now correctly evaluates STORE_ACCOUNTANT, STORE_SELLER etc. as non-PARENT
     const isParentRole = PARENT_LIKE_ROLES.includes(activeRole);
 
     return (
@@ -345,8 +367,91 @@ function EditSysUser() {
                             </nav>
                         </div>
 
+                        {/* ── Profile Photo (shown for all roles) ── */}
+                        <div className="px-4 sm:px-6 lg:px-8 pt-6">
+                            <label className="block font-semibold text-gray-600 text-sm mb-3">
+                                Profile Photo <span className="text-gray-400 text-xs font-normal ml-1">(optional)</span>
+                            </label>
+                            <div className="flex items-center gap-5 mb-6">
+                                <div className="relative shrink-0">
+                                    <div className="w-20 h-20 rounded-full overflow-hidden bg-blue-100 border-2 border-blue-200 flex items-center justify-center">
+                                        {displayedImage ? (
+                                            <img
+                                                src={displayedImage}
+                                                alt="Profile"
+                                                className="w-full h-full object-cover"
+                                                onError={() => setExistingImageUrl(null)}
+                                            />
+                                        ) : (
+                                            <User className="w-8 h-8 text-blue-400" />
+                                        )}
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => fileInputRef.current?.click()}
+                                        className="absolute bottom-0 right-0 w-6 h-6 bg-blue-500 hover:bg-blue-600 rounded-full flex items-center justify-center shadow transition-colors"
+                                    >
+                                        <Camera className="w-3.5 h-3.5 text-white" />
+                                    </button>
+                                </div>
+
+                                <div className="flex-1">
+                                    {!displayedImage ? (
+                                        <button
+                                            type="button"
+                                            onClick={() => fileInputRef.current?.click()}
+                                            className="w-full border-2 border-dashed border-blue-300 hover:border-blue-500 bg-blue-50 hover:bg-blue-100 rounded-lg p-4 text-center transition-colors cursor-pointer"
+                                        >
+                                            <Camera className="w-5 h-5 text-blue-400 mx-auto mb-1" />
+                                            <p className="text-sm font-medium text-blue-600">Click to upload photo</p>
+                                            <p className="text-xs text-gray-400 mt-0.5">JPEG or PNG, max 10 MB</p>
+                                        </button>
+                                    ) : (
+                                        <div className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                                            <div className="flex-1 min-w-0">
+                                                {profileImage ? (
+                                                    <>
+                                                        <p className="text-sm font-medium text-green-700 truncate">{profileImage.name}</p>
+                                                        <p className="text-xs text-green-500 mt-0.5">{(profileImage.size / 1024).toFixed(1)} KB — new photo selected</p>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <p className="text-sm font-medium text-green-700">Current profile photo</p>
+                                                        <p className="text-xs text-green-500 mt-0.5">Click "Change" to replace</p>
+                                                    </>
+                                                )}
+                                            </div>
+                                            <div className="flex gap-2 shrink-0">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => fileInputRef.current?.click()}
+                                                    className="text-xs px-2.5 py-1 bg-white border border-green-300 text-green-700 rounded-md hover:bg-green-50 transition-colors"
+                                                >
+                                                    Change
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={handleRemoveImage}
+                                                    className="w-7 h-7 flex items-center justify-center bg-white border border-red-200 text-red-500 rounded-md hover:bg-red-50 transition-colors"
+                                                >
+                                                    <X className="w-3.5 h-3.5" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept="image/jpeg,image/jpg,image/png"
+                                onChange={handleImageChange}
+                                className="hidden"
+                            />
+                        </div>
+
                         {/* Non-PARENT content */}
-                        <div className={`p-4 sm:p-6 lg:p-8 ${activeTab === 'personal' && isParentRole ? 'hidden' : ''}`}>
+                        <div className={`px-4 sm:px-6 lg:px-8 pb-6 ${activeTab === 'personal' && isParentRole ? 'hidden' : ''}`}>
                             {activeTab === 'personal' && (
                                 <UserPersonalDetailsTab
                                     formData={formData}
@@ -358,7 +463,7 @@ function EditSysUser() {
                         </div>
 
                         {/* PARENT content */}
-                        <div className={`p-4 sm:p-6 lg:p-8 ${activeTab === 'personal' && !isParentRole ? 'hidden' : ''}`}>
+                        <div className={`px-4 sm:px-6 lg:px-8 pb-6 ${activeTab === 'personal' && !isParentRole ? 'hidden' : ''}`}>
                             {activeTab === 'personal' && (
                                 <ParentPersonalDetailsTab
                                     formData={formData}

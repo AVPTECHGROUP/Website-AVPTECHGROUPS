@@ -104,19 +104,38 @@ export const updateStudent = async (id, updatedStudent, imageFile) => {
     throw error;
   }
 };
-export const searchStudents = async (filters = {}, page, size = 10, sort = 'id') => {
+
+export const searchStudents = async (
+  filters = {},
+  page = 0,
+  size = 10,
+  sort = ['id']
+) => {
   try {
-    const res = await authFetch(`${BASE_URL}/students/search/paginated?page=${page}&size=${size}&sort=${sort}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(filters),
-    });
+    const pageable = encodeURIComponent(
+      JSON.stringify({
+        page,
+        size,
+        sort,
+      })
+    );
+
+    const res = await authFetch(
+      `${BASE_URL}/students/search/paginated?pageable=${pageable}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(filters),
+      }
+    );
+
     if (!res.ok) {
       const errorText = await res.text();
       throw new Error(errorText || 'Failed to Search Students...');
     }
+
     const data = await res.json();
     return data;
   } catch (error) {

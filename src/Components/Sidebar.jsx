@@ -101,7 +101,7 @@ const menuItems = [
     roles: ['GLOBAL_ADMIN'],
   },
   {
-    id: 'schoolConfig', icon: SchoolIcon, label: 'Schools', route: '/schoolConfig',
+    id: 'schoolConfig', icon: SchoolIcon, label: 'School Config', route: '/schoolConfig',
     roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN'],
   },
 ]

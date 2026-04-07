@@ -252,6 +252,7 @@ export default function SuperAdminSchools() {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     localStorage.removeItem("school");
+     localStorage.removeItem("requireSchoolSelection");
     navigate("/login");
   };
 

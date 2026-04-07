@@ -3,14 +3,14 @@ import {
   School, Phone, Globe, MapPin, Award, Clock,
   Fingerprint, Navigation, Upload, Image as ImageIcon,
   RotateCcw, Save, ChevronDown, CheckCircle, X,
-  Settings, CalendarClock, RefreshCw, Building2,
+  Settings, CalendarClock, Building2,
   Mail, User, Hash, Calendar, Shield, Zap,
   Info, Wifi, WifiOff, Loader2, AlertCircle,
-  List, Bus, User2, File,
 } from "lucide-react";
 import { getSchoolById, updateSchool, uploadSchoolLogo } from "../../Api/SchoolConfig";
 import { getAttendanceConfig, updateAttendanceConfig } from "../../Api/SchoolConfig";
 import { toast } from "react-toastify";
+import { getListOfValues } from "../../Api/ListOfValues";
 
 const TABS = [
   { id: "school", label: "School Info", icon: Settings },
@@ -248,6 +248,7 @@ export default function SchoolConfig() {
   const [schoolErrors, setSchoolErrors] = useState({});
   const [attErrors, setAttErrors] = useState({});
   const [logoError, setLogoError] = useState(null);
+  const [boards, setBoards] = useState([]);
 
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(null);
@@ -304,6 +305,25 @@ export default function SchoolConfig() {
       }
     };
     loadSchool();
+  }, []);
+
+  useEffect(() => {
+    const fetchBoards = async () => {
+      try {
+        const res = await getListOfValues("SCHOOL_BOARD");
+
+        // assuming API returns [{ label: "CBSE", value: "CBSE" }]
+        const formatted = res.map(item => item.value || item.label);
+
+        setBoards(formatted);
+      } catch (err) {
+        console.error("Failed to fetch boards:", err);
+        // fallback (optional)
+        setBoards(["CBSE", "ICSE"]);
+      }
+    };
+
+    fetchBoards();
   }, []);
 
   // ── Fetch attendance when tab opened ──────────────────────────────────────
@@ -498,7 +518,7 @@ export default function SchoolConfig() {
             const currentSchool = JSON.parse(localStorage.getItem("school") || "{}");
             localStorage.setItem("school", JSON.stringify({
               ...currentSchool,
-              logoUrl: newLogoUrl,  
+              logoUrl: newLogoUrl,
             }));
             window.dispatchEvent(new Event("storage"));
 
@@ -744,7 +764,11 @@ export default function SchoolConfig() {
                 {/* Board */}
                 <div>
                   <Label icon={<Award className="w-3.5 h-3.5" />}>Board</Label>
-                  <SelectInput value={schoolData.board} options={BOARDS} onChange={v => handleSchoolChange("board", v)} />
+                  <SelectInput
+                    value={schoolData.board}
+                    options={boards}
+                    onChange={v => handleSchoolChange("board", v)}
+                  />
                 </div>
 
                 {/* Est. Year */}
