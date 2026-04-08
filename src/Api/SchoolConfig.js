@@ -227,8 +227,9 @@ export const getMySchools = async (filters = {}) => {
   if (filters.board) params.append("board", filters.board);
   if (filters.isActive !== undefined) params.append("isActive", filters.isActive);
 
-  const url = `${BASE_URL}/schools/my-schools${params.toString() ? `?${params.toString()}` : ""
-    }`;
+  const url = `${BASE_URL}/schools/my-schools${
+    params.toString() ? `?${params.toString()}` : ""
+  }`;
 
   const res = await authFetch(url, {
     method: "GET",

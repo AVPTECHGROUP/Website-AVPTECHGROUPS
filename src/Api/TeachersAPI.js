@@ -30,18 +30,39 @@ export const getTeachers = async (page = 0, size = 10, sort = 'id') => {
   }
 };
 
-export const createTeachers = async (teacher) => {
-  const res = await authFetch(`${BASE_URL}/teachers`, { method: "POST", body: JSON.stringify(teacher) });
-  const text = await res.text();
-  const data = text ? JSON.parse(text) : {};
+export const createTeachers = async (teacher, imageFile) => {
+  const formData = new FormData();
+
+  // JSON part
+  formData.append(
+    "data",
+    new Blob([JSON.stringify(teacher)], { type: "application/json" })
+  );
+
+  // Image part (optional)
+  if (imageFile) {
+    formData.append("image", imageFile);
+  }
+
+  const res = await authFetch(`${BASE_URL}/teachers`, {
+    method: "POST",
+    body: formData,
+  });
+
+  const data = await res.json();
+
   if (!res.ok) throw new Error(data?.message || "Failed to create Teacher");
+
   return data;
 };
-
 export const getTeacherById = async (id) => {
   try {
-    const res = await authFetch(`${BASE_URL}/teachers/${id}`, { method: "GET" });
+    const res = await authFetch(`${BASE_URL}/teachers/${id}`, {
+      method: "GET",
+    });
+
     if (!res.ok) throw new Error("Failed to fetch Teacher");
+
     const data = await res.json();
     return data.data || data;
   } catch (error) {
@@ -50,11 +71,33 @@ export const getTeacherById = async (id) => {
   }
 };
 
-export const updateTeacher = async (id, updatedTeacher) => {
+export const updateTeacher = async (id, updatedTeacher, imageFile) => {
   try {
-    const res = await authFetch(`${BASE_URL}/teachers/${id}`, { method: 'PUT', body: JSON.stringify(updatedTeacher) });
-    if (!res.ok) throw new Error('Failed to update Teacher');
-    return res.json();
+    const formData = new FormData();
+
+    // JSON part
+    formData.append(
+      "data",
+      new Blob([JSON.stringify(updatedTeacher)], {
+        type: "application/json",
+      })
+    );
+
+    // Image part (optional)
+    if (imageFile) {
+      formData.append("image", imageFile);
+    }
+
+    const res = await authFetch(`${BASE_URL}/teachers/${id}`, {
+      method: "PUT",
+      body: formData,
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) throw new Error(data?.message || "Failed to update Teacher");
+
+    return data;
   } catch (error) {
     console.error("UpdateTeachers error:", error.message);
     throw error;

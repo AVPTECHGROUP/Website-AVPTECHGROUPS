@@ -6,6 +6,7 @@ import {
     Users,
 } from "lucide-react";
 import { groupMarkAttendance, unmarkAttendance } from "../../../Api/AttendanceApi";
+import { getSchoolLocation } from "../../../utils/getSchoolLocation";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const getInitials = (fullName = "") => {
@@ -575,7 +576,7 @@ export default function GroupPhotoView({ onBack, selectedClass, selectedSection 
     const TABS = ["1 · Upload Photos", "2 · Review Results", "3 · Confirm & Done"];
 
     const submitGroupPhoto = async (imageFile, previewUrl = null) => {
-        // ✅ FIX: Validate IDs before submitting and warn clearly
+        const { gpsLatitude, gpsLongitude } = getSchoolLocation();
         if (!selectedClass?.id || !selectedSection?.id) {
             alert(`Cannot submit: missing class or section.\nclass_id=${selectedClass?.id}, section_id=${selectedSection?.id}\n\nPlease go back and reselect the class and section.`);
             return;
@@ -601,8 +602,8 @@ export default function GroupPhotoView({ onBack, selectedClass, selectedSection 
                 classId: selectedClass.id,
                 sectionId: selectedSection.id,
                 image: imageFile,
-                gps_latitude: "28.6139",
-                gps_longitude: "77.209",
+                gps_latitude: gpsLatitude,   
+                gps_longitude: gpsLongitude, 
             });
 
             console.log("[GroupPhotoView] API response:", rawRes);
@@ -681,8 +682,8 @@ export default function GroupPhotoView({ onBack, selectedClass, selectedSection 
                                     else if (i === 2 && groupResult) setTab(2);
                                 }}
                                 className={`flex-1 min-w-max px-3 sm:px-4 py-3 text-xs sm:text-sm font-semibold border-b-2 transition-colors whitespace-nowrap ${tab === i ? "border-blue-600 text-blue-600 bg-blue-50 cursor-pointer"
-                                        : i > 0 && !groupResult ? "border-transparent text-gray-300 cursor-not-allowed"
-                                            : "border-transparent text-gray-500 hover:text-gray-700 cursor-pointer"
+                                    : i > 0 && !groupResult ? "border-transparent text-gray-300 cursor-not-allowed"
+                                        : "border-transparent text-gray-500 hover:text-gray-700 cursor-pointer"
                                     }`}>
                                 {t}
                             </button>
