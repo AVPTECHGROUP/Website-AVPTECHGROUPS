@@ -97,6 +97,7 @@ function EditTeachersDetails() {
     async function handle_updateDetails(e) {
         e.preventDefault();
         setIsLoading(true);
+        const loadingToast = toast.loading("Updating teacher...");
 
         const teacherPayload = {
             personalDetails: {
@@ -118,7 +119,7 @@ function EditTeachersDetails() {
         };
 
         try {
-            await updateTeacher(id, teacherPayload);
+            await updateTeacher(id, teacherPayload, profileImage);
 
             if (formData.salaryType && formData.baseSalary) {
                 const baseSalary = Number(formData.baseSalary) || 0;
@@ -186,13 +187,11 @@ function EditTeachersDetails() {
                 }
             }
 
-            toast.success("Teacher details updated successfully!");
+            toast.dismiss(loadingToast);  
+            toast.success("Teacher details updated successfully! ✅");
             if (profileImage) {
-                toast.info("Profile photo may take a few seconds to reflect.", {
-                    autoClose: 4000,
-                });
+                toast.info("Profile photo may take a few seconds to reflect.", { autoClose: 4000 });
             }
-
             navigate("/teachers");
 
         } catch (err) {

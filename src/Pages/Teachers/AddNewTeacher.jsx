@@ -145,7 +145,7 @@ function AddNewTeacher() {
                 // remarks: "Created from UI"
             };
 
-            const response = await createTeachers(apiPayload);
+            const response = await createTeachers(apiPayload, profileImage);
 
             console.log("Create Teacher Response:", response);
 
@@ -213,12 +213,11 @@ function AddNewTeacher() {
                 });
             }
 
-            toast.dismiss(loadingToast);
-            toast.success("Teacher added successfully!", {
-                duration: 3000,
-                icon: "✅"
-            });
-
+            toast.dismiss(loadingToast);   // ← ADD THIS
+            toast.success("Teacher added successfully! ✅");
+            if (profileImage) {
+                toast.info("Profile photo may take a few seconds to reflect.", { autoClose: 4000 });  // ← ADD THIS
+            }
             // Navigate after a short delay to show the toast
             setTimeout(() => {
                 navigate('/teachers');

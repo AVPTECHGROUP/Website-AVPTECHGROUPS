@@ -1,4 +1,5 @@
-import React from 'react';
+import { useEffect, useState } from "react";
+import { getListOfValues } from "../../Api/ListOfValues";
 
 const AddStudentPersonalDetails = ({ formData, setFormData, handleInputChange, sections = [], sectionsLoading = false }) => {
 
@@ -10,9 +11,27 @@ const AddStudentPersonalDetails = ({ formData, setFormData, handleInputChange, s
         return acc;
     }, {});
 
+    const [academicYears, setAcademicYears] = useState([]);
+    const [academicYearsLoading, setAcademicYearsLoading] = useState(false);
+
+    useEffect(() => {
+        const fetchAcademicYears = async () => {
+            try {
+                setAcademicYearsLoading(true);
+                const data = await getListOfValues("ACADEMIC_YEAR");
+                setAcademicYears(data);
+            } catch (err) {
+                console.error("Error fetching academic years:", err);
+            } finally {
+                setAcademicYearsLoading(false);
+            }
+        };
+
+        fetchAcademicYears();
+    }, []);
+
     return (
         <div className="space-y-8">
-
             {/* ─── Personal Details Section ─── */}
             <div>
                 <div className="flex justify-start items-center mb-4 pb-3 border-b border-gray-200">
@@ -142,13 +161,24 @@ const AddStudentPersonalDetails = ({ formData, setFormData, handleInputChange, s
                         <label className='block font-semibold text-gray-600 text-sm mb-2'>
                             Academic Year<span className="text-red-600 ml-1">*</span>
                         </label>
-                        <select name="academicYear" value={formData.academicYear} onChange={handleInputChange} required
-                            className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'>
-                            <option value="">Select Academic Year</option>
-                            <option value="2023-2024">2023-2024</option>
-                            <option value="2024-2025">2024-2025</option>
-                            <option value="2025-2026">2025-2026</option>
-                            <option value="2026-2027">2026-2027</option>
+
+                        <select
+                            name="academicYear"
+                            value={formData.academicYear}
+                            onChange={handleInputChange}
+                            required
+                            disabled={academicYearsLoading}
+                            className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60'
+                        >
+                            <option value="">
+                                {academicYearsLoading ? "Loading..." : "Select Academic Year"}
+                            </option>
+
+                            {academicYears.map((year) => (
+                                <option key={year.id} value={year.value}>
+                                    {year.label}
+                                </option>
+                            ))}
                         </select>
                     </div>
 

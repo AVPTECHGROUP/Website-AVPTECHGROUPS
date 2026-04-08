@@ -43,8 +43,13 @@ const Login_2 = ({ onLoginSuccess }) => {
             const res = await loginAPI({ email, password });
             const token = res.data?.token || res.token;
             const user = res.data?.user || res.user;
+            const requireSchoolSelection = res.data?.requireSchoolSelection ?? res.requireSchoolSelection ?? false; // ADD
+
             if (!token) throw new Error('Invalid response from server. Please try again.');
+
             localStorage.setItem("token", token);
+            localStorage.setItem("requireSchoolSelection", requireSchoolSelection);
+
             if (user) {
                 localStorage.setItem("user", JSON.stringify(user));
                 setUser({
@@ -52,10 +57,17 @@ const Login_2 = ({ onLoginSuccess }) => {
                     userType: user.roles?.[0],
                     email: user.email,
                     permissions: user.permissions,
-                })
+                });
             }
+
             if (onLoginSuccess) onLoginSuccess(token);
-            navigate("/dashboard");
+
+            if (requireSchoolSelection) {
+                navigate("/superAdmin");
+            } else {
+                navigate("/dashboard");
+            }
+
         } catch (err) {
             setLoginError(err.message || "Invalid email or password. Please try again.");
         } finally {

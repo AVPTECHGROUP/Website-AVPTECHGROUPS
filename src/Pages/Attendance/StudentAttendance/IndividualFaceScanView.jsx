@@ -6,6 +6,7 @@ import {
     RefreshCw, ShieldAlert, BadgeCheck,
 } from "lucide-react";
 import { markAttendanceByFace, unmarkAttendance } from "../../../Api/AttendanceApi";
+import { getSchoolLocation } from "../../../utils/getSchoolLocation";
 
 const getInitials = (fullName = "") => {
     const parts = fullName.trim().split(" ").filter(Boolean);
@@ -57,9 +58,6 @@ const parseLowConfidenceError = (message = "") => {
     return { isLowConfidence: false };
 };
 
-// Handles BOTH API response shapes:
-// Shape A (direct):  { id, userId, userType, userName, ... }
-// Shape B (wrapped): { success, message, data: { id, userId, userType, ... } }
 const extractApiResponse = (res) => {
     if (!res) return { rec: null, apiMessage: "" };
     if (res.data && typeof res.data === "object" && res.data.userId !== undefined) {
@@ -89,12 +87,12 @@ const INITIAL_SCAN_STATE = {
 
 // MediaPipe CDN — loaded once, cached in ref. No npm install, no Vite WASM config needed.
 const MEDIAPIPE_CDN = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.34/vision_bundle.mjs";
-const WASM_BASE  = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.34/wasm";
-const MODEL_URL  = "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task";
-const BLINK_THRESHOLD  = 0.45; // 0–1 blend shape score; 0.45 catches a natural blink without triggering on squinting
+const WASM_BASE = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.34/wasm";
+const MODEL_URL = "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task";
+const BLINK_THRESHOLD = 0.45; // 0–1 blend shape score; 0.45 catches a natural blink without triggering on squinting
 const BLINK_MIN_FRAMES = 2;    // consecutive frames above threshold → real blink (not a single-frame brightness spike)
 const BLINK_OPEN_RESET = 0.25; // score must drop below this after blink peak to confirm eyes reopened
-const BLINK_PEAK_MIN   = 0.65; // peak MUST reach this to pass — screens/photos produce shallow scores (0.45–0.60)
+const BLINK_PEAK_MIN = 0.65; // peak MUST reach this to pass — screens/photos produce shallow scores (0.45–0.60)
 
 export default function IndividualFaceScanView({ onBack, selectedClass, selectedSection }) {
     const webcamRef = useRef(null);
@@ -108,12 +106,12 @@ export default function IndividualFaceScanView({ onBack, selectedClass, selected
     // ── Blink liveness ───────────────────────────────────────────────────────
     // "idle" | "loading" | "waiting" | "detected"
     const [blinkPhase, setBlinkPhase] = useState("idle");
-    const landmarkerRef   = useRef(null); // cached FaceLandmarker instance
-    const rafRef          = useRef(null); // requestAnimationFrame id
-    const blinkCapturedRef    = useRef(false); // guard against double-fire
-    const blinkFrameCountRef  = useRef(0);     // consecutive above-threshold frames
-    const blinkPeakRef        = useRef(false); // true once BLINK_MIN_FRAMES reached
-    const blinkPeakScoreRef   = useRef(0);     // max score this cycle — screen detection gate
+    const landmarkerRef = useRef(null); // cached FaceLandmarker instance
+    const rafRef = useRef(null); // requestAnimationFrame id
+    const blinkCapturedRef = useRef(false); // guard against double-fire
+    const blinkFrameCountRef = useRef(0);     // consecutive above-threshold frames
+    const blinkPeakRef = useRef(false); // true once BLINK_MIN_FRAMES reached
+    const blinkPeakScoreRef = useRef(0);     // max score this cycle — screen detection gate
 
     // Cancel RAF loop on unmount
     useEffect(() => () => {
@@ -121,7 +119,7 @@ export default function IndividualFaceScanView({ onBack, selectedClass, selected
     }, []);
 
     const submitScan = useCallback(async (imageBlob) => {
-
+        const { gpsLatitude, gpsLongitude } = getSchoolLocation();
         if (!selectedClass?.id || !selectedSection?.id) {
             alert("Please select class and section first");
             return;
@@ -134,8 +132,8 @@ export default function IndividualFaceScanView({ onBack, selectedClass, selected
                 user_type: "STUDENT",
                 class_id: selectedClass?.id,
                 section_id: selectedSection?.id,
-                gpsLatitude: "28.6139",
-                gpsLongitude: "77.209",
+                gpsLatitude,
+                gpsLongitude,
             });
 
             // Step 1: Normalize response shape
@@ -203,10 +201,10 @@ export default function IndividualFaceScanView({ onBack, selectedClass, selected
     const startBlinkCheck = useCallback(async () => {
         if (camError) { doCapture(); return; }
         setBlinkPhase("loading");
-        blinkCapturedRef.current  = false;
+        blinkCapturedRef.current = false;
         blinkFrameCountRef.current = 0;
-        blinkPeakRef.current       = false;
-        blinkPeakScoreRef.current  = 0;
+        blinkPeakRef.current = false;
+        blinkPeakScoreRef.current = 0;
         try {
             const lm = await loadLandmarker();
             setBlinkPhase("waiting");
@@ -221,7 +219,7 @@ export default function IndividualFaceScanView({ onBack, selectedClass, selected
                 const result = lm.detectForVideo(video, performance.now());
                 const shapes = result?.faceBlendshapes?.[0]?.categories;
                 if (shapes) {
-                    const L = shapes.find(s => s.categoryName === "eyeBlinkLeft")?.score  ?? 0;
+                    const L = shapes.find(s => s.categoryName === "eyeBlinkLeft")?.score ?? 0;
                     const R = shapes.find(s => s.categoryName === "eyeBlinkRight")?.score ?? 0;
                     const score = Math.max(L, R);
                     if (score > BLINK_THRESHOLD) {
@@ -239,8 +237,8 @@ export default function IndividualFaceScanView({ onBack, selectedClass, selected
                             }
                             // Shallow peak → likely screen/video replay — silently reset for retry
                             blinkFrameCountRef.current = 0;
-                            blinkPeakRef.current       = false;
-                            blinkPeakScoreRef.current  = 0;
+                            blinkPeakRef.current = false;
+                            blinkPeakScoreRef.current = 0;
                         }
                         if (!blinkPeakRef.current) blinkFrameCountRef.current = 0;
                     }
@@ -264,10 +262,10 @@ export default function IndividualFaceScanView({ onBack, selectedClass, selected
     const handleRetake = useCallback(() => {
         // Cancel any active blink-detection loop
         if (rafRef.current) cancelAnimationFrame(rafRef.current);
-        blinkCapturedRef.current  = true; // stop loop if it somehow fires after cancel
+        blinkCapturedRef.current = true; // stop loop if it somehow fires after cancel
         blinkFrameCountRef.current = 0;
-        blinkPeakRef.current       = false;
-        blinkPeakScoreRef.current  = 0;
+        blinkPeakRef.current = false;
+        blinkPeakScoreRef.current = 0;
         setBlinkPhase("idle");
         setScanState(INITIAL_SCAN_STATE);
         setCapturedImage(null);
@@ -297,8 +295,8 @@ export default function IndividualFaceScanView({ onBack, selectedClass, selected
     }, [scanState.data, handleRetake]);
 
     const { status, data, confidence, threshold, message } = scanState;
-    const isScanning  = status === "scanning";
-    const isTerminal  = status !== "idle" && status !== "scanning";
+    const isScanning = status === "scanning";
+    const isTerminal = status !== "idle" && status !== "scanning";
     const isBlinkActive = blinkPhase === "loading" || blinkPhase === "waiting";
     const confidencePct = data?.faceConfidenceScore ? Math.round(data.faceConfidenceScore * 100) : null;
     const resultInitials = getInitials(data?.userName || "");
@@ -378,7 +376,7 @@ export default function IndividualFaceScanView({ onBack, selectedClass, selected
                                 </div>
                                 {/* Dot pulse bar at bottom */}
                                 <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5">
-                                    {[0,1,2].map(i => (
+                                    {[0, 1, 2].map(i => (
                                         <div key={i} className="w-2 h-2 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
                                     ))}
                                 </div>

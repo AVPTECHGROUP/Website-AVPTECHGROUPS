@@ -10,9 +10,11 @@ import {
     UserSearch,
     UserPlus,
     Info,
+    ChevronDown,
 } from 'lucide-react';
 import CardComponent from '../../Components/CommonComp/CardComponent';
 import { getStudents, searchStudents } from '../../Api/StudentsApi';
+import { getAllSections } from '../../Api/TeachersAPI';
 import CardLoader from '../../Components/CommonComp/CardLoader';
 import ListLoader from '../../Components/CommonComp/ListLoader';
 import TooltipComponent from '../../Components/CommonComp/Tooltip_comp/TooltipComp';
@@ -28,25 +30,60 @@ const Student = () => {
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const navigate = useNavigate();
 
-    // ── Debounce: searchInput is what the user types (instant),
-    //             debouncedSearch is what triggers the API call (delayed)
     const [searchInput, setSearchInput] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
     const debounceTimer = useRef(null);
 
-    const [statusFilter, setStatusFilter] = useState('All Status');
+    // ── Sections grouped by class ────────────────────────────────────────────
+    const [groupedSections, setGroupedSections] = useState([]); // [{ className, classId, sections: [{id, name}] }]
+    const [sectionsLoading, setSectionsLoading] = useState(false);
 
-    // Debounce handler — fires API only 500ms after user stops typing
+    // ── Combined class+section filter — stores sectionId (or '') ────────────
+    const [selectedSectionId, setSelectedSectionId] = useState('');
+
+    // ── Status dropdown ──────────────────────────────────────────────────────
+    const [statusFilter, setStatusFilter] = useState('');
+
+    // ── Fetch & group sections on mount ─────────────────────────────────────
+    useEffect(() => {
+        const fetchSections = async () => {
+            setSectionsLoading(true);
+            try {
+                const res = await getAllSections();
+                if (res?.success && Array.isArray(res.data)) {
+                    // Group sections by className / classId
+                    const map = new Map();
+                    res.data.forEach((sec) => {
+                        const key = sec.classId;
+                        if (!map.has(key)) {
+                            map.set(key, {
+                                classId: sec.classId,
+                                className: sec.className || `Class ${sec.classId}`,
+                                sections: [],
+                            });
+                        }
+                        map.get(key).sections.push({ id: sec.id, name: sec.name });
+                    });
+                    setGroupedSections(Array.from(map.values()));
+                }
+            } catch (err) {
+                console.error('Failed to fetch sections:', err);
+            } finally {
+                setSectionsLoading(false);
+            }
+        };
+        fetchSections();
+    }, []);
+
     const handleSearchChange = (e) => {
-    const value = e.target.value;
-    setSearchInput(value);               
-
-    if (debounceTimer.current) clearTimeout(debounceTimer.current);
-    debounceTimer.current = setTimeout(() => {
-        setDebouncedSearch(value);       
-        setPage(1);                      
-    }, 500);
-};
+        const value = e.target.value;
+        setSearchInput(value);
+        if (debounceTimer.current) clearTimeout(debounceTimer.current);
+        debounceTimer.current = setTimeout(() => {
+            setDebouncedSearch(value);
+            setPage(1);
+        }, 500);
+    };
 
     const handleClearSearch = () => {
         setSearchInput('');
@@ -55,14 +92,23 @@ const Student = () => {
         if (debounceTimer.current) clearTimeout(debounceTimer.current);
     };
 
-    // Cleanup timer on unmount
+    const handleSectionChange = (e) => {
+        setSelectedSectionId(e.target.value);
+        setPage(1);
+    };
+
+    const handleStatusChange = (e) => {
+        setStatusFilter(e.target.value);
+        setPage(1);
+    };
+
     useEffect(() => {
         return () => {
             if (debounceTimer.current) clearTimeout(debounceTimer.current);
         };
     }, []);
 
-    // ── Fetch students — depends on debouncedSearch (NOT searchInput) ──
+    // ── Fetch students ────────────────────────────────────────────────────────
     useEffect(() => {
         const fetchStudents = async () => {
             setLoading(true);
@@ -70,19 +116,18 @@ const Student = () => {
             try {
                 const hasFilters =
                     debouncedSearch.trim() !== '' ||
-                    (statusFilter && statusFilter !== 'All Status');
+                    selectedSectionId !== '' ||
+                    statusFilter !== '';
 
                 let res;
                 if (hasFilters) {
                     const filters = {
-                        // Single searchTerm covers name, email & admissionNumber on backend
-                        searchTerm: debouncedSearch.trim() || undefined,
-                        status:
-                            statusFilter && statusFilter !== 'All Status'
-                                ? statusFilter
-                                : undefined,
+                        ...(debouncedSearch.trim() && { searchTerm: debouncedSearch.trim() }),
+                        // Pass sectionId — backend will also resolve classId from it
+                        ...(selectedSectionId && { sectionId: Number(selectedSectionId) }),
+                        ...(statusFilter && { status: statusFilter }),
                     };
-                    res = await searchStudents(filters, page - 1, rowsPerPage, 'id');
+                    res = await searchStudents(filters, page - 1, rowsPerPage, ['id']);
                 } else {
                     res = await getStudents(page - 1, rowsPerPage, 'id');
                 }
@@ -121,7 +166,7 @@ const Student = () => {
         };
 
         fetchStudents();
-    }, [page, rowsPerPage, debouncedSearch, statusFilter]); // ← debouncedSearch, not searchInput
+    }, [page, rowsPerPage, debouncedSearch, selectedSectionId, statusFilter]);
 
     const getAvatarColor = (name) => {
         const colors = [
@@ -131,16 +176,14 @@ const Student = () => {
         return colors[name?.charCodeAt(0) % colors.length || 0];
     };
 
-    // ── Smart Pagination ──────────────────────────────────────────────────────
+    // ── Pagination ────────────────────────────────────────────────────────────
     const renderPageButtons = () => {
         if (totalPages <= 1) return null;
         const base = 'min-w-[32px] h-8 px-2 rounded text-sm transition-all font-medium';
         const active = 'bg-blue-500 text-white';
         const inactive = 'text-gray-600 hover:bg-gray-100';
         const dots = (key) => (
-            <span key={key} className="min-w-8 h-8 flex items-center justify-center text-gray-400 text-sm select-none">
-                …
-            </span>
+            <span key={key} className="min-w-8 h-8 flex items-center justify-center text-gray-400 text-sm select-none">…</span>
         );
         const btn = (num) => (
             <button key={num} onClick={() => setPage(num)} className={`${base} ${page === num ? active : inactive}`}>
@@ -182,7 +225,6 @@ const Student = () => {
             <ChevronRight className="w-4 h-4" />
         </button>
     );
-    // ─────────────────────────────────────────────────────────────────────────
 
     const cardsArray = [
         {
@@ -195,12 +237,23 @@ const Student = () => {
     ];
 
     const tableHeadItems = ['Student Name', 'Mobile Number', 'Email', 'Class', 'Section', 'Status'];
-    const tdStyle = 'px-6 py-3 text-center text-gray-700 text-sm';
+    const tdStyle = 'px-4 py-3 text-center text-gray-700 text-sm';
+
+    const dropdownClass = `
+        appearance-none cursor-pointer
+        pl-3 pr-8 py-2.5
+        rounded-lg border border-gray-200 bg-gray-100
+        text-sm text-gray-600 font-normal
+        focus:outline-none focus:ring-2 focus:ring-blue-300
+        hover:border-gray-300 transition-all
+        disabled:opacity-50 disabled:cursor-not-allowed
+        w-full
+    `;
 
     return (
-        <div className="flex flex-col h-screen overflow-hidden bg-linear-to-b from-sky-50 to-sky-100">
-            <div className="flex flex-col flex-1 overflow-hidden">
-                <div className="flex flex-col flex-1 overflow-hidden p-4 sm:p-5 lg:p-4 gap-4">
+        <div className="flex flex-col min-h-screen lg:h-screen lg:overflow-hidden bg-linear-to-b from-sky-50 to-sky-100">
+            <div className="flex flex-col flex-1 lg:overflow-hidden">
+                <div className="flex flex-col flex-1 lg:overflow-hidden p-3 sm:p-4 lg:p-4 gap-3 sm:gap-4">
 
                     {/* Page Title */}
                     <div>
@@ -212,9 +265,20 @@ const Student = () => {
                     </div>
 
                     {/* Cards */}
-                    <div className="flex flex-wrap gap-4">
+                    <div className="flex flex-wrap gap-3 sm:gap-4">
                         {loading
-                            ? cardsArray.map((_, i) => <CardLoader key={i} />)
+                            ? cardsArray.map((_, i) => (
+                                <div
+                                    key={i}
+                                    className="flex items-center gap-4 bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4 w-48 sm:w-56 animate-pulse"
+                                >
+                                    <div className="w-11 h-11 rounded-xl bg-blue-50 shrink-0" />
+                                    <div className="flex flex-col gap-2 flex-1">
+                                        <div className="h-3 w-20 bg-gray-200 rounded-full" />
+                                        <div className="h-5 w-10 bg-gray-300 rounded-full" />
+                                    </div>
+                                </div>
+                            ))
                             : cardsArray.map((card) => (
                                 <CardComponent
                                     key={card.keyName}
@@ -227,29 +291,30 @@ const Student = () => {
                             ))}
                     </div>
 
-                    {/* Search + Add Student Bar */}
-                    <div className="bg-white flex items-center gap-3 px-4 py-3 rounded-xl border border-gray-200 shrink-0">
+                    {/* ── Search + Filter + Add Bar ── */}
+                    <div className="bg-white flex flex-wrap items-center gap-2 sm:gap-3 px-3 sm:px-4 py-3 rounded-xl border border-gray-200 shrink-0">
+
+                        {/* Add Student Button */}
                         <button
                             onClick={() => navigate('/students/addStudents')}
                             className="shrink-0 flex items-center justify-center gap-2 cursor-pointer
-                                       px-4 py-2.5 rounded-lg font-medium text-sm
+                                       px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg font-medium text-xs sm:text-sm
                                        bg-blue-600 hover:bg-blue-700 active:scale-[0.97]
-                                       text-white transition-all duration-150"
+                                       text-white transition-all duration-150 whitespace-nowrap"
                         >
-                            <UserPlus className="w-5 h-5" />
-                            Add New Student
+                            <UserPlus className="w-4 h-4 sm:w-5 sm:h-5" />
+                            <span>Add New Student</span>
                         </button>
 
-                        <div className="flex-1 flex items-center gap-2 border border-gray-200 rounded-lg bg-gray-100 px-2 py-2.5 focus-within:shadow-sm focus-within:shadow-blue-200 transition-all">
+                        {/* ── Search Input ── */}
+                        <div className="flex-1 min-w-35 flex items-center gap-2 border border-gray-200 rounded-lg bg-gray-100 px-2 py-2 sm:py-2.5 focus-within:shadow-sm focus-within:shadow-blue-200 transition-all">
                             <SearchIcon className="w-4 h-4 text-gray-500 shrink-0" />
                             <input
                                 value={searchInput}
                                 onChange={handleSearchChange}
-                                // ↓ Updated placeholder to reflect all 3 searchable fields
                                 placeholder="Search by name, email or admission no..."
-                                className="text-sm font-normal focus:outline-none text-gray-600 w-full bg-transparent placeholder:text-gray-400"
+                                className="text-xs sm:text-sm font-normal focus:outline-none text-gray-600 w-full bg-transparent placeholder:text-gray-400"
                             />
-                            {/* Subtle spinner shown while debounce is pending */}
                             {searchInput && searchInput !== debouncedSearch && (
                                 <div className="w-3.5 h-3.5 border-2 border-blue-400 border-t-transparent rounded-full animate-spin shrink-0" />
                             )}
@@ -263,15 +328,51 @@ const Student = () => {
                                 </button>
                             )}
                         </div>
+
+                        {/* ── Class → Section Dropdown (combined) ── */}
+                        <div className="relative shrink-0 w-full sm:w-auto">
+                            <select
+                                value={selectedSectionId}
+                                onChange={handleSectionChange}
+                                disabled={sectionsLoading}
+                                className={dropdownClass}
+                            >
+                                <option value="">All Classes</option>
+                                {groupedSections.map((grp) => (
+                                    <optgroup key={grp.classId} label={grp.className}>
+                                        {grp.sections.map((sec) => (
+                                            <option key={sec.id} value={sec.id}>
+                                                {grp.className} - Section {sec.name}
+                                            </option>
+                                        ))}
+                                    </optgroup>
+                                ))}
+                            </select>
+                            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                        </div>
+
+                        {/* ── Status Dropdown ── */}
+                        <div className="relative shrink-0 w-full sm:w-auto">
+                            <select
+                                value={statusFilter}
+                                onChange={handleStatusChange}
+                                className={dropdownClass}
+                            >
+                                <option value="">All Status</option>
+                                <option value="ACTIVE">Active</option>
+                                <option value="INACTIVE">Inactive</option>
+                            </select>
+                            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                        </div>
                     </div>
 
-                    {/* MOBILE / TABLET CARDS */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:hidden overflow-y-auto">
+                    {/* ── MOBILE / TABLET CARDS ── */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 lg:hidden overflow-y-auto pb-2">
                         {loading ? (
                             <div className="flex items-center justify-center py-8 col-span-full">
                                 <div className="text-center">
                                     <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-                                    <p className="text-gray-600 font-medium">Loading students...</p>
+                                    <p className="text-gray-600 font-medium text-sm">Loading students...</p>
                                 </div>
                             </div>
                         ) : error ? (
@@ -280,8 +381,8 @@ const Student = () => {
                                     <UserRoundXIcon className="w-6 h-6 text-red-600" />
                                 </div>
                                 <h3 className="text-lg font-bold text-gray-900 mb-2">Error Loading Students</h3>
-                                <p className="text-gray-600 mb-4">{error}</p>
-                                <button onClick={() => window.location.reload()} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                                <p className="text-gray-600 mb-4 text-sm">{error}</p>
+                                <button onClick={() => window.location.reload()} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">
                                     Retry
                                 </button>
                             </div>
@@ -291,47 +392,41 @@ const Student = () => {
                                     <UserSearch className="w-6 h-6 text-blue-600" />
                                 </div>
                                 <h3 className="text-lg font-bold text-gray-900 mb-2">No Students Found</h3>
-                                <p className="text-gray-600 mb-4">There are no students to display.</p>
+                                <p className="text-gray-600 mb-4 text-sm">There are no students to display.</p>
                             </div>
                         ) : (
                             students.map((student) => (
                                 <div key={student.id} className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
-                                    <td className={tdStyle}>
-                                        <div className="flex items-center gap-3">
-                                            <div className={`w-9 h-9 rounded-full ${getAvatarColor(student.name)} flex items-center justify-center text-white text-sm font-semibold shrink-0`}>
-                                                {student.avatar}
-                                            </div>
-                                            <div className="flex flex-col">
-                                                <span className="font-medium text-gray-900">{student.name}</span>
-                                                <span className="text-xs text-gray-500">{student.admissionNumber}</span>
-                                            </div>
+                                    <div className="flex items-center gap-3 mb-3">
+                                        <div className={`w-9 h-9 rounded-full ${getAvatarColor(student.name)} flex items-center justify-center text-white text-sm font-semibold shrink-0`}>
+                                            {student.avatar}
                                         </div>
-                                    </td>
+                                        <div className="flex flex-col min-w-0">
+                                            <span className="font-medium text-gray-900 text-sm truncate">{student.name}</span>
+                                            <span className="text-xs text-gray-500 truncate">{student.admissionNumber}</span>
+                                        </div>
+                                    </div>
                                     <div className="space-y-2 text-sm">
-                                        <p>
-                                            <span className="font-medium text-gray-600">Contact:</span>
-                                            <span className="text-gray-800 ml-4">{student.mobile}</span>
-                                        </p>
-                                        <p>
-                                            <span className="font-medium text-gray-600">Class:</span>
-                                            <span className="text-gray-800 ml-4">
-                                                {student.className
-                                                    ? <span className="inline-flex items-center px-2 py-0.5 rounded bg-blue-50 text-blue-700 text-xs font-medium">{student.className}</span>
-                                                    : <span className="text-gray-400 text-xs">N/A</span>
-                                                }
-                                            </span>
-                                        </p>
-                                        <p>
-                                            <span className="font-medium text-gray-600">Section:</span>
-                                            <span className="text-gray-800 ml-2">
-                                                {student.sectionName
-                                                    ? <span className="inline-flex items-center px-2 py-0.5 rounded bg-purple-50 text-purple-700 text-xs font-medium">{student.sectionName}</span>
-                                                    : <span className="text-gray-400 text-xs">N/A</span>
-                                                }
-                                            </span>
+                                        <p className="flex items-center gap-2">
+                                            <span className="font-medium text-gray-500 w-16 shrink-0 text-xs">Contact</span>
+                                            <span className="text-gray-800 text-xs">{student.mobile}</span>
                                         </p>
                                         <p className="flex items-center gap-2">
-                                            <span className="font-medium text-gray-600">Status:</span>
+                                            <span className="font-medium text-gray-500 w-16 shrink-0 text-xs">Class</span>
+                                            {student.className
+                                                ? <span className="inline-flex items-center px-2 py-0.5 rounded bg-blue-50 text-blue-700 text-xs font-medium">{student.className}</span>
+                                                : <span className="text-gray-400 text-xs">N/A</span>
+                                            }
+                                        </p>
+                                        <p className="flex items-center gap-2">
+                                            <span className="font-medium text-gray-500 w-16 shrink-0 text-xs">Section</span>
+                                            {student.sectionName
+                                                ? <span className="inline-flex items-center px-2 py-0.5 rounded bg-purple-50 text-purple-700 text-xs font-medium">{student.sectionName}</span>
+                                                : <span className="text-gray-400 text-xs">N/A</span>
+                                            }
+                                        </p>
+                                        <p className="flex items-center gap-2">
+                                            <span className="font-medium text-gray-500 w-16 shrink-0 text-xs">Status</span>
                                             <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${student.status === 'ACTIVE' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
                                                 <span className={`w-1.5 h-1.5 rounded-full ${student.status === 'ACTIVE' ? 'bg-green-500' : 'bg-red-500'}`} />
                                                 {student.status}
@@ -359,18 +454,18 @@ const Student = () => {
                         )}
                     </div>
 
-                    {/* DESKTOP TABLE */}
+                    {/* ── DESKTOP TABLE ── */}
                     <div className="hidden lg:flex lg:flex-col flex-1 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden min-h-0">
                         <div className="flex-1 overflow-auto">
-                            <table className="w-full">
-                                <thead className="border-b border-gray-100">
+                            <table className="w-full min-w-[700px]">
+                                <thead className="border-b border-gray-100 sticky top-0 z-10">
                                     <tr>
                                         {tableHeadItems.map((h) => (
-                                            <th key={h} className="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider sticky top-0 bg-gray-50 z-50">
+                                            <th key={h} className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider bg-gray-50">
                                                 {h}
                                             </th>
                                         ))}
-                                        <th className="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider sticky top-0 bg-gray-50 z-50">
+                                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider bg-gray-50">
                                             Actions
                                         </th>
                                     </tr>
@@ -404,19 +499,19 @@ const Student = () => {
                                     ) : (
                                         students.map((student) => (
                                             <tr key={student.id} className="hover:bg-gray-50 transition-colors">
-                                                <td className='px-6 py-3 text-gray-700 text-sm'>
+                                                <td className="px-4 py-3 text-gray-700 text-sm">
                                                     <div className="flex items-center gap-3">
                                                         <div className={`w-9 h-9 rounded-full ${getAvatarColor(student.name)} flex items-center justify-center text-white text-sm font-semibold shrink-0`}>
                                                             {student.avatar}
                                                         </div>
-                                                        <div className="flex flex-col">
-                                                            <span className="font-medium text-gray-900">{student.name}</span>
-                                                            <span className="text-xs text-gray-500">{student.admissionNumber}</span>
+                                                        <div className="flex flex-col min-w-0">
+                                                            <span className="font-medium text-gray-900 truncate">{student.name}</span>
+                                                            <span className="text-xs text-gray-500 truncate">{student.admissionNumber}</span>
                                                         </div>
                                                     </div>
                                                 </td>
                                                 <td className={`${tdStyle} text-center`}>{student.mobile}</td>
-                                                <td className={`${tdStyle} text-center`}>{student.email}</td>
+                                                <td className={`${tdStyle} text-center max-w-[180px] truncate`}>{student.email}</td>
                                                 <td className={tdStyle}>
                                                     {student.className
                                                         ? <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-blue-50 text-blue-700 text-xs font-medium">{student.className}</span>
@@ -435,7 +530,7 @@ const Student = () => {
                                                         {student.status}
                                                     </span>
                                                 </td>
-                                                <td className='text-center'>
+                                                <td className="px-4 py-3 text-center">
                                                     <div className="flex items-center justify-center gap-2">
                                                         <button
                                                             onClick={() => navigate(`/students/editStudent/${student.id}`)}
@@ -461,8 +556,8 @@ const Student = () => {
                         </div>
 
                         {/* Desktop Pagination */}
-                        <div className="shrink-0 px-6 py-4 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4 bg-white">
-                            <div className="flex flex-col sm:flex-row items-center gap-4">
+                        <div className="shrink-0 px-4 sm:px-6 py-4 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-3 bg-white">
+                            <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4">
                                 <span className="text-sm text-gray-500">
                                     Showing{' '}
                                     <span className="font-medium text-gray-700">{totalElements === 0 ? 0 : (page - 1) * rowsPerPage + 1}</span>
