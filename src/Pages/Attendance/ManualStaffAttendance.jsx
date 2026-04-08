@@ -3,6 +3,7 @@ import { X, ClipboardEdit, FileText, Search, ChevronDown, Loader2 } from 'lucide
 import { toast } from 'react-toastify';
 import { getUsersSummary } from '../../Api/userManagementAPI';
 import { requestManualAttendance } from '../../Api/AttendanceApi';
+import { getSchoolLocation } from "../../utils/getSchoolLocation";
 
 const TODAY = new Date().toISOString().split('T')[0];
 
@@ -122,6 +123,7 @@ const ManualStaffAttendance = ({ onClose, onSuccess }) => {
 
     /* ── Submit ── */
     const handleSubmit = async () => {
+        const { gpsLatitude, gpsLongitude } = getSchoolLocation();
         if (!selectedStaff) {
             toast.error('Please select a staff member');
             return;
@@ -155,6 +157,8 @@ const ManualStaffAttendance = ({ onClose, onSuccess }) => {
                 userId: selectedStaff.userId,
                 userType: selectedStaff.userType,
                 userName: selectedStaff.userName,
+                gpsLatitude: parseFloat(gpsLatitude),
+                gpsLongitude: parseFloat(gpsLongitude),
                 remarks: remarks.trim(),
             });
             toast.success('Manual attendance submitted for review!');

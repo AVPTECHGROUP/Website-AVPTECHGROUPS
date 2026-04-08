@@ -348,6 +348,10 @@ export default function SchoolConfig() {
             allowedRadiusMeters: ac.allowedRadiusMeters ?? 0,
             gpsCheckEnabled: ac.gpsCheckEnabled ?? false,
           });
+          localStorage.setItem("attendanceConfig", JSON.stringify({
+            schoolLatitude: ac.schoolLatitude,
+            schoolLongitude: ac.schoolLongitude,
+          }));
         } else {
           // No config exists — show empty form, no error banner
           setAttData(EMPTY_ATTENDANCE);
