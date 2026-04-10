@@ -33,45 +33,72 @@ const statusColors = {
   DELIVERED: "bg-green-100  text-green-700   border border-green-200",
   CANCELLED: "bg-red-100    text-red-600     border border-red-200",
 };
-
-// ── Cancel Confirm Modal ──────────────────────────────────────────
 function CancelConfirmModal({ order, onConfirm, onClose, loading }) {
+  const [confirmInput, setConfirmInput] = useState("");
+
   if (!order) return null;
+
+  const isConfirmed = order.status === "CONFIRMED";
+
+  const isMatch = confirmInput === String(order.id);
+
   return (
     <div className="fixed inset-0 z-60 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm z-10 p-6 space-y-4 ccm-anim">
-        <style>{`
-          @keyframes ccmIn { from{opacity:0;transform:scale(.94) translateY(8px)} to{opacity:1;transform:scale(1) translateY(0)} }
-          .ccm-anim { animation: ccmIn .18s ease-out forwards; }
-        `}</style>
+
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm z-10 p-6 space-y-4">
         <div className="flex items-start gap-4">
-          <div className="w-11 h-11 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+          <div className="w-11 h-11 rounded-full bg-red-100 flex items-center justify-center">
             <AlertTriangle className="w-5 h-5 text-red-500" />
           </div>
+
           <div>
             <h3 className="text-base font-bold text-gray-800">Cancel Order?</h3>
+
             <p className="text-sm text-gray-500 mt-1">
               Are you sure you want to cancel{" "}
-              <span className="font-semibold text-gray-700">Order #{order.id}</span>{" "}
+              <span className="font-semibold text-gray-700">
+                Order #{order.id}
+              </span>{" "}
               for{" "}
               <span className="font-semibold text-gray-700">
-                {order.studentName || order.student?.name || "this student"}
+                {order.studentName || "this student"}
               </span>?
-              <span className="text-red-500 text-xs mt-1 block">This action cannot be undone.</span>
             </p>
+
+            {isConfirmed && (
+              <p className="text-xs text-red-500 mt-2">
+                ⚠ Type order number to confirm cancellation
+              </p>
+            )}
           </div>
         </div>
-        <div className="flex items-center justify-end gap-3 pt-2">
-          <button onClick={onClose} disabled={loading}
-            className="px-5 py-2 text-sm font-semibold text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50">
+
+        {isConfirmed && (
+          <input
+            type="text"
+            placeholder={`Type Order #${order.id}`}
+            value={confirmInput}
+            onChange={(e) => setConfirmInput(e.target.value)}
+            className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+          />
+        )}
+
+        <div className="flex justify-end gap-3 pt-2">
+          <button
+            onClick={onClose}
+            disabled={loading}
+            className="px-4 py-2 border rounded-lg text-gray-600"
+          >
             Keep Order
           </button>
-          <button onClick={onConfirm} disabled={loading}
-            className="flex items-center gap-2 px-5 py-2 text-sm font-semibold text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
-            {loading
-              ? <><Loader2 className="w-4 h-4 animate-spin" /> Cancelling…</>
-              : <><Ban className="w-4 h-4" /> Yes, Cancel</>}
+
+          <button
+            onClick={() => onConfirm()}
+            disabled={loading || (isConfirmed && !isMatch)}
+            className="px-4 py-2 bg-red-500 text-white rounded-lg disabled:opacity-50"
+          >
+            {loading ? "Cancelling..." : "Yes, Cancel"}
           </button>
         </div>
       </div>
@@ -109,15 +136,48 @@ function getPageNumbers(currentPage, totalPages) {
 
 function buildActionOptions(status) {
   const s = (status || "").toUpperCase();
-  if (s === "DRAFT") {
+
+  if (s === "DRAFT" || s === "CONFIRMED") {
     return [
-      { value: "edit", label: "Edit", icon: Pencil, text: "text-blue-600", bg: "bg-blue-50", hover: "hover:bg-blue-100" },
-      { value: "view", label: "View", icon: Eye, text: "text-gray-600", bg: "bg-gray-50", hover: "hover:bg-gray-100" },
-      { value: "cancel", label: "Cancel", icon: Ban, text: "text-red-500", bg: "bg-red-50", hover: "hover:bg-red-100" },
+      ...(s === "DRAFT"
+        ? [{
+          value: "edit",
+          label: "Edit",
+          icon: Pencil,
+          text: "text-blue-600",
+          bg: "bg-blue-50",
+          hover: "hover:bg-blue-100"
+        }]
+        : []),
+
+      {
+        value: "view",
+        label: "View",
+        icon: Eye,
+        text: "text-gray-600",
+        bg: "bg-gray-50",
+        hover: "hover:bg-gray-100"
+      },
+      {
+        value: "cancel",
+        label: "Cancel",
+        icon: Ban,
+        text: "text-red-500",
+        bg: "bg-red-50",
+        hover: "hover:bg-red-100"
+      },
     ];
   }
+
   return [
-    { value: "view", label: "View", icon: Eye, text: "text-blue-600", bg: "bg-blue-50", hover: "hover:bg-blue-100" },
+    {
+      value: "view",
+      label: "View",
+      icon: Eye,
+      text: "text-blue-600",
+      bg: "bg-blue-50",
+      hover: "hover:bg-blue-100"
+    },
   ];
 }
 
@@ -270,18 +330,27 @@ export default function StudentOrders() {
   useEffect(() => { fetchOrders(); }, [fetchOrders]);
   const totalItems = pagination?.totalElements ?? orders.length;
   const totalPages = pagination?.totalPages ?? Math.max(1, Math.ceil(totalItems / rowsPerPage));
-
   const handleCancelOrder = async () => {
     if (!cancelTarget) return;
+
     setCancelling(true);
+
     try {
-      await cancelStudentOrder(cancelTarget.id, "Cancelled by admin");
+      await cancelStudentOrder(
+        cancelTarget.id,
+        "Cancelled by admin - restore stock"
+      );
+
       toast.success(`Order #${cancelTarget.id} cancelled.`);
+
       setCancelTarget(null);
-      fetchOrders(); fetchStats();
+      fetchOrders();
+      fetchStats();
     } catch (e) {
       toast.error(`Failed to cancel: ${e.message}`);
-    } finally { setCancelling(false); }
+    } finally {
+      setCancelling(false);
+    }
   };
 
   const handleAction = (val, order) => {
@@ -411,7 +480,7 @@ export default function StudentOrders() {
                   <input
                     type="date"
                     value={toDate}
-                    min={fromDate || undefined} 
+                    min={fromDate || undefined}
                     onChange={(e) => {
                       const value = e.target.value;
                       setToDate(value);
