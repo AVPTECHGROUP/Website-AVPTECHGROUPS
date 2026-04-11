@@ -14,6 +14,7 @@ import CardLoader from "../../../Components/CommonComp/CardLoader";
 import ListLoader from "../../../Components/CommonComp/ListLoader";
 import ActionDropDownComp from "../../../Components/CommonComp/ActionDropDownComp";
 import ViewStudentOrder from "./ViewOrder";
+import { useDecodedUser } from "../../../ContextAPI/UserContext";
 import { getOrderStats, getStudentOrders, cancelStudentOrder } from "../../../Api/StudentOrder";
 import { getClasses } from "../../../Api/TeachersAPI";
 
@@ -35,6 +36,9 @@ const statusColors = {
   DELIVERED: "bg-green-100  text-green-700   border border-green-200",
   CANCELLED: "bg-red-100    text-red-600     border border-red-200",
 };
+
+const CANCEL_CONFIRMED_ROLES = ["SUPER_ADMIN", "GLOBAL_ADMIN", "STORE_ACCOUNTANT"];
+
 function CancelConfirmModal({ order, onConfirm, onClose, loading }) {
   const [confirmInput, setConfirmInput] = useState("");
 
@@ -135,12 +139,12 @@ function getPageNumbers(currentPage, totalPages) {
   pages.push(totalPages);
   return pages;
 }
-
-const CANCEL_ALLOWED_ROLES = ['STORE_ACCOUNTANT', 'SUPER_ADMIN', 'GLOBAL_ADMIN'];
-
 function buildActionOptions(status, userRole) {
   const s = (status || "").toUpperCase();
-  const canCancelConfirmed = CANCEL_ALLOWED_ROLES.includes(userRole);
+  const normalize = (v) => (v || "").toLowerCase().replace(/[\s_]/g, "");
+  const normalizedUserRole = normalize(userRole);
+  const normalizedAllowed = CANCEL_CONFIRMED_ROLES.map(normalize);
+  const canCancelConfirmed = normalizedAllowed.includes(normalizedUserRole);
 
   if (s === "DRAFT") {
     return [
@@ -150,7 +154,7 @@ function buildActionOptions(status, userRole) {
         icon: Pencil,
         text: "text-blue-600",
         bg: "bg-blue-50",
-        hover: "hover:bg-blue-100",
+        hover: "hover:bg-blue-100"
       },
       {
         value: "view",
@@ -179,22 +183,21 @@ function buildActionOptions(status, userRole) {
         icon: Eye,
         text: "text-gray-600",
         bg: "bg-gray-50",
-        hover: "hover:bg-gray-100",
+        hover: "hover:bg-gray-100"
       },
-      // ✅ Cancel on CONFIRMED — sirf allowed roles ko
-      ...(canCancelConfirmed
-        ? [{
-          value: "cancel",
-          label: "Cancel",
-          icon: Ban,
-          text: "text-red-500",
-          bg: "bg-red-50",
-          hover: "hover:bg-red-100",
-        }]
-        : []),
+      // Sirf privileged roles ko cancel dikhega
+      ...(canCancelConfirmed ? [{
+        value: "cancel",
+        label: "Cancel",
+        icon: Ban,
+        text: "text-red-500",
+        bg: "bg-red-50",
+        hover: "hover:bg-red-100"
+      }] : []),
     ];
   }
 
+  // CANCELLED, DELIVERED, etc. — sirf view
   return [
     {
       value: "view",
@@ -240,6 +243,8 @@ function PageButtons({ page, totalPages, onPageChange }) {
 export default function StudentOrders() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useDecodedUser();
+  console.log("userType:", user?.userType);
 
   const [orders, setOrders] = useState([]);
   const [pagination, setPagination] = useState(null);
@@ -248,33 +253,7 @@ export default function StudentOrders() {
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
-  const [stats, setStats] = useState({ draftOrders: 0, confirmedOrders: 0, cancelledOrders: 0 });
-  const { user } = useContext(UserContext);
-  const userRole = (() => {
-
-    if (user?.userType) return user.userType;
-
-    // 2. localStorage 'user' object se
-    try {
-      const stored = JSON.parse(localStorage.getItem('user') || '{}');
-      if (stored?.roles?.[0]) return stored.roles[0];
-    } catch { }
-
-    // 3. JWT token directly decode karo
-    try {
-      const token = localStorage.getItem('token');
-      if (token) {
-        const decoded = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
-        if (decoded?.roles?.[0]) return decoded.roles[0];
-      }
-    } catch { }
-
-    return null;
-  })();
-
-  console.log("FINAL userRole:", userRole);
-  console.log("Current user:", user);
-  console.log("Current userRole:", userRole);
+ const [stats, setStats] = useState({ draftOrders: 0, confirmedOrders: 0, cancelledOrders: 0 });
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -593,7 +572,7 @@ export default function StudentOrders() {
                         </div>
                         <div className="flex justify-start items-center pt-1">
                           <ActionDropDownComp
-                            actionOptions={buildActionOptions(order.status, userRole)}
+                            actionOptions={buildActionOptions(order.status, user?.userType)}
                             onAction={(val) => handleAction(val, order)}
                           />
                         </div>
@@ -707,7 +686,7 @@ export default function StudentOrders() {
 
                             <td className={tdStyle}>
                               <ActionDropDownComp
-                                actionOptions={buildActionOptions(order.status, userRole)}
+                                actionOptions={buildActionOptions(order.status, user?.userType)}
                                 onAction={(val) => handleAction(val, order)}
                               />
                             </td>
