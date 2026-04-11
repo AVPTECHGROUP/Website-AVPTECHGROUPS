@@ -7,6 +7,8 @@ import {
   ClipboardList, Eye, Pencil, Ban, AlertTriangle, Loader2,
   ChevronLeft, ChevronRight, SearchIcon, IndianRupee,
 } from "lucide-react";
+import { useContext } from "react";
+import { UserContext } from "../../../ContextAPI/UserContext";
 import CardComponent from "../../../Components/CommonComp/CardComponent";
 import CardLoader from "../../../Components/CommonComp/CardLoader";
 import ListLoader from "../../../Components/CommonComp/ListLoader";
@@ -77,7 +79,7 @@ function CancelConfirmModal({ order, onConfirm, onClose, loading }) {
         {isConfirmed && (
           <input
             type="text"
-            placeholder={`Type Order #${order.id}`}
+            placeholder={`Type Order ID`}
             value={confirmInput}
             onChange={(e) => setConfirmInput(e.target.value)}
             className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
@@ -134,29 +136,29 @@ function getPageNumbers(currentPage, totalPages) {
   return pages;
 }
 
-function buildActionOptions(status) {
+const CANCEL_ALLOWED_ROLES = ['STORE_ACCOUNTANT', 'SUPER_ADMIN', 'GLOBAL_ADMIN'];
+
+function buildActionOptions(status, userRole) {
   const s = (status || "").toUpperCase();
+  const canCancelConfirmed = CANCEL_ALLOWED_ROLES.includes(userRole);
 
-  if (s === "DRAFT" || s === "CONFIRMED") {
+  if (s === "DRAFT") {
     return [
-      ...(s === "DRAFT"
-        ? [{
-          value: "edit",
-          label: "Edit",
-          icon: Pencil,
-          text: "text-blue-600",
-          bg: "bg-blue-50",
-          hover: "hover:bg-blue-100"
-        }]
-        : []),
-
+      {
+        value: "edit",
+        label: "Edit",
+        icon: Pencil,
+        text: "text-blue-600",
+        bg: "bg-blue-50",
+        hover: "hover:bg-blue-100",
+      },
       {
         value: "view",
         label: "View",
         icon: Eye,
         text: "text-gray-600",
         bg: "bg-gray-50",
-        hover: "hover:bg-gray-100"
+        hover: "hover:bg-gray-100",
       },
       {
         value: "cancel",
@@ -164,8 +166,32 @@ function buildActionOptions(status) {
         icon: Ban,
         text: "text-red-500",
         bg: "bg-red-50",
-        hover: "hover:bg-red-100"
+        hover: "hover:bg-red-100",
       },
+    ];
+  }
+
+  if (s === "CONFIRMED") {
+    return [
+      {
+        value: "view",
+        label: "View",
+        icon: Eye,
+        text: "text-gray-600",
+        bg: "bg-gray-50",
+        hover: "hover:bg-gray-100",
+      },
+      // ✅ Cancel on CONFIRMED — sirf allowed roles ko
+      ...(canCancelConfirmed
+        ? [{
+          value: "cancel",
+          label: "Cancel",
+          icon: Ban,
+          text: "text-red-500",
+          bg: "bg-red-50",
+          hover: "hover:bg-red-100",
+        }]
+        : []),
     ];
   }
 
@@ -176,7 +202,7 @@ function buildActionOptions(status) {
       icon: Eye,
       text: "text-blue-600",
       bg: "bg-blue-50",
-      hover: "hover:bg-blue-100"
+      hover: "hover:bg-blue-100",
     },
   ];
 }
@@ -223,7 +249,32 @@ export default function StudentOrders() {
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
   const [stats, setStats] = useState({ draftOrders: 0, confirmedOrders: 0, cancelledOrders: 0 });
+  const { user } = useContext(UserContext);
+  const userRole = (() => {
 
+    if (user?.userType) return user.userType;
+
+    // 2. localStorage 'user' object se
+    try {
+      const stored = JSON.parse(localStorage.getItem('user') || '{}');
+      if (stored?.roles?.[0]) return stored.roles[0];
+    } catch { }
+
+    // 3. JWT token directly decode karo
+    try {
+      const token = localStorage.getItem('token');
+      if (token) {
+        const decoded = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+        if (decoded?.roles?.[0]) return decoded.roles[0];
+      }
+    } catch { }
+
+    return null;
+  })();
+
+  console.log("FINAL userRole:", userRole);
+  console.log("Current user:", user);
+  console.log("Current userRole:", userRole);
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -542,7 +593,7 @@ export default function StudentOrders() {
                         </div>
                         <div className="flex justify-start items-center pt-1">
                           <ActionDropDownComp
-                            actionOptions={buildActionOptions(order.status)}
+                            actionOptions={buildActionOptions(order.status, userRole)}
                             onAction={(val) => handleAction(val, order)}
                           />
                         </div>
@@ -656,7 +707,7 @@ export default function StudentOrders() {
 
                             <td className={tdStyle}>
                               <ActionDropDownComp
-                                actionOptions={buildActionOptions(order.status)}
+                                actionOptions={buildActionOptions(order.status, userRole)}
                                 onAction={(val) => handleAction(val, order)}
                               />
                             </td>

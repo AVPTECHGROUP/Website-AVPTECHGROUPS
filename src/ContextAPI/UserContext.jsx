@@ -17,7 +17,7 @@ export const UserProvider = ({ children }) => {
       if (decodedToken) {
         setUser({
           id: decodedToken.userId,
-          userType: decodedToken.roles?.[0],
+          userType: decodedToken.roles?.[0] || JSON.parse(localStorage.getItem('user') || '{}')?.roles?.[0],
           email: decodedToken.sub,
           permissions: decodedToken.permissions,
         });
