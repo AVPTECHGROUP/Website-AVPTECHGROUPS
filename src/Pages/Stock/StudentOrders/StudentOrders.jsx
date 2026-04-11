@@ -12,6 +12,7 @@ import CardLoader from "../../../Components/CommonComp/CardLoader";
 import ListLoader from "../../../Components/CommonComp/ListLoader";
 import ActionDropDownComp from "../../../Components/CommonComp/ActionDropDownComp";
 import ViewStudentOrder from "./ViewOrder";
+import { useDecodedUser } from "../../../ContextAPI/UserContext";
 import { getOrderStats, getStudentOrders, cancelStudentOrder } from "../../../Api/StudentOrder";
 import { getClasses } from "../../../Api/TeachersAPI";
 
@@ -33,6 +34,9 @@ const statusColors = {
   DELIVERED: "bg-green-100  text-green-700   border border-green-200",
   CANCELLED: "bg-red-100    text-red-600     border border-red-200",
 };
+
+const CANCEL_CONFIRMED_ROLES = ["SUPER_ADMIN", "GLOBAL_ADMIN", "STORE_ACCOUNTANT"];
+
 function CancelConfirmModal({ order, onConfirm, onClose, loading }) {
   const [confirmInput, setConfirmInput] = useState("");
 
@@ -133,23 +137,23 @@ function getPageNumbers(currentPage, totalPages) {
   pages.push(totalPages);
   return pages;
 }
-
-function buildActionOptions(status) {
+function buildActionOptions(status, userRole) {
   const s = (status || "").toUpperCase();
+  const normalize = (v) => (v || "").toLowerCase().replace(/[\s_]/g, "");
+  const normalizedUserRole = normalize(userRole);
+  const normalizedAllowed = CANCEL_CONFIRMED_ROLES.map(normalize);
+  const canCancelConfirmed = normalizedAllowed.includes(normalizedUserRole);
 
-  if (s === "DRAFT" || s === "CONFIRMED") {
+  if (s === "DRAFT") {
     return [
-      ...(s === "DRAFT"
-        ? [{
-          value: "edit",
-          label: "Edit",
-          icon: Pencil,
-          text: "text-blue-600",
-          bg: "bg-blue-50",
-          hover: "hover:bg-blue-100"
-        }]
-        : []),
-
+      {
+        value: "edit",
+        label: "Edit",
+        icon: Pencil,
+        text: "text-blue-600",
+        bg: "bg-blue-50",
+        hover: "hover:bg-blue-100"
+      },
       {
         value: "view",
         label: "View",
@@ -169,6 +173,29 @@ function buildActionOptions(status) {
     ];
   }
 
+  if (s === "CONFIRMED") {
+    return [
+      {
+        value: "view",
+        label: "View",
+        icon: Eye,
+        text: "text-gray-600",
+        bg: "bg-gray-50",
+        hover: "hover:bg-gray-100"
+      },
+      // Sirf privileged roles ko cancel dikhega
+      ...(canCancelConfirmed ? [{
+        value: "cancel",
+        label: "Cancel",
+        icon: Ban,
+        text: "text-red-500",
+        bg: "bg-red-50",
+        hover: "hover:bg-red-100"
+      }] : []),
+    ];
+  }
+
+  // CANCELLED, DELIVERED, etc. — sirf view
   return [
     {
       value: "view",
@@ -214,6 +241,8 @@ function PageButtons({ page, totalPages, onPageChange }) {
 export default function StudentOrders() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useDecodedUser();
+  console.log("userType:", user?.userType);
 
   const [orders, setOrders] = useState([]);
   const [pagination, setPagination] = useState(null);
@@ -542,7 +571,7 @@ export default function StudentOrders() {
                         </div>
                         <div className="flex justify-start items-center pt-1">
                           <ActionDropDownComp
-                            actionOptions={buildActionOptions(order.status)}
+                            actionOptions={buildActionOptions(order.status, user?.userType)}
                             onAction={(val) => handleAction(val, order)}
                           />
                         </div>
@@ -656,7 +685,7 @@ export default function StudentOrders() {
 
                             <td className={tdStyle}>
                               <ActionDropDownComp
-                                actionOptions={buildActionOptions(order.status)}
+                                actionOptions={buildActionOptions(order.status, user?.userType)}
                                 onAction={(val) => handleAction(val, order)}
                               />
                             </td>
