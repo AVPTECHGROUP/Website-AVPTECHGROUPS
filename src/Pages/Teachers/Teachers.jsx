@@ -43,10 +43,6 @@ const Teachers = () => {
   });
   const [statsLoading, setStatsLoading] = useState(false);
 
-  // ── Single Row Selection ──────────────────────────────────────────────────
-  // selectedTeacher holds the full teacher object of the currently selected row.
-  // Clicking the same row again → deselects (null).
-  // Clicking a different row → replaces previous selection (single-select).
   const [selectedTeacher, setSelectedTeacher] = useState(null);
 
   // ── Reset Password Modal ──────────────────────────────────────────────────
@@ -122,6 +118,7 @@ const Teachers = () => {
 
       const mappedTeachers = teacherArray.map((teacher) => ({
         id: teacher.id,
+        userId: teacher.userId,
         employeeCode: teacher.employeeCode || 'N/A',
         name: teacher.fullName || 'Unknown',
         avatar: (teacher.fullName || 'U')[0].toUpperCase(),
@@ -293,7 +290,7 @@ const Teachers = () => {
           isOpen={isResetOpen}
           onClose={() => setIsResetOpen(false)}
           userName={selectedTeacher?.name}
-          onReset={() => resetPassword(selectedTeacher?.id)}
+          onReset={() => resetPassword(selectedTeacher?.userId)}
           currUserId={selectedTeacher?.id}
         />
 
