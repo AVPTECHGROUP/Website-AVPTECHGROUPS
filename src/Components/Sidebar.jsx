@@ -5,7 +5,7 @@ import {
   ChevronDown, UserCog, Package, Bus, Phone, Mail,
   Shield, ChevronUp, ArrowLeftRight, BookOpenText,
   GraduationCap,
-  SchoolIcon,
+  SchoolIcon,NotebookPen
 } from 'lucide-react'
 import { useState, useEffect, useContext, useRef } from 'react'
 import { UserContext } from '../ContextAPI/UserContext'
@@ -92,6 +92,10 @@ const menuItems = [
       { label: 'Fee Plans', route: '/route/feePlans', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'] },
       { label: 'Reports', route: '/route/reports', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'] },
     ]
+  },
+  {
+    id: 'Homework', icon: NotebookPen, label: 'Homework', route: '/homework',
+    roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN','ADMIN','PRINCIPAL','TEACHER'],
   },
   {
     id: 'Permission',
