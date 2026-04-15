@@ -74,6 +74,7 @@ import MarksEntry from '../Pages/Exams/MarksEntry';
 import ReportCards from '../Pages/Exams/ReportCards';
 import Analytics from '../Pages/Exams/Analytics';
 import SchoolConfig from '../Pages/Schools/SchoolConfig';
+import HomeworkPage from '../Pages/Homework/Homeworkpage';
 
 // ─── Role Groups ───────────────────────────────────────────────────────────────
 const STOCK_ACCOUNTANT_ROLES = ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'STORE_ACCOUNTANT'];
@@ -220,6 +221,11 @@ const MainRoutes = () => {
             <Route path="/route/feePlans" element={<Fee_Plans />} />
             <Route path="/route/reports" element={<Reports />} />
           </Route>
+
+          <Route element={<RoleProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'PRINCIPAL','TEACHER']} />}>
+            <Route path="/homework" element={<HomeworkPage />} />
+          </Route>
+
 
           {/* Leaves redirect for non-admin */}
           <Route element={<RoleProtectedRoute allowedRoles={['TEACHER', 'PRINCIPAL', 'RECEPTIONIST', 'ACCOUNTANT']} />}>

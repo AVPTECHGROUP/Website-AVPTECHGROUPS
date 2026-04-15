@@ -1,7 +1,7 @@
 import { authFetch } from "../Authfetch/Authfetch";
 
 
-const BASE_URL = import.meta.env.VITE_API_BASE_V1;
+const BASE_URL = import.meta.env.VITE_API_BASE_DOUBLE_V1;
 
 export const getSchools = async ({
   page,
