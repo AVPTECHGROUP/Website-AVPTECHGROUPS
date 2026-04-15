@@ -40,19 +40,44 @@ class SectionSubjectService {
     return json;
   }
 
+  /**
+   * Try primary URL first (Swagger contract), then optional fallback URL
+   * for environments still using legacy endpoints.
+   */
+  async #reqWithFallback(method, primaryUrl, fallbackUrl = null, body = null, silent = true) {
+    try {
+      return await this.#req(method, primaryUrl, body, silent);
+    } catch (err) {
+      if (!fallbackUrl) throw err;
+      return this.#req(method, fallbackUrl, body, silent);
+    }
+  }
+
   // ── Dropdowns ─────────────────────────────────────────────────────────────
 
   async getAllClasses() {
     try {
       const { schoolId } = getCurrUserDetails() ?? {};
-      const json = await this.#req("GET", `${BASE}/classes/school/${schoolId}`, null, true);
+      const json = await this.#reqWithFallback(
+        "GET",
+        `${BASE}/classes`,
+        schoolId ? `${BASE}/classes/school/${schoolId}` : null,
+        null,
+        true
+      );
       return toArray(json);
     } catch { return []; }
   }
 
   async getSectionsByClass(classId) {
     try {
-      const json = await this.#req("GET", `${BASE}/sections/class/${classId}`, null, true);
+      const json = await this.#reqWithFallback(
+        "GET",
+        `${BASE}/sections/class/${classId}`,
+        `${BASE}/classes/${classId}/sections`,
+        null,
+        true
+      );
       return toArray(json);
     } catch { return []; }
   }
@@ -75,7 +100,13 @@ class SectionSubjectService {
 
   async getActiveSubjectsBySection(sectionId) {
     try {
-      const json = await this.#req("GET", `${SECTION_SUBJ}/section/${sectionId}/active`, null, true);
+      const json = await this.#reqWithFallback(
+        "GET",
+        `${BASE}/sections/${sectionId}/subjects`,
+        `${SECTION_SUBJ}/section/${sectionId}/active`,
+        null,
+        true
+      );
       return toArray(json);
     } catch { return []; }
   }
