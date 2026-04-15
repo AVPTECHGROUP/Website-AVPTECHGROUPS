@@ -1,10 +1,8 @@
-import { useState, useRef } from "react";
-import { Eye, Pencil, Ban, ChevronLeft, ChevronRight, Loader2, CalendarDays } from "lucide-react";
+import { Eye, Pencil, Ban, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { DuePill, StatusBadge, AttachChip, SubjectLabel } from "./Badges";
 
 const COLUMNS = ["#", "Subject", "Title / Description", "Assigned", "Due Date", "Attachment", "Status", "Actions"];
 
-// ── Skeleton ──────────────────────────────────────────────────────────────────
 function SkeletonRow() {
   return (
     <tr className="border-b border-gray-100">
@@ -17,25 +15,28 @@ function SkeletonRow() {
   );
 }
 
-// ── Field readers ─────────────────────────────────────────────────────────────
 function getDueState(hw) {
   if (hw.dueState) return hw.dueState;
   const due = hw.dueDate ? new Date(hw.dueDate) : null;
   if (!due) return "ok";
-  const diff = (due - new Date()) / (1000 * 60 * 60 * 24);
+  const now  = new Date();
+  const diff = (due - now) / (1000 * 60 * 60 * 24);
   if (diff < 0)  return "over";
   if (diff <= 2) return "soon";
   return "ok";
 }
 
-function fmtDate(iso) {
-  if (!iso) return "—";
-  return new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+function getDueLabel(hw) {
+  if (hw.dueState === "over") return "Overdue";
+  if (hw.due)                 return hw.due;
+  if (hw.dueDate)             return new Date(hw.dueDate).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  return "—";
 }
 
-function toInputVal(iso) {
-  if (!iso) return "";
-  return iso.split("T")[0];   // "YYYY-MM-DD"
+function getAssignedLabel(hw) {
+  if (hw.assigned)     return hw.assigned;
+  if (hw.assignedDate) return new Date(hw.assignedDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+  return "—";
 }
 
 function getAttachType(hw) {
@@ -49,82 +50,22 @@ function getSubject(hw) {
   return hw.subject ?? hw.subjectName ?? hw.subjectId ?? "—";
 }
 
-// ── Inline editable date cell ─────────────────────────────────────────────────
-// Renders as a styled label. Clicking it reveals a native date picker.
-// On change → calls onSave(newIsoDate). Pressing Escape cancels.
-function EditableDate({ iso, onSave, disabled }) {
-  const [editing, setEditing] = useState(false);
-  const inputRef = useRef(null);
-
-  const open = () => {
-    if (disabled) return;
-    setEditing(true);
-    // Focus the hidden input after React paints
-    setTimeout(() => inputRef.current?.showPicker?.(), 50);
-  };
-
-  const commit = (e) => {
-    const val = e.target.value;   // "YYYY-MM-DD"
-    setEditing(false);
-    if (val && val !== toInputVal(iso)) onSave(val);
-  };
-
-  const cancel = (e) => {
-    if (e.key === "Escape") setEditing(false);
-  };
-
-  return (
-    <div className="relative inline-flex items-center gap-1 group">
-      {/* Visible label */}
-      <button
-        onClick={open}
-        disabled={disabled}
-        title={disabled ? undefined : "Click to change date"}
-        className={`flex items-center gap-1 text-sm text-gray-600 rounded px-1 py-0.5
-          transition-colors
-          ${disabled ? "cursor-default" : "hover:bg-blue-50 hover:text-blue-700 cursor-pointer"}`}
-      >
-        {fmtDate(iso)}
-        {!disabled && (
-          <CalendarDays
-            size={11}
-            className="text-gray-300 group-hover:text-blue-500 transition-colors"
-          />
-        )}
-      </button>
-
-      {/* Native date input — visible only while editing */}
-      {editing && (
-        <input
-          ref={inputRef}
-          type="date"
-          defaultValue={toInputVal(iso)}
-          onChange={commit}
-          onKeyDown={cancel}
-          onBlur={() => setEditing(false)}
-          className="absolute left-0 top-0 opacity-0 w-0 h-0 pointer-events-none"
-          style={{ visibility: "hidden" }}
-          autoFocus
-        />
-      )}
-    </div>
-  );
-}
-
-// ── Action button ─────────────────────────────────────────────────────────────
+// ── Action button — matches the screenshot style exactly ─────────────────────
 function ActionBtn({ onClick, disabled, title, icon: Icon, label, variant }) {
   const variants = {
-    view:   "border border-gray-300   text-gray-600  bg-white hover:bg-gray-50",
-    edit:   "border border-blue-400   text-blue-600  bg-white hover:bg-blue-50",
-    cancel: "border border-red-400    text-red-500   bg-white hover:bg-red-50",
+    view:   "border border-gray-300 text-gray-600 bg-white hover:bg-gray-50",
+    edit:   "border border-blue-400 text-blue-600 bg-white hover:bg-blue-50",
+    cancel: "border border-red-400 text-red-500 bg-white hover:bg-red-50",
   };
+
   return (
     <button
       onClick={onClick}
       disabled={disabled}
       title={title}
       className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold
-        transition-colors whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed
+        transition-colors whitespace-nowrap
+        disabled:opacity-40 disabled:cursor-not-allowed
         ${variants[variant]}`}
     >
       <Icon size={12} strokeWidth={2.2} />
@@ -133,8 +74,7 @@ function ActionBtn({ onClick, disabled, title, icon: Icon, label, variant }) {
   );
 }
 
-// ── Single row ────────────────────────────────────────────────────────────────
-function HwRow({ hw, index, submitting, onView, onEdit, onCancel, onDateSave }) {
+function HwRow({ hw, index, submitting, onView, onEdit, onCancel }) {
   const cancelled = hw.status === "CANCELLED";
   const dueState  = getDueState(hw);
 
@@ -153,25 +93,10 @@ function HwRow({ hw, index, submitting, onView, onEdit, onCancel, onDateSave }) 
         </div>
       </td>
 
-      {/* Assigned date — click to edit */}
-      <td className="px-4 py-3.5 whitespace-nowrap">
-        <EditableDate
-          iso={hw.assignedDate}
-          disabled={cancelled || submitting}
-          onSave={(val) => onDateSave(hw, "assignedDate", val)}
-        />
-      </td>
+      <td className="px-4 py-3.5 text-sm text-gray-600 whitespace-nowrap">{getAssignedLabel(hw)}</td>
 
-      {/* Due date — click to edit */}
-      <td className="px-4 py-3.5 whitespace-nowrap">
-        <div className="flex flex-col gap-0.5">
-          <DuePill state={dueState} label={fmtDate(hw.dueDate)} />
-          <EditableDate
-            iso={hw.dueDate}
-            disabled={cancelled || submitting}
-            onSave={(val) => onDateSave(hw, "dueDate", val)}
-          />
-        </div>
+      <td className="px-4 py-3.5">
+        <DuePill state={dueState} label={getDueLabel(hw)} />
       </td>
 
       <td className="px-4 py-3.5">
@@ -182,18 +107,27 @@ function HwRow({ hw, index, submitting, onView, onEdit, onCancel, onDateSave }) 
         <StatusBadge status={hw.status} />
       </td>
 
+      {/* ── Actions ── */}
       <td className="px-4 py-3.5">
         <div className="flex items-center gap-2">
           <ActionBtn
             onClick={() => onView(hw)}
-            icon={Eye} label="View" variant="view"
+            disabled={false}
+            title="View homework"
+            icon={Eye}
+            label="View"
+            variant="view"
           />
+
           <ActionBtn
             onClick={() => !cancelled && onEdit(hw)}
             disabled={cancelled || submitting}
             title={cancelled ? "Cannot edit a cancelled homework" : "Edit homework"}
-            icon={Pencil} label="Edit" variant="edit"
+            icon={Pencil}
+            label="Edit"
+            variant="edit"
           />
+
           <ActionBtn
             onClick={() => !cancelled && !submitting && onCancel(hw.id)}
             disabled={cancelled || submitting}
@@ -208,7 +142,6 @@ function HwRow({ hw, index, submitting, onView, onEdit, onCancel, onDateSave }) 
   );
 }
 
-// ── Empty ─────────────────────────────────────────────────────────────────────
 function EmptyState() {
   return (
     <tr>
@@ -219,7 +152,6 @@ function EmptyState() {
   );
 }
 
-// ── Footer ────────────────────────────────────────────────────────────────────
 function TableFooter({ total }) {
   return (
     <div className="flex items-center justify-between px-4 py-2.5 border-t border-gray-100 bg-gray-50 rounded-b-xl">
@@ -239,14 +171,7 @@ function TableFooter({ total }) {
   );
 }
 
-// ── Export ────────────────────────────────────────────────────────────────────
-/**
- * Props:
- *   rows, loading, submitting
- *   onView(hw), onEdit(hw), onCancel(hwId)
- *   onDateSave(hw, field, "YYYY-MM-DD")  ← called when user picks a new date inline
- */
-export default function HomeworkTable({ rows, loading, submitting, onView, onEdit, onCancel, onDateSave }) {
+export default function HomeworkTable({ rows, loading, submitting, onView, onEdit, onCancel }) {
   return (
     <>
       <div className="overflow-x-auto">
@@ -254,7 +179,10 @@ export default function HomeworkTable({ rows, loading, submitting, onView, onEdi
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200">
               {COLUMNS.map((col) => (
-                <th key={col} className="px-4 py-3 text-left text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">
+                <th
+                  key={col}
+                  className="px-4 py-3 text-left text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap"
+                >
                   {col}
                 </th>
               ))}
@@ -274,7 +202,6 @@ export default function HomeworkTable({ rows, loading, submitting, onView, onEdi
                       onView={onView}
                       onEdit={onEdit}
                       onCancel={onCancel}
-                      onDateSave={onDateSave ?? (() => {})}
                     />
                   ))
             }
