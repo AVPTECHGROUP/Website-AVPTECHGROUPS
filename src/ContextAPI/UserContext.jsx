@@ -11,15 +11,22 @@ export const UserProvider = ({ children }) => {
     catch { return null; }
   });
 
+  // ✅ Load profile from localStorage on mount
+  const [profile, setProfile] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("profile")) || null; }
+    catch { return null; }
+  });
+
   useEffect(() => {
     try {
       const decodedToken = getCurrUserDetails();
       if (decodedToken) {
         setUser({
-          id: decodedToken.userId,
-          userType: decodedToken.roles?.[0],
-          email: decodedToken.sub,
+          id:          decodedToken.userId,
+          userType:    decodedToken.roles?.[0],
+          email:       decodedToken.sub,
           permissions: decodedToken.permissions,
+          schoolId:    decodedToken.schoolId,
         });
       }
     } catch (error) {
@@ -30,6 +37,16 @@ export const UserProvider = ({ children }) => {
   const saveToken = (newToken) => {
     localStorage.setItem("token", newToken);
     setToken(newToken);
+  };
+
+  // ✅ Call this after login with response.data.user.profile
+  const saveProfile = (profileData) => {
+    if (profileData) {
+      localStorage.setItem("profile", JSON.stringify(profileData));
+    } else {
+      localStorage.removeItem("profile");
+    }
+    setProfile(profileData);
   };
 
   const saveSchool = (school) => {
@@ -44,14 +61,16 @@ export const UserProvider = ({ children }) => {
   const logout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("school");
+    localStorage.removeItem("profile");
     setToken(null);
     setUser(null);
     setSchoolInfo(null);
+    setProfile(null);
   };
 
   return (
     <UserContext.Provider
-      value={{ user, setUser, token, saveToken, logout, schoolInfo, saveSchool }}
+      value={{ user, setUser, token, saveToken, logout, schoolInfo, saveSchool, profile, saveProfile }}
     >
       {children}
     </UserContext.Provider>

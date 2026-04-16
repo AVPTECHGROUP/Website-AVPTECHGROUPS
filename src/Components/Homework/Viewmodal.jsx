@@ -52,13 +52,22 @@ function getAssignedLabel(hw) {
   return "—";
 }
 
+
 function getAttachType(hw) {
-  if (hw.attach)     return hw.attach;
-  if (hw.attachType) return hw.attachType.toLowerCase();
-  if (hw.linkUrl)    return "link";
+  if (hw.attachmentType) {
+    const type = hw.attachmentType.toLowerCase();
+
+    if (type.includes("pdf")) return "pdf";
+    if (type.includes("image")) return "image";
+    if (type.includes("doc")) return "doc";
+
+    return type;
+  }
+
+  if (hw.attachmentUrl) return "link";
+
   return "none";
 }
-
 // ── exported ──────────────────────────────────────────────────────────────────
 export default function ViewModal({ hw, onClose, onEdit }) {
   if (!hw) return null;
@@ -70,7 +79,7 @@ export default function ViewModal({ hw, onClose, onEdit }) {
     { label: "Assigned",   value: getAssignedLabel(hw) },
     { label: "Due",        value: <DuePill state={getDueState(hw)} label={getDueLabel(hw)} /> },
     { label: "Attachment", value: <AttachChip type={getAttachType(hw)} /> },
-    { label: "Sections",   value: hw.sections?.join(", ") ?? hw.sectionName ?? "—" },
+    // { label: "Sections",   value: hw.sections?.join(", ") ?? hw.sectionName ?? "—" },
   ];
 
   return (
