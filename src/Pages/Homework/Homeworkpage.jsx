@@ -13,106 +13,94 @@ import ViewModal     from "../../Components/Homework/Viewmodal";
 import {
   createHomework,
   updateHomework,
-  cancelHomework,           // PATCH /homework/:id/status?status=CANCELLED
+  cancelHomework,
   uploadHomeworkAttachment,
-  getHomework,              // GET  /homework/section/:sectionId
+  getHomework,
+  getActiveSubjectsBySection,
+  getTeachers,
 } from "../../Api/Homework";
 
-import { getActiveSubjectsBySection } from "../../Api/Homework";
-import SectionSubjectService from "../../Api/SectionSubjectService";
-// ── Error toast helper — always shows the message string, never a raw object ──
+import { getActiveClasses, getSectionsByClass } from "../../Api/ClassSectionAPI";
+
 const showError = (err, fallback = "Something went wrong") =>
     toast.error(typeof err?.message === "string" ? err.message : fallback);
+
 const getDefaultDates = () => {
   const today = new Date();
-
-  const before = new Date(today);
-  before.setDate(today.getDate() - 2);
-
-  const after = new Date(today);
-  after.setDate(today.getDate() + 2);
-
+  const oneWeekAgo = new Date(today);
+  oneWeekAgo.setDate(today.getDate() - 7);
   const format = (d) => d.toISOString().split("T")[0];
-
-  return {
-    dateFrom: format(before),
-    dateTo: format(after),
-  };
+  return { dateFrom: format(oneWeekAgo), dateTo: format(today) };
 };
 
 const EMPTY_FILTERS = {
   subjectFilter: "",
   statusFilter:  "",
   search:        "",
-  ...getDefaultDates(),   // dateFrom = today-2, dateTo = today — not overridden
+  ...getDefaultDates(),
 };
-console.log("EMPTY_FILTERS dates →", EMPTY_FILTERS.dateFrom, EMPTY_FILTERS.dateTo);
-// ── Normalise class / section / subject shapes from different API responses ───
-const normClass = (item) => ({
-  id:    item.id        ?? item.classId    ?? "",
-  label: item.name      ?? item.className  ?? item.label ?? "",
-});
 
-const normSection = (item) => ({
-  id:    item.id        ?? item.sectionId   ?? "",
-  label: item.name      ?? item.sectionName ?? item.label ?? "",
-});
+const normClass   = (item) => ({ id: item.id ?? item.classId ?? "",   label: item.name ?? item.className ?? item.label ?? "" });
+const normSection = (item) => ({ id: item.id ?? item.sectionId ?? "", label: item.name ?? item.sectionName ?? item.label ?? "" });
+const normSubject = (item) => ({ id: item.subjectId ?? item.id ?? "", label: item.subjectName ?? item.name ?? item.label ?? "" });
 
-const normSubject = (item) => ({
-  id:    item.subjectId ?? item.id     ?? "",
-  label: item.subjectName ?? item.name ?? item.label ?? "",
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
 export default function HomeworkPage() {
 
-  // ── Teacher ID from decoded JWT ───────────────────────────────────────────
-  const { user } = useDecodedUser();
-  // Coerce to number here so it's ready for the payload
-  // const teacherId = user?.teacherId
-  // ? Number(user.teacherId)
-  // : user?.id
-  // ? Number(user.id)
-  // : undefined;
-  const teacherId=62;
+  const { user, profile } = useDecodedUser();
+  const schoolId = user?.schoolId ? Number(user.schoolId) : 1;
+  const isTeacher = user?.userType === "TEACHER";
+
+  // ✅ teacherId from profile.id if teacher, else from selectedTeacher in modal
+  const teacherId = isTeacher ? profile?.id : null;
+
+  // ── Teachers (for non-teacher roles) ─────────────────────────────────────
+  const [teachers,        setTeachers]        = useState([]);
+  const [teachersLoading, setTeachersLoading] = useState(false);
+
+  useEffect(() => {
+    if (isTeacher) return; // teachers don't need this list
+    const fetchTeachers = async () => {
+      setTeachersLoading(true);
+      try {
+        const list = await getTeachers();
+        const data = Array.isArray(list) ? list : Array.isArray(list?.data) ? list.data : [];
+        setTeachers(data);
+      } catch (err) {
+        showError(err, "Failed to load teachers");
+      } finally {
+        setTeachersLoading(false);
+      }
+    };
+    fetchTeachers();
+  }, [isTeacher]);
 
   // ── Classes ───────────────────────────────────────────────────────────────
   const [classes,        setClasses]        = useState([]);
   const [classesLoading, setClassesLoading] = useState(false);
-  const [confirmCancel, setConfirmCancel] = useState(null);
+  const [confirmCancel,  setConfirmCancel]  = useState(null);
 
   useEffect(() => {
-  const fetchClasses = async () => {
-    setClassesLoading(true);
-    try {
-      const data = await SectionSubjectService.getAllClasses();
+    const fetchClasses = async () => {
+      setClassesLoading(true);
+      try {
+        const raw  = await getActiveClasses(schoolId);
+        const data = Array.isArray(raw) ? raw : Array.isArray(raw?.data) ? raw.data : [];
+        const uniqueMap = new Map();
+        data.map(normClass).forEach((item) => {
+          const key = item.id || item.label;
+          if (!uniqueMap.has(key)) uniqueMap.set(key, item);
+        });
+        setClasses(Array.from(uniqueMap.values()));
+      } catch (err) {
+        showError(err, "Failed to load classes");
+      } finally {
+        setClassesLoading(false);
+      }
+    };
+    fetchClasses();
+  }, [schoolId]);
 
-      // Normalize first
-      const normalized = data.map(normClass);
-
-      // Remove duplicates based on ID (preferred) or label fallback
-      const uniqueMap = new Map();
-
-      normalized.forEach((item) => {
-        const key = item.id || item.label; // fallback if id missing
-        if (!uniqueMap.has(key)) {
-          uniqueMap.set(key, item);
-        }
-      });
-
-      setClasses(Array.from(uniqueMap.values()));
-    } catch (err) {
-      showError(err, "Failed to load classes");
-    } finally {
-      setClassesLoading(false);
-    }
-  };
-
-  fetchClasses();
-}, []);
-  
-
-  // ── Sections — reload when selected class changes ─────────────────────────
+  // ── Sections ──────────────────────────────────────────────────────────────
   const [selectedClassId,   setSelectedClassId]   = useState("");
   const [sections,          setSections]          = useState([]);
   const [sectionsLoading,   setSectionsLoading]   = useState(false);
@@ -121,123 +109,104 @@ export default function HomeworkPage() {
     setSections([]);
     setSelectedSectionId("");
     setSubjects([]);
+    setRows([]);
     if (!selectedClassId) return;
 
     setSectionsLoading(true);
-    SectionSubjectService.getSectionsByClass(selectedClassId)
-        .then((data) => setSections(data.map(normSection)))
+    getSectionsByClass(selectedClassId)
+        .then((raw) => {
+          const data = Array.isArray(raw) ? raw : Array.isArray(raw?.data) ? raw.data : [];
+          setSections(data.map(normSection));
+        })
         .catch((err) => showError(err, "Failed to load sections"))
         .finally(() => setSectionsLoading(false));
   }, [selectedClassId]);
 
-  // ── Subjects — reload when selected section changes ───────────────────────
+  // ── Subjects ──────────────────────────────────────────────────────────────
   const [selectedSectionId, setSelectedSectionId] = useState("");
   const [subjects,          setSubjects]          = useState([]);
   const [subjectsLoading,   setSubjectsLoading]   = useState(false);
 
-useEffect(() => {
-  setSubjects([]);
-  setFilters((f) => ({ ...f, subjectFilter: "" }));
+  useEffect(() => {
+    setSubjects([]);
+    setFilters((f) => ({ ...f, subjectFilter: "" }));
+    setRows([]);
+    if (!selectedSectionId) return;
 
-  if (!selectedSectionId) return;
-
-  const fetchSubjects = async () => {
-    setSubjectsLoading(true);
-    try {
-      const list = await getActiveSubjectsBySection(selectedSectionId);
-      setSubjects(list.map(normSubject));
-    } catch (err) {
-      showError(err, "Failed to load subjects");
-    } finally {
-      setSubjectsLoading(false);
-    }
-  };
-
-  fetchSubjects();
-}, [selectedSectionId]);
+    const fetchSubjects = async () => {
+      setSubjectsLoading(true);
+      try {
+        const list = await getActiveSubjectsBySection(selectedSectionId);
+        setSubjects(list.map(normSubject));
+      } catch (err) {
+        showError(err, "Failed to load subjects");
+      } finally {
+        setSubjectsLoading(false);
+      }
+    };
+    fetchSubjects();
+  }, [selectedSectionId]);
 
   // ── Filters ───────────────────────────────────────────────────────────────
   const [filters, setFilters] = useState(EMPTY_FILTERS);
   const setFilter = (key) => (val) => setFilters((f) => ({ ...f, [key]: val }));
-
-  const handleReset = () => {
-    setFilters(EMPTY_FILTERS);
-    if (selectedSectionId) setApplyTrigger((n) => n + 1);
-  };
-
-  // ── Apply trigger — fetch fires ONLY when user clicks Apply ───────────────
-  const [applyTrigger, setApplyTrigger] = useState(0);
-  const handleApply = useCallback(() => {
-    if (!selectedSectionId) return;
-    setApplyTrigger((n) => n + 1);
-  }, [selectedSectionId]);
 
   // ── Homework list ─────────────────────────────────────────────────────────
   const [rows,        setRows]        = useState([]);
   const [listLoading, setListLoading] = useState(false);
   const [submitting,  setSubmitting]  = useState(false);
 
-const fetchHomework = useCallback(async () => {
-  if (!selectedClassId || !selectedSectionId) {
-    setRows([]);
-    return;
-  }
+  const fetchHomework = useCallback(async (currentFilters) => {
+    if (!selectedClassId || !selectedSectionId) {
+      toast.warn("Please select a class and section first.");
+      return;
+    }
+    setListLoading(true);
+    try {
+      const result = await getHomework({
+        sectionId: selectedSectionId,
+        subjectId: currentFilters.subjectFilter || undefined,
+        status:    currentFilters.statusFilter  || undefined,
+        dueAfter:  currentFilters.dateFrom      || undefined,
+        dueBefore: currentFilters.dateTo        || undefined,
+      });
+      setRows(Array.isArray(result) ? result : []);
+    } catch (err) {
+      showError(err, "Failed to load homework");
+    } finally {
+      setListLoading(false);
+    }
+  }, [selectedClassId, selectedSectionId]);
 
-  setListLoading(true);
-
-  try {
-    const result = await getHomework({
-      sectionId: selectedSectionId,
-      subjectId: filters.subjectFilter || undefined,
-      status:    filters.statusFilter  || undefined,
-
-      // ✅ USE UI VALUES
-      dueAfter: filters.dateFrom || undefined,
-      dueBefore: filters.dateTo || undefined,
-    });
-
-    setRows(Array.isArray(result) ? result : []);
-  } catch (err) {
-    showError(err, "Failed to load homework");
-  } finally {
-    setListLoading(false);
-  }
-}, [selectedClassId, selectedSectionId, filters]);
-
+  // ── Auto-fetch when section selected ─────────────────────────────────────
   useEffect(() => {
-    if (applyTrigger > 0) fetchHomework();
+    if (selectedClassId && selectedSectionId) {
+      fetchHomework(filters);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [applyTrigger]);
+  }, [selectedSectionId]);
 
-  // Clear table when class / section selection changes
-  useEffect(() => {
-  setRows([]);
-  if (selectedClassId && selectedSectionId) {
-    setApplyTrigger((n) => n + 1);   // reuses existing fetch path — no new logic
-  }
-}, [selectedClassId, selectedSectionId]);
+  // ── Apply button ──────────────────────────────────────────────────────────
+  const handleApply = useCallback(() => {
+    fetchHomework(filters);
+  }, [fetchHomework, filters]);
 
-  // ── Client-side search + date filters ────────────────────────────────────
+  // ── Reset ─────────────────────────────────────────────────────────────────
+  const handleReset = () => {
+    const defaultFilters = EMPTY_FILTERS;
+    setFilters(defaultFilters);
+    if (selectedSectionId) fetchHomework(defaultFilters);
+  };
+
+  // ── Client-side search filter ─────────────────────────────────────────────
   const visibleRows = useMemo(() => {
     const q = filters.search.trim().toLowerCase();
     return rows.filter((hw) => {
-      const textMatch = !q ||
+      return !q ||
           (hw.title       ?? "").toLowerCase().includes(q) ||
           (hw.description ?? hw.desc ?? "").toLowerCase().includes(q);
-
-      const subjectMatch = !filters.subjectFilter ||
-          String(hw.subjectId ?? "") === String(filters.subjectFilter);
-
-      const statusMatch = !filters.statusFilter ||
-          String(hw.status ?? "") === String(filters.statusFilter);
-
-      const hwDue = hw.dueDate ? new Date(hw.dueDate) : null;
-      const fromMatch = !filters.dateFrom || !hwDue || hwDue >= new Date(filters.dateFrom);
-      const toMatch   = !filters.dateTo   || !hwDue || hwDue <= new Date(filters.dateTo);
-
-      return textMatch && subjectMatch && statusMatch && fromMatch && toMatch;
     });
-  }, [rows, filters]);
+  }, [rows, filters.search]);
 
   // ── Stats ─────────────────────────────────────────────────────────────────
   const stats = useMemo(() => ({
@@ -256,17 +225,15 @@ const fetchHomework = useCallback(async () => {
   const openEdit    = (hw) => { setEditHw(hw); setAssignOpen(true); };
   const closeAssign = ()   => { setAssignOpen(false); setEditHw(null); };
 
-  // ── Save — POST /homework  |  PUT /homework/:id ───────────────────────────
+  // ── Save ──────────────────────────────────────────────────────────────────
   const handleSave = async (payload, file) => {
     setSubmitting(true);
     try {
-      // Numeric IDs must be numbers — strings cause 500 on the Java side.
-      // sanitizePayload inside the API layer handles this, but we also coerce
-      // here for clarity and to avoid the round-trip if validation is server-side.
       const enriched = {
         ...payload,
-        sectionId: Number(selectedSectionId),   // string → number
-        teacherId,                               // already a number (see top)
+        sectionId: Number(selectedSectionId),
+        // ✅ teacherId from profile if teacher, else from payload (selected in modal)
+        teacherId: isTeacher ? teacherId : payload.teacherId,
       };
 
       let saved;
@@ -276,16 +243,12 @@ const fetchHomework = useCallback(async () => {
         saved = await createHomework(enriched);
       }
 
-      // The saved ID may live at different depths depending on the API envelope
       const savedId = saved?.id ?? saved?.data?.id ?? saved?.data?.homeworkId;
-
-      if (file && savedId) {
-        await uploadHomeworkAttachment(savedId, file);
-      }
+      if (file && savedId) await uploadHomeworkAttachment(savedId, file);
 
       toast.success(editHw ? "Homework updated!" : "Homework published!");
       closeAssign();
-      setApplyTrigger((n) => n + 1);   // re-fetch after save
+      fetchHomework(filters);
     } catch (err) {
       showError(err, "Failed to save homework");
     } finally {
@@ -293,25 +256,24 @@ const fetchHomework = useCallback(async () => {
     }
   };
 
-  // ── Cancel — PATCH /homework/:id/status?status=CANCELLED ─────────────────
- const handleCancel = (hwId) => setConfirmCancel(hwId); // just open the modal
+  // ── Cancel ────────────────────────────────────────────────────────────────
+  const handleCancel = (hwId) => setConfirmCancel(hwId);
 
-const handleConfirmCancel = async () => {
-  const hwId = confirmCancel;
-  setConfirmCancel(null);
-  setSubmitting(true);
-  try {
-    await cancelHomework(hwId);
-    toast.success("Homework cancelled");
-    setApplyTrigger((n) => n + 1);
-  } catch (err) {
-    showError(err, "Failed to cancel homework");
-  } finally {
-    setSubmitting(false);
-  }
-};
+  const handleConfirmCancel = async () => {
+    const hwId = confirmCancel;
+    setConfirmCancel(null);
+    setSubmitting(true);
+    try {
+      await cancelHomework(hwId);
+      toast.success("Homework cancelled");
+      fetchHomework(filters);
+    } catch (err) {
+      showError(err, "Failed to cancel homework");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
-  // ─────────────────────────────────────────────────────────────────────────
   return (
       <div className="flex flex-col h-full">
 
@@ -384,16 +346,22 @@ const handleConfirmCancel = async () => {
                 submitting      = {submitting}
                 onClose         = {closeAssign}
                 onSave          = {handleSave}
+                // ✅ pass teacher context to modal
+                isTeacher       = {isTeacher}
+                teacherId       = {teacherId}
+                teacherName     = {profile?.fullName}
+                teachers        = {teachers}
+                teachersLoading = {teachersLoading}
             />
         )}
 
         {confirmCancel && (
-  <ConfirmModal
-    message="Are you sure you want to cancel this homework? This action cannot be undone."
-    onConfirm={handleConfirmCancel}
-    onClose={() => setConfirmCancel(null)}
-  />
-)}
+            <ConfirmModal
+                message   = "Are you sure you want to cancel this homework? This action cannot be undone."
+                onConfirm = {handleConfirmCancel}
+                onClose   = {() => setConfirmCancel(null)}
+            />
+        )}
       </div>
   );
 }
