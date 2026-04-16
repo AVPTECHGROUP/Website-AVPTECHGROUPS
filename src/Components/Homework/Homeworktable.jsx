@@ -40,9 +40,18 @@ function getAssignedLabel(hw) {
 }
 
 function getAttachType(hw) {
-  if (hw.attach)     return hw.attach;
-  if (hw.attachType) return hw.attachType.toLowerCase();
-  if (hw.linkUrl)    return "link";
+  if (hw.attachmentType) {
+    const type = hw.attachmentType.toLowerCase();
+
+    if (type.includes("pdf")) return "pdf";
+    if (type.includes("image")) return "image";
+    if (type.includes("doc")) return "doc";
+
+    return type;
+  }
+
+  if (hw.attachmentUrl) return "link";
+
   return "none";
 }
 
