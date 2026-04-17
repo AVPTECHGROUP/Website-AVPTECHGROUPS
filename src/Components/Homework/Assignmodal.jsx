@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import {
   X, ChevronDown, SendHorizonal, Upload,
   Pencil, Loader2, FileText, CalendarDays, User,
+  ExternalLink, Image as ImageIcon, Link2, RefreshCw, Download,
 } from "lucide-react";
 import { toast } from "react-toastify";
 
@@ -26,6 +27,12 @@ const currentAcademicYear = () => {
   const short     = String(startYear + 1).slice(-2);
   return `${startYear}-${short}`;
 };
+
+// ── Resolve attachment URL from any possible field name ───────────────────────
+function getExistingAttachUrl(hw) {
+  if (!hw) return null;
+  return hw.attachmentUrl ?? hw.fileUrl ?? hw.url ?? hw.linkUrl ?? null;
+}
 
 // ── Initial form state ────────────────────────────────────────────────────────
 const EMPTY_FORM = {
@@ -80,8 +87,99 @@ function ModalSelect({ value, onChange, disabled = false, loading = false, child
   );
 }
 
-function UploadZone({ file, onFileChange, disabled }) {
+// ── UploadZone — shows new file selection OR existing attachment preview ───────
+function UploadZone({ file, onFileChange, disabled, existingUrl, existingType, onReplace }) {
   const ref = useRef(null);
+
+  // If there's an existing attachment and no new file chosen yet — show preview
+  if (existingUrl && !file) {
+    return (
+      <div className="border-2 border-gray-200 rounded-xl overflow-hidden">
+        {/* Preview header */}
+        <div className="flex items-center justify-between px-3 py-2 bg-gray-50 border-b border-gray-200">
+          <div className="flex items-center gap-1.5">
+            {existingType === "pdf"   && <FileText  size={13} className="text-red-500"  />}
+            {existingType === "image" && <ImageIcon size={13} className="text-blue-500" />}
+            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              Current Attachment
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <a
+              href={existingUrl}
+              download
+              className="inline-flex items-center gap-1 text-xs font-semibold text-gray-500 hover:text-gray-700 transition-colors"
+            >
+              <Download size={12} />
+              Download
+            </a>
+            <a
+              href={existingUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-xs font-semibold text-blue-700 hover:text-blue-900 transition-colors"
+            >
+              <ExternalLink size={12} />
+              Open
+            </a>
+            <button
+              type="button"
+              onClick={() => !disabled && ref.current?.click()}
+              disabled={disabled}
+              className="inline-flex items-center gap-1 text-xs font-semibold text-orange-600 hover:text-orange-800 transition-colors disabled:opacity-40"
+            >
+              <RefreshCw size={12} />
+              Replace
+            </button>
+          </div>
+        </div>
+
+        {/* Existing PDF — Google Docs Viewer (bypasses Content-Disposition: attachment) */}
+        {existingType === "pdf" && (
+          <div className="bg-gray-900" style={{ height: "300px" }}>
+            <embed
+              src={`${existingUrl}#toolbar=1&navpanes=0`}
+              type="application/pdf"
+              width="100%"
+              height="100%"
+              style={{ display: "block" }}
+            />
+          </div>
+        )}
+
+        {/* Image — plain <img>, never triggers download */}
+        {existingType === "image" && (
+          <div className="bg-gray-100 flex flex-col items-center justify-center p-3 gap-2 min-h-[80px]">
+            <img
+              src={existingUrl}
+              alt="Current attachment"
+              className="max-w-full max-h-48 rounded-lg object-contain shadow-sm"
+              onError={(e) => {
+                e.currentTarget.style.display = "none";
+                e.currentTarget.nextElementSibling.style.display = "flex";
+              }}
+            />
+            {/* Fallback shown only if image fails to load */}
+            <div className="hidden flex-col items-center gap-2 text-sm text-gray-400 py-4">
+              <ImageIcon size={16} className="text-gray-300" />
+              <span>Image could not be loaded.</span>
+            </div>
+          </div>
+        )}
+
+        {/* Hidden replacement file input */}
+        <input
+          ref={ref}
+          type="file"
+          className="hidden"
+          accept=".pdf,.png,.jpg,.jpeg"
+          onChange={(e) => onFileChange(e.target.files?.[0] ?? null)}
+        />
+      </div>
+    );
+  }
+
+  // ── Default upload zone ────────────────────────────────────────────────────
   return (
     <div
       onClick={() => !disabled && ref.current?.click()}
@@ -98,10 +196,22 @@ function UploadZone({ file, onFileChange, disabled }) {
         accept=".pdf,.png,.jpg,.jpeg"
         onChange={(e) => onFileChange(e.target.files?.[0] ?? null)}
       />
+
       {file ? (
-        <div className="flex items-center justify-center gap-2 text-blue-700">
-          <FileText size={18} />
-          <span className="text-sm font-medium truncate max-w-[240px]">{file.name}</span>
+        <div className="flex flex-col items-center gap-2">
+          <div className="flex items-center justify-center gap-2 text-blue-700">
+            <FileText size={18} />
+            <span className="text-sm font-medium truncate max-w-[240px]">{file.name}</span>
+          </div>
+          {/* Preview for newly-selected image */}
+          {file.type.startsWith("image/") && (
+            <img
+              src={URL.createObjectURL(file)}
+              alt="Preview"
+              className="max-h-36 rounded-lg object-contain mt-1 shadow-sm"
+            />
+          )}
+          <p className="text-xs text-blue-500 mt-1">Click to choose a different file</p>
         </div>
       ) : (
         <>
@@ -123,7 +233,6 @@ export default function AssignModal({
   submitting      = false,
   onClose,
   onSave,
-  // teacher context props from HomeworkPage
   isTeacher       = false,
   teacherId       = null,
   teacherName     = "",
@@ -131,6 +240,14 @@ export default function AssignModal({
   teachersLoading = false,
 }) {
   const isEdit = mode === "edit";
+
+  // ── Resolve existing attachment info from hw ──────────────────────────────
+  const existingAttachUrl = isEdit ? getExistingAttachUrl(hw) : null;
+  const existingAttachType = isEdit && hw?.attachmentType
+    ? hw.attachmentType.toLowerCase().includes("pdf")   ? "pdf"
+    : hw.attachmentType.toLowerCase().includes("image") ? "image"
+    : "link"
+    : null;
 
   const [form, setForm] = useState(() =>
     isEdit && hw
@@ -148,7 +265,6 @@ export default function AssignModal({
         }
       : {
           ...EMPTY_FORM,
-          // pre-fill teacherId if teacher is logged in
           teacherId: isTeacher && teacherId ? String(teacherId) : "",
         }
   );
@@ -156,7 +272,6 @@ export default function AssignModal({
   const [attachFile, setAttachFile] = useState(null);
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
-  // Resolve the effective teacherId for submission
   const effectiveTeacherId = isTeacher ? teacherId : form.teacherId;
 
   const handleSubmit = async () => {
@@ -203,6 +318,11 @@ export default function AssignModal({
     form.academicYear &&
     (isTeacher ? true : !!form.teacherId);
 
+  const handleAttachTypeChange = (v) => {
+    set("attachType", v);
+    setAttachFile(null);
+  };
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
@@ -234,7 +354,6 @@ export default function AssignModal({
 
           {/* ── Teacher row ── */}
           {isTeacher ? (
-            /* Teacher is logged in — show read-only badge */
             <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-100 rounded-lg">
               <User size={13} className="text-blue-600 shrink-0" />
               <span className="text-xs text-blue-700 font-medium">
@@ -245,7 +364,6 @@ export default function AssignModal({
               </span>
             </div>
           ) : (
-            /* Admin / non-teacher — show teacher dropdown */
             <Field label="On behalf of" required>
               <div className="relative">
                 {teachersLoading && (
@@ -270,7 +388,6 @@ export default function AssignModal({
                 >
                   <option value="">On behalf of...</option>
                   {teachers.map((t) => {
-                    // support both flat and nested profile shapes
                     const id   = t.id ?? t.userId ?? t.profile?.id ?? "";
                     const name =
                       t.fullName ??
@@ -364,16 +481,22 @@ export default function AssignModal({
 
           {/* Description */}
           <Field label="Description">
-            <textarea
-              value={form.description}
-              disabled={submitting}
-              onChange={(e) => set("description", e.target.value)}
-              placeholder="Instructions for students…"
-              rows={3}
-              className="w-full border-[1.5px] border-gray-300 rounded-lg px-3 py-2 text-sm outline-none
-                focus:border-blue-500 focus:ring-2 focus:ring-blue-100 resize-y disabled:opacity-60"
-            />
-          </Field>
+  <textarea
+    value={form.description}
+    onChange={(e) => {
+      if (e.target.value.length <= 1000) {
+        set("description", e.target.value); // ✅ use your helper
+      }
+    }}
+    maxLength={1000}
+    className="w-full border rounded p-2"
+    placeholder="Enter description (max 1000 characters)"
+  />
+
+  <div className="text-xs text-gray-500 text-right">
+    {form.description?.length || 0} / 1000
+  </div>
+</Field>
 
           {/* Dates */}
           <div className="grid grid-cols-2 gap-3">
@@ -404,7 +527,7 @@ export default function AssignModal({
           <Field label="Attachment Type">
             <ModalSelect
               value={form.attachType}
-              onChange={(v) => { set("attachType", v); setAttachFile(null); }}
+              onChange={handleAttachTypeChange}
               disabled={submitting}
             >
               <option value="NONE">None</option>
@@ -414,21 +537,42 @@ export default function AssignModal({
             </ModalSelect>
           </Field>
 
+          {/* Upload zone */}
           {showUpload && (
-            <UploadZone file={attachFile} onFileChange={setAttachFile} disabled={submitting} />
+            <UploadZone
+              file         = {attachFile}
+              onFileChange = {setAttachFile}
+              disabled     = {submitting}
+              existingUrl  = {existingAttachUrl}
+              existingType = {existingAttachType}
+            />
           )}
 
+          {/* Link field */}
           {showLink && (
             <Field label="Resource Link">
-              <input
-                type="url"
-                value={form.linkUrl}
-                disabled={submitting}
-                onChange={(e) => set("linkUrl", e.target.value)}
-                placeholder="https://…"
-                className="w-full border-[1.5px] border-gray-300 rounded-lg px-3 py-2 text-sm outline-none
-                  focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:opacity-60"
-              />
+              <div className="space-y-2">
+                <input
+                  type="url"
+                  value={form.linkUrl}
+                  disabled={submitting}
+                  onChange={(e) => set("linkUrl", e.target.value)}
+                  placeholder="https://…"
+                  className="w-full border-[1.5px] border-gray-300 rounded-lg px-3 py-2 text-sm outline-none
+                    focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:opacity-60"
+                />
+                {form.linkUrl && (
+                  <a
+                    href={form.linkUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-800 font-medium transition-colors"
+                  >
+                    <ExternalLink size={12} />
+                    Preview link
+                  </a>
+                )}
+              </div>
             </Field>
           )}
         </div>
