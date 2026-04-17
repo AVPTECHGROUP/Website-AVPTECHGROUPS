@@ -1,7 +1,11 @@
-import { X, Pencil, ExternalLink, FileText, Image as ImageIcon, Link2, Download } from "lucide-react";
+import { useState } from "react";
+import {
+  X, Pencil, ExternalLink, FileText,
+  Image as ImageIcon, Link2, Download, Eye, EyeOff, AlignLeft,
+} from "lucide-react";
 import { DuePill, StatusBadge, AttachChip } from "./Badges";
 
-// ── same deterministic colour palette as SubjectLabel in Badges.jsx ───────────
+// ── colour palette ────────────────────────────────────────────────────────────
 const SUBJECT_COLOURS = [
   { dot: "bg-amber-400",    text: "text-amber-700"   },
   { dot: "bg-blue-500",     text: "text-blue-700"    },
@@ -15,15 +19,23 @@ const SUBJECT_COLOURS = [
 
 function subjectColour(subject = "") {
   let hash = 0;
-  for (let i = 0; i < subject.length; i++) {
-    hash = (hash * 31 + subject.charCodeAt(i)) >>> 0;
-  }
+  for (let i = 0; i < subject.length; i++) hash = (hash * 31 + subject.charCodeAt(i)) >>> 0;
   return SUBJECT_COLOURS[hash % SUBJECT_COLOURS.length];
 }
 
-// ── helpers ───────────────────────────────────────────────────────────────────
-function getSubjectName(hw) {
-  return hw.subjectName ?? hw.subject ?? hw.subjectTitle ?? "—";
+function getSubjectName(hw)  { return hw.subjectName ?? hw.subject ?? hw.subjectTitle ?? "—"; }
+function getAttachUrl(hw)    { return hw.attachmentUrl ?? hw.fileUrl ?? hw.url ?? hw.linkUrl ?? null; }
+
+function getAttachType(hw) {
+  if (hw.attachmentType) {
+    const t = hw.attachmentType.toLowerCase();
+    if (t.includes("pdf"))   return "pdf";
+    if (t.includes("image")) return "image";
+    if (t.includes("link"))  return "link";
+    return t;
+  }
+  if (hw.attachmentUrl || hw.fileUrl || hw.url || hw.linkUrl) return "link";
+  return "none";
 }
 
 function getDueState(hw) {
@@ -49,127 +61,95 @@ function getAssignedLabel(hw) {
   return "—";
 }
 
-function getAttachType(hw) {
-  if (hw.attachmentType) {
-    const type = hw.attachmentType.toLowerCase();
-    if (type.includes("pdf"))   return "pdf";
-    if (type.includes("image")) return "image";
-    if (type.includes("doc"))   return "doc";
-    if (type.includes("link"))  return "link";
-    return type;
-  }
-  if (hw.attachmentUrl || hw.fileUrl || hw.url || hw.linkUrl) return "link";
-  return "none";
-}
+// ── Lazy Attachment section ───────────────────────────────────────────────────
+function AttachmentSection({ hw }) {
+  const [open, setOpen] = useState(false);
+  const type = getAttachType(hw);
+  const url  = getAttachUrl(hw);
+  if (type === "none" || !url) return null;
 
-// ── Resolve attachment URL from any possible field name ───────────────────────
-function getAttachUrl(hw) {
-  return hw.attachmentUrl ?? hw.fileUrl ?? hw.url ?? hw.linkUrl ?? null;
-}
-
-// ── Attachment Preview component ──────────────────────────────────────────────
-function AttachmentPreview({ hw }) {
-  const type      = getAttachType(hw);
-  const attachUrl = getAttachUrl(hw);
-
-  // Nothing to show
-  if (type === "none" || !attachUrl) return null;
+  const isPdf   = type === "pdf";
+  const isImage = type === "image";
+  const isLink  = !isPdf && !isImage;
 
   return (
     <div className="border border-gray-200 rounded-xl overflow-hidden">
-      {/* Preview header */}
-      <div className="flex items-center justify-between px-3 py-2 bg-gray-50 border-b border-gray-200">
+      <div className="flex items-center justify-between px-3 py-2.5 bg-gray-50">
         <div className="flex items-center gap-1.5">
-          {type === "pdf"   && <FileText  size={13} className="text-red-500"  />}
-          {type === "image" && <ImageIcon size={13} className="text-blue-500" />}
-          {type === "link"  && <Link2     size={13} className="text-gray-500" />}
+          {isPdf   && <FileText  size={13} className="text-red-500"  />}
+          {isImage && <ImageIcon size={13} className="text-blue-500" />}
+          {isLink  && <Link2     size={13} className="text-gray-500" />}
           <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
-            {type === "pdf"   && "PDF Attachment"}
-            {type === "image" && "Image Attachment"}
-            {type === "link"  && "Resource Link"}
+            {isPdf ? "PDF Attachment" : isImage ? "Image Attachment" : "Resource Link"}
           </span>
         </div>
         <div className="flex items-center gap-2">
-          {/* Download — forces save-to-disk without triggering viewer */}
-          {(type === "pdf" || type === "image") && (
-            <a
-              href={attachUrl}
-              download
-              className="inline-flex items-center gap-1 text-xs font-semibold text-gray-500 hover:text-gray-700 transition-colors"
+          {!isLink && (
+            <button
+              type="button"
+              onClick={() => setOpen((v) => !v)}
+              className="inline-flex items-center gap-1 text-xs font-semibold text-blue-700 hover:text-blue-900 transition-colors"
             >
-              <Download size={12} />
-              Download
+              {open ? <EyeOff size={12} /> : <Eye size={12} />}
+              {open ? "Hide" : "View"}
+            </button>
+          )}
+          {(isPdf || isImage) && (
+            <a href={url} download className="inline-flex items-center gap-1 text-xs font-semibold text-gray-500 hover:text-gray-700 transition-colors">
+              <Download size={12} /> Download
             </a>
           )}
           <a
-            href={attachUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-xs font-semibold text-blue-700 hover:text-blue-900 transition-colors"
+            href={isPdf ? `https://docs.google.com/viewer?url=${encodeURIComponent(url)}` : url}
+            target="_blank" rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-xs font-semibold text-gray-500 hover:text-gray-700 transition-colors"
           >
-            <ExternalLink size={12} />
-            Open
+            <ExternalLink size={12} /> Open
           </a>
         </div>
       </div>
 
-      {/* PDF — Google Docs Viewer iframe (bypasses Content-Disposition: attachment) */}
-      {type === "pdf" && (
-        <div className="bg-gray-100">
-          <iframe
-            src={`https://docs.google.com/viewer?url=${encodeURIComponent(attachUrl)}&embedded=true`}
-            title="PDF Preview"
-            className="w-full"
-            style={{ height: "420px", border: "none" }}
-          />
+      {open && (
+        <div className="border-t border-gray-200">
+          {isPdf && (
+            <div className="bg-gray-100" style={{ height: 420 }}>
+              <iframe
+                src={`https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`}
+                title="PDF Preview" width="100%" height="100%"
+                style={{ border: "none", display: "block" }}
+              />
+            </div>
+          )}
+          {isImage && (
+            <div className="bg-gray-100 flex items-center justify-center p-3 min-h-[80px]">
+              <img
+                src={url} alt="Homework attachment"
+                className="max-w-full max-h-72 rounded-lg object-contain shadow-sm"
+                onError={(e) => {
+                  e.currentTarget.style.display = "none";
+                  if (e.currentTarget.nextElementSibling)
+                    e.currentTarget.nextElementSibling.style.display = "flex";
+                }}
+              />
+              <div className="hidden flex-col items-center gap-1 text-sm text-gray-400 py-6">
+                <ImageIcon size={18} className="text-gray-300" />
+                <span>Image could not be loaded.</span>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
-      {/* Image — inline preview */}
-      {type === "image" && (
-        <div className="bg-gray-100 flex items-center justify-center p-3">
-          <img
-            src={attachUrl}
-            alt="Homework attachment"
-            className="max-w-full max-h-72 rounded-lg object-contain shadow-sm"
-            onError={(e) => {
-              e.target.style.display = "none";
-              e.target.nextSibling.style.display = "flex";
-            }}
-          />
-          {/* Fallback if image fails to load */}
-          <div
-            className="hidden items-center gap-2 text-sm text-gray-400 py-6"
-          >
-            <ImageIcon size={18} className="text-gray-300" />
-            <span>Image could not be loaded.</span>
-            <a
-              href={attachUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-600 underline"
-            >
-              Open link
-            </a>
-          </div>
-        </div>
-      )}
-
-      {/* Link / URL — clickable card */}
-      {type === "link" && (
+      {isLink && (
         <a
-          href={attachUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-3 px-4 py-3 bg-white hover:bg-blue-50 transition-colors group"
+          href={url} target="_blank" rel="noopener noreferrer"
+          className="flex items-center gap-3 px-4 py-3 bg-white hover:bg-blue-50 transition-colors group border-t border-gray-200"
         >
-          <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
-            <Link2 size={15} className="text-blue-600" />
+          <div className="flex-shrink-0 w-7 h-7 rounded-lg bg-blue-100 flex items-center justify-center">
+            <Link2 size={13} className="text-blue-600" />
           </div>
           <div className="min-w-0">
-            <div className="text-xs font-semibold text-gray-700 group-hover:text-blue-700 transition-colors truncate">
-              {attachUrl}
-            </div>
+            <div className="text-xs font-semibold text-gray-700 group-hover:text-blue-700 truncate">{url}</div>
             <div className="text-[10px] text-gray-400 mt-0.5">Click to open in new tab</div>
           </div>
           <ExternalLink size={13} className="ml-auto flex-shrink-0 text-gray-400 group-hover:text-blue-600 transition-colors" />
@@ -179,11 +159,48 @@ function AttachmentPreview({ hw }) {
   );
 }
 
-// ── exported ──────────────────────────────────────────────────────────────────
+// ── Description Box — collapses long text so attachment stays reachable ───────
+const DESC_PREVIEW_LENGTH = 300;
+
+function DescriptionBox({ text }) {
+  const [expanded, setExpanded] = useState(false);
+  const isEmpty = !text || text.trim() === "";
+  const isLong  = !isEmpty && text.length > DESC_PREVIEW_LENGTH;
+  const display = isLong && !expanded ? text.slice(0, DESC_PREVIEW_LENGTH) + "…" : text;
+
+  return (
+    <div className="rounded-xl border border-gray-200 overflow-hidden">
+      <div className="flex items-center gap-1.5 px-3 py-2 bg-gray-50 border-b border-gray-200">
+        <AlignLeft size={12} className="text-gray-400" />
+        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Instructions</span>
+      </div>
+      <div className="px-4 py-3 bg-white">
+        {isEmpty ? (
+          <p className="text-sm text-gray-300 italic">No description provided.</p>
+        ) : (
+          <>
+            <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap break-words">{display}</p>
+            {isLong && (
+              <button
+                type="button"
+                onClick={() => setExpanded((v) => !v)}
+                className="mt-2 text-xs font-semibold text-blue-600 hover:text-blue-800 transition-colors"
+              >
+                {expanded ? "Show less ↑" : "Show more ↓"}
+              </button>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── ViewModal ─────────────────────────────────────────────────────────────────
 export default function ViewModal({ hw, onClose, onEdit }) {
   if (!hw) return null;
 
-  const subjectName = getSubjectName(hw);
+  const subjectName   = getSubjectName(hw);
   const { dot, text } = subjectColour(subjectName);
 
   const metaItems = [
@@ -197,24 +214,26 @@ export default function ViewModal({ hw, onClose, onEdit }) {
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
       onClick={onClose}
     >
+      {/*
+        FIX: flex flex-col + max-h-[90vh]
+        - Header + Footer are flex-shrink-0 (never squished, never scroll away)
+        - Body is flex-1 overflow-y-auto (scrolls independently)
+        → Description can be any length; Attachment is always reachable by scrolling
+      */}
       <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-[520px] max-h-[90vh] overflow-y-auto"
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-[520px] max-h-[90vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+        {/* Header — pinned */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 flex-shrink-0">
           <h2 className="text-sm font-bold text-gray-900">Homework Details</h2>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 p-1 rounded-md hover:bg-gray-100"
-          >
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1 rounded-md hover:bg-gray-100">
             <X size={18} />
           </button>
         </div>
 
-        {/* Body */}
-        <div className="px-5 py-4 space-y-3">
-          {/* Subject chip + status badge */}
+        {/* Body — scrolls */}
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
           <div className="flex items-center justify-between">
             <span className={`inline-flex items-center gap-1.5 text-sm font-bold ${text}`}>
               <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${dot}`} />
@@ -223,32 +242,26 @@ export default function ViewModal({ hw, onClose, onEdit }) {
             <StatusBadge status={hw.status} />
           </div>
 
-          {/* Title + description */}
-          <div>
-            <div className="text-base font-bold text-gray-900">{hw.title}</div>
-            <div className="text-sm text-gray-500 mt-1 leading-relaxed">
-              {hw.description ?? hw.desc ?? "—"}
-            </div>
-          </div>
+          <div className="text-base font-bold text-gray-900">{hw.title}</div>
 
-          {/* Meta grid */}
-          <div className="grid grid-cols-2 gap-3 pt-1">
+          <div className="grid grid-cols-2 gap-3">
             {metaItems.map(({ label, value }) => (
               <div key={label} className="bg-gray-50 rounded-lg px-3 py-2">
-                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
-                  {label}
-                </div>
+                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">{label}</div>
                 <div className="text-sm text-gray-800">{value}</div>
               </div>
             ))}
           </div>
 
-          {/* ── Attachment Preview ── */}
-          <AttachmentPreview hw={hw} />
+          {/* Description collapses if > 300 chars so attachment is never pushed offscreen */}
+          <DescriptionBox text={hw.description ?? hw.desc} />
+
+          {/* Attachment always rendered below description */}
+          <AttachmentSection hw={hw} />
         </div>
 
-        {/* Footer */}
-        <div className="flex justify-end gap-2 px-5 py-3.5 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
+        {/* Footer — pinned */}
+        <div className="flex justify-end gap-2 px-5 py-3.5 border-t border-gray-100 bg-gray-50 rounded-b-2xl flex-shrink-0">
           <button
             onClick={onClose}
             className="px-4 py-2 text-xs font-semibold border border-gray-300 rounded-lg text-gray-600 bg-white hover:bg-gray-50 transition-colors"
