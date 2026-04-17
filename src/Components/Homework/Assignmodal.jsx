@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   X, ChevronDown, SendHorizonal, Upload,
   Pencil, Loader2, FileText, CalendarDays, User,
@@ -89,7 +89,7 @@ function ModalSelect({ value, onChange, disabled = false, loading = false, child
   );
 }
 
-// ── Lazy Attachment Viewer (for showing existing attachment inline) ────────────
+// ── Lazy Attachment Viewer ────────────────────────────────────────────────────
 function LazyAttachmentViewer({ url, type, label = "Attachment" }) {
   const [open, setOpen] = useState(false);
   if (!url) return null;
@@ -185,16 +185,13 @@ function LazyAttachmentViewer({ url, type, label = "Attachment" }) {
 }
 
 // ── Upload Zone ───────────────────────────────────────────────────────────────
-// KEY FIX: existingUrl is always shown when no new file is chosen.
-// The user must explicitly click "Replace" / pick a new file to change it.
-// If they leave it untouched, onSave receives file=null and keeps the existing attachment.
 function UploadZone({ file, onFileChange, disabled, existingUrl, existingType }) {
   const ref = useRef(null);
 
   return (
     <div className="space-y-3">
-      {/* Always show existing attachment preview when in edit mode */}
-      {existingUrl && (
+      {/* Always show existing attachment preview when no new file chosen */}
+      {existingUrl && !file && (
         <LazyAttachmentViewer
           url   = {existingUrl}
           type  = {existingType}
@@ -237,7 +234,7 @@ function UploadZone({ file, onFileChange, disabled, existingUrl, existingType })
         )}
       </div>
 
-      {/* Show "revert" only after user picked a replacement */}
+      {/* Revert button — only shown after user picks a replacement */}
       {file && existingUrl && (
         <button
           type="button"
@@ -301,7 +298,6 @@ export default function AssignModal({
           description:  hw.description  ?? hw.desc ?? "",
           assignedDate: hw.assignedDate ?? "",
           dueDate:      hw.dueDate      ?? "",
-          // normalise to uppercase so the dropdown matches
           attachType:   (hw.attachmentType ?? hw.attachType ?? hw.attach ?? "NONE").toUpperCase(),
           linkUrl:      hw.linkUrl      ?? "",
           status:       hw.status       ?? "PUBLISHED",
@@ -314,7 +310,18 @@ export default function AssignModal({
         }
   );
 
-  // attachFile = newly chosen file, null = keep existing (or none)
+  // ── KEY FIX: when subjects load in edit mode, ensure subjectId is still set ─
+  // Sometimes subjects arrive after the modal mounts, so we re-sync once loaded.
+  useEffect(() => {
+    if (isEdit && hw?.subjectId && subjects.length > 0) {
+      const match = subjects.find((s) => String(s.id) === String(hw.subjectId));
+      if (match) {
+        setForm((f) => ({ ...f, subjectId: String(hw.subjectId) }));
+      }
+    }
+  }, [subjects, isEdit, hw?.subjectId]);
+
+  // attachFile = newly chosen file; null = keep existing (or none)
   const [attachFile, setAttachFile] = useState(null);
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -345,13 +352,18 @@ export default function AssignModal({
       ...(form.attachType === "LINK" && form.linkUrl && { linkUrl: form.linkUrl }),
     };
 
-    /*
-      KEY FIX: only pass a file to onSave if the user actually chose a new one.
-      If attachFile is null and we're editing, onSave receives null → the
-      upload step is skipped → backend keeps the existing attachment untouched.
-    */
-    const file =
-      form.attachType !== "NONE" && form.attachType !== "LINK" ? attachFile : null;
+    const isFileBased = form.attachType !== "NONE" && form.attachType !== "LINK";
+
+    // ── KEY FIX: preserve existing attachment when editing without a new file ──
+    // If user didn't pick a new file, send back the existing URL so the backend
+    // never clears the stored attachment reference.
+    if (isEdit && isFileBased && !attachFile && existingAttachUrl) {
+      payload.attachmentUrl  = existingAttachUrl;
+      payload.attachmentType = hw.attachmentType ?? form.attachType;
+    }
+
+    // Only pass a real File object when user actually chose a new one
+    const file = isFileBased ? attachFile : null;
 
     await onSave(payload, file);
   };
@@ -475,9 +487,16 @@ export default function AssignModal({
               </div>
 
               <Field label="Subject" required>
-                <ModalSelect value={form.subjectId} onChange={(v) => set("subjectId", v)} disabled={submitting} loading={subjectsLoading}>
+                <ModalSelect
+                  value    = {form.subjectId}
+                  onChange = {(v) => set("subjectId", v)}
+                  disabled = {submitting}
+                  loading  = {subjectsLoading}
+                >
                   <option value="">Select subject</option>
-                  {subjects.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
+                  {subjects.map((s) => (
+                    <option key={s.id} value={String(s.id)}>{s.label}</option>
+                  ))}
                 </ModalSelect>
               </Field>
 
@@ -542,8 +561,10 @@ export default function AssignModal({
               </Field>
 
               {/*
-                UploadZone always shows the existing attachment when editing.
-                A new file only replaces it if the user explicitly picks one.
+                UploadZone:
+                - In edit mode with no new file chosen → shows existing attachment preview
+                - Once user picks a new file → shows new file name + revert option
+                - existingUrl is passed down so the zone knows whether to show revert
               */}
               {showUpload && (
                 <UploadZone
