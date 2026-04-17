@@ -47,30 +47,25 @@ const normSubject = (item) => ({ id: item.subjectId ?? item.id ?? "", label: ite
 export default function HomeworkPage() {
 
   const { user, profile } = useDecodedUser();
-  const schoolId = user?.schoolId ? Number(user.schoolId) : 1;
+  const schoolId  = user?.schoolId ? Number(user.schoolId) : 1;
   const isTeacher = user?.userType === "TEACHER";
-
   const teacherId = isTeacher ? profile?.id : null;
 
-  // ── Teachers (for non-teacher roles) ─────────────────────────────────────
+  // ── Teachers ──────────────────────────────────────────────────────────────
   const [teachers,        setTeachers]        = useState([]);
   const [teachersLoading, setTeachersLoading] = useState(false);
 
   useEffect(() => {
     if (isTeacher) return;
-    const fetchTeachers = async () => {
+    const fetch_ = async () => {
       setTeachersLoading(true);
       try {
         const list = await getTeachers();
-        const data = Array.isArray(list) ? list : Array.isArray(list?.data) ? list.data : [];
-        setTeachers(data);
-      } catch (err) {
-        showError(err, "Failed to load teachers");
-      } finally {
-        setTeachersLoading(false);
-      }
+        setTeachers(Array.isArray(list) ? list : Array.isArray(list?.data) ? list.data : []);
+      } catch (err) { showError(err, "Failed to load teachers"); }
+      finally { setTeachersLoading(false); }
     };
-    fetchTeachers();
+    fetch_();
   }, [isTeacher]);
 
   // ── Classes ───────────────────────────────────────────────────────────────
@@ -79,24 +74,18 @@ export default function HomeworkPage() {
   const [confirmCancel,  setConfirmCancel]  = useState(null);
 
   useEffect(() => {
-    const fetchClasses = async () => {
+    const fetch_ = async () => {
       setClassesLoading(true);
       try {
         const raw  = await getActiveClasses(schoolId);
         const data = Array.isArray(raw) ? raw : Array.isArray(raw?.data) ? raw.data : [];
-        const uniqueMap = new Map();
-        data.map(normClass).forEach((item) => {
-          const key = item.id || item.label;
-          if (!uniqueMap.has(key)) uniqueMap.set(key, item);
-        });
-        setClasses(Array.from(uniqueMap.values()));
-      } catch (err) {
-        showError(err, "Failed to load classes");
-      } finally {
-        setClassesLoading(false);
-      }
+        const map  = new Map();
+        data.map(normClass).forEach((item) => { const k = item.id || item.label; if (!map.has(k)) map.set(k, item); });
+        setClasses(Array.from(map.values()));
+      } catch (err) { showError(err, "Failed to load classes"); }
+      finally { setClassesLoading(false); }
     };
-    fetchClasses();
+    fetch_();
   }, [schoolId]);
 
   // ── Sections ──────────────────────────────────────────────────────────────
@@ -105,18 +94,11 @@ export default function HomeworkPage() {
   const [sectionsLoading,   setSectionsLoading]   = useState(false);
 
   useEffect(() => {
-    setSections([]);
-    setSelectedSectionId("");
-    setSubjects([]);
-    setRows([]);
+    setSections([]); setSelectedSectionId(""); setSubjects([]); setRows([]);
     if (!selectedClassId) return;
-
     setSectionsLoading(true);
     getSectionsByClass(selectedClassId)
-        .then((raw) => {
-          const data = Array.isArray(raw) ? raw : Array.isArray(raw?.data) ? raw.data : [];
-          setSections(data.map(normSection));
-        })
+        .then((raw) => setSections((Array.isArray(raw) ? raw : raw?.data ?? []).map(normSection)))
         .catch((err) => showError(err, "Failed to load sections"))
         .finally(() => setSectionsLoading(false));
   }, [selectedClassId]);
@@ -127,23 +109,17 @@ export default function HomeworkPage() {
   const [subjectsLoading,   setSubjectsLoading]   = useState(false);
 
   useEffect(() => {
-    setSubjects([]);
-    setFilters((f) => ({ ...f, subjectFilter: "" }));
-    setRows([]);
+    setSubjects([]); setFilters((f) => ({ ...f, subjectFilter: "" })); setRows([]);
     if (!selectedSectionId) return;
-
-    const fetchSubjects = async () => {
+    const fetch_ = async () => {
       setSubjectsLoading(true);
       try {
         const list = await getActiveSubjectsBySection(selectedSectionId);
         setSubjects(list.map(normSubject));
-      } catch (err) {
-        showError(err, "Failed to load subjects");
-      } finally {
-        setSubjectsLoading(false);
-      }
+      } catch (err) { showError(err, "Failed to load subjects"); }
+      finally { setSubjectsLoading(false); }
     };
-    fetchSubjects();
+    fetch_();
   }, [selectedSectionId]);
 
   // ── Filters ───────────────────────────────────────────────────────────────
@@ -155,7 +131,7 @@ export default function HomeworkPage() {
   const [listLoading, setListLoading] = useState(false);
   const [submitting,  setSubmitting]  = useState(false);
 
-  // ── fetchHomework now RETURNS the fresh rows so callers can sync state ────
+  // Returns the fresh rows so callers can sync dependent state (e.g. viewHw)
   const fetchHomework = useCallback(async (currentFilters) => {
     if (!selectedClassId || !selectedSectionId) {
       toast.warn("Please select a class and section first.");
@@ -181,43 +157,32 @@ export default function HomeworkPage() {
     }
   }, [selectedClassId, selectedSectionId]);
 
-  // ── Auto-fetch when section selected ─────────────────────────────────────
   useEffect(() => {
-    if (selectedClassId && selectedSectionId) {
-      fetchHomework(filters);
-    }
+    if (selectedClassId && selectedSectionId) fetchHomework(filters);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedSectionId]);
 
-  // ── Apply button ──────────────────────────────────────────────────────────
-  const handleApply = useCallback(() => {
-    fetchHomework(filters);
-  }, [fetchHomework, filters]);
+  const handleApply = useCallback(() => fetchHomework(filters), [fetchHomework, filters]);
 
-  // ── Reset ─────────────────────────────────────────────────────────────────
   const handleReset = () => {
-    const defaultFilters = EMPTY_FILTERS;
-    setFilters(defaultFilters);
-    if (selectedSectionId) fetchHomework(defaultFilters);
+    const def = EMPTY_FILTERS;
+    setFilters(def);
+    if (selectedSectionId) fetchHomework(def);
   };
 
-  // ── Client-side search filter ─────────────────────────────────────────────
   const visibleRows = useMemo(() => {
     const q = filters.search.trim().toLowerCase();
-    return rows.filter((hw) => {
-      return !q ||
-          (hw.title       ?? "").toLowerCase().includes(q) ||
-          (hw.description ?? hw.desc ?? "").toLowerCase().includes(q);
-    });
+    return rows.filter((hw) =>
+      !q ||
+      (hw.title       ?? "").toLowerCase().includes(q) ||
+      (hw.description ?? hw.desc ?? "").toLowerCase().includes(q)
+    );
   }, [rows, filters.search]);
 
-  // ── Stats ─────────────────────────────────────────────────────────────────
   const stats = useMemo(() => ({
     total:   rows.length,
     active:  rows.filter((hw) => hw.status === "PUBLISHED").length,
-    overdue: rows.filter((hw) =>
-        hw.dueDate && new Date(hw.dueDate) < new Date() && hw.status !== "CANCELLED"
-    ).length,
+    overdue: rows.filter((hw) => hw.dueDate && new Date(hw.dueDate) < new Date() && hw.status !== "CANCELLED").length,
   }), [rows]);
 
   // ── Modals ────────────────────────────────────────────────────────────────
@@ -231,7 +196,6 @@ export default function HomeworkPage() {
   // ── Save ──────────────────────────────────────────────────────────────────
   const handleSave = async (payload, file) => {
     setSubmitting(true);
-    // capture the id of the item being edited (if any) before closing modal
     const editingId = editHw?.id ?? null;
 
     try {
@@ -249,18 +213,25 @@ export default function HomeworkPage() {
       }
 
       const savedId = saved?.id ?? saved?.data?.id ?? saved?.data?.homeworkId;
-      if (file && savedId) await uploadHomeworkAttachment(savedId, file);
+
+      /*
+        Only call uploadHomeworkAttachment when the user actually picked a new file.
+        If file is null (user kept existing attachment), we skip the upload entirely
+        so the backend never overwrites / clears the stored file.
+      */
+      if (file && savedId) {
+        await uploadHomeworkAttachment(savedId, file);
+      }
 
       toast.success(editHw ? "Homework updated!" : "Homework published!");
       closeAssign();
 
-      // ── Re-fetch and sync viewHw so the ViewModal shows fresh attachment ──
+      // Re-fetch and refresh viewHw so the ViewModal reflects the latest data
       const freshRows = await fetchHomework(filters);
       if (editingId && freshRows.length > 0) {
-        const updatedHw = freshRows.find((r) => r.id === editingId);
-        if (updatedHw) {
-          // If ViewModal is still open for this item, refresh it
-          setViewHw((prev) => (prev?.id === editingId ? updatedHw : prev));
+        const updated = freshRows.find((r) => r.id === editingId);
+        if (updated) {
+          setViewHw((prev) => (prev?.id === editingId ? updated : prev));
         }
       }
     } catch (err) {
@@ -297,7 +268,6 @@ export default function HomeworkPage() {
         </div>
 
         <div className="flex-1 overflow-hidden m-4 bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col">
-
           <ControlBar
               classes         = {classes}
               classesLoading  = {classesLoading}
@@ -305,16 +275,13 @@ export default function HomeworkPage() {
               sectionsLoading = {sectionsLoading}
               subjects        = {subjects}
               subjectsLoading = {subjectsLoading}
-
               selectedClassId      = {selectedClassId}
               setSelectedClassId   = {setSelectedClassId}
               selectedSectionId    = {selectedSectionId}
               setSelectedSectionId = {setSelectedSectionId}
-
               total   = {stats.total}
               active  = {stats.active}
               overdue = {stats.overdue}
-
               subjectFilter    = {filters.subjectFilter}
               setSubjectFilter = {setFilter("subjectFilter")}
               statusFilter     = {filters.statusFilter}
@@ -325,7 +292,6 @@ export default function HomeworkPage() {
               setDateTo        = {setFilter("dateTo")}
               search           = {filters.search}
               setSearch        = {setFilter("search")}
-
               onReset  = {handleReset}
               onApply  = {handleApply}
               onAssign = {() => setAssignOpen(true)}
