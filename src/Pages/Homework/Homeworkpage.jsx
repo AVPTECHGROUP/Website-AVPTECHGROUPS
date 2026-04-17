@@ -50,7 +50,6 @@ export default function HomeworkPage() {
   const schoolId = user?.schoolId ? Number(user.schoolId) : 1;
   const isTeacher = user?.userType === "TEACHER";
 
-  // ✅ teacherId from profile.id if teacher, else from selectedTeacher in modal
   const teacherId = isTeacher ? profile?.id : null;
 
   // ── Teachers (for non-teacher roles) ─────────────────────────────────────
@@ -58,7 +57,7 @@ export default function HomeworkPage() {
   const [teachersLoading, setTeachersLoading] = useState(false);
 
   useEffect(() => {
-    if (isTeacher) return; // teachers don't need this list
+    if (isTeacher) return;
     const fetchTeachers = async () => {
       setTeachersLoading(true);
       try {
@@ -156,10 +155,11 @@ export default function HomeworkPage() {
   const [listLoading, setListLoading] = useState(false);
   const [submitting,  setSubmitting]  = useState(false);
 
+  // ── fetchHomework now RETURNS the fresh rows so callers can sync state ────
   const fetchHomework = useCallback(async (currentFilters) => {
     if (!selectedClassId || !selectedSectionId) {
       toast.warn("Please select a class and section first.");
-      return;
+      return [];
     }
     setListLoading(true);
     try {
@@ -170,9 +170,12 @@ export default function HomeworkPage() {
         dueAfter:  currentFilters.dateFrom      || undefined,
         dueBefore: currentFilters.dateTo        || undefined,
       });
-      setRows(Array.isArray(result) ? result : []);
+      const fresh = Array.isArray(result) ? result : [];
+      setRows(fresh);
+      return fresh;
     } catch (err) {
       showError(err, "Failed to load homework");
+      return [];
     } finally {
       setListLoading(false);
     }
@@ -228,11 +231,13 @@ export default function HomeworkPage() {
   // ── Save ──────────────────────────────────────────────────────────────────
   const handleSave = async (payload, file) => {
     setSubmitting(true);
+    // capture the id of the item being edited (if any) before closing modal
+    const editingId = editHw?.id ?? null;
+
     try {
       const enriched = {
         ...payload,
         sectionId: Number(selectedSectionId),
-        // ✅ teacherId from profile if teacher, else from payload (selected in modal)
         teacherId: isTeacher ? teacherId : payload.teacherId,
       };
 
@@ -248,7 +253,16 @@ export default function HomeworkPage() {
 
       toast.success(editHw ? "Homework updated!" : "Homework published!");
       closeAssign();
-      fetchHomework(filters);
+
+      // ── Re-fetch and sync viewHw so the ViewModal shows fresh attachment ──
+      const freshRows = await fetchHomework(filters);
+      if (editingId && freshRows.length > 0) {
+        const updatedHw = freshRows.find((r) => r.id === editingId);
+        if (updatedHw) {
+          // If ViewModal is still open for this item, refresh it
+          setViewHw((prev) => (prev?.id === editingId ? updatedHw : prev));
+        }
+      }
     } catch (err) {
       showError(err, "Failed to save homework");
     } finally {
@@ -346,7 +360,6 @@ export default function HomeworkPage() {
                 submitting      = {submitting}
                 onClose         = {closeAssign}
                 onSave          = {handleSave}
-                // ✅ pass teacher context to modal
                 isTeacher       = {isTeacher}
                 teacherId       = {teacherId}
                 teacherName     = {profile?.fullName}

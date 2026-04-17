@@ -1,4 +1,4 @@
-import { X, Pencil } from "lucide-react";
+import { X, Pencil, ExternalLink, FileText, Image as ImageIcon, Link2, Download } from "lucide-react";
 import { DuePill, StatusBadge, AttachChip } from "./Badges";
 
 // ── same deterministic colour palette as SubjectLabel in Badges.jsx ───────────
@@ -21,14 +21,11 @@ function subjectColour(subject = "") {
   return SUBJECT_COLOURS[hash % SUBJECT_COLOURS.length];
 }
 
-// ── helper: resolve subject display name from the hw record ──────────────────
-// The API may return the name under different field names depending on the
-// endpoint. We try the most specific first and fall back gracefully.
+// ── helpers ───────────────────────────────────────────────────────────────────
 function getSubjectName(hw) {
   return hw.subjectName ?? hw.subject ?? hw.subjectTitle ?? "—";
 }
 
-// ── helper: resolve due state / label from the hw record ─────────────────────
 function getDueState(hw) {
   if (hw.dueState) return hw.dueState;
   if (!hw.dueDate) return "ok";
@@ -52,22 +49,136 @@ function getAssignedLabel(hw) {
   return "—";
 }
 
-
 function getAttachType(hw) {
   if (hw.attachmentType) {
     const type = hw.attachmentType.toLowerCase();
-
-    if (type.includes("pdf")) return "pdf";
+    if (type.includes("pdf"))   return "pdf";
     if (type.includes("image")) return "image";
-    if (type.includes("doc")) return "doc";
-
+    if (type.includes("doc"))   return "doc";
+    if (type.includes("link"))  return "link";
     return type;
   }
-
-  if (hw.attachmentUrl) return "link";
-
+  if (hw.attachmentUrl || hw.fileUrl || hw.url || hw.linkUrl) return "link";
   return "none";
 }
+
+// ── Resolve attachment URL from any possible field name ───────────────────────
+function getAttachUrl(hw) {
+  return hw.attachmentUrl ?? hw.fileUrl ?? hw.url ?? hw.linkUrl ?? null;
+}
+
+// ── Attachment Preview component ──────────────────────────────────────────────
+function AttachmentPreview({ hw }) {
+  const type      = getAttachType(hw);
+  const attachUrl = getAttachUrl(hw);
+
+  // Nothing to show
+  if (type === "none" || !attachUrl) return null;
+
+  return (
+    <div className="border border-gray-200 rounded-xl overflow-hidden">
+      {/* Preview header */}
+      <div className="flex items-center justify-between px-3 py-2 bg-gray-50 border-b border-gray-200">
+        <div className="flex items-center gap-1.5">
+          {type === "pdf"   && <FileText  size={13} className="text-red-500"  />}
+          {type === "image" && <ImageIcon size={13} className="text-blue-500" />}
+          {type === "link"  && <Link2     size={13} className="text-gray-500" />}
+          <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+            {type === "pdf"   && "PDF Attachment"}
+            {type === "image" && "Image Attachment"}
+            {type === "link"  && "Resource Link"}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          {/* Download — forces save-to-disk without triggering viewer */}
+          {(type === "pdf" || type === "image") && (
+            <a
+              href={attachUrl}
+              download
+              className="inline-flex items-center gap-1 text-xs font-semibold text-gray-500 hover:text-gray-700 transition-colors"
+            >
+              <Download size={12} />
+              Download
+            </a>
+          )}
+          <a
+            href={attachUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-xs font-semibold text-blue-700 hover:text-blue-900 transition-colors"
+          >
+            <ExternalLink size={12} />
+            Open
+          </a>
+        </div>
+      </div>
+
+      {/* PDF — Google Docs Viewer iframe (bypasses Content-Disposition: attachment) */}
+      {type === "pdf" && (
+        <div className="bg-gray-100">
+          <iframe
+            src={`https://docs.google.com/viewer?url=${encodeURIComponent(attachUrl)}&embedded=true`}
+            title="PDF Preview"
+            className="w-full"
+            style={{ height: "420px", border: "none" }}
+          />
+        </div>
+      )}
+
+      {/* Image — inline preview */}
+      {type === "image" && (
+        <div className="bg-gray-100 flex items-center justify-center p-3">
+          <img
+            src={attachUrl}
+            alt="Homework attachment"
+            className="max-w-full max-h-72 rounded-lg object-contain shadow-sm"
+            onError={(e) => {
+              e.target.style.display = "none";
+              e.target.nextSibling.style.display = "flex";
+            }}
+          />
+          {/* Fallback if image fails to load */}
+          <div
+            className="hidden items-center gap-2 text-sm text-gray-400 py-6"
+          >
+            <ImageIcon size={18} className="text-gray-300" />
+            <span>Image could not be loaded.</span>
+            <a
+              href={attachUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 underline"
+            >
+              Open link
+            </a>
+          </div>
+        </div>
+      )}
+
+      {/* Link / URL — clickable card */}
+      {type === "link" && (
+        <a
+          href={attachUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-3 px-4 py-3 bg-white hover:bg-blue-50 transition-colors group"
+        >
+          <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+            <Link2 size={15} className="text-blue-600" />
+          </div>
+          <div className="min-w-0">
+            <div className="text-xs font-semibold text-gray-700 group-hover:text-blue-700 transition-colors truncate">
+              {attachUrl}
+            </div>
+            <div className="text-[10px] text-gray-400 mt-0.5">Click to open in new tab</div>
+          </div>
+          <ExternalLink size={13} className="ml-auto flex-shrink-0 text-gray-400 group-hover:text-blue-600 transition-colors" />
+        </a>
+      )}
+    </div>
+  );
+}
+
 // ── exported ──────────────────────────────────────────────────────────────────
 export default function ViewModal({ hw, onClose, onEdit }) {
   if (!hw) return null;
@@ -79,7 +190,6 @@ export default function ViewModal({ hw, onClose, onEdit }) {
     { label: "Assigned",   value: getAssignedLabel(hw) },
     { label: "Due",        value: <DuePill state={getDueState(hw)} label={getDueLabel(hw)} /> },
     { label: "Attachment", value: <AttachChip type={getAttachType(hw)} /> },
-    // { label: "Sections",   value: hw.sections?.join(", ") ?? hw.sectionName ?? "—" },
   ];
 
   return (
@@ -88,7 +198,7 @@ export default function ViewModal({ hw, onClose, onEdit }) {
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-[480px]"
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-[520px] max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -132,6 +242,9 @@ export default function ViewModal({ hw, onClose, onEdit }) {
               </div>
             ))}
           </div>
+
+          {/* ── Attachment Preview ── */}
+          <AttachmentPreview hw={hw} />
         </div>
 
         {/* Footer */}
