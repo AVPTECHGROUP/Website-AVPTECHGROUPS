@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import Webcam from "react-webcam"; // npm install react-webcam
 import {
     Users,
     UserCheck,
@@ -16,6 +17,7 @@ import {
     Shield,
     Camera,
     AlertCircle,
+    Upload,
 } from "lucide-react";
 import CardComponent from "../../Components/CommonComp/CardComponent";
 import CardLoader from "../../Components/CommonComp/CardLoader";
@@ -133,34 +135,271 @@ function ReEnrollModal({ staff, onConfirm, onCancel, loading }) {
     );
 }
 
-function PhotoSlot({ index, file, onAdd, onRemove }) {
-    const inputRef = useRef();
-    const preview = file ? URL.createObjectURL(file) : null;
+// ─── PhotoCaptureModal ────────────────────────────────────────────────────────
+function PhotoCaptureModal({ slotIndex, onCapture, onClose }) {
+    const [mode, setMode] = useState(null); // null | "camera" | "upload"
+    const [cameraFacing, setCameraFacing] = useState("user");
+    const [cameraReady, setCameraReady] = useState(false);
+    const [capturedPreview, setCapturedPreview] = useState(null);
+    const webcamRef = useRef(null);
+    const fileInputRef = useRef(null);
+
+    useEffect(() => { setCameraReady(false); }, [cameraFacing]);
+
+    const handleCapture = useCallback(() => {
+        if (!webcamRef.current) return;
+        const imageSrc = webcamRef.current.getScreenshot();
+        if (!imageSrc) return;
+        fetch(imageSrc)
+            .then((res) => res.blob())
+            .then((blob) => {
+                const file = new File([blob], `face_${slotIndex + 1}_${Date.now()}.jpg`, { type: "image/jpeg" });
+                setCapturedPreview({ src: imageSrc, file });
+            });
+    }, [slotIndex]);
+
+    const handleConfirmCapture = () => {
+        if (!capturedPreview) return;
+        onCapture(slotIndex, capturedPreview.file);
+        onClose();
+    };
+
+    const handleFileChange = (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        onCapture(slotIndex, file);
+        onClose();
+    };
+
     return (
-        <div className="relative">
-            <div
-                onClick={() => !file && inputRef.current?.click()}
-                className={`w-full aspect-square rounded-xl border-2 flex flex-col items-center justify-center transition-all overflow-hidden
-          ${file ? "border-emerald-400 bg-emerald-50" : "border-dashed border-gray-300 bg-gray-50 hover:border-blue-400 hover:bg-blue-50 cursor-pointer"}`}
-            >
-                {file
-                    ? <img src={preview} alt={`F${index + 1}`} className="w-full h-full object-cover" />
-                    : <><Camera className="w-6 h-6 text-gray-400 mb-1" /><span className="text-xs text-gray-500 font-medium">F{index + 1}</span></>
-                }
-                <input ref={inputRef} type="file" accept="image/*" className="hidden"
-                    onChange={(e) => e.target.files[0] && onAdd(index, e.target.files[0])} />
-            </div>
-            {file && (
-                <button onClick={() => onRemove(index)} className="cursor-pointer absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition-colors z-10">
-                    <X className="w-3 h-3" />
-                </button>
-            )}
-            {file && (
-                <div className="absolute bottom-1 left-1 right-1 flex justify-center">
-                    <span className="text-[10px] bg-emerald-600 text-white px-1.5 py-0.5 rounded font-semibold">✓ Good</span>
+        <div
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm px-4"
+            onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+        >
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden border border-gray-200">
+
+                {/* Header */}
+                <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                    <div>
+                        <h3 className="text-sm font-bold text-gray-900">
+                            Photo Slot {slotIndex + 1} — Add Face Photo
+                        </h3>
+                        <p className="text-xs text-gray-400 mt-0.5">
+                            {mode === "camera" ? "Position face within the oval guide" : "Choose how to add this photo"}
+                        </p>
+                    </div>
+                    <button
+                        onClick={onClose}
+                        className="cursor-pointer w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
+                    >
+                        <X className="w-3.5 h-3.5 text-gray-600" />
+                    </button>
                 </div>
-            )}
+
+                {/* ── Option Selection (default view) ── */}
+                {!mode && (
+                    <div className="p-5 space-y-3">
+                        {/* Live Camera option */}
+                        <button
+                            onClick={() => setMode("camera")}
+                            className="cursor-pointer w-full flex items-center gap-4 p-4 rounded-xl border-2 border-blue-100 bg-blue-50 hover:border-blue-400 hover:bg-blue-100 transition-all group text-left"
+                        >
+                            <div className="w-11 h-11 rounded-full bg-blue-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                                <Camera className="w-5 h-5 text-white" />
+                            </div>
+                            <div>
+                                <p className="text-sm font-bold text-blue-800">Open Live Camera</p>
+                                <p className="text-xs text-blue-500 mt-0.5">Click photo in real-time using webcam</p>
+                            </div>
+                        </button>
+
+                        {/* Upload from device option */}
+                        <button
+                            onClick={() => {
+                                setMode("upload");
+                                setTimeout(() => fileInputRef.current?.click(), 80);
+                            }}
+                            className="cursor-pointer w-full flex items-center gap-4 p-4 rounded-xl border-2 border-gray-100 bg-gray-50 hover:border-gray-300 hover:bg-gray-100 transition-all group text-left"
+                        >
+                            <div className="w-11 h-11 rounded-full bg-gray-700 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                                <Upload className="w-5 h-5 text-white" />
+                            </div>
+                            <div>
+                                <p className="text-sm font-bold text-gray-800">Upload from Device</p>
+                                <p className="text-xs text-gray-400 mt-0.5">Select an existing photo from your gallery</p>
+                            </div>
+                        </button>
+
+                        <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+                    </div>
+                )}
+
+                {/* ── Live Camera Mode ── */}
+                {mode === "camera" && (
+                    <div className="p-4">
+                        {capturedPreview ? (
+                            // Preview of captured photo — confirm or retake
+                            <div>
+                                <div className="rounded-xl overflow-hidden mb-3 bg-black" style={{ aspectRatio: "4/3" }}>
+                                    <img
+                                        src={capturedPreview.src}
+                                        alt="Captured"
+                                        className="w-full h-full object-cover"
+                                        style={{ transform: cameraFacing === "user" ? "scaleX(-1)" : "none" }}
+                                    />
+                                </div>
+                                <p className="text-xs text-center text-gray-500 mb-3">Photo looks good? Confirm to use it.</p>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => setCapturedPreview(null)}
+                                        className="cursor-pointer flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 text-xs font-semibold transition-colors"
+                                    >
+                                        <RefreshCw className="w-3.5 h-3.5" /> Retake
+                                    </button>
+                                    <button
+                                        onClick={handleConfirmCapture}
+                                        className="cursor-pointer flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition-colors"
+                                    >
+                                        <CheckCircle className="w-3.5 h-3.5" /> Use This Photo
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            // Live webcam view
+                            <div>
+                                <div className="rounded-xl overflow-hidden mb-3 bg-gray-900 relative" style={{ aspectRatio: "4/3" }}>
+                                    <Webcam
+                                        ref={webcamRef}
+                                        audio={false}
+                                        screenshotFormat="image/jpeg"
+                                        screenshotQuality={0.92}
+                                        videoConstraints={{ facingMode: cameraFacing, width: 640, height: 480 }}
+                                        onUserMedia={() => setCameraReady(true)}
+                                        onUserMediaError={() => setCameraReady(false)}
+                                        className="w-full h-full object-cover"
+                                        style={{ transform: cameraFacing === "user" ? "scaleX(-1)" : "none" }}
+                                    />
+                                    {/* Loading overlay */}
+                                    {!cameraReady && (
+                                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-900">
+                                            <RefreshCw className="w-6 h-6 text-gray-400 animate-spin mb-2" />
+                                            <p className="text-xs text-gray-400">Starting camera...</p>
+                                        </div>
+                                    )}
+                                    {/* Face guide oval */}
+                                    {cameraReady && (
+                                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                            <div className="border-2 border-white/70 border-dashed rounded-full"
+                                                style={{ width: "42%", height: "68%" }} />
+                                        </div>
+                                    )}
+                                    {/* Slot label badge */}
+                                    <div className="absolute top-2 left-2 bg-black/50 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                                        F{slotIndex + 1}
+                                    </div>
+                                </div>
+
+                                {/* Flip camera */}
+                                <button
+                                    onClick={() => { setCameraFacing((f) => f === "user" ? "environment" : "user"); }}
+                                    className="cursor-pointer flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-600 text-xs font-medium transition-colors mb-3"
+                                >
+                                    <RefreshCw className="w-3 h-3" />
+                                    {cameraFacing === "user" ? "Switch to Back Camera" : "Switch to Front Camera"}
+                                </button>
+
+                                {/* Click photo button */}
+                                <button
+                                    onClick={handleCapture}
+                                    disabled={!cameraReady}
+                                    className={`cursor-pointer w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all
+                                        ${cameraReady ? "bg-blue-600 hover:bg-blue-700 text-white shadow-sm" : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}
+                                >
+                                    <Camera className="w-4 h-4" /> Click Photo
+                                </button>
+
+                                <button
+                                    onClick={() => { setMode(null); setCameraReady(false); }}
+                                    className="cursor-pointer w-full mt-2 py-1.5 text-xs text-gray-400 hover:text-gray-600 transition-colors"
+                                >
+                                    ← Back to options
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* ── Upload Mode (shows file picker prompt) ── */}
+                {mode === "upload" && (
+                    <div className="p-5">
+                        <div className="flex flex-col items-center justify-center py-6 gap-3">
+                            <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
+                                <Upload className="w-5 h-5 text-gray-500" />
+                            </div>
+                            <p className="text-sm text-gray-600 font-medium">Opening file picker...</p>
+                            <p className="text-xs text-gray-400 text-center">If it didn't open, tap Browse Files below</p>
+                        </div>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => fileInputRef.current?.click()}
+                                className="cursor-pointer flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold transition-colors"
+                            >
+                                Browse Files
+                            </button>
+                            <button
+                                onClick={() => setMode(null)}
+                                className="cursor-pointer flex-1 py-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-600 text-xs font-semibold transition-colors"
+                            >
+                                Back
+                            </button>
+                        </div>
+                        <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+                    </div>
+                )}
+            </div>
         </div>
+    );
+}
+
+// ─── PhotoSlot — updated to open PhotoCaptureModal ───────────────────────────
+function PhotoSlot({ index, file, onAdd, onRemove }) {
+    const [showModal, setShowModal] = useState(false);
+    const preview = file ? URL.createObjectURL(file) : null;
+
+    return (
+        <>
+            {showModal && (
+                <PhotoCaptureModal
+                    slotIndex={index}
+                    onCapture={onAdd}
+                    onClose={() => setShowModal(false)}
+                />
+            )}
+            <div className="relative">
+                <div
+                    onClick={() => !file && setShowModal(true)}
+                    className={`w-full aspect-square rounded-xl border-2 flex flex-col items-center justify-center transition-all overflow-hidden
+                        ${file
+                            ? "border-emerald-400 bg-emerald-50"
+                            : "border-dashed border-gray-300 bg-gray-50 hover:border-blue-400 hover:bg-blue-50 cursor-pointer"}`}
+                >
+                    {file
+                        ? <img src={preview} alt={`F${index + 1}`} className="w-full h-full object-cover" />
+                        : <><Camera className="w-6 h-6 text-gray-400 mb-1" /><span className="text-xs text-gray-500 font-medium">F{index + 1}</span></>
+                    }
+                </div>
+                {file && (
+                    <button onClick={() => onRemove(index)} className="cursor-pointer absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition-colors z-10">
+                        <X className="w-3 h-3" />
+                    </button>
+                )}
+                {file && (
+                    <div className="absolute bottom-1 left-1 right-1 flex justify-center">
+                        <span className="text-[10px] bg-emerald-600 text-white px-1.5 py-0.5 rounded font-semibold">✓ Good</span>
+                    </div>
+                )}
+            </div>
+        </>
     );
 }
 
@@ -186,8 +425,6 @@ export default function StaffAttendanceRegistration() {
     const [usersLoading, setUsersLoading] = useState(true);
     const [userSearch, setUserSearch] = useState("");
 
-    // ✅ KEY: a userId → enrollmentRecord map built from getStaffEnrollment
-    // This is the single source of truth for enrollment status across both panels
     const [enrollmentMap, setEnrollmentMap] = useState({});
 
     const [staffList, setStaffList] = useState([]);
@@ -208,16 +445,14 @@ export default function StaffAttendanceRegistration() {
 
     const uploadPanelRef = useRef(null);
 
-    // ── Build enrollment map (fetch all records, not just one page) ───────────
     const buildEnrollmentMap = useCallback(async () => {
         try {
-            // Fetch a large page to cover all staff; increase size if school is larger
             const res = await getStaffEnrollment(0, 500, "id", undefined);
             const records = res.data || [];
             const map = {};
             records.forEach((r) => { map[r.userId] = r; });
             setEnrollmentMap(map);
-            return map; // return so callers can use it immediately
+            return map;
         } catch (e) {
             console.error("buildEnrollmentMap failed:", e);
             return {};
@@ -255,7 +490,6 @@ export default function StaffAttendanceRegistration() {
         finally { setStaffLoading(false); }
     }, [tablePageSize]);
 
-    // ── Initial load ──────────────────────────────────────────────────────────
     useEffect(() => {
         fetchStats();
         fetchAllUsers();
@@ -266,14 +500,11 @@ export default function StaffAttendanceRegistration() {
         fetchStaffTable(tablePage, filterStatus);
     }, [fetchStaffTable, tablePage, filterStatus]);
 
-    // ── Sync selectedStaff status whenever enrollmentMap refreshes ───────────
-    // This is the reactive link: map updates → selectedStaff panel updates automatically
     useEffect(() => {
         if (!selectedStaff?.userId) return;
         const live = enrollmentMap[selectedStaff.userId];
         if (!live) return;
         setSelectedStaff((prev) => {
-            // Only update if something actually changed to avoid infinite loops
             if (
                 prev.enrollmentStatus === live.enrollmentStatus &&
                 prev.photosCount === (live.photosCount || 0)
@@ -287,14 +518,12 @@ export default function StaffAttendanceRegistration() {
         });
     }, [enrollmentMap]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // ── refreshAll: re-fetches stats + table + map, then syncs selectedStaff ──
     const refreshAll = useCallback(async (targetUserId) => {
         const [freshMap] = await Promise.all([
             buildEnrollmentMap(),
             fetchStats(),
             fetchStaffTable(tablePage, filterStatus),
         ]);
-        // Immediately sync selectedStaff from the freshMap (don't wait for useEffect)
         if (targetUserId && freshMap[targetUserId]) {
             const live = freshMap[targetUserId];
             setSelectedStaff((prev) =>
@@ -310,13 +539,11 @@ export default function StaffAttendanceRegistration() {
     const scrollToUpload = () =>
         setTimeout(() => uploadPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
 
-    // ── Select from LEFT panel (getAllUsers) ──────────────────────────────────
-    // ✅ FIX: look up real enrollment status from enrollmentMap instead of hardcoding NOT_ENROLLED
     const handleSelectStaff = (user) => {
         const name = user.fullName || `${user.firstName || ""} ${user.lastName || ""}`.trim() || "Unknown";
         const role = user.roles?.[0] || "TEACHER";
         const code = user.employeeCode || "—";
-        const live = enrollmentMap[user.id]; // real record or undefined
+        const live = enrollmentMap[user.id];
 
         setSelectedStaff({
             userId: user.id,
@@ -334,8 +561,6 @@ export default function StaffAttendanceRegistration() {
         scrollToUpload();
     };
 
-    // ── Select from TABLE (Enroll / Complete buttons) ─────────────────────────
-    // Table rows already have real enrollment data from the API
     const handleTableEnroll = (staff) => {
         setSelectedStaff({
             userId: staff.userId,
@@ -354,19 +579,9 @@ export default function StaffAttendanceRegistration() {
 
     const handleTableReEnroll = (staff) => setReEnrollTarget(staff);
 
-    // ── Re-enroll confirm ─────────────────────────────────────────────────────
     const confirmReEnroll = async () => {
         if (!reEnrollTarget) return;
-
         const targetId = reEnrollTarget.userId;
-
-        console.log("ReEnroll Payload:", {
-            userId: targetId,
-            userType: reEnrollTarget.userType,
-            mapData: enrollmentMap[targetId],
-        });
-
-
         const existing = enrollmentMap[targetId];
 
         if (!existing) {
@@ -377,24 +592,20 @@ export default function StaffAttendanceRegistration() {
 
         try {
             setReEnrollLoading(true);
-
             await removeEnrollment({
                 userId: targetId,
                 userType: existing?.roles?.[0] || reEnrollTarget?.roles?.[0],
             });
-
             showToast("Enrollment removed successfully");
-
             setReEnrollTarget(null);
             await refreshAll(targetId);
-
         } catch (e) {
             showToast(e.message || "Failed to remove enrollment", "error");
         } finally {
             setReEnrollLoading(false);
         }
     };
-    // ── Photo handlers ────────────────────────────────────────────────────────
+
     const handleAddPhoto = (index, file) => {
         const updated = [...photos]; updated[index] = file; setPhotos(updated);
         if (activeStep < 3) setActiveStep(3);
@@ -404,7 +615,6 @@ export default function StaffAttendanceRegistration() {
     };
     const handleClearAll = () => setPhotos(Array(5).fill(null));
 
-    // ── Enroll ────────────────────────────────────────────────────────────────
     const handleEnroll = async () => {
         if (uploadedCount < 5 || !selectedStaff) return;
         const enrolledId = selectedStaff.userId;
@@ -420,7 +630,6 @@ export default function StaffAttendanceRegistration() {
             setActiveStep(4);
             setPhotos(Array(5).fill(null));
 
-            // ✅ Optimistic update: flip status immediately in the panel
             setSelectedStaff((prev) => ({
                 ...prev,
                 enrollmentStatus: "ENROLLED",
@@ -428,7 +637,6 @@ export default function StaffAttendanceRegistration() {
                 fullyEnrolled: true,
             }));
 
-            // Then refresh everything in the background to sync table + map + stats
             await refreshAll(enrolledId);
         } catch (e) {
             showToast(e.message || "Enrollment failed", "error");
@@ -437,7 +645,6 @@ export default function StaffAttendanceRegistration() {
         }
     };
 
-    // ── Derived ───────────────────────────────────────────────────────────────
     const uploadedCount = photos.filter(Boolean).length;
 
     const filteredUsers = allUsers.filter((u) => {
@@ -447,7 +654,6 @@ export default function StaffAttendanceRegistration() {
         return name.toLowerCase().includes(q) || code.toLowerCase().includes(q);
     });
 
-    // ─────────────────────────────────────────────────────────────────────────────
     return (
         <div className="min-h-screen bg-[#EBF0F5] font-sans">
             {reEnrollTarget && (
@@ -507,15 +713,12 @@ export default function StaffAttendanceRegistration() {
                                     const role = user.roles?.[0] || "—";
                                     const code = user.employeeCode || "—";
                                     const isSelected = selectedStaff?.userId === user.id;
-
-                                    // ✅ Show real-time status indicator in left panel
                                     const live = enrollmentMap[user.id];
                                     const liveStatus = live?.enrollmentStatus ?? "NOT_ENROLLED";
 
                                     return (
                                         <button key={user.id} onClick={() => handleSelectStaff(user)}
-                                            className={`cursor-pointer w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${isSelected ? "border-blue-400 bg-blue-50 shadow-sm" : "border-gray-100 bg-white hover:border-gray-300 hover:bg-gray-50"
-                                                }`}>
+                                            className={`cursor-pointer w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${isSelected ? "border-blue-400 bg-blue-50 shadow-sm" : "border-gray-100 bg-white hover:border-gray-300 hover:bg-gray-50"}`}>
                                             <div className={`w-9 h-9 rounded-full ${AVATAR_COLORS[idx % AVATAR_COLORS.length]} text-white text-xs font-bold flex items-center justify-center shrink-0`}>
                                                 {getInitials(name) || "?"}
                                             </div>
@@ -523,7 +726,6 @@ export default function StaffAttendanceRegistration() {
                                                 <p className="text-sm font-semibold text-gray-800 truncate">{name}</p>
                                                 <p className="text-xs text-gray-500">{code} · {role}</p>
                                             </div>
-                                            {/* ✅ Live status indicator */}
                                             {liveStatus === "ENROLLED"
                                                 ? <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0" />
                                                 : liveStatus === "PARTIAL"
@@ -634,8 +836,8 @@ export default function StaffAttendanceRegistration() {
                             {["Select Staff", "Review Info", "Upload Photos", "Enroll"].map((step, i) => (
                                 <div key={step} className="flex items-center shrink-0">
                                     <div className={`px-3 py-1.5 rounded-full ${activeStep > i + 1 ? "bg-blue-600 text-white"
-                                            : activeStep === i + 1 ? "bg-blue-100 text-blue-700 border border-blue-300"
-                                                : "bg-gray-100 text-gray-400"
+                                        : activeStep === i + 1 ? "bg-blue-100 text-blue-700 border border-blue-300"
+                                            : "bg-gray-100 text-gray-400"
                                         }`}>{i + 1} · {step}</div>
                                     {i < 3 && <div className="w-8 h-px bg-gray-300 mx-1" />}
                                 </div>
@@ -644,7 +846,7 @@ export default function StaffAttendanceRegistration() {
 
                         <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-start">
 
-                            {/* Staff Info — ✅ now always shows live status */}
+                            {/* Staff Info */}
                             <div className="md:col-span-3">
                                 <div className="flex items-start gap-3 p-4 rounded-xl bg-blue-50 border border-blue-100 h-full">
                                     <div className="w-12 h-12 rounded-full bg-blue-600 text-white text-sm font-bold flex items-center justify-center shrink-0">
@@ -712,8 +914,7 @@ export default function StaffAttendanceRegistration() {
                                     <Trash2 className="w-4 h-4" /> Clear All
                                 </button>
                                 <button onClick={handleEnroll} disabled={uploadedCount < 5 || enrolling}
-                                    className={`cursor-pointer w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-white text-sm font-semibold transition-all ${uploadedCount === 5 && !enrolling ? "bg-blue-600 hover:bg-blue-700 shadow-sm" : "bg-gray-300 cursor-not-allowed"
-                                        }`}>
+                                    className={`cursor-pointer w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-white text-sm font-semibold transition-all ${uploadedCount === 5 && !enrolling ? "bg-blue-600 hover:bg-blue-700 shadow-sm" : "bg-gray-300 cursor-not-allowed"}`}>
                                     {enrolling ? <><RefreshCw className="w-4 h-4 animate-spin" /> Enrolling...</> : <><Zap className="w-4 h-4" /> Enroll Staff</>}
                                 </button>
                                 {uploadedCount < 5 && (
