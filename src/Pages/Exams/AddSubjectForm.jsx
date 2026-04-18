@@ -234,14 +234,14 @@ const STYLE = `
 // ─── Initial form state factory ───────────────────────────────────────────────
 function initFormData(editData = null) {
     return {
-        sectionSubjectId:      editData?.sectionSubjectId      ?? "",
-        maxMarks:              editData?.maxMarks               != null ? String(editData.maxMarks) : "",
-        passingMarks:          editData?.passingMarks           != null ? String(editData.passingMarks) : "",
-        hasTheoryPractical:    editData?.hasTheoryPractical     ?? false,
-        maxTheoryMarks:        editData?.maxTheoryMarks         != null ? String(editData.maxTheoryMarks) : "",
-        maxPracticalMarks:     editData?.maxPracticalMarks      != null ? String(editData.maxPracticalMarks) : "",
-        passingTheoryMarks:    editData?.passingTheoryMarks     != null ? String(editData.passingTheoryMarks) : "",
-        passingPracticalMarks: editData?.passingPracticalMarks  != null ? String(editData.passingPracticalMarks) : "",
+        sectionSubjectId: editData?.sectionSubjectId ?? "",
+        maxMarks: editData?.maxMarks != null ? String(editData.maxMarks) : "",
+        passingMarks: editData?.passingMarks != null ? String(editData.passingMarks) : "",
+        hasTheoryPractical: editData?.hasTheoryPractical ?? false,
+        maxTheoryMarks: editData?.maxTheoryMarks != null ? String(editData.maxTheoryMarks) : "",
+        maxPracticalMarks: editData?.maxPracticalMarks != null ? String(editData.maxPracticalMarks) : "",
+        passingTheoryMarks: editData?.passingTheoryMarks != null ? String(editData.passingTheoryMarks) : "",
+        passingPracticalMarks: editData?.passingPracticalMarks != null ? String(editData.passingPracticalMarks) : "",
     };
 }
 
@@ -260,11 +260,11 @@ export default function AddSubjectForm({
 
     /* ── State ─────────────────────────────── */
     const [sectionSubjects, setSectionSubjects] = useState([]);
-    const [loadingMeta, setLoadingMeta]         = useState(true);
-    const [submitting, setSubmitting]           = useState(false);
-    const [error, setError]                     = useState(null);
+    const [loadingMeta, setLoadingMeta] = useState(true);
+    const [submitting, setSubmitting] = useState(false);
+    const [error, setError] = useState(null);
     // BUG FIX: Per-field validation errors
-    const [fieldErrors, setFieldErrors]         = useState({});
+    const [fieldErrors, setFieldErrors] = useState({});
 
     const [formData, setFormData] = useState(() => initFormData(editData));
 
@@ -321,7 +321,7 @@ export default function AddSubjectForm({
         subjectName: editData?.subjectName,
         subjectCode: editData?.subjectCode,
         sectionName: editData?.sectionName,
-        className:   editData?.className,
+        className: editData?.className,
     } : null);
 
     /* ── Handlers ── */
@@ -344,9 +344,9 @@ export default function AddSubjectForm({
             hasTheoryPractical: checked,
             // Reset T/P fields when disabling
             ...(checked ? {} : {
-                maxTheoryMarks:        "",
-                maxPracticalMarks:     "",
-                passingTheoryMarks:    "",
+                maxTheoryMarks: "",
+                maxPracticalMarks: "",
+                passingTheoryMarks: "",
                 passingPracticalMarks: "",
             }),
         }));
@@ -370,7 +370,7 @@ export default function AddSubjectForm({
             topError = errors.sectionSubjectId;
         }
 
-        const max     = Number(formData.maxMarks);
+        const max = Number(formData.maxMarks);
         const passing = Number(formData.passingMarks);
 
         if (!formData.maxMarks || isNaN(max) || max < 1) {
@@ -387,8 +387,8 @@ export default function AddSubjectForm({
         }
 
         if (formData.hasTheoryPractical) {
-            const th  = Number(formData.maxTheoryMarks);
-            const pr  = Number(formData.maxPracticalMarks);
+            const th = Number(formData.maxTheoryMarks);
+            const pr = Number(formData.maxPracticalMarks);
             const pth = Number(formData.passingTheoryMarks || 0);
             const ppr = Number(formData.passingPracticalMarks || 0);
 
@@ -433,15 +433,15 @@ export default function AddSubjectForm({
         try {
             const tp = formData.hasTheoryPractical;
             const payload = {
-                sectionSubjectId:      Number(formData.sectionSubjectId),
-                maxMarks:              Number(formData.maxMarks),
-                passingMarks:          Number(formData.passingMarks),
-                hasTheoryPractical:    tp,
+                sectionSubjectId: Number(formData.sectionSubjectId),
+                maxMarks: Number(formData.maxMarks),
+                passingMarks: Number(formData.passingMarks),
+                hasTheoryPractical: tp,
                 // BUG FIX: Send null (not 0) when T/P is disabled
-                maxTheoryMarks:        tp ? Number(formData.maxTheoryMarks)        : null,
-                maxPracticalMarks:     tp ? Number(formData.maxPracticalMarks)     : null,
+                maxTheoryMarks: tp ? Number(formData.maxTheoryMarks) : null,
+                maxPracticalMarks: tp ? Number(formData.maxPracticalMarks) : null,
                 // BUG FIX: Default passing T/P to 0 if blank when T/P enabled
-                passingTheoryMarks:    tp ? Number(formData.passingTheoryMarks || 0)    : null,
+                passingTheoryMarks: tp ? Number(formData.passingTheoryMarks || 0) : null,
                 passingPracticalMarks: tp ? Number(formData.passingPracticalMarks || 0) : null,
             };
 
@@ -466,19 +466,19 @@ export default function AddSubjectForm({
     };
 
     /* ── Live sum hint ── */
-    const theoryVal      = Number(formData.maxTheoryMarks || 0);
-    const practicalVal   = Number(formData.maxPracticalMarks || 0);
-    const theorySum      = theoryVal + practicalVal;
-    const maxVal         = Number(formData.maxMarks || 0);
-    const sumMatchesMax  = theorySum > 0 && maxVal > 0 && theorySum === maxVal;
-    const showSumHint    = formData.hasTheoryPractical && (formData.maxTheoryMarks || formData.maxPracticalMarks);
+    const theoryVal = Number(formData.maxTheoryMarks || 0);
+    const practicalVal = Number(formData.maxPracticalMarks || 0);
+    const theorySum = theoryVal + practicalVal;
+    const maxVal = Number(formData.maxMarks || 0);
+    const sumMatchesMax = theorySum > 0 && maxVal > 0 && theorySum === maxVal;
+    const showSumHint = formData.hasTheoryPractical && (formData.maxTheoryMarks || formData.maxPracticalMarks);
 
     /* ── Label builder for dropdown ── */
     const mappingLabel = (m) => {
         // BUG FIX: Handle varying field names from backend
-        const className   = m.className   || m.schoolClassName   || "";
-        const sectionName = m.sectionName || m.section?.name     || "";
-        const subjectName = m.subjectName || m.subject?.name     || "";
+        const className = m.className || m.schoolClassName || "";
+        const sectionName = m.sectionName || m.section?.name || "";
+        const subjectName = m.subjectName || m.subject?.name || "";
         return [className, sectionName, subjectName].filter(Boolean).join(" — ") || `Subject #${m.id}`;
     };
 
