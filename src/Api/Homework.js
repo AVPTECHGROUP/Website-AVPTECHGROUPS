@@ -1,5 +1,5 @@
 import { authFetch } from "../Authfetch/Authfetch";
-
+import { getCurrUserDetails } from "../utils/getCurrUserDetails";
 const BASE_URL = import.meta.env.VITE_API_BASE_V1;
 const HOMEWORK_BASE_URL = `${BASE_URL}/homework`;
 const BASE = import.meta.env.VITE_API_BASE_V1;
@@ -35,6 +35,40 @@ const unwrapList = (body, label) => {
   if (body?.content !== undefined)        return body;
   console.warn(`[${label}] Unrecognised response shape`, body);
   return [];
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Deep unwrap — finds the first array anywhere in the response object.
+//  Used as a last-resort fallback when the shape is completely unknown.
+// ─────────────────────────────────────────────────────────────────────────────
+const deepFindArray = (obj, depth = 0) => {
+  if (depth > 4) return null;
+  if (Array.isArray(obj)) return obj;
+  if (obj && typeof obj === "object") {
+    for (const val of Object.values(obj)) {
+      const found = deepFindArray(val, depth + 1);
+      if (found) return found;
+    }
+  }
+  return null;
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  authFetch normaliser — authFetch may return a real Response object OR an
+//  already-parsed body depending on the interceptor version.  This helper
+//  always returns the parsed JSON body and throws on HTTP errors.
+// ─────────────────────────────────────────────────────────────────────────────
+const resolveAuthFetch = async (raw) => {
+  if (raw && typeof raw.json === "function") {
+    // It's a real Response object
+    if (!raw.ok) {
+      const text = await raw.text().catch(() => raw.statusText);
+      throw new Error(text || `HTTP ${raw.status}`);
+    }
+    return await raw.json();
+  }
+  // Already parsed
+  return raw;
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -148,8 +182,6 @@ export const cancelHomework = (id) => updateHomeworkStatus(id, "CANCELLED");
 // ─────────────────────────────────────────────────────────────────────────────
 //  8. Get homework for a section
 //     GET /api/v1/homework/section/:sectionId?subjectId=&status=&dueAfter=&dueBefore=&page=&size=&sort=
-//
-//  ✅ FIX: dueAfter and dueBefore are now destructured and appended to the URL
 // ─────────────────────────────────────────────────────────────────────────────
 export const getHomework = async ({
   sectionId,
@@ -173,21 +205,17 @@ export const getHomework = async ({
     { method: "GET" }
   );
 
-  // ✅ authFetch may return parsed body OR a Response object — handle both
   let body;
   if (raw && typeof raw.json === "function") {
-    // raw is a real Response object
     if (!raw.ok) {
       const text = await raw.text().catch(() => raw.statusText);
       throw new Error(text || `Failed (${raw.status})`);
     }
     body = await raw.json();
   } else {
-    // authFetch already parsed and returned the body
     body = raw;
   }
 
-  // ✅ unwrap paginated response { success, data: [...], pagination }
   if (Array.isArray(body))           return body;
   if (Array.isArray(body?.data))     return body.data;
   if (Array.isArray(body?.content))  return body.content;
@@ -195,6 +223,7 @@ export const getHomework = async ({
   console.warn("[getHomework] Unexpected shape:", body);
   return [];
 };
+
 // ─────────────────────────────────────────────────────────────────────────────
 //  9. Get published homework for a section
 //     GET /api/v1/homework/section/:sectionId/published
@@ -260,22 +289,56 @@ export const getActiveSubjectsBySection = async (sectionId) => {
   return unwrapList(await res.json(), "getActiveSubjectsBySection");
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
+//  12. Teacher lookup   GET /api/v1/teachers/lookup
+//
+//  authFetch can return a real Response OR an already-parsed body.
+//  We handle both cases and try every known response shape before falling back
+//  to a deep search for any array in the payload.
+// ─────────────────────────────────────────────────────────────────────────────
+export const getTeacherLookup = async () => {
+  let data;
 
+  try {
+    const raw = await authFetch(`${BASE_URL}/teachers/lookup`);
+    data = await resolveAuthFetch(raw);
+  } catch (err) {
+    // If authFetch itself threw, bubble the error
+    console.error("[getTeacherLookup] authFetch error:", err.message);
+    throw err;
+  }
+
+  console.log("[getTeacherLookup] raw response:", data);
+
+  // ── Try every known envelope shape ──────────────────────────────────────
+  if (Array.isArray(data))                return data;
+  if (Array.isArray(data?.data))          return data.data;
+  if (Array.isArray(data?.teachers))      return data.teachers;
+  if (Array.isArray(data?.result))        return data.result;
+  if (Array.isArray(data?.content))       return data.content;
+  if (Array.isArray(data?.items))         return data.items;
+  if (Array.isArray(data?.data?.content)) return data.data.content;
+
+  // ── Last resort: find the first array anywhere in the response ───────────
+  const found = deepFindArray(data);
+  if (found) {
+    console.warn("[getTeacherLookup] Used deepFindArray fallback, shape:", data);
+    return found;
+  }
+
+  console.warn("[getTeacherLookup] No array found in response:", data);
+  return [];
+};
+
+// Keep old getTeachers for any other consumers
 export const getTeachers = async () => {
-  const res = await authFetch(`${BASE_URL}/users/teachers`, {
-    method: "GET",
-  });
-
+  const res = await authFetch(`${BASE_URL}/users/teachers`, { method: "GET" });
   if (!res.ok) {
     const text = await res.text().catch(() => res.statusText);
     throw new Error(text || `Failed to fetch teachers (${res.status})`);
   }
-
   const data = await res.json();
-
-  // unwrap like your other APIs
-  if (Array.isArray(data)) return data;
+  if (Array.isArray(data))       return data;
   if (Array.isArray(data?.data)) return data.data;
-
   return [];
 };

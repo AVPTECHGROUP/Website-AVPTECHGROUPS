@@ -29,15 +29,16 @@ const menuItems = [
   // ── Academics (Exams + Subjects merged) ──────────────────────────────────
   {
     id: 'academics', icon: GraduationCap, label: 'Academics', route: '/subjectsmaster',
-    roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'],
+    roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN','TEACHER'],
     subItems: [
       { label: 'Subjects', route: '/subjectsmaster', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'] },
-      { label: 'Exams', route: '/exams', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN'] },
+      { label: 'Exams', route: '/exams', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN','PRINCIPAL','TEACHER'] },
       { label: 'Marks Entry', route: '/exams/marksEntry', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN'] },
       { label: 'Report Cards', route: '/exams/reportCard', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN'] },
       { label: 'Analytics', route: '/exams/analytics', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN'] },
       { label: 'Exam Configuration', route: '/exams/examConfig', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN'] },
       { label: 'Class & Sections', route: '/academics/classSections', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'] },
+      {label:'HomeWork',route:'/homework',roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN','ADMIN','PRINCIPAL','TEACHER']}
     ]
   },
   {
@@ -93,10 +94,10 @@ const menuItems = [
       { label: 'Reports', route: '/route/reports', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'] },
     ]
   },
-  {
-    id: 'Homework', icon: NotebookPen, label: 'Homework', route: '/homework',
-    roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN','ADMIN','PRINCIPAL','TEACHER'],
-  },
+  // {
+  //   id: 'Homework', icon: NotebookPen, label: 'Homework', route: '/homework',
+  //   roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN','ADMIN','PRINCIPAL','TEACHER'],
+  // },
   {
     id: 'Permission',
     icon: Shield,
