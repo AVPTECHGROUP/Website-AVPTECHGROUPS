@@ -33,6 +33,11 @@ export const loginAPI = async (credentials) => {
       localStorage.setItem("user", JSON.stringify(data.data.user));
     }
 
+    // ✅ Save profile separately so useDecodedUser().profile works everywhere
+    if (data.data?.user?.profile) {
+      localStorage.setItem("profile", JSON.stringify(data.data.user.profile));
+    }
+
     return data;
 
   } catch (error) {
@@ -63,8 +68,10 @@ export const logoutAPI = async () => {
     throw error;
 
   } finally {
+    // ✅ Also clear profile on logout
     localStorage.removeItem("token");
     localStorage.removeItem("user");
+    localStorage.removeItem("profile");
   }
 };
 
