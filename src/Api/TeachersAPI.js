@@ -274,6 +274,38 @@ export const getClasses = async () => {
   }
 };
 
+export const getActiveClasses = async () => {
+  try {
+    const decoded = getCurrUserDetails();        // JWT token decode
+    const schoolId = decoded?.schoolId ?? null;  // schoolId from token
+
+    if (!schoolId) {
+      console.warn("getActiveClasses: schoolId not found in token. Switch school first.");
+      return [];
+    }
+
+    console.log("getActiveClasses: using schoolId →", schoolId);
+
+    // ✅ Updated endpoint with /active
+    const res = await authFetch(`${BASE_URL}/classes/school/${schoolId}/active`);
+
+    if (!res.ok) throw new Error("Failed to fetch active classes");
+
+    const data = await res.json();
+    console.log("Active Classes API response:", data);
+
+    // Handle response safely
+    if (data?.data && Array.isArray(data.data)) return data.data;
+    if (Array.isArray(data)) return data;
+
+    console.warn("Unexpected active classes response format:", data);
+    return [];
+  } catch (error) {
+    console.error("getActiveClasses error:", error.message);
+    throw error;
+  }
+};
+
 export const getClassById = async (classId) => {
   try {
     const res = await authFetch(`${BASE_URL}/classes/${classId}`);
@@ -461,6 +493,32 @@ export const updateSubject = async (subjectId, subjectData) => {
     return data.data || data;
   } catch (error) {
     console.error('updateSubject error:', error.message);
+    throw error;
+  }
+};
+
+export const getTeacherLookup = async () => {
+  try {
+    const decoded = getCurrUserDetails();         // JWT token decode
+    const schoolId = decoded?.schoolId ?? null;   // optional (if needed)
+
+    console.log("getTeacherLookup: schoolId →", schoolId);
+
+    const res = await authFetch(`${BASE_URL}/teachers/lookup`);
+
+    if (!res.ok) throw new Error("Failed to fetch teacher lookup");
+
+    const data = await res.json();
+    console.log("Teacher Lookup API response:", data);
+
+    // Handle response safely (same pattern as your code)
+    if (data?.data && Array.isArray(data.data)) return data.data;
+    if (Array.isArray(data)) return data;
+
+    console.warn("Unexpected teacher lookup response format:", data);
+    return [];
+  } catch (error) {
+    console.error("getTeacherLookup error:", error.message);
     throw error;
   }
 };

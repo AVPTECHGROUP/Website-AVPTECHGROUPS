@@ -98,6 +98,26 @@ function LazyAttachmentViewer({ url, type, label = "Attachment" }) {
   const isImage = type === "image";
   const isLink  = !isPdf && !isImage;
 
+  const handleDownload = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      const res  = await fetch(url);
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href     = blobUrl;
+      a.download = url.split("/").pop() || "attachment";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(blobUrl);
+    } catch {
+      // Fallback: open in new tab if CORS blocks direct download
+      window.open(url, "_blank", "noopener,noreferrer");
+    }
+  };
+
   return (
     <div className="border border-gray-200 rounded-xl overflow-hidden">
       <div className="flex items-center justify-between px-3 py-2 bg-gray-50 border-b border-gray-200">
@@ -119,11 +139,13 @@ function LazyAttachmentViewer({ url, type, label = "Attachment" }) {
             </button>
           )}
           {(isPdf || isImage) && (
-            <a href={url} download onClick={(e) => e.stopPropagation()}
+            <button
+              type="button"
+              onClick={handleDownload}
               className="inline-flex items-center gap-1 text-xs font-semibold text-gray-500 hover:text-gray-700 transition-colors"
             >
               <Download size={12} /> Download
-            </a>
+            </button>
           )}
           <a
             href={isPdf ? `https://docs.google.com/viewer?url=${encodeURIComponent(url)}` : url}
@@ -268,6 +290,26 @@ function Tab({ active, onClick, icon: Icon, label, dot }) {
   );
 }
 
+// ── Resolve teacher name — handles all known API shapes safely ────────────────
+// NOTE: ?? and || must NOT be mixed without parens — Babel requires explicit grouping.
+function resolveTeacherName(t) {
+  const id = (t.id ?? t.userId ?? t.profile?.id ?? "");
+
+  // Build name: try every known field in order, then fall back
+  const fromFields = (
+    t.name ??
+    t.fullName ??
+    t.profile?.fullName ??
+    (
+      `${t.firstName ?? ""} ${t.lastName ?? ""}`.trim() || null
+    )
+  );
+
+  const name = fromFields || t.email || `Teacher #${id}`;
+
+  return { id: String(id), name: String(name) };
+}
+
 // ── AssignModal ───────────────────────────────────────────────────────────────
 export default function AssignModal({
   mode            = "assign",
@@ -310,8 +352,7 @@ export default function AssignModal({
         }
   );
 
-  // ── KEY FIX: when subjects load in edit mode, ensure subjectId is still set ─
-  // Sometimes subjects arrive after the modal mounts, so we re-sync once loaded.
+  // ── When subjects load in edit mode, ensure subjectId is still set ─────────
   useEffect(() => {
     if (isEdit && hw?.subjectId && subjects.length > 0) {
       const match = subjects.find((s) => String(s.id) === String(hw.subjectId));
@@ -354,9 +395,7 @@ export default function AssignModal({
 
     const isFileBased = form.attachType !== "NONE" && form.attachType !== "LINK";
 
-    // ── KEY FIX: preserve existing attachment when editing without a new file ──
-    // If user didn't pick a new file, send back the existing URL so the backend
-    // never clears the stored attachment reference.
+    // Preserve existing attachment when editing without a new file
     if (isEdit && isFileBased && !attachFile && existingAttachUrl) {
       payload.attachmentUrl  = existingAttachUrl;
       payload.attachmentType = hw.attachmentType ?? form.attachType;
@@ -431,6 +470,11 @@ export default function AssignModal({
           {activeTab === "details" && (
             <div className="space-y-4">
 
+              {/*
+                Teacher field:
+                - Logged-in TEACHER → read-only blue banner
+                - Admin / Principal / Staff → dropdown from teacher lookup API
+              */}
               {isTeacher ? (
                 <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-100 rounded-lg">
                   <User size={13} className="text-blue-600 shrink-0" />
@@ -438,27 +482,39 @@ export default function AssignModal({
                   <span className="ml-auto text-[10px] text-blue-400 font-semibold tracking-wide uppercase">Assigned by you</span>
                 </div>
               ) : (
-                <Field label="On behalf of" required>
+                <Field label="On behalf of teacher" required>
                   <div className="relative">
                     {teachersLoading && (
                       <Loader2 size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 animate-spin pointer-events-none" />
                     )}
-                    <User size={13} className={`absolute top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none ${teachersLoading ? "left-6" : "left-2.5"}`} />
+                    <User
+                      size={13}
+                      className={`absolute top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none ${teachersLoading ? "left-6" : "left-2.5"}`}
+                    />
                     <select
                       value={form.teacherId}
                       onChange={(e) => set("teacherId", e.target.value)}
                       disabled={submitting || teachersLoading}
                       className="w-full appearance-none border-[1.5px] border-gray-300 rounded-lg pl-8 pr-7 py-2 text-sm outline-none bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:opacity-60"
                     >
-                      <option value="">On behalf of...</option>
+                      <option value="">
+                        {teachersLoading ? "Loading teachers…" : "Select teacher…"}
+                      </option>
                       {teachers.map((t) => {
-                        const id   = t.id ?? t.userId ?? t.profile?.id ?? "";
-                        const name = t.fullName ?? t.profile?.fullName ?? `${t.firstName ?? ""} ${t.lastName ?? ""}`.trim() ?? t.email ?? `Teacher #${id}`;
-                        return <option key={id} value={id}>{name}</option>;
+                        const { id, name } = resolveTeacherName(t);
+                        return (
+                          <option key={id} value={id}>{name}</option>
+                        );
                       })}
                     </select>
                     <ChevronDown size={13} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                   </div>
+                  {/* Debug hint — remove after teachers confirmed loading */}
+                  {!teachersLoading && teachers.length === 0 && (
+                    <p className="text-[10px] text-red-400 mt-1">
+                      No teachers loaded — check console for [getTeacherLookup] logs.
+                    </p>
+                  )}
                 </Field>
               )}
 
@@ -536,20 +592,36 @@ export default function AssignModal({
             <div className="space-y-4">
 
               <Field label="Description">
-                <textarea
-                  value={form.description}
-                  disabled={submitting}
-                  onChange={(e) => {
-                    if (e.target.value.length <= 1000) set("description", e.target.value);
-                  }}
-                  placeholder="Instructions for students…"
-                  rows={6}
-                  className="w-full border-[1.5px] border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 resize-y disabled:opacity-60"
-                />
-                <div className="text-[10px] text-gray-400 text-right mt-1">
-                  {form.description?.length ?? 0} / 1000
-                </div>
-              </Field>
+            <textarea
+              value={form.description}
+                disabled={submitting}
+                onChange={(e) => {
+               if (e.target.value.length <= 1000) set("description", e.target.value);
+                 }}
+                 placeholder="Instructions for students…"
+                rows={6}
+             className="w-full border-[1.5px] border-gray-300 rounded-lg px-3 py-2 text-sm outline-none
+            focus:border-blue-500 focus:ring-2 focus:ring-blue-100 resize-none overflow-y-auto
+            disabled:opacity-60"
+            style={{ maxHeight: "200px" }}
+           />
+           <div className="flex items-center justify-between mt-1">
+             {form.description?.length >= 950 && (
+               <span className="text-[10px] text-orange-500 font-medium">
+              {1000 - (form.description?.length ?? 0)} characters remaining
+           </span>
+          )}
+             <span className={`text-[10px] ml-auto font-medium ${
+             (form.description?.length ?? 0) >= 1000
+                ? "text-red-500"
+              : (form.description?.length ?? 0) >= 950
+                ? "text-orange-400"
+                : "text-gray-400"
+             }`}>
+               {form.description?.length ?? 0} / 1000
+            </span>
+            </div>
+        </Field>
 
               <Field label="Attachment Type">
                 <ModalSelect value={form.attachType} onChange={handleAttachTypeChange} disabled={submitting}>
@@ -560,12 +632,6 @@ export default function AssignModal({
                 </ModalSelect>
               </Field>
 
-              {/*
-                UploadZone:
-                - In edit mode with no new file chosen → shows existing attachment preview
-                - Once user picks a new file → shows new file name + revert option
-                - existingUrl is passed down so the zone knows whether to show revert
-              */}
               {showUpload && (
                 <UploadZone
                   file         = {attachFile}
