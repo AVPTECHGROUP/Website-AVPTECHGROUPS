@@ -17,7 +17,7 @@ import {
   uploadHomeworkAttachment,
   getHomework,
   getActiveSubjectsBySection,
-  getTeachers,
+  getTeacherLookup,
 } from "../../Api/Homework";
 
 import { getActiveClasses, getSectionsByClass } from "../../Api/ClassSectionAPI";
@@ -44,6 +44,20 @@ const normClass   = (item) => ({ id: item.id ?? item.classId ?? "",   label: ite
 const normSection = (item) => ({ id: item.id ?? item.sectionId ?? "", label: item.name ?? item.sectionName ?? item.label ?? "" });
 const normSubject = (item) => ({ id: item.subjectId ?? item.id ?? "", label: item.subjectName ?? item.name ?? item.label ?? "" });
 
+// ── Normalise teacher records from the lookup API { id, name } ──────────────
+// The lookup endpoint returns { id, name }. We keep the raw shape as-is so
+// AssignModal can resolve it with its own resolveTeacherName helper, but we
+// also normalise here in case any other part of the page reads teacher.name.
+const normTeacher = (item) => ({
+  ...item,
+  id: item.id ?? item.userId ?? item.profile?.id ?? "",
+  name: (
+    item.name ??
+    item.fullName ??
+    item.profile?.fullName ??
+    `${item.firstName ?? ""} ${item.lastName ?? ""}`.trim()
+  ) || item.email || `Teacher #${item.id ?? "?"}`,
+});
 export default function HomeworkPage() {
 
   const { user, profile } = useDecodedUser();
@@ -52,21 +66,29 @@ export default function HomeworkPage() {
   const teacherId = isTeacher ? profile?.id : null;
 
   // ── Teachers ──────────────────────────────────────────────────────────────
+  // Only loaded for non-teacher users (admin, principal, staff, etc.)
+  // so they can assign homework on behalf of a teacher.
   const [teachers,        setTeachers]        = useState([]);
   const [teachersLoading, setTeachersLoading] = useState(false);
 
-  useEffect(() => {
-    if (isTeacher) return;
-    const fetch_ = async () => {
-      setTeachersLoading(true);
-      try {
-        const list = await getTeachers();
-        setTeachers(Array.isArray(list) ? list : Array.isArray(list?.data) ? list.data : []);
-      } catch (err) { showError(err, "Failed to load teachers"); }
-      finally { setTeachersLoading(false); }
-    };
-    fetch_();
-  }, [isTeacher]);
+  // Around line where teachers are fetched:
+useEffect(() => {
+  if (isTeacher) return;
+  const fetch_ = async () => {
+    setTeachersLoading(true);
+    try {
+      const list = await getTeacherLookup();
+      const raw  = Array.isArray(list) ? list : [];
+      console.log("[HomeworkPage] teachers loaded:", raw); // ← confirm shape here
+      setTeachers(raw.map(normTeacher));
+    } catch (err) {
+      showError(err, "Failed to load teachers");
+    } finally {
+      setTeachersLoading(false);
+    }
+  };
+  fetch_();
+}, [isTeacher]);
 
   // ── Classes ───────────────────────────────────────────────────────────────
   const [classes,        setClasses]        = useState([]);

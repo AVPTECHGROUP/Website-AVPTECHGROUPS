@@ -390,7 +390,7 @@ export default function SectionSubjectAssignment() {
 
   const loadClasses = useCallback(async () => {
     setClassesLoading(true);
-    const data = await SectionSubjectService.getAllClasses();
+    const data = await SectionSubjectService.getActiveClasses();
     setClasses(data);
     if (data.length) setSelectedClassId(String(data[0].id));
     setClassesLoading(false);
