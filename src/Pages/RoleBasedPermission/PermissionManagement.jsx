@@ -594,6 +594,32 @@ export default function RolesPermissionsManagement() {
     [currentPerms, activeFilter]
   );
 
+  const columnLabels = useMemo(() => {
+  const actionModuleCount = {};
+  const actionDisplayName = {};
+
+  moduleRows.forEach((row) => {
+    row.actions.forEach((action) => {
+      actionModuleCount[action] = (actionModuleCount[action] || 0) + 1;
+      if (!actionDisplayName[action]) {
+        actionDisplayName[action] = row.permissionMap[action]?.displayName;
+      }
+    });
+  });
+
+  const map = {};
+  Object.keys(actionModuleCount).forEach((action) => {
+    // Only use displayName for unique actions (e.g. STOCK_INWARD, ENTER_MARKS)
+    // Common actions (CREATE, VIEW, EDIT...) just format the action key itself
+    map[action] =
+      actionModuleCount[action] === 1
+        ? actionDisplayName[action] || action.replace(/_/g, " ")
+        : action.replace(/_/g, " ");
+  });
+
+  return map;
+}, [moduleRows]);
+
   // ── Matrix checkbox toggle ──
   const handleToggle = (mIdx, col) => {
     if (!selectedRole) return;
@@ -895,9 +921,13 @@ export default function RolesPermissionsManagement() {
                     <th className="px-5 py-3 text-left min-w-[180px]">Module</th>
                     {/* allColumns is 100% dynamic — zero hardcoded action names */}
                     {allColumns.map((col) => (
-                      <th key={col} className="px-3 py-3 text-center whitespace-nowrap">
-                        {col.replace(/_/g, " ")}
-                      </th>
+                      <th
+  key={col}
+  className="px-3 py-3 text-center"
+  style={{ minWidth: "72px", whiteSpace: "normal", wordBreak: "normal", lineHeight: "1.3" }}
+>
+  {columnLabels[col] || col.replace(/_/g, " ")}
+</th>
                     ))}
                   </tr>
                 </thead>
