@@ -251,7 +251,7 @@ function initFormData(editData = null) {
 export default function AddSubjectForm({
     examId,
     examName = "",
-    classId,          // ← REQUIRED: used to fetch section-subjects for this class
+    classId,        
     editData = null,
     onClose,
     onSuccess,
