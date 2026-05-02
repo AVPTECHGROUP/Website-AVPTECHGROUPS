@@ -232,7 +232,7 @@ const Teachers = () => {
     payrollIncluded,
     attendanceBlocked,
   };
-  
+
   return (
     <div className="flex h-screen overflow-hidden bg-linear-to-b from-sky-50 to-sky-100">
       <div ref={scrollContainerRef} className="flex-1 overflow-auto w-0">
@@ -247,7 +247,7 @@ const Teachers = () => {
 
             <QuickActions
               teacherId={selectedTeacher?.id ?? null}
-              onResetPassword={() => setIsResetOpen(true)}  
+              onResetPassword={() => setIsResetOpen(true)}
             />
           </div>
 
@@ -291,7 +291,7 @@ const Teachers = () => {
           onClose={() => setIsResetOpen(false)}
           userName={selectedTeacher?.name}
           onReset={() => resetPassword(selectedTeacher?.userId)}
-          currUserId={selectedTeacher?.id}
+          currUserId={selectedTeacher?.userId}
         />
 
       </div>

@@ -418,19 +418,6 @@ function UploadTab({ selectedClass, selectedSection, groupError, processing, cap
 
             <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => onFileSelect(e.target.files[0])} />
 
-            {/* ✅ FIX: Show actual selected class & section IDs for debugging visibility */}
-            <div className="bg-gray-50 rounded-xl p-3 border border-gray-200">
-                <div className="flex items-center gap-2 mb-1">
-                    <span className="bg-green-100 text-green-700 text-xs font-bold px-2 py-0.5 rounded">POST</span>
-                    <span className="text-xs font-mono text-gray-600">/attendance/students/group-mark</span>
-                </div>
-                <p className="text-xs text-gray-400">
-                    class_id=<span className="font-mono font-semibold text-gray-700">{selectedClass?.id ?? "⚠ not set"}</span>
-                    {" "}· section_id=<span className="font-mono font-semibold text-gray-700">{selectedSection?.id ?? "⚠ not set"}</span>
-                    {" "}· class=<span className="font-mono font-semibold text-gray-700">{selectedClass?.name ?? "—"}</span>
-                    {" "}· section=<span className="font-mono font-semibold text-gray-700">{selectedSection?.name ?? "—"}</span>
-                </p>
-            </div>
         </div>
     );
 }
