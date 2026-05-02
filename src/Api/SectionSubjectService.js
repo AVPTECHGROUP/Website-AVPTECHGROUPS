@@ -69,6 +69,30 @@ class SectionSubjectService {
     } catch { return []; }
   }
 
+  
+  async getActiveClasses() {
+  try {
+    const { schoolId } = getCurrUserDetails() ?? {};
+
+    if (!schoolId) {
+      console.warn("getActiveClasses: schoolId missing");
+      return [];
+    }
+
+    const json = await this.#req(
+      "GET",
+      `${BASE}/classes/school/${schoolId}/active`,
+      null,
+      true
+    );
+
+    return toArray(json);
+  } catch (err) {
+    console.error("getActiveClasses error:", err.message);
+    return [];
+  }
+}
+
   async getSectionsByClass(classId) {
     try {
       const json = await this.#reqWithFallback(
