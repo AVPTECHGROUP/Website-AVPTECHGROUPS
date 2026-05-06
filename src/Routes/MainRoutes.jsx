@@ -75,11 +75,14 @@ import ReportCards from '../Pages/Exams/ReportCards';
 import Analytics from '../Pages/Exams/Analytics';
 import SchoolConfig from '../Pages/Schools/SchoolConfig';
 import HomeworkPage from '../Pages/Homework/Homeworkpage';
+import AcademicYear from '../Pages/Attendance/AcademicYear/AcademicYear';
+import TimeTable from '../Pages/Schedule/TimeTable';
+import CreateSchedule from '../Pages/Schedule/CreateSchedule';
 
 // ─── Role Groups ───────────────────────────────────────────────────────────────
 const STOCK_ACCOUNTANT_ROLES = ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'STORE_ACCOUNTANT'];
 const STOCK_SELLER_ROLES = ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'STORE_ACCOUNTANT', 'STORE_SELLER'];
-
+const SCHEDULE_ROLES = ['GLOBAL_ADMIN', 'SUPER_ADMIN', 'ADMIN'];
 // ✅ Roles that see the school picker (requiresSchoolSelection: true)
 const SCHOOL_PICKER_ROLES = ['SUPER_ADMIN', 'GLOBAL_ADMIN'];
 
@@ -166,6 +169,11 @@ const MainRoutes = () => {
             <Route path="/exams/examConfig" element={<ExamConfiguration />} />
             <Route path="/academics/classSections" element={<ClassSectionConfig />} />
 
+            <Route element={<RoleProtectedRoute allowedRoles={SCHEDULE_ROLES} />}>
+              <Route path="/schedule" element={<TimeTable />} />
+              <Route path="/schedule/create" element={<CreateSchedule />} />
+            </Route>
+
             <Route path="/teachers" element={<Teachers />} />
             <Route path="/teachers/addTeacher" element={<AddNewTeacher />} />
             <Route path="/teachers/editTeacher/:id" element={<EditTeachersDetails />} />
@@ -222,7 +230,7 @@ const MainRoutes = () => {
             <Route path="/route/reports" element={<Reports />} />
           </Route>
 
-          <Route element={<RoleProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'PRINCIPAL','TEACHER']} />}>
+          <Route element={<RoleProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'PRINCIPAL', 'TEACHER']} />}>
             <Route path="/homework" element={<HomeworkPage />} />
           </Route>
 
@@ -231,9 +239,11 @@ const MainRoutes = () => {
           <Route element={<RoleProtectedRoute allowedRoles={['TEACHER', 'PRINCIPAL', 'RECEPTIONIST', 'ACCOUNTANT']} />}>
             <Route path="/leaves" element={<Navigate to="/leaves/myLeaves" replace />} />
           </Route>
+
           {/* Schools Management */}
           <Route element={<RoleProtectedRoute allowedRoles={['SUPER_ADMIN', 'GLOBAL_ADMIN']} />}>
-            <Route path="/schoolConfig" element={<SchoolConfig/>} />
+            <Route path="/schoolConfig" element={<SchoolConfig />} />
+            <Route path="/academicYear" element={<AcademicYear />} />
           </Route>
 
           {/* Fallback */}

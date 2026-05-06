@@ -457,7 +457,7 @@ const Student = () => {
                     {/* ── DESKTOP TABLE ── */}
                     <div className="hidden lg:flex lg:flex-col flex-1 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden min-h-0">
                         <div className="flex-1 overflow-auto">
-                            <table className="w-full min-w-[700px]">
+                            <table className="w-full min-w-175">
                                 <thead className="border-b border-gray-100 sticky top-0 z-10">
                                     <tr>
                                         {tableHeadItems.map((h) => (
@@ -511,7 +511,7 @@ const Student = () => {
                                                     </div>
                                                 </td>
                                                 <td className={`${tdStyle} text-center`}>{student.mobile}</td>
-                                                <td className={`${tdStyle} text-center max-w-[180px] truncate`}>{student.email}</td>
+                                                <td className={`${tdStyle} text-center max-w-45 truncate`}>{student.email}</td>
                                                 <td className={tdStyle}>
                                                     {student.className
                                                         ? <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-blue-50 text-blue-700 text-xs font-medium">{student.className}</span>

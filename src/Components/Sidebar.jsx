@@ -5,7 +5,7 @@ import {
   ChevronDown, UserCog, Package, Bus, Phone, Mail,
   Shield, ChevronUp, ArrowLeftRight, BookOpenText,
   GraduationCap,
-  SchoolIcon,NotebookPen
+  SchoolIcon, NotebookPen
 } from 'lucide-react'
 import { useState, useEffect, useContext, useRef } from 'react'
 import { UserContext } from '../ContextAPI/UserContext'
@@ -29,16 +29,17 @@ const menuItems = [
   // ── Academics (Exams + Subjects merged) ──────────────────────────────────
   {
     id: 'academics', icon: GraduationCap, label: 'Academics', route: '/subjectsmaster',
-    roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN','TEACHER'],
+    roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'TEACHER'],
     subItems: [
       { label: 'Subjects', route: '/subjectsmaster', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'] },
-      { label: 'Exams', route: '/exams', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN','PRINCIPAL','TEACHER'] },
+      { label: 'Exams', route: '/exams', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'PRINCIPAL', 'TEACHER'] },
       { label: 'Marks Entry', route: '/exams/marksEntry', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN'] },
       { label: 'Report Cards', route: '/exams/reportCard', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN'] },
       { label: 'Analytics', route: '/exams/analytics', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN'] },
+      { label: 'Time Table', route: '/schedule', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN'] },
       { label: 'Exam Configuration', route: '/exams/examConfig', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN'] },
       { label: 'Class & Sections', route: '/academics/classSections', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'] },
-      {label:'HomeWork',route:'/homework',roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN','ADMIN','PRINCIPAL','TEACHER']}
+      { label: 'HomeWork', route: '/homework', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'PRINCIPAL', 'TEACHER'] }
     ]
   },
   {
@@ -50,7 +51,7 @@ const menuItems = [
       { label: 'Staff Attendance', route: '/attendance/markUserAttendance', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'TEACHER', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST'] },
       { label: 'Student Enrollment', route: '/attendance/studentImgReg', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'TEACHER'] },
       { label: 'Student Attendance', route: '/attendance/studentAttendance', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'TEACHER'] },
-     ]
+    ]
   },
   {
     id: 'students', icon: Users, label: 'Students', route: '/students',
@@ -93,6 +94,13 @@ const menuItems = [
       { label: 'Fee Plans', route: '/route/feePlans', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'] },
       { label: 'Reports', route: '/route/reports', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'] },
     ]
+  },
+  {
+    id: 'academicYear',
+    icon: BookOpenText,
+    label: 'Academic Years',
+    route: '/academicYear',
+    roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN'],
   },
   // {
   //   id: 'Homework', icon: NotebookPen, label: 'Homework', route: '/homework',
@@ -389,7 +397,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
               ${!sidebarOpen ? 'justify-center' : ''}`}
             title={!sidebarOpen ? displayName : ''}
           >
-            <div className="shrink-0 w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-blue-700
+            <div className="shrink-0 w-9 h-9 rounded-full bg-linear-to-br from-blue-500 to-blue-700
               flex items-center justify-center text-white font-bold text-sm shadow-sm">
               {initials}
             </div>
