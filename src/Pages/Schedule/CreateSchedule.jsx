@@ -18,7 +18,7 @@ import {
     deleteSlot,
     saveSlot,
     getTimetableConfig,
-} from '../../api/ScheduleApi';
+} from '../../Api/ScheduleApi';
 import { getSubjectsBySection } from '../../Api/TeachersAPI';
 
 // ── Helper: generate periods + breaks from config ──

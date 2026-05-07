@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
-import { getAvailableTeachersForSlot } from '../../../api/ScheduleApi';
+import { getAvailableTeachersForSlot } from '../../../Api/ScheduleApi';
 
 const normalizeTeacher = (t) => ({
     id: t.teacherId,
