@@ -13,7 +13,7 @@ import {
     createTimetable,
     deleteTimetable,
     publishTimetable,
-} from '../../api/ScheduleApi';
+} from '../../Api/ScheduleApi';
 
 const StatusBadge = ({ status }) => {
     const isDraft = status === 'Draft' || status === 'DRAFT';
