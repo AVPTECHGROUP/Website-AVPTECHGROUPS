@@ -75,6 +75,9 @@ import ReportCards from '../Pages/Exams/ReportCards';
 import Analytics from '../Pages/Exams/Analytics';
 import SchoolConfig from '../Pages/Schools/SchoolConfig';
 import HomeworkPage from '../Pages/Homework/Homeworkpage';
+import FeeManagement from '../Pages/FeeManagement/FeeManagement';
+// import AcademicYear from '../Pages/Attendance/AcademicYear/AcademicYear';
+
 import AcademicYear from '../Pages/Attendance/AcademicYear/AcademicYear';
 import TimeTable from '../Pages/Schedule/TimeTable';
 import CreateSchedule from '../Pages/Schedule/CreateSchedule';
@@ -187,6 +190,8 @@ const MainRoutes = () => {
 
             <Route path="/leaves" element={<Leaves />} />
             <Route path="/leaves/manageHolidays" element={<HolidayManagment />} />
+
+            <Route path='/feemanagement' element={<FeeManagement/>}/>
 
             {/* Subject Section Assignment */}
             <Route path="/sectionSubjectAssignment" element={<SectionSubjectAssignment />} />
