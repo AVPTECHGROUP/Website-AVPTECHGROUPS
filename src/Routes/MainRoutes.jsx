@@ -77,6 +77,8 @@ import SchoolConfig from '../Pages/Schools/SchoolConfig';
 import HomeworkPage from '../Pages/Homework/Homeworkpage';
 import FeeManagement from '../Pages/FeeManagement/FeeManagement';
 // import AcademicYear from '../Pages/Attendance/AcademicYear/AcademicYear';
+
+import AcademicYear from '../Pages/Attendance/AcademicYear/AcademicYear';
 import TimeTable from '../Pages/Schedule/TimeTable';
 import CreateSchedule from '../Pages/Schedule/CreateSchedule';
 

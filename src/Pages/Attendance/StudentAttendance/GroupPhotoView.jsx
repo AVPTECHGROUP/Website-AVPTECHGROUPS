@@ -589,8 +589,8 @@ export default function GroupPhotoView({ onBack, selectedClass, selectedSection 
                 classId: selectedClass.id,
                 sectionId: selectedSection.id,
                 image: imageFile,
-                gps_latitude: gpsLatitude,   
-                gps_longitude: gpsLongitude, 
+                gps_latitude: gpsLatitude,
+                gps_longitude: gpsLongitude,
             });
 
             console.log("[GroupPhotoView] API response:", rawRes);

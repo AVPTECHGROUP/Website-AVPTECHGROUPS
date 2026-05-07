@@ -18,7 +18,7 @@ import {
 import ShowWarningDialog from "../../Components/CommonComp/WarningShowDialog/ShowWarningDialog";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// MODULE COLOR MAP — auto-assigns for any unknown module
+// MODULE COLOR MAP
 // ─────────────────────────────────────────────────────────────────────────────
 const PALETTE = [
   "#7c3aed", "#2563eb", "#16a34a", "#d97706",
@@ -31,6 +31,7 @@ const MODULE_COLORS = {
   FEE: "#10b981", HOMEWORK: "#ec4899", LEAVE: "#d97706",
   NOTICE: "#8b5cf6", PAYROLL: "#ef4444", STORE: "#dc2626",
   STUDENT: "#7c3aed", TEACHER: "#2563eb", USER: "#2563eb",
+  ACADEMIC_YEAR: "#0891b2", TIMETABLE: "#7c3aed",
 };
 let _colorIdx = 0;
 const getModuleColor = (mod) => {
@@ -42,63 +43,62 @@ const getModuleColor = (mod) => {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// HELPERS
+// HELPERS - FIXED TO HANDLE MULTIPLE PERMISSIONS WITH SAME ACTION
 // ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * Convert grouped API response → { allColumns, moduleRows }
- * allColumns: string[] — every unique action in insertion order (fully dynamic, no hardcoding)
- * moduleRows: { module, color, actions: Set, permissionMap: { action → permObj } }[]
- */
 function parseGroupedPermissions(groupedData) {
-  const actionOrderSeen = [];
+  const allPermissionsList = [];
   const moduleRows = [];
 
   Object.entries(groupedData).forEach(([moduleName, permissions]) => {
-    const actions = new Set();
-    const permissionMap = {};
-    permissions.forEach((p) => {
-      actions.add(p.action);
-      permissionMap[p.action] = p;
-      if (!actionOrderSeen.includes(p.action)) actionOrderSeen.push(p.action);
-    });
+    // Store ALL permissions, not just unique actions
+    const permissionsList = permissions.map(p => ({
+      ...p,
+      uniqueKey: `${p.action}_${p.id}` // Create unique key combining action and ID
+    }));
+    
     moduleRows.push({
       module: moduleName,
       color: getModuleColor(moduleName),
-      actions,
-      permissionMap,
+      permissions: permissionsList, // Store full list
     });
+
+    // Collect all permissions for column generation
+    permissionsList.forEach(p => allPermissionsList.push(p));
   });
 
-  return { allColumns: actionOrderSeen, moduleRows };
+  return { allPermissionsList, moduleRows };
 }
 
-/** Build checked rows for a role given its assigned permissions list */
 function buildCheckedRows(moduleRows, assignedPermissions) {
-  const assignedNames = new Set((assignedPermissions || []).map((p) => p.name));
+  const assignedIds = new Set((assignedPermissions || []).map((p) => p.id));
+  
   return moduleRows.map((row) => {
     const cols = {};
     let checkedCount = 0;
-    row.actions.forEach((action) => {
-      const perm = row.permissionMap[action];
-      const isChecked = perm && assignedNames.has(perm.name);
-      cols[action] = isChecked ? 1 : 0;
+    
+    row.permissions.forEach((perm) => {
+      const isChecked = assignedIds.has(perm.id);
+      cols[perm.uniqueKey] = isChecked ? 1 : 0;
       if (isChecked) checkedCount++;
     });
-    return { ...row, cols, assigned: `${checkedCount}/${row.actions.size}` };
+    
+    return { 
+      ...row, 
+      cols, 
+      assigned: `${checkedCount}/${row.permissions.length}` 
+    };
   });
 }
 
-/** Build all-unchecked rows */
 const buildEmptyRows = (moduleRows) =>
   moduleRows.map((row) => ({
     ...row,
-    cols: Object.fromEntries([...row.actions].map((a) => [a, 0])),
-    assigned: `0/${row.actions.size}`,
+    cols: Object.fromEntries(row.permissions.map((p) => [p.uniqueKey, 0])),
+    assigned: `0/${row.permissions.length}`,
   }));
 
 // ─────────────────────────────────────────────────────────────────────────────
-// CHECKBOX — reusable
+// CHECKBOX
 // ─────────────────────────────────────────────────────────────────────────────
 function Checkbox({ checked, onChange, accent = "blue" }) {
   const colors = {
@@ -127,16 +127,13 @@ function Checkbox({ checked, onChange, accent = "blue" }) {
 function RoleModal({ mode, role, moduleRows, onClose, onSave }) {
   const isEdit = mode === "edit";
 
-  // ── form state ──
   const [form, setForm] = useState({
     displayName: isEdit ? (role?.displayName ?? "") : "",
     description: isEdit ? (role?.description ?? "") : "",
     isSystemRole: isEdit ? (role?.isSystemRole ?? false) : false,
-    // name only used in create mode
     name: "",
   });
 
-  // selectedIds: Set<number> of permission IDs
   const [selectedIds, setSelectedIds] = useState(() =>
     new Set((role?.permissions || []).map((p) => p.id))
   );
@@ -145,24 +142,21 @@ function RoleModal({ mode, role, moduleRows, onClose, onSave }) {
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState({});
 
-
-  // filter modules by search query
   const filteredModules = useMemo(() => {
     if (!permSearch.trim()) return moduleRows;
     const q = permSearch.toLowerCase();
     return moduleRows
       .map((row) => {
-        const matchingActions = [...row.actions].filter((action) => {
-          const perm = row.permissionMap[action];
+        const matchingPerms = row.permissions.filter((perm) => {
           return (
             perm?.name?.toLowerCase().includes(q) ||
             perm?.displayName?.toLowerCase().includes(q) ||
-            action.toLowerCase().includes(q) ||
+            perm?.action?.toLowerCase().includes(q) ||
             row.module.toLowerCase().includes(q)
           );
         });
-        if (!matchingActions.length) return null;
-        return { ...row, filteredActions: matchingActions };
+        if (!matchingPerms.length) return null;
+        return { ...row, filteredPermissions: matchingPerms };
       })
       .filter(Boolean);
   }, [moduleRows, permSearch]);
@@ -176,8 +170,8 @@ function RoleModal({ mode, role, moduleRows, onClose, onSave }) {
   };
 
   const toggleModule = (row) => {
-    const displayActions = row.filteredActions ?? [...row.actions];
-    const ids = displayActions.map((a) => row.permissionMap[a]?.id).filter(Boolean);
+    const displayPerms = row.filteredPermissions ?? row.permissions;
+    const ids = displayPerms.map((p) => p.id);
     const allChecked = ids.every((id) => selectedIds.has(id));
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -205,9 +199,6 @@ function RoleModal({ mode, role, moduleRows, onClose, onSave }) {
     setSaving(true);
     try {
       if (isEdit) {
-        // PUT /roles/:roleId
-        // Payload: { displayName, description, isSystemRole, permissionIds }
-        // name is NOT sent — immutable after creation
         const payload = {
           displayName: form.displayName.trim(),
           description: form.description.trim(),
@@ -216,8 +207,6 @@ function RoleModal({ mode, role, moduleRows, onClose, onSave }) {
         };
         await updateRole(role.id, payload);
       } else {
-        // POST /roles
-        // Payload: { name, displayName, description, isSystemRole, permissionIds }
         const payload = {
           name: form.name.trim(),
           displayName: form.displayName.trim(),
@@ -235,26 +224,22 @@ function RoleModal({ mode, role, moduleRows, onClose, onSave }) {
     }
   };
 
-
-
-
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-      {/* Backdrop */}
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-
-      {/* Panel — full-screen on mobile, centred card on sm+ */}
       <div className="relative bg-white w-full sm:max-w-lg sm:rounded-2xl shadow-2xl flex flex-col
                       h-full sm:h-auto sm:max-h-[92vh] rounded-t-2xl overflow-hidden">
 
-        {/* ── Header ── */}
+        {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 shrink-0">
           <div>
             <h2 className="font-bold text-gray-800 text-base leading-tight">
               {isEdit ? "Edit Role" : "Create New Role"}
             </h2>
             <p className="text-[11px] text-gray-400 mt-0.5">
-              {isEdit ? "Update role details and permissions to reflect current access requirements." : "A protected role with predefined permissions for secure system access."}
+              {isEdit
+                ? "Update role details and permissions to reflect current access requirements."
+                : "A protected role with predefined permissions for secure system access."}
             </p>
           </div>
           <button
@@ -265,16 +250,15 @@ function RoleModal({ mode, role, moduleRows, onClose, onSave }) {
           </button>
         </div>
 
-        {/* ── Scrollable body ── */}
+        {/* Body */}
         <div className="overflow-y-auto flex-1 px-5 py-5 space-y-5">
 
-          {/* ROLE DETAILS */}
+          {/* Role Details */}
           <div>
             <p className="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-4">
               Role Details
             </p>
 
-            {/* Name — create only */}
             {!isEdit && (
               <div className="mb-4">
                 <label className="block text-xs font-semibold text-gray-700 mb-1">
@@ -303,7 +287,6 @@ function RoleModal({ mode, role, moduleRows, onClose, onSave }) {
               </div>
             )}
 
-            {/* Display Name */}
             <div className="mb-4">
               <label className="block text-xs font-semibold text-gray-700 mb-1">
                 Display Name <span className="text-red-500">*</span>
@@ -324,7 +307,6 @@ function RoleModal({ mode, role, moduleRows, onClose, onSave }) {
               )}
             </div>
 
-            {/* Description */}
             <div className="mb-4">
               <label className="block text-xs font-semibold text-gray-700 mb-1">Description</label>
               <textarea
@@ -336,7 +318,6 @@ function RoleModal({ mode, role, moduleRows, onClose, onSave }) {
               />
             </div>
 
-            {/* System Role toggle */}
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-2">System Role</label>
               <div className="flex items-center gap-3">
@@ -352,20 +333,19 @@ function RoleModal({ mode, role, moduleRows, onClose, onSave }) {
                   />
                 </button>
                 <span className="text-sm text-gray-600">
-                  {form.isSystemRole ? `This role cannot be deleted.` : "This role can be deleted."}
+                  {form.isSystemRole ? "This role cannot be deleted." : "This role can be deleted."}
                 </span>
               </div>
               <p className="text-[11px] text-gray-400 mt-1">System roles cannot be deleted from System.</p>
             </div>
           </div>
 
-          {/* ASSIGN PERMISSIONS */}
+          {/* Assign Permissions */}
           <div>
             <p className="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-1">
               Assign Permissions
             </p>
 
-            {/* Search */}
             <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 mb-3">
               <Search className="w-3.5 h-3.5 text-gray-400 shrink-0" />
               <input
@@ -382,20 +362,18 @@ function RoleModal({ mode, role, moduleRows, onClose, onSave }) {
               )}
             </div>
 
-            {/* Permissions list */}
             <div className="border border-gray-200 rounded-xl overflow-hidden max-h-64 overflow-y-auto">
               {filteredModules.length === 0 ? (
                 <div className="px-4 py-8 text-center text-gray-400 text-sm">No permissions found.</div>
               ) : (
                 filteredModules.map((row) => {
-                  const displayActions = row.filteredActions ?? [...row.actions];
-                  const ids = displayActions.map((a) => row.permissionMap[a]?.id).filter(Boolean);
+                  const displayPerms = row.filteredPermissions ?? row.permissions;
+                  const ids = displayPerms.map((p) => p.id);
                   const allChecked = ids.length > 0 && ids.every((id) => selectedIds.has(id));
                   const someChecked = !allChecked && ids.some((id) => selectedIds.has(id));
 
                   return (
                     <div key={row.module}>
-                      {/* Module header */}
                       <div className="flex items-center justify-between px-4 py-2.5 bg-gray-50 border-b border-gray-100 sticky top-0">
                         <div className="flex items-center gap-2">
                           <div className="w-2 h-2 rounded-full shrink-0" style={{ background: row.color }} />
@@ -421,10 +399,7 @@ function RoleModal({ mode, role, moduleRows, onClose, onSave }) {
                         </button>
                       </div>
 
-                      {/* Permission rows */}
-                      {displayActions.map((action) => {
-                        const perm = row.permissionMap[action];
-                        if (!perm) return null;
+                      {displayPerms.map((perm) => {
                         const checked = selectedIds.has(perm.id);
                         return (
                           <div
@@ -435,7 +410,7 @@ function RoleModal({ mode, role, moduleRows, onClose, onSave }) {
                             <Checkbox checked={checked} onChange={() => togglePerm(perm.id)} accent="blue" />
                             <div className="min-w-0">
                               <p className="text-sm font-medium text-gray-700 leading-tight">
-                                {perm.displayName || action.replace(/_/g, " ")}
+                                {perm.displayName || perm.name?.replace(/_/g, " ")}
                               </p>
                               <p className="text-[10px] font-mono text-gray-400 mt-0.5">{perm.name}</p>
                             </div>
@@ -450,14 +425,14 @@ function RoleModal({ mode, role, moduleRows, onClose, onSave }) {
           </div>
         </div>
 
-        {/* ── Footer ── */}
+        {/* Footer */}
         <div className="shrink-0 px-5 py-4 border-t border-gray-100 bg-gray-50">
           <div className="flex items-center justify-between gap-3">
             <p className="text-xs text-gray-500 leading-tight">
-              <span className="font-semibold text-blue-700">{selectedIds.size === 0 ? 'No' : selectedIds.size}</span> {`permission${selectedIds.size > 1 ? 's' : ''} selected`}
-              <span className="text-gray-400 hidden sm:inline">
-                {" "}
-              </span>
+              <span className="font-semibold text-blue-700">
+                {selectedIds.size === 0 ? "No" : selectedIds.size}
+              </span>{" "}
+              {`permission${selectedIds.size !== 1 ? "s" : ""} selected`}
             </p>
             <div className="flex gap-2 shrink-0">
               <button
@@ -499,8 +474,6 @@ export default function RolesPermissionsManagement() {
   const [roles, setRoles] = useState([]);
   const [MODULE_FILTERS, setMODULE_FILTERS] = useState([]);
 
-  // Fully dynamic — derived from GET /roles/permissions/grouped, zero hardcoding
-  const [allColumns, setAllColumns] = useState([]);
   const [moduleRows, setModuleRows] = useState([]);
 
   const [selectedRole, setSelectedRole] = useState(null);
@@ -509,21 +482,18 @@ export default function RolesPermissionsManagement() {
   const [searchQuery, setSearchQuery] = useState("");
   const [hasChanges, setHasChanges] = useState(false);
   const [loadingPerms, setLoadingPerms] = useState(false);
-  const [modal, setModal] = useState(null); // null | { mode: "create"|"edit", role? }
-
-  //for local store to handle discard changes in permission matrix
+  const [modal, setModal] = useState(null);
   const [baselinePermissions, setBaselinePermissions] = useState({});
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
-   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  // ── Stat cards config ──
   const stats = [
-    { key: "Total Roles", val: statsData.totalRoles, icon: Shield, txColor: "text-blue-600", bgColor: "bg-blue-50" },
-    { key: "System Roles", val: statsData.systemRoles, icon: Users, txColor: "text-violet-600", bgColor: "bg-violet-50" },
-    { key: "Custom Roles", val: statsData.customRoles, icon: LayoutGrid, txColor: "text-amber-500", bgColor: "bg-amber-50" },
-    { key: "Total Permissions", val: statsData.totalPermissions, icon: Key, txColor: "text-green-600", bgColor: "bg-green-50" },
+    { key: "Total Roles",       val: statsData.totalRoles,       icon: Shield,     txColor: "text-blue-600",   bgColor: "bg-blue-50"   },
+    { key: "System Roles",      val: statsData.systemRoles,      icon: Users,      txColor: "text-violet-600", bgColor: "bg-violet-50" },
+    { key: "Custom Roles",      val: statsData.customRoles,      icon: LayoutGrid, txColor: "text-amber-500",  bgColor: "bg-amber-50"  },
+    { key: "Total Permissions", val: statsData.totalPermissions, icon: Key,        txColor: "text-green-600",  bgColor: "bg-green-50"  },
   ];
 
-  // ── Data fetching ──
+  // ── Data fetching ──────────────────────────────────────────────────────────
   useEffect(() => {
     getPermissionAccessStat()
       .then((res) => setStatsData(res.data))
@@ -543,18 +513,15 @@ export default function RolesPermissionsManagement() {
       .catch((e) => console.error("chips error:", e.message));
   }, []);
 
-  // Fetch grouped permissions once → derive dynamic columns + rows
   useEffect(() => {
     getAllPermissions()
       .then((res) => {
-        const { allColumns: cols, moduleRows: rows } = parseGroupedPermissions(res.data);
-        setAllColumns(cols);
+        const { moduleRows: rows } = parseGroupedPermissions(res.data);
         setModuleRows(rows);
       })
       .catch((e) => console.error("getAllPermissions error:", e.message));
   }, []);
 
-  // Lazy-load permissions for selected role, cache by id
   useEffect(() => {
     if (!selectedRole || !moduleRows.length) return;
     if (permissionsMap[selectedRole.id]) return;
@@ -565,125 +532,111 @@ export default function RolesPermissionsManagement() {
         const assigned = Array.isArray(res.data)
           ? res.data
           : (res.data?.permissions ?? []);
-        setPermissionsMap((prev) => ({
-          ...prev,
-          [selectedRole.id]: buildCheckedRows(moduleRows, assigned),
-        }));
-
         const rows = buildCheckedRows(moduleRows, assigned);
-        //for local store 
-        setBaselinePermissions((prev) => ({
-          ...prev,
-          [selectedRole.id]: rows,
-        }));
+        setPermissionsMap((prev) => ({ ...prev, [selectedRole.id]: rows }));
+        setBaselinePermissions((prev) => ({ ...prev, [selectedRole.id]: rows }));
       })
       .catch((e) => console.error("getSpecificRolePermissions error:", e.message))
       .finally(() => setLoadingPerms(false));
-  }, [selectedRole, moduleRows]);
+  }, [selectedRole, moduleRows, permissionsMap]);
 
-  // ── Derived data ──
+  // ── Derived data ──────────────────────────────────────────────────────────
   const currentPerms = useMemo(() => {
     if (!selectedRole) return buildEmptyRows(moduleRows);
     return permissionsMap[selectedRole.id] ?? buildEmptyRows(moduleRows);
   }, [selectedRole, permissionsMap, moduleRows]);
 
+  // Rows filtered by active module chip
   const filteredPerms = useMemo(() =>
     activeFilter === "All Modules"
       ? currentPerms
-      : currentPerms.filter((m) => m.module.toLowerCase().includes(activeFilter.toLowerCase())),
+      : currentPerms.filter((m) => m.module === activeFilter),
     [currentPerms, activeFilter]
   );
 
-  const columnLabels = useMemo(() => {
-  const actionModuleCount = {};
-  const actionDisplayName = {};
-
-  moduleRows.forEach((row) => {
-    row.actions.forEach((action) => {
-      actionModuleCount[action] = (actionModuleCount[action] || 0) + 1;
-      if (!actionDisplayName[action]) {
-        actionDisplayName[action] = row.permissionMap[action]?.displayName;
-      }
-    });
-  });
-
-  const map = {};
-  Object.keys(actionModuleCount).forEach((action) => {
-    // Only use displayName for unique actions (e.g. STOCK_INWARD, ENTER_MARKS)
-    // Common actions (CREATE, VIEW, EDIT...) just format the action key itself
-    map[action] =
-      actionModuleCount[action] === 1
-        ? actionDisplayName[action] || action.replace(/_/g, " ")
-        : action.replace(/_/g, " ");
-  });
-
-  return map;
-}, [moduleRows]);
-
-  // ── Matrix checkbox toggle ──
-  const handleToggle = (mIdx, col) => {
+  // ── Matrix toggle ──────────────────────────────────────────────────────────
+  const handleToggle = (mIdx, permId) => {
     if (!selectedRole) return;
     const roleId = selectedRole.id;
+    
+    // Find the permission's unique key
+    const targetModule = filteredPerms[mIdx];
+    const targetPerm = targetModule.permissions.find(p => p.id === permId);
+    if (!targetPerm) return;
+
     const updated = currentPerms.map((row) => ({ ...row, cols: { ...row.cols } }));
-    const realIdx = currentPerms.findIndex((m) => m.module === filteredPerms[mIdx].module);
+    const realIdx = currentPerms.findIndex((m) => m.module === targetModule.module);
     if (realIdx === -1) return;
-    updated[realIdx].cols[col] = updated[realIdx].cols[col] === 1 ? 0 : 1;
+    
+    updated[realIdx].cols[targetPerm.uniqueKey] = updated[realIdx].cols[targetPerm.uniqueKey] === 1 ? 0 : 1;
     const count = Object.values(updated[realIdx].cols).filter((v) => v === 1).length;
-    updated[realIdx].assigned = `${count}/${updated[realIdx].actions.size}`;
+    updated[realIdx].assigned = `${count}/${updated[realIdx].permissions.length}`;
+    
     setPermissionsMap((prev) => ({ ...prev, [roleId]: updated }));
     setHasChanges(true);
   };
 
-  // ── Save matrix changes — PUT /roles/:roleId with { permissionIds }
+  // ── Save - FIXED TO UPDATE BASELINE ───────────────────────────────────────
   const handleSave = async () => {
     if (!selectedRole) return;
+    
+    // Collect all checked permission IDs
     const permissionIds = currentPerms.flatMap((row) =>
-      Object.entries(row.cols)
-        .filter(([, v]) => v === 1)
-        .map(([action]) => row.permissionMap[action]?.id)
-        .filter(Boolean)
+      row.permissions
+        .filter((perm) => row.cols[perm.uniqueKey] === 1)
+        .map((perm) => perm.id)
     );
+    
     try {
       await updateRolePermissions(selectedRole.id, permissionIds);
+      
+      // CRITICAL FIX: Update the baseline after successful save
+      const currentState = permissionsMap[selectedRole.id];
+      setBaselinePermissions((prev) => ({ 
+        ...prev, 
+        [selectedRole.id]: currentState 
+      }));
+      
       setHasChanges(false);
     } catch (e) {
       console.error("save permissions error:", e.message);
     }
   };
 
-  // ── Discard matrix changes ──
+  // ── Discard ────────────────────────────────────────────────────────────────
   const handleDiscard = () => {
     if (!selectedRole) return;
-
     const original = baselinePermissions[selectedRole.id];
     if (!original) return;
-
-    setPermissionsMap((prev) => ({
-      ...prev,
-      [selectedRole.id]: original,
-    }));
-
+    setPermissionsMap((prev) => ({ ...prev, [selectedRole.id]: original }));
     setHasChanges(false);
   };
 
-  // ── Delete role — DELETE /roles/:roleId (only roleId needed, no body) ──
+  // ── Delete ─────────────────────────────────────────────────────────────────
   const handleDeleteDialogBox = async () => {
     if (!selectedRole) return;
-    //if (!window.confirm(`Delete role "${selectedRole.displayName}"? This can not be undone.`)) return;
     try {
       await deleteRole(selectedRole.id);
       setSelectedRole(null);
-      setPermissionsMap((prev) => { const n = { ...prev }; delete n[selectedRole.id]; return n; });
+      setPermissionsMap((prev) => {
+        const n = { ...prev };
+        delete n[selectedRole.id];
+        return n;
+      });
+      setBaselinePermissions((prev) => {
+        const n = { ...prev };
+        delete n[selectedRole.id];
+        return n;
+      });
       refreshRoles();
     } catch (e) {
       console.error("delete role error:", e.message);
-    }
-    finally {
+    } finally {
       setShowDeleteModal(false);
     }
   };
 
-  // ── Open edit modal — fetch current permissions to pre-fill checkboxes ──
+  // ── Open edit modal ────────────────────────────────────────────────────────
   const handleOpenEdit = async () => {
     if (!selectedRole) return;
     let assigned = [];
@@ -694,10 +647,19 @@ export default function RolesPermissionsManagement() {
     setModal({ mode: "edit", role: { ...selectedRole, permissions: assigned } });
   };
 
-  // ── After modal save: invalidate cache + refresh list ──
+  // ── After modal save ───────────────────────────────────────────────────────
   const handleModalSave = () => {
     if (modal?.role?.id) {
-      setPermissionsMap((prev) => { const n = { ...prev }; delete n[modal.role.id]; return n; });
+      setPermissionsMap((prev) => {
+        const n = { ...prev };
+        delete n[modal.role.id];
+        return n;
+      });
+      setBaselinePermissions((prev) => {
+        const n = { ...prev };
+        delete n[modal.role.id];
+        return n;
+      });
     }
     setModal(null);
     refreshRoles();
@@ -786,7 +748,7 @@ export default function RolesPermissionsManagement() {
                 return (
                   <button
                     key={role.id}
-                    onClick={() => { setSelectedRole(role); setHasChanges(false); }}
+                    onClick={() => { setSelectedRole(role); setHasChanges(false); setActiveFilter("All Modules"); }}
                     className={`w-full flex items-center justify-between px-4 py-3 text-left transition-colors
                       ${isSelected
                         ? "bg-blue-50 border-l-4 border-blue-500"
@@ -818,15 +780,17 @@ export default function RolesPermissionsManagement() {
             )}
           </div>
         </div>
-        {/* Delete Role Modal */}
+
+        {/* Delete warning dialog */}
         {ShowWarningDialog && selectedRole && showDeleteModal && (
           <ShowWarningDialog
             title="Delete Role"
             message={`Delete role "${selectedRole.displayName}"? This cannot be undone.`}
-            onConfirm={handleDeleteDialogBox}   // Calls your deletion method
+            onConfirm={handleDeleteDialogBox}
             onClose={() => setShowDeleteModal(false)}
           />
         )}
+
         {/* RIGHT — Permissions Matrix */}
         <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
 
@@ -915,58 +879,38 @@ export default function RolesPermissionsManagement() {
                 <p className="text-sm">Select a role to view its permissions</p>
               </div>
             ) : (
-              <table className="w-full">
-                <thead>
-                  <tr className="bg-gray-50 text-[10px] font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-100 sticky top-0">
-                    <th className="px-5 py-3 text-left min-w-[180px]">Module</th>
-                    {/* allColumns is 100% dynamic — zero hardcoded action names */}
-                    {allColumns.map((col) => (
-                      <th
-  key={col}
-  className="px-3 py-3 text-center"
-  style={{ minWidth: "72px", whiteSpace: "normal", wordBreak: "normal", lineHeight: "1.3" }}
->
-  {columnLabels[col] || col.replace(/_/g, " ")}
-</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {filteredPerms.map((mod, mIdx) => (
-                    <tr key={mod.module} className="hover:bg-blue-50/30 transition-colors">
-                      <td className="px-5 py-3.5">
-                        <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 rounded-full shrink-0" style={{ background: mod.color }} />
-                          <div>
-                            <p className="text-sm font-semibold text-gray-800 whitespace-nowrap">
-                              {mod.module.replace(/_/g, " ")}
+              <div className="p-4 space-y-4">
+                {filteredPerms.map((mod, mIdx) => (
+                  <div key={mod.module} className="border border-gray-200 rounded-lg overflow-hidden">
+                    <div className="bg-gray-50 px-4 py-2 border-b border-gray-100">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full shrink-0" style={{ background: mod.color }} />
+                        <p className="text-sm font-semibold text-gray-800">
+                          {mod.module.replace(/_/g, " ")}
+                        </p>
+                        <p className="text-[10px] text-gray-400 ml-auto">{mod.assigned} assigned</p>
+                      </div>
+                    </div>
+                    <div className="divide-y divide-gray-100">
+                      {mod.permissions.map((perm) => (
+                        <div key={perm.id} className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors">
+                          <Checkbox
+                            checked={mod.cols[perm.uniqueKey] === 1}
+                            onChange={() => handleToggle(mIdx, perm.id)}
+                            accent="blue"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-700">
+                              {perm.displayName || perm.name?.replace(/_/g, " ")}
                             </p>
-                            <p className="text-[10px] text-gray-400">{mod.assigned} assigned</p>
+                            <p className="text-[10px] font-mono text-gray-400 mt-0.5">{perm.name}</p>
                           </div>
                         </div>
-                      </td>
-                      {allColumns.map((col) => {
-                        if (!mod.actions.has(col)) {
-                          return (
-                            <td key={col} className="px-3 py-3.5 text-center">
-                              <span className="text-gray-200 text-sm">—</span>
-                            </td>
-                          );
-                        }
-                        return (
-                          <td key={col} className="px-3 py-3.5 text-center">
-                            <Checkbox
-                              checked={mod.cols[col] === 1}
-                              onChange={() => handleToggle(mIdx, col)}
-                              accent="blue"
-                            />
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
 
