@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X, Loader2 } from 'lucide-react';
-import { getAvailableTeachersForSlot } from '../../../api/ScheduleApi';
+import { getAvailableTeachersForSlot } from '../../../Api/ScheduleApi';
 import { getSubjectsBySection } from '../../../Api/TeachersAPI';
 
 const SUBJECT_COLOR_MAP = {

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { BarChart2, Users, Grid, Target } from 'lucide-react';
-import { getTimetableById, getTimetableSlots, getTimetableConfig } from '../../../api/ScheduleApi';
+import { getTimetableById, getTimetableSlots, getTimetableConfig } from '../../../Api/ScheduleApi';
 import { getSubjectsBySection } from '../../../Api/TeachersAPI';
 
 const AVATAR_COLORS = [
