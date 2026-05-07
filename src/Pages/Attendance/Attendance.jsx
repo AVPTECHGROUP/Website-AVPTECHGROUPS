@@ -342,7 +342,7 @@ const Attendance = () => {
                   ))}
                 </select>
 
-                <div className="flex-1 min-w-[160px] relative">
+                <div className="flex-1 min-w-40 relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <input type="text" value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); setPage(0); }}
                     placeholder="Search by name or employee code..."
