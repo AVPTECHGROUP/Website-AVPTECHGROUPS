@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X, Loader2 } from 'lucide-react';
-import { getAvailableTeachersForSlot } from '../../../api/ScheduleApi';
+import { getAvailableTeachersForSlot } from '../../../Api/ScheduleApi';
 import { getSubjectsBySection } from '../../../Api/TeachersAPI';
 
 const SUBJECT_COLOR_MAP = {
@@ -78,7 +78,7 @@ export default function AddSlotModal({
     timetableId,
     sectionId,
     editSlot = null,
-    prefillSubject = null,
+    prefillSubject = null,   // ← drag-drop se aata hai — auto select this subject
     onClose,
     onSave,
 }) {
@@ -92,20 +92,12 @@ export default function AddSlotModal({
     const [teachers, setTeachers] = useState({ bestMatch: [], others: [], busy: [] });
     const [loadingTeachers, setLoadingTeachers] = useState(false);
 
-    const [selectedSubject, setSelectedSubject] = useState(
-        editSlot?.subject || prefillSubject || null
-    );
+    // Priority: editSlot.subject > prefillSubject (drag) > null
+    const [selectedSubject, setSelectedSubject] = useState(editSlot?.subject || prefillSubject || null);
     const [selectedTeacher, setSelectedTeacher] = useState(editSlot?.teacher?.id || null);
     const [selectedRoom, setSelectedRoom] = useState(editSlot?.room || '101');
     const [formError, setFormError] = useState('');
     const [saving, setSaving] = useState(false);
-
-    useEffect(() => {
-        if (prefillSubject) {
-            setSelectedSubject(prefillSubject);
-            setSelectedTeacher(null); // reset teacher
-        }
-    }, [prefillSubject]);
 
     // Load subjects on mount
     useEffect(() => {
@@ -125,13 +117,17 @@ export default function AddSlotModal({
                 ...getSubjectColor(s.code || s.subjectCode, i),
             }));
             setSubjects(enriched);
-            if (prefillSubject) {
-                const matched = enriched.find(s => s.id === prefillSubject.id);
-                if (matched) setSelectedSubject(matched);
-            }
-            else if (isEdit && editSlot?.subject?.id) {
+
+            // Edit mode: match subject from API list
+            if (isEdit && editSlot?.subject?.id) {
                 const matched = enriched.find(s => s.id === editSlot.subject.id);
                 if (matched) setSelectedSubject(matched);
+            }
+            // Drag-drop prefill: match from API list by id
+            else if (prefillSubject?.id) {
+                const matched = enriched.find(s => s.id === prefillSubject.id);
+                if (matched) setSelectedSubject(matched);
+                else setSelectedSubject(prefillSubject); // use as-is if not found
             }
         } catch (err) {
             setSubjectError('Failed to load subjects. Please retry.');
@@ -217,11 +213,6 @@ export default function AddSlotModal({
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                             Subject <span className="text-red-500">*</span>
                         </label>
-                        {prefillSubject && (
-                            <p className="text-xs text-blue-500 mb-2">
-                                Subject selected via drag & drop
-                            </p>
-                        )}
                         {formError && <p className="text-xs text-red-500 mb-2">{formError}</p>}
 
                         {loadingSubjects ? (
@@ -240,15 +231,8 @@ export default function AddSlotModal({
                         ) : (
                             <div className="grid grid-cols-2 gap-2 max-h-56 overflow-y-auto pr-0.5">
                                 {subjects.map(s => (
-                                    <button
-                                        key={s.id}
-                                        disabled={!!prefillSubject}
-                                        onClick={() => {
-                                            if (!prefillSubject) {
-                                                setSelectedSubject(s);
-                                                setFormError('');
-                                            }
-                                        }}
+                                    <button key={s.id}
+                                        onClick={() => { setSelectedSubject(s); setFormError(''); }}
                                         className={`flex items-center gap-2 px-3 py-2.5 rounded-lg border text-sm font-medium transition text-left w-full
                                             ${selectedSubject?.id === s.id
                                                 ? 'border-orange-400 bg-orange-50 text-orange-700'

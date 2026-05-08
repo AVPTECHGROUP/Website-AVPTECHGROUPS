@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X, Settings } from 'lucide-react';
-import { getTimetableConfig, saveTimetableConfig } from '../../../api/ScheduleApi';
+import { getTimetableConfig, saveTimetableConfig } from '../../../Api/ScheduleApi';
 
 function generateSchedule({ startTime, periodsPerDay, duration, breaks }) {
     const slots = [];

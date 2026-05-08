@@ -13,7 +13,7 @@ import {
     createTimetable,
     deleteTimetable,
     publishTimetable,
-} from '../../api/ScheduleApi';
+} from '../../Api/ScheduleApi';
 
 const StatusBadge = ({ status }) => {
     const isDraft = status === 'Draft' || status === 'DRAFT';
@@ -35,7 +35,6 @@ export default function TimeTable() {
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('All Statuses');
     const [classFilter, setClassFilter] = useState('All Classes');
-    const [yearFilter, setYearFilter] = useState('All Years');
     const [sort, setSort] = useState('Recently Added');
     const [openWorkspace, setOpenWorkspace] = useState(null);
     const [deleteConfirm, setDeleteConfirm] = useState(null);
@@ -127,8 +126,7 @@ export default function TimeTable() {
             t.section.toLowerCase().includes(search.toLowerCase());
         const matchStatus = statusFilter === 'All Statuses' || t.status === statusFilter;
         const matchClass = classFilter === 'All Classes' || t.class === classFilter;
-        const matchYear = yearFilter === 'All Years' || t.year === yearFilter;
-        return matchSearch && matchStatus && matchClass && matchYear;
+        return matchSearch && matchStatus && matchClass;
     });
 
     // Unique filter options from loaded data
@@ -202,7 +200,6 @@ export default function TimeTable() {
                     {[
                         { val: statusFilter, set: setStatusFilter, opts: ['All Statuses', 'Draft', 'Published'] },
                         { val: classFilter, set: setClassFilter, opts: ['All Classes', ...uniqueClasses] },
-                        { val: yearFilter, set: setYearFilter, opts: ['All Years', ...uniqueYears] },
                     ].map(({ val, set, opts }, i) => (
                         <div key={i} className="relative">
                             <select value={val} onChange={e => set(e.target.value)}

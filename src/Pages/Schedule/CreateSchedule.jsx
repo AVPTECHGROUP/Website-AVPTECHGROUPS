@@ -17,23 +17,57 @@ import {
     bulkSaveSlots,
     deleteSlot,
     saveSlot,
-} from '../../api/ScheduleApi';
+    getTimetableConfig,
+} from '../../Api/ScheduleApi';
 import { getSubjectsBySection } from '../../Api/TeachersAPI';
 
-const WORKING_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+// ── Helper: generate periods + breaks from config ──
+const generatePeriodsFromConfig = (config) => {
+    if (!config) return [];
+    const { startTime, periodsPerDay, periodDurationMinutes, breaks = [] } = config;
 
-const PERIODS = [
-    { id: 'P1', label: 'Period 1', time: '08:00–08:45' },
-    { id: 'P2', label: 'Period 2', time: '08:45–09:30' },
-    { id: 'P3', label: 'Period 3', time: '09:30–10:15' },
-    { id: 'P4', label: 'Period 4', time: '10:15–11:00' },
-    { id: 'RECESS', label: 'Recess', time: '11:00–11:20', isBreak: true, duration: '20 min', emoji: '🍎' },
-    { id: 'P5', label: 'Period 5', time: '11:20–12:05' },
-    { id: 'P6', label: 'Period 6', time: '12:05–12:50' },
-    { id: 'LUNCH', label: 'Lunch Break', time: '12:50–13:30', isBreak: true, duration: '40 min', emoji: '🥗' },
-    { id: 'P7', label: 'Period 7', time: '13:30–14:15' },
-    { id: 'P8', label: 'Period 8', time: '14:15–15:00' },
-];
+    const toMinutes = (t) => {
+        const [h, m] = t.split(':').map(Number);
+        return h * 60 + m;
+    };
+    const toTimeStr = (mins) => {
+        const h = Math.floor(mins / 60).toString().padStart(2, '0');
+        const m = (mins % 60).toString().padStart(2, '0');
+        return `${h}:${m}`;
+    };
+
+    const result = [];
+    let current = toMinutes(startTime || '08:00');
+
+    for (let i = 1; i <= periodsPerDay; i++) {
+        const start = toTimeStr(current);
+        current += periodDurationMinutes;
+        const end = toTimeStr(current);
+        result.push({
+            id: `P${i}`,
+            label: `Period ${i}`,
+            time: `${start}–${end}`,
+            isBreak: false,
+        });
+
+        // Check if a break comes after this period
+        const brk = breaks.find(b => b.afterPeriod === i);
+        if (brk) {
+            const bStart = toTimeStr(current);
+            current += brk.duration;
+            const bEnd = toTimeStr(current);
+            result.push({
+                id: `BRK${i}`,
+                label: brk.label || 'Break',
+                time: `${bStart}–${bEnd}`,
+                isBreak: true,
+                duration: `${brk.duration} min`,
+                emoji: brk.label?.includes('Lunch') ? '🥗' : '🍎',
+            });
+        }
+    }
+    return result;
+};
 
 // ── Subject color helpers (dynamic, not hardcoded) ──
 const SUBJECT_COLOR_MAP = {
@@ -77,16 +111,18 @@ const TEACHER_COLORS = {
 
 const getInitials = (name) => name ? name.split(' ').map(w => w[0]).join('').toUpperCase() : '?';
 
+// Helper to convert API slot data to local format
+// ✅ IMPORTANT: subjectId aur teacherId dono preserve karo — toApiSlot mein kaam aate hain
 const normalizeSlot = (apiSlot) => ({
     day: apiSlot.dayOfWeek,
     periodId: `P${apiSlot.periodNumber}`,
     subject: {
-        id: apiSlot.subjectId || apiSlot.subject?.id,
+        id: apiSlot.subjectId || apiSlot.subject?.id,           // ← yahi fix hai
         code: apiSlot.subjectCode || apiSlot.subject?.code,
         label: apiSlot.subjectName || apiSlot.subject?.label,
     },
     teacher: {
-        id: apiSlot.teacherId || apiSlot.teacher?.id,
+        id: apiSlot.teacherId || apiSlot.teacher?.id,           // ← aur yeh
         name: apiSlot.teacherName || apiSlot.teacher?.name,
     },
     room: apiSlot.room,
@@ -123,24 +159,29 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
     const [showSubstitution, setShowSubstitution] = useState(false);
     const [showPublishConfirm, setShowPublishConfirm] = useState(false);
     const [draggedSubject, setDraggedSubject] = useState(null);
+    const [dragOverCell, setDragOverCell] = useState(null); // { day, periodId }
 
     const [subjectSearch, setSubjectSearch] = useState('');
     const [subjectFilter, setSubjectFilter] = useState('All');
     const [sidebarTab, setSidebarTab] = useState('subjects');
     const [toastMsg, setToastMsg] = useState('');
 
+    // ── Dynamic config from API ──
+    const [timetableConfig, setTimetableConfig] = useState(null);
+    const [workingDays, setWorkingDays] = useState(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']);
+    const [periods, setPeriods] = useState([]);
+
     // ── Dynamic subjects from section API ──
     const [subjectsList, setSubjectsList] = useState([]);
-    // sectionId: from timetable prop (set by normalizeApiTimetable in TimeTable.jsx)
     const sectionId = timetable?.sectionId || timetableInfo?.sectionId || null;
 
-    // ── Load timetable info + slots + subjects on mount ──
+    // ── Load everything on mount ──
     useEffect(() => {
         if (!timetable?.id) return;
         loadTimetableData();
+        loadConfig();
     }, [timetable?.id]);
 
-    // Load subjects when sectionId is known
     useEffect(() => {
         if (!sectionId) return;
         loadSubjects(sectionId);
@@ -149,6 +190,34 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
     const showToast = (msg) => {
         setToastMsg(msg);
         setTimeout(() => setToastMsg(''), 3000);
+    };
+
+    // ── Load school timetable config (working days, periods, breaks) ──
+    const loadConfig = async () => {
+        try {
+            const config = await getTimetableConfig();
+            if (config) {
+                setTimetableConfig(config);
+                // workingDays from API e.g. ['Mon','Tue','Wed','Thu','Fri','Sat']
+                if (config.workingDays?.length) setWorkingDays(config.workingDays);
+                // Generate periods dynamically from startTime, periodsPerDay, duration, breaks
+                const generatedPeriods = generatePeriodsFromConfig(config);
+                setPeriods(generatedPeriods);
+            }
+        } catch (err) {
+            console.error('Failed to load timetable config:', err);
+            // Fallback to defaults if API fails
+            setWorkingDays(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']);
+            setPeriods(generatePeriodsFromConfig({
+                startTime: '08:00',
+                periodsPerDay: 8,
+                periodDurationMinutes: 45,
+                breaks: [
+                    { afterPeriod: 4, label: '🍎 Recess', duration: 20 },
+                    { afterPeriod: 6, label: '🥗 Lunch Break', duration: 40 },
+                ],
+            }));
+        }
     };
 
     const loadSubjects = async (secId) => {
@@ -311,7 +380,7 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
         }
     };
 
-    const totalSlots = 48;
+    const totalSlots = workingDays.length * (timetableConfig?.periodsPerDay || periods.filter(p => !p.isBreak).length || 8);
     const filledCount = slots.length;
     const emptyCount = totalSlots - filledCount;
     const pct = Math.round((filledCount / totalSlots) * 100);
@@ -365,10 +434,21 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
                 </button>
                 <div className="h-5 w-px bg-gray-200" />
                 <div className="flex items-center gap-2">
-                    <span className="font-bold text-gray-900">{timetableInfo?.class}</span>
-                    <span className="text-gray-500">{timetableInfo?.section}</span>
-                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ml-1
-            ${status === 'Draft' ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-blue-50 text-blue-700 border-blue-200'}`}>
+                    <span className="font-bold text-gray-900">
+                        {timetableInfo?.class || timetableInfo?.className}
+                    </span>
+
+                    <span className="text-gray-500">
+                        {timetableInfo?.section || timetableInfo?.sectionName}
+                    </span>
+
+                    <span
+                        className={`text-xs font-semibold px-2 py-0.5 rounded-full border ml-1
+        ${status === 'Draft'
+                                ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                : 'bg-blue-50 text-blue-700 border-blue-200'
+                            }`}
+                    >
                         {isViewOnly ? '👁 View' : `— ${status}`}
                     </span>
                 </div>
@@ -433,85 +513,126 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
 
             {activeTab === 'analytics' ? (
                 <div className="flex-1 overflow-auto">
-                    <AnalyticsTab slots={slots} subjectsList={subjectsList}/>
+                    <AnalyticsTab
+                        slots={slots}
+                        subjectsList={subjectsList}
+                        timetableId={timetable?.id}
+                        sectionId={sectionId}
+                        timetableInfo={timetableInfo}
+                        config={timetableConfig}
+                    />
                 </div>
             ) : (
                 <>
                     {/* Stats Bar */}
-                    <div className="bg-white border-b border-gray-100 px-4 py-3">
-                        <div className="flex flex-wrap gap-4 items-center">
-                            <div className="flex items-center gap-2 text-sm text-gray-600">
-                                <span className="w-5 h-5 bg-gray-100 rounded flex items-center justify-center text-xs">📅</span>
-                                <span className="font-semibold">{WORKING_DAYS.length}</span>
-                                <span className="text-gray-400">Working Days</span>
-                            </div>
-                            <div className="flex items-center gap-2 text-sm text-gray-600">
-                                <span className="w-5 h-5 bg-gray-100 rounded flex items-center justify-center text-xs">⏱</span>
-                                <span className="font-semibold">8</span>
-                                <span className="text-gray-400">Periods / Day</span>
-                            </div>
-                            <div className="flex items-center gap-2 text-sm text-gray-600">
-                                <div className="w-8 h-8 relative">
-                                    <svg viewBox="0 0 36 36" className="w-8 h-8 -rotate-90">
-                                        <circle cx="18" cy="18" r="15.9" fill="none" stroke="#e5e7eb" strokeWidth="4" />
-                                        <circle cx="18" cy="18" r="15.9" fill="none" stroke="#3b82f6" strokeWidth="4"
-                                            strokeDasharray={`${pct} ${100 - pct}`} strokeLinecap="round" />
-                                    </svg>
-                                    <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-gray-700">{pct}%</span>
-                                </div>
-                                <div>
-                                    <span className="font-semibold">{filledCount}/{totalSlots}</span>
-                                    <span className="text-gray-400 ml-1">Slots Filled</span>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-2 text-sm text-gray-600">
-                                <span className="font-semibold text-amber-600">{emptyCount}</span>
-                                <span className="text-gray-400">Empty Slots</span>
-                            </div>
-                            <div className="flex items-center gap-2 text-sm text-gray-600">
-                                <div className="flex -space-x-1">
-                                    {uniqueTeacherNames.slice(0, 5).map(n => (
-                                        <span key={n} className={`w-6 h-6 rounded-full border-2 border-white ${TEACHER_COLORS[n] || 'bg-gray-400'} text-white text-xs font-bold flex items-center justify-center`}>
-                                            {getInitials(n)}
-                                        </span>
-                                    ))}
-                                    {uniqueTeacherNames.length > 5 && (
-                                        <span className="w-6 h-6 rounded-full border-2 border-white bg-gray-300 text-gray-700 text-xs font-bold flex items-center justify-center">
-                                            +{uniqueTeacherNames.length - 5}
-                                        </span>
-                                    )}
-                                </div>
-                                <span className="font-semibold">{uniqueTeacherNames.length}</span>
-                                <span className="text-gray-400">Teachers</span>
-                            </div>
+                    <div className="bg-white border-b border-gray-100 px-5 py-2.5 flex items-center gap-2 flex-wrap">
 
-                            {!isViewOnly && (
-                                <div className="ml-auto flex items-center gap-2">
-                                    <div className="flex gap-1 flex-wrap">
-                                        <button onClick={() => setSubjectFilter('All')}
-                                            className={`px-2.5 py-1 rounded-full text-xs font-medium transition ${subjectFilter === 'All' ? 'bg-[#1e293b] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
-                                            All
-                                        </button>
-                                        {subjectCounts.map(s => (
-                                            <button key={s.code} onClick={() => setSubjectFilter(s.code === subjectFilter ? 'All' : s.code)}
-                                                className={`px-2.5 py-1 rounded-full text-xs font-medium transition flex items-center gap-1
-                          ${subjectFilter === s.code ? 'bg-[#1e293b] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
-                                                <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
-                                                {s.code} {s.count}
-                                            </button>
-                                        ))}
-                                    </div>
-                                    <button onClick={() => window.print()} className="flex items-center gap-1 px-3 py-1.5 border border-gray-200 rounded-lg text-xs text-gray-600 hover:bg-gray-50">
-                                        <Printer size={13} /> Print
-                                    </button>
-                                    <button onClick={handleClearAll} className="flex items-center gap-1 px-3 py-1.5 border border-red-100 rounded-lg text-xs text-red-500 hover:bg-red-50">
-                                        <Trash2 size={13} /> Clear All
-                                    </button>
-                                </div>
-                            )}
+                        {/* Working Days */}
+                        <div className="flex items-center gap-2.5 px-4 py-2.5 border border-gray-200 rounded-xl bg-white">
+                            <svg className="text-slate-500 shrink-0" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.6" viewBox="0 0 24 24">
+                                <rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
+                            </svg>
+                            <div>
+                                <p className="text-[20px] font-bold text-slate-900 leading-none">{workingDays.length}</p>
+                                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mt-0.5">Working Days</p>
+                            </div>
                         </div>
-                    </div>
 
+                        {/* Periods / Day */}
+                        <div className="flex items-center gap-2.5 px-4 py-2.5 border border-gray-200 rounded-xl bg-white">
+                            <svg className="text-slate-500 shrink-0" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.6" viewBox="0 0 24 24">
+                                <circle cx="12" cy="12" r="9" /><polyline points="12 7 12 12 15 15" />
+                            </svg>
+                            <div>
+                                <p className="text-[20px] font-bold text-slate-900 leading-none">{timetableConfig?.periodsPerDay || periods.filter(p => !p.isBreak).length || 8}</p>
+                                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mt-0.5">Periods / Day</p>
+                            </div>
+                        </div>
+
+                        {/* Slots Filled — Donut + progress bar */}
+                        <div className="flex items-center gap-3.5 px-4 py-2.5 border border-gray-200 rounded-xl bg-white">
+                            <div className="relative w-[52px] h-[52px] shrink-0">
+                                <svg viewBox="0 0 36 36" width="52" height="52" style={{ transform: 'rotate(-90deg)' }}>
+                                    <circle cx="18" cy="18" r="14" fill="none" stroke="#e2e8f0" strokeWidth="3.5" />
+                                    <circle cx="18" cy="18" r="14" fill="none" stroke="#1e293b" strokeWidth="3.5"
+                                        strokeDasharray={`${pct} ${100 - pct}`} strokeLinecap="round" />
+                                </svg>
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                    <span className="text-[11px] font-bold text-slate-800">{pct}%</span>
+                                </div>
+                            </div>
+                            <div>
+                                <div className="flex items-baseline gap-1 leading-none">
+                                    <span className="text-[22px] font-bold text-slate-900">{filledCount}</span>
+                                    <span className="text-sm font-medium text-slate-400">/{totalSlots}</span>
+                                </div>
+                                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mt-1">Slots Filled</p>
+                                <div className="w-[90px] h-[3px] bg-gray-200 rounded-full mt-1.5">
+                                    <div className="h-[3px] bg-[#1e293b] rounded-full transition-all" style={{ width: `${pct}%` }} />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Empty Slots */}
+                        <div className="flex items-center gap-2.5 px-4 py-2.5 border border-gray-200 rounded-xl bg-white">
+                            <svg className="text-slate-500 shrink-0" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.6" viewBox="0 0 24 24">
+                                <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
+                            </svg>
+                            <div>
+                                <p className={`text-[20px] font-bold leading-none ${emptyCount > 0 ? 'text-orange-500' : 'text-slate-900'}`}>{emptyCount}</p>
+                                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mt-0.5">Empty Slots</p>
+                            </div>
+                        </div>
+
+                        {/* Teachers */}
+                        <div className="flex items-center gap-3 px-4 py-2.5 border border-gray-200 rounded-xl bg-white">
+                            <div className="flex items-center">
+                                {uniqueTeacherNames.length > 5 && (
+                                    <span className="w-7 h-7 rounded-full border-2 border-white bg-indigo-500 text-white flex items-center justify-center shrink-0"
+                                        style={{ fontSize: '9px', fontWeight: 700 }}>
+                                        +{uniqueTeacherNames.length - 5}
+                                    </span>
+                                )}
+                                {uniqueTeacherNames.slice(0, 5).map((n, i) => (
+                                    <span key={n}
+                                        className={`w-7 h-7 rounded-full border-2 border-white ${TEACHER_COLORS[n] || 'bg-gray-400'} text-white flex items-center justify-center shrink-0`}
+                                        style={{ fontSize: '9px', fontWeight: 700, marginLeft: (i === 0 && uniqueTeacherNames.length <= 5) ? 0 : '-8px' }}>
+                                        {getInitials(n)}
+                                    </span>
+                                ))}
+                            </div>
+                            <div>
+                                <p className="text-[20px] font-bold text-slate-900 leading-none">{uniqueTeacherNames.length}</p>
+                                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mt-0.5">Teachers</p>
+                            </div>
+                        </div>
+
+                        {/* Right side filters */}
+                        {!isViewOnly && (
+                            <div className="ml-auto flex items-center gap-2 flex-wrap">
+                                <div className="flex gap-1 flex-wrap">
+                                    <button onClick={() => setSubjectFilter('All')}
+                                        className={`px-2.5 py-1 rounded-full text-xs font-medium transition ${subjectFilter === 'All' ? 'bg-[#1e293b] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                                        All
+                                    </button>
+                                    {subjectCounts.map(s => (
+                                        <button key={s.code} onClick={() => setSubjectFilter(s.code === subjectFilter ? 'All' : s.code)}
+                                            className={`px-2.5 py-1 rounded-full text-xs font-medium transition flex items-center gap-1
+                            ${subjectFilter === s.code ? 'bg-[#1e293b] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                                            <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
+                                            {s.code} {s.count}
+                                        </button>
+                                    ))}
+                                </div>
+                                <button onClick={() => window.print()} className="flex items-center gap-1 px-3 py-1.5 border border-gray-200 rounded-lg text-xs text-gray-600 hover:bg-gray-50">
+                                    <Printer size={13} /> Print
+                                </button>
+                                <button onClick={handleClearAll} className="flex items-center gap-1 px-3 py-1.5 border border-red-100 rounded-lg text-xs text-red-500 hover:bg-red-50">
+                                    <Trash2 size={13} /> Clear All
+                                </button>
+                            </div>
+                        )}
+                    </div>
                     {/* Planner Grid */}
                     <div className="flex flex-1 overflow-hidden">
                         {/* Sidebar */}
@@ -542,8 +663,13 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
                                                 <div
                                                     key={s.code}
                                                     draggable
-                                                    onDragStart={() => setDraggedSubject(s)}
-                                                    className="flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-gray-50 cursor-grab"
+                                                    onDragStart={(e) => {
+                                                        setDraggedSubject(s);
+                                                        e.dataTransfer.effectAllowed = 'copy';
+                                                    }}
+                                                    onDragEnd={() => setDraggedSubject(null)}
+                                                    className="flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-gray-50 cursor-grab active:cursor-grabbing select-none"
+                                                    title="Drag to a slot"
                                                 >
                                                     <span className={`w-1 h-6 rounded-full ${s.dot}`} />
                                                     <span className={`text-xs font-bold ${s.color}`}>{s.code}</span>
@@ -589,7 +715,7 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
                                             <th className="bg-gray-50 border-b border-r border-gray-200 px-4 py-3 text-left text-xs font-semibold text-gray-500 w-36 sticky left-0 z-10">
                                                 PERIOD / TIME
                                             </th>
-                                            {WORKING_DAYS.map(day => (
+                                            {workingDays.map(day => (
                                                 <th key={day}
                                                     className={`border-b border-r border-gray-200 px-3 py-3 text-center text-sm font-semibold min-w-32.5
                           ${day === 'Mon' ? 'bg-[#1e293b] text-white' : 'bg-gray-800 text-gray-200'}`}>
@@ -599,7 +725,7 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {PERIODS.map(period => {
+                                        {periods.map(period => {
                                             if (period.isBreak) {
                                                 return (
                                                     <tr key={period.id} className="bg-amber-50/60">
@@ -610,9 +736,9 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
                                                             </div>
                                                             <p className="text-xs text-amber-600">{period.time}</p>
                                                         </td>
-                                                        {WORKING_DAYS.map(day => (
+                                                        {workingDays.map(day => (
                                                             <td key={day} className="border-b border-r border-gray-200 px-3 py-2">
-                                                                {day === WORKING_DAYS[0] && (
+                                                                {day === workingDays[0] && (
                                                                     <div className="flex items-center gap-2">
                                                                         <span>{period.emoji}</span>
                                                                         <span className="text-xs text-amber-700 font-medium">{period.time}</span>
@@ -632,7 +758,7 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
                                                         <p className="text-sm font-medium text-gray-800">{period.label}</p>
                                                         <p className="text-xs text-gray-400">{period.time}</p>
                                                     </td>
-                                                    {WORKING_DAYS.map(day => {
+                                                    {workingDays.map(day => {
                                                         const slot = getSlot(day, period.id);
                                                         const subjectMeta = slot
                                                             ? (subjectsList.find(s => s.code === slot.subject?.code || s.id === slot.subject?.id) || null)
@@ -702,11 +828,17 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
                                                                     !isViewOnly && (
                                                                         <button
                                                                             onClick={() => setAddSlotTarget({ day, period })}
-
-                                                                            onDragOver={(e) => e.preventDefault()}
-
-                                                                            onDrop={() => {
+                                                                            onDragOver={(e) => {
+                                                                                e.preventDefault();
+                                                                                e.dataTransfer.dropEffect = 'copy';
+                                                                                setDragOverCell({ day, periodId: period.id });
+                                                                            }}
+                                                                            onDragLeave={() => setDragOverCell(null)}
+                                                                            onDrop={(e) => {
+                                                                                e.preventDefault();
+                                                                                setDragOverCell(null);
                                                                                 if (draggedSubject) {
+                                                                                    // Open AddSlotModal with this subject pre-selected
                                                                                     setAddSlotTarget({
                                                                                         day,
                                                                                         period,
@@ -715,9 +847,11 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
                                                                                     setDraggedSubject(null);
                                                                                 }
                                                                             }}
-
-                                                                            className="w-full h-full min-h-20 flex items-center justify-center text-gray-300 hover:text-gray-400 hover:bg-gray-100/60 rounded-lg transition border-2 border-transparent hover:border-gray-200 border-dashed"
-                                                                        >
+                                                                            className={`w-full h-full min-h-20 flex items-center justify-center rounded-lg transition border-2 border-dashed
+                                                                                ${dragOverCell?.day === day && dragOverCell?.periodId === period.id
+                                                                                    ? 'border-blue-400 bg-blue-50 text-blue-400 scale-[1.02]'
+                                                                                    : 'border-transparent hover:border-gray-200 text-gray-300 hover:text-gray-400 hover:bg-gray-100/60'
+                                                                                }`}>
                                                                             <Plus size={18} />
                                                                         </button>
                                                                     )
@@ -740,7 +874,7 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
                         <span>•</span>
                         <span>📅 {timetableInfo?.year || timetableInfo?.academicYear}</span>
                         <span>•</span>
-                        <span>6 days · 8 periods/day</span>
+                        <span>{workingDays.length} days · {timetableConfig?.periodsPerDay || periods.filter(p => !p.isBreak).length || 8} periods/day</span>
                         <span>•</span>
                         <span className={status === 'Draft' ? 'text-amber-600 font-medium' : 'text-blue-600 font-medium'}>{status}</span>
                     </div>
@@ -814,8 +948,7 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
                     timetable={timetableInfo}
                     timetableId={timetable?.id}
                     onClose={() => setShowSettings(false)}
-                    onApply={async (updatedForm) => {
-                        setWorkingDays(updatedForm.workingDays); 
+                    onApply={async () => {
                         await loadTimetableData();
                         setShowSettings(false);
                     }}
