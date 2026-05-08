@@ -13,6 +13,7 @@ import {
   deleteFeeStructure,
 } from '../../Api/FeeStructures';
 import { getFeePeriods, getAcademicYears } from '../../Api/FeePeriods';
+import { getActiveClasses } from '../../Api/ClassSectionAPI';
 import { toast } from 'react-toastify';
 
 const formatCurrency = (amount) => {
@@ -30,15 +31,15 @@ const STRUCT_STATUS = {
 };
 
 const COMPONENT_TYPE_OPTIONS = [
-  { value: 'TUITION', label: 'Tuition Fee' },
-  { value: 'TRANSPORT', label: 'Transport Fee' },
-  { value: 'LAB', label: 'Lab Fee' },
-  { value: 'LIBRARY', label: 'Library Fee' },
-  { value: 'ACTIVITY', label: 'Activity Fee' },
-  { value: 'SPORTS', label: 'Sports Fee' },
-  { value: 'EXAM', label: 'Exam Fee' },
-  { value: 'MISC', label: 'Misc' },
-  { value: 'OTHER', label: 'Other' },
+  { value: 'TUITION_FEE_', label: 'TUITION_FEE' },
+  { value: 'TRANSPORT_FEE', label: 'Transport Fee' },
+  { value: 'LAB_FEE', label: 'Lab Fee' },
+  { value: 'LIBRARY_FEE', label: 'Library Fee' },
+  { value: 'ACTIVITY_FEE', label: 'Activity Fee' },
+  { value: 'SPORTS_FEE', label: 'Sports Fee' },
+  { value: 'EXAM_FEE', label: 'Exam Fee' },
+  { value: 'MISC_FEE', label: 'Misc Fee' },
+  { value: 'OTHER_FEE', label: 'Other Fee' },
 ];
 
 function ViewDetailsModal({ isOpen, onClose, structure }) {
@@ -100,7 +101,7 @@ function StructureModal({ isOpen, onClose, structure, periods, classes, onSucces
     feePeriodId: '',
     academicYearId: '',
     classIds: [],
-    components: [{ componentType: 'TUITION', customName: '', amount: '', displayOrder: 0 }],
+    components: [{ componentType: 'TUITION_FEE', customName: '', amount: '', displayOrder: 0 }],
   });
 
   useEffect(() => {
@@ -111,18 +112,18 @@ function StructureModal({ isOpen, onClose, structure, periods, classes, onSucces
         academicYearId: structure.academicYearId?.toString() || '',
         classIds: structure.classes?.map((c) => c.id) || [],
         components: structure.components?.map((comp, idx) => ({
-          componentType: comp.componentType || 'TUITION',
+          componentType: comp.componentType || 'TUITION_FEE',
           customName: comp.customName || '',
           amount: comp.amount?.toString() || '',
           displayOrder: comp.displayOrder ?? idx,
-        })) || [{ componentType: 'TUITION', customName: '', amount: '', displayOrder: 0 }],
+        })) || [{ componentType: 'TUITION_FEE', customName: '', amount: '', displayOrder: 0 }],
       });
     } else {
       setForm({
         feePeriodId: '',
         academicYearId: '',
         classIds: [],
-        components: [{ componentType: 'TUITION', customName: '', amount: '', displayOrder: 0 }],
+        components: [{ componentType: 'TUITION_FEE', customName: '', amount: '', displayOrder: 0 }],
       });
     }
   }, [isOpen, structure]);
@@ -279,7 +280,7 @@ function StructureModal({ isOpen, onClose, structure, periods, classes, onSucces
             <div className="space-y-2.5">
               <div className="grid grid-cols-12 gap-3 text-xs font-semibold text-gray-500 uppercase tracking-wider px-1">
                 <div className="col-span-5">Component</div>
-                <div className="col-span-4">Custom Name</div>
+                <div className="col-span-4">Custom Name(For MISC_FEE/Other)</div>
                 <div className="col-span-2">Amount</div>
                 <div className="col-span-1"></div>
               </div>
@@ -297,7 +298,7 @@ function StructureModal({ isOpen, onClose, structure, periods, classes, onSucces
                       value={comp.customName}
                       onChange={(v) => updateComponent(i, 'customName', v)}
                       placeholder="Optional..."
-                      disabled={!['MISC', 'OTHER'].includes(comp.componentType)}
+                      disabled={!['MISC_FEE', 'OTHER_FEE'].includes(comp.componentType)}
                     />
                   </div>
                   <div className="col-span-2">
@@ -342,6 +343,14 @@ const FeeStructures = () => {
   const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [structuresLoading, setStructuresLoading] = useState(false);
+  const [classesLoading, setClassesLoading] = useState(false);
+
+  // Get schoolId from context or localStorage
+  const getSchoolId = () => {
+    // Replace with actual logic to get schoolId from your app's context/state
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    return user.schoolId || 1; // Default to 1 if not found
+  };
 
   useEffect(() => { fetchInitialData(); }, []);
 
@@ -355,19 +364,37 @@ const FeeStructures = () => {
         setPeriods(periodsData);
       }
       await fetchStructures(null);
-      setClasses([
-        { id: 1, name: 'Class 6', studentCount: 72 },
-        { id: 2, name: 'Class 7', studentCount: 74 },
-        { id: 3, name: 'Class 8', studentCount: 76 },
-        { id: 4, name: 'Class 9', studentCount: 90 },
-        { id: 5, name: 'Class 10', studentCount: 82 },
-        { id: 6, name: 'Class 11', studentCount: 60 },
-        { id: 7, name: 'Class 12', studentCount: 55 },
-      ]);
+      await fetchClasses();
     } catch (error) {
       toast.error('Failed to load data');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchClasses = async () => {
+    try {
+      setClassesLoading(true);
+      const schoolId = getSchoolId();
+      const classesData = await getActiveClasses(schoolId);
+
+console.log("Classes API Response:", classesData);
+
+const normalizedClasses =
+  Array.isArray(classesData)
+    ? classesData
+    : Array.isArray(classesData?.data)
+    ? classesData.data
+    : Array.isArray(classesData?.result)
+    ? classesData.result
+    : [];
+
+setClasses(normalizedClasses);
+    } catch (error) {
+      toast.error('Failed to fetch classes');
+      console.error('Error fetching classes:', error);
+    } finally {
+      setClassesLoading(false);
     }
   };
 

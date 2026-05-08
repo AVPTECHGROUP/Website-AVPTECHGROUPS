@@ -109,6 +109,11 @@ const menuItems = [
   {
     id: 'FeeManagement', icon: IndianRupee, label: 'Fee Management', route: '/feemanagement',
     roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'],
+     subItems: [
+      { label: 'Fee Config', route: '/feemanagement/config', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'] },
+      { label: 'Collection and History', route: '/feemanagement/collections', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'] },
+  
+    ]
   },
   {
     id: 'Permission',

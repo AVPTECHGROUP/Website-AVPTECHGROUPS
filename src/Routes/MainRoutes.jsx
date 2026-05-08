@@ -75,8 +75,7 @@ import ReportCards from '../Pages/Exams/ReportCards';
 import Analytics from '../Pages/Exams/Analytics';
 import SchoolConfig from '../Pages/Schools/SchoolConfig';
 import HomeworkPage from '../Pages/Homework/Homeworkpage';
-import FeeManagement from '../Pages/FeeManagement/FeeManagement';
-// import AcademicYear from '../Pages/Attendance/AcademicYear/AcademicYear';
+import { OverviewPage, FeeSynthesisPage, CollectionsPage } from '../Pages/FeeManagement/FeeManagement';
 
 import AcademicYear from '../Pages/Attendance/AcademicYear/AcademicYear';
 import TimeTable from '../Pages/Schedule/TimeTable';
@@ -191,7 +190,9 @@ const MainRoutes = () => {
             <Route path="/leaves" element={<Leaves />} />
             <Route path="/leaves/manageHolidays" element={<HolidayManagment />} />
 
-            <Route path='/feemanagement' element={<FeeManagement/>}/>
+            <Route path='/feemanagement'             element={<OverviewPage />} />
+            <Route path='/feemanagement/config'   element={<FeeSynthesisPage />} />
+            <Route path='/feemanagement/collections' element={<CollectionsPage />} />
 
             {/* Subject Section Assignment */}
             <Route path="/sectionSubjectAssignment" element={<SectionSubjectAssignment />} />
