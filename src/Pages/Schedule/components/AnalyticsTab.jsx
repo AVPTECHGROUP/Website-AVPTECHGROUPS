@@ -296,7 +296,7 @@ export default function AnalyticsTab({
                                             <span className="text-xs text-gray-500">
                                                 {hasTarget ? `${s.filled}/${s.target}` : `${s.filled} slots`}
                                             </span>
-                                            {hasTarget ? (
+                                            {/* {hasTarget ? (
                                                 <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${left === 0
                                                         ? 'bg-green-100 text-green-700'
                                                         : 'bg-amber-100 text-amber-700'
@@ -307,7 +307,7 @@ export default function AnalyticsTab({
                                                 <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
                                                     No target
                                                 </span>
-                                            )}
+                                            )} */}
                                         </div>
                                     );
                                 })}
