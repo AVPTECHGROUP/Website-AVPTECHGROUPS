@@ -1,104 +1,168 @@
+// FeeManagement.jsx — Root router
+// Route: /feemanagement             → OverviewPage (dashboard)
+// Route: /feemanagement/synthesis   → FeeSynthesisPage  (Fee Periods + Fee Structures tabs)
+// Route: /feemanagement/collections → CollectionsPage   (Outstanding + History tabs)
+
 import React, { useState } from 'react';
+import { useDecodedUser } from '../../ContextAPI/UserContext';
 import Overview from './Overview';
 import FeePeriods from './FeePeriods';
 import FeeStructures from './Feestructures.';
 import CollectionsHistory from './Collectionhistory';
-import CollectFeeModal     from '../../Components/FeeModal/CollectfeeModal';
-import ReceiptModal        from '../../Components/FeeModal/ReceiptModal';
-import Button              from '../../Components/FeeModal/Button';
-import { studentFeeData, feeComponents } from '../../Components/FeeModal/mockData';
+import CollectFeeModal from '../../Components/FeeModal/CollectfeeModal';
+import ReceiptModal from '../../Components/FeeModal/ReceiptModal';
+import Button from '../../Components/FeeModal/Button';
 
-const TABS = [
-  { key: 'overview',     label: 'Dashboard'               },
-  { key: 'periods',      label: 'Fee Periods'             },
-  { key: 'structures',   label: 'Fee Structures'          },
-  { key: 'collections',  label: 'Collections & History', badge: 9 },
-];
+// ─── Shared Topbar User Pill ──────────────────────────────────────────────────
+const UserPill = ({ profile, user }) => {
+  // Derive display name: prefer profile.firstName + lastName, fall back to email
+  const fullName = profile
+    ? [profile.firstName, profile.lastName].filter(Boolean).join(' ')
+    : (user?.email?.split('@')[0] || 'User');
 
-const FeeManagement = () => {
-  const [page, setPage] = useState('overview');
-  const [collectModal, setCollectModal] = useState({ isOpen: false, student: null });
-  const [receiptModal, setReceiptModal] = useState({ isOpen: false, receipt: null });
+  const role = profile?.designation || user?.userType || 'Admin';
 
-  const handleCollect = (student = studentFeeData.find((s) => s.balance > 0)) => {
-    setCollectModal({ isOpen: true, student });
-  };
+  // Build initials
+  const initials = profile
+    ? `${(profile.firstName?.[0] || '').toUpperCase()}${(profile.lastName?.[0] || '').toUpperCase()}`
+    : fullName.slice(0, 2).toUpperCase();
 
-  const handleFeeSubmit = (data) => {
-    const receipt = {
-      receiptNo:    `RC-2026-${String(Math.floor(Math.random() * 99999)).padStart(5, '0')}`,
-      date:         data.paymentDate,
-      studentName:  data.student.studentName,
-      studentCode:  data.student.studentCode,
-      class:        data.student.class,
-      period:       data.student.period,
-      components:   feeComponents,
-      amountPaid:   parseFloat(data.amountPaid),
-      discount:     parseFloat(data.discount)  || 0,
-      lateFine:     parseFloat(data.lateFine)  || 0,
-      paymentMode:  data.paymentMode,
-      balanceAfter: data.student.balance - parseFloat(data.amountPaid),
-    };
-    setCollectModal({ isOpen: false, student: null });
-    setReceiptModal({ isOpen: true, receipt });
+  return (
+    <div className="flex items-center gap-2 border border-gray-200 rounded-full pl-1 pr-3 py-1 cursor-pointer hover:bg-gray-50 transition-colors">
+      <div className="w-7 h-7 rounded-full bg-[#1A3A5C] flex items-center justify-center text-white text-[11px] font-bold">
+        {initials}
+      </div>
+      <div>
+        <div className="text-xs font-bold text-gray-800 leading-tight">{fullName}</div>
+        <div className="text-[10px] text-gray-500 leading-none">{role}</div>
+      </div>
+    </div>
+  );
+};
+
+// ─── Fee Synthesis Page ────────────────────────────────────────────────────────
+export const FeeSynthesisPage = () => {
+  const [tab, setTab] = useState('periods');
+  const { profile, user, currentAcademicYear } = useDecodedUser();
+
+  const TABS = [
+    { key: 'periods',    label: 'Fee Periods'    },
+    { key: 'structures', label: 'Fee Structures' },
+  ];
+
+  const handleNavigate = (target) => {
+    if (target === 'structures') setTab('structures');
   };
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
-      {/* ── Topbar ── */}
-      <header className="bg-white border-b border-gray-200 px-6 h-14 flex items-center justify-between sticky top-2 z-40">
+      <header className="bg-white border-b border-gray-200 px-6 h-14 flex items-center justify-between sticky top-0 z-40">
         <div>
-          <div className=" font-bold text-lg text-black-600 leading-tight">Fee Management</div>
-          
+          <div className="font-bold text-lg text-gray-900 leading-tight">Fee Synthesis</div>
+          {currentAcademicYear && (
+            <div className="text-[11px] text-gray-500">AY {currentAcademicYear.label}</div>
+          )}
         </div>
-        <div className="flex items-center gap-3">
-          <Button variant="secondary" size="sm">⬇ Export</Button>
-          <Button variant="primary"   size="sm" onClick={() => handleCollect()}>+ Collect Fee</Button>
-          <div className="flex items-center gap-2 border border-gray-200 rounded-full pl-1 pr-3 py-1 cursor-pointer hover:bg-gray-50 transition-colors">
-            <div className="w-7 h-7 rounded-full bg-navy flex items-center justify-center text-white text-[11px] font-bold">AK</div>
-            <div>
-              <div className="text-xs font-bold text-gray-800 leading-tight">Amit Kumar</div>
-              <div className="text-[10px] text-gray-500 leading-none">Admin</div>
-            </div>
-          </div>
-        </div>
+        <UserPill profile={profile} user={user} />
       </header>
 
-      {/* ── Module Tab Nav ── */}
       <nav className="bg-white border-b border-gray-200 px-6 flex sticky top-14 z-30">
         {TABS.map((t) => (
           <button
             key={t.key}
-            onClick={() => setPage(t.key)}
+            onClick={() => setTab(t.key)}
             className={`inline-flex items-center gap-2 px-4 py-3 text-[12.5px] font-semibold border-b-2 -mb-px transition-colors whitespace-nowrap ${
-              page === t.key
-                ? 'text-navy border-navy'
+              tab === t.key
+                ? 'text-[#1A3A5C] border-[#1A3A5C]'
                 : 'text-gray-500 border-transparent hover:text-gray-700 hover:border-gray-300'
             }`}
           >
             {t.label}
-            {t.badge && (
-              <span className="bg-danger text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">{t.badge}</span>
-            )}
           </button>
         ))}
       </nav>
 
-      {/* ── Page body ── */}
-      <main className="flex-1 p-6 max-w-[1600px] mx-auto w-full ">
-        {page === 'overview'    && <Overview           onNavigate={setPage} onCollect={handleCollect} />}
-        {page === 'periods'     && <FeePeriods         onNavigate={setPage} />}
-        {page === 'structures'  && <FeeStructures />}
-        {page === 'collections' && <CollectionsHistory />}
+      <main className="flex-1 p-6 max-w-[1600px] mx-auto w-full">
+        {tab === 'periods'    && <FeePeriods   onNavigate={handleNavigate} />}
+        {tab === 'structures' && <FeeStructures />}
+      </main>
+    </div>
+  );
+};
+
+// ─── Collections Page ─────────────────────────────────────────────────────────
+export const CollectionsPage = () => {
+  const { profile, user, currentAcademicYear } = useDecodedUser();
+
+  return (
+    <div className="min-h-screen bg-gray-100 flex flex-col">
+      <header className="bg-white border-b border-gray-200 px-6 h-14 flex items-center justify-between sticky top-0 z-40">
+        <div>
+          <div className="font-bold text-lg text-gray-900 leading-tight">Collections &amp; History</div>
+          {currentAcademicYear && (
+            <div className="text-[11px] text-gray-500">AY {currentAcademicYear.label}</div>
+          )}
+        </div>
+        <UserPill profile={profile} user={user} />
+      </header>
+
+      <main className="flex-1 p-6 max-w-[1600px] mx-auto w-full">
+        <CollectionsHistory />
+      </main>
+    </div>
+  );
+};
+
+// ─── Overview / Dashboard Page ────────────────────────────────────────────────
+export const OverviewPage = () => {
+  const { profile, user, currentAcademicYear } = useDecodedUser();
+
+  const [collectModal, setCollectModal] = useState({ isOpen: false, student: null });
+  const [receiptModal, setReceiptModal] = useState({ isOpen: false, receipt: null });
+
+  // Called by Overview when "Collect" is clicked on an overdue student row
+  // student shape comes from getOutstandingFees API response
+  const handleCollect = (student = null) => {
+    setCollectModal({ isOpen: true, student });
+  };
+
+  // Called by CollectFeeModal on successful payment
+  // receipt shape is returned directly from POST /v1/fee/collections response
+  const handleFeeSubmit = (receiptData) => {
+    setCollectModal({ isOpen: false, student: null });
+    setReceiptModal({ isOpen: true, receipt: receiptData });
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-100 flex flex-col">
+      <header className="bg-white border-b border-gray-200 px-6 h-14 flex items-center justify-between sticky top-0 z-40">
+        <div>
+          <div className="font-bold text-lg text-gray-900 leading-tight">Fee Management</div>
+          {currentAcademicYear && (
+            <div className="text-[11px] text-gray-500">AY {currentAcademicYear.label}</div>
+          )}
+        </div>
+        <div className="flex items-center gap-3">
+          <Button variant="secondary" size="sm">⬇ Export</Button>
+          <Button variant="primary" size="sm" onClick={() => handleCollect(null)}>+ Collect Fee</Button>
+          <UserPill profile={profile} user={user} />
+        </div>
+      </header>
+
+      <main className="flex-1 p-6 max-w-[1600px] mx-auto w-full">
+        {/* Overview receives onCollect so overdue alert buttons can pre-fill the modal */}
+        <Overview onNavigate={() => {}} onCollect={handleCollect} />
       </main>
 
-      {/* ── Global Modals ── */}
+      {/* Collect Fee Modal */}
       <CollectFeeModal
         isOpen={collectModal.isOpen}
         onClose={() => setCollectModal({ isOpen: false, student: null })}
         student={collectModal.student}
         onSubmit={handleFeeSubmit}
       />
+
+      {/* Receipt Modal — shown after successful payment */}
       <ReceiptModal
         isOpen={receiptModal.isOpen}
         onClose={() => setReceiptModal({ isOpen: false, receipt: null })}
@@ -106,6 +170,13 @@ const FeeManagement = () => {
       />
     </div>
   );
+};
+
+// ─── Default export ────────────────────────────────────────────────────────────
+const FeeManagement = ({ page = 'overview' }) => {
+  if (page === 'synthesis')   return <FeeSynthesisPage />;
+  if (page === 'collections') return <CollectionsPage />;
+  return <OverviewPage />;
 };
 
 export default FeeManagement;
