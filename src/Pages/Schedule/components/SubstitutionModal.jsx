@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { X, ArrowLeftRight } from 'lucide-react';
-import { authFetch } from '../../../Authfetch/Authfetch';
-
-const BASE_URL = import.meta.env.VITE_API_BASE_DOUBLE_V1;
+import {
+    getSubstitutions,
+    createSubstitution,
+    updateSubstitutionStatus,
+} from '../../../Api/ScheduleApi';
 
 const REASONS = [
     'Medical Leave', 'Personal Leave', 'Official Duty',
@@ -41,10 +43,11 @@ export default function SubstitutionModal({ timetableId, slot = null, onClose })
 
     const loadSubstitutions = async () => {
         try {
-            const res = await authFetch(`${BASE_URL}/timetable/${timetableId}/substitutions`, { method: 'GET' });
-            const data = await res.json();
-            if (res.ok) setSubstitutions(data?.data || []);
-        } catch { /* silent */ }
+            const data = await getSubstitutions(timetableId);
+            setSubstitutions(data || []);
+        } catch {
+
+        }
     };
 
     const set = (key, val) => {
@@ -76,13 +79,7 @@ export default function SubstitutionModal({ timetableId, slot = null, onClose })
                 reason: form.reason,
                 notes: form.notes,
             };
-            const res = await authFetch(`${BASE_URL}/timetable/${timetableId}/substitutions`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
-            });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data?.message || 'Failed to create substitution');
+            await createSubstitution(timetableId, payload);
             await loadSubstitutions();
             setTab('list');
         } catch (err) {
@@ -94,11 +91,16 @@ export default function SubstitutionModal({ timetableId, slot = null, onClose })
 
     const handleUpdateStatus = async (subId, status) => {
         try {
-            await authFetch(`${BASE_URL}/timetable/${timetableId}/substitutions/${subId}/status?status=${status}`, {
-                method: 'PUT',
-            });
+            await updateSubstitutionStatus(
+                timetableId,
+                subId,
+                status
+            );
+
             await loadSubstitutions();
-        } catch { /* silent */ }
+        } catch {
+            /* silent */
+        }
     };
 
     const originalTeacherId = parseInt(form.originalTeacherId);
