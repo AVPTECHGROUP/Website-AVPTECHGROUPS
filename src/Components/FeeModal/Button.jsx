@@ -13,11 +13,12 @@ const Button = ({
   const baseClasses = 'inline-flex items-center justify-center gap-2 font-semibold transition-all duration-200 ease-in-out active:scale-98 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap tracking-wide';
   
   const variants = {
-    primary: 'bg-navy text-white hover:bg-navy-dark',
+    primary:'bg-[#173B63] text-white border border-[#173B63] hover:bg-[#102A46]',
     secondary: 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50',
     success: 'bg-success text-white hover:bg-[#065F46]',
     danger: 'bg-danger text-white hover:bg-[#991B1B]',
-    ghost: 'bg-navy-light text-navy border border-[#C7D7EE] hover:bg-[#DDE8F5]',
+    ghost:
+  'bg-[#EEF4FB] text-[#173B63] border border-[#C7D7EE] hover:bg-[#DDE8F5]',
   };
   
   const sizes = {

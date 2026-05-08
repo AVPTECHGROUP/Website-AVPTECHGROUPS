@@ -2,7 +2,27 @@ import { authFetch } from "../Authfetch/Authfetch";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_V1;
 
-// Create Fee Collection
+/**
+ * Helper function to build clean query parameters
+ * Filters out undefined, null, and empty string values
+ */
+const buildQueryParams = (params) => {
+  const searchParams = new URLSearchParams();
+  
+  Object.entries(params).forEach(([key, value]) => {
+    // Only add parameter if it has a real value
+    if (value !== undefined && value !== null && value !== '') {
+      searchParams.append(key, value);
+    }
+  });
+  
+  return searchParams.toString();
+};
+
+/**
+ * Create single fee collection
+ * POST /v1/fee/collections
+ */
 export const createFeeCollection = async (payload) => {
   try {
     const res = await authFetch(`${BASE_URL}/fee/collections`, {
@@ -21,11 +41,15 @@ export const createFeeCollection = async (payload) => {
 
     return data;
   } catch (error) {
-    console.error("createFeeCollection error:", error.message);
+    console.error("❌ createFeeCollection error:", error.message);
     throw error;
   }
 };
 
+/**
+ * Create bulk fee collections
+ * POST /v1/fee/collections/bulk
+ */
 export const createBulkFeeCollection = async (payload) => {
   try {
     const res = await authFetch(`${BASE_URL}/fee/collections/bulk`, {
@@ -44,11 +68,15 @@ export const createBulkFeeCollection = async (payload) => {
 
     return data;
   } catch (error) {
-    console.error("createBulkFeeCollection error:", error.message);
+    console.error("❌ createBulkFeeCollection error:", error.message);
     throw error;
   }
 };
 
+/**
+ * Get fee collection history with filters
+ * GET /v1/fee/collections/history
+ */
 export const getFeeCollectionHistory = async ({
   fromDate,
   toDate,
@@ -57,10 +85,10 @@ export const getFeeCollectionHistory = async ({
   mode,
   page = 0,
   size = 10,
-  sort = "id"
-}) => {
+} = {}) => {
   try {
-    const params = new URLSearchParams({
+
+    const queryString = buildQueryParams({
       fromDate,
       toDate,
       classId,
@@ -68,15 +96,17 @@ export const getFeeCollectionHistory = async ({
       mode,
       page,
       size,
-      sort
     });
 
-    const res = await authFetch(
-      `${BASE_URL}/fee/collections/history?${params}`,
-      {
-        method: "GET",
-      }
-    );
+    const url = `${BASE_URL}/fee/collections/history${
+      queryString ? "?" + queryString : ""
+    }`;
+
+    console.log("🌐 Fetching history:", url);
+
+    const res = await authFetch(url, {
+      method: "GET",
+    });
 
     if (!res.ok) {
       const errorText = await res.text();
@@ -86,29 +116,39 @@ export const getFeeCollectionHistory = async ({
     const data = await res.json();
 
     return {
-      records: data.data || [],
-      pagination: data.pagination || {}
+      records: data?.data?.content || [],
+      pagination: {
+        totalPages: data?.data?.totalPages || 0,
+        totalElements: data?.data?.totalElements || 0,
+        size: data?.data?.size || size,
+        number: data?.data?.number || page,
+      }
     };
 
   } catch (error) {
-    console.error("getFeeCollectionHistory error:", error.message);
+    console.error("❌ getFeeCollectionHistory error:", error.message);
     throw error;
   }
 };
 
-export const getOutstandingFees = async ({ classId, periodId }) => {
+/**
+ * Get outstanding fees with optional filters
+ * GET /v1/fee/collections/outstanding
+ */
+export const getOutstandingFees = async ({ classId, periodId } = {}) => {
   try {
-    const params = new URLSearchParams({
+    // Build query string with only defined values
+    const queryString = buildQueryParams({
       classId,
       periodId
     });
 
-    const res = await authFetch(
-      `${BASE_URL}/fee/collections/outstanding?${params}`,
-      {
-        method: "GET",
-      }
-    );
+    const url = `${BASE_URL}/fee/collections/outstanding${queryString ? '?' + queryString : ''}`;
+    console.log('🌐 Fetching outstanding:', url);
+
+    const res = await authFetch(url, {
+      method: "GET",
+    });
 
     if (!res.ok) {
       const errorText = await res.text();
@@ -123,19 +163,27 @@ export const getOutstandingFees = async ({ classId, periodId }) => {
     };
 
   } catch (error) {
-    console.error("getOutstandingFees error:", error.message);
+    console.error("❌ getOutstandingFees error:", error.message);
     throw error;
   }
 };
 
+/**
+ * Get fee receipt by ID
+ * GET /v1/fee/collections/receipt/:id
+ */
 export const getFeeReceiptById = async (id) => {
   try {
-    const res = await authFetch(
-      `${BASE_URL}/fee/collections/receipt/${id}`,
-      {
-        method: "GET",
-      }
-    );
+    if (!id) {
+      throw new Error("Receipt ID is required");
+    }
+
+    const url = `${BASE_URL}/fee/collections/receipt/${id}`;
+    console.log('🌐 Fetching receipt:', url);
+
+    const res = await authFetch(url, {
+      method: "GET",
+    });
 
     if (!res.ok) {
       const errorText = await res.text();
@@ -146,7 +194,7 @@ export const getFeeReceiptById = async (id) => {
     return data.data || {};
 
   } catch (error) {
-    console.error("getFeeReceiptById error:", error.message);
+    console.error("❌ getFeeReceiptById error:", error.message);
     throw error;
   }
 };
