@@ -1,21 +1,22 @@
 import { useState, useEffect } from 'react';
 import { X, Calendar } from 'lucide-react';
 import { getClasses, getSectionsByClass } from '../../../Api/TeachersAPI';
+import { getListOfValues } from '../../../Api/ListOfValues';
 
-const YEARS = ['2025-2026', '2024-2025', '2026-2027'];
 
 export default function AddTimetableModal({ onClose, onSubmit, existingTimetables = [] }) {
     const [classes, setClasses] = useState([]);
     const [sections, setSections] = useState([]);
     const [loadingClasses, setLoadingClasses] = useState(false);
     const [loadingSections, setLoadingSections] = useState(false);
+    const [academicYears, setAcademicYears] = useState([]);
 
     const [form, setForm] = useState({
         classId: '',
         className: '',
         sectionId: '',
         sectionName: '',
-        academicYear: '2025-2026',
+        academicYear: '',
         copyFrom: '',
         copyFromTimetableId: null,
         notes: '',
@@ -37,7 +38,36 @@ export default function AddTimetableModal({ onClose, onSubmit, existingTimetable
         };
         loadClasses();
     }, []);
+    useEffect(() => {
+        const loadMeta = async () => {
+            try {
+                setLoadingClasses(true);
 
+                const [classData, yearData] = await Promise.all([
+                    getClasses(),
+                    getListOfValues('ACADEMIC_YEAR')
+                ]);
+
+                setClasses(classData || []);
+                setAcademicYears(yearData || []);
+
+                // Default select first academic year
+                if (yearData?.length > 0) {
+                    setForm(prev => ({
+                        ...prev,
+                        academicYear: yearData[0].id
+                    }));
+                }
+
+            } catch (err) {
+                console.error('Failed to load data:', err);
+            } finally {
+                setLoadingClasses(false);
+            }
+        };
+
+        loadMeta();
+    }, []);
     // Load sections when classId changes
     useEffect(() => {
         if (!form.classId) { setSections([]); return; }
@@ -192,9 +222,15 @@ export default function AddTimetableModal({ onClose, onSubmit, existingTimetable
                             value={form.academicYear}
                             onChange={e => set('academicYear', e.target.value)}
                             className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 bg-white
-                ${errors.academicYear ? 'border-red-300' : 'border-gray-200'}`}
+    ${errors.academicYear ? 'border-red-300' : 'border-gray-200'}`}
                         >
-                            {YEARS.map(y => <option key={y}>{y}</option>)}
+                            <option value="">— Select Academic Year —</option>
+
+                            {academicYears.map(year => (
+                                <option key={year.id} value={year.id}>
+                                    {year.name || year.value}
+                                </option>
+                            ))}
                         </select>
                         {errors.academicYear && <p className="text-xs text-red-500 mt-1">{errors.academicYear}</p>}
                     </div>

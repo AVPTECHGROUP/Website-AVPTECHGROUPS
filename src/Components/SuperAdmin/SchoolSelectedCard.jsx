@@ -2,11 +2,12 @@ import { useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { CheckCircle, ArrowRight, X, Loader2 } from "lucide-react";
 import { switchSchool } from "../../Api/Schools";
+import { getCurrentAcademicYear } from "../../Api/AcademicYear";
 import { UserContext } from "../../ContextAPI/UserContext";
 
 export default function SchoolSelectedCard({ school, onClose }) {
     const navigate = useNavigate();
-    const { saveToken, saveSchool } = useContext(UserContext);
+    const { saveToken, saveSchool, saveCurrentAcademicYear } = useContext(UserContext);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
@@ -16,13 +17,21 @@ export default function SchoolSelectedCard({ school, onClose }) {
         try {
             const result = await switchSchool(school.id);
             saveToken(result.token);
-
             saveSchool({
                 schoolId: school.id,
                 schoolName: school.name,
                 schoolCode: school.code,
                 logoUrl: school.logoUrl || null,
             });
+
+            // ✅ Fetch & store academic year after school switch
+            try {
+                const { academicYear } = await getCurrentAcademicYear();
+                saveCurrentAcademicYear(academicYear); // saves { id, label, ... } to context + localStorage
+            } catch (ayErr) {
+                console.warn("Could not fetch academic year:", ayErr);
+                // Non-fatal — don't block navigation
+            }
 
             navigate("/dashboard", { replace: true });
 
@@ -78,7 +87,6 @@ export default function SchoolSelectedCard({ school, onClose }) {
                         </div>
                         <p className="text-lg font-medium">Access validated</p>
                     </div>
-
                 </div>
 
                 {/* Error */}

@@ -1,796 +1,856 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
-import { X, BookOpen, Loader2, CheckCircle2, AlertCircle, ChevronDown, FlaskConical } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import {
+    X, BookOpen, Loader2, CheckCircle2, AlertCircle,
+    FlaskConical, ChevronDown, ChevronUp, Save
+} from "lucide-react";
 import { addExamSubject, updateExamSubject } from "../../Api/Exams";
 import { getSectionSubjectsByClass } from "../../Api/TeachersAPI";
 
-const STYLE = `
-  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
-
-  .asf-root { font-family: 'DM Sans', sans-serif; }
-  .asf-mono { font-family: 'JetBrains Mono', monospace; }
-
-  .asf-overlay {
-    position: fixed; inset: 0; z-index: 50;
-    display: flex; align-items: center; justify-content: center;
-    background: rgba(8, 12, 30, 0.72);
-    backdrop-filter: blur(6px);
-    padding: 1rem;
-  }
-
-  .asf-card {
-    background: #ffffff;
-    border-radius: 20px;
-    box-shadow: 0 32px 80px rgba(8,12,30,.18), 0 0 0 1px rgba(0,0,0,.06);
-    width: 100%; max-width: 560px;
-    max-height: 92vh;
-    display: flex; flex-direction: column;
-    overflow: hidden;
-  }
-
-  /* ── Header ── */
-  .asf-header {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 20px 24px 18px;
-    border-bottom: 1px solid #f0f0f4;
-    flex-shrink: 0;
-  }
-  .asf-header-left { display: flex; align-items: center; gap: 10px; }
-  .asf-icon-wrap {
-    width: 36px; height: 36px; border-radius: 10px;
-    background: linear-gradient(135deg, #3b5bdb 0%, #6741d9 100%);
-    display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0;
-  }
-  .asf-title { font-size: 15px; font-weight: 700; color: #111827; line-height: 1.2; }
-  .asf-subtitle { font-size: 12px; color: #9ca3af; margin-top: 1px; }
-  .asf-close-btn {
-    width: 32px; height: 32px; border-radius: 8px; border: none; cursor: pointer;
-    background: #f3f4f6; color: #6b7280;
-    display: flex; align-items: center; justify-content: center;
-    transition: background .15s, color .15s;
-  }
-  .asf-close-btn:hover { background: #fee2e2; color: #ef4444; }
-  .asf-close-btn:disabled { opacity: .4; cursor: not-allowed; }
-
-  /* ── Body ── */
-  .asf-body { padding: 20px 24px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 16px; }
-
-  /* ── Error banner ── */
-  .asf-error {
-    display: flex; align-items: flex-start; gap: 8px;
-    padding: 10px 14px;
-    background: #fff1f2; border: 1px solid #fecdd3; border-radius: 10px;
-    font-size: 13px; color: #be123c;
-    flex-shrink: 0;
-    margin: 8px 24px 0;
-  }
-  .asf-error svg { flex-shrink: 0; margin-top: 1px; }
-
-  /* ── Field ── */
-  .asf-field { display: flex; flex-direction: column; gap: 5px; }
-  .asf-label { font-size: 12px; font-weight: 600; color: #374151; letter-spacing: .3px; text-transform: uppercase; }
-  .asf-req { color: #ef4444; }
-
-  /* ── Input / Select ── */
-  .asf-input, .asf-select {
-    width: 100%; padding: 9px 12px;
-    border: 1.5px solid #e5e7eb; border-radius: 10px;
-    font-size: 14px; color: #111827; font-family: 'DM Sans', sans-serif;
-    background: #fff; outline: none;
-    transition: border-color .15s, box-shadow .15s;
-    box-sizing: border-box;
-  }
-  .asf-input:focus, .asf-select:focus {
-    border-color: #3b5bdb;
-    box-shadow: 0 0 0 3px rgba(59,91,219,.1);
-  }
-  .asf-input::placeholder { color: #c4c9d4; }
-  .asf-input:disabled, .asf-select:disabled { background: #f9fafb; color: #9ca3af; cursor: not-allowed; }
-  .asf-input.asf-input-error, .asf-select.asf-select-error {
-    border-color: #f87171;
-    box-shadow: 0 0 0 3px rgba(248,113,113,.12);
-  }
-  .asf-input-readonly {
-    padding: 9px 12px;
-    background: #f9fafb; border: 1.5px solid #e5e7eb; border-radius: 10px;
-    font-size: 14px; color: #374151;
-    display: flex; align-items: center; gap: 8px;
-    min-height: 40px;
-  }
-
-  /* ── Field error text ── */
-  .asf-field-error { font-size: 11px; color: #ef4444; margin-top: 3px; }
-
-  /* ── Select wrapper ── */
-  .asf-select-wrap { position: relative; }
-  .asf-select-wrap select { appearance: none; padding-right: 36px; }
-  .asf-select-wrap .asf-chevron {
-    position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
-    pointer-events: none; color: #9ca3af;
-  }
-
-  /* ── Skeleton ── */
-  .asf-skeleton {
-    height: 40px; border-radius: 10px;
-    background: linear-gradient(90deg, #f0f0f4 25%, #e8e8ed 50%, #f0f0f4 75%);
-    background-size: 200% 100%;
-    animation: asf-shimmer 1.4s infinite;
-  }
-  @keyframes asf-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-
-  /* ── Subject preview card ── */
-  .asf-preview {
-    display: flex; align-items: center; gap: 12px;
-    padding: 11px 14px;
-    background: linear-gradient(135deg, #eef2ff 0%, #f5f3ff 100%);
-    border: 1.5px solid #c7d2fe; border-radius: 12px;
-  }
-  .asf-preview-icon {
-    width: 34px; height: 34px; border-radius: 9px; flex-shrink: 0;
-    background: linear-gradient(135deg, #3b5bdb, #6741d9);
-    display: flex; align-items: center; justify-content: center;
-    color: white;
-  }
-  .asf-preview-name { font-size: 14px; font-weight: 600; color: #1e1b4b; }
-  .asf-preview-meta { font-size: 12px; color: #6366f1; margin-top: 1px; }
-  .asf-preview-code {
-    margin-left: auto; flex-shrink: 0;
-    font-size: 11px; font-weight: 600; color: #4338ca;
-    background: #e0e7ff; padding: 3px 8px; border-radius: 6px;
-    font-family: 'JetBrains Mono', monospace;
-  }
-
-  /* ── Grid ── */
-  .asf-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-
-  /* ── Toggle checkbox row ── */
-  .asf-toggle-row {
-    display: flex; align-items: center; gap: 10px;
-    padding: 12px 14px;
-    background: #fafafa; border: 1.5px solid #e5e7eb; border-radius: 12px;
-    cursor: pointer; user-select: none;
-    transition: border-color .15s, background .15s;
-  }
-  .asf-toggle-row:hover { border-color: #c7d2fe; background: #f5f3ff; }
-  .asf-toggle-row.active { border-color: #6366f1; background: #eef2ff; }
-  .asf-toggle-row input[type="checkbox"] { width: 16px; height: 16px; accent-color: #4f46e5; cursor: pointer; flex-shrink: 0; }
-  .asf-toggle-label { font-size: 13px; font-weight: 600; color: #374151; }
-  .asf-toggle-desc { font-size: 11px; color: #9ca3af; margin-top: 1px; }
-
-  /* ── Theory/Practical panel ── */
-  .asf-tp-panel {
-    padding: 16px;
-    background: #f8f9ff;
-    border: 1.5px solid #c7d2fe; border-radius: 14px;
-  }
-  .asf-tp-header {
-    display: flex; align-items: center; gap: 6px;
-    font-size: 11px; font-weight: 700; color: #4338ca;
-    text-transform: uppercase; letter-spacing: .6px;
-    margin-bottom: 14px;
-  }
-  .asf-tp-header svg { color: #6366f1; }
-
-  /* ── Sum indicator ── */
-  .asf-sum-row {
-    display: flex; align-items: center; gap: 6px;
-    padding: 8px 12px; border-radius: 8px;
-    font-size: 12px; font-weight: 600;
-    margin-top: 4px;
-  }
-  .asf-sum-ok { background: #dcfce7; color: #166534; }
-  .asf-sum-err { background: #fff7ed; color: #9a3412; }
-
-  /* ── Section label (divider-style) ── */
-  .asf-section-label {
-    font-size: 11px; font-weight: 700; color: #6b7280;
-    text-transform: uppercase; letter-spacing: .6px;
-    display: flex; align-items: center; gap: 8px;
-  }
-  .asf-section-label::after { content: ''; flex: 1; height: 1px; background: #e5e7eb; }
-
-  /* ── Empty subjects state ── */
-  .asf-empty {
-    padding: 20px; text-align: center;
-    background: #f9fafb; border: 1.5px dashed #e5e7eb; border-radius: 12px;
-    font-size: 13px; color: #9ca3af;
-  }
-
-  /* ── Footer ── */
-  .asf-footer {
-    display: flex; align-items: center; justify-content: flex-end; gap: 10px;
-    padding: 16px 24px;
-    border-top: 1px solid #f0f0f4;
-    background: #fafafa;
-    flex-shrink: 0;
-  }
-  .asf-btn {
-    padding: 9px 20px; border-radius: 10px; font-size: 14px; font-weight: 600;
-    font-family: 'DM Sans', sans-serif; cursor: pointer; border: none;
-    display: flex; align-items: center; gap: 6px;
-    transition: all .15s;
-  }
-  .asf-btn:disabled { opacity: .5; cursor: not-allowed; }
-  .asf-btn-cancel {
-    background: white; color: #374151;
-    border: 1.5px solid #e5e7eb;
-  }
-  .asf-btn-cancel:hover:not(:disabled) { background: #f9fafb; border-color: #d1d5db; }
-  .asf-btn-submit {
-    background: linear-gradient(135deg, #3b5bdb 0%, #6741d9 100%);
-    color: white;
-    box-shadow: 0 2px 8px rgba(59,91,219,.3);
-  }
-  .asf-btn-submit:hover:not(:disabled) {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 14px rgba(59,91,219,.4);
-  }
-  .asf-btn-submit:active:not(:disabled) { transform: translateY(0); }
-
-  @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-  .asf-spin { animation: spin 1s linear infinite; }
-`;
-
-// ─── Initial form state factory ───────────────────────────────────────────────
-function initFormData(editData = null) {
+// ─── Per-subject row state factory ────────────────────────────────────────────
+function makeRowState(subject, editData = null, alreadyAdded = false) {
+    const e = editData;
     return {
-        sectionSubjectId: editData?.sectionSubjectId ?? "",
-        maxMarks: editData?.maxMarks != null ? String(editData.maxMarks) : "",
-        passingMarks: editData?.passingMarks != null ? String(editData.passingMarks) : "",
-        hasTheoryPractical: editData?.hasTheoryPractical ?? false,
-        maxTheoryMarks: editData?.maxTheoryMarks != null ? String(editData.maxTheoryMarks) : "",
-        maxPracticalMarks: editData?.maxPracticalMarks != null ? String(editData.maxPracticalMarks) : "",
-        passingTheoryMarks: editData?.passingTheoryMarks != null ? String(editData.passingTheoryMarks) : "",
-        passingPracticalMarks: editData?.passingPracticalMarks != null ? String(editData.passingPracticalMarks) : "",
+        sectionSubjectId: subject.id,
+        subjectName: subject.subjectName || subject.subject?.name || `Subject #${subject.id}`,
+        subjectCode: subject.subjectCode || "",
+        sectionName: subject.sectionName || "",
+        included: e ? true : false,
+        // Already added to this exam — cannot be selected again
+        alreadyAdded,
+        maxMarks: e?.maxMarks != null ? String(e.maxMarks) : "",
+        passingMarks: e?.passingMarks != null ? String(e.passingMarks) : "",
+        hasTheoryPractical: e?.hasTheoryPractical ?? false,
+        maxTheoryMarks: e?.maxTheoryMarks != null ? String(e.maxTheoryMarks) : "",
+        maxPracticalMarks: e?.maxPracticalMarks != null ? String(e.maxPracticalMarks) : "",
+        passingTheoryMarks: e?.passingTheoryMarks != null ? String(e.passingTheoryMarks) : "",
+        passingPracticalMarks: e?.passingPracticalMarks != null ? String(e.passingPracticalMarks) : "",
+        expanded: e?.hasTheoryPractical ?? false,
+        errors: {},
     };
 }
 
-/* ─────────────────────────────────────────────
-   Component
-───────────────────────────────────────────── */
+// ─── Validate a single row ─────────────────────────────────────────────────────
+function validateRow(row) {
+    if (!row.included) return {};
+    const errors = {};
+    const max = Number(row.maxMarks);
+    const pass = Number(row.passingMarks);
+
+    if (!row.maxMarks || isNaN(max) || max < 1) errors.maxMarks = "Required, min 1";
+    if (!row.passingMarks || isNaN(pass) || pass < 1) errors.passingMarks = "Required, min 1";
+    if (!errors.maxMarks && !errors.passingMarks && pass > max)
+        errors.passingMarks = `Cannot exceed ${max}`;
+
+    if (row.hasTheoryPractical) {
+        const th = Number(row.maxTheoryMarks);
+        const pr = Number(row.maxPracticalMarks);
+        const pth = Number(row.passingTheoryMarks || 0);
+        const ppr = Number(row.passingPracticalMarks || 0);
+
+        if (!row.maxTheoryMarks || isNaN(th) || th < 0) errors.maxTheoryMarks = "Required";
+        if (!row.maxPracticalMarks || isNaN(pr) || pr < 0) errors.maxPracticalMarks = "Required";
+        if (!errors.maxTheoryMarks && !errors.maxPracticalMarks && !errors.maxMarks && th + pr !== max)
+            errors.tpSum = `Theory+Practical must = ${max}`;
+        if (!errors.maxTheoryMarks && pth > th) errors.passingTheoryMarks = `Max ${th}`;
+        if (!errors.maxPracticalMarks && ppr > pr) errors.passingPracticalMarks = `Max ${pr}`;
+    }
+    return errors;
+}
+
+// ─── Small input ──────────────────────────────────────────────────────────────
+function NumInput({ value, onChange, placeholder, disabled, hasError, onKeyDown }) {
+    return (
+        <input
+            type="number"
+            value={value}
+            onChange={onChange}
+            placeholder={placeholder}
+            disabled={disabled}
+            onKeyDown={onKeyDown ?? ((e) => ["-", "e", "E", "+"].includes(e.key) && e.preventDefault())}
+            className={[
+                "w-full rounded-lg border px-2 py-1.5 text-sm text-gray-800 bg-white",
+                "focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all",
+                "placeholder:text-gray-300 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed",
+                hasError ? "border-red-400 ring-1 ring-red-300" : "border-gray-200",
+            ].join(" ")}
+        />
+    );
+}
+
+// ─── Theory/Practical expandable panel ───────────────────────────────────────
+function TPPanel({ row, rowIdx, onChange, disabled }) {
+    const th = Number(row.maxTheoryMarks || 0);
+    const pr = Number(row.maxPracticalMarks || 0);
+    const sum = th + pr;
+    const max = Number(row.maxMarks || 0);
+    const sumOk = sum > 0 && max > 0 && sum === max;
+
+    return (
+        <div className="mt-2 rounded-xl border border-indigo-100 bg-indigo-50/50 p-3">
+            <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest mb-2 flex items-center gap-1">
+                <FlaskConical className="w-3 h-3" /> Theory / Practical Breakdown
+            </p>
+            {/* 2×2 grid */}
+            <div className="grid grid-cols-2 gap-2">
+                <div>
+                    <p className="text-[10px] text-gray-500 font-semibold mb-1">Max Theory *</p>
+                    <NumInput
+                        value={row.maxTheoryMarks} disabled={disabled}
+                        placeholder="e.g. 70"
+                        hasError={!!row.errors.maxTheoryMarks || !!row.errors.tpSum}
+                        onChange={(e) => onChange(rowIdx, "maxTheoryMarks", e.target.value)}
+                    />
+                    {row.errors.maxTheoryMarks && <p className="text-[10px] text-red-500 mt-0.5">{row.errors.maxTheoryMarks}</p>}
+                </div>
+                <div>
+                    <p className="text-[10px] text-gray-500 font-semibold mb-1">Max Practical *</p>
+                    <NumInput
+                        value={row.maxPracticalMarks} disabled={disabled}
+                        placeholder="e.g. 30"
+                        hasError={!!row.errors.maxPracticalMarks || !!row.errors.tpSum}
+                        onChange={(e) => onChange(rowIdx, "maxPracticalMarks", e.target.value)}
+                    />
+                    {row.errors.maxPracticalMarks && <p className="text-[10px] text-red-500 mt-0.5">{row.errors.maxPracticalMarks}</p>}
+                </div>
+                <div>
+                    <p className="text-[10px] text-gray-500 font-semibold mb-1">Pass Theory</p>
+                    <NumInput
+                        value={row.passingTheoryMarks} disabled={disabled}
+                        placeholder="e.g. 23"
+                        hasError={!!row.errors.passingTheoryMarks}
+                        onChange={(e) => onChange(rowIdx, "passingTheoryMarks", e.target.value)}
+                    />
+                    {row.errors.passingTheoryMarks && <p className="text-[10px] text-red-500 mt-0.5">{row.errors.passingTheoryMarks}</p>}
+                </div>
+                <div>
+                    <p className="text-[10px] text-gray-500 font-semibold mb-1">Pass Practical</p>
+                    <NumInput
+                        value={row.passingPracticalMarks} disabled={disabled}
+                        placeholder="e.g. 10"
+                        hasError={!!row.errors.passingPracticalMarks}
+                        onChange={(e) => onChange(rowIdx, "passingPracticalMarks", e.target.value)}
+                    />
+                    {row.errors.passingPracticalMarks && <p className="text-[10px] text-red-500 mt-0.5">{row.errors.passingPracticalMarks}</p>}
+                </div>
+            </div>
+            {/* Live sum indicator */}
+            {(row.maxTheoryMarks || row.maxPracticalMarks) && (
+                <div className={[
+                    "mt-2 flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold",
+                    sumOk ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"
+                ].join(" ")}>
+                    {sumOk
+                        ? <CheckCircle2 className="w-3 h-3 shrink-0" />
+                        : <AlertCircle className="w-3 h-3 shrink-0" />}
+                    <span className="font-mono">{th} + {pr} = {sum}</span>
+                    <span>{sumOk ? "✓ Matches max marks" : `Must equal ${max || "max marks"}`}</span>
+                </div>
+            )}
+            {row.errors.tpSum && <p className="text-[10px] text-red-500 mt-1">{row.errors.tpSum}</p>}
+        </div>
+    );
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 export default function AddSubjectForm({
     examId,
     examName = "",
-    classId,        
+    classId,
     editData = null,
+    alreadyAddedSubjects = [],   // subjects already configured for this exam (from parent)
     onClose,
     onSuccess,
 }) {
     const isEdit = Boolean(editData);
 
-    /* ── State ─────────────────────────────── */
+    // Build a Set of sectionSubjectIds already added to this exam
+    // getExamSubjects returns objects with a `sectionSubjectId` field
+    const alreadyAddedIds = new Set(
+        (Array.isArray(alreadyAddedSubjects) ? alreadyAddedSubjects : [])
+            .map((s) => String(s.sectionSubjectId))
+            .filter(Boolean)
+    );
+
     const [sectionSubjects, setSectionSubjects] = useState([]);
+    const [rows, setRows] = useState([]);
     const [loadingMeta, setLoadingMeta] = useState(true);
     const [submitting, setSubmitting] = useState(false);
-    const [error, setError] = useState(null);
-    // BUG FIX: Per-field validation errors
-    const [fieldErrors, setFieldErrors] = useState({});
+    const [topError, setTopError] = useState(null);
+    const [submitError, setSubmitError] = useState(null);
 
-    const [formData, setFormData] = useState(() => initFormData(editData));
-
-    // BUG FIX: Prevent background scroll
+    // Prevent background scroll
     useEffect(() => {
         document.body.style.overflow = "hidden";
         return () => { document.body.style.overflow = ""; };
     }, []);
 
-    /* ── Fetch section-subjects for this class ── */
+    // Load subjects
     useEffect(() => {
-        // BUG FIX: Validate classId before fetching
         if (!classId) {
-            setError("No class selected. Please select an exam with a valid class first.");
+            setTopError("No class selected. Please select an exam first.");
             setLoadingMeta(false);
             return;
         }
         const load = async () => {
             setLoadingMeta(true);
-            setError(null);
+            setTopError(null);
             try {
                 const data = await getSectionSubjectsByClass(classId);
                 const list = Array.isArray(data) ? data : [];
                 setSectionSubjects(list);
-                // BUG FIX: If no subjects available, show informative message
-                if (list.length === 0 && !isEdit) {
-                    setError("No subjects are mapped to this class yet. Please configure section-subjects first.");
+
+                if (isEdit) {
+                    // In edit mode: show only the subject being edited
+                    const match = list.find((s) => String(s.id) === String(editData.sectionSubjectId));
+                    const subjectToUse = match ?? {
+                        id: editData.sectionSubjectId,
+                        subjectName: editData.subjectName,
+                        subjectCode: editData.subjectCode,
+                        sectionName: editData.sectionName,
+                    };
+                    setRows([makeRowState(subjectToUse, editData, false)]);
+                } else {
+                    // Add mode: mark subjects already added to this exam
+                    setRows(list.map((s) => {
+                        const isAlreadyAdded = alreadyAddedIds.has(String(s.id));
+                        return makeRowState(s, null, isAlreadyAdded);
+                    }));
+                    if (list.length === 0) {
+                        setTopError("No subjects mapped to this class yet.");
+                    }
                 }
             } catch (err) {
                 console.error("getSectionSubjectsByClass error:", err);
-                setError("Failed to load subject mappings. Please close and try again.");
+                setTopError("Failed to load subjects. Please close and try again.");
             } finally {
                 setLoadingMeta(false);
             }
         };
         load();
-    }, [classId, isEdit]);
+    }, [classId, isEdit, editData]);
 
-    /* ── Re-sync formData when editData prop changes ── */
-    useEffect(() => {
-        setFormData(initFormData(editData));
-        setFieldErrors({});
-        setError(null);
-    }, [editData]);
-
-    /* ── Derived: selected subject info ── */
-    const selectedMapping = useMemo(
-        () => sectionSubjects.find((s) => String(s.id) === String(formData.sectionSubjectId)) ?? null,
-        [sectionSubjects, formData.sectionSubjectId]
-    );
-
-    // BUG FIX: In EDIT mode, show editData fields as preview when sectionSubjects not yet loaded
-    const previewSubject = selectedMapping ?? (isEdit ? {
-        subjectName: editData?.subjectName,
-        subjectCode: editData?.subjectCode,
-        sectionName: editData?.sectionName,
-        className: editData?.className,
-    } : null);
-
-    /* ── Handlers ── */
-    const handleChange = useCallback((e) => {
-        const { name, value, type, checked } = e.target;
-        setFormData((prev) => ({
-            ...prev,
-            [name]: type === "checkbox" ? checked : value,
-        }));
-        // BUG FIX: Clear individual field error on change
-        setFieldErrors((prev) => ({ ...prev, [name]: undefined }));
-        setError(null);
+    // Update a single field on a row
+    const handleFieldChange = useCallback((rowIdx, field, value) => {
+        setRows((prev) => {
+            const next = [...prev];
+            const row = { ...next[rowIdx], [field]: value };
+            // Clear related errors on change
+            row.errors = { ...row.errors, [field]: undefined };
+            if (field === "maxMarks" || field === "maxTheoryMarks" || field === "maxPracticalMarks") {
+                row.errors.tpSum = undefined;
+            }
+            next[rowIdx] = row;
+            return next;
+        });
+        setSubmitError(null);
     }, []);
 
-    // BUG FIX: When theory/practical toggle is turned OFF, clear those fields
-    const handleTheoryToggle = useCallback((e) => {
-        const checked = e.target.checked;
-        setFormData((prev) => ({
-            ...prev,
-            hasTheoryPractical: checked,
-            // Reset T/P fields when disabling
-            ...(checked ? {} : {
-                maxTheoryMarks: "",
-                maxPracticalMarks: "",
-                passingTheoryMarks: "",
-                passingPracticalMarks: "",
-            }),
-        }));
-        setFieldErrors((prev) => ({
-            ...prev,
-            maxTheoryMarks: undefined,
-            maxPracticalMarks: undefined,
-            passingTheoryMarks: undefined,
-            passingPracticalMarks: undefined,
-        }));
-        setError(null);
+    // Toggle "included" checkbox — blocked for alreadyAdded rows
+    const handleToggleInclude = useCallback((rowIdx) => {
+        setRows((prev) => {
+            const next = [...prev];
+            if (next[rowIdx].alreadyAdded) return next; // no-op
+            next[rowIdx] = { ...next[rowIdx], included: !next[rowIdx].included, errors: {} };
+            return next;
+        });
     }, []);
 
-    /* ── Per-field Validation (returns fieldErrors object + top-level error) ── */
-    const validate = useCallback(() => {
-        const errors = {};
-        let topError = null;
-
-        if (!formData.sectionSubjectId) {
-            errors.sectionSubjectId = "Please select a subject.";
-            topError = errors.sectionSubjectId;
-        }
-
-        const max = Number(formData.maxMarks);
-        const passing = Number(formData.passingMarks);
-
-        if (!formData.maxMarks || isNaN(max) || max < 1) {
-            errors.maxMarks = "Max marks must be at least 1.";
-            if (!topError) topError = errors.maxMarks;
-        }
-        if (!formData.passingMarks || isNaN(passing) || passing < 1) {
-            errors.passingMarks = "Passing marks must be at least 1.";
-            if (!topError) topError = errors.passingMarks;
-        }
-        if (!errors.maxMarks && !errors.passingMarks && passing > max) {
-            errors.passingMarks = `Passing marks (${passing}) cannot exceed max marks (${max}).`;
-            if (!topError) topError = errors.passingMarks;
-        }
-
-        if (formData.hasTheoryPractical) {
-            const th = Number(formData.maxTheoryMarks);
-            const pr = Number(formData.maxPracticalMarks);
-            const pth = Number(formData.passingTheoryMarks || 0);
-            const ppr = Number(formData.passingPracticalMarks || 0);
-
-            if (!formData.maxTheoryMarks || isNaN(th) || th < 0) {
-                errors.maxTheoryMarks = "Max theory marks required.";
-                if (!topError) topError = errors.maxTheoryMarks;
+    // Toggle theory/practical
+    const handleToggleTP = useCallback((rowIdx) => {
+        setRows((prev) => {
+            const next = [...prev];
+            const row = { ...next[rowIdx] };
+            row.hasTheoryPractical = !row.hasTheoryPractical;
+            if (!row.hasTheoryPractical) {
+                row.maxTheoryMarks = "";
+                row.maxPracticalMarks = "";
+                row.passingTheoryMarks = "";
+                row.passingPracticalMarks = "";
             }
-            if (!formData.maxPracticalMarks || isNaN(pr) || pr < 0) {
-                errors.maxPracticalMarks = "Max practical marks required.";
-                if (!topError) topError = errors.maxPracticalMarks;
-            }
-            if (!errors.maxTheoryMarks && !errors.maxPracticalMarks && th + pr !== max) {
-                const msg = `Theory (${th}) + Practical (${pr}) = ${th + pr}, must equal Max Marks (${max}).`;
-                errors.maxTheoryMarks = msg;
-                errors.maxPracticalMarks = msg;
-                if (!topError) topError = msg;
-            }
-            if (!errors.maxTheoryMarks && pth > th) {
-                errors.passingTheoryMarks = `Cannot exceed max theory marks (${th}).`;
-                if (!topError) topError = errors.passingTheoryMarks;
-            }
-            if (!errors.maxPracticalMarks && ppr > pr) {
-                errors.passingPracticalMarks = `Cannot exceed max practical marks (${pr}).`;
-                if (!topError) topError = errors.passingPracticalMarks;
-            }
-        }
+            row.errors = {};
+            next[rowIdx] = row;
+            return next;
+        });
+    }, []);
 
-        return { errors, topError };
-    }, [formData]);
+    // Select all / deselect all — never touches alreadyAdded rows
+    const handleSelectAll = (checked) => {
+        setRows((prev) => prev.map((r) => r.alreadyAdded ? r : { ...r, included: checked, errors: {} }));
+    };
 
-    /* ── Submit ── */
+    const selectableRows = rows.filter((r) => !r.alreadyAdded);
+    const allSelected = selectableRows.length > 0 && selectableRows.every((r) => r.included);
+    const someSelected = rows.some((r) => r.included && !r.alreadyAdded);
+    const includedCount = rows.filter((r) => r.included && !r.alreadyAdded).length;
+    const alreadyAddedCount = rows.filter((r) => r.alreadyAdded).length;
+
+    // Submit
     const handleSubmit = async () => {
-        setError(null);
-        const { errors, topError } = validate();
-        if (topError) {
-            setFieldErrors(errors);
-            setError(topError);
-            return;
+        setSubmitError(null);
+
+        if (isEdit) {
+            // Edit mode: validate single row
+            const row = rows[0];
+            const errors = validateRow(row);
+            if (Object.keys(errors).length > 0) {
+                setRows((prev) => {
+                    const next = [...prev];
+                    next[0] = { ...next[0], errors };
+                    return next;
+                });
+                setSubmitError("Please fix the errors above.");
+                return;
+            }
+        } else {
+            // Add mode: validate all included rows
+            if (!someSelected) {
+                setSubmitError("Please select at least one subject to add.");
+                return;
+            }
+            let hasErrors = false;
+            const nextRows = rows.map((row) => {
+                if (!row.included) return row;
+                const errors = validateRow(row);
+                if (Object.keys(errors).length > 0) hasErrors = true;
+                return { ...row, errors };
+            });
+            if (hasErrors) {
+                setRows(nextRows);
+                setSubmitError("Please fix the errors in the highlighted rows.");
+                return;
+            }
         }
-        setFieldErrors({});
+
         setSubmitting(true);
         try {
-            const tp = formData.hasTheoryPractical;
-            const payload = {
-                sectionSubjectId: Number(formData.sectionSubjectId),
-                maxMarks: Number(formData.maxMarks),
-                passingMarks: Number(formData.passingMarks),
-                hasTheoryPractical: tp,
-                // BUG FIX: Send null (not 0) when T/P is disabled
-                maxTheoryMarks: tp ? Number(formData.maxTheoryMarks) : null,
-                maxPracticalMarks: tp ? Number(formData.maxPracticalMarks) : null,
-                // BUG FIX: Default passing T/P to 0 if blank when T/P enabled
-                passingTheoryMarks: tp ? Number(formData.passingTheoryMarks || 0) : null,
-                passingPracticalMarks: tp ? Number(formData.passingPracticalMarks || 0) : null,
-            };
+            const included = isEdit ? rows : rows.filter((r) => r.included);
+            const results = await Promise.allSettled(
+                included.map((row) => {
+                    const tp = row.hasTheoryPractical;
+                    const payload = {
+                        sectionSubjectId: Number(row.sectionSubjectId),
+                        maxMarks: Number(row.maxMarks),
+                        passingMarks: Number(row.passingMarks),
+                        hasTheoryPractical: tp,
+                        maxTheoryMarks: tp ? Number(row.maxTheoryMarks) : null,
+                        maxPracticalMarks: tp ? Number(row.maxPracticalMarks) : null,
+                        passingTheoryMarks: tp ? Number(row.passingTheoryMarks || 0) : null,
+                        passingPracticalMarks: tp ? Number(row.passingPracticalMarks || 0) : null,
+                    };
+                    if (isEdit) return updateExamSubject(examId, editData.id, payload);
+                    return addExamSubject(examId, payload);
+                })
+            );
 
-            if (isEdit) {
-                // BUG FIX: editData.id is the configId (subject config record id)
-                await updateExamSubject(examId, editData.id, payload);
+            const failed = results.filter((r) => r.status === "rejected");
+            if (failed.length > 0) {
+                const msg = failed[0].reason?.response?.data?.message
+                    ?? failed[0].reason?.message
+                    ?? "Some subjects failed to save.";
+                setSubmitError(`${failed.length} subject(s) failed: ${msg}`);
+                // Still call onSuccess for partial saves
+                if (failed.length < included.length) onSuccess?.();
             } else {
-                await addExamSubject(examId, payload);
+                onSuccess?.();
             }
-
-            onSuccess?.();
         } catch (err) {
-            console.error("AddSubjectForm submit error:", err);
-            // BUG FIX: Extract meaningful error from response if possible
-            const msg = err?.response?.data?.message
-                ?? err?.message
-                ?? `Failed to ${isEdit ? "update" : "add"} subject. Please try again.`;
-            setError(msg);
+            setSubmitError(err?.message ?? "Failed to save. Please try again.");
         } finally {
             setSubmitting(false);
         }
     };
 
-    /* ── Live sum hint ── */
-    const theoryVal = Number(formData.maxTheoryMarks || 0);
-    const practicalVal = Number(formData.maxPracticalMarks || 0);
-    const theorySum = theoryVal + practicalVal;
-    const maxVal = Number(formData.maxMarks || 0);
-    const sumMatchesMax = theorySum > 0 && maxVal > 0 && theorySum === maxVal;
-    const showSumHint = formData.hasTheoryPractical && (formData.maxTheoryMarks || formData.maxPracticalMarks);
-
-    /* ── Label builder for dropdown ── */
-    const mappingLabel = (m) => {
-        // BUG FIX: Handle varying field names from backend
-        const className = m.className || m.schoolClassName || "";
-        const sectionName = m.sectionName || m.section?.name || "";
-        const subjectName = m.subjectName || m.subject?.name || "";
-        return [className, sectionName, subjectName].filter(Boolean).join(" — ") || `Subject #${m.id}`;
-    };
-
-    // ─────────────────────────────────────────────────────────────────────────
+    // ─── RENDER ───────────────────────────────────────────────────────────────
     return (
-        <>
-            <style>{STYLE}</style>
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-0 sm:p-4">
+            {/* Modal card */}
+            <div className="bg-white w-full sm:max-w-3xl lg:max-w-4xl rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col max-h-[92vh] sm:max-h-[88vh]">
 
-            <div className="asf-root asf-overlay">
-                <div className="asf-card">
-
-                    {/* ── Header ─────────────────────────────── */}
-                    <div className="asf-header">
-                        <div className="asf-header-left">
-                            <div className="asf-icon-wrap">
-                                <BookOpen size={17} color="white" />
-                            </div>
-                            <div>
-                                <div className="asf-title">
-                                    {isEdit ? "Edit Subject Config" : "Add Subject to Exam"}
-                                </div>
-                                {examName && (
-                                    <div className="asf-subtitle">{examName}</div>
-                                )}
-                            </div>
+                {/* ── Header ────────────────────────────────────────────────── */}
+                <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-100 flex-shrink-0">
+                    <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center flex-shrink-0 shadow-sm">
+                            <BookOpen className="w-4 h-4 text-white" />
                         </div>
-                        <button
-                            className="asf-close-btn"
-                            onClick={onClose}
-                            disabled={submitting}
-                            aria-label="Close"
-                        >
-                            <X size={16} />
-                        </button>
+                        <div className="min-w-0">
+                            <h2 className="text-sm sm:text-base font-bold text-gray-900 leading-tight">
+                                {isEdit ? "Edit Subject Config" : "Add Subjects to Exam"}
+                            </h2>
+                            {examName && (
+                                <p className="text-xs text-gray-400 truncate mt-0.5">{examName}</p>
+                            )}
+                        </div>
                     </div>
+                    <button
+                        onClick={onClose} disabled={submitting}
+                        className="w-8 h-8 rounded-lg bg-gray-100 hover:bg-red-50 hover:text-red-500 text-gray-500 flex items-center justify-center transition-all disabled:opacity-40 flex-shrink-0 ml-3"
+                        aria-label="Close"
+                    >
+                        <X className="w-4 h-4" />
+                    </button>
+                </div>
 
-                    {/* ── Error Banner ────────────────────────── */}
-                    {error && (
-                        <div className="asf-error">
-                            <AlertCircle size={15} />
-                            <span>{error}</span>
+                {/* ── Top error banner ──────────────────────────────────────── */}
+                {(topError || submitError) && (
+                    <div className="mx-4 sm:mx-6 mt-3 flex items-start gap-2 px-3 py-2.5 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600 flex-shrink-0">
+                        <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                        <span>{topError || submitError}</span>
+                    </div>
+                )}
+
+                {/* ── Body ─────────────────────────────────────────────────── */}
+                <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4">
+
+                    {/* Loading skeleton */}
+                    {loadingMeta ? (
+                        <div className="space-y-3">
+                            {Array(5).fill(0).map((_, i) => (
+                                <div key={i} className="h-14 bg-gray-100 rounded-xl animate-pulse" />
+                            ))}
                         </div>
-                    )}
-
-                    {/* ── Body ──────────────────────────────── */}
-                    <div className="asf-body">
-
-                        {/* Section Subject Dropdown / Read-only */}
-                        <div className="asf-field">
-                            <label className="asf-label">
-                                Section & Subject <span className="asf-req">*</span>
-                            </label>
-
-                            {isEdit ? (
-                                /* EDIT: read-only display */
-                                <div className="asf-input-readonly">
-                                    <BookOpen size={14} color="#6366f1" />
-                                    <span style={{ flex: 1, fontWeight: 500 }}>
-                                        {previewSubject
-                                            ? [previewSubject.className, previewSubject.sectionName, previewSubject.subjectName]
-                                                .filter(Boolean).join(" — ") || "—"
-                                            : "—"}
-                                    </span>
-                                    {previewSubject?.subjectCode && (
-                                        <span className="asf-mono" style={{ fontSize: 11, color: "#4338ca", background: "#e0e7ff", padding: "2px 7px", borderRadius: 5 }}>
-                                            {previewSubject.subjectCode}
+                    ) : rows.length === 0 ? (
+                        <div className="text-center py-12 text-gray-400 text-sm">
+                            No subjects available for this class.
+                        </div>
+                    ) : isEdit ? (
+                        /* ── EDIT MODE: single subject form ── */
+                        <EditSingleRow
+                            row={rows[0]}
+                            rowIdx={0}
+                            onChange={handleFieldChange}
+                            onToggleTP={handleToggleTP}
+                            disabled={submitting}
+                        />
+                    ) : (
+                        /* ── ADD MODE: bulk subject table ── */
+                        <div>
+                            {/* Info bar + select all */}
+                            <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+                                <div className="flex items-center gap-3 flex-wrap">
+                                    {/* Select all checkbox — only selects non-added subjects */}
+                                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                                        <input
+                                            type="checkbox"
+                                            checked={allSelected}
+                                            onChange={(e) => handleSelectAll(e.target.checked)}
+                                            disabled={selectableRows.length === 0}
+                                            className="w-4 h-4 accent-blue-600 cursor-pointer disabled:cursor-not-allowed"
+                                        />
+                                        <span className="text-sm font-semibold text-gray-700">Select All</span>
+                                    </label>
+                                    {someSelected && (
+                                        <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full">
+                                            {includedCount} selected
+                                        </span>
+                                    )}
+                                    {alreadyAddedCount > 0 && (
+                                        <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full flex items-center gap-1">
+                                            <CheckCircle2 className="w-3 h-3" />
+                                            {alreadyAddedCount} already added
                                         </span>
                                     )}
                                 </div>
-                            ) : loadingMeta ? (
-                                <div className="asf-skeleton" />
-                            ) : sectionSubjects.length === 0 ? (
-                                /* BUG FIX: Empty state for no subjects */
-                                <div className="asf-empty">
-                                    No subjects available for this class. Please configure section-subjects first.
-                                </div>
-                            ) : (
-                                <div className="asf-select-wrap">
-                                    <select
-                                        name="sectionSubjectId"
-                                        value={formData.sectionSubjectId}
-                                        onChange={handleChange}
-                                        className={`asf-select${fieldErrors.sectionSubjectId ? " asf-select-error" : ""}`}
-                                        disabled={submitting}
-                                    >
-                                        <option value="" disabled>Select section + subject…</option>
-                                        {sectionSubjects.map((m) => (
-                                            <option key={m.id} value={m.id}>{mappingLabel(m)}</option>
+                                <p className="text-xs text-gray-400">{rows.length} subject{rows.length !== 1 ? "s" : ""} total</p>
+                            </div>
+
+                            {/* ── DESKTOP TABLE (md+) ── */}
+                            <div className="hidden md:block rounded-xl border border-gray-200 overflow-hidden">
+                                <table className="w-full text-sm">
+                                    <thead>
+                                        <tr className="bg-gray-50 border-b border-gray-100">
+                                            <th className="w-10 px-3 py-3 text-left">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={allSelected}
+                                                    onChange={(e) => handleSelectAll(e.target.checked)}
+                                                    className="w-4 h-4 accent-blue-600 cursor-pointer"
+                                                />
+                                            </th>
+                                            <th className="px-3 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Subject</th>
+                                            <th className="px-3 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider w-28">Max Marks *</th>
+                                            <th className="px-3 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider w-28">Pass Marks *</th>
+                                            <th className="px-3 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider w-36">Theory + Practical</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-50">
+                                        {rows.map((row, idx) => (
+                                            <DesktopRow
+                                                key={row.sectionSubjectId}
+                                                row={row}
+                                                rowIdx={idx}
+                                                onChange={handleFieldChange}
+                                                onToggleInclude={handleToggleInclude}
+                                                onToggleTP={handleToggleTP}
+                                                disabled={submitting}
+                                            />
                                         ))}
-                                    </select>
-                                    <ChevronDown size={16} className="asf-chevron" />
-                                </div>
-                            )}
-                            {fieldErrors.sectionSubjectId && (
-                                <span className="asf-field-error">{fieldErrors.sectionSubjectId}</span>
-                            )}
-                        </div>
-
-                        {/* Subject Preview Card */}
-                        {previewSubject && previewSubject.subjectName && (
-                            <div className="asf-preview">
-                                <div className="asf-preview-icon">
-                                    <BookOpen size={16} />
-                                </div>
-                                <div>
-                                    <div className="asf-preview-name">{previewSubject.subjectName}</div>
-                                    <div className="asf-preview-meta">{previewSubject.sectionName || "—"}</div>
-                                </div>
-                                {previewSubject.subjectCode && (
-                                    <div className="asf-preview-code asf-mono">{previewSubject.subjectCode}</div>
-                                )}
+                                    </tbody>
+                                </table>
                             </div>
-                        )}
 
-                        {/* Marks section */}
-                        <div className="asf-section-label">Marks Configuration</div>
-
-                        <div className="asf-grid-2">
-                            <div className="asf-field">
-                                <label className="asf-label">
-                                    Max Marks <span className="asf-req">*</span>
-                                </label>
-                                <input
-                                    type="number"
-                                    name="maxMarks"
-                                    value={formData.maxMarks}
-                                    onChange={handleChange}
-                                    min={1}
-                                    // BUG FIX: max should not be limited by UI when not T/P mode
-                                    placeholder="e.g. 100"
-                                    disabled={submitting}
-                                    className={`asf-input${fieldErrors.maxMarks ? " asf-input-error" : ""}`}
-                                    // BUG FIX: Prevent negative numbers
-                                    onKeyDown={(e) => ["-", "e", "E", "+"].includes(e.key) && e.preventDefault()}
-                                />
-                                {fieldErrors.maxMarks && (
-                                    <span className="asf-field-error">{fieldErrors.maxMarks}</span>
-                                )}
-                            </div>
-                            <div className="asf-field">
-                                <label className="asf-label">
-                                    Passing Marks <span className="asf-req">*</span>
-                                </label>
-                                <input
-                                    type="number"
-                                    name="passingMarks"
-                                    value={formData.passingMarks}
-                                    onChange={handleChange}
-                                    min={1}
-                                    // BUG FIX: max attribute dynamically set
-                                    max={formData.maxMarks ? Number(formData.maxMarks) : undefined}
-                                    placeholder="e.g. 33"
-                                    disabled={submitting}
-                                    className={`asf-input${fieldErrors.passingMarks ? " asf-input-error" : ""}`}
-                                    onKeyDown={(e) => ["-", "e", "E", "+"].includes(e.key) && e.preventDefault()}
-                                />
-                                {fieldErrors.passingMarks && (
-                                    <span className="asf-field-error">{fieldErrors.passingMarks}</span>
-                                )}
+                            {/* ── MOBILE / TABLET CARDS (< md) ── */}
+                            <div className="md:hidden space-y-2">
+                                {rows.map((row, idx) => (
+                                    <MobileCard
+                                        key={row.sectionSubjectId}
+                                        row={row}
+                                        rowIdx={idx}
+                                        onChange={handleFieldChange}
+                                        onToggleInclude={handleToggleInclude}
+                                        onToggleTP={handleToggleTP}
+                                        disabled={submitting}
+                                    />
+                                ))}
                             </div>
                         </div>
+                    )}
+                </div>
 
-                        {/* Theory + Practical Toggle */}
-                        {/* BUG FIX: Separate handler for toggle to clear T/P fields on disable */}
-                        <label
-                            className={`asf-toggle-row ${formData.hasTheoryPractical ? "active" : ""}`}
-                            htmlFor="hasTheoryPractical"
-                        >
-                            <input
-                                id="hasTheoryPractical"
-                                type="checkbox"
-                                name="hasTheoryPractical"
-                                checked={formData.hasTheoryPractical}
-                                onChange={handleTheoryToggle}
-                                disabled={submitting}
-                            />
-                            <div>
-                                <div className="asf-toggle-label">Has Theory + Practical Split</div>
-                                <div className="asf-toggle-desc">Enable separate breakdown for theory and practical marks</div>
-                            </div>
-                        </label>
-
-                        {/* Theory / Practical Fields */}
-                        {formData.hasTheoryPractical && (
-                            <div className="asf-tp-panel">
-                                <div className="asf-tp-header">
-                                    <FlaskConical size={13} />
-                                    Theory / Practical Breakdown
-                                </div>
-
-                                <div className="asf-grid-2" style={{ marginBottom: 12 }}>
-                                    <div className="asf-field">
-                                        <label className="asf-label">Max Theory <span className="asf-req">*</span></label>
-                                        <input
-                                            type="number"
-                                            name="maxTheoryMarks"
-                                            value={formData.maxTheoryMarks}
-                                            onChange={handleChange}
-                                            min={0}
-                                            max={formData.maxMarks ? Number(formData.maxMarks) : undefined}
-                                            placeholder="e.g. 70"
-                                            disabled={submitting}
-                                            className={`asf-input${fieldErrors.maxTheoryMarks ? " asf-input-error" : ""}`}
-                                            onKeyDown={(e) => ["-", "e", "E", "+"].includes(e.key) && e.preventDefault()}
-                                        />
-                                        {fieldErrors.maxTheoryMarks && (
-                                            <span className="asf-field-error">{fieldErrors.maxTheoryMarks}</span>
-                                        )}
-                                    </div>
-                                    <div className="asf-field">
-                                        <label className="asf-label">Max Practical <span className="asf-req">*</span></label>
-                                        <input
-                                            type="number"
-                                            name="maxPracticalMarks"
-                                            value={formData.maxPracticalMarks}
-                                            onChange={handleChange}
-                                            min={0}
-                                            max={formData.maxMarks ? Number(formData.maxMarks) : undefined}
-                                            placeholder="e.g. 30"
-                                            disabled={submitting}
-                                            className={`asf-input${fieldErrors.maxPracticalMarks ? " asf-input-error" : ""}`}
-                                            onKeyDown={(e) => ["-", "e", "E", "+"].includes(e.key) && e.preventDefault()}
-                                        />
-                                        {fieldErrors.maxPracticalMarks && (
-                                            <span className="asf-field-error">{fieldErrors.maxPracticalMarks}</span>
-                                        )}
-                                    </div>
-                                    <div className="asf-field">
-                                        <label className="asf-label">Pass Theory</label>
-                                        <input
-                                            type="number"
-                                            name="passingTheoryMarks"
-                                            value={formData.passingTheoryMarks}
-                                            onChange={handleChange}
-                                            min={0}
-                                            max={formData.maxTheoryMarks ? Number(formData.maxTheoryMarks) : undefined}
-                                            placeholder="e.g. 23"
-                                            disabled={submitting}
-                                            className={`asf-input${fieldErrors.passingTheoryMarks ? " asf-input-error" : ""}`}
-                                            onKeyDown={(e) => ["-", "e", "E", "+"].includes(e.key) && e.preventDefault()}
-                                        />
-                                        {fieldErrors.passingTheoryMarks && (
-                                            <span className="asf-field-error">{fieldErrors.passingTheoryMarks}</span>
-                                        )}
-                                    </div>
-                                    <div className="asf-field">
-                                        <label className="asf-label">Pass Practical</label>
-                                        <input
-                                            type="number"
-                                            name="passingPracticalMarks"
-                                            value={formData.passingPracticalMarks}
-                                            onChange={handleChange}
-                                            min={0}
-                                            max={formData.maxPracticalMarks ? Number(formData.maxPracticalMarks) : undefined}
-                                            placeholder="e.g. 10"
-                                            disabled={submitting}
-                                            className={`asf-input${fieldErrors.passingPracticalMarks ? " asf-input-error" : ""}`}
-                                            onKeyDown={(e) => ["-", "e", "E", "+"].includes(e.key) && e.preventDefault()}
-                                        />
-                                        {fieldErrors.passingPracticalMarks && (
-                                            <span className="asf-field-error">{fieldErrors.passingPracticalMarks}</span>
-                                        )}
-                                    </div>
-                                </div>
-
-                                {/* Live sum hint */}
-                                {showSumHint && (
-                                    <div className={`asf-sum-row ${sumMatchesMax ? "asf-sum-ok" : "asf-sum-err"}`}>
-                                        {sumMatchesMax
-                                            ? <CheckCircle2 size={14} />
-                                            : <AlertCircle size={14} />}
-                                        <span className="asf-mono">
-                                            {theoryVal} + {practicalVal} = {theorySum}
-                                        </span>
-                                        <span>
-                                            {sumMatchesMax
-                                                ? "✓ Matches max marks"
-                                                : `Must equal ${formData.maxMarks || "max marks"}`}
-                                        </span>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-
+                {/* ── Footer ───────────────────────────────────────────────── */}
+                <div className="flex items-center justify-between gap-3 px-4 sm:px-6 py-4 border-t border-gray-100 bg-gray-50/50 flex-shrink-0">
+                    <div className="text-xs text-gray-400 hidden sm:block">
+                        {!isEdit && someSelected && `${includedCount} subject${includedCount !== 1 ? "s" : ""} will be added`}
                     </div>
-
-                    {/* ── Footer ─────────────────────────────── */}
-                    <div className="asf-footer">
+                    <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
                         <button
-                            className="asf-btn asf-btn-cancel"
-                            onClick={onClose}
-                            disabled={submitting}
+                            onClick={onClose} disabled={submitting}
+                            className="px-4 py-2 text-sm font-semibold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-all disabled:opacity-50"
                         >
                             Cancel
                         </button>
                         <button
-                            className="asf-btn asf-btn-submit"
                             onClick={handleSubmit}
-                            // BUG FIX: Disable when loadingMeta OR no subjects available (and not edit mode)
-                            disabled={submitting || loadingMeta || (!isEdit && sectionSubjects.length === 0)}
+                            disabled={submitting || loadingMeta || (!isEdit && !someSelected)}
+                            className="flex items-center gap-2 px-5 py-2 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-all shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            {submitting && (
-                                <Loader2 size={15} className="asf-spin" />
-                            )}
+                            {submitting
+                                ? <Loader2 className="w-4 h-4 animate-spin" />
+                                : <Save className="w-4 h-4" />}
                             {submitting
                                 ? (isEdit ? "Saving…" : "Adding…")
-                                : (isEdit ? "Save Changes" : "Add Subject")}
+                                : (isEdit ? "Save Changes" : `Add Subject${includedCount > 1 ? "s" : ""}`)}
                         </button>
                     </div>
-
                 </div>
             </div>
+        </div>
+    );
+}
+
+// ─── Edit mode: single subject full-width form ────────────────────────────────
+function EditSingleRow({ row, rowIdx, onChange, onToggleTP, disabled }) {
+    return (
+        <div className="space-y-4">
+            {/* Subject header */}
+            <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-xl border border-blue-100">
+                <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center flex-shrink-0">
+                    <BookOpen className="w-4 h-4 text-white" />
+                </div>
+                <div>
+                    <p className="text-sm font-bold text-gray-800">{row.subjectName}</p>
+                    <p className="text-xs text-blue-500">{row.subjectCode} {row.sectionName ? `· Section ${row.sectionName}` : ""}</p>
+                </div>
+            </div>
+
+            {/* Marks */}
+            <div className="grid grid-cols-2 gap-3">
+                <div>
+                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Max Marks *</p>
+                    <NumInput
+                        value={row.maxMarks} disabled={disabled}
+                        placeholder="e.g. 100"
+                        hasError={!!row.errors.maxMarks}
+                        onChange={(e) => onChange(rowIdx, "maxMarks", e.target.value)}
+                    />
+                    {row.errors.maxMarks && <p className="text-xs text-red-500 mt-1">{row.errors.maxMarks}</p>}
+                </div>
+                <div>
+                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Passing Marks *</p>
+                    <NumInput
+                        value={row.passingMarks} disabled={disabled}
+                        placeholder="e.g. 33"
+                        hasError={!!row.errors.passingMarks}
+                        onChange={(e) => onChange(rowIdx, "passingMarks", e.target.value)}
+                    />
+                    {row.errors.passingMarks && <p className="text-xs text-red-500 mt-1">{row.errors.passingMarks}</p>}
+                </div>
+            </div>
+
+            {/* Theory toggle */}
+            <label className={[
+                "flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all select-none",
+                row.hasTheoryPractical ? "border-indigo-300 bg-indigo-50" : "border-gray-200 bg-white hover:border-indigo-200 hover:bg-indigo-50/40"
+            ].join(" ")}>
+                <input
+                    type="checkbox"
+                    checked={row.hasTheoryPractical}
+                    onChange={() => onToggleTP(rowIdx)}
+                    disabled={disabled}
+                    className="w-4 h-4 accent-indigo-600 cursor-pointer flex-shrink-0"
+                />
+                <div>
+                    <p className="text-sm font-semibold text-gray-700">Has Theory + Practical Split</p>
+                    <p className="text-xs text-gray-400">Enable separate breakdown for theory and practical marks</p>
+                </div>
+            </label>
+
+            {row.hasTheoryPractical && (
+                <TPPanel row={row} rowIdx={rowIdx} onChange={onChange} disabled={disabled} />
+            )}
+        </div>
+    );
+}
+
+// ─── Desktop table row ────────────────────────────────────────────────────────
+function DesktopRow({ row, rowIdx, onChange, onToggleInclude, onToggleTP, disabled }) {
+    const hasRowError = Object.keys(row.errors).length > 0;
+    const isBlocked = row.alreadyAdded || disabled;
+
+    // Already-added rows get a distinct muted green treatment
+    if (row.alreadyAdded) {
+        return (
+            <tr className="bg-emerald-50/40 border-l-2 border-l-emerald-400">
+                {/* Disabled checkbox */}
+                <td className="px-3 py-3 align-middle">
+                    <input
+                        type="checkbox"
+                        checked disabled
+                        className="w-4 h-4 accent-emerald-500 cursor-not-allowed opacity-60 mt-1"
+                    />
+                </td>
+                {/* Subject name */}
+                <td className="px-3 py-3 align-middle">
+                    <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-lg bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                            <BookOpen className="w-3.5 h-3.5 text-emerald-600" />
+                        </div>
+                        <div>
+                            <p className="text-sm font-semibold text-gray-500 leading-tight">{row.subjectName}</p>
+                            {row.subjectCode && <p className="text-xs text-gray-400 font-mono">{row.subjectCode}</p>}
+                        </div>
+                    </div>
+                </td>
+                {/* Already added badge spanning remaining cols */}
+                <td colSpan={3} className="px-3 py-3 align-middle">
+                    <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 bg-emerald-100 border border-emerald-200 px-3 py-1.5 rounded-full">
+                        <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" />
+                        Already added to this exam
+                    </span>
+                </td>
+            </tr>
+        );
+    }
+
+    return (
+        <>
+            <tr className={[
+                "transition-colors group",
+                row.included ? "bg-blue-50/30" : "bg-white hover:bg-gray-50/60",
+                hasRowError ? "border-l-2 border-l-red-400" : row.included ? "border-l-2 border-l-blue-500" : ""
+            ].join(" ")}>
+                {/* Checkbox */}
+                <td className="px-3 py-3 align-top">
+                    <input
+                        type="checkbox"
+                        checked={row.included}
+                        onChange={() => onToggleInclude(rowIdx)}
+                        disabled={disabled}
+                        className="w-4 h-4 accent-blue-600 cursor-pointer mt-1"
+                    />
+                </td>
+
+                {/* Subject name */}
+                <td className="px-3 py-3 align-top">
+                    <div className="flex items-center gap-2">
+                        <div className={[
+                            "w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors",
+                            row.included ? "bg-blue-100" : "bg-gray-100"
+                        ].join(" ")}>
+                            <BookOpen className={["w-3.5 h-3.5", row.included ? "text-blue-600" : "text-gray-400"].join(" ")} />
+                        </div>
+                        <div>
+                            <p className={["text-sm font-semibold leading-tight", row.included ? "text-gray-800" : "text-gray-500"].join(" ")}>
+                                {row.subjectName}
+                            </p>
+                            {row.subjectCode && (
+                                <p className="text-xs text-gray-400 font-mono">{row.subjectCode}</p>
+                            )}
+                        </div>
+                    </div>
+                </td>
+
+                {/* Max marks */}
+                <td className="px-3 py-3 align-top w-28">
+                    <NumInput
+                        value={row.maxMarks}
+                        onChange={(e) => onChange(rowIdx, "maxMarks", e.target.value)}
+                        placeholder="e.g. 100"
+                        disabled={disabled || !row.included}
+                        hasError={!!row.errors.maxMarks}
+                    />
+                    {row.errors.maxMarks && <p className="text-[10px] text-red-500 mt-0.5">{row.errors.maxMarks}</p>}
+                </td>
+
+                {/* Pass marks */}
+                <td className="px-3 py-3 align-top w-28">
+                    <NumInput
+                        value={row.passingMarks}
+                        onChange={(e) => onChange(rowIdx, "passingMarks", e.target.value)}
+                        placeholder="e.g. 33"
+                        disabled={disabled || !row.included}
+                        hasError={!!row.errors.passingMarks}
+                    />
+                    {row.errors.passingMarks && <p className="text-[10px] text-red-500 mt-0.5">{row.errors.passingMarks}</p>}
+                </td>
+
+                {/* Theory + Practical toggle */}
+                <td className="px-3 py-3 align-top text-center w-36">
+                    <label className={[
+                        "inline-flex items-center gap-1.5 cursor-pointer select-none",
+                        (!row.included || disabled) ? "opacity-40 cursor-not-allowed" : ""
+                    ].join(" ")}>
+                        <input
+                            type="checkbox"
+                            checked={row.hasTheoryPractical}
+                            onChange={() => onToggleTP(rowIdx)}
+                            disabled={disabled || !row.included}
+                            className="w-3.5 h-3.5 accent-indigo-600 cursor-pointer"
+                        />
+                        <FlaskConical className={["w-3.5 h-3.5", row.hasTheoryPractical ? "text-indigo-500" : "text-gray-400"].join(" ")} />
+                        <span className="text-xs font-semibold text-gray-600">Split</span>
+                    </label>
+                </td>
+            </tr>
+
+            {/* Theory/Practical expanded row */}
+            {row.included && row.hasTheoryPractical && (
+                <tr className="bg-indigo-50/40">
+                    <td colSpan={5} className="px-4 pb-4 pt-0">
+                        <TPPanel row={row} rowIdx={rowIdx} onChange={onChange} disabled={disabled} />
+                    </td>
+                </tr>
+            )}
         </>
+    );
+}
+
+// ─── Mobile card ──────────────────────────────────────────────────────────────
+function MobileCard({ row, rowIdx, onChange, onToggleInclude, onToggleTP, disabled }) {
+    const hasRowError = Object.keys(row.errors).length > 0;
+
+    // Already-added: show locked card
+    if (row.alreadyAdded) {
+        return (
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50/40 overflow-hidden">
+                <div className="flex items-center gap-3 px-3 py-3">
+                    <input
+                        type="checkbox"
+                        checked disabled
+                        className="w-4 h-4 accent-emerald-500 cursor-not-allowed opacity-60 flex-shrink-0"
+                    />
+                    <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                        <BookOpen className="w-4 h-4 text-emerald-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-gray-500 truncate">{row.subjectName}</p>
+                        {row.subjectCode && <p className="text-xs text-gray-400 font-mono">{row.subjectCode}</p>}
+                    </div>
+                    <span className="text-xs font-semibold text-emerald-600 bg-emerald-100 border border-emerald-200 px-2 py-1 rounded-full shrink-0 flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3" />
+                        Added
+                    </span>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className={[
+            "rounded-xl border transition-all overflow-hidden",
+            hasRowError ? "border-red-300" : row.included ? "border-blue-300 bg-blue-50/20" : "border-gray-200 bg-white"
+        ].join(" ")}>
+            {/* Card header: checkbox + subject name */}
+            <div
+                className="flex items-center gap-3 px-3 py-3 cursor-pointer"
+                onClick={() => !disabled && onToggleInclude(rowIdx)}
+            >
+                <input
+                    type="checkbox"
+                    checked={row.included}
+                    onChange={() => onToggleInclude(rowIdx)}
+                    disabled={disabled}
+                    onClick={(e) => e.stopPropagation()}
+                    className="w-4 h-4 accent-blue-600 cursor-pointer flex-shrink-0"
+                />
+                <div className={[
+                    "w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0",
+                    row.included ? "bg-blue-100" : "bg-gray-100"
+                ].join(" ")}>
+                    <BookOpen className={["w-4 h-4", row.included ? "text-blue-600" : "text-gray-400"].join(" ")} />
+                </div>
+                <div className="flex-1 min-w-0">
+                    <p className={["text-sm font-bold truncate", row.included ? "text-gray-800" : "text-gray-500"].join(" ")}>
+                        {row.subjectName}
+                    </p>
+                    {row.subjectCode && (
+                        <p className="text-xs text-gray-400 font-mono">{row.subjectCode}</p>
+                    )}
+                </div>
+                {row.included && (
+                    <span className="text-xs font-semibold text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full shrink-0">Selected</span>
+                )}
+            </div>
+
+            {/* Expanded fields when included */}
+            {row.included && (
+                <div className="px-3 pb-3 space-y-3 border-t border-gray-100 pt-3">
+                    {/* Marks row */}
+                    <div className="grid grid-cols-2 gap-2">
+                        <div>
+                            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-1">Max Marks *</p>
+                            <NumInput
+                                value={row.maxMarks}
+                                onChange={(e) => onChange(rowIdx, "maxMarks", e.target.value)}
+                                placeholder="e.g. 100"
+                                disabled={disabled}
+                                hasError={!!row.errors.maxMarks}
+                            />
+                            {row.errors.maxMarks && <p className="text-[10px] text-red-500 mt-0.5">{row.errors.maxMarks}</p>}
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-1">Pass Marks *</p>
+                            <NumInput
+                                value={row.passingMarks}
+                                onChange={(e) => onChange(rowIdx, "passingMarks", e.target.value)}
+                                placeholder="e.g. 33"
+                                disabled={disabled}
+                                hasError={!!row.errors.passingMarks}
+                            />
+                            {row.errors.passingMarks && <p className="text-[10px] text-red-500 mt-0.5">{row.errors.passingMarks}</p>}
+                        </div>
+                    </div>
+
+                    {/* Theory toggle */}
+                    <label className={[
+                        "flex items-center gap-2 p-2.5 rounded-lg border cursor-pointer transition-all select-none",
+                        row.hasTheoryPractical ? "border-indigo-300 bg-indigo-50" : "border-gray-200 bg-white"
+                    ].join(" ")}>
+                        <input
+                            type="checkbox"
+                            checked={row.hasTheoryPractical}
+                            onChange={() => onToggleTP(rowIdx)}
+                            disabled={disabled}
+                            className="w-4 h-4 accent-indigo-600 cursor-pointer flex-shrink-0"
+                        />
+                        <FlaskConical className="w-3.5 h-3.5 text-indigo-400 flex-shrink-0" />
+                        <span className="text-xs font-semibold text-gray-700">Has Theory + Practical Split</span>
+                    </label>
+
+                    {row.hasTheoryPractical && (
+                        <TPPanel row={row} rowIdx={rowIdx} onChange={onChange} disabled={disabled} />
+                    )}
+                </div>
+            )}
+        </div>
     );
 }

@@ -5,13 +5,8 @@ import { Link, useNavigate } from 'react-router-dom'
 import { loginAPI } from '../Api/AuthApi'
 import { UserContext } from '../ContextAPI/UserContext'
 import cstech from "../assets/Images/cstech.png"
-import { getCurrentAcademicYear } from '../Api/AcademicYear'
 
-/**
- * Fetches current academic year after login.
- * Uses the token that was just stored in localStorage.
- */
-
+// ❌ REMOVED: getCurrentAcademicYear import — now fetched after school selection, not at login
 
 const Login_2 = ({ onLoginSuccess }) => {
 
@@ -23,7 +18,8 @@ const Login_2 = ({ onLoginSuccess }) => {
   const [loginError, setLoginError] = useState('')
   const navigate = useNavigate()
 
-  const { setUser, saveProfile, saveCurrentAcademicYear } = useContext(UserContext)
+  const { setUser, saveProfile } = useContext(UserContext)
+  // ❌ REMOVED: saveCurrentAcademicYear — not needed here anymore
 
   const validateForm = () => {
     let allErrors = {}
@@ -41,78 +37,75 @@ const Login_2 = ({ onLoginSuccess }) => {
     return Object.keys(allErrors).length === 0
   }
 
- const onSubmitHandler = async (e) => {
-  e.preventDefault()
+  const onSubmitHandler = async (e) => {
+    e.preventDefault()
 
-  if (!validateForm()) return
+    if (!validateForm()) return
 
-  setIsLoading(true)
-  setLoginError('')
+    setIsLoading(true)
+    setLoginError('')
 
-  try {
-    const res = await loginAPI({ email, password })
+    try {
+      const res = await loginAPI({ email, password })
 
-    const token = res.data?.token || res.token
-    const user = res.data?.user || res.user
+      const token = res.data?.token || res.token
+      const user = res.data?.user || res.user
 
-    const requireSchoolSelection =
-  res.data?.requiresSchoolSelection ??
-  res.requiresSchoolSelection ??
-  false
+      const requireSchoolSelection =
+        res.data?.requiresSchoolSelection ??
+        res.requiresSchoolSelection ??
+        false
 
-    if (!token) {
-      throw new Error('Invalid response from server. Please try again.')
-    }
-
-    localStorage.setItem("token", token)
-    localStorage.setItem("requireSchoolSelection", requireSchoolSelection)
-
-    if (user) {
-      localStorage.setItem("user", JSON.stringify(user))
-
-      setUser({
-        id: user.id,
-        userType: user.roles?.[0],
-        email: user.email,
-        permissions: user.permissions,
-      })
-
-      if (user.profile) {
-        saveProfile(user.profile)
-      }
-    }
-
-    if (onLoginSuccess) {
-      onLoginSuccess(token)
-    }
-
-    // ✅ only fetch academic year after school selection
-    if (requireSchoolSelection) {
-
-      navigate("/superAdmin")
-
-    } else {
-
-      const academicYear = await getCurrentAcademicYear()
-
-      if (academicYear) {
-        saveCurrentAcademicYear(academicYear)
+      if (!token) {
+        throw new Error('Invalid response from server. Please try again.')
       }
 
-      navigate("/dashboard")
+      localStorage.setItem("token", token)
+      localStorage.setItem("requireSchoolSelection", requireSchoolSelection)
+
+      if (user) {
+        localStorage.setItem("user", JSON.stringify(user))
+
+        setUser({
+          id: user.id,
+          userType: user.roles?.[0],
+          email: user.email,
+          permissions: user.permissions,
+        })
+
+        if (user.profile) {
+          saveProfile(user.profile)
+        }
+      }
+
+      if (onLoginSuccess) {
+        onLoginSuccess(token)
+      }
+
+      if (requireSchoolSelection) {
+        // SuperAdmin → school selection screen
+        // Academic year will be fetched AFTER school is selected (in SchoolSelectedCard)
+        navigate("/superAdmin")
+      } else {
+        // Regular user → direct to dashboard
+        // Academic year will be fetched AFTER school is selected (in SchoolSelectedCard)
+        // If your regular users also go through a school picker, academic year fetch stays there.
+        // If they skip school selection entirely, fetch it here:
+        navigate("/dashboard")
+      }
+
+    } catch (err) {
+
+      setLoginError(
+        err.message || "Invalid email or password. Please try again."
+      )
+
+    } finally {
+
+      setIsLoading(false)
     }
-
-  } catch (err) {
-
-    setLoginError(
-      err.message || "Invalid email or password. Please try again."
-    )
-
-  } finally {
-
-    setIsLoading(false)
   }
-}
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-br from-blue-100 to-blue-200">
 

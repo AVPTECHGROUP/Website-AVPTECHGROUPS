@@ -1,19 +1,21 @@
 import { useState, useEffect } from 'react';
 import {
     Calendar, Plus, Eye, Pencil, Trash2, Send,
-    Search, ChevronDown, Settings2, BookOpen, Clock
+    Search, ChevronDown, Settings2, BookOpen, Clock, UserSearch
 } from 'lucide-react';
 import CardComponent from '../../Components/CommonComp/CardComponent';
 import CardLoader from '../../Components/CommonComp/CardLoader';
 import ScheduleConfig from './components/ScheduleConfig';
 import AddTimetableModal from './components/AddTimetableModal';
 import CreateSchedule from './CreateSchedule';
+import TeacherScheduleViewer from './components/TeacherScheduleViewer';
 import {
     getTimetables,
     createTimetable,
     deleteTimetable,
     publishTimetable,
 } from '../../Api/ScheduleApi';
+import { getListOfValues } from '../../Api/ListOfValues';
 
 const StatusBadge = ({ status }) => {
     const isDraft = status === 'Draft' || status === 'DRAFT';
@@ -33,19 +35,31 @@ export default function TimeTable() {
     const [deletingId, setDeletingId] = useState(null);
     const [showConfig, setShowConfig] = useState(false);
     const [showAddModal, setShowAddModal] = useState(false);
+    const [showTeacherSchedule, setShowTeacherSchedule] = useState(false); // ← new state
     const [timetables, setTimetables] = useState([]);
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('All Statuses');
     const [classFilter, setClassFilter] = useState('All Classes');
     const [yearFilter, setYearFilter] = useState('All Years');
     const [sort, setSort] = useState('Recently Added');
+    const [academicYears, setAcademicYears] = useState([]);
     const [openWorkspace, setOpenWorkspace] = useState(null);
     const [deleteConfirm, setDeleteConfirm] = useState(null);
     const [toastMsg, setToastMsg] = useState('');
 
     useEffect(() => {
         loadTimetables();
+        loadAcademicYears();
     }, []);
+
+    const loadAcademicYears = async () => {
+        try {
+            const data = await getListOfValues('ACADEMIC_YEAR');
+            setAcademicYears(data || []);
+        } catch (err) {
+            console.error('Failed to load academic years:', err);
+        }
+    };
 
     const showToast = (msg) => {
         setToastMsg(msg);
@@ -56,7 +70,6 @@ export default function TimeTable() {
         try {
             setLoading(true);
             const res = await getTimetables(0, 50);
-            // API returns paginated response: { content: [...] } or { data: [...] }
             const list = res?.content || res?.data?.content || res?.data || [];
             setTimetables(list.map(normalizeApiTimetable));
         } catch (err) {
@@ -67,7 +80,6 @@ export default function TimeTable() {
         }
     };
 
-    // Normalize API response to local shape
     const normalizeApiTimetable = (t) => ({
         id: t.id,
         class: t.className || t.class || `Class ${t.classId}`,
@@ -76,7 +88,7 @@ export default function TimeTable() {
         status: t.status === 'PUBLISHED' ? 'Published' : 'Draft',
         lastUpdated: t.updatedAt ? new Date(t.updatedAt).toLocaleDateString() : 'Recently',
         classId: t.classId,
-        sectionId: t.sectionId,   // ← critical for subject loading
+        sectionId: t.sectionId,
         notes: t.notes,
     });
 
@@ -140,9 +152,11 @@ export default function TimeTable() {
         return matchSearch && matchStatus && matchClass && matchYear;
     });
 
-    // Unique filter options from loaded data
     const uniqueClasses = [...new Set(timetables.map(t => t.class))];
-    const uniqueYears = [...new Set(timetables.map(t => t.year))];
+    // Use LOV academic years; fall back to years extracted from loaded timetables
+    const uniqueYears = academicYears.length > 0
+        ? academicYears.map(y => y.name || y.value)
+        : [...new Set(timetables.map(t => t.year))];
 
     if (openWorkspace) {
         return (
@@ -165,23 +179,9 @@ export default function TimeTable() {
             )}
 
             {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
-                <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Timetable Directory</h1>
-                    <p className="text-sm text-gray-500 mt-0.5">List of all class-section timetables. Choose view or edit.</p>
-                </div>
-                <div className="flex gap-2 flex-wrap">
-                    <button onClick={() => setShowConfig(true)}
-                        className="flex items-center gap-2 px-4 py-2 border cursor-pointer border-gray-300 bg-white text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition">
-                        <Settings2 size={16} />
-                        School Time Config
-                    </button>
-                    <button onClick={() => setShowAddModal(true)}
-                        className="flex items-center gap-2 px-4 py-2 cursor-pointer bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition">
-                        <Plus size={16} />
-                        Add Timetable
-                    </button>
-                </div>
+            <div className="mb-6">
+                <h1 className="text-2xl font-bold text-gray-900">Timetable Directory</h1>
+                <p className="text-sm text-gray-500 mt-0.5">List of all class-section timetables. Choose view or edit.</p>
             </div>
 
             {/* Stat Cards */}
@@ -200,6 +200,29 @@ export default function TimeTable() {
 
             {/* Table Card */}
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+
+                {/* Quick Actions */}
+                <div className="px-5 pt-4 pb-3 border-b border-gray-100">
+                    <p className="text-sm font-bold text-gray-700 mb-2.5">Quick Actions</p>
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <button onClick={() => setShowAddModal(true)}
+                            className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition cursor-pointer">
+                            <Plus size={15} />
+                            Add Timetable
+                        </button>
+                        <button onClick={() => setShowTeacherSchedule(true)}
+                            className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition cursor-pointer">
+                            <UserSearch size={15} />
+                            Teacher Schedule
+                        </button>
+                        <button onClick={() => setShowConfig(true)}
+                            className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition cursor-pointer">
+                            <Settings2 size={15} />
+                            School Time Config
+                        </button>
+                    </div>
+                </div>
+
                 {/* Filters */}
                 <div className="p-4 border-b border-gray-100 flex flex-col sm:flex-row gap-3 flex-wrap">
                     <div className="relative flex-1 min-w-[180px]">
@@ -333,6 +356,11 @@ export default function TimeTable() {
                     onSubmit={handleAddTimetable}
                     existingTimetables={timetables}
                 />
+            )}
+
+            {/* ── Teacher Schedule Viewer Modal ── */}
+            {showTeacherSchedule && (
+                <TeacherScheduleViewer onClose={() => setShowTeacherSchedule(false)} />
             )}
 
             {/* Delete Confirm */}
