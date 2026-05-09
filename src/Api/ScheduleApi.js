@@ -358,3 +358,37 @@ export const updateSubstitutionStatus = async (
         throw error;
     }
 };
+
+// Get teacher daily schedule
+
+export const getTeacherSchedule = async (teacherId, date = null) => {
+    try {
+        const params = new URLSearchParams();
+
+        params.append("teacherId", teacherId);
+
+        if (date) {
+            params.append("date", date);
+        }
+
+        const res = await authFetch(
+            `${BASE_URL}/timetable/teacher-schedule?${params.toString()}`,
+            {
+                method: "GET",
+            }
+        );
+
+        const data = await res.json();
+
+        if (!res.ok) {
+            throw new Error(
+                data?.message || "Failed to fetch teacher schedule"
+            );
+        }
+
+        return data?.data;
+    } catch (error) {
+        console.error("getTeacherSchedule error:", error.message);
+        throw error;
+    }
+};
