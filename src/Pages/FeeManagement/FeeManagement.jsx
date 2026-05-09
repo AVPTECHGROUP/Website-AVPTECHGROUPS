@@ -1,28 +1,23 @@
 // FeeManagement.jsx — Root router
-// Route: /feemanagement             → OverviewPage (dashboard)
-// Route: /feemanagement/synthesis   → FeeSynthesisPage  (Fee Periods + Fee Structures tabs)
-// Route: /feemanagement/collections → CollectionsPage   (Outstanding + History tabs)
+// Academic year is fetched ONCE here via /academic-years/current
+// then passed down to all other fee pages as props.
+// No child page ever calls /academic-years or /academic-years/current directly.
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useDecodedUser } from '../../ContextAPI/UserContext';
 import Overview from './Overview';
 import FeePeriods from './FeePeriods';
 import FeeStructures from './Feestructures.';
 import CollectionsHistory from './Collectionhistory';
-import CollectFeeModal from '../../Components/FeeModal/CollectfeeModal';
-import ReceiptModal from '../../Components/FeeModal/ReceiptModal';
 import Button from '../../Components/FeeModal/Button';
+import { getCurrentAcademicYear } from "../../Api/AcademicYear";
 
 // ─── Shared Topbar User Pill ──────────────────────────────────────────────────
 const UserPill = ({ profile, user }) => {
-  // Derive display name: prefer profile.firstName + lastName, fall back to email
   const fullName = profile
     ? [profile.firstName, profile.lastName].filter(Boolean).join(' ')
     : (user?.email?.split('@')[0] || 'User');
-
   const role = profile?.designation || user?.userType || 'Admin';
-
-  // Build initials
   const initials = profile
     ? `${(profile.firstName?.[0] || '').toUpperCase()}${(profile.lastName?.[0] || '').toUpperCase()}`
     : fullName.slice(0, 2).toUpperCase();
@@ -40,27 +35,24 @@ const UserPill = ({ profile, user }) => {
   );
 };
 
-// ─── Fee Synthesis Page ────────────────────────────────────────────────────────
-export const FeeSynthesisPage = () => {
+// ─── Fee Synthesis Page ───────────────────────────────────────────────────────
+export const FeeSynthesisPage = ({ academicYear, yearLoading, yearError }) => {
+
   const [tab, setTab] = useState('periods');
-  const { profile, user, currentAcademicYear } = useDecodedUser();
+  const { profile, user } = useDecodedUser();
 
   const TABS = [
     { key: 'periods',    label: 'Fee Periods'    },
     { key: 'structures', label: 'Fee Structures' },
   ];
 
-  const handleNavigate = (target) => {
-    if (target === 'structures') setTab('structures');
-  };
-
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
       <header className="bg-white border-b border-gray-200 px-6 h-14 flex items-center justify-between sticky top-0 z-40">
         <div>
           <div className="font-bold text-lg text-gray-900 leading-tight">Fee Synthesis</div>
-          {currentAcademicYear && (
-            <div className="text-[11px] text-gray-500">AY {currentAcademicYear.label}</div>
+          {academicYear?.label && (
+            <div className="text-[11px] text-gray-500">AY {academicYear.label}</div>
           )}
         </div>
         <UserPill profile={profile} user={user} />
@@ -83,100 +75,129 @@ export const FeeSynthesisPage = () => {
       </nav>
 
       <main className="flex-1 p-6 max-w-[1600px] mx-auto w-full">
-        {tab === 'periods'    && <FeePeriods   onNavigate={handleNavigate} />}
-        {tab === 'structures' && <FeeStructures />}
+        {tab === 'periods'    && <FeePeriods    academicYear={academicYear} yearLoading={yearLoading} yearError={yearError} onNavigate={(t) => setTab(t)} />}
+        {tab === 'structures' && <FeeStructures academicYear={academicYear} yearLoading={yearLoading} yearError={yearError} />}
       </main>
     </div>
   );
 };
 
 // ─── Collections Page ─────────────────────────────────────────────────────────
-export const CollectionsPage = () => {
-  const { profile, user, currentAcademicYear } = useDecodedUser();
+export const CollectionsPage = ({ academicYear, yearLoading, yearError }) => {
+  const { profile, user } = useDecodedUser();
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
       <header className="bg-white border-b border-gray-200 px-6 h-14 flex items-center justify-between sticky top-0 z-40">
         <div>
           <div className="font-bold text-lg text-gray-900 leading-tight">Collections &amp; History</div>
-          {currentAcademicYear && (
-            <div className="text-[11px] text-gray-500">AY {currentAcademicYear.label}</div>
+          {academicYear?.label && (
+            <div className="text-[11px] text-gray-500">AY {academicYear.label}</div>
           )}
         </div>
         <UserPill profile={profile} user={user} />
       </header>
 
       <main className="flex-1 p-6 max-w-[1600px] mx-auto w-full">
-        <CollectionsHistory />
+        <CollectionsHistory academicYear={academicYear} yearLoading={yearLoading} yearError={yearError} />
       </main>
     </div>
   );
 };
 
 // ─── Overview / Dashboard Page ────────────────────────────────────────────────
-export const OverviewPage = () => {
-  const { profile, user, currentAcademicYear } = useDecodedUser();
-
-  const [collectModal, setCollectModal] = useState({ isOpen: false, student: null });
-  const [receiptModal, setReceiptModal] = useState({ isOpen: false, receipt: null });
-
-  // Called by Overview when "Collect" is clicked on an overdue student row
-  // student shape comes from getOutstandingFees API response
-  const handleCollect = (student = null) => {
-    setCollectModal({ isOpen: true, student });
-  };
-
-  // Called by CollectFeeModal on successful payment
-  // receipt shape is returned directly from POST /v1/fee/collections response
-  const handleFeeSubmit = (receiptData) => {
-    setCollectModal({ isOpen: false, student: null });
-    setReceiptModal({ isOpen: true, receipt: receiptData });
-  };
+export const OverviewPage = ({ academicYear, yearLoading, yearError }) => {
+  const { profile, user } = useDecodedUser();
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
       <header className="bg-white border-b border-gray-200 px-6 h-14 flex items-center justify-between sticky top-0 z-40">
         <div>
           <div className="font-bold text-lg text-gray-900 leading-tight">Fee Management</div>
-          {currentAcademicYear && (
-            <div className="text-[11px] text-gray-500">AY {currentAcademicYear.label}</div>
+          {academicYear?.label && (
+            <div className="text-[11px] text-gray-500">AY {academicYear.label}</div>
           )}
         </div>
         <div className="flex items-center gap-3">
           <Button variant="secondary" size="sm">⬇ Export</Button>
-          <Button variant="primary" size="sm" onClick={() => handleCollect(null)}>+ Collect Fee</Button>
           <UserPill profile={profile} user={user} />
         </div>
       </header>
 
       <main className="flex-1 p-6 max-w-[1600px] mx-auto w-full">
-        {/* Overview receives onCollect so overdue alert buttons can pre-fill the modal */}
-        <Overview onNavigate={() => {}} onCollect={handleCollect} />
+        <Overview
+          onNavigate={() => {}}
+          academicYear={academicYear}
+          yearLoading={yearLoading}
+          yearError={yearError}
+        />
       </main>
-
-      {/* Collect Fee Modal */}
-      <CollectFeeModal
-        isOpen={collectModal.isOpen}
-        onClose={() => setCollectModal({ isOpen: false, student: null })}
-        student={collectModal.student}
-        onSubmit={handleFeeSubmit}
-      />
-
-      {/* Receipt Modal — shown after successful payment */}
-      <ReceiptModal
-        isOpen={receiptModal.isOpen}
-        onClose={() => setReceiptModal({ isOpen: false, receipt: null })}
-        receipt={receiptModal.receipt}
-      />
     </div>
   );
 };
 
-// ─── Default export ────────────────────────────────────────────────────────────
+// ─── Root FeeManagement — single source of truth for academic year ─────────────
 const FeeManagement = ({ page = 'overview' }) => {
-  if (page === 'synthesis')   return <FeeSynthesisPage />;
-  if (page === 'collections') return <CollectionsPage />;
-  return <OverviewPage />;
+  console.log("FeeManagement Rendered");
+  const [academicYear, setAcademicYear] = useState(null);
+  const [yearLoading, setYearLoading] = useState(true);
+  const [yearError, setYearError] = useState(null);
+  
+
+
+  useEffect(() => {
+
+  console.log("useEffect Running");
+    const loadAcademicYear = async () => {
+       console.log("loadAcademicYear Called");
+      try {
+        setYearLoading(true);
+        setYearError(null);
+
+        const res = await getCurrentAcademicYear();
+        
+        console.log('Academic Year API Response:', res);
+
+        // Extract year from response
+        const year = res?.data || res;
+
+        console.log('Extracted Academic Year:', year);
+
+        // Validate the year data
+        if (!year || !year.id) {
+          throw new Error('Invalid academic year data received');
+        }
+
+        setAcademicYear({
+          id: year.id,
+          label: year.label || year.name || year.academicYearName || `AY ${year.id}`,
+        });
+
+        console.log('Academic Year Set:', {
+          id: year.id,
+          label: year.label || year.name || year.academicYearName || `AY ${year.id}`,
+        });
+
+      } catch (err) {
+        console.error("Failed to load academic year:", err);
+        setYearError(err.message || 'Failed to load academic year');
+      } finally {
+        setYearLoading(false);
+      }
+    };
+
+    loadAcademicYear();
+  }, []);
+
+  if (page === 'synthesis') {
+    return <FeeSynthesisPage academicYear={academicYear} yearLoading={yearLoading} yearError={yearError} />;
+  }
+  
+  if (page === 'collections') {
+    return <CollectionsPage academicYear={academicYear} yearLoading={yearLoading} yearError={yearError} />;
+  }
+
+  return <OverviewPage academicYear={academicYear} yearLoading={yearLoading} yearError={yearError} />;
 };
 
 export default FeeManagement;

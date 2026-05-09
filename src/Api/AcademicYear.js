@@ -29,13 +29,24 @@ export const getAcademicYears = async () => {
 // ==============================
 export const getCurrentAcademicYear = async () => {
     try {
-        const res = await authFetch(`${BASE_URL}/academic-years/current`, {
+
+        console.log("BASE_URL =", BASE_URL);
+
+        const url = `${BASE_URL}/academic-years/current`;
+
+        console.log("FINAL URL =", url);
+
+        const res = await authFetch(url, {
             method: "GET",
         });
+
+        console.log("RESPONSE =", res);
 
         if (!res.ok) throw new Error("Failed to fetch current academic year");
 
         const data = await res.json();
+
+        console.log("DATA =", data);
 
         return data.data || {};
     } catch (error) {

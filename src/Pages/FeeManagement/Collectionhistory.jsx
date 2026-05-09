@@ -9,21 +9,20 @@ import {
 } from '../../Api/FeeCollection';
 import { getFeePeriods } from '../../Api/FeePeriods';
 import { authFetch } from '../../Authfetch/Authfetch';
+// ✅ useDecodedUser no longer needed for academicYear — comes from props
 
-// ─── Constants ───────────────────────────────────────────────────────────────
-const ACADEMIC_YEAR_ID = 3;
+// ─── Constants ────────────────────────────────────────────────────────────────
 const SCHOOL_ID = 1;
-const BASE_URL = import.meta.env.VITE_API_BASE_V1;
+const BASE_URL  = import.meta.env.VITE_API_BASE_V1;
 const PAGE_SIZE = 10;
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 const fmt = (n) => '₹' + (Number(n) || 0).toLocaleString('en-IN');
 
 const fmtDate = (d) => {
   if (!d) return '—';
-  try {
-    return new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-  } catch { return d; }
+  try { return new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }); }
+  catch { return d; }
 };
 
 const todayISO = () => new Date().toISOString().split('T')[0];
@@ -31,7 +30,7 @@ const todayISO = () => new Date().toISOString().split('T')[0];
 const initials = (name = '') =>
   name.split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase();
 
-// ─── Shared UI primitives ────────────────────────────────────────────────────
+// ─── Shared UI primitives ─────────────────────────────────────────────────────
 const Av = ({ name, status, size = 'md' }) => {
   const sz = { sm: 'w-8 h-8 text-xs', md: 'w-10 h-10 text-sm', lg: 'w-12 h-12 text-base' }[size];
   const bg = status === 'OVERDUE' ? 'bg-red-700' : status === 'PARTIAL' ? 'bg-amber-700' : 'bg-[#1A3A5C]';
@@ -68,7 +67,7 @@ const Badge = ({ status }) => {
 
 const Btn = ({ children, variant = 'primary', size = 'md', onClick, type = 'button', disabled, className = '' }) => {
   const sz = { xs: 'px-2 py-1 text-[11px]', sm: 'px-3 py-1.5 text-[12px]', md: 'px-4 py-2 text-[12.5px]' }[size];
-  const v = {
+  const v  = {
     primary:   'bg-[#1A3A5C] text-white hover:bg-[#0F2744]',
     success:   'bg-emerald-700 text-white hover:bg-emerald-800',
     danger:    'bg-red-700 text-white hover:bg-red-800',
@@ -98,7 +97,7 @@ const Sel = ({ options = [], placeholder, value, onChange, className = '' }) => 
   </select>
 );
 
-// ─── Modal shell ─────────────────────────────────────────────────────────────
+// ─── Modal shell ──────────────────────────────────────────────────────────────
 const Modal = ({ open, onClose, title, wide, children, footer }) => {
   if (!open) return null;
   return (
@@ -122,8 +121,9 @@ const Modal = ({ open, onClose, title, wide, children, footer }) => {
   );
 };
 
-// ─── Collect Fee Modal (single) ───────────────────────────────────────────────
-const CollectFeeModal = ({ open, onClose, student, onSuccess }) => {
+// ─── Collect Fee Modal ────────────────────────────────────────────────────────
+const CollectFeeModal = ({ open, onClose, student, periodOptions, onSuccess }) => {
+  const [selectedPeriodId, setSelectedPeriodId] = useState('');
   const [form, setForm] = useState({
     amountPaid: '', paymentMode: 'CASH', paymentDate: todayISO(),
     referenceNo: '', discount: '', discountReason: '', lateFine: '', remarks: '',
@@ -132,19 +132,24 @@ const CollectFeeModal = ({ open, onClose, student, onSuccess }) => {
 
   useEffect(() => {
     if (open && student) {
+      const matchedPeriod = periodOptions.find(
+  (p) =>
+    p.label?.trim().toLowerCase() ===
+    student.period?.trim().toLowerCase()
+);
       setForm({
         amountPaid: student.balance?.toString() || '',
         paymentMode: 'CASH', paymentDate: todayISO(),
         referenceNo: '', discount: '', discountReason: '', lateFine: '', remarks: '',
       });
     }
-  }, [open, student]);
+  }, [open, student, periodOptions]);
 
   if (!open || !student) return null;
 
-  const MODES = { CASH: '💵 Cash', ONLINE: '🌐 Online', CHEQUE: '📝 Cheque', DD: '🏦 DD' };
+  const MODES    = { CASH: '💵 Cash', ONLINE: '🌐 Online', CHEQUE: '📝 Cheque', DD: '🏦 DD' };
   const isOverdue = student.status === 'OVERDUE';
-  const netTotal = (parseFloat(form.amountPaid) || 0) + (parseFloat(form.lateFine) || 0) - (parseFloat(form.discount) || 0);
+  const netTotal  = (parseFloat(form.amountPaid) || 0) + (parseFloat(form.lateFine) || 0) - (parseFloat(form.discount) || 0);
 
   const feeBreakdown = student.totalFee > 0 ? [
     { name: 'Tuition Fee',   amount: Math.floor(student.totalFee * 0.67) },
@@ -155,21 +160,21 @@ const CollectFeeModal = ({ open, onClose, student, onSuccess }) => {
 
   const handleSubmit = async () => {
     if (!form.amountPaid || parseFloat(form.amountPaid) <= 0) { alert('Please enter a valid amount'); return; }
+    if (!selectedPeriodId) { alert('Please select a fee period'); return; }
     try {
       setLoading(true);
-      const payload = {
-        studentId: student.studentId,
+      const response = await createFeeCollection({
+        studentId:      student.studentId,
         feeStructureId: student.feeStructureId,
-        amountPaid: parseFloat(form.amountPaid),
-        discount: parseFloat(form.discount) || 0,
+        amountPaid:     parseFloat(form.amountPaid),
+        discount:       parseFloat(form.discount) || 0,
         discountReason: form.discountReason || null,
-        lateFine: parseFloat(form.lateFine) || 0,
-        paymentMode: form.paymentMode,
-        paymentDate: form.paymentDate,
-        referenceNo: form.referenceNo || null,
-        remarks: form.remarks || null,
-      };
-      const response = await createFeeCollection(payload);
+        lateFine:       parseFloat(form.lateFine) || 0,
+        paymentMode:    form.paymentMode,
+        paymentDate:    form.paymentDate,
+        referenceNo:    form.referenceNo || null,
+        remarks:        form.remarks || null,
+      });
       onSuccess(response, student);
     } catch (e) {
       alert(e.message || 'Failed to record payment. Please try again.');
@@ -187,13 +192,11 @@ const CollectFeeModal = ({ open, onClose, student, onSuccess }) => {
         </>
       }>
       <div className="grid grid-cols-2 gap-6">
-        {/* Left */}
         <div className="space-y-4">
           <div>
             <label className="block text-[11.5px] font-semibold text-gray-600 mb-1">Search Student *</label>
             <Inp value={student.studentName} disabled className="bg-gray-50 text-gray-600" />
           </div>
-          {/* Student card */}
           <div className="bg-[#EEF4FF] border border-[#C7D7EE] rounded-xl p-3 flex items-center gap-3">
             <Av name={student.studentName} status={student.status} size="lg" />
             <div>
@@ -204,14 +207,18 @@ const CollectFeeModal = ({ open, onClose, student, onSuccess }) => {
               </div>
             </div>
           </div>
-          {/* Period */}
           <div>
             <label className="block text-[11.5px] font-semibold text-gray-600 mb-1">Fee Period *</label>
-            <select className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 text-gray-600" disabled>
-              <option>{student.period} — Balance: {fmt(student.balance)}{isOverdue ? ' (Overdue)' : ''}</option>
+            <select value={selectedPeriodId} onChange={(e) => setSelectedPeriodId(e.target.value)}
+              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-[#1A3A5C]/10 focus:border-[#1A3A5C] transition-all bg-white">
+              <option value="">-- Select fee period --</option>
+              {periodOptions.map((p) => (
+                <option key={p.value} value={String(p.value)}>
+                  {p.label} — Balance: {fmt(student.balance)}{isOverdue ? ' (Overdue)' : ''}
+                </option>
+              ))}
             </select>
           </div>
-          {/* Breakdown */}
           <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
             <div className="text-[10.5px] font-bold text-gray-500 uppercase tracking-wider mb-2">
               Fee Breakdown — {student.period}
@@ -227,7 +234,6 @@ const CollectFeeModal = ({ open, onClose, student, onSuccess }) => {
               <span className="text-[#1A3A5C] text-base">{fmt(student.balance)}</span>
             </div>
           </div>
-          {/* Paid/Balance chips */}
           <div className="grid grid-cols-2 gap-2">
             <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 text-center">
               <div className="text-[10px] font-bold text-emerald-700 uppercase">Already Paid</div>
@@ -240,9 +246,7 @@ const CollectFeeModal = ({ open, onClose, student, onSuccess }) => {
           </div>
         </div>
 
-        {/* Right */}
         <div className="space-y-4">
-          {/* Amount */}
           <div>
             <label className="block text-[11.5px] font-semibold text-gray-600 mb-1">Amount to Collect *</label>
             <div className="relative">
@@ -256,7 +260,6 @@ const CollectFeeModal = ({ open, onClose, student, onSuccess }) => {
             </div>
             <div className="text-[10.5px] text-gray-400 mt-1">Balance due: {fmt(student.balance)}</div>
           </div>
-          {/* Payment mode */}
           <div>
             <label className="block text-[11.5px] font-semibold text-gray-600 mb-1">Payment Mode *</label>
             <div className="grid grid-cols-4 gap-2">
@@ -274,7 +277,6 @@ const CollectFeeModal = ({ open, onClose, student, onSuccess }) => {
               ))}
             </div>
           </div>
-          {/* Date + Ref */}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-[11.5px] font-semibold text-gray-600 mb-1">Payment Date *</label>
@@ -287,17 +289,15 @@ const CollectFeeModal = ({ open, onClose, student, onSuccess }) => {
                 onChange={(e) => setForm((p) => ({ ...p, referenceNo: e.target.value }))} />
             </div>
           </div>
-          {/* Discount */}
           <div>
             <label className="block text-[11.5px] font-semibold text-gray-600 mb-1">Discount (optional)</label>
-            <Inp type="number" value={form.discount} placeholder="Discount amount e.g. 500"
+            <Inp type="number" value={form.discount} placeholder="Discount amount"
               onChange={(e) => setForm((p) => ({ ...p, discount: e.target.value }))} />
             <textarea value={form.discountReason} rows={2}
               onChange={(e) => setForm((p) => ({ ...p, discountReason: e.target.value }))}
               placeholder="Reason e.g. Sibling discount, scholarship..."
               className="w-full mt-2 px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-[#1A3A5C]/10 focus:border-[#1A3A5C] transition-all resize-none" />
           </div>
-          {/* Late fine banner */}
           {isOverdue && (
             <div className="bg-amber-50 border border-amber-300 rounded-lg p-3">
               <div className="flex items-start gap-2 mb-2">
@@ -310,12 +310,11 @@ const CollectFeeModal = ({ open, onClose, student, onSuccess }) => {
                 </div>
               </div>
               <label className="block text-[11.5px] font-semibold text-amber-800 mb-1">Late Fine Amount (₹)</label>
-              <Inp type="number" value={form.lateFine} placeholder="Enter manually e.g. 100 — leave blank to waive"
+              <Inp type="number" value={form.lateFine} placeholder="Enter manually — leave blank to waive"
                 onChange={(e) => setForm((p) => ({ ...p, lateFine: e.target.value }))}
                 className="border-amber-300 focus:border-amber-500" />
             </div>
           )}
-          {/* Remarks */}
           <div>
             <label className="block text-[11.5px] font-semibold text-gray-600 mb-1">Remarks</label>
             <textarea value={form.remarks} rows={2}
@@ -323,7 +322,6 @@ const CollectFeeModal = ({ open, onClose, student, onSuccess }) => {
               placeholder="Optional note..."
               className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-[#1A3A5C]/10 focus:border-[#1A3A5C] transition-all resize-none" />
           </div>
-          {/* Net total */}
           <div className="bg-gray-900 rounded-lg px-4 py-3 flex justify-between items-center">
             <div>
               <div className="text-[10px] text-gray-400 uppercase tracking-wider">Receipt No.</div>
@@ -344,8 +342,8 @@ const CollectFeeModal = ({ open, onClose, student, onSuccess }) => {
 const BulkCollectModal = ({ open, onClose, students, onSuccess }) => {
   const [commonMode, setCommonMode] = useState('CASH');
   const [commonDate, setCommonDate] = useState(todayISO());
-  const [rows, setRows] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [rows,       setRows]       = useState([]);
+  const [loading,    setLoading]    = useState(false);
 
   useEffect(() => {
     if (open && students.length > 0) {
@@ -375,21 +373,20 @@ const BulkCollectModal = ({ open, onClose, students, onSuccess }) => {
     if (bad) { alert('Please fill in all collect amounts'); return; }
     try {
       setLoading(true);
-      const payload = {
+      const response = await createBulkFeeCollection({
         payments: rows.map((r) => ({
-          studentId: r.studentId,
+          studentId:      r.studentId,
           feeStructureId: r.feeStructureId,
-          amountPaid: parseFloat(r.collectAmount),
-          discount: parseFloat(r.discount) || 0,
+          amountPaid:     parseFloat(r.collectAmount),
+          discount:       parseFloat(r.discount) || 0,
           discountReason: null,
-          lateFine: r.lateFine !== null && r.lateFine !== '' ? parseFloat(r.lateFine) : null,
-          paymentMode: r.paymentMode,
-          paymentDate: r.paymentDate,
-          referenceNo: r.referenceNo || null,
-          remarks: r.remarks || null,
+          lateFine:       r.lateFine !== null && r.lateFine !== '' ? parseFloat(r.lateFine) : null,
+          paymentMode:    r.paymentMode,
+          paymentDate:    r.paymentDate,
+          referenceNo:    r.referenceNo || null,
+          remarks:        r.remarks || null,
         })),
-      };
-      const response = await createBulkFeeCollection(payload);
+      });
       onSuccess(response);
     } catch (e) {
       alert(e.message || 'Failed to process bulk payments.');
@@ -397,8 +394,10 @@ const BulkCollectModal = ({ open, onClose, students, onSuccess }) => {
   };
 
   const modeOpts = [
-    { value: 'CASH', label: 'Cash' }, { value: 'ONLINE', label: 'Online' },
-    { value: 'CHEQUE', label: 'Cheque' }, { value: 'DD', label: 'DD' },
+    { value: 'CASH',   label: 'Cash'   },
+    { value: 'ONLINE', label: 'Online' },
+    { value: 'CHEQUE', label: 'Cheque' },
+    { value: 'DD',     label: 'DD'     },
   ];
 
   return (
@@ -412,9 +411,8 @@ const BulkCollectModal = ({ open, onClose, students, onSuccess }) => {
         </>
       }>
       <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-2.5 mb-4 text-sm text-emerald-800">
-        Payments will be recorded for all {students.length} selected students. Adjust amounts, discounts and late fines per row as needed.
+        Payments will be recorded for all {students.length} selected students.
       </div>
-      {/* Common controls */}
       <div className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 mb-4 flex items-end gap-4">
         <div>
           <label className="block text-[11.5px] font-semibold text-gray-600 mb-1">Common Payment Mode</label>
@@ -426,7 +424,6 @@ const BulkCollectModal = ({ open, onClose, students, onSuccess }) => {
         </div>
         <Btn variant="ghost" size="sm" onClick={applyToAll}>Apply to All Rows</Btn>
       </div>
-      {/* Table */}
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
@@ -496,12 +493,10 @@ const ReceiptModal = ({ open, onClose, receipt }) => {
     const win = window.open('', '_blank');
     win.document.write(`<html><head><title>Receipt ${receipt?.receiptNo || ''}</title>
       <style>body{font-family:monospace;font-size:12px;padding:20px}
-      .row{display:flex;justify-content:space-between;margin:3px 0}
       hr{border:none;border-top:1px dashed #999;margin:8px 0}
       .paid{color:#0D7A55;border:2px solid #0D7A55;display:inline-block;
             padding:3px 18px;font-size:16px;font-weight:900;letter-spacing:.15em;
-            transform:rotate(-6deg);margin-top:14px;font-family:sans-serif}
-      .center{text-align:center}</style></head>
+            transform:rotate(-6deg);margin-top:14px;font-family:sans-serif}</style></head>
       <body>${printRef.current?.innerHTML || ''}</body></html>`);
     win.document.close(); win.print();
   };
@@ -522,9 +517,7 @@ const ReceiptModal = ({ open, onClose, receipt }) => {
             <div className="text-[11px] text-gray-500 mt-1">123 Education Lane, New Delhi · 011-4567-8900</div>
           </div>
           <hr className="border-dashed border-gray-300" />
-          <div className="flex justify-between font-bold my-2">
-            <span>FEE RECEIPT</span><span>{receipt.receiptNo}</span>
-          </div>
+          <div className="flex justify-between font-bold my-2"><span>FEE RECEIPT</span><span>{receipt.receiptNo}</span></div>
           <hr className="border-dashed border-gray-300" />
           <div className="space-y-1 my-2">
             <div className="flex justify-between"><span>Date:</span><span>{fmtDate(receipt.date)}</span></div>
@@ -568,9 +561,7 @@ const ReceiptModal = ({ open, onClose, receipt }) => {
             <span>{fmtDate(receipt.date)}</span>
           </div>
           <div className="text-center mt-4">
-            <span className="inline-block text-emerald-700 border-2 border-emerald-700 px-5 py-1 font-black text-base tracking-widest -rotate-[6deg] font-sans">
-              PAID
-            </span>
+            <span className="inline-block text-emerald-700 border-2 border-emerald-700 px-5 py-1 font-black text-base tracking-widest -rotate-[6deg] font-sans">PAID</span>
           </div>
         </div>
       )}
@@ -578,213 +569,173 @@ const ReceiptModal = ({ open, onClose, receipt }) => {
   );
 };
 
-// ─── Main Page ────────────────────────────────────────────────────────────────
-const CollectionsHistory = () => {
-  const [tab, setTab] = useState('outstanding');
-  const [search, setSearch] = useState('');
-  const [classF, setClassF] = useState('');
+// ─── CollectionsHistory ───────────────────────────────────────────────────────
+//
+// Props:
+//   academicYear  { id, label }  — passed from FeeManagement root (fetched once in Overview)
+//
+const CollectionsHistory = ({ academicYear }) => {
+  // ✅ academicYearId comes from props — no useDecodedUser, no extra API call
+  const academicYearId = academicYear?.id || null;
+
+  const [tab,     setTab]     = useState('outstanding');
+  const [search,  setSearch]  = useState('');
+  const [classF,  setClassF]  = useState('');
   const [periodF, setPeriodF] = useState('');
   const [statusF, setStatusF] = useState('');
-  const [modeF, setModeF] = useState('');
- 
-  const [page, setPage] = useState(1);
+  const [modeF,   setModeF]   = useState('');
+  const [page,    setPage]    = useState(1);
   const [selected, setSelected] = useState([]);
 
-  const [outstanding, setOutstanding] = useState([]);
-  const [history, setHistory] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-
-  const [classOptions, setClassOptions] = useState([]);
+  const [outstanding,   setOutstanding]   = useState([]);
+  const [history,       setHistory]       = useState([]);
+  const [loading,       setLoading]       = useState(false);
+  const [error,         setError]         = useState(null);
+  const [classOptions,  setClassOptions]  = useState([]);
   const [periodOptions, setPeriodOptions] = useState([]);
 
   const [collectModal, setCollectModal] = useState({ open: false, student: null });
-  const [bulkModal, setBulkModal] = useState({ open: false, students: [] });
+  const [bulkModal,    setBulkModal]    = useState({ open: false, students: [] });
   const [receiptModal, setReceiptModal] = useState({ open: false, receipt: null });
 
-  const [fromDate, setFromDate] = useState("");
-const [toDate, setToDate] = useState("");
-const [totalPages, setTotalPages] = useState(1);
-   useEffect(() => {
-  const today = new Date();
+  const [fromDate,    setFromDate]    = useState('');
+  const [toDate,      setToDate]      = useState('');
+  const [totalPages,  setTotalPages]  = useState(1);
 
-  const oneMonthAgo = new Date(
-    today.getFullYear(),
-    today.getMonth() - 1,
-    today.getDate()
-  );
-
-  const formatDate = (date) => {
-    return date.toISOString().split("T")[0];
-  };
-
-  setFromDate(formatDate(oneMonthAgo));
-  setToDate(formatDate(today));
-}, []);
-
-  // ── Load filter options ───────────────────────────────────────────────────
+  // Default date range
   useEffect(() => {
+    const today       = new Date();
+    const oneMonthAgo = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate());
+    const fmt         = (d) => d.toISOString().split('T')[0];
+    setFromDate(fmt(oneMonthAgo));
+    setToDate(fmt(today));
+  }, []);
+
+  // ✅ Load filter options using academicYearId from props — no separate year fetch
+  useEffect(() => {
+    if (!academicYearId) return;
+
     const loadClasses = async () => {
       try {
         const res = await authFetch(`${BASE_URL}/classes/school/${SCHOOL_ID}/active`);
         if (!res.ok) return;
-        const data = await res.json();
+        const data    = await res.json();
         const records = Array.isArray(data) ? data : (data.data || []);
         setClassOptions(records.map((c) => ({ value: String(c.id), label: c.name || c.className })));
       } catch (e) { console.error('Classes load failed:', e); }
     };
+
     const loadPeriods = async () => {
       try {
-        const periods = await getFeePeriods(ACADEMIC_YEAR_ID);
-        setPeriodOptions(periods.map((p) => ({ value: String(p.id), label: p.name || p.periodName })));
+        // ✅ Use academicYearId from props — no getAcademicYears call here
+        const periods = await getFeePeriods(academicYearId);
+        setPeriodOptions(periods.map((p) => ({
+          value: String(p.id),
+          label: p.periodName || p.name,
+        })));
       } catch (e) { console.error('Periods load failed:', e); }
     };
+
     loadClasses();
     loadPeriods();
-  }, []);
+  }, [academicYearId]);
 
-  
+  const fetchOutstanding = async () => {
+    try {
+      setLoading(true); setError(null);
+      const params = {};
+      if (classF)  params.classId  = classF;
+      if (periodF) params.periodId = periodF;
+      const res = await getOutstandingFees(params);
 
-const fetchOutstanding = async () => {
-  try {
-    setLoading(true);
-    setError(null);
+      setOutstanding(
+        (res.records || []).map((r, index) => {
+          let status = 'PENDING';
+          if ((r.paidAmount || 0) > 0 && r.balanceDue > 0) status = 'PARTIAL';
+          if (r.balanceDue <= 0)                            status = 'PAID';
+          if (r.overdueDays > 0 && r.balanceDue > 0)       status = 'OVERDUE';
+          return {
+            id:             index + 1,
+            studentId:      r.studentId,
+            studentName:    r.studentName,
+            studentCode:    r.admissionNumber,
+            class:          r.className,
+            section:        r.sectionName,
+            period:         r.feePeriodName,
+            feePeriodId:     r.feePeriodId || r.periodId || r.fee_period_id,
+            balance:        r.balanceDue,
+            totalFee:       r.totalFee,
+            paidAmount:     r.paidAmount,
+            daysLate:       r.overdueDays || 0,
+            feeStructureId: r.feeStructureId,
+            dueDate:        r.dueDate,
+            status,
+          };
+        })
+      );
+    } catch (e) {
+      console.error(e);
+      setError(e.message || 'Failed to load outstanding fees.');
+      setOutstanding([]);
+    } finally { setLoading(false); }
+  };
 
-    const params = {};
+  const fetchHistory = async () => {
+    try {
+      setLoading(true); setError(null);
+      const params = { fromDate, toDate, page: page - 1, size: PAGE_SIZE };
+      if (classF)  params.classId  = classF;
+      if (periodF) params.periodId = periodF;
+      if (modeF)   params.mode     = modeF;
 
-    if (classF) params.classId = classF;
-    if (periodF) params.periodId = periodF;
+      const res = await getFeeCollectionHistory(params);
+      console.log('History API Response:', res);
 
-    const res = await getOutstandingFees(params);
-
-    console.log("Outstanding Response:", res);
-
-    setOutstanding(
-      (res.records || []).map((r, index) => {
-
-        let status = 'PENDING';
-
-        if ((r.paidAmount || 0) > 0 && r.balanceDue > 0) {
-          status = 'PARTIAL';
-        }
-
-        if (r.balanceDue <= 0) {
-          status = 'PAID';
-        }
-
-        return {
-          id: index + 1,
-
-          studentId: r.studentId,
+      const records = res?.records || [];
+      setHistory(
+        records.map((r) => ({
+          id:          r.id,
+          receiptNo:   r.receiptNo,
+          date:        r.paymentDate,
           studentName: r.studentName,
           studentCode: r.admissionNumber,
-
-          class: r.className,
-          section: r.sectionName,
-
-          period: r.feePeriodName,
-
-          balance: r.balanceDue,
-          totalFee: r.totalFee,
-          paidAmount: r.paidAmount,
-
-          daysLate: r.overdueDays || 0,
-
-          feeStructureId: r.feeStructureId,
-          feePeriodId: r.feePeriodId,
-
-          dueDate: r.dueDate,
-
-          status,
-        };
-      })
-    );
-
-  } catch (e) {
-    console.error(e);
-    setError(e.message || "Failed to load outstanding fees.");
-    setOutstanding([]);
-  } finally {
-    setLoading(false);
-  }
-};
-  const fetchHistory = async () => {
-  try {
-    setLoading(true);
-    setError(null);
-
-    const params = {
-      fromDate,
-      toDate,
-      page: page - 1,
-      size: PAGE_SIZE,
-    };
-
-    if (classF) params.classId = classF;
-    if (periodF) params.periodId = periodF;
-    if (modeF) params.mode = modeF;
-
-    console.log("History Params:", params);
-
-    const res = await getFeeCollectionHistory(params);
-
-    console.log("History API Response:", res);
-
-    // ✅ FIXED RESPONSE HANDLING
-    const records = res?.data?.content || [];
-
-    setHistory(
-      records.map((r) => ({
-        id: r.id,
-
-        receiptNo: r.receiptNo,
-        date: r.paymentDate,
-
-        studentName: r.studentName,
-        studentCode: r.admissionNumber,
-
-        class: `${r.className} ${r.sectionName || ""}`,
-
-        period: r.feePeriodName,
-
-        amount: r.amountPaid,
-        discount: r.discount || 0,
-        lateFine: r.lateFine || 0,
-
-        mode: r.paymentMode,
-        referenceNo: r.referenceNo,
-
-        recordedBy: r.collectedBy,
-
-        status: "Completed",
-      }))
-    );
-
-    // ✅ FIXED PAGINATION
-    setTotalPages(res?.data?.totalPages || 1);
-
-  } catch (e) {
-    console.error(e);
-    setError(e.message || "Failed to load history");
-    setHistory([]);
-  } finally {
-    setLoading(false);
-  }
-};
-
+          class:       `${r.className}${r.sectionName ? ' ' + r.sectionName : ''}`,
+          period:      r.feePeriodName,
+          amount:      r.amountPaid,
+          discount:    r.discount    || 0,
+          lateFine:    r.lateFine    || 0,
+          mode:        r.paymentMode,
+          referenceNo: r.referenceNo,
+          recordedBy:  r.collectedBy,
+          status:      'Completed',
+        }))
+      );
+      setTotalPages(res?.pagination?.totalPages || 1);
+    } catch (e) {
+      console.error('History fetch error:', e);
+      setError(e.message || 'Failed to load history');
+      setHistory([]);
+    } finally { setLoading(false); }
+  };
 
   useEffect(() => {
-  if (tab === "outstanding") {
-    fetchOutstanding();
-  } else {
-    // only call after dates are ready
-    if (fromDate && toDate) {
-      fetchHistory();
+    if (tab === 'outstanding') {
+      fetchOutstanding();
+    } else {
+      if (fromDate && toDate) fetchHistory();
     }
-  }
-}, [tab, fromDate, toDate, classF, periodF, modeF, page]);
+  }, [tab, fromDate, toDate, classF, periodF, modeF, page]);
 
-  // ── Filtering / pagination ────────────────────────────────────────────────
+  // Show a waiting state if academicYear hasn't arrived yet
+  if (!academicYearId) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin w-6 h-6 border-2 border-[#1A3A5C] border-t-transparent rounded-full mx-auto" />
+      </div>
+    );
+  }
+
+  // ── Filtering ─────────────────────────────────────────────────────────────
   const filteredOut = outstanding.filter((s) => {
     const q = search.toLowerCase();
     return (
@@ -798,49 +749,47 @@ const fetchOutstanding = async () => {
     return !q || h.studentName.toLowerCase().includes(q) || (h.receiptNo || '').toLowerCase().includes(q);
   });
 
-  const pagedOut = filteredOut.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-  const totalOutPages = Math.max(1, Math.ceil(filteredOut.length / PAGE_SIZE));
-  const overdueCount = outstanding.filter((s) => s.status === 'OVERDUE').length;
+  const pagedOut       = filteredOut.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const totalOutPages  = Math.max(1, Math.ceil(filteredOut.length / PAGE_SIZE));
+  const overdueCount   = outstanding.filter((s) => s.status === 'OVERDUE').length;
 
-  // ── Selection ─────────────────────────────────────────────────────────────
   const toggleRow = (id) =>
     setSelected((p) => p.includes(id) ? p.filter((x) => x !== id) : [...p, id]);
 
   const toggleAll = () => {
-    const ids = filteredOut.map((s) => s.id);
+    const ids    = filteredOut.map((s) => s.id);
     const allSel = ids.every((id) => selected.includes(id));
     if (allSel) setSelected((p) => p.filter((id) => !ids.includes(id)));
     else setSelected((p) => [...new Set([...p, ...ids])]);
   };
 
   const selStudents = outstanding.filter((s) => selected.includes(s.id));
-  const selTotal = selStudents.reduce((a, s) => a + s.balance, 0);
+  const selTotal    = selStudents.reduce((a, s) => a + s.balance, 0);
 
-  // ── Event handlers ────────────────────────────────────────────────────────
   const handleCollectSuccess = (response, student) => {
     setCollectModal({ open: false, student: null });
     setReceiptModal({
       open: true,
       receipt: {
-        receiptNo: response.receiptNo,
-        date: response.paymentDate,
+        receiptNo:   response.receiptNo,
+        date:        response.paymentDate,
         studentName: student.studentName,
         studentCode: student.studentCode,
-        class: student.class,
-        period: student.period,
-        components: response.components || [
+        class:       student.class,
+        period:      student.period,
+        components:  response.components || [
           { name: 'Tuition Fee',   amount: Math.floor(student.totalFee * 0.67) },
           { name: 'Transport Fee', amount: Math.floor(student.totalFee * 0.20) },
           { name: 'Lab Fee',       amount: Math.floor(student.totalFee * 0.10) },
           { name: 'Misc',          amount: student.totalFee - Math.floor(student.totalFee * 0.97) },
         ],
-        amountPaid: response.amountPaid,
-        discount: response.discount || 0,
-        lateFine: response.lateFine || 0,
+        amountPaid:  response.amountPaid,
+        discount:    response.discount    || 0,
+        lateFine:    response.lateFine    || 0,
         paymentMode: response.paymentMode,
         referenceNo: response.referenceNo,
         balanceAfter: response.balanceAfter,
-        recordedBy: response.recordedBy || 'Admin',
+        recordedBy:  response.recordedBy  || 'Admin',
       },
     });
     fetchOutstanding(); setSelected([]);
@@ -869,7 +818,6 @@ const fetchOutstanding = async () => {
         },
       });
     } catch {
-      // Fallback with available data
       setReceiptModal({
         open: true,
         receipt: {
@@ -888,22 +836,21 @@ const fetchOutstanding = async () => {
 
   const resetTab = () => {
     setSearch(''); setClassF(''); setPeriodF('');
-    setStatusF(''); setModeF(''); setFromDate(''); setToDate('');
-    setPage(1); setSelected([]); setError(null);
+    setStatusF(''); setModeF(''); setPage(1); setSelected([]); setError(null);
   };
 
-  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-5">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-xl font-extrabold text-gray-900 tracking-tight">Collections &amp; History</h1>
-          <p className="text-xs text-gray-500 mt-0.5">Collect fee payments and view complete transaction history</p>
+          <p className="text-xs text-gray-500 mt-0.5">
+            AY {academicYear?.label} · Collect fee payments and view complete transaction history
+          </p>
         </div>
         <div className="flex gap-2">
           <Btn variant="secondary" size="sm"><FileDown size={13} /> Export</Btn>
-          {/* Opens first outstanding student; if none yet loaded shows disabled */}
           <Btn variant="primary" size="sm"
             disabled={outstanding.length === 0}
             onClick={() => outstanding.length > 0 && setCollectModal({ open: true, student: outstanding[0] })}>
@@ -912,7 +859,6 @@ const fetchOutstanding = async () => {
         </div>
       </div>
 
-      {/* Error banner */}
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 flex items-start gap-3">
           <AlertCircle size={16} className="text-red-600 mt-0.5 flex-shrink-0" />
@@ -922,11 +868,11 @@ const fetchOutstanding = async () => {
         </div>
       )}
 
-      {/* Inner tabs */}
+      {/* Tabs */}
       <div className="flex border-b border-gray-200">
         {[
           { key: 'outstanding', label: 'Outstanding & Overdue', badge: overdueCount },
-          { key: 'history', label: 'Payment History', badge: 0 },
+          { key: 'history',     label: 'Payment History',       badge: 0            },
         ].map((t) => (
           <button key={t.key} onClick={() => { setTab(t.key); resetTab(); }}
             className={`inline-flex items-center gap-2 px-4 py-3 text-[12.5px] font-semibold border-b-2 -mb-px transition-colors ${
@@ -943,27 +889,23 @@ const fetchOutstanding = async () => {
       {/* ══ OUTSTANDING TAB ══ */}
       {tab === 'outstanding' && (
         <>
-          {/* Filters */}
           <div className="flex flex-wrap gap-2">
             <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }}
               placeholder="🔍 Student name or ID..."
               className="flex-1 min-w-[200px] px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-[#1A3A5C]/10 focus:border-[#1A3A5C] transition-all" />
             <Sel value={periodF} onChange={(v) => { setPeriodF(v); setPage(1); setSelected([]); }}
               options={periodOptions} placeholder="All Periods" className="w-40" />
-            
             <Sel value={classF} onChange={(v) => { setClassF(v); setPage(1); setSelected([]); }}
               options={classOptions} placeholder="All Classes" className="w-36" />
-            
             <Sel value={statusF} onChange={(v) => { setStatusF(v); setPage(1); }}
               options={[
                 { value: 'OVERDUE', label: 'Overdue' },
                 { value: 'PARTIAL', label: 'Partial' },
-                { value: 'UNPAID', label: 'Pending' },
+                { value: 'UNPAID',  label: 'Pending' },
               ]}
               placeholder="All Status" className="w-36" />
           </div>
 
-          {/* Bulk selection bar */}
           {selected.length > 0 && (
             <div className="bg-[#1A3A5C] rounded-lg px-5 py-3 flex items-center justify-between shadow-md">
               <div className="flex items-center gap-6">
@@ -976,9 +918,7 @@ const fetchOutstanding = async () => {
               </div>
               <div className="flex gap-2">
                 <Btn variant="secondary" size="sm" onClick={() => setSelected([])}
-                  className="!bg-white/10 hover:!bg-white/20 !border-white/30 !text-white">
-                  Clear
-                </Btn>
+                  className="!bg-white/10 hover:!bg-white/20 !border-white/30 !text-white">Clear</Btn>
                 <Btn variant="success" size="sm"
                   onClick={() => setBulkModal({ open: true, students: selStudents })}>
                   Collect Selected ({selected.length})
@@ -987,7 +927,6 @@ const fetchOutstanding = async () => {
             </div>
           )}
 
-          {/* Table */}
           <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
@@ -1076,7 +1015,7 @@ const fetchOutstanding = async () => {
               </span>
               <div className="flex gap-2">
                 <Btn variant="secondary" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>← Prev</Btn>
-                <Btn variant="primary" size="sm" onClick={() => setPage((p) => Math.min(totalOutPages, p + 1))} disabled={page >= totalOutPages}>Next →</Btn>
+                <Btn variant="primary"   size="sm" onClick={() => setPage((p) => Math.min(totalOutPages, p + 1))} disabled={page >= totalOutPages}>Next →</Btn>
               </div>
             </div>
           </div>
@@ -1091,18 +1030,17 @@ const fetchOutstanding = async () => {
               placeholder="🔍 Receipt no. or student..."
               className="flex-1 min-w-[200px] px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-[#1A3A5C]/10 focus:border-[#1A3A5C] transition-all" />
             <Inp type="date" value={fromDate} onChange={(e) => { setFromDate(e.target.value); setPage(1); }} className="w-40" />
-            <Inp type="date" value={toDate} onChange={(e) => { setToDate(e.target.value); setPage(1); }} className="w-40" />
-
-               <Sel value={periodF} onChange={(v) => { setPeriodF(v); setPage(1); }}
+            <Inp type="date" value={toDate}   onChange={(e) => { setToDate(e.target.value);   setPage(1); }} className="w-40" />
+            <Sel value={periodF} onChange={(v) => { setPeriodF(v); setPage(1); }}
               options={periodOptions} placeholder="All Periods" className="w-40" />
-           
-            <Sel value={classF} onChange={(v) => { setClassF(v); setPage(1); }}
+            <Sel value={classF}  onChange={(v) => { setClassF(v);  setPage(1); }}
               options={classOptions} placeholder="All Classes" className="w-32" />
-           
-            <Sel value={modeF} onChange={(v) => { setModeF(v); setPage(1); }}
+            <Sel value={modeF}   onChange={(v) => { setModeF(v);   setPage(1); }}
               options={[
-                { value: 'CASH', label: 'Cash' }, { value: 'ONLINE', label: 'Online' },
-                { value: 'CHEQUE', label: 'Cheque' }, { value: 'DD', label: 'DD' },
+                { value: 'CASH',   label: 'Cash'   },
+                { value: 'ONLINE', label: 'Online' },
+                { value: 'CHEQUE', label: 'Cheque' },
+                { value: 'DD',     label: 'DD'     },
               ]}
               placeholder="All Modes" className="w-32" />
           </div>
@@ -1138,11 +1076,11 @@ const fetchOutstanding = async () => {
                       </td>
                       <td className="px-3 py-3 text-xs text-gray-600">{h.period}</td>
                       <td className="px-3 py-3 font-bold text-emerald-600">{fmt(h.amount)}</td>
-                      <td className="px-3 py-3 text-xs text-gray-500">{h.discount > 0 ? fmt(h.discount) : '—'}</td>
+                      <td className="px-3 py-3 text-xs text-gray-500">{h.discount  > 0 ? fmt(h.discount)  : '—'}</td>
                       <td className="px-3 py-3 text-xs text-amber-700">{h.lateFine > 0 ? fmt(h.lateFine) : '—'}</td>
                       <td className="px-3 py-3"><Badge status={h.mode} /></td>
                       <td className="px-3 py-3 text-xs text-gray-500">{h.referenceNo || '—'}</td>
-                      <td className="px-3 py-3 text-xs text-gray-500">{h.recordedBy || '—'}</td>
+                      <td className="px-3 py-3 text-xs text-gray-500">{h.recordedBy  || '—'}</td>
                       <td className="px-3 py-3">
                         <Btn variant="ghost" size="xs" onClick={() => handleViewReceipt(h)}>Receipt</Btn>
                       </td>
@@ -1155,7 +1093,7 @@ const fetchOutstanding = async () => {
               <span className="text-xs text-gray-500">Showing {filteredHist.length} transactions</span>
               <div className="flex gap-2">
                 <Btn variant="secondary" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>← Prev</Btn>
-                <Btn variant="primary" size="sm" onClick={() => setPage((p) => p + 1)} disabled={filteredHist.length < PAGE_SIZE}>Next →</Btn>
+                <Btn variant="primary"   size="sm" onClick={() => setPage((p) => p + 1)} disabled={filteredHist.length < PAGE_SIZE}>Next →</Btn>
               </div>
             </div>
           </div>
@@ -1167,6 +1105,7 @@ const fetchOutstanding = async () => {
         open={collectModal.open}
         onClose={() => setCollectModal({ open: false, student: null })}
         student={collectModal.student}
+        periodOptions={periodOptions}
         onSuccess={handleCollectSuccess}
       />
       <BulkCollectModal

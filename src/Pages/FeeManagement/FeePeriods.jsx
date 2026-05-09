@@ -12,106 +12,103 @@ import {
   createFeePeriod,
   updateFeePeriod,
   deleteFeePeriod,
-  getAcademicYears,
 } from '../../Api/FeePeriods';
+// ✅ getAcademicYears is no longer imported — year comes from props
 import { toast } from 'react-toastify';
 
 const cardTopColors = {
-  QUARTERLY: '#1A3A5C',
-  MONTHLY: '#0369A1',
-  YEARLY: '#0D7A55',
+  QUARTERLY:   '#1A3A5C',
+  MONTHLY:     '#0369A1',
+  YEARLY:      '#0D7A55',
   HALF_YEARLY: '#7C3AED',
-  CUSTOM: '#92400E',
+  CUSTOM:      '#92400E',
 };
 
 const typeLabels = {
-  QUARTERLY: 'Quarterly',
-  MONTHLY: 'Monthly',
-  YEARLY: 'Yearly',
+  QUARTERLY:   'Quarterly',
+  MONTHLY:     'Monthly',
+  YEARLY:      'Yearly',
   HALF_YEARLY: 'Half-Yearly',
-  CUSTOM: 'Custom',
+  CUSTOM:      'Custom',
 };
 
 const getStatusInfo = (period) => {
   const dueDate = new Date(period.dueDate);
-  const today = new Date();
+  const today   = new Date();
   if (period.collectedAmount && period.totalAmount && period.collectedAmount >= period.totalAmount) {
     return { status: 'PAID', label: 'Closed' };
   }
-  if (dueDate < today) {
-    return { status: 'OVERDUE', label: 'Overdue' };
-  }
-  if (period.collectedAmount && period.collectedAmount > 0) {
-    return { status: 'PARTIAL', label: 'Active' };
-  }
+  if (dueDate < today) return { status: 'OVERDUE', label: 'Overdue' };
+  if (period.collectedAmount && period.collectedAmount > 0) return { status: 'PARTIAL', label: 'Active' };
   return { status: 'PENDING', label: 'Upcoming' };
 };
 
 const formatCurrency = (amount) => {
-  if (!amount || amount === 0) return '\u20B90';
-  if (amount >= 10000000) return '\u20B9' + (amount / 10000000).toFixed(1) + 'Cr';
-  if (amount >= 100000) return '\u20B9' + (amount / 100000).toFixed(1) + 'L';
-  if (amount >= 1000) return '\u20B9' + (amount / 1000).toFixed(1) + 'K';
-  return '\u20B9' + amount.toLocaleString('en-IN');
+  if (!amount || amount === 0) return '₹0';
+  if (amount >= 10000000) return '₹' + (amount / 10000000).toFixed(1) + 'Cr';
+  if (amount >= 100000)   return '₹' + (amount / 100000).toFixed(1) + 'L';
+  if (amount >= 1000)     return '₹' + (amount / 1000).toFixed(1) + 'K';
+  return '₹' + amount.toLocaleString('en-IN');
 };
 
 const formatDate = (dateString) => {
-  if (!dateString) return '\u2014';
-  const date = new Date(dateString);
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  if (!dateString) return '—';
+  return new Date(dateString).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 };
 
-function PeriodModal({ isOpen, onClose, period, academicYears, currentAcademicYear, onSuccess }) {
-  const isEdit = !!period;
+// ─── Period Modal ─────────────────────────────────────────────────────────────
+// academicYear prop is { id, label } — no dropdown needed, just display the label
+function PeriodModal({ isOpen, onClose, period, academicYear, onSuccess }) {
+  const isEdit  = !!period;
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
-    name: '',
-    type: 'QUARTERLY',
+    name:              '',
+    type:              'QUARTERLY',
     academicYearLabel: '',
-    dueDate: '',
-    notes: '',
+    dueDate:           '',
+    notes:             '',
   });
 
   useEffect(() => {
     if (!isOpen) return;
     if (period) {
-      const matchedYear = academicYears.find((y) => y.id === period.academicYearId);
-      const label = matchedYear?.label || period.academicYearLabel || currentAcademicYear?.label || '';
       setForm({
-        name: period.name || '',
-        type: period.type || 'QUARTERLY',
-        academicYearLabel: label,
-        dueDate: period.dueDate ? period.dueDate.split('T')[0] : '',
-        notes: period.notes || '',
+        name:              period.name || '',
+        type:              period.type || 'QUARTERLY',
+        // Always use the passed-in academicYear label — no lookup needed
+        academicYearLabel: academicYear?.label || period.academicYearLabel || '',
+        dueDate:           period.dueDate ? period.dueDate.split('T')[0] : '',
+        notes:             period.notes || '',
       });
     } else {
       setForm({
-        name: '',
-        type: 'QUARTERLY',
-        academicYearLabel: currentAcademicYear?.label || '',
-        dueDate: '',
-        notes: '',
+        name:              '',
+        type:              'QUARTERLY',
+        academicYearLabel: academicYear?.label || '',
+        dueDate:           '',
+        notes:             '',
       });
     }
-  }, [isOpen, period, currentAcademicYear, academicYears]);
+  }, [isOpen, period, academicYear]);
 
   const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
 
   const handleSubmit = async () => {
-    if (!form.name.trim()) { toast.error('Period name is required'); return; }
-    if (!form.type) { toast.error('Period type is required'); return; }
-    if (!form.academicYearLabel) { toast.error('Academic year is required'); return; }
-    if (!form.dueDate) { toast.error('Due date is required'); return; }
+    if (!form.name.trim())        { toast.error('Period name is required');    return; }
+    if (!form.type)               { toast.error('Period type is required');    return; }
+    if (!form.academicYearLabel)  { toast.error('Academic year is required'); return; }
+    if (!form.dueDate)            { toast.error('Due date is required');       return; }
 
     setLoading(true);
     try {
       const payload = {
-        name: form.name.trim(),
-        type: form.type,
-        academicYearLabel: form.academicYearLabel,
-        dueDate: form.dueDate,
-        notes: form.notes.trim(),
-      };
+  name: form.name.trim(),
+  type: form.type,
+  academicYearId: academicYear.id,
+  academicYearLabel: academicYear.label,
+  dueDate: form.dueDate,
+  notes: form.notes.trim(),
+};
       if (isEdit) {
         await updateFeePeriod(period.id, payload);
         toast.success('Fee period updated successfully');
@@ -122,16 +119,11 @@ function PeriodModal({ isOpen, onClose, period, academicYears, currentAcademicYe
       onSuccess();
       onClose();
     } catch (error) {
-      toast.error(error.message || ('Failed to ' + (isEdit ? 'update' : 'create') + ' fee period'));
+      toast.error(error.message || `Failed to ${isEdit ? 'update' : 'create'} fee period`);
     } finally {
       setLoading(false);
     }
   };
-
-  const academicYearOptions = academicYears.map((year) => {
-    const label = year.label || (year.startDate + ' - ' + year.endDate);
-    return { value: label, label: label };
-  });
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={isEdit ? 'Edit Fee Period' : 'New Fee Period'} size="md">
@@ -149,6 +141,7 @@ function PeriodModal({ isOpen, onClose, period, academicYears, currentAcademicYe
               A clear name visible to staff when collecting payments.
             </div>
           </div>
+
           <div>
             <label className="block text-xs font-semibold text-gray-700 mb-1.5">
               Type <span className="text-red-500">*</span>
@@ -157,14 +150,15 @@ function PeriodModal({ isOpen, onClose, period, academicYears, currentAcademicYe
               value={form.type}
               onChange={(v) => set('type', v)}
               options={[
-                { value: 'MONTHLY', label: 'Monthly' },
-                { value: 'QUARTERLY', label: 'Quarterly' },
-                { value: 'HALF_YEARLY', label: 'Half-Yearly' },
-                { value: 'YEARLY', label: 'Yearly' },
-                { value: 'CUSTOM', label: 'Custom / One-time' },
+                { value: 'MONTHLY',     label: 'Monthly'          },
+                { value: 'QUARTERLY',   label: 'Quarterly'        },
+                { value: 'HALF_YEARLY', label: 'Half-Yearly'      },
+                { value: 'YEARLY',      label: 'Yearly'           },
+                { value: 'CUSTOM',      label: 'Custom / One-time' },
               ]}
             />
           </div>
+
           <div className="grid grid-cols-2 gap-4">
             <Input
               label="Due Date"
@@ -173,24 +167,19 @@ function PeriodModal({ isOpen, onClose, period, academicYears, currentAcademicYe
               onChange={(v) => set('dueDate', v)}
               required
             />
+            {/* ✅ Academic year shown as read-only chip — no dropdown, no API call */}
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                Academic Year <span className="text-red-500">*</span>
+                Academic Year
               </label>
-              <Select
-                value={form.academicYearLabel}
-                onChange={(v) => set('academicYearLabel', v)}
-                options={[
-                  { value: '', label: '-- Select academic year --' },
-                  ...academicYearOptions,
-                ]}
-              />
+              <div className="px-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 text-gray-700 font-semibold">
+                {form.academicYearLabel || '—'}
+              </div>
             </div>
           </div>
+
           <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-              Notes (optional)
-            </label>
+            <label className="block text-xs font-semibold text-gray-700 mb-1.5">Notes (optional)</label>
             <textarea
               value={form.notes}
               onChange={(e) => set('notes', e.target.value)}
@@ -202,9 +191,7 @@ function PeriodModal({ isOpen, onClose, period, academicYears, currentAcademicYe
         </div>
       </Modal.Body>
       <Modal.Footer>
-        <Button variant="secondary" onClick={onClose} disabled={loading}>
-          Cancel
-        </Button>
+        <Button variant="secondary" onClick={onClose} disabled={loading}>Cancel</Button>
         <Button variant="primary" onClick={handleSubmit} disabled={loading}>
           {loading ? 'Saving...' : isEdit ? 'Update Period' : 'Save Period'}
         </Button>
@@ -213,38 +200,28 @@ function PeriodModal({ isOpen, onClose, period, academicYears, currentAcademicYe
   );
 }
 
-const FeePeriods = ({ onNavigate }) => {
-  const [modal, setModal] = useState(false);
+// ─── FeePeriods Component ─────────────────────────────────────────────────────
+//
+// Props:
+//   academicYear  { id, label }  — passed from FeeManagement root (fetched once in Overview)
+//   onNavigate    fn             — tab navigation
+//
+const FeePeriods = ({ academicYear, onNavigate }) => {
+  const [modal,      setModal]      = useState(false);
   const [editPeriod, setEditPeriod] = useState(null);
-  const [periods, setPeriods] = useState([]);
-  const [academicYears, setAcademicYears] = useState([]);
-  const [currentAcademicYear, setCurrentAcademicYear] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [periods,    setPeriods]    = useState([]);
+  const [loading,    setLoading]    = useState(false);
 
-  useEffect(() => { fetchAcademicYears(); }, []);
-
+  // ✅ Fetch periods as soon as we have the academicYearId — no separate year fetch
   useEffect(() => {
-    if (currentAcademicYear) fetchPeriods();
-  }, [currentAcademicYear]);
-
-  const fetchAcademicYears = async () => {
-    try {
-      const data = await getAcademicYears();
-      setAcademicYears(data);
-      const current = data.find((y) => y.isCurrent) || data[0];
-      setCurrentAcademicYear(current || null);
-      if (!current) setLoading(false);
-    } catch (error) {
-      toast.error('Failed to fetch academic years');
-      setLoading(false);
-    }
-  };
+    if (academicYear?.id) fetchPeriods();
+  }, [academicYear?.id]);
 
   const fetchPeriods = async () => {
-    if (!currentAcademicYear) return;
+    if (!academicYear?.id) return;
     setLoading(true);
     try {
-      const data = await getFeePeriods(currentAcademicYear.id);
+      const data = await getFeePeriods(academicYear.id);
       setPeriods(data);
     } catch (error) {
       toast.error('Failed to fetch fee periods');
@@ -253,9 +230,9 @@ const FeePeriods = ({ onNavigate }) => {
     }
   };
 
-  const openNew = () => { setEditPeriod(null); setModal(true); };
-  const openEdit = (p) => { setEditPeriod(p); setModal(true); };
-  const close = () => { setModal(false); setEditPeriod(null); };
+  const openNew  = () => { setEditPeriod(null);  setModal(true); };
+  const openEdit = (p) => { setEditPeriod(p);    setModal(true); };
+  const close    = () => { setModal(false);       setEditPeriod(null); };
   const handleSuccess = () => fetchPeriods();
 
   const handleDelete = async (periodId) => {
@@ -269,6 +246,15 @@ const FeePeriods = ({ onNavigate }) => {
     }
   };
 
+  // Show a waiting state if academicYear hasn't arrived yet
+  if (!academicYear?.id) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-gray-500 text-sm">Waiting for academic year…</div>
+      </div>
+    );
+  }
+
   if (loading && periods.length === 0) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -279,10 +265,13 @@ const FeePeriods = ({ onNavigate }) => {
 
   return (
     <div className="space-y-5">
+      {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
           <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">Fee Periods</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Define named installment periods for each academic year</p>
+          <p className="text-sm text-gray-500 mt-0.5">
+            Define named installment periods · AY {academicYear.label}
+          </p>
         </div>
         <div className="flex-shrink-0">
           <Button variant="primary" icon={<Plus size={15} />} onClick={openNew}>
@@ -295,6 +284,7 @@ const FeePeriods = ({ onNavigate }) => {
         Fee Periods define <strong>when</strong> fee is due. After creating a period, attach class-wise fee structures to it from the <strong>Fee Structures</strong> tab.
       </div>
 
+      {/* Period cards */}
       <div className="grid grid-cols-4 gap-4">
         {periods.map((p) => {
           const statusInfo = getStatusInfo(p);
@@ -307,11 +297,7 @@ const FeePeriods = ({ onNavigate }) => {
             >
               <div className="flex items-center justify-between mb-2">
                 <Badge status={p.type}>{typeLabels[p.type] || p.type}</Badge>
-                <Button
-                  variant="ghost"
-                  size="xs"
-                  onClick={(e) => { e.stopPropagation(); openEdit(p); }}
-                >
+                <Button variant="ghost" size="xs" onClick={(e) => { e.stopPropagation(); openEdit(p); }}>
                   Edit
                 </Button>
               </div>
@@ -335,6 +321,8 @@ const FeePeriods = ({ onNavigate }) => {
             </div>
           );
         })}
+
+        {/* Add new card */}
         <div
           onClick={openNew}
           className="bg-gray-50 border-[1.5px] border-dashed border-gray-300 rounded-xl p-4 flex flex-col items-center justify-center cursor-pointer hover:border-navy hover:bg-navy-light transition-all duration-200 min-h-[160px]"
@@ -345,8 +333,9 @@ const FeePeriods = ({ onNavigate }) => {
         </div>
       </div>
 
+      {/* Table */}
       <Card>
-        <Card.Header>All Periods — {currentAcademicYear?.label || '2025-26'}</Card.Header>
+        <Card.Header>All Periods — {academicYear.label}</Card.Header>
         <Table>
           <Table.Header>
             <Table.Row>
@@ -370,25 +359,26 @@ const FeePeriods = ({ onNavigate }) => {
               </Table.Row>
             ) : (
               periods.map((p) => {
-                const statusInfo = getStatusInfo(p);
-                const outstandingAmount = (p.totalAmount || 0) - (p.collectedAmount || 0);
+                const statusInfo      = getStatusInfo(p);
+                const outstandingAmt  = (p.totalAmount || 0) - (p.collectedAmount || 0);
                 return (
                   <Table.Row key={p.id}>
                     <Table.Cell><span className="font-bold">{p.name}</span></Table.Cell>
                     <Table.Cell><Badge status={p.type}>{typeLabels[p.type] || p.type}</Badge></Table.Cell>
                     <Table.Cell className="text-gray-600 text-xs">{formatDate(p.dueDate)}</Table.Cell>
                     <Table.Cell>{p.structureCount || 0}</Table.Cell>
-                    <Table.Cell>{p.studentCount || 0}</Table.Cell>
+                    <Table.Cell>{p.studentCount  || 0}</Table.Cell>
                     <Table.Cell className={!p.collectedAmount ? 'text-gray-400' : 'text-success font-semibold'}>
-                      {p.collectedAmount ? formatCurrency(p.collectedAmount) : '\u2014'}
+                      {p.collectedAmount ? formatCurrency(p.collectedAmount) : '—'}
                     </Table.Cell>
-                    <Table.Cell className={outstandingAmount === 0 ? 'text-success' : 'text-[#B45309] font-semibold'}>
-                      {formatCurrency(outstandingAmount)}
+                    <Table.Cell className={outstandingAmt === 0 ? 'text-success' : 'text-[#B45309] font-semibold'}>
+                      {formatCurrency(outstandingAmt)}
                     </Table.Cell>
                     <Table.Cell><Badge status={statusInfo.status}>{statusInfo.label}</Badge></Table.Cell>
                     <Table.Cell>
                       <div className="flex gap-2">
-                        <Button variant="ghost" size="xs" onClick={() => onNavigate && onNavigate('structures', { periodId: p.id })}>
+                        <Button variant="ghost" size="xs"
+                          onClick={() => onNavigate && onNavigate('structures', { periodId: p.id })}>
                           Structures
                         </Button>
                         {statusInfo.status !== 'PAID' && (
@@ -409,12 +399,12 @@ const FeePeriods = ({ onNavigate }) => {
         </Table>
       </Card>
 
+      {/* Modal — no academicYears array needed, just pass academicYear */}
       <PeriodModal
         isOpen={modal}
         onClose={close}
         period={editPeriod}
-        academicYears={academicYears}
-        currentAcademicYear={currentAcademicYear}
+        academicYear={academicYear}
         onSuccess={handleSuccess}
       />
     </div>
