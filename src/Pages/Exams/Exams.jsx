@@ -24,6 +24,7 @@ import ListLoader from "../../Components/CommonComp/ListLoader";
 import NewExamForm from "./NewExamForm";
 import AddSubjectForm from "./AddSubjectForm";
 import TooltipComponent from "../../Components/CommonComp/Tooltip_comp/TooltipComp";
+import UpdateSubjectForm from "./UpdateExamForm";
 
 import { getExams, getExamSubjects, deleteExamSubject, declareExamResult } from "../../Api/Exams";
 import { getClasses } from "../../Api/TeachersAPI";
@@ -265,6 +266,7 @@ export default function Exams() {
     const [exams, setExams] = useState([]);
     const [subjects, setSubjects] = useState([]);
     const [selectedExamForSubjects, setSelectedExamForSubjects] = useState(null);
+    const [showUpdateSubjects, setShowUpdateSubjects] = useState(false);
 
     // ── Loading / error ───────────────────────────────────────────────────────
     const [loadingExams, setLoadingExams] = useState(false);
@@ -785,15 +787,29 @@ export default function Exams() {
                             <p className="text-xs text-gray-400">Click an exam row above to configure its subjects.</p>
                         )}
                     </div>
+                    <div className="flex  gap-3 ">
 
-                    <button
-                        onClick={() => { setEditSubject(null); setShowAddSubject(true); }}
-                        disabled={!selectedExamForSubjects || loadingExams}
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-all shadow-sm active:scale-95 whitespace-nowrap disabled:opacity-60 disabled:cursor-not-allowed w-full sm:w-auto justify-center"
-                    >
-                        <Plus className="w-4 h-4" />
-                        Add Subject
-                    </button>
+                        <button
+                            onClick={() => { setEditSubject(null); setShowAddSubject(true); }}
+                            disabled={!selectedExamForSubjects || loadingExams}
+                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-all shadow-sm active:scale-95 whitespace-nowrap disabled:opacity-60 disabled:cursor-not-allowed w-full sm:w-auto justify-center"
+                        >
+                            <Plus className="w-4 h-4" />
+                            Add Subject
+                        </button>
+                        <button
+                            onClick={() => setShowUpdateSubjects(true)}
+                            disabled={
+                                !selectedExamForSubjects ||
+                                loadingExams ||
+                                subjects.length === 0
+                            }
+                            className="flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-lg transition-all shadow-sm active:scale-95 whitespace-nowrap disabled:opacity-60 disabled:cursor-not-allowed w-full sm:w-auto justify-center"
+                        >
+                            <RefreshCw className="w-4 h-4" />
+                            Update Subject
+                        </button>
+                    </div>
                 </div>
 
                 {errorSubjects && (
@@ -959,6 +975,20 @@ export default function Exams() {
                     classId={examClassId}
                     editData={editSubject}
                     alreadyAddedSubjects={subjects}
+                />
+            )}
+            
+            {showUpdateSubjects && selectedExamForSubjects && (
+                <UpdateSubjectForm
+                    examId={selectedExamForSubjects.id}
+                    examName={selectedExamForSubjects.name}
+                    subjects={subjects}
+                    onClose={() => setShowUpdateSubjects(false)}
+                    onSuccess={() => {
+                        setShowUpdateSubjects(false);
+                        fetchSubjects();
+                        fetchExams();
+                    }}
                 />
             )}
 
