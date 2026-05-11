@@ -18,10 +18,14 @@ export const UserProvider = ({ children }) => {
   });
 
   // ✅ Academic year stored once at login — used across fee module
-  const [currentAcademicYear, setCurrentAcademicYear] = useState(() => {
-    try { return JSON.parse(localStorage.getItem("currentAcademicYear")) || null; }
-    catch { return null; }
-  });
+ const [currentAcademicYear, setCurrentAcademicYear] = useState(() => {
+    try {
+        const saved = localStorage.getItem("currentAcademicYear");
+        return saved ? JSON.parse(saved) : null;
+    } catch {
+        return null;
+    }
+});
 
   useEffect(() => {
     try {
