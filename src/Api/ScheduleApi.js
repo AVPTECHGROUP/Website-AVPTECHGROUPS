@@ -281,3 +281,114 @@ export const bulkSaveSlots = async (timetableId, slots = []) => {
         throw error;
     }
 };
+
+// ─────────────────────────────────────────────
+// TIMETABLE SUBSTITUTIONS
+// ─────────────────────────────────────────────
+
+// Get substitutions for a timetable
+export const getSubstitutions = async (timetableId) => {
+    try {
+        const res = await authFetch(
+            `${BASE_URL}/timetable/${timetableId}/substitutions`,
+            { method: "GET" }
+        );
+
+        const data = await res.json();
+
+        if (!res.ok) {
+            throw new Error(data?.message || "Failed to fetch substitutions");
+        }
+
+        return data?.data || [];
+    } catch (error) {
+        console.error("getSubstitutions error:", error.message);
+        throw error;
+    }
+};
+
+// Create substitution
+export const createSubstitution = async (timetableId, payload) => {
+    try {
+        const res = await authFetch(
+            `${BASE_URL}/timetable/${timetableId}/substitutions`,
+            {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+            }
+        );
+
+        const data = await res.json();
+
+        if (!res.ok) {
+            throw new Error(data?.message || "Failed to create substitution");
+        }
+
+        return data?.data;
+    } catch (error) {
+        console.error("createSubstitution error:", error.message);
+        throw error;
+    }
+};
+
+// Update substitution status
+export const updateSubstitutionStatus = async (
+    timetableId,
+    substitutionId,
+    status
+) => {
+    try {
+        const res = await authFetch(
+            `${BASE_URL}/timetable/${timetableId}/substitutions/${substitutionId}/status?status=${status}`,
+            {
+                method: "PUT",
+            }
+        );
+
+        const data = await res.json();
+
+        if (!res.ok) {
+            throw new Error(data?.message || "Failed to update substitution status");
+        }
+
+        return data?.data;
+    } catch (error) {
+        console.error("updateSubstitutionStatus error:", error.message);
+        throw error;
+    }
+};
+
+// Get teacher daily schedule
+
+export const getTeacherSchedule = async (teacherId, date = null) => {
+    try {
+        const params = new URLSearchParams();
+
+        params.append("teacherId", teacherId);
+
+        if (date) {
+            params.append("date", date);
+        }
+
+        const res = await authFetch(
+            `${BASE_URL}/timetable/teacher-schedule?${params.toString()}`,
+            {
+                method: "GET",
+            }
+        );
+
+        const data = await res.json();
+
+        if (!res.ok) {
+            throw new Error(
+                data?.message || "Failed to fetch teacher schedule"
+            );
+        }
+
+        return data?.data;
+    } catch (error) {
+        console.error("getTeacherSchedule error:", error.message);
+        throw error;
+    }
+};

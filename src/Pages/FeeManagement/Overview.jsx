@@ -1,13 +1,24 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useContext
+} from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Download, Plus, X, Printer, FileText, ArrowRight } from 'lucide-react';
 import { getFeeDashboard } from '../../Api/FeeDashboard';
 import { getFeePeriods } from '../../Api/FeePeriods';
-import { getOutstandingFees, createFeeCollection, createBulkFeeCollection } from '../../Api/FeeCollection';
-import { getFeeCollectionHistory } from '../../Api/FeeCollection';
+import { getOutstandingFees, createFeeCollection, createBulkFeeCollection, getFeeCollectionHistory } from '../../Api/FeeCollection';
+import { UserContext } from '../../ContextAPI/UserContext';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const TODAY = new Date().toISOString().split('T')[0];
+const ONE_MONTH_AGO = (() => {
+  const d = new Date();
+  d.setMonth(d.getMonth() - 1);
+  return d.toISOString().split('T')[0];
+})();
 
 // ─── Formatters ───────────────────────────────────────────────────────────────
 const fmt = (n) => '₹' + (Number(n) || 0).toLocaleString('en-IN');
@@ -151,7 +162,7 @@ const ReceiptModal = ({ open, onClose, receipt }) => {
   const handlePrint = () => {
     const w = window.open('', '_blank');
     w.document.write(`<html><head><title>Receipt ${receipt.receiptNo}</title>
-      <style>body{font-family:monospace;font-size:12px;padding:20px}.row{display:flex;justify-content:space-between;margin:3px 0}hr{border:none;border-top:1px dashed #999;margin:8px 0}.paid{color:#0D7A55;border:2px solid #0D7A55;display:inline-block;padding:3px 18px;font-size:16px;font-weight:900;letter-spacing:.15em;transform:rotate(-6deg);margin-top:14px;font-family:sans-serif}.center{text-align:center}</style>
+      <style>body{font-family:monospace;font-size:12px;padding:20px}hr{border:none;border-top:1px dashed #999;margin:8px 0}</style>
       </head><body>${printRef.current?.innerHTML || ''}</body></html>`);
     w.document.close(); w.print();
   };
@@ -160,11 +171,10 @@ const ReceiptModal = ({ open, onClose, receipt }) => {
       footer={<><Btn variant="secondary" onClick={onClose}>Close</Btn><Btn variant="primary" onClick={handlePrint}><Printer size={13} /> Print</Btn><Btn variant="ghost"><FileText size={13} /> PDF</Btn></>}>
       <div ref={printRef} className="border-2 border-gray-300 rounded-xl p-6 font-mono text-xs max-w-sm mx-auto bg-gray-50">
         <div className="text-center mb-3 font-sans">
-          <div className="text-[13.5px] font-extrabold">SPRINGDALE PUBLIC SCHOOL</div>
-          <div className="text-[11px] text-gray-500 mt-1">123 Education Lane, New Delhi · 011-4567-8900</div>
+          <div className="text-[13.5px] font-extrabold">FEE RECEIPT</div>
         </div>
         <hr className="border-dashed border-gray-300" />
-        <div className="flex justify-between font-bold my-2"><span>FEE RECEIPT</span><span>{receipt.receiptNo}</span></div>
+        <div className="flex justify-between font-bold my-2"><span>RECEIPT</span><span>{receipt.receiptNo}</span></div>
         <hr className="border-dashed border-gray-300" />
         <div className="space-y-1 my-2">
           {[['Date', fmtDate(receipt.date)], ['Student', receipt.studentName], ['Class', receipt.class || receipt.className], ['Adm. No.', receipt.studentCode], ['Period', receipt.period || receipt.periodName]].map(([k, v]) => (
@@ -209,10 +219,12 @@ const CollectFeeModal = ({ open, onClose, student, periodOptions, onSuccess }) =
 
   useEffect(() => {
     if (open && student) {
-      const matchedPeriod = periodOptions.find(
-        (p) => p.label === student.period || String(p.value) === String(student.feePeriodId)
-      );
-      setSelectedPeriodId(matchedPeriod ? String(matchedPeriod.value) : (periodOptions[0]?.value ? String(periodOptions[0].value) : ''));
+      // Match period by feePeriodId first, then by name
+      const matched =
+        periodOptions.find((p) => String(p.value) === String(student.feePeriodId)) ||
+        periodOptions.find((p) => p.label?.trim().toLowerCase() === student.period?.trim().toLowerCase()) ||
+        periodOptions[0];
+      setSelectedPeriodId(matched ? String(matched.value) : '');
       setForm({
         amountPaid: student.balance?.toString() || '',
         paymentMode: 'CASH', paymentDate: TODAY,
@@ -227,29 +239,22 @@ const CollectFeeModal = ({ open, onClose, student, periodOptions, onSuccess }) =
   const netTotal = (parseFloat(form.amountPaid) || 0) + (parseFloat(form.lateFine) || 0) - (parseFloat(form.discount) || 0);
   const MODES = [['CASH', '💵', 'Cash'], ['ONLINE', '🌐', 'Online'], ['CHEQUE', '📝', 'Cheque'], ['DD', '🏦', 'DD']];
 
-  const feeBreakdown = student.totalFee > 0 ? [
-    { name: 'Tuition Fee',   amount: Math.floor(student.totalFee * 0.67) },
-    { name: 'Transport Fee', amount: Math.floor(student.totalFee * 0.20) },
-    { name: 'Lab Fee',       amount: Math.floor(student.totalFee * 0.10) },
-    { name: 'Misc',          amount: student.totalFee - Math.floor(student.totalFee * 0.97) },
-  ] : [];
-
   const handleSubmit = async () => {
     if (!form.amountPaid || parseFloat(form.amountPaid) <= 0) { alert('Please enter a valid amount'); return; }
     if (!selectedPeriodId) { alert('Please select a fee period'); return; }
     try {
       setLoading(true);
       const res = await createFeeCollection({
-        studentId: student.studentId,
+        studentId:      student.studentId,
         feeStructureId: student.feeStructureId,
-        amountPaid: parseFloat(form.amountPaid),
-        discount: parseFloat(form.discount) || 0,
+        amountPaid:     parseFloat(form.amountPaid),
+        discount:       parseFloat(form.discount) || 0,
         discountReason: form.discountReason || null,
-        lateFine: parseFloat(form.lateFine) || 0,
-        paymentMode: form.paymentMode,
-        paymentDate: form.paymentDate,
-        referenceNo: form.referenceNo || null,
-        remarks: form.remarks || null,
+        lateFine:       parseFloat(form.lateFine) || 0,
+        paymentMode:    form.paymentMode,
+        paymentDate:    form.paymentDate,
+        referenceNo:    form.referenceNo || null,
+        remarks:        form.remarks || null,
       });
       onSuccess(res, student);
     } catch (e) { alert(e.message || 'Failed to record payment'); }
@@ -260,48 +265,24 @@ const CollectFeeModal = ({ open, onClose, student, periodOptions, onSuccess }) =
     <Modal open={open} onClose={onClose} title="Collect Fee Payment" wide
       footer={<><Btn variant="secondary" onClick={onClose}>Cancel</Btn><Btn variant="success" onClick={handleSubmit} disabled={loading}>{loading ? 'Recording…' : '✓ Record & Generate Receipt'}</Btn></>}>
       <div className="grid grid-cols-2 gap-6">
+        {/* Left */}
         <div className="space-y-4">
-          <div>
-            <label className="block text-[11.5px] font-semibold text-gray-600 mb-1">Search Student *</label>
-            <Inp value={student.studentName} disabled className="bg-gray-50 text-gray-600" />
-          </div>
           <div className="bg-[#EEF4FF] border border-[#C7D7EE] rounded-xl p-3 flex items-center gap-3">
             <Av name={student.studentName} status={student.status} size="lg" />
             <div>
               <div className="font-extrabold text-gray-900">{student.studentName}</div>
               <div className="text-xs text-gray-600">{student.studentCode} · Class {student.class}</div>
-              <div className="text-[11px] text-gray-500 mt-0.5">Parent: {student.parentName || 'N/A'} · {student.parentPhone || '—'}</div>
             </div>
           </div>
           <div>
             <label className="block text-[11.5px] font-semibold text-gray-600 mb-1">Fee Period *</label>
-            <select
-              value={selectedPeriodId}
-              onChange={(e) => setSelectedPeriodId(e.target.value)}
-              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-[#1A3A5C]/10 focus:border-[#1A3A5C] transition-all bg-white"
-            >
+            <select value={selectedPeriodId} onChange={(e) => setSelectedPeriodId(e.target.value)}
+              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-[#1A3A5C]/10 focus:border-[#1A3A5C] transition-all bg-white">
               <option value="">-- Select fee period --</option>
               {periodOptions.map((p) => (
-                <option key={p.value} value={String(p.value)}>
-                  {p.label} — Balance: {fmt(student.balance)}{isOverdue ? ' (Overdue)' : ''}
-                </option>
+                <option key={p.value} value={String(p.value)}>{p.label}</option>
               ))}
             </select>
-          </div>
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
-            <div className="text-[10.5px] font-bold text-gray-500 uppercase tracking-wider mb-2">
-              Fee Breakdown — {student.period}
-            </div>
-            {feeBreakdown.map((item) => (
-              <div key={item.name} className="flex justify-between text-sm py-1 border-b border-gray-200 last:border-0">
-                <span className="text-gray-700">{item.name}</span>
-                <span className="font-semibold">{fmt(item.amount)}</span>
-              </div>
-            ))}
-            <div className="flex justify-between font-bold pt-2 mt-1 border-t border-gray-300">
-              <span>Total Due</span>
-              <span className="text-[#1A3A5C] text-base">{fmt(student.balance)}</span>
-            </div>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 text-center">
@@ -309,12 +290,12 @@ const CollectFeeModal = ({ open, onClose, student, periodOptions, onSuccess }) =
               <div className="text-lg font-extrabold text-emerald-600">{fmt(student.paidAmount || 0)}</div>
             </div>
             <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-center">
-              <div className="text-[10px] font-bold text-red-700 uppercase">Balance</div>
+              <div className="text-[10px] font-bold text-red-700 uppercase">Balance Due</div>
               <div className="text-lg font-extrabold text-red-600">{fmt(student.balance)}</div>
             </div>
           </div>
         </div>
-
+        {/* Right */}
         <div className="space-y-4">
           <div>
             <label className="block text-[11.5px] font-semibold text-gray-600 mb-1">Amount to Collect *</label>
@@ -322,18 +303,17 @@ const CollectFeeModal = ({ open, onClose, student, periodOptions, onSuccess }) =
               <Inp type="number" value={form.amountPaid} className="pr-28"
                 onChange={(e) => setForm((p) => ({ ...p, amountPaid: e.target.value }))} />
               <button type="button" onClick={() => setForm((p) => ({ ...p, amountPaid: student.balance?.toString() }))}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-[11px] font-semibold text-[#1A3A5C] bg-[#EEF4FF] hover:bg-[#DDE8F5] border border-[#C7D7EE] px-2 py-1 rounded transition-colors">
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-[11px] font-semibold text-[#1A3A5C] bg-[#EEF4FF] hover:bg-[#DDE8F5] border border-[#C7D7EE] px-2 py-1 rounded">
                 Full {fmt(student.balance)}
               </button>
             </div>
-            <div className="text-[10.5px] text-gray-400 mt-1">Balance due: {fmt(student.balance)}</div>
           </div>
           <div>
             <label className="block text-[11.5px] font-semibold text-gray-600 mb-1">Payment Mode *</label>
             <div className="grid grid-cols-4 gap-2">
               {MODES.map(([mode, icon, label]) => (
                 <button key={mode} type="button" onClick={() => setForm((p) => ({ ...p, paymentMode: mode }))}
-                  className={`flex flex-col items-center gap-1.5 px-2 py-2.5 rounded-lg border-2 transition-all ${form.paymentMode === mode ? 'border-[#1A3A5C] bg-[#EEF4FF] text-[#1A3A5C]' : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'}`}>
+                  className={`flex flex-col items-center gap-1.5 px-2 py-2.5 rounded-lg border-2 transition-all ${form.paymentMode === mode ? 'border-[#1A3A5C] bg-[#EEF4FF] text-[#1A3A5C]' : 'border-gray-200 bg-white text-gray-600'}`}>
                   <span className="text-xl">{icon}</span>
                   <span className="text-[10.5px] font-bold">{label}</span>
                 </button>
@@ -352,21 +332,13 @@ const CollectFeeModal = ({ open, onClose, student, periodOptions, onSuccess }) =
           </div>
           <div>
             <label className="block text-[11.5px] font-semibold text-gray-600 mb-1">Discount (optional)</label>
-            <Inp type="number" value={form.discount} placeholder="Discount amount" onChange={(e) => setForm((p) => ({ ...p, discount: e.target.value }))} />
-            <textarea value={form.discountReason} rows={2} onChange={(e) => setForm((p) => ({ ...p, discountReason: e.target.value }))}
-              placeholder="Reason e.g. Sibling discount, scholarship..."
-              className="w-full mt-2 px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-[#1A3A5C]/10 focus:border-[#1A3A5C] resize-none" />
+            <Inp type="number" value={form.discount} placeholder="₹ Discount amount" onChange={(e) => setForm((p) => ({ ...p, discount: e.target.value }))} />
           </div>
           {isOverdue && (
             <div className="bg-amber-50 border border-amber-300 rounded-lg p-3">
-              <div className="flex items-start gap-2 mb-2">
-                <span>⚠️</span>
-                <div>
-                  <div className="text-sm font-bold text-amber-800">Past Due Date — Add Late Fine?</div>
-                  <div className="text-[11px] text-amber-700 mt-0.5">{student.daysLate || 0} day{student.daysLate !== 1 ? 's' : ''} overdue</div>
-                </div>
-              </div>
-              <Inp type="number" value={form.lateFine} placeholder="Enter fine amount (₹)" onChange={(e) => setForm((p) => ({ ...p, lateFine: e.target.value }))} className="border-amber-300 focus:border-amber-500" />
+              <div className="text-sm font-bold text-amber-800 mb-1">⚠️ Past Due — Add Late Fine?</div>
+              <div className="text-[11px] text-amber-700 mb-2">{student.daysLate || 0} day{student.daysLate !== 1 ? 's' : ''} overdue</div>
+              <Inp type="number" value={form.lateFine} placeholder="Fine amount (₹)" onChange={(e) => setForm((p) => ({ ...p, lateFine: e.target.value }))} className="border-amber-300" />
             </div>
           )}
           <div>
@@ -378,7 +350,7 @@ const CollectFeeModal = ({ open, onClose, student, periodOptions, onSuccess }) =
           <div className="bg-gray-900 rounded-lg px-4 py-3 flex justify-between items-center">
             <div>
               <div className="text-[10px] text-gray-400 uppercase tracking-wider">Receipt No.</div>
-              <div className="text-white font-bold text-sm mt-0.5">RC-{new Date().getFullYear()}-XXXXX</div>
+              <div className="text-white font-bold text-sm mt-0.5">Auto-generated</div>
             </div>
             <div className="text-right">
               <div className="text-[10px] text-gray-400 uppercase tracking-wider">Net Total</div>
@@ -425,8 +397,7 @@ const BulkCollectModal = ({ open, onClose, students, onSuccess }) => {
         payments: rows.map((r) => ({
           studentId: r.studentId, feeStructureId: r.feeStructureId,
           amountPaid: parseFloat(r.collectAmount),
-          discount: parseFloat(r.discount) || 0,
-          discountReason: null,
+          discount: parseFloat(r.discount) || 0, discountReason: null,
           lateFine: r.lateFine !== null && r.lateFine !== '' ? parseFloat(r.lateFine) : null,
           paymentMode: r.paymentMode, paymentDate: r.paymentDate,
           referenceNo: null, remarks: null,
@@ -439,9 +410,9 @@ const BulkCollectModal = ({ open, onClose, students, onSuccess }) => {
 
   return (
     <Modal open={open} onClose={onClose} title={`Bulk Fee Collection — ${students.length} Students`} wide
-      footer={<><Btn variant="secondary" onClick={onClose}>Cancel</Btn><Btn variant="success" onClick={handleSubmit} disabled={loading}>{loading ? 'Processing…' : `Process ${rows.length} Payments & Generate Receipts`}</Btn></>}>
+      footer={<><Btn variant="secondary" onClick={onClose}>Cancel</Btn><Btn variant="success" onClick={handleSubmit} disabled={loading}>{loading ? 'Processing…' : `Process ${rows.length} Payments`}</Btn></>}>
       <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-2.5 mb-4 text-sm text-emerald-800">
-        Payments will be recorded for all {students.length} selected students. Adjust amounts and late fines per row as needed.
+        Payments will be recorded for all {students.length} selected students.
       </div>
       <div className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 mb-4 flex items-end gap-4">
         <div>
@@ -466,43 +437,21 @@ const BulkCollectModal = ({ open, onClose, students, onSuccess }) => {
           <tbody>
             {rows.map((row) => (
               <tr key={row.id} className={`border-b border-gray-100 ${row.daysLate > 0 ? 'bg-red-50' : ''}`}>
-                <td className="px-3 py-2.5">
-                  <div className="font-semibold text-gray-900">{row.studentName}</div>
-                  <div className="text-xs text-gray-500">{row.studentCode}</div>
-                </td>
+                <td className="px-3 py-2.5"><div className="font-semibold text-gray-900">{row.studentName}</div><div className="text-xs text-gray-500">{row.studentCode}</div></td>
                 <td className="px-3 py-2.5"><span className="px-2 py-0.5 bg-[#EEF4FF] text-[#1A3A5C] text-xs font-semibold rounded">{row.class}</span></td>
                 <td className="px-3 py-2.5 text-xs text-gray-600">{row.period}</td>
-                <td className="px-3 py-2.5">
-                  {row.daysLate > 0 ? <span className="text-red-700 text-xs font-bold">● {fmt(row.balanceDue)} · {row.daysLate}d late</span>
-                    : <span className="font-semibold">{fmt(row.balanceDue)}</span>}
-                </td>
-                <td className="px-3 py-2.5">
-                  <input type="number" value={row.collectAmount} onChange={(e) => update(row.id, 'collectAmount', e.target.value)}
-                    className="w-24 px-2 py-1 text-sm border border-gray-200 rounded focus:outline-none focus:border-[#1A3A5C]" />
-                </td>
-                <td className="px-3 py-2.5">
-                  <input type="number" value={row.discount} placeholder="0" onChange={(e) => update(row.id, 'discount', e.target.value)}
-                    className="w-20 px-2 py-1 text-sm border border-gray-200 rounded focus:outline-none focus:border-[#1A3A5C]" />
-                </td>
-                <td className="px-3 py-2.5">
-                  {row.lateFine !== null
-                    ? <input type="number" value={row.lateFine} placeholder="Fine" onChange={(e) => update(row.id, 'lateFine', e.target.value)}
-                        className="w-20 px-2 py-1 text-sm border border-amber-300 rounded focus:outline-none focus:border-amber-500 bg-amber-50" />
-                    : <span className="text-xs text-gray-400">N/A</span>}
-                </td>
-                <td className="px-3 py-2.5">
-                  <select value={row.paymentMode} onChange={(e) => update(row.id, 'paymentMode', e.target.value)}
-                    className="w-24 px-2 py-1 text-sm border border-gray-200 rounded focus:outline-none focus:border-[#1A3A5C]">
-                    {MODES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                  </select>
-                </td>
+                <td className="px-3 py-2.5">{row.daysLate > 0 ? <span className="text-red-700 text-xs font-bold">● {fmt(row.balanceDue)} · {row.daysLate}d late</span> : <span className="font-semibold">{fmt(row.balanceDue)}</span>}</td>
+                <td className="px-3 py-2.5"><input type="number" value={row.collectAmount} onChange={(e) => update(row.id, 'collectAmount', e.target.value)} className="w-24 px-2 py-1 text-sm border border-gray-200 rounded focus:outline-none focus:border-[#1A3A5C]" /></td>
+                <td className="px-3 py-2.5"><input type="number" value={row.discount} placeholder="0" onChange={(e) => update(row.id, 'discount', e.target.value)} className="w-20 px-2 py-1 text-sm border border-gray-200 rounded focus:outline-none focus:border-[#1A3A5C]" /></td>
+                <td className="px-3 py-2.5">{row.lateFine !== null ? <input type="number" value={row.lateFine} placeholder="Fine" onChange={(e) => update(row.id, 'lateFine', e.target.value)} className="w-20 px-2 py-1 text-sm border border-amber-300 rounded bg-amber-50" /> : <span className="text-xs text-gray-400">N/A</span>}</td>
+                <td className="px-3 py-2.5"><select value={row.paymentMode} onChange={(e) => update(row.id, 'paymentMode', e.target.value)} className="w-24 px-2 py-1 text-sm border border-gray-200 rounded">{MODES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</select></td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
       <div className="bg-gray-900 rounded-lg px-4 py-3 mt-4 flex justify-between items-center">
-        <div className="text-sm text-gray-400">{rows.length} receipts will be generated automatically</div>
+        <div className="text-sm text-gray-400">{rows.length} receipts will be generated</div>
         <div className="text-white font-extrabold text-base">Grand Total: {fmt(grandTotal)}</div>
       </div>
     </Modal>
@@ -518,10 +467,8 @@ const StatCard = ({ title, value, subtitle, type }) => {
     overdue:  { border: '#B91C1C', color: '#B91C1C' },
     discount: { border: '#64748B', color: '#334155' },
   }[type] || { border: '#94A3B8', color: '#334155' };
-
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow"
-      style={{ borderLeft: `3px solid ${styles.border}` }}>
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow" style={{ borderLeft: `3px solid ${styles.border}` }}>
       <div className="text-[10px] font-bold tracking-widest uppercase text-gray-500 mb-1.5">{title}</div>
       <div className="text-2xl font-extrabold leading-none mb-1" style={{ color: styles.color }}>{value}</div>
       <div className="text-[11px] text-gray-500">{subtitle}</div>
@@ -529,148 +476,178 @@ const StatCard = ({ title, value, subtitle, type }) => {
   );
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
 // ─── Main Overview Component ──────────────────────────────────────────────────
-const Overview = ({ onNavigate, academicYear, yearLoading, yearError }) => {
+// Props:
+//   academicYear  — { id, label } — from FeeManagement via UserContext/localStorage
+//   onNavigate    — (tabKey: string) => void
+// ─────────────────────────────────────────────────────────────────────────────
+const Overview = ({ onNavigate }) => {
   const navigate = useNavigate();
 
-  const academicYearId = academicYear?.id;
-  const academicYearLabel = academicYear?.label;
+const { currentAcademicYear } = useContext(UserContext);
 
-  // ── Dashboard / periods / outstanding ────────────────────────────────────
-  const [dashboard,      setDashboard]      = useState(null);
-  const [periods,        setPeriods]        = useState([]);
-  const [periodOptions,  setPeriodOptions]  = useState([]);
-  const [outstanding,    setOutstanding]    = useState([]);
-  const [loading,        setLoading]        = useState(false);
-  const [periodFilter,   setPeriodFilter]   = useState('');
+const academicYearId = currentAcademicYear?.id;
+const academicYearLabel = currentAcademicYear?.label;
 
-  // ── Fee collection history (separate state — NOT from dashboard) ─────────
-  const [history,        setHistory]        = useState([]);
-  const [historyLoading, setHistoryLoading] = useState(false);
+console.log('[Overview] Context academic year:', currentAcademicYear);
 
-  // Modal states
+  const [dashboard,     setDashboard]     = useState(null);
+  const [periods,       setPeriods]       = useState([]);
+  const [periodOptions, setPeriodOptions] = useState([]);
+  const [outstanding,   setOutstanding]   = useState([]);
+  const [loading,       setLoading]       = useState(false);
+  const [periodFilter,  setPeriodFilter]  = useState('');
+  const [history,       setHistory]       = useState([]);
+  const [historyLoading,setHistoryLoading]= useState(false);
+
   const [collectModal, setCollectModal] = useState({ open: false, student: null });
   const [bulkModal,    setBulkModal]    = useState({ open: false, students: [] });
   const [receiptModal, setReceiptModal] = useState({ open: false, receipt: null });
   const [selected,     setSelected]     = useState([]);
 
+  // ── Fetch recent collections (history) ────────────────────────────────────
   const fetchHistory = useCallback(async () => {
     try {
       setHistoryLoading(true);
-
-      const data = await getFeeCollectionHistory({
-        fromDate: '2026-04-08',
-        toDate: TODAY,
-        page: 0,
-        size: 10,
+      const res = await getFeeCollectionHistory({
+        fromDate: ONE_MONTH_AGO,
+        toDate:   TODAY,
+        page:     0,
+        size:     10,
       });
-
-      const records = data?.data?.content || data?.content || [];
-
+      const records = res?.records || [];
       setHistory(
         records.map((item) => ({
-          id: item.id,
-          receiptNo: item.receiptNo,
+          id:          item.id,
+          receiptNo:   item.receiptNo,
           studentName: item.studentName,
-          studentCode: item.admissionNumber,
-          class: item.className,
-          section: item.sectionName,
-          period: item.feePeriodName,
-          amount: item.amountPaid,
-          discount: item.discount,
-          lateFine: item.lateFine,
-          totalDue: item.totalDue,
-          balanceAfter: item.balanceAfter,
-          mode: item.paymentMode,
-          date: item.paymentDate,
+          studentCode: item.admissionNumber  || item.studentCode,
+          class:       item.className        || item.class,
+          section:     item.sectionName      || item.section,
+          period:      item.feePeriodName    || item.period,
+          amount:      item.amountPaid       || item.amount,
+          discount:    item.discount         || 0,
+          lateFine:    item.lateFine         || 0,
+          balanceAfter:item.balanceAfter     || 0,
+          mode:        item.paymentMode      || item.mode,
+          date:        item.paymentDate      || item.date,
           referenceNo: item.referenceNo,
-          remarks: item.remarks,
-          recordedBy: item.collectedBy,
+          recordedBy:  item.collectedBy      || item.recordedBy,
         }))
       );
     } catch (err) {
-      console.error('History fetch error:', err);
+      console.error('❌ History fetch error:', err);
     } finally {
       setHistoryLoading(false);
     }
   }, []);
 
-  // Run history fetch once on mount — independent of academic year
   useEffect(() => { fetchHistory(); }, [fetchHistory]);
 
-  // ── Main data load — waits for academicYearId ────────────────────────────
+  // ── Main data load ────────────────────────────────────────────────────────
   const loadAll = useCallback(async () => {
-    if (!academicYearId) return;
+    if (!academicYearId) {
+      console.warn('[Overview] ⚠️ loadAll skipped — academicYearId is missing');
+      return;
+    }
+    
+    console.log('[Overview] 🔄 loadAll firing with academicYearId:', academicYearId);
     setLoading(true);
+    
     try {
       const [dash, perds, out] = await Promise.all([
-        getFeeDashboard(academicYearId).catch(() => null),
-        getFeePeriods(academicYearId).catch(() => []),
-        getOutstandingFees({}).catch(() => ({ records: [] })),
+        getFeeDashboard(academicYearId).catch((e) => { 
+          console.error('❌ Dashboard error:', e); 
+          return null; 
+        }),
+        getFeePeriods(academicYearId).catch((e) => { 
+          console.error('❌ Periods error:', e); 
+          return []; 
+        }),
+        getOutstandingFees({}).catch((e) => { 
+          console.error('❌ Outstanding error:', e); 
+          return { records: [] }; 
+        }),
       ]);
 
-      setDashboard(dash);
+      console.log('[Overview] ✅ API results:', { dash, perds, out });
 
+      // ── Dashboard ──
+      setDashboard(dash || {});
+
+      // ── Periods ──
       const periodsArray = Array.isArray(perds) ? perds : [];
       setPeriods(periodsArray);
       setPeriodOptions(
         periodsArray.map((p) => ({
           value: String(p.id),
-          label: p.name || p.periodName,
+          label: p.name || p.periodName || `Period ${p.id}`,
         }))
       );
 
+      // ── Outstanding ──
+      const outRecords = out?.records || [];
       setOutstanding(
-        (out?.records || []).map((r, index) => {
+        outRecords.map((r, index) => {
           let status = 'PENDING';
-          if ((r.paidAmount || 0) > 0 && r.balanceDue > 0) status = 'PARTIAL';
-          if (r.balanceDue <= 0)                            status = 'PAID';
-          if (r.overdueDays > 0 && r.balanceDue > 0)       status = 'OVERDUE';
+          if ((r.paidAmount || 0) > 0 && (r.balanceDue || 0) > 0) status = 'PARTIAL';
+          if ((r.balanceDue || 0) <= 0 && (r.totalFee || 0) > 0)  status = 'PAID';
+          if ((r.overdueDays || 0) > 0 && (r.balanceDue || 0) > 0) status = 'OVERDUE';
           return {
             id:             index + 1,
             studentId:      r.studentId,
             studentName:    r.studentName,
-            studentCode:    r.admissionNumber,
-            class:          r.className,
-            section:        r.sectionName,
-            period:         r.feePeriodName,
-            feePeriodId:    r.feePeriodId,
-            balance:        r.balanceDue,
-            totalFee:       r.totalFee,
-            paidAmount:     r.paidAmount,
-            daysLate:       r.overdueDays || 0,
+            studentCode:    r.admissionNumber  || r.studentCode,
+            class:          r.className        || r.class,
+            section:        r.sectionName      || r.section,
+            period:         r.feePeriodName    || r.periodName    || r.period,
+            feePeriodId:    r.feePeriodId      || r.periodId,
+            balance:        r.balanceDue       || 0,
+            totalFee:       r.totalFee         || 0,
+            paidAmount:     r.paidAmount       || 0,
+            daysLate:       r.overdueDays      || 0,
             feeStructureId: r.feeStructureId,
             dueDate:        r.dueDate,
             status,
           };
         })
       );
+      
+      console.log('[Overview] ✅ State updated:', {
+        dashboard: dash,
+        periodsCount: periodsArray.length,
+        outstandingCount: outRecords.length
+      });
+      
     } catch (e) {
-      console.error('Dashboard load error:', e);
+      console.error('[Overview] ❌ loadAll error:', e);
     } finally {
       setLoading(false);
     }
   }, [academicYearId]);
 
-  // Trigger main load once we have the academic year id
-  useEffect(() => { loadAll(); }, [loadAll]);
+  useEffect(() => { 
+    console.log('[Overview] 🔵 useEffect triggered, academicYearId:', academicYearId);
+    loadAll(); 
+  }, [loadAll]);
 
-  // ── Derived stats ─────────────────────────────────────────────────────────
-  const stats = {
-    totalBilled:      dashboard?.totalBilled        || 0,
-    collected:        dashboard?.totalCollected      || dashboard?.collected || 0,
-    partial:          dashboard?.partialAmount       || dashboard?.partial   || 0,
-    overdue:          dashboard?.overdueAmount       || dashboard?.overdue   || 0,
-    discounts:        dashboard?.totalDiscount       || dashboard?.discounts || 0,
-    collectedPct:     dashboard?.collectionRate      || 0,
-    partialStudents:  dashboard?.partialStudentCount || 0,
-    overdueStudents:  dashboard?.overdueStudentCount || 0,
-    discountStudents: dashboard?.discountStudentCount|| 0,
-    totalStudents:    dashboard?.totalStudents       || 0,
-    totalPeriods:     dashboard?.totalPeriods        || periods.length,
-  };
+  // ── Derived stats from dashboard ──────────────────────────────────────────
+ const stats = {
+  totalBilled:      dashboard?.totalBilled           || dashboard?.totalFee        || 0,
+  collected:        dashboard?.totalCollected        || dashboard?.collected       || 0,
+  partial:          dashboard?.totalPartialOrPending || dashboard?.partialAmount   || dashboard?.partial   || 0,
+  overdue:          dashboard?.totalOverdue          || dashboard?.overdueAmount   || dashboard?.overdue   || 0,
+  discounts:        dashboard?.totalDiscounts        || dashboard?.totalDiscount   || dashboard?.discounts || 0,
+  collectedPct:     dashboard?.collectionRate        || dashboard?.collectionRatio || 0,
+  partialStudents:  dashboard?.partialStudentCount   || dashboard?.partialStudents || 0,
+  overdueStudents:  dashboard?.overdueStudentCount   || dashboard?.overdueStudents || (dashboard?.overdueAlerts?.length ?? 0),
+  discountStudents: dashboard?.discountStudentCount  || dashboard?.discountStudents || 0,
+  totalStudents:    dashboard?.totalStudents         || 0,
+  totalPeriods:     dashboard?.totalPeriods          || periods.length,
+};
 
-  const classData     = dashboard?.classWiseCollection || dashboard?.classCollection || [];
+const classData = dashboard?.classRows || dashboard?.classWiseCollection || dashboard?.classCollection || dashboard?.classData || [];
   const overdueAlerts = outstanding.filter((s) => s.status === 'OVERDUE').slice(0, 3);
 
   // ── Period status helper ──────────────────────────────────────────────────
@@ -681,54 +658,35 @@ const Overview = ({ onNavigate, academicYear, yearLoading, yearError }) => {
     return { label: 'Upcoming', status: 'PENDING' };
   };
 
-  // ── Selection helpers ─────────────────────────────────────────────────────
+  // ── Filtering & selection ─────────────────────────────────────────────────
   const filteredOut = outstanding.filter(
     (s) => !periodFilter || s.period?.includes(periodFilter)
   );
+  const selStudents = outstanding.filter((s) => selected.includes(s.id));
+  const selTotal    = selStudents.reduce((a, s) => a + (Number(s.balance) || 0), 0);
 
-  const selStudents = outstanding.filter((s) =>
-    selected.includes(s.id)
-  );
-
-  const selTotal = selStudents.reduce(
-    (a, s) => a + (Number(s.balance) || 0),
-    0
-  );
-
-  const toggleRow = (id) => {
-    setSelected((prev) =>
-      prev.includes(id)
-        ? prev.filter((x) => x !== id)
-        : [...prev, id]
-    );
-  };
-
-  const toggleAll = () => {
-    if (selected.length === filteredOut.length) {
-      setSelected([]);
-    } else {
-      setSelected(filteredOut.map((s) => s.id));
-    }
-  };
+  const toggleRow = (id) => setSelected((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
+  const toggleAll = () => setSelected(selected.length === filteredOut.length ? [] : filteredOut.map((s) => s.id));
 
   // ── Modal helpers ─────────────────────────────────────────────────────────
   const openReceipt = (res, student) => {
     setReceiptModal({
       open: true,
       receipt: {
-        receiptNo:   res.receiptNo,   date:         res.paymentDate,
-        studentName: student.studentName, studentCode: student.studentCode,
-        class:       student.class,   period:       student.period,
-        components:  res.components || [
-          { name: 'Tuition Fee',   amount: Math.floor(student.totalFee * 0.67) },
-          { name: 'Transport Fee', amount: Math.floor(student.totalFee * 0.20) },
-          { name: 'Lab Fee',       amount: Math.floor(student.totalFee * 0.10) },
-          { name: 'Misc',          amount: student.totalFee - Math.floor(student.totalFee * 0.97) },
-        ],
-        amountPaid:  res.amountPaid,  discount:    res.discount    || 0,
-        lateFine:    res.lateFine     || 0,         paymentMode:   res.paymentMode,
-        referenceNo: res.referenceNo, balanceAfter: res.balanceAfter || 0,
-        recordedBy:  res.recordedBy   || 'Admin',
+        receiptNo:   res.receiptNo   || res.data?.receiptNo,
+        date:        res.paymentDate || res.data?.paymentDate,
+        studentName: student.studentName,
+        studentCode: student.studentCode,
+        class:       student.class,
+        period:      student.period,
+        components:  res.components  || res.data?.components || [],
+        amountPaid:  res.amountPaid  || res.data?.amountPaid,
+        discount:    res.discount    || 0,
+        lateFine:    res.lateFine    || 0,
+        paymentMode: res.paymentMode || res.data?.paymentMode,
+        referenceNo: res.referenceNo,
+        balanceAfter:res.balanceAfter|| 0,
+        recordedBy:  res.recordedBy  || 'Admin',
       },
     });
   };
@@ -736,60 +694,23 @@ const Overview = ({ onNavigate, academicYear, yearLoading, yearError }) => {
   const handleCollectSuccess = (res, student) => {
     setCollectModal({ open: false, student: null });
     openReceipt(res, student);
-    loadAll();
-    fetchHistory();
-    setSelected([]);
+    loadAll(); fetchHistory(); setSelected([]);
   };
 
   const handleBulkSuccess = (responses) => {
     setBulkModal({ open: false, students: [] });
     alert(`✅ Successfully processed ${Array.isArray(responses) ? responses.length : '?'} payments!`);
-    loadAll();
-    fetchHistory();
-    setSelected([]);
+    loadAll(); fetchHistory(); setSelected([]);
   };
 
   const openCollect = (student) => setCollectModal({ open: true, student });
   const openBulk   = () => setBulkModal({ open: true, students: selStudents });
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Show a full-page spinner while academic year is loading
-  if (yearLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <div className="animate-spin w-8 h-8 border-2 border-[#1A3A5C] border-t-transparent rounded-full mx-auto mb-3" />
-          <div className="text-sm text-gray-400">Loading academic year…</div>
-        </div>
-      </div>
-    );
-  }
-
-  // Show error state if academic year failed to load
-  if (yearError) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <div className="text-red-600 font-semibold mb-2">⚠️ Error Loading Academic Year</div>
-          <div className="text-sm text-gray-500 mb-4">{yearError}</div>
-          <button 
-            onClick={() => window.location.reload()} 
-            className="px-4 py-2 bg-[#1A3A5C] text-white rounded-lg text-sm hover:bg-[#0F2744] transition-colors"
-          >
-            Retry
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // Show message if academic year ID is missing
+  // Guard — academicYear not yet loaded
   if (!academicYearId) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-center text-sm text-gray-500">
-          Could not determine the current academic year. Please check your connection or log in again.
-        </div>
+        <div className="text-gray-500 text-sm">⏳ Waiting for academic year data...</div>
       </div>
     );
   }
@@ -798,7 +719,7 @@ const Overview = ({ onNavigate, academicYear, yearLoading, yearError }) => {
   return (
     <div className="space-y-5">
 
-      {/* ── Page header ── */}
+      {/* Page header */}
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-xl font-extrabold text-gray-900 tracking-tight">Fee Dashboard</h1>
@@ -817,23 +738,23 @@ const Overview = ({ onNavigate, academicYear, yearLoading, yearError }) => {
       {loading && (
         <div className="flex items-center gap-2 text-xs text-gray-400">
           <div className="animate-spin w-4 h-4 border-2 border-[#1A3A5C] border-t-transparent rounded-full" />
-          Refreshing data…
+          Loading data…
         </div>
       )}
 
-      {/* ── Stat cards ── */}
+      {/* Stat cards */}
       <div className="grid grid-cols-5 gap-4">
-        <StatCard title="Total Billed"      value={fmtCompact(stats.totalBilled)}  subtitle={`${stats.totalStudents} students · ${stats.totalPeriods} periods`}             type="total"    />
-        <StatCard title="Collected"         value={fmtCompact(stats.collected)}    subtitle={`${stats.collectedPct ? stats.collectedPct.toFixed(1) : '—'}% collection rate`} type="paid"     />
-        <StatCard title="Partial / Pending" value={fmtCompact(stats.partial)}      subtitle={`${stats.partialStudents} students with balance`}                               type="partial"  />
-        <StatCard title="Overdue"           value={fmtCompact(stats.overdue)}      subtitle={`${stats.overdueStudents} students past due date`}                              type="overdue"  />
-        <StatCard title="Discounts Given"   value={fmtCompact(stats.discounts)}    subtitle={`${stats.discountStudents} students`}                                           type="discount" />
+        <StatCard title="Total Billed"      value={fmtCompact(stats.totalBilled)}  subtitle={`${stats.totalStudents} students · ${stats.totalPeriods} periods`}              type="total"    />
+        <StatCard title="Collected"         value={fmtCompact(stats.collected)}    subtitle={`${stats.collectedPct ? Number(stats.collectedPct).toFixed(1) : '—'}% collection rate`} type="paid" />
+        <StatCard title="Partial / Pending" value={fmtCompact(stats.partial)}      subtitle={`${stats.partialStudents} students with balance`}                                type="partial"  />
+        <StatCard title="Overdue"           value={fmtCompact(stats.overdue)}      subtitle={`${stats.overdueStudents} students past due date`}                               type="overdue"  />
+        <StatCard title="Discounts Given"   value={fmtCompact(stats.discounts)}    subtitle={`${stats.discountStudents} students`}                                            type="discount" />
       </div>
 
-      {/* ── 2-col section ── */}
+      {/* 2-col: class table + right column */}
       <div className="grid grid-cols-3 gap-4">
 
-        {/* Collection by class table */}
+        {/* Collection by Class */}
         <div className="col-span-2 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
           <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
             <h3 className="text-sm font-bold text-gray-800">Collection by Class</h3>
@@ -852,15 +773,17 @@ const Overview = ({ onNavigate, academicYear, yearLoading, yearError }) => {
               </thead>
               <tbody>
                 {classData.length > 0 ? classData.map((row) => {
-                  const pct    = row.totalBilled > 0 ? Math.round(((row.totalCollected || 0) / row.totalBilled) * 100) : 0;
-                  const bal    = (row.totalBilled || 0) - (row.totalCollected || 0);
-                  const status = pct >= 100 ? 'PAID' : bal > 0 ? 'PARTIAL' : 'PAID';
+                  const billed    = row.totalBilled   || row.billed    || 0;
+                  const collected = row.totalCollected|| row.collected || 0;
+                 const pct = row.progressPercent != null ? Math.round(row.progressPercent) : (billed > 0 ? Math.round((collected / billed) * 100) : 0);
+                  const bal       = billed - collected;
+                  const status    = pct >= 100 ? 'PAID' : bal > 0 ? 'PARTIAL' : 'PAID';
                   return (
-                    <tr key={row.className || row.class} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                    <tr key={row.className || row.class || row.classId} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                       <td className="px-3 py-2.5 font-semibold text-sm">{row.className || row.class}</td>
                       <td className="px-3 py-2.5 text-sm">{row.studentCount || row.students || '—'}</td>
-                      <td className="px-3 py-2.5 text-sm">{fmtCompact(row.totalBilled || row.billed)}</td>
-                      <td className="px-3 py-2.5 text-sm font-semibold text-emerald-600">{fmtCompact(row.totalCollected || row.collected)}</td>
+                      <td className="px-3 py-2.5 text-sm">{fmtCompact(billed)}</td>
+                      <td className="px-3 py-2.5 text-sm font-semibold text-emerald-600">{fmtCompact(collected)}</td>
                       <td className={`px-3 py-2.5 text-sm font-semibold ${bal > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>{bal > 0 ? fmtCompact(bal) : '₹0'}</td>
                       <td className="px-3 py-2.5"><ProgressBar pct={pct} /></td>
                       <td className="px-3 py-2.5"><Bdg status={status}>{status === 'PAID' ? 'Paid' : 'Partial'}</Bdg></td>
@@ -877,7 +800,7 @@ const Overview = ({ onNavigate, academicYear, yearLoading, yearError }) => {
         {/* Right column */}
         <div className="space-y-4">
 
-          {/* ── Recent Collections — powered by history API ── */}
+          {/* Recent Collections */}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
             <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
               <h3 className="text-sm font-bold text-gray-800">Recent Collections</h3>
@@ -886,7 +809,6 @@ const Overview = ({ onNavigate, academicYear, yearLoading, yearError }) => {
                 View all <ArrowRight size={11} />
               </button>
             </div>
-
             {historyLoading ? (
               <div className="flex items-center justify-center py-8 gap-2">
                 <div className="animate-spin w-4 h-4 border-2 border-[#1A3A5C] border-t-transparent rounded-full" />
@@ -933,7 +855,7 @@ const Overview = ({ onNavigate, academicYear, yearLoading, yearError }) => {
         </div>
       </div>
 
-      {/* ── Outstanding table with bulk collect ── */}
+      {/* Outstanding Fees table */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
           <h3 className="text-sm font-bold text-gray-800">Outstanding Fees</h3>
@@ -981,16 +903,11 @@ const Overview = ({ onNavigate, academicYear, yearLoading, yearError }) => {
                 const isSel = selected.includes(s.id);
                 return (
                   <tr key={s.id} className={`border-b border-gray-100 transition-colors ${isSel ? 'bg-blue-50' : s.status === 'OVERDUE' ? 'bg-red-50/40 hover:bg-red-50' : 'hover:bg-gray-50'}`}>
-                    <td className="px-3 py-3">
-                      <input type="checkbox" className="w-3.5 h-3.5 cursor-pointer accent-[#1A3A5C]" checked={isSel} onChange={() => toggleRow(s.id)} />
-                    </td>
+                    <td className="px-3 py-3"><input type="checkbox" className="w-3.5 h-3.5 cursor-pointer accent-[#1A3A5C]" checked={isSel} onChange={() => toggleRow(s.id)} /></td>
                     <td className="px-3 py-3">
                       <div className="flex items-center gap-2">
                         <Av name={s.studentName} status={s.status} size="sm" />
-                        <div>
-                          <div className="font-semibold text-gray-900 text-sm">{s.studentName}</div>
-                          <div className="text-xs text-gray-500">{s.studentCode}</div>
-                        </div>
+                        <div><div className="font-semibold text-gray-900 text-sm">{s.studentName}</div><div className="text-xs text-gray-500">{s.studentCode}</div></div>
                       </div>
                     </td>
                     <td className="px-3 py-3"><span className="px-2 py-0.5 bg-[#EEF4FF] text-[#1A3A5C] text-xs font-semibold rounded">{s.class}</span></td>
@@ -1007,13 +924,9 @@ const Overview = ({ onNavigate, academicYear, yearLoading, yearError }) => {
                         </div>
                       ) : <span className="font-semibold text-gray-900 text-sm">{fmtCompact(s.balance)}</span>}
                     </td>
-                    <td className="px-3 py-3 text-xs">
-                      <span className={s.status === 'OVERDUE' ? 'text-red-600 font-semibold' : 'text-gray-600'}>{fmtDate(s.dueDate)}</span>
-                    </td>
+                    <td className="px-3 py-3 text-xs"><span className={s.status === 'OVERDUE' ? 'text-red-600 font-semibold' : 'text-gray-600'}>{fmtDate(s.dueDate)}</span></td>
                     <td className="px-3 py-3"><Bdg status={s.status}>{s.status === 'OVERDUE' ? 'Overdue' : s.status === 'PARTIAL' ? 'Partial' : 'Pending'}</Bdg></td>
-                    <td className="px-3 py-3">
-                      <Btn variant={s.status === 'OVERDUE' ? 'danger' : 'primary'} size="xs" onClick={() => openCollect(s)}>Collect</Btn>
-                    </td>
+                    <td className="px-3 py-3"><Btn variant={s.status === 'OVERDUE' ? 'danger' : 'primary'} size="xs" onClick={() => openCollect(s)}>Collect</Btn></td>
                   </tr>
                 );
               })}
@@ -1031,7 +944,7 @@ const Overview = ({ onNavigate, academicYear, yearLoading, yearError }) => {
         )}
       </div>
 
-      {/* ── Active Fee Periods ── */}
+      {/* Active Fee Periods */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
           <h3 className="text-sm font-bold text-gray-800">Active Fee Periods — {academicYearLabel}</h3>
@@ -1064,7 +977,7 @@ const Overview = ({ onNavigate, academicYear, yearLoading, yearError }) => {
         </div>
       </div>
 
-      {/* ── Modals ── */}
+      {/* Modals */}
       <CollectFeeModal
         open={collectModal.open}
         onClose={() => setCollectModal({ open: false, student: null })}

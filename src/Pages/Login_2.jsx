@@ -5,7 +5,8 @@ import { Link, useNavigate } from 'react-router-dom'
 import { loginAPI } from '../Api/AuthApi'
 import { UserContext } from '../ContextAPI/UserContext'
 import cstech from "../assets/Images/cstech.png"
-import { getCurrentAcademicYear } from '../Api/AcademicYear'
+
+// ❌ REMOVED: getCurrentAcademicYear import — now fetched after school selection, not at login
 
 const Login_2 = ({ onLoginSuccess }) => {
 
@@ -17,7 +18,8 @@ const Login_2 = ({ onLoginSuccess }) => {
   const [loginError, setLoginError] = useState('')
   const navigate = useNavigate()
 
-  const { setUser, saveProfile, saveCurrentAcademicYear } = useContext(UserContext)
+  const { setUser, saveProfile } = useContext(UserContext)
+  // ❌ REMOVED: saveCurrentAcademicYear — not needed here anymore
 
   const validateForm = () => {
     let allErrors = {}
@@ -80,20 +82,15 @@ const Login_2 = ({ onLoginSuccess }) => {
         onLoginSuccess(token)
       }
 
-      // ✅ Navigate to school selection - academic year will be fetched AFTER selection
       if (requireSchoolSelection) {
+        // SuperAdmin → school selection screen
+        // Academic year will be fetched AFTER school is selected (in SchoolSelectedCard)
         navigate("/superAdmin")
       } else {
-        // ✅ Fetch and save current academic year immediately for direct login
-        try {
-          const academicYear = await getCurrentAcademicYear()
-          if (academicYear) {
-            saveCurrentAcademicYear(academicYear)
-          }
-        } catch (err) {
-          console.error("Failed to fetch academic year:", err)
-          // Continue navigation even if academic year fetch fails
-        }
+        // Regular user → direct to dashboard
+        // Academic year will be fetched AFTER school is selected (in SchoolSelectedCard)
+        // If your regular users also go through a school picker, academic year fetch stays there.
+        // If they skip school selection entirely, fetch it here:
         navigate("/dashboard")
       }
 

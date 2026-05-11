@@ -1,203 +1,194 @@
-// FeeManagement.jsx — Root router
-// Academic year is fetched ONCE here via /academic-years/current
-// then passed down to all other fee pages as props.
-// No child page ever calls /academic-years or /academic-years/current directly.
+// FeeManagement.jsx
+// Academic year flow:
+//   SchoolSelectedCard → getCurrentAcademicYear() → saveCurrentAcademicYear() + localStorage
+//   FeeManagement reads context first, then localStorage fallback
+//   Passes { id, label } as prop to every child page
 
-import React, { useState, useEffect } from 'react';
-import { useDecodedUser } from '../../ContextAPI/UserContext';
+import React, { useState, useContext ,useEffect } from 'react';
+import { useDecodedUser, UserContext } from '../../ContextAPI/UserContext';
 import Overview from './Overview';
 import FeePeriods from './FeePeriods';
 import FeeStructures from './Feestructures.';
 import CollectionsHistory from './Collectionhistory';
 import Button from '../../Components/FeeModal/Button';
-import { getCurrentAcademicYear } from "../../Api/AcademicYear";
 
-// ─── Shared Topbar User Pill ──────────────────────────────────────────────────
+
+
+// ─── User pill ────────────────────────────────────────────────────────────────
 const UserPill = ({ profile, user }) => {
-  const fullName = profile
-    ? [profile.firstName, profile.lastName].filter(Boolean).join(' ')
-    : (user?.email?.split('@')[0] || 'User');
-  const role = profile?.designation || user?.userType || 'Admin';
-  const initials = profile
-    ? `${(profile.firstName?.[0] || '').toUpperCase()}${(profile.lastName?.[0] || '').toUpperCase()}`
-    : fullName.slice(0, 2).toUpperCase();
-
-  return (
-    <div className="flex items-center gap-2 border border-gray-200 rounded-full pl-1 pr-3 py-1 cursor-pointer hover:bg-gray-50 transition-colors">
-      <div className="w-7 h-7 rounded-full bg-[#1A3A5C] flex items-center justify-center text-white text-[11px] font-bold">
-        {initials}
-      </div>
-      <div>
-        <div className="text-xs font-bold text-gray-800 leading-tight">{fullName}</div>
-        <div className="text-[10px] text-gray-500 leading-none">{role}</div>
-      </div>
-    </div>
-  );
+    const fullName = profile
+        ? [profile.firstName, profile.lastName].filter(Boolean).join(' ')
+        : (user?.email?.split('@')[0] || 'User');
+    const role = profile?.designation || user?.userType || 'Admin';
+    const initials = fullName.slice(0, 2).toUpperCase();
+    return (
+        <div className="flex items-center gap-2 border border-gray-200 rounded-full pl-1 pr-3 py-1 cursor-pointer hover:bg-gray-50 transition-colors">
+            <div className="w-7 h-7 rounded-full bg-[#1A3A5C] flex items-center justify-center text-white text-[11px] font-bold">{initials}</div>
+            <div>
+                <div className="text-xs font-bold text-gray-800 leading-tight">{fullName}</div>
+                <div className="text-[10px] text-gray-500 leading-none">{role}</div>
+            </div>
+        </div>
+    );
 };
 
-// ─── Fee Synthesis Page ───────────────────────────────────────────────────────
-export const FeeSynthesisPage = ({ academicYear, yearLoading, yearError }) => {
-
-  const [tab, setTab] = useState('periods');
-  const { profile, user } = useDecodedUser();
-
-  const TABS = [
-    { key: 'periods',    label: 'Fee Periods'    },
-    { key: 'structures', label: 'Fee Structures' },
-  ];
-
-  return (
-    <div className="min-h-screen bg-gray-100 flex flex-col">
-      <header className="bg-white border-b border-gray-200 px-6 h-14 flex items-center justify-between sticky top-0 z-40">
-        <div>
-          <div className="font-bold text-lg text-gray-900 leading-tight">Fee Synthesis</div>
-          {academicYear?.label && (
-            <div className="text-[11px] text-gray-500">AY {academicYear.label}</div>
-          )}
+const AySubtitle = ({ academicYear, schoolName }) => {
+    if (!academicYear?.label) return null;
+    return (
+        <div className="text-[11px] text-gray-500">
+            Academic Year {academicYear.label}{schoolName ? <> &middot; {schoolName}</> : null}
         </div>
-        <UserPill profile={profile} user={user} />
-      </header>
-
-      <nav className="bg-white border-b border-gray-200 px-6 flex sticky top-14 z-30">
-        {TABS.map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            className={`inline-flex items-center gap-2 px-4 py-3 text-[12.5px] font-semibold border-b-2 -mb-px transition-colors whitespace-nowrap ${
-              tab === t.key
-                ? 'text-[#1A3A5C] border-[#1A3A5C]'
-                : 'text-gray-500 border-transparent hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </nav>
-
-      <main className="flex-1 p-6 max-w-[1600px] mx-auto w-full">
-        {tab === 'periods'    && <FeePeriods    academicYear={academicYear} yearLoading={yearLoading} yearError={yearError} onNavigate={(t) => setTab(t)} />}
-        {tab === 'structures' && <FeeStructures academicYear={academicYear} yearLoading={yearLoading} yearError={yearError} />}
-      </main>
-    </div>
-  );
+    );
 };
 
-// ─── Collections Page ─────────────────────────────────────────────────────────
-export const CollectionsPage = ({ academicYear, yearLoading, yearError }) => {
-  const { profile, user } = useDecodedUser();
-
-  return (
-    <div className="min-h-screen bg-gray-100 flex flex-col">
-      <header className="bg-white border-b border-gray-200 px-6 h-14 flex items-center justify-between sticky top-0 z-40">
-        <div>
-          <div className="font-bold text-lg text-gray-900 leading-tight">Collections &amp; History</div>
-          {academicYear?.label && (
-            <div className="text-[11px] text-gray-500">AY {academicYear.label}</div>
-          )}
+// ─── Pages ────────────────────────────────────────────────────────────────────
+export const FeeSynthesisPage = ({ academicYear }) => {
+    const [tab, setTab] = useState('periods');
+    const { profile, user } = useDecodedUser();
+   const { schoolInfo: currentSchool } = useContext(UserContext);
+    const TABS = [{ key: 'periods', label: 'Fee Periods' }, { key: 'structures', label: 'Fee Structures' }];
+    return (
+        <div className="min-h-screen bg-gray-100 flex flex-col">
+            <header className="bg-white border-b border-gray-200 px-6 h-14 flex items-center justify-between sticky top-0 z-40">
+                <div>
+                    <div className="font-bold text-lg text-gray-900 leading-tight">Fee Synthesis</div>
+                    <AySubtitle academicYear={academicYear} schoolName={currentSchool?.schoolName} />
+                </div>
+                <UserPill profile={profile} user={user} />
+            </header>
+            <nav className="bg-white border-b border-gray-200 px-6 flex sticky top-14 z-30">
+                {TABS.map((t) => (
+                    <button key={t.key} onClick={() => setTab(t.key)}
+                        className={`inline-flex items-center gap-2 px-4 py-3 text-[12.5px] font-semibold border-b-2 -mb-px transition-colors whitespace-nowrap ${tab === t.key ? 'text-[#1A3A5C] border-[#1A3A5C]' : 'text-gray-500 border-transparent hover:text-gray-700 hover:border-gray-300'}`}>
+                        {t.label}
+                    </button>
+                ))}
+            </nav>
+            <main className="flex-1 p-6 max-w-[1600px] mx-auto w-full">
+                {tab === 'periods'    && <FeePeriods    academicYear={academicYear} />}
+                {tab === 'structures' && <FeeStructures academicYear={academicYear} />}
+            </main>
         </div>
-        <UserPill profile={profile} user={user} />
-      </header>
-
-      <main className="flex-1 p-6 max-w-[1600px] mx-auto w-full">
-        <CollectionsHistory academicYear={academicYear} yearLoading={yearLoading} yearError={yearError} />
-      </main>
-    </div>
-  );
+    );
 };
 
-// ─── Overview / Dashboard Page ────────────────────────────────────────────────
-export const OverviewPage = ({ academicYear, yearLoading, yearError }) => {
-  const { profile, user } = useDecodedUser();
-
-  return (
-    <div className="min-h-screen bg-gray-100 flex flex-col">
-      <header className="bg-white border-b border-gray-200 px-6 h-14 flex items-center justify-between sticky top-0 z-40">
-        <div>
-          <div className="font-bold text-lg text-gray-900 leading-tight">Fee Management</div>
-          {academicYear?.label && (
-            <div className="text-[11px] text-gray-500">AY {academicYear.label}</div>
-          )}
+export const CollectionsPage = ({ academicYear }) => {
+    const { profile, user } = useDecodedUser();
+  const { schoolInfo: currentSchool } = useContext(UserContext);
+    return (
+        <div className="min-h-screen bg-gray-100 flex flex-col">
+            <header className="bg-white border-b border-gray-200 px-6 h-14 flex items-center justify-between sticky top-0 z-40">
+                <div>
+                    <div className="font-bold text-lg text-gray-900 leading-tight">Collections &amp; History</div>
+                    <AySubtitle academicYear={academicYear} schoolName={currentSchool?.schoolName} />
+                </div>
+                <UserPill profile={profile} user={user} />
+            </header>
+            <main className="flex-1 p-6 max-w-[1600px] mx-auto w-full">
+                <CollectionsHistory academicYear={academicYear} />
+            </main>
         </div>
-        <div className="flex items-center gap-3">
-          <Button variant="secondary" size="sm">⬇ Export</Button>
-          <UserPill profile={profile} user={user} />
-        </div>
-      </header>
-
-      <main className="flex-1 p-6 max-w-[1600px] mx-auto w-full">
-        <Overview
-          onNavigate={() => {}}
-          academicYear={academicYear}
-          yearLoading={yearLoading}
-          yearError={yearError}
-        />
-      </main>
-    </div>
-  );
+    );
 };
 
-// ─── Root FeeManagement — single source of truth for academic year ─────────────
+export const OverviewPage = ({ academicYear }) => {
+    const { profile, user } = useDecodedUser();
+    const { schoolInfo: currentSchool } = useContext(UserContext);
+    return (
+        <div className="min-h-screen bg-gray-100 flex flex-col">
+            <header className="bg-white border-b border-gray-200 px-6 h-14 flex items-center justify-between sticky top-0 z-40">
+                <div>
+                    <div className="font-bold text-lg text-gray-900 leading-tight">Fee Management</div>
+                    <AySubtitle academicYear={academicYear} schoolName={currentSchool?.schoolName} />
+                </div>
+                <div className="flex items-center gap-3">
+                    <Button variant="secondary" size="sm">⬇ Export</Button>
+                    <UserPill profile={profile} user={user} />
+                </div>
+            </header>
+            <main className="flex-1 p-6 max-w-[1600px] mx-auto w-full">
+                <Overview onNavigate={() => {}} academicYear={academicYear} />
+            </main>
+        </div>
+    );
+};
+
+// ─── Root ─────────────────────────────────────────────────────────────────────
 const FeeManagement = ({ page = 'overview' }) => {
-  console.log("FeeManagement Rendered");
-  const [academicYear, setAcademicYear] = useState(null);
-  const [yearLoading, setYearLoading] = useState(true);
-  const [yearError, setYearError] = useState(null);
-  
 
+    const [academicYear, setAcademicYear] = useState(null);
 
-  useEffect(() => {
+    useEffect(() => {
 
-  console.log("useEffect Running");
-    const loadAcademicYear = async () => {
-       console.log("loadAcademicYear Called");
-      try {
-        setYearLoading(true);
-        setYearError(null);
+        try {
+            const stored = localStorage.getItem('currentAcademicYear');
 
-        const res = await getCurrentAcademicYear();
-        
-        console.log('Academic Year API Response:', res);
+            if (!stored) {
+                console.warn('[FeeManagement] No academic year in localStorage');
+                return;
+            }
 
-        // Extract year from response
-        const year = res?.data || res;
+            const parsed = JSON.parse(stored);
 
-        console.log('Extracted Academic Year:', year);
+            console.log(
+                '[FeeManagement] Loaded academic year:',
+                parsed
+            );
 
-        // Validate the year data
-        if (!year || !year.id) {
-          throw new Error('Invalid academic year data received');
+            if (parsed?.id) {
+                setAcademicYear({
+                    id: parsed.id,
+                    label: parsed.label,
+                });
+            }
+
+        } catch (err) {
+            console.error(
+                '[FeeManagement] Failed to parse academic year',
+                err
+            );
         }
 
-        setAcademicYear({
-          id: year.id,
-          label: year.label || year.name || year.academicYearName || `AY ${year.id}`,
-        });
+    }, []);
 
-        console.log('Academic Year Set:', {
-          id: year.id,
-          label: year.label || year.name || year.academicYearName || `AY ${year.id}`,
-        });
+    
 
-      } catch (err) {
-        console.error("Failed to load academic year:", err);
-        setYearError(err.message || 'Failed to load academic year');
-      } finally {
-        setYearLoading(false);
-      }
-    };
+    if (!academicYear?.id) {
+        return (
+            <div className="flex flex-col items-center justify-center h-64 gap-3">
+                <div className="text-base font-semibold text-gray-700">Academic year not loaded</div>
+                <div className="text-sm text-gray-500 max-w-sm text-center">
+                    Please open browser DevTools → Console and check the
+                    "[FeeManagement]" logs above. Also check Application → Local Storage
+                    for a <code className="bg-gray-100 px-1 rounded">currentAcademicYear</code> key.
+                </div>
+                <button
+                    onClick={() => {
+                        // Last-resort: try reading from all possible localStorage keys
+                        const keys = ['currentAcademicYear', 'academicYear', 'ayData', 'ay'];
+                        for (const k of keys) {
+                            try {
+                                const v = JSON.parse(localStorage.getItem(k) || 'null');
+                                if (v?.id) {
+                                    console.log(`Found AY under key "${k}":`, v);
+                                    alert(`Found academic year under "${k}": id=${v.id}, label=${v.label}\nCheck console for details.`);
+                                    return;
+                                }
+                            } catch { /* ignore */ }
+                        }
+                        alert('No academic year found in localStorage. Check console for [FeeManagement] logs.');
+                    }}
+                    className="text-xs text-blue-600 underline cursor-pointer"
+                >
+                    Debug: check localStorage
+                </button>
+            </div>
+        );
+    }
 
-    loadAcademicYear();
-  }, []);
-
-  if (page === 'synthesis') {
-    return <FeeSynthesisPage academicYear={academicYear} yearLoading={yearLoading} yearError={yearError} />;
-  }
-  
-  if (page === 'collections') {
-    return <CollectionsPage academicYear={academicYear} yearLoading={yearLoading} yearError={yearError} />;
-  }
-
-  return <OverviewPage academicYear={academicYear} yearLoading={yearLoading} yearError={yearError} />;
+    if (page === 'synthesis')   return <FeeSynthesisPage academicYear={academicYear} />;
+    if (page === 'collections') return <CollectionsPage  academicYear={academicYear} />;
+    return <OverviewPage academicYear={academicYear} />;
 };
 
 export default FeeManagement;

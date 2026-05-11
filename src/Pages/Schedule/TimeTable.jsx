@@ -1,19 +1,21 @@
 import { useState, useEffect } from 'react';
 import {
     Calendar, Plus, Eye, Pencil, Trash2, Send,
-    Search, ChevronDown, Settings2, BookOpen, Clock
+    Search, ChevronDown, Settings2, BookOpen, Clock, UserSearch
 } from 'lucide-react';
 import CardComponent from '../../Components/CommonComp/CardComponent';
 import CardLoader from '../../Components/CommonComp/CardLoader';
 import ScheduleConfig from './components/ScheduleConfig';
 import AddTimetableModal from './components/AddTimetableModal';
 import CreateSchedule from './CreateSchedule';
+import TeacherScheduleViewer from './components/TeacherScheduleViewer';
 import {
     getTimetables,
     createTimetable,
     deleteTimetable,
     publishTimetable,
 } from '../../Api/ScheduleApi';
+import { getListOfValues } from '../../Api/ListOfValues';
 
 const StatusBadge = ({ status }) => {
     const isDraft = status === 'Draft' || status === 'DRAFT';
@@ -29,20 +31,35 @@ const StatusBadge = ({ status }) => {
 
 export default function TimeTable() {
     const [loading, setLoading] = useState(false);
+    const [publishingId, setPublishingId] = useState(null);
+    const [deletingId, setDeletingId] = useState(null);
     const [showConfig, setShowConfig] = useState(false);
     const [showAddModal, setShowAddModal] = useState(false);
+    const [showTeacherSchedule, setShowTeacherSchedule] = useState(false); // ← new state
     const [timetables, setTimetables] = useState([]);
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('All Statuses');
     const [classFilter, setClassFilter] = useState('All Classes');
+    const [yearFilter, setYearFilter] = useState('All Years');
     const [sort, setSort] = useState('Recently Added');
+    const [academicYears, setAcademicYears] = useState([]);
     const [openWorkspace, setOpenWorkspace] = useState(null);
     const [deleteConfirm, setDeleteConfirm] = useState(null);
     const [toastMsg, setToastMsg] = useState('');
 
     useEffect(() => {
         loadTimetables();
+        loadAcademicYears();
     }, []);
+
+    const loadAcademicYears = async () => {
+        try {
+            const data = await getListOfValues('ACADEMIC_YEAR');
+            setAcademicYears(data || []);
+        } catch (err) {
+            console.error('Failed to load academic years:', err);
+        }
+    };
 
     const showToast = (msg) => {
         setToastMsg(msg);
@@ -63,12 +80,11 @@ export default function TimeTable() {
         }
     };
 
-    // Normalize API response to local shape
     const normalizeApiTimetable = (t) => ({
         id: t.id,
         class: t.className || t.class || `Class ${t.classId}`,
         section: t.sectionName || t.section || `Section ${t.sectionId}`,
-        year: t.academicYearLabel || t.year,
+        year: t.academicYear || t.year,
         status: t.status === 'PUBLISHED' ? 'Published' : 'Draft',
         lastUpdated: t.updatedAt ? new Date(t.updatedAt).toLocaleDateString() : 'Recently',
         classId: t.classId,
@@ -81,7 +97,7 @@ export default function TimeTable() {
             const payload = {
                 classId: data.classId,
                 sectionId: data.sectionId,
-                academicYearLabel: data.academicYearLabel,
+                academicYear: data.academicYear,
                 notes: data.notes,
                 ...(data.copyFromTimetableId ? { copyFromTimetableId: data.copyFromTimetableId } : {}),
             };
@@ -98,22 +114,28 @@ export default function TimeTable() {
 
     const handlePublish = async (id) => {
         try {
+            setPublishingId(id);
             await publishTimetable(id);
             setTimetables(prev => prev.map(t => t.id === id ? { ...t, status: 'Published', lastUpdated: 'Just now' } : t));
             showToast('Published ✓');
         } catch (err) {
             showToast(err.message || 'Failed to publish');
+        } finally {
+            setPublishingId(null);
         }
     };
 
     const handleDelete = async (id) => {
         try {
+            setDeletingId(id);
             await deleteTimetable(id);
             setTimetables(prev => prev.filter(t => t.id !== id));
             setDeleteConfirm(null);
-            showToast('Deleted');
+            showToast('Deleted ✓');
         } catch (err) {
             showToast(err.message || 'Failed to delete');
+        } finally {
+            setDeletingId(null);
         }
     };
 
@@ -126,12 +148,15 @@ export default function TimeTable() {
             t.section.toLowerCase().includes(search.toLowerCase());
         const matchStatus = statusFilter === 'All Statuses' || t.status === statusFilter;
         const matchClass = classFilter === 'All Classes' || t.class === classFilter;
-        return matchSearch && matchStatus && matchClass;
+        const matchYear = yearFilter === 'All Years' || t.year === yearFilter;
+        return matchSearch && matchStatus && matchClass && matchYear;
     });
 
-    // Unique filter options from loaded data
     const uniqueClasses = [...new Set(timetables.map(t => t.class))];
-    const uniqueYears = [...new Set(timetables.map(t => t.year))];
+    // Use LOV academic years; fall back to years extracted from loaded timetables
+    const uniqueYears = academicYears.length > 0
+        ? academicYears.map(y => y.name || y.value)
+        : [...new Set(timetables.map(t => t.year))];
 
     if (openWorkspace) {
         return (
@@ -148,29 +173,15 @@ export default function TimeTable() {
 
             {/* Toast */}
             {toastMsg && (
-                <div className="fixed bottom-5 right-5 z-100 bg-[#1e293b] text-white text-sm px-4 py-2.5 rounded-xl shadow-xl">
+                <div className="fixed bottom-5 right-5 z-[100] bg-[#1e293b] text-white text-sm px-4 py-2.5 rounded-xl shadow-xl">
                     {toastMsg}
                 </div>
             )}
 
             {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
-                <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Timetable Directory</h1>
-                    <p className="text-sm text-gray-500 mt-0.5">List of all class-section timetables. Choose view or edit.</p>
-                </div>
-                <div className="flex gap-2 flex-wrap">
-                    <button onClick={() => setShowConfig(true)}
-                        className="flex items-center gap-2 px-4 py-2 border border-gray-300 bg-white text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition">
-                        <Settings2 size={16} />
-                        School Time Config
-                    </button>
-                    <button onClick={() => setShowAddModal(true)}
-                        className="flex items-center gap-2 px-4 py-2 bg-[#1e293b] text-white rounded-lg text-sm font-medium hover:bg-[#334155] transition">
-                        <Plus size={16} />
-                        Add Timetable
-                    </button>
-                </div>
+            <div className="mb-6">
+                <h1 className="text-2xl font-bold text-gray-900">Timetable Directory</h1>
+                <p className="text-sm text-gray-500 mt-0.5">List of all class-section timetables. Choose view or edit.</p>
             </div>
 
             {/* Stat Cards */}
@@ -189,9 +200,32 @@ export default function TimeTable() {
 
             {/* Table Card */}
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+
+                {/* Quick Actions */}
+                <div className="px-5 pt-4 pb-3 border-b border-gray-100">
+                    <p className="text-sm font-bold text-gray-700 mb-2.5">Quick Actions</p>
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <button onClick={() => setShowAddModal(true)}
+                            className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition cursor-pointer">
+                            <Plus size={15} />
+                            Add Timetable
+                        </button>
+                        <button onClick={() => setShowTeacherSchedule(true)}
+                            className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition cursor-pointer">
+                            <UserSearch size={15} />
+                            Teacher Schedule
+                        </button>
+                        <button onClick={() => setShowConfig(true)}
+                            className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition cursor-pointer">
+                            <Settings2 size={15} />
+                            School Time Config
+                        </button>
+                    </div>
+                </div>
+
                 {/* Filters */}
                 <div className="p-4 border-b border-gray-100 flex flex-col sm:flex-row gap-3 flex-wrap">
-                    <div className="relative flex-1 min-w-45">
+                    <div className="relative flex-1 min-w-[180px]">
                         <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                         <input value={search} onChange={e => setSearch(e.target.value)}
                             placeholder="Search class or section..."
@@ -200,6 +234,7 @@ export default function TimeTable() {
                     {[
                         { val: statusFilter, set: setStatusFilter, opts: ['All Statuses', 'Draft', 'Published'] },
                         { val: classFilter, set: setClassFilter, opts: ['All Classes', ...uniqueClasses] },
+                        { val: yearFilter, set: setYearFilter, opts: ['All Years', ...uniqueYears] },
                     ].map(({ val, set, opts }, i) => (
                         <div key={i} className="relative">
                             <select value={val} onChange={e => set(e.target.value)}
@@ -210,7 +245,7 @@ export default function TimeTable() {
                         </div>
                     ))}
                     <button onClick={loadTimetables}
-                        className="px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition font-medium">
+                        className="px-3 py-2 border border-gray-200 rounded-lg text-sm cursor-pointer text-gray-600 hover:bg-gray-50 transition font-medium">
                         ↻ Refresh
                     </button>
                 </div>
@@ -245,21 +280,21 @@ export default function TimeTable() {
                                     <td className="px-5 py-4">
                                         <div className="flex items-center gap-2 flex-wrap">
                                             <button onClick={() => setOpenWorkspace({ timetable: tt, mode: 'view' })}
-                                                className="flex items-center gap-1 px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-50 transition">
+                                                className="flex items-center gap-1 px-3 cursor-pointer py-1.5 border border-gray-200 rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-50 transition">
                                                 <Eye size={13} /> View
                                             </button>
                                             <button onClick={() => setOpenWorkspace({ timetable: tt, mode: 'edit' })}
-                                                className="flex items-center gap-1 px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-50 transition">
+                                                className="flex items-center gap-1 px-3 cursor-pointer py-1.5 border border-gray-200 rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-50 transition">
                                                 <Pencil size={13} /> Edit
                                             </button>
                                             {tt.status === 'Draft' && (
-                                                <button onClick={() => handlePublish(tt.id)}
-                                                    className="flex items-center gap-1 px-3 py-1.5 bg-[#1e293b] text-white rounded-lg text-xs font-medium hover:bg-[#334155] transition">
-                                                    <Send size={13} /> Publish
+                                                <button onClick={() => handlePublish(tt.id)} disabled={publishingId === tt.id}
+                                                    className="flex items-center gap-1 px-3 cursor-pointer py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700 transition disabled:opacity-50">
+                                                    <Send size={13} /> {publishingId === tt.id ? 'Publishing...' : 'Publish'}
                                                 </button>
                                             )}
                                             <button onClick={() => setDeleteConfirm(tt.id)}
-                                                className="flex items-center gap-1 px-3 py-1.5 border border-red-100 rounded-lg text-xs font-medium text-red-500 hover:bg-red-50 transition">
+                                                className="flex items-center gap-1 px-3 py-1.5 border cursor-pointer border-red-100 rounded-lg text-xs font-medium text-red-500 hover:bg-red-50 transition">
                                                 <Trash2 size={13} /> Delete
                                             </button>
                                         </div>
@@ -290,17 +325,17 @@ export default function TimeTable() {
                             </div>
                             <div className="flex gap-2 flex-wrap mt-3">
                                 <button onClick={() => setOpenWorkspace({ timetable: tt, mode: 'view' })}
-                                    className="flex items-center gap-1 px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-medium text-gray-600">
+                                    className="flex items-center gap-1 px-3 cursor-pointer py-1.5 border border-gray-200 rounded-lg text-xs font-medium text-gray-600">
                                     <Eye size={13} /> View
                                 </button>
                                 <button onClick={() => setOpenWorkspace({ timetable: tt, mode: 'edit' })}
-                                    className="flex items-center gap-1 px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-medium text-gray-600">
+                                    className="flex items-center gap-1 px-3 cursor-pointer py-1.5 border border-gray-200 rounded-lg text-xs font-medium text-gray-600">
                                     <Pencil size={13} /> Edit
                                 </button>
                                 {tt.status === 'Draft' && (
-                                    <button onClick={() => handlePublish(tt.id)}
-                                        className="flex items-center gap-1 px-3 py-1.5 bg-[#1e293b] text-white rounded-lg text-xs font-medium">
-                                        <Send size={13} /> Publish
+                                    <button onClick={() => handlePublish(tt.id)} disabled={publishingId === tt.id}
+                                        className="flex items-center gap-1 px-3 cursor-pointer py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium disabled:opacity-50">
+                                        <Send size={13} /> {publishingId === tt.id ? 'Publishing...' : 'Publish'}
                                     </button>
                                 )}
                                 <button onClick={() => setDeleteConfirm(tt.id)}
@@ -323,6 +358,11 @@ export default function TimeTable() {
                 />
             )}
 
+            {/* ── Teacher Schedule Viewer Modal ── */}
+            {showTeacherSchedule && (
+                <TeacherScheduleViewer onClose={() => setShowTeacherSchedule(false)} />
+            )}
+
             {/* Delete Confirm */}
             {deleteConfirm && (
                 <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
@@ -331,12 +371,12 @@ export default function TimeTable() {
                         <p className="text-sm text-gray-500 mb-5">This action cannot be undone. All slots will be permanently removed.</p>
                         <div className="flex gap-3 justify-end">
                             <button onClick={() => setDeleteConfirm(null)}
-                                className="px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50">
+                                className="px-4 py-2 border cursor-pointer border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50">
                                 Cancel
                             </button>
-                            <button onClick={() => handleDelete(deleteConfirm)}
-                                className="px-4 py-2 bg-red-500 text-white rounded-lg text-sm font-medium hover:bg-red-600">
-                                Delete
+                            <button onClick={() => handleDelete(deleteConfirm)} disabled={deletingId === deleteConfirm}
+                                className="px-4 py-2 bg-red-500 text-white rounded-lg cursor-pointer text-sm font-medium hover:bg-red-600 disabled:opacity-50">
+                                {deletingId === deleteConfirm ? 'Deleting...' : 'Delete'}
                             </button>
                         </div>
                     </div>
