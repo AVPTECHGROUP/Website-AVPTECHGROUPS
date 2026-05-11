@@ -3,7 +3,7 @@ import {
     X, BookOpen, Loader2, CheckCircle2, AlertCircle,
     FlaskConical, ChevronDown, ChevronUp, Save
 } from "lucide-react";
-import { addExamSubject, updateExamSubject } from "../../Api/Exams";
+import { addExamSubject, bulkAddExamSubjects, updateExamSubject } from "../../Api/Exams";
 import { getSectionSubjectsByClass } from "../../Api/TeachersAPI";
 
 // ─── Per-subject row state factory ────────────────────────────────────────────
@@ -285,6 +285,7 @@ export default function AddSubjectForm({
     const alreadyAddedCount = rows.filter((r) => r.alreadyAdded).length;
 
     // Submit
+    // Submit
     const handleSubmit = async () => {
         setSubmitError(null);
 
@@ -292,12 +293,14 @@ export default function AddSubjectForm({
             // Edit mode: validate single row
             const row = rows[0];
             const errors = validateRow(row);
+
             if (Object.keys(errors).length > 0) {
                 setRows((prev) => {
                     const next = [...prev];
                     next[0] = { ...next[0], errors };
                     return next;
                 });
+
                 setSubmitError("Please fix the errors above.");
                 return;
             }
@@ -307,13 +310,21 @@ export default function AddSubjectForm({
                 setSubmitError("Please select at least one subject to add.");
                 return;
             }
+
             let hasErrors = false;
+
             const nextRows = rows.map((row) => {
                 if (!row.included) return row;
+
                 const errors = validateRow(row);
-                if (Object.keys(errors).length > 0) hasErrors = true;
+
+                if (Object.keys(errors).length > 0) {
+                    hasErrors = true;
+                }
+
                 return { ...row, errors };
             });
+
             if (hasErrors) {
                 setRows(nextRows);
                 setSubmitError("Please fix the errors in the highlighted rows.");
@@ -322,45 +333,83 @@ export default function AddSubjectForm({
         }
 
         setSubmitting(true);
-        try {
-            const included = isEdit ? rows : rows.filter((r) => r.included);
-            const results = await Promise.allSettled(
-                included.map((row) => {
-                    const tp = row.hasTheoryPractical;
-                    const payload = {
-                        sectionSubjectId: Number(row.sectionSubjectId),
-                        maxMarks: Number(row.maxMarks),
-                        passingMarks: Number(row.passingMarks),
-                        hasTheoryPractical: tp,
-                        maxTheoryMarks: tp ? Number(row.maxTheoryMarks) : null,
-                        maxPracticalMarks: tp ? Number(row.maxPracticalMarks) : null,
-                        passingTheoryMarks: tp ? Number(row.passingTheoryMarks || 0) : null,
-                        passingPracticalMarks: tp ? Number(row.passingPracticalMarks || 0) : null,
-                    };
-                    if (isEdit) return updateExamSubject(examId, editData.id, payload);
-                    return addExamSubject(examId, payload);
-                })
-            );
 
-            const failed = results.filter((r) => r.status === "rejected");
-            if (failed.length > 0) {
-                const msg = failed[0].reason?.response?.data?.message
-                    ?? failed[0].reason?.message
-                    ?? "Some subjects failed to save.";
-                setSubmitError(`${failed.length} subject(s) failed: ${msg}`);
-                // Still call onSuccess for partial saves
-                if (failed.length < included.length) onSuccess?.();
-            } else {
+        try {
+            // ─────────────────────────────
+            // EDIT MODE → SINGLE UPDATE API
+            // ─────────────────────────────
+            if (isEdit) {
+                const row = rows[0];
+                const tp = row.hasTheoryPractical;
+
+                const payload = {
+                    sectionSubjectId: Number(row.sectionSubjectId),
+                    maxMarks: Number(row.maxMarks),
+                    passingMarks: Number(row.passingMarks),
+                    hasTheoryPractical: tp,
+                    maxTheoryMarks: tp ? Number(row.maxTheoryMarks) : null,
+                    maxPracticalMarks: tp ? Number(row.maxPracticalMarks) : null,
+                    passingTheoryMarks: tp ? Number(row.passingTheoryMarks || 0) : null,
+                    passingPracticalMarks: tp ? Number(row.passingPracticalMarks || 0) : null,
+                };
+
+                await updateExamSubject(examId, editData.id, payload);
+
                 onSuccess?.();
+                return;
             }
+
+            // ─────────────────────────────
+            // ADD MODE
+            // SINGLE → addExamSubject
+            // MULTIPLE → bulkAddExamSubjects
+            // ─────────────────────────────
+            const includedRows = rows.filter((r) => r.included);
+
+            const payloads = includedRows.map((row) => {
+                const tp = row.hasTheoryPractical;
+
+                return {
+                    sectionSubjectId: Number(row.sectionSubjectId),
+                    maxMarks: Number(row.maxMarks),
+                    passingMarks: Number(row.passingMarks),
+                    hasTheoryPractical: tp,
+                    maxTheoryMarks: tp ? Number(row.maxTheoryMarks) : null,
+                    maxPracticalMarks: tp ? Number(row.maxPracticalMarks) : null,
+                    passingTheoryMarks: tp ? Number(row.passingTheoryMarks || 0) : null,
+                    passingPracticalMarks: tp ? Number(row.passingPracticalMarks || 0) : null,
+                };
+            });
+
+            // Single add
+            if (payloads.length === 1) {
+                await addExamSubject(examId, payloads[0]);
+            }
+
+            // Bulk add
+            else {
+                const result = await bulkAddExamSubjects(examId, payloads);
+
+                // Optional skipped message
+                if (result?.skippedCount > 0) {
+                    setSubmitError(
+                        `${result.skippedCount} subject(s) were already added and skipped.`
+                    );
+                }
+            }
+
+            onSuccess?.();
+
         } catch (err) {
-            setSubmitError(err?.message ?? "Failed to save. Please try again.");
+            setSubmitError(
+                err?.message || "Failed to save subjects. Please try again."
+            );
         } finally {
             setSubmitting(false);
         }
     };
 
-    // ─── RENDER ───────────────────────────────────────────────────────────────
+    // ─── RENDER 
     return (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-0 sm:p-4">
             {/* Modal card */}
