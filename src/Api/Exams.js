@@ -656,3 +656,84 @@ export const deactivateExamType = async (id) => {
     throw error;
   }
 };
+
+// ─── Bulk Add Subjects to Exam ───────────────────────────────────────────────
+export const bulkAddExamSubjects = async (examId, subjectsData = []) => {
+  try {
+    if (!examId) {
+      throw new Error("examId is required");
+    }
+
+    if (!Array.isArray(subjectsData) || subjectsData.length === 0) {
+      throw new Error("subjectsData must be a non-empty array");
+    }
+
+    const res = await authFetch(
+      `${BASE_URL}/exams/${examId}/subjects/bulk`,
+      {
+        method: "POST",
+        body: JSON.stringify(subjectsData),
+      }
+    );
+
+    if (!res.ok) {
+      const msg = await extractError(
+        res,
+        `Failed to bulk add subjects to examId: ${examId}`
+      );
+      throw new Error(msg);
+    }
+
+    const data = await res.json();
+
+    return data?.data || {
+      added: [],
+      skipped: [],
+      addedCount: 0,
+      skippedCount: 0,
+    };
+  } catch (error) {
+    console.error(`bulkAddExamSubjects error: ${error.message}`);
+    throw error;
+  }
+};
+
+// ─── Bulk Update Subject Configs ─────────────────────────────────────────────
+export const bulkUpdateExamSubjects = async (
+  examId,
+  subjectsData = []
+) => {
+  try {
+    if (!examId) {
+      throw new Error("examId is required");
+    }
+
+    if (!Array.isArray(subjectsData) || subjectsData.length === 0) {
+      throw new Error("subjectsData must be a non-empty array");
+    }
+
+    const res = await authFetch(
+      `${BASE_URL}/exams/${examId}/subjects/bulk`,
+      {
+        method: "PUT",
+        body: JSON.stringify(subjectsData),
+      }
+    );
+
+    if (!res.ok) {
+      const msg = await extractError(
+        res,
+        `Failed to bulk update subjects for examId: ${examId}`
+      );
+
+      throw new Error(msg);
+    }
+
+    const data = await res.json();
+
+    return data?.data || [];
+  } catch (error) {
+    console.error(`bulkUpdateExamSubjects error: ${error.message}`);
+    throw error;
+  }
+};
