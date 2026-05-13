@@ -36,7 +36,7 @@ const initials = (name = '') =>
 // ─── Shared UI primitives ─────────────────────────────────────────────────────
 const Av = ({ name, status, size = 'md' }) => {
   const sz = { sm: 'w-8 h-8 text-xs', md: 'w-10 h-10 text-sm', lg: 'w-12 h-12 text-base' }[size];
-  const bg = status === 'OVERDUE' ? 'bg-red-700' : status === 'PARTIAL' ? 'bg-amber-700' : 'bg-[#1A3A5C]';
+  const bg = status === 'PARTIAL' ? 'bg-amber-700' : 'bg-[#1A3A5C]';
   return (
     <div className={`${sz} ${bg} rounded-full flex items-center justify-center text-white font-bold flex-shrink-0`}>
       {initials(name)}
@@ -525,7 +525,7 @@ const BulkCollectModal = ({ open, onClose, students, onSuccess }) => {
           <thead><tr className="bg-gray-50 border-b border-gray-200">{['Student', 'Class', 'Period', 'Balance Due', 'Collect Amount', 'Discount', 'Late Fine', 'Mode'].map((h) => <th key={h} className="px-3 py-2 text-left text-[10.5px] font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>)}</tr></thead>
           <tbody>
             {rows.map((row) => (
-              <tr key={row.id} className={`border-b border-gray-100 ${row.daysLate > 0 ? 'bg-red-50' : ''}`}>
+             <tr key={row.id} className="border-b border-gray-100 hover:bg-gray-50">
                 <td className="px-3 py-2.5"><div className="font-semibold text-gray-900">{row.studentName}</div><div className="text-xs text-gray-500">{row.studentCode}</div></td>
                 <td className="px-3 py-2.5"><span className="px-2 py-0.5 bg-[#EEF4FF] text-[#1A3A5C] text-xs font-semibold rounded">{row.class}</span></td>
                 <td className="px-3 py-2.5 text-xs text-gray-600">{row.period}</td>
@@ -994,21 +994,24 @@ const CollectionsHistory = () => {
                   ) : pagedOut.map((s) => {
                     const isSel = selected.includes(s.id);
                     return (
-                      <tr key={s.id} className={`border-b border-gray-100 transition-colors ${isSel ? 'bg-blue-50 border-l-4 border-l-[#1A3A5C]' : s.status === 'OVERDUE' ? 'bg-red-50/40 hover:bg-red-50' : 'hover:bg-gray-50'}`}>
+                      <tr key={s.id} className={`border-b border-gray-100 transition-colors ${isSel ? 'bg-blue-50 border-l-4 border-l-[#1A3A5C]' : 'hover:bg-gray-50'}`}>
                         <td className="px-3 py-3"><input type="checkbox" className="w-3.5 h-3.5 cursor-pointer accent-[#1A3A5C]" checked={isSel} onChange={() => toggleRow(s.id)} /></td>
                         <td className="px-3 py-3"><div className="flex items-center gap-2"><Av name={s.studentName} status={s.status} size="sm" /><div><div className="font-semibold text-gray-900 text-sm">{s.studentName}</div><div className="text-xs text-gray-500">{s.studentCode}</div></div></div></td>
                         <td className="px-3 py-3"><span className="px-2 py-0.5 bg-[#EEF4FF] text-[#1A3A5C] text-xs font-semibold rounded">{s.class}</span></td>
                         <td className="px-3 py-3 text-xs text-gray-600">{s.period}</td>
                         <td className="px-3 py-3 text-sm">{fmtDisp(s.totalFee)}</td>
                         <td className={`px-3 py-3 text-sm font-semibold ${s.paidAmount > 0 ? 'text-emerald-600' : 'text-gray-400'}`}>{fmtDisp(s.paidAmount)}</td>
-                        <td className="px-3 py-3">
-                          {s.status === 'OVERDUE'
-                            ? <div><div className="text-red-700 font-bold text-sm">{fmtDisp(s.balance)}</div><div className="flex items-center gap-1 text-red-600 text-[11px] font-semibold"><span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse" />{s.daysLate}d overdue</div></div>
-                            : <span className="font-semibold text-gray-900 text-sm">{fmtDisp(s.balance)}</span>}
-                        </td>
-                        <td className="px-3 py-3 text-xs"><span className={s.status === 'OVERDUE' ? 'text-red-600 font-semibold' : 'text-gray-600'}>{fmtDate(s.dueDate)}</span></td>
+                      <td className="px-3 py-3">
+  <span className="font-semibold text-gray-900 text-sm">{fmtDisp(s.balance)}</span>
+  {s.status === 'OVERDUE' && (
+    <div className="text-[11px] text-gray-500 mt-0.5">{s.daysLate}d overdue</div>
+  )}
+</td>
+                       <td className="px-3 py-3 text-xs text-gray-600">
+  {fmtDate(s.dueDate)}
+</td>
                         <td className="px-3 py-3"><Badge status={s.status} /></td>
-                        <td className="px-3 py-3"><Btn variant={s.status === 'OVERDUE' ? 'danger' : 'primary'} size="xs" onClick={() => setCollectModal({ open: true, student: s })}>Collect</Btn></td>
+                        <td className="px-3 py-3"><Btn variant="primary" size="xs" onClick={() => setCollectModal({ open: true, student: s })}>Collect</Btn></td>
                       </tr>
                     );
                   })}
