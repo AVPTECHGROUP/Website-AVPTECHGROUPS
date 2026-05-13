@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useContext } from 'react';
+import React, { useState, useEffect,  useContext } from 'react';
 import { X, FileDown, AlertCircle, Printer, FileText, Search } from 'lucide-react';
 import {
   getOutstandingFees,
@@ -11,7 +11,7 @@ import { getFeePeriods } from '../../Api/FeePeriods';
 import { getFeeStructures } from '../../Api/FeeStructures';
 import { authFetch } from '../../Authfetch/Authfetch';
 import { UserContext } from '../../ContextAPI/UserContext';
-import jsPDF from 'jspdf';
+import FeeReceiptPrint from '../../Components/FeeModal/FeeReciptPrint';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const SCHOOL_ID = 1;
@@ -548,187 +548,7 @@ const BulkCollectModal = ({ open, onClose, students, onSuccess }) => {
 };
 
 // ─── Receipt Modal ────────────────────────────────────────────────────────────
-const ReceiptModal = ({ open, onClose, receipt }) => {
-  const printRef = useRef();
 
-  const handlePrint = () => {
-    const win = window.open('', '_blank');
-    win.document.write(`<html><head><title>Receipt ${receipt?.receiptNo || ''}</title>
-      <style>body{font-family:monospace;font-size:12px;padding:20px}hr{border:none;border-top:1px dashed #999;margin:8px 0}</style></head>
-      <body>${printRef.current?.innerHTML || ''}</body></html>`);
-    win.document.close(); win.print();
-  };
-
-  const handlePDF = () => {
-    if (!receipt) return;
-
-    try {
-      const doc = new jsPDF({ unit: 'mm', format: 'a5', orientation: 'portrait' });
-      const W = doc.internal.pageSize.getWidth();
-
-      // ── helpers (use ASCII Rs. — ₹ crashes jsPDF with standard fonts) ──
-      const pdfFmt = (n) => 'Rs.' + (Number(n) || 0).toLocaleString('en-IN');
-      const dline  = (y) => {
-        doc.setDrawColor(180);
-        doc.setLineDash([2, 2]);
-        doc.line(10, y, W - 10, y);
-        doc.setLineDash([]);
-      };
-      const trow = (l, r, y) => {
-        doc.text(String(l), 12, y);
-        doc.text(String(r), W - 12, y, { align: 'right' });
-      };
-
-      // ── Navy header ─────────────────────────────────────────────────────
-      doc.setFillColor(26, 58, 92);
-      doc.rect(0, 0, W, 20, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'bold');
-      doc.text('FEE RECEIPT', W / 2, 9, { align: 'center' });
-      doc.setFontSize(8);
-      doc.setFont('helvetica', 'normal');
-      doc.text(receipt.receiptNo || '', W / 2, 15, { align: 'center' });
-
-      // ── Light-blue student block ─────────────────────────────────────────
-      doc.setFillColor(238, 244, 255);
-      doc.rect(0, 22, W, 28, 'F');
-      doc.setTextColor(30, 30, 30);
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'bold');
-      doc.text(receipt.studentName || '—', 12, 30);
-      doc.setFontSize(8);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(80);
-      doc.text(`${receipt.studentCode || '—'}  |  Class ${receipt.class || receipt.className || '—'}`, 12, 36);
-      doc.text(`Period: ${receipt.period || receipt.periodName || '—'}`, 12, 42);
-      doc.text(`Date: ${fmtDate(receipt.date)}`, W - 12, 36, { align: 'right' });
-      doc.text(`Mode: ${receipt.paymentMode || '—'}`, W - 12, 42, { align: 'right' });
-
-      // ── Fee breakdown ────────────────────────────────────────────────────
-      let y = 57;
-      doc.setFontSize(7.5);
-      doc.setTextColor(140);
-      doc.text('FEE BREAKDOWN', 12, y - 3);
-      dline(y - 0.5);
-      doc.setTextColor(30, 30, 30);
-      doc.setFontSize(8.5);
-      doc.setFont('helvetica', 'normal');
-
-      (receipt.components || []).forEach((c) => {
-        trow(c.name || c.componentType || '—', pdfFmt(c.amount), y);
-        y += 7;
-      });
-
-      if ((receipt.lateFine || 0) > 0) {
-        doc.setTextColor(180, 83, 9);
-        trow('Late Fine', pdfFmt(receipt.lateFine), y);
-        doc.setTextColor(30, 30, 30);
-        y += 7;
-      }
-      if ((receipt.discount || 0) > 0) {
-        doc.setTextColor(4, 120, 87);
-        trow('Discount', '- ' + pdfFmt(receipt.discount), y);
-        doc.setTextColor(30, 30, 30);
-        y += 7;
-      }
-
-      // ── Total bar ────────────────────────────────────────────────────────
-      dline(y);
-      y += 5;
-      doc.setFillColor(26, 58, 92);
-      doc.rect(0, y - 1, W, 12, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(9.5);
-      doc.setFont('helvetica', 'bold');
-      doc.text('TOTAL COLLECTED', 12, y + 7);
-      doc.text(pdfFmt(receipt.amountPaid), W - 12, y + 7, { align: 'right' });
-      y += 17;
-
-      // ── Balance / ref ────────────────────────────────────────────────────
-      doc.setFontSize(8.5);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(4, 120, 87);
-      trow('Balance After Payment', pdfFmt(receipt.balanceAfter || 0), y);
-      y += 7;
-      if (receipt.referenceNo) {
-        doc.setTextColor(80);
-        trow('Reference No.', receipt.referenceNo, y);
-        y += 7;
-      }
-
-      // ── Recorded by ──────────────────────────────────────────────────────
-      doc.setTextColor(140);
-      doc.setFontSize(7.5);
-      doc.text(`Recorded by: ${receipt.recordedBy || 'Admin'}`, 12, y + 2);
-
-      // ── PAID stamp (rotated text) ────────────────────────────────────────
-      doc.setTextColor(4, 120, 87);
-      doc.setFontSize(22);
-      doc.setFont('helvetica', 'bold');
-      doc.text('PAID', W - 30, y + 4, { angle: 15 });
-
-      // ── Footer ───────────────────────────────────────────────────────────
-      y += 16;
-      doc.setDrawColor(200);
-      doc.setLineDash([]);
-      doc.line(10, y, W - 10, y);
-      doc.setFontSize(7);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(160);
-      doc.text(
-        'This is a computer-generated receipt. No signature required.',
-        W / 2, y + 5, { align: 'center' }
-      );
-
-      doc.save(`Receipt-${receipt.receiptNo || 'fee'}.pdf`);
-    } catch (err) {
-      console.error('PDF generation error:', err);
-      alert('PDF generation failed: ' + err.message);
-    }
-  };
-
-  return (
-    <Modal open={open} onClose={onClose} title="Payment Receipt"
-      footer={
-        <>
-          <Btn variant="secondary" onClick={onClose}>Close</Btn>
-          <Btn variant="primary" onClick={handlePrint}><Printer size={13} /> Print</Btn>
-          <Btn variant="ghost" onClick={handlePDF}><FileText size={13} /> Download PDF</Btn>
-        </>
-      }>
-      {receipt && (
-        <div ref={printRef} className="border-2 border-gray-300 rounded-xl p-6 font-mono text-xs max-w-sm mx-auto bg-gray-50">
-          <div className="text-center mb-3 font-sans"><div className="text-[13.5px] font-extrabold">FEE RECEIPT</div></div>
-          <hr className="border-dashed border-gray-300" />
-          <div className="flex justify-between font-bold my-2"><span>RECEIPT</span><span>{receipt.receiptNo}</span></div>
-          <hr className="border-dashed border-gray-300" />
-          <div className="space-y-1 my-2">
-            {[['Date', fmtDate(receipt.date)], ['Student', receipt.studentName], ['Class', receipt.class || receipt.className], ['Adm. No.', receipt.studentCode], ['Period', receipt.period || receipt.periodName]].map(([k, v]) => (
-              <div key={k} className="flex justify-between"><span>{k}:</span><span>{v}</span></div>
-            ))}
-          </div>
-          <hr className="border-dashed border-gray-300" />
-          <div className="space-y-1 my-2">
-            {(receipt.components || []).map((c, i) => <div key={i} className="flex justify-between"><span>{c.name || c.componentType}</span><span>{fmtDisp(c.amount)}</span></div>)}
-            {(receipt.lateFine || 0) > 0 && <div className="flex justify-between text-amber-700 font-semibold"><span>Late Fine</span><span>{fmtDisp(receipt.lateFine)}</span></div>}
-            {(receipt.discount || 0) > 0 && <div className="flex justify-between text-emerald-700 font-semibold"><span>Discount</span><span>-{fmtDisp(receipt.discount)}</span></div>}
-          </div>
-          <hr className="border-dashed border-gray-300" />
-          <div className="space-y-1 my-2">
-            <div className="flex justify-between font-bold"><span>TOTAL COLLECTED</span><span>{fmtDisp(receipt.amountPaid)}</span></div>
-            <div className="flex justify-between"><span>Mode:</span><span>{receipt.paymentMode}</span></div>
-            {receipt.referenceNo && <div className="flex justify-between"><span>Ref:</span><span>{receipt.referenceNo}</span></div>}
-            <div className="flex justify-between text-emerald-700 font-semibold"><span>Balance After:</span><span>{fmtDisp(receipt.balanceAfter)}</span></div>
-          </div>
-          <hr className="border-dashed border-gray-300" />
-          <div className="flex justify-between text-[10px] text-gray-400 font-sans mt-2"><span>By: {receipt.recordedBy || 'Admin'}</span><span>{fmtDate(receipt.date)}</span></div>
-          <div className="text-center mt-4"><span className="inline-block text-emerald-700 border-2 border-emerald-700 px-5 py-1 font-black text-base tracking-widest -rotate-[6deg] font-sans">PAID</span></div>
-        </div>
-      )}
-    </Modal>
-  );
-};
 
 // ─── CollectionsHistory ───────────────────────────────────────────────────────
 const CollectionsHistory = () => {
@@ -1100,11 +920,12 @@ const CollectionsHistory = () => {
         students={bulkModal.students}
         onSuccess={handleBulkSuccess}
       />
-      <ReceiptModal
-        open={receiptModal.open}
-        onClose={() => setReceiptModal({ open: false, receipt: null })}
-        receipt={receiptModal.receipt}
-      />
+     {receiptModal.open && (
+  <FeeReceiptPrint
+    receipt={receiptModal.receipt}
+    onClose={() => setReceiptModal({ open: false, receipt: null })}
+  />
+)}
     </div>
   );
 };
