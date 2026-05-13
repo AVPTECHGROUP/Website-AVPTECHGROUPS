@@ -2,6 +2,7 @@ import { authFetch } from "../Authfetch/Authfetch";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_DOUBLE_V1;
 
+
 // Listing of Students
 export const getStudents = async (page = 0, size = 10, sort = 'id') => {
   try {
@@ -68,6 +69,30 @@ export const getStudentById = async (id) => {
     return data?.data; 
   } catch (error) {
     console.error("getStudentById error:", error.message);
+    throw error;
+  }
+};
+
+export const getStudentByClass = async (id) => {
+  try {
+    const res = await authFetch(
+      `${BASE_URL}/students/class/${id}?status=ACTIVE`,
+      {
+        method: "GET",
+      }
+    );
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(
+        data?.message || data?.error || "Failed to fetch student"
+      );
+    }
+
+    return data?.data;
+  } catch (error) {
+    console.error("getStudentByClass error:", error.message);
     throw error;
   }
 };

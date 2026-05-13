@@ -18,23 +18,7 @@ import FeeStructures from './Feestructures.';
 import CollectionsHistory from './Collectionhistory';
 import Button from '../../Components/FeeModal/Button';
 
-// ─── User pill ────────────────────────────────────────────────────────────────
-const UserPill = ({ profile, user }) => {
-    const fullName = profile
-        ? [profile.firstName, profile.lastName].filter(Boolean).join(' ')
-        : (user?.email?.split('@')[0] || 'User');
-    const role     = profile?.designation || user?.userType || 'Admin';
-    const initials = fullName.slice(0, 2).toUpperCase();
-    return (
-        <div className="flex items-center gap-2 border border-gray-200 rounded-full pl-1 pr-3 py-1 cursor-pointer hover:bg-gray-50 transition-colors">
-            <div className="w-7 h-7 rounded-full bg-[#1A3A5C] flex items-center justify-center text-white text-[11px] font-bold">{initials}</div>
-            <div>
-                <div className="text-xs font-bold text-gray-800 leading-tight">{fullName}</div>
-                <div className="text-[10px] text-gray-500 leading-none">{role}</div>
-            </div>
-        </div>
-    );
-};
+
 
 // ─── AY subtitle ─────────────────────────────────────────────────────────────
 const AySubtitle = ({ label, schoolName }) => {
@@ -60,7 +44,7 @@ export const FeeSynthesisPage = () => {
                     <div className="font-bold text-lg text-gray-900 leading-tight">Fee Synthesis</div>
                     <AySubtitle label={currentAcademicYear?.label} schoolName={schoolInfo?.schoolName} />
                 </div>
-                <UserPill profile={profile} user={user} />
+                {/* <UserPill profile={profile} user={user} /> */}
             </header>
             <nav className="bg-white border-b border-gray-200 px-6 flex sticky top-14 z-30">
                 {TABS.map((t) => (
@@ -93,7 +77,7 @@ export const CollectionsPage = () => {
                     <div className="font-bold text-lg text-gray-900 leading-tight">Collections &amp; History</div>
                     <AySubtitle label={currentAcademicYear?.label} schoolName={schoolInfo?.schoolName} />
                 </div>
-                <UserPill profile={profile} user={user} />
+                {/* <UserPill profile={profile} user={user} /> */}
             </header>
             <main className="flex-1 p-6 max-w-[1600px] mx-auto w-full">
                 {/* ✅ No props — child reads from UserContext directly */}
@@ -115,10 +99,10 @@ export const OverviewPage = () => {
                     <div className="font-bold text-lg text-gray-900 leading-tight">Fee Management</div>
                     <AySubtitle label={currentAcademicYear?.label} schoolName={schoolInfo?.schoolName} />
                 </div>
-                <div className="flex items-center gap-3">
+                {/* <div className="flex items-center gap-3">
                     <Button variant="secondary" size="sm">⬇ Export</Button>
                     <UserPill profile={profile} user={user} />
-                </div>
+                </div> */}
             </header>
             <main className="flex-1 p-6 max-w-[1600px] mx-auto w-full">
                 {/* ✅ No props — Overview reads from UserContext directly */}
