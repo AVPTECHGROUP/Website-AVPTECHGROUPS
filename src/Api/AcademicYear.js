@@ -27,21 +27,45 @@ export const getAcademicYears = async () => {
 // ==============================
 // Get Current Academic Year
 // ==============================
+
+
+/**
+ * GET /v1/academic-years/current  (or similar endpoint)
+ * Returns: { id, label, startDate, endDate, ... }
+ *
+ * Handles all common response shapes:
+ *   { data: { id, label } }
+ *   { data: { academicYear: { id, label } } }
+ *   { academicYear: { id, label } }
+ *   { id, label }  ← bare object
+ */
 export const getCurrentAcademicYear = async () => {
-    try {
-        const res = await authFetch(`${BASE_URL}/academic-years/current`, {
-            method: "GET",
-        });
+  try {
+    const res = await authFetch(`${BASE_URL}/academic-years/current`, {
+      method: "GET",
+    });
 
-        if (!res.ok) throw new Error("Failed to fetch current academic year");
-
-        const data = await res.json();
-
-        return data.data || {};
-    } catch (error) {
-        console.error("getCurrentAcademicYear error:", error);
-        throw error;
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(errorText || "Failed to fetch current academic year");
     }
+
+    const raw = await res.json();
+    console.log("📦 getCurrentAcademicYear raw response:", raw);
+
+    // Unwrap every common shape → always return { id, label, ... }
+    const ay =
+      raw?.data?.academicYear ||   // { data: { academicYear: {...} } }
+      raw?.data ||                  // { data: { id, label } }
+      raw?.academicYear ||          // { academicYear: { id, label } }
+      raw;                          // bare { id, label }
+
+    console.log("✅ Resolved academic year:", ay);
+    return ay || {};
+  } catch (error) {
+    console.error("❌ getCurrentAcademicYear error:", error.message);
+    throw error;
+  }
 };
 
 // ==============================

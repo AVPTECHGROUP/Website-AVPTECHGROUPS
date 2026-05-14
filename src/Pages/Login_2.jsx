@@ -95,13 +95,10 @@ const Login_2 = ({ onLoginSuccess }) => {
       }
 
     } catch (err) {
-
       setLoginError(
         err.message || "Invalid email or password. Please try again."
       )
-
     } finally {
-
       setIsLoading(false)
     }
   }

@@ -25,6 +25,8 @@ const buildQueryParams = (params) => {
  */
 export const createFeeCollection = async (payload) => {
   try {
+    console.log('📤 Creating fee collection:', payload);
+
     const res = await authFetch(`${BASE_URL}/fee/collections`, {
       method: "POST",
       headers: {
@@ -36,9 +38,11 @@ export const createFeeCollection = async (payload) => {
     const data = await res.json();
 
     if (!res.ok) {
+      console.error('❌ Fee collection failed:', data);
       throw new Error(data?.message || "Failed to create fee collection");
     }
 
+    console.log('✅ Fee collection created:', data);
     return data;
   } catch (error) {
     console.error("❌ createFeeCollection error:", error.message);
@@ -52,6 +56,8 @@ export const createFeeCollection = async (payload) => {
  */
 export const createBulkFeeCollection = async (payload) => {
   try {
+    console.log('📤 Creating bulk fee collection:', payload);
+
     const res = await authFetch(`${BASE_URL}/fee/collections/bulk`, {
       method: "POST",
       headers: {
@@ -63,9 +69,11 @@ export const createBulkFeeCollection = async (payload) => {
     const data = await res.json();
 
     if (!res.ok) {
+      console.error('❌ Bulk fee collection failed:', data);
       throw new Error(data?.message || "Failed to create bulk fee collection");
     }
 
+    console.log('✅ Bulk fee collection created:', data);
     return data;
   } catch (error) {
     console.error("❌ createBulkFeeCollection error:", error.message);
@@ -87,7 +95,6 @@ export const getFeeCollectionHistory = async ({
   size = 10,
 } = {}) => {
   try {
-
     const queryString = buildQueryParams({
       fromDate,
       toDate,
@@ -110,10 +117,12 @@ export const getFeeCollectionHistory = async ({
 
     if (!res.ok) {
       const errorText = await res.text();
+      console.error('❌ History API failed:', errorText);
       throw new Error(errorText || "Failed to fetch fee collection history");
     }
 
     const data = await res.json();
+    console.log('✅ History response:', data);
 
     return {
       records: data?.data?.content || [],
@@ -152,10 +161,12 @@ export const getOutstandingFees = async ({ classId, periodId } = {}) => {
 
     if (!res.ok) {
       const errorText = await res.text();
+      console.error('❌ Outstanding API failed:', errorText);
       throw new Error(errorText || "Failed to fetch outstanding fees");
     }
 
     const data = await res.json();
+    console.log('✅ Outstanding response:', data);
 
     return {
       records: data.data || [],
@@ -187,10 +198,13 @@ export const getFeeReceiptById = async (id) => {
 
     if (!res.ok) {
       const errorText = await res.text();
+      console.error('❌ Receipt API failed:', errorText);
       throw new Error(errorText || "Failed to fetch fee receipt");
     }
 
     const data = await res.json();
+    console.log('✅ Receipt response:', data);
+    
     return data.data || {};
 
   } catch (error) {
