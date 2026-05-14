@@ -193,6 +193,30 @@ const RejectModal = ({ user, onClose, onConfirm }) => {
   );
 };
 
+/* ─── Reason Modal ─── */
+const ReasonModal = ({ reason, onClose }) => (
+  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+        <h3 className="text-base font-bold text-gray-900">Reason</h3>
+        <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors text-gray-400 hover:text-gray-600">
+          <X className="w-5 h-5" />
+        </button>
+      </div>
+      <div className="px-6 py-5">
+        <p className="text-sm text-gray-700 leading-relaxed break-all">
+          {reason}
+        </p>
+      </div>
+      <div className="px-6 py-4 border-t border-gray-100 bg-gray-50">
+        <button onClick={onClose} className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-100 transition-all">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+);
+
 /* ─── Main Component ─── */
 const UsersAttendance = () => {
   const navigate = useNavigate();
@@ -204,6 +228,7 @@ const UsersAttendance = () => {
   const [listLoading, setListLoading] = useState(false);
   const [approveModal, setApproveModal] = useState(null);
   const [rejectModal, setRejectModal] = useState(null);
+  const [reasonModal, setReasonModal] = useState(null);
   const itemsPerPage = 10;
 
   const formatDate = (dateString) => new Date(dateString).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
@@ -267,9 +292,7 @@ const UsersAttendance = () => {
 
   const pendingStatCards = [
     { icon: Clock, label: 'Pending Today', val: pendingCount, sub: 'Awaiting action', subColor: 'text-yellow-600 font-semibold', iconTx: 'text-yellow-600', iconBg: 'bg-yellow-100' },
-    { icon: UserCheck2, label: 'Approved This Week', val: approvedCount, sub: 'Confirmed present', subColor: 'text-green-600 font-semibold', iconTx: 'text-green-600', iconBg: 'bg-green-100' },
-    { icon: XCircle, label: 'Rejected This Week', val: rejectedCount, sub: 'Declined requests', subColor: 'text-red-500 font-semibold', iconTx: 'text-red-500', iconBg: 'bg-red-100' },
-  ];
+   ];
 
   const getStatusBadge = (status) => {
     const map = {
@@ -290,6 +313,7 @@ const UsersAttendance = () => {
     <div className="flex h-screen overflow-hidden">
       {approveModal && <ApproveModal user={approveModal} onClose={() => setApproveModal(null)} onConfirm={handleApproveConfirm} />}
       {rejectModal && <RejectModal user={rejectModal} onClose={() => setRejectModal(null)} onConfirm={handleRejectConfirm} />}
+      {reasonModal && <ReasonModal reason={reasonModal} onClose={() => setReasonModal(null)} />}
 
       <div className="flex-1 flex flex-col overflow-hidden w-full">
         <div className="flex-1 bg-gradient-to-b from-sky-50 to-sky-100 overflow-auto p-3 sm:p-4 md:p-6 lg:p-8">
@@ -365,7 +389,7 @@ const UsersAttendance = () => {
               <table className="w-full">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
-                    {['Staff Member', 'Employee ID', 'Department', 'Date', 'Reason', 'Status', 'Actions'].map((col) => (
+                    {['Staff Member', 'Department', 'Date', 'Reason', 'Status', 'Actions'].map((col) => (
                       <th key={col} className="px-4 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">{col}</th>
                     ))}
                   </tr>
@@ -382,15 +406,16 @@ const UsersAttendance = () => {
                   {!listLoading && currentUsers.length > 0 && currentUsers.map((user) => (
                     <tr key={user.id} className="hover:bg-blue-50/30 transition-colors">
                       <td className="px-4 py-4">
-                        <div className="flex items-center justify-center gap-2">
+                        <div className="flex items-center justify-start gap-2">
                           <div className={`w-8 h-8 rounded-full ${getAvatarColor(user.userName)} flex items-center justify-center text-white text-xs font-bold shrink-0`}>
                             {user.userName?.charAt(0)?.toUpperCase() || '?'}
                           </div>
-                          <span className="font-semibold text-gray-900 text-sm">{user.userName || 'N/A'}</span>
+                          {/* ─── CHANGE THIS ─── */}
+                          <div>
+                            <p className="font-semibold text-gray-900 text-sm">{user.userName || 'N/A'}</p>
+                            <p className="text-xs text-gray-400">ID: {user.userId}</p>
+                          </div>
                         </div>
-                      </td>
-                      <td className="px-4 py-4 text-center">
-                        <span className="text-sm font-medium text-gray-600">{user.userId}</span>
                       </td>
                       <td className="px-4 py-4 text-center">
                         <span className="px-2 py-0.5 bg-slate-100 text-slate-700 text-xs font-semibold rounded-lg">{user.userType}</span>
@@ -399,7 +424,20 @@ const UsersAttendance = () => {
                         <span className="text-sm text-gray-600 whitespace-nowrap">{user.attendanceDate}</span>
                       </td>
                       <td className="px-4 py-4 text-center max-w-[180px]">
-                        <span className="text-sm text-gray-600 line-clamp-2" title={user.remarks}>{user.remarks || '—'}</span>
+                        {user.remarks ? (
+                          user.remarks.length > 30 ? (
+                            <button
+                              onClick={() => setReasonModal(user.remarks)}
+                              className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-semibold rounded-lg transition-all"
+                            >
+                              View
+                            </button>
+                          ) : (
+                            <span className="text-sm text-gray-600">{user.remarks}</span>
+                          )
+                        ) : (
+                          <span className="text-sm text-gray-400">—</span>
+                        )}
                       </td>
                       <td className="px-4 py-4 text-center">
                         <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold ${getStatusBadge(user.status)}`}>
@@ -503,7 +541,16 @@ const UsersAttendance = () => {
                   {user.remarks && (
                     <div className="flex flex-col gap-0.5">
                       <span className="text-xs text-gray-400 font-medium">Reason</span>
-                      <p className="text-xs text-gray-700">{user.remarks}</p>
+                      {user.remarks.length > 50 ? (
+                        <button
+                          onClick={() => setReasonModal(user.remarks)}
+                          className="self-start px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-semibold rounded-lg transition-all"
+                        >
+                          View
+                        </button>
+                      ) : (
+                        <p className="text-xs text-gray-700">{user.remarks}</p>
+                      )}
                     </div>
                   )}
                 </div>

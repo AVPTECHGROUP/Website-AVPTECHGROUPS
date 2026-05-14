@@ -2,11 +2,12 @@ import { useState, useCallback, useEffect } from 'react';
 import {
     ChevronLeft, LayoutGrid, BarChart2, Wand2, ArrowLeftRight,
     Settings, Send, Printer, Trash2, Undo2, Redo2, Plus,
-    Search, AlertTriangle, X, Eye, Pencil, User, RefreshCw
+    Search, AlertTriangle, X, Eye, Pencil, User, RefreshCw, Clock
 } from 'lucide-react';
 import AddSlotModal from './components/AddSlotModal';
 import TimetableSettings from './components/TimetableSettings';
 import SubstitutionModal from './components/SubstitutionModal';
+import PendingSubstitutionsModal from './components/PendingSubstitutionModel';
 import AssignTeacherModal from './components/AssignTeacherModal';
 import AnalyticsTab from './components/AnalyticsTab';
 import PrintTimetableModal from './components/PrintTimeTableModal';
@@ -52,7 +53,6 @@ const generatePeriodsFromConfig = (config) => {
             isBreak: false,
         });
 
-        // Check if a break comes after this period
         const brk = breaks.find(b => b.afterPeriod === i);
         if (brk) {
             const bStart = toTimeStr(current);
@@ -71,7 +71,7 @@ const generatePeriodsFromConfig = (config) => {
     return result;
 };
 
-// ── Subject color helpers (dynamic, not hardcoded) ──
+// ── Subject color helpers ──
 const SUBJECT_COLOR_MAP = {
     MATH: { color: 'text-blue-600', dot: 'bg-blue-500', border: 'border-blue-200', bg: 'bg-blue-50' },
     ENG: { color: 'text-green-600', dot: 'bg-green-500', border: 'border-green-200', bg: 'bg-green-50' },
@@ -113,7 +113,6 @@ const TEACHER_COLORS = {
 
 const getInitials = (name) => name ? name.split(' ').map(w => w[0]).join('').toUpperCase() : '?';
 
-// Helper to convert API slot data to local format
 const normalizeSlot = (apiSlot) => ({
     day: apiSlot.dayOfWeek,
     periodId: `P${apiSlot.periodNumber}`,
@@ -130,8 +129,6 @@ const normalizeSlot = (apiSlot) => ({
     slotId: apiSlot.id,
 });
 
-// Helper to convert local slot to API format
-// ✅ subjectId: subject.id > slot-level subjectId fallback
 const toApiSlot = (slot) => ({
     dayOfWeek: slot.day,
     periodNumber: parseInt(slot.periodId.replace('P', '')),
@@ -139,6 +136,8 @@ const toApiSlot = (slot) => ({
     teacherId: slot.teacher?.id ?? slot.teacherId ?? null,
     room: slot.room || null,
 });
+
+const slotKey = (slot) => `${slot.day}_${slot.periodId}`;
 
 export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
     const isViewOnly = mode === 'view';
@@ -152,63 +151,55 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
     const [historyIdx, setHistoryIdx] = useState(0);
     const [showPrint, setShowPrint] = useState(false);
     const [savingAll, setSavingAll] = useState(false);
+
+    // ── Slot selection for substitution ──
+    const [selectedSlotKey, setSelectedSlotKey] = useState(null);
+
     // Modal states
-    const [addSlotTarget, setAddSlotTarget] = useState(null);       // { day, period, editSlot? }
-    const [editSlotTarget, setEditSlotTarget] = useState(null);     // slot to edit
-    const [assignTeacherTarget, setAssignTeacherTarget] = useState(null); // { day, period, slot }
-    const [substitutionTarget, setSubstitutionTarget] = useState(null);   // slot for substitution
+    const [addSlotTarget, setAddSlotTarget] = useState(null);
+    const [assignTeacherTarget, setAssignTeacherTarget] = useState(null);
+    const [substitutionTarget, setSubstitutionTarget] = useState(null);
+    const [showPendingSubstitutions, setShowPendingSubstitutions] = useState(false); // ← NEW
     const [showSettings, setShowSettings] = useState(false);
     const [showSubstitution, setShowSubstitution] = useState(false);
     const [showPublishConfirm, setShowPublishConfirm] = useState(false);
     const [draggedSubject, setDraggedSubject] = useState(null);
-    const [dragOverCell, setDragOverCell] = useState(null); // { day, periodId }
+    const [dragOverCell, setDragOverCell] = useState(null);
 
     const [subjectSearch, setSubjectSearch] = useState('');
     const [subjectFilter, setSubjectFilter] = useState('All');
     const [sidebarTab, setSidebarTab] = useState('subjects');
     const [toastMsg, setToastMsg] = useState('');
 
-    // ── Dynamic config from API ──
     const [timetableConfig, setTimetableConfig] = useState(null);
     const [workingDays, setWorkingDays] = useState(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']);
     const [periods, setPeriods] = useState([]);
 
-    // ── Dynamic subjects from section API ──
     const [subjectsList, setSubjectsList] = useState([]);
     const sectionId = timetable?.sectionId || timetableInfo?.sectionId || null;
 
-    // ── Load everything on mount ──
     useEffect(() => {
         if (!timetable?.id) return;
         loadTimetableData();
         loadConfig();
     }, [timetable?.id]);
 
-    useEffect(() => {
-        if (!sectionId) return;
-        loadSubjects(sectionId);
-    }, [sectionId]);
-
     const showToast = (msg) => {
         setToastMsg(msg);
         setTimeout(() => setToastMsg(''), 3000);
     };
 
-    // ── Load school timetable config (working days, periods, breaks) ──
     const loadConfig = async () => {
         try {
             const config = await getTimetableConfig();
             if (config) {
                 setTimetableConfig(config);
-                // workingDays from API e.g. ['Mon','Tue','Wed','Thu','Fri','Sat']
                 if (config.workingDays?.length) setWorkingDays(config.workingDays);
-                // Generate periods dynamically from startTime, periodsPerDay, duration, breaks
                 const generatedPeriods = generatePeriodsFromConfig(config);
                 setPeriods(generatedPeriods);
             }
         } catch (err) {
             console.error('Failed to load timetable config:', err);
-            // Fallback to defaults if API fails
             setWorkingDays(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']);
             setPeriods(generatePeriodsFromConfig({
                 startTime: '08:00',
@@ -223,14 +214,14 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
     };
 
     const loadSubjects = async (secId) => {
+        if (!secId || subjectsList.length > 0) return;
         try {
             const data = await getSubjectsBySection(secId);
-            // getSubjectsBySection returns: [{ id: subjectId, name, code }]
             const enriched = (data || []).map((s, i) => ({
                 id: s.id,
                 code: s.code || s.subjectCode || '',
                 label: s.name || s.subjectName || '',
-                total: 0, // no hardcoded target needed
+                total: 0,
                 ...getSubjectStyle(s.code || s.subjectCode, i),
             }));
             setSubjectsList(enriched);
@@ -254,10 +245,9 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
             setSlots(normalized);
             setHistory([normalized]);
             setHistoryIdx(0);
-            // If sectionId comes from API (not already in timetable prop), load subjects now
             const resolvedSectionId = resolvedInfo?.sectionId || timetable?.sectionId;
-            if (resolvedSectionId && subjectsList.length === 0) {
-                loadSubjects(resolvedSectionId);
+            if (resolvedSectionId) {
+                await loadSubjects(resolvedSectionId);
             }
         } catch (err) {
             console.error('Failed to load timetable data:', err);
@@ -291,7 +281,22 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
     const getSlot = (day, periodId) =>
         slots.find(s => s.day === day && s.periodId === periodId);
 
-    // ── Add / Edit slot ──
+    const toggleSlotSelection = (slot) => {
+        const key = slotKey(slot);
+
+        setSelectedSlotKey(prev =>
+            prev === key ? null : key
+        );
+    };
+    const selectedSlots = slots.filter(
+        s => slotKey(s) === selectedSlotKey
+    );
+
+    const handleOpenSubstitution = () => {
+        if (selectedSlots.length === 0) return;
+        setSubstitutionTarget(selectedSlots);
+    };
+
     const handleAddSlot = async (data) => {
         try {
             const payload = {
@@ -314,14 +319,12 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
             setSlots(newSlots);
             pushHistory(newSlots);
             setAddSlotTarget(null);
-            setEditSlotTarget(null);
             showToast('Slot saved ✓');
         } catch (err) {
             showToast(err.message || 'Failed to save slot');
         }
     };
 
-    // ── Remove single slot ──
     const handleRemoveSlot = async (day, periodId) => {
         try {
             const periodNumber = parseInt(periodId.replace('P', ''));
@@ -329,13 +332,16 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
             const newSlots = slots.filter(s => !(s.day === day && s.periodId === periodId));
             setSlots(newSlots);
             pushHistory(newSlots);
+            const key = `${day}_${periodId}`;
+            if (selectedSlotKey === key) {
+                setSelectedSlotKey(null);
+            }
             showToast('Slot removed');
         } catch (err) {
             showToast(err.message || 'Failed to remove slot');
         }
     };
 
-    // ── Auto-fill ──
     const handleAutoFill = async () => {
         try {
             const result = await autoFillSlots(timetable.id);
@@ -346,11 +352,11 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
         }
     };
 
-    // ── Clear all slots ──
     const handleClearAll = async () => {
         try {
             await bulkSaveSlots(timetable.id, []);
             setSlots([]);
+            setSelectedSlotKey(null);
             pushHistory([]);
             showToast('All slots cleared');
         } catch (err) {
@@ -358,7 +364,6 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
         }
     };
 
-    // ── Publish ──
     const handlePublish = async () => {
         try {
             await publishTimetable(timetable.id);
@@ -371,15 +376,11 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
         }
     };
 
-    // ── Bulk Save (Save All) ──
     const handleBulkSave = async () => {
         try {
             setSavingAll(true);
-
             const apiSlots = slots.map(toApiSlot);
-
             await bulkSaveSlots(timetable.id, apiSlots);
-
             showToast('All slots saved ✓');
         } catch (err) {
             showToast(err.message || 'Failed to save slots');
@@ -387,6 +388,7 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
             setSavingAll(false);
         }
     };
+
     const totalSlots = workingDays.length * (timetableConfig?.periodsPerDay || periods.filter(p => !p.isBreak).length || 8);
     const filledCount = slots.length;
     const emptyCount = totalSlots - filledCount;
@@ -444,18 +446,14 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
                     <span className="font-bold text-gray-900">
                         {timetableInfo?.class || timetableInfo?.className}
                     </span>
-
                     <span className="text-gray-500">
                         {timetableInfo?.section || timetableInfo?.sectionName}
                     </span>
-
-                    <span
-                        className={`text-xs font-semibold px-2 py-0.5 rounded-full border ml-1
-        ${status === 'Draft'
-                                ? 'bg-amber-50 text-amber-700 border-amber-200'
-                                : 'bg-blue-50 text-blue-700 border-blue-200'
-                            }`}
-                    >
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ml-1
+                        ${status === 'Draft'
+                            ? 'bg-amber-50 text-amber-700 border-amber-200'
+                            : 'bg-blue-50 text-blue-700 border-blue-200'
+                        }`}>
                         {isViewOnly ? 'View' : `${status}`}
                     </span>
                 </div>
@@ -464,16 +462,12 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
                 <div className="flex items-center gap-1 ml-2">
                     <button onClick={() => setActiveTab('planner')}
                         className={`flex items-center gap-1.5 px-3 py-1.5 cursor-pointer rounded-lg text-sm font-medium transition
-              ${activeTab === 'planner'
-                                ? 'bg-blue-600 text-white shadow-sm'
-                                : 'text-gray-600 hover:bg-blue-50 hover:text-blue-600'}`}>
+                            ${activeTab === 'planner' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-600'}`}>
                         <LayoutGrid size={15} /> Planner
                     </button>
                     <button onClick={() => setActiveTab('analytics')}
                         className={`flex items-center cursor-pointer gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition
-              ${activeTab === 'analytics'
-                                ? 'bg-blue-600 text-white shadow-sm'
-                                : 'text-gray-600 hover:bg-blue-50 hover:text-blue-600'}`}>
+                            ${activeTab === 'analytics' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-600'}`}>
                         <BarChart2 size={15} /> Analytics
                     </button>
                 </div>
@@ -498,22 +492,13 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
                                 onClick={handleBulkSave}
                                 disabled={savingAll}
                                 className={`flex items-center gap-1.5 px-3 cursor-pointer py-1.5 rounded-lg text-sm font-medium transition shadow-sm ${savingAll
-                                        ? 'bg-blue-400 cursor-not-allowed opacity-80'
-                                        : 'bg-blue-600 hover:bg-blue-700 text-white'}`}>
+                                    ? 'bg-blue-400 cursor-not-allowed opacity-80'
+                                    : 'bg-blue-600 hover:bg-blue-700 text-white'}`}>
                                 {savingAll ? (
-                                    <>
-                                        <RefreshCw size={14} className="animate-spin" />
-                                        Saving...
-                                    </>
+                                    <><RefreshCw size={14} className="animate-spin" /> Saving...</>
                                 ) : (
-                                    <>
-                                        💾 Save All
-                                    </>
+                                    <>💾 Save All</>
                                 )}
-                            </button>
-                            <button onClick={() => setShowSubstitution(true)}
-                                className="flex items-center gap-1.5 px-3 cursor-pointer py-1.5 border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition">
-                                <ArrowLeftRight size={14} /> Substitution
                             </button>
                             <button onClick={() => setShowSettings(true)}
                                 className="flex items-center gap-1.5 px-3 cursor-pointer py-1.5 border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition">
@@ -574,7 +559,7 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
                             </div>
                         </div>
 
-                        {/* Slots Filled — Donut + progress bar */}
+                        {/* Slots Filled */}
                         <div className="flex items-center gap-3.5 px-4 py-2.5 border border-gray-200 rounded-xl bg-white">
                             <div className="relative w-[52px] h-[52px] shrink-0">
                                 <svg viewBox="0 0 36 36" width="52" height="52" style={{ transform: 'rotate(-90deg)' }}>
@@ -609,7 +594,7 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
                             </div>
                         </div>
 
-                        {/* Teachers */}
+                        {/* Teachers stat + Substitution buttons */}
                         <div className="flex items-center gap-3 px-4 py-2.5 border border-gray-200 rounded-xl bg-white">
                             <div className="flex items-center">
                                 {uniqueTeacherNames.length > 5 && (
@@ -630,6 +615,35 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
                                 <p className="text-[20px] font-bold text-slate-900 leading-none">{uniqueTeacherNames.length}</p>
                                 <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mt-0.5">Teachers</p>
                             </div>
+
+                            {!isViewOnly && (
+                                <div className="flex items-center gap-1.5 ml-2">
+                                    {/* ── Arrange Substitution (enabled when ≥1 slot selected) ── */}
+                                    <button
+                                        onClick={handleOpenSubstitution}
+                                        disabled={selectedSlots.length === 0}
+                                        title={selectedSlots.length === 0 ? 'Select one or more slots to arrange substitution' : `Arrange substitution for ${selectedSlots.length} slot(s)`}
+                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition
+                                            ${selectedSlots.length > 0
+                                                ? 'bg-indigo-600 text-white border-indigo-600 hover:bg-indigo-700 cursor-pointer shadow-sm'
+                                                : 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
+                                            }`}>
+                                        <ArrowLeftRight size={13} />
+                                        {selectedSlots.length > 0
+                                            ? `Arrange Substitution (${selectedSlots.length})`
+                                            : 'Arrange Substitution'}
+                                    </button>
+
+                                    {/* ── Pending Substitutions button ── */}
+                                    <button
+                                        onClick={() => setShowPendingSubstitutions(true)}
+                                        title="View pending substitutions"
+                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 cursor-pointer transition">
+                                        <Clock size={13} />
+                                        Pending Substitution
+                                    </button>
+                                </div>
+                            )}
                         </div>
 
                         {/* Right side filters */}
@@ -661,6 +675,7 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
                             </div>
                         )}
                     </div>
+
                     {/* Planner Grid */}
                     <div className="flex flex-1 overflow-hidden">
                         {/* Sidebar */}
@@ -668,8 +683,7 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
                             <div className="w-52 shrink-0 bg-white border-r border-gray-200 flex flex-col min-h-0">
                                 <div className="flex border-b border-gray-100">
                                     <button onClick={() => setSidebarTab('subjects')}
-                                        className={`flex-1 py-2.5 text-xs font-medium transition sidebarTab === 'subjects'
-    ? 'border-b-2 border-blue-600 text-blue-600 bg-blue-50' cursor-pointer text-[#1e293b]' : 'text-gray-500'}`}>
+                                        className={`flex-1 py-2.5 text-xs font-medium transition cursor-pointer ${sidebarTab === 'subjects' ? 'border-b-2 border-blue-600 text-blue-600 bg-blue-50' : 'text-gray-500'}`}>
                                         Subjects
                                     </button>
                                     <button onClick={() => setSidebarTab('hours')}
@@ -698,12 +712,10 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
                                                     }}
                                                     onDragEnd={() => setDraggedSubject(null)}
                                                     className="flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-gray-50 cursor-grab active:cursor-grabbing select-none"
-                                                    title="Drag to a slot"
-                                                >
+                                                    title="Drag to a slot">
                                                     <span className={`w-1 h-6 rounded-full ${s.dot}`} />
                                                     <span className={`text-xs font-bold ${s.color}`}>{s.code}</span>
                                                     <span className="text-xs text-gray-700 flex-1">{s.label}</span>
-                                                    {/* <span className="text-xs text-gray-400">{s.count}/{s.total}</span> */}
                                                 </div>
                                             ))}
                                         </div>
@@ -792,39 +804,42 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
                                                             ? (subjectsList.find(s => s.code === slot.subject?.code || s.id === slot.subject?.id) || null)
                                                             : null;
                                                         const teacherColor = slot?.teacher?.name ? (TEACHER_COLORS[slot.teacher.name] || 'bg-gray-400') : '';
+                                                        const isSelected = slot
+                                                            ? selectedSlotKey === slotKey(slot)
+                                                            : false;
 
                                                         return (
                                                             <td key={day} className="border-b border-r border-gray-200 p-1.5 align-top">
                                                                 {slot ? (
-                                                                    // ── FILLED SLOT with 4 hover icons ──
-                                                                    <div className={`relative rounded-lg border p-2 group
-                                      ${subjectMeta ? `${subjectMeta.bg} ${subjectMeta.border}` : 'bg-gray-50 border-gray-200'}`}>
+                                                                    <div className={`relative rounded-lg border p-2 group transition
+                                                                        ${isSelected ? 'ring-2 ring-indigo-500 ring-offset-1' : ''}
+                                                                        ${subjectMeta ? `${subjectMeta.bg} ${subjectMeta.border}` : 'bg-gray-50 border-gray-200'}`}>
 
-                                                                        {/* 4 action icons on hover */}
+                                                                        {!isViewOnly && (
+                                                                            <input
+                                                                                type="checkbox"
+                                                                                checked={isSelected}
+                                                                                onChange={() => toggleSlotSelection(slot)}
+                                                                                onClick={(e) => e.stopPropagation()}
+                                                                                className="absolute top-1.5 right-1.5 w-3.5 h-3.5 accent-indigo-600 cursor-pointer z-10"
+                                                                                title="Select for substitution"
+                                                                            />
+                                                                        )}
+
                                                                         {!isViewOnly && (
                                                                             <div className="absolute inset-x-0 bottom-1.5 flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-150 z-10">
-                                                                                {/* 1. Edit slot */}
                                                                                 <button
                                                                                     title="Edit Slot"
                                                                                     onClick={() => setAddSlotTarget({ day, period, editSlot: slot })}
                                                                                     className="w-6 h-6 rounded bg-white/90 border border-gray-200 cursor-pointer shadow flex items-center justify-center hover:bg-blue-100 hover:border-blue-500 transition">
                                                                                     <Pencil size={10} className="text-gray-600" />
                                                                                 </button>
-                                                                                {/* 2. Assign Teacher */}
                                                                                 <button
                                                                                     title="Assign Teacher"
                                                                                     onClick={() => setAssignTeacherTarget({ day, period, slot })}
                                                                                     className="w-6 h-6 rounded cursor-pointer bg-white/90 border border-gray-200 shadow flex items-center justify-center hover:bg-blue-100 hover:border-blue-500 transition">
                                                                                     <User size={10} className="text-gray-600" />
                                                                                 </button>
-                                                                                {/* 3. Substitution */}
-                                                                                <button
-                                                                                    title="Arrange Substitution"
-                                                                                    onClick={() => setSubstitutionTarget({ day, period, slot })}
-                                                                                    className="w-6 h-6 rounded cursor-pointer bg-white/90 border border-gray-200 shadow flex items-center justify-center hover:bg-blue-100 hover:border-blue-500 transition">
-                                                                                    <RefreshCw size={10} className="text-gray-600" />
-                                                                                </button>
-                                                                                {/* 4. Delete slot */}
                                                                                 <button
                                                                                     title="Remove Slot"
                                                                                     onClick={() => handleRemoveSlot(day, period.id)}
@@ -834,7 +849,7 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
                                                                             </div>
                                                                         )}
 
-                                                                        <p className={`text-xs font-bold mb-0.5 ${subjectMeta?.color || 'text-gray-600'}`}>
+                                                                        <p className={`text-xs font-bold mb-0.5 pr-4 ${subjectMeta?.color || 'text-gray-600'}`}>
                                                                             {slot.subject?.code}
                                                                         </p>
                                                                         <p className="text-xs font-semibold text-gray-800 leading-tight">{slot.subject?.label}</p>
@@ -849,7 +864,6 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
                                                                         {slot.room && (
                                                                             <p className="text-xs text-gray-400 mt-0.5">📍 {slot.room}</p>
                                                                         )}
-                                                                        {/* Spacer so icons don't overlap text */}
                                                                         {!isViewOnly && <div className="h-5" />}
                                                                     </div>
                                                                 ) : (
@@ -866,7 +880,6 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
                                                                                 e.preventDefault();
                                                                                 setDragOverCell(null);
                                                                                 if (draggedSubject) {
-                                                                                    // Open AddSlotModal with this subject pre-selected
                                                                                     setAddSlotTarget({
                                                                                         day,
                                                                                         period,
@@ -905,13 +918,18 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
                         <span>{workingDays.length} days · {timetableConfig?.periodsPerDay || periods.filter(p => !p.isBreak).length || 8} periods/day</span>
                         <span>•</span>
                         <span className={status === 'Draft' ? 'text-amber-600 font-medium' : 'text-blue-600 font-medium'}>{status}</span>
+                        {selectedSlots.length > 0 && (
+                            <>
+                                <span>•</span>
+                                <span className="text-indigo-600 font-medium">{selectedSlots.length} slot(s) selected</span>
+                            </>
+                        )}
                     </div>
                 </>
             )}
 
             {/* ── Modals ── */}
 
-            {/* Add / Edit Slot Modal */}
             {addSlotTarget && !isViewOnly && (
                 <AddSlotModal
                     day={addSlotTarget.day}
@@ -925,7 +943,6 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
                 />
             )}
 
-            {/* Assign Teacher Modal */}
             {assignTeacherTarget && !isViewOnly && (
                 <AssignTeacherModal
                     day={assignTeacherTarget.day}
@@ -953,24 +970,26 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
                 />
             )}
 
-            {/* Substitution Modal — slot-level */}
+            {/* Arrange Substitution Modal */}
             {substitutionTarget && !isViewOnly && (
                 <SubstitutionModal
                     timetableId={timetable?.id}
-                    slot={substitutionTarget.slot}
-                    onClose={() => setSubstitutionTarget(null)}
+                    selectedSlots={substitutionTarget}
+                    onClose={() => {
+                        setSubstitutionTarget(null);
+                        setSelectedSlotKey(null);
+                    }}
                 />
             )}
 
-            {/* Substitution Modal — toolbar level */}
-            {showSubstitution && !isViewOnly && (
-                <SubstitutionModal
+            {/* Pending Substitutions Modal — separate popup */}
+            {showPendingSubstitutions && !isViewOnly && (
+                <PendingSubstitutionsModal
                     timetableId={timetable?.id}
-                    onClose={() => setShowSubstitution(false)}
+                    onClose={() => setShowPendingSubstitutions(false)}
                 />
             )}
 
-            {/* Settings Modal */}
             {showSettings && !isViewOnly && (
                 <TimetableSettings
                     timetable={timetableInfo}
@@ -995,7 +1014,6 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
                 />
             )}
 
-            {/* Publish Confirm */}
             {showPublishConfirm && (
                 <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
                     <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm">

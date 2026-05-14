@@ -624,9 +624,6 @@ export default function StudentAttendanceRegistration() {
                                                 <p className="text-xs text-gray-500 mt-0.5">
                                                     Roll No. {selectedStudent.rollNumber || "—"} · {selectedClass?.name} · {selectedSection?.name}
                                                 </p>
-                                                <p className="text-[11px] text-gray-400 font-mono mt-0.5">
-                                                    school-{selectedClass?.schoolId || "1"}-class-{selectedClass?.id}-section-{selectedSection?.id}
-                                                </p>
                                                 <p className="text-[11px] text-gray-400">Student ID: {selectedStudent.id}</p>
                                             </div>
                                             <StatusBadge status={selectedStudent.enrollmentStatus} photos={selectedStudent.photosCount} />
