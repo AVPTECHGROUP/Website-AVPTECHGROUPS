@@ -110,6 +110,25 @@ const Attendance = () => {
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   };
+  
+  const formatTimeToIST = (timeString, attendanceDate) => {
+    if (!timeString) return '—';
+
+    try {
+      // Treat backend time as UTC
+      const utcDate = new Date(`${attendanceDate}T${timeString}Z`);
+
+      return utcDate.toLocaleTimeString('en-IN', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true,
+        timeZone: 'Asia/Kolkata',
+      });
+    } catch {
+      return timeString;
+    }
+  };
 
   // Fetch roles for filter dropdown (kept separate from staff list)
   useEffect(() => {
@@ -119,9 +138,9 @@ const Attendance = () => {
         const data = await getAllUserRoles();
         const list = Array.isArray(data) ? data
           : Array.isArray(data?.data) ? data.data
-          : Array.isArray(data?.roles) ? data.roles
-          : Array.isArray(data?.content) ? data.content
-          : [];
+            : Array.isArray(data?.roles) ? data.roles
+              : Array.isArray(data?.content) ? data.content
+                : [];
         setRoles(list);
       } catch (err) {
         console.error('Failed to fetch roles:', err);
@@ -383,7 +402,7 @@ const Attendance = () => {
                         <span className="px-2 py-0.5 bg-slate-100 text-slate-700 text-xs font-semibold rounded-lg">{item.userType}</span>
                       </td>
                       <td className="px-4 lg:px-5 py-4 text-sm text-gray-600">{item.attendanceDate}</td>
-                      <td className="px-4 lg:px-5 py-4 text-sm font-semibold text-gray-800">{item.checkInTime || '—'}</td>
+                      <td className="px-4 lg:px-5 py-4 text-sm font-semibold text-gray-800">{formatTimeToIST(item.checkInTime, item.attendanceDate)}</td>
                       <td className="px-4 lg:px-5 py-4">{getSourceBadge(item.attendanceSource)}</td>
                       <td className="px-4 lg:px-5 py-4">
                         <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold ${getStatusBadge(item.status)}`}>

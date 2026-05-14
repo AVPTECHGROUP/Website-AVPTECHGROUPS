@@ -167,7 +167,7 @@ export default function Items() {
         { key: "Total Items", val: statsData?.totalItems ?? 0, icon: Package, txColor: "text-blue-600", bgColor: "bg-blue-50" },
         { key: "Active Items", val: statsData?.activeItems ?? 0, icon: PackageCheck, txColor: "text-green-600", bgColor: "bg-green-50" },
         { key: "Inactive", val: statsData?.inactiveItems ?? 0, icon: PackageX, txColor: "text-red-500", bgColor: "bg-red-50" },
-        { key: "Active Categories",   val: statsData?.categories ?? statsData?.totalCategories ?? 0, icon: Layers, txColor: "text-purple-600", bgColor: "bg-purple-50" },
+        { key: "Active Categories", val: statsData?.categories ?? statsData?.totalCategories ?? 0, icon: Layers, txColor: "text-purple-600", bgColor: "bg-purple-50" },
     ], [statsData]);
 
     const resetPage = () => setPage(1);
@@ -483,8 +483,8 @@ export default function Items() {
                                                 <td className={tdStyle}>
                                                     <div className="flex items-center gap-1.5">
                                                         <span className={`text-sm font-bold w-7 shrink-0 ${item.totalStock < item.minLevel ? "text-red-500"
-                                                                : item.totalStock < item.minLevel * 1.5 ? "text-orange-500"
-                                                                    : "text-gray-800"
+                                                            : item.totalStock < item.minLevel * 1.5 ? "text-orange-500"
+                                                                : "text-gray-800"
                                                             }`}>
                                                             {item.totalStock}
                                                         </span>
@@ -547,12 +547,35 @@ export default function Items() {
                                     className="px-3 py-1 text-gray-600 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all">
                                     <ChevronLeft className="w-4 h-4" />
                                 </button>
-                                {[...Array(totalPages)].map((_, idx) => (
-                                    <button key={idx + 1} onClick={() => setPage(idx + 1)}
-                                        className={`px-3 py-1 rounded transition-all ${page === idx + 1 ? "bg-blue-500 text-white" : "text-gray-600 hover:bg-gray-100"}`}>
-                                        {idx + 1}
-                                    </button>
-                                ))}
+                                {(() => {
+                                    const pageBtn = (n) => (
+                                        <button key={n} onClick={() => setPage(n)}
+                                            className={`px-3 py-1 rounded transition-all ${page === n ? "bg-blue-500 text-white" : "text-gray-600 hover:bg-gray-100"}`}>
+                                            {n}
+                                        </button>
+                                    );
+                                    const ellipsis = (key) => (
+                                        <span key={key} className="px-2 py-1 text-gray-400">…</span>
+                                    );
+
+                                    if (totalPages <= 7) {
+                                        return [...Array(totalPages)].map((_, i) => pageBtn(i + 1));
+                                    }
+
+                                    const pages = [];
+                                    pages.push(pageBtn(1));
+
+                                    if (page > 3) pages.push(ellipsis("left"));
+
+                                    const start = Math.max(2, page - 1);
+                                    const end = Math.min(totalPages - 1, page + 1);
+                                    for (let n = start; n <= end; n++) pages.push(pageBtn(n));
+
+                                    if (page < totalPages - 2) pages.push(ellipsis("right"));
+
+                                    pages.push(pageBtn(totalPages));
+                                    return pages;
+                                })()}
                                 <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages || totalPages === 0 || loading}
                                     className="px-3 py-1 text-gray-600 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all">
                                     <ChevronRight className="w-4 h-4" />

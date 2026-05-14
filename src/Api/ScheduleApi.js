@@ -287,47 +287,64 @@ export const bulkSaveSlots = async (timetableId, slots = []) => {
 // ─────────────────────────────────────────────
 
 // Get substitutions for a timetable
+
+// ─────────────────────────────────────────────
+// TIMETABLE SUBSTITUTIONS
+// ─────────────────────────────────────────────
+
+// Get substitutions for a timetable
 export const getSubstitutions = async (timetableId) => {
     try {
         const res = await authFetch(
             `${BASE_URL}/timetable/${timetableId}/substitutions`,
-            { method: "GET" }
+            {
+                method: "GET",
+            }
         );
 
-        const data = await res.json();
+        const data = await res.json().catch(() => null);
 
         if (!res.ok) {
-            throw new Error(data?.message || "Failed to fetch substitutions");
+            throw new Error(
+                data?.message || "Failed to fetch substitutions"
+            );
         }
 
-        return data?.data || [];
+        return data?.data ?? [];
     } catch (error) {
-        console.error("getSubstitutions error:", error.message);
+        console.error("getSubstitutions error:", error);
         throw error;
     }
 };
 
 // Create substitution
-export const createSubstitution = async (timetableId, payload) => {
+export const createSubstitution = async (
+    timetableId,
+    payload
+) => {
     try {
         const res = await authFetch(
             `${BASE_URL}/timetable/${timetableId}/substitutions`,
             {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: {
+                    "Content-Type": "application/json",
+                },
                 body: JSON.stringify(payload),
             }
         );
 
-        const data = await res.json();
+        const data = await res.json().catch(() => null);
 
         if (!res.ok) {
-            throw new Error(data?.message || "Failed to create substitution");
+            throw new Error(
+                data?.message || "Failed to create substitution"
+            );
         }
 
-        return data?.data;
+        return data?.data ?? null;
     } catch (error) {
-        console.error("createSubstitution error:", error.message);
+        console.error("createSubstitution error:", error);
         throw error;
     }
 };
@@ -339,22 +356,38 @@ export const updateSubstitutionStatus = async (
     status
 ) => {
     try {
+        // Allowed statuses from backend
+        const allowedStatuses = [
+            "PENDING",
+            "CONFIRMED",
+            "CANCELLED",
+        ];
+
+        if (!allowedStatuses.includes(status)) {
+            throw new Error(
+                `Invalid status. Allowed values: ${allowedStatuses.join(", ")}`
+            );
+        }
+
         const res = await authFetch(
-            `${BASE_URL}/timetable/${timetableId}/substitutions/${substitutionId}/status?status=${status}`,
+            `${BASE_URL}/timetable/${timetableId}/substitutions/${substitutionId}/status?status=${encodeURIComponent(status)}`,
             {
                 method: "PUT",
             }
         );
 
-        const data = await res.json();
+        const data = await res.json().catch(() => null);
 
         if (!res.ok) {
-            throw new Error(data?.message || "Failed to update substitution status");
+            throw new Error(
+                data?.message ||
+                "Failed to update substitution status"
+            );
         }
 
-        return data?.data;
+        return data?.data ?? null;
     } catch (error) {
-        console.error("updateSubstitutionStatus error:", error.message);
+        console.error("updateSubstitutionStatus error:", error);
         throw error;
     }
 };
