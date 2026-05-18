@@ -1,52 +1,126 @@
 import { useState, useEffect } from 'react';
-import { X, ArrowLeftRight } from 'lucide-react';
+import { X, ArrowLeftRight, AlertCircle, ChevronDown } from 'lucide-react';
 import {
     getSubstitutions,
     createSubstitution,
     updateSubstitutionStatus,
+    getAvailableTeachersForSlot,
 } from '../../../Api/ScheduleApi';
 
 const REASONS = [
-    'Medical Leave', 'Personal Leave', 'Official Duty',
-    'Training / Workshop', 'Emergency', 'Other',
+    'Medical Leave',
+    'Personal Leave',
+    'Official Duty',
+    'Training / Workshop',
+    'Emergency',
+    'Other',
 ];
 
-export default function SubstitutionModal({ timetableId, slot = null, onClose }) {
+/**
+ * SubstitutionModal
+ *
+ * Props:
+ *  - timetableId: number
+ *  - selectedSlots: Slot[]   — array of slots user checked in the grid
+ *  - onClose: () => void
+ */
+export default function SubstitutionModal({ timetableId, selectedSlots = [], onClose }) {
+    const [activeSlotIndex, setActiveSlotIndex] = useState(0);
+    const activeSlot = selectedSlots[activeSlotIndex] || null;
+
     const [form, setForm] = useState({
         date: '',
-        originalTeacherId: slot?.teacher?.id || '',
         substituteTeacherId: '',
         reason: '',
+        reasonOther: '',
         notes: '',
     });
-    const [teachers, setTeachers] = useState([]);
+
+    const [availableTeachers, setAvailableTeachers] = useState([]);
+    const [loadingTeachers, setLoadingTeachers] = useState(false);
+
     const [substitutions, setSubstitutions] = useState([]);
+    const [existingSubstitution, setExistingSubstitution] = useState(null);
+
+    const [teacherDropdownOpen, setTeacherDropdownOpen] = useState(false);
+    const [teacherSearch, setTeacherSearch] = useState('');
+
     const [errors, setErrors] = useState({});
     const [saving, setSaving] = useState(false);
-    const [tab, setTab] = useState('create'); // 'create' | 'list'
-
-    // Load teachers list (reuse available teachers or use static)
-    const STATIC_TEACHERS = [
-        { id: 1, name: 'Kavita Rao' },
-        { id: 2, name: 'Rajesh Kumar' },
-        { id: 3, name: 'Priya Patel' },
-        { id: 4, name: 'Meena Sharma' },
-        { id: 5, name: 'Suresh Nair' },
-        { id: 6, name: 'Anjali Singh' },
-        { id: 7, name: 'Amit Joshi' },
-    ];
 
     useEffect(() => {
-        setTeachers(STATIC_TEACHERS);
         if (timetableId) loadSubstitutions();
     }, [timetableId]);
+
+    useEffect(() => {
+        if (!activeSlot) return;
+        fetchAvailableTeachers(activeSlot);
+        checkExistingSubstitution(activeSlot);
+        setForm(prev => ({
+            ...prev,
+            substituteTeacherId: '',
+            reason: '',
+            reasonOther: '',
+            notes: '',
+        }));
+        setErrors({});
+    }, [activeSlotIndex, substitutions.length]);
 
     const loadSubstitutions = async () => {
         try {
             const data = await getSubstitutions(timetableId);
             setSubstitutions(data || []);
         } catch {
+            // silent
+        }
+    };
 
+    const fetchAvailableTeachers = async (slot) => {
+        if (!slot) return;
+        try {
+            setLoadingTeachers(true);
+            setAvailableTeachers([]);
+            const periodNumber = parseInt((slot.periodId || '').replace('P', ''));
+            const result = await getAvailableTeachersForSlot(
+                timetableId,
+                slot.day,
+                periodNumber,
+                slot.subject?.id
+            );
+            const data = result?.data || result;
+            const bestMatch = data?.bestMatch || [];
+            const others = data?.others || [];
+            const list = Array.isArray(result)
+                ? result
+                : [...bestMatch, ...others];
+            setAvailableTeachers(list);
+        } catch (err) {
+            console.error('fetchAvailableTeachers error:', err);
+            setAvailableTeachers([]);
+        } finally {
+            setLoadingTeachers(false);
+        }
+    };
+
+    const checkExistingSubstitution = (slot) => {
+        if (!slot?.slotId || substitutions.length === 0) {
+            setExistingSubstitution(null);
+            return;
+        }
+        const existing = substitutions.find(
+            s => s.slotId === slot.slotId && s.status === 'PENDING'
+        );
+        if (existing) {
+            setExistingSubstitution(existing);
+            setForm({
+                date: existing.substituteDate || '',
+                substituteTeacherId: String(existing.substituteTeacherId || ''),
+                reason: REASONS.includes(existing.reason) ? existing.reason : 'Other',
+                reasonOther: REASONS.includes(existing.reason) ? '' : (existing.reason || ''),
+                notes: existing.notes || '',
+            });
+        } else {
+            setExistingSubstitution(null);
         }
     };
 
@@ -57,215 +131,362 @@ export default function SubstitutionModal({ timetableId, slot = null, onClose })
 
     const validate = () => {
         const errs = {};
-        if (!form.date) errs.date = 'Required';
-        if (!form.originalTeacherId) errs.originalTeacherId = 'Required';
-        if (!form.substituteTeacherId) errs.substituteTeacherId = 'Required';
-        if (form.originalTeacherId && form.substituteTeacherId &&
-            String(form.originalTeacherId) === String(form.substituteTeacherId))
-            errs.substituteTeacherId = 'Cannot be same as original teacher';
+        if (!form.date) errs.date = 'Date is required';
+        if (!form.substituteTeacherId) errs.substituteTeacherId = 'Please select a substitute teacher';
+        if (activeSlot?.teacher?.id && String(activeSlot.teacher.id) === String(form.substituteTeacherId))
+            errs.substituteTeacherId = 'Substitute cannot be the same as the original teacher';
+        if (!form.reason) errs.reason = 'Please select a reason';
+        if (form.reason === 'Other' && !form.reasonOther.trim())
+            errs.reasonOther = 'Please specify the reason';
         return errs;
     };
+
+    const resolvedReason = form.reason === 'Other' ? form.reasonOther.trim() : form.reason;
 
     const handleConfirm = async () => {
         const errs = validate();
         if (Object.keys(errs).length > 0) { setErrors(errs); return; }
+
         try {
             setSaving(true);
-            const payload = {
-                slotId: slot?.slotId || null,
-                substituteDate: form.date,
-                originalTeacherId: parseInt(form.originalTeacherId),
-                substituteTeacherId: parseInt(form.substituteTeacherId),
-                reason: form.reason,
-                notes: form.notes,
-            };
-            await createSubstitution(timetableId, payload);
+            if (existingSubstitution) {
+                await updateSubstitutionStatus(timetableId, existingSubstitution.id, 'CONFIRMED');
+            } else {
+                const payload = {
+                    slotId: activeSlot?.slotId || null,
+                    substituteDate: form.date,
+                    originalTeacherId: activeSlot?.teacher?.id
+                        ? parseInt(activeSlot.teacher.id)
+                        : undefined,
+                    substituteTeacherId: parseInt(form.substituteTeacherId),
+                    reason: resolvedReason,
+                    notes: form.notes,
+                };
+                await createSubstitution(timetableId, payload);
+            }
             await loadSubstitutions();
-            setTab('list');
+            if (activeSlotIndex < selectedSlots.length - 1) {
+                setActiveSlotIndex(i => i + 1);
+            } else {
+                onClose();
+            }
         } catch (err) {
-            setErrors({ submit: err.message });
+            setErrors({ submit: err.message || 'Something went wrong' });
         } finally {
             setSaving(false);
         }
     };
 
-    const handleUpdateStatus = async (subId, status) => {
-        try {
-            await updateSubstitutionStatus(
-                timetableId,
-                subId,
-                status
-            );
+    const teacherDisplayName = (t) =>
+        t?.name || t?.teacherName || `Teacher #${t?.id || t?.teacherId}`;
 
-            await loadSubstitutions();
-        } catch {
-            /* silent */
-        }
-    };
+    const teacherInitial = (t) =>
+        (teacherDisplayName(t)[0] ?? '?').toUpperCase();
 
-    const originalTeacherId = parseInt(form.originalTeacherId);
+    const filteredTeachers = teacherSearch
+        ? availableTeachers.filter(t =>
+            teacherDisplayName(t)
+                .toLowerCase()
+                .includes(teacherSearch.toLowerCase())
+        )
+        : availableTeachers;
+
+    const isUpdate = !!existingSubstitution;
+    const originalTeacherName = activeSlot?.teacher?.name || '—';
 
     return (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+
                 {/* Header */}
                 <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
                     <div className="flex items-center gap-2">
                         <ArrowLeftRight size={18} className="text-blue-600" />
-                        <h2 className="text-lg font-semibold text-gray-900">Arrange Substitution</h2>
+                        <h2 className="text-lg font-semibold text-gray-900">
+                            {isUpdate ? 'Update Substitution' : 'Arrange Substitution'}
+                        </h2>
                     </div>
-                    <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100">
+                    <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 cursor-pointer">
                         <X size={18} className="text-gray-500" />
                     </button>
                 </div>
 
-                {/* Tabs */}
-                <div className="flex border-b border-gray-100">
-                    <button onClick={() => setTab('create')}
-                        className={`flex-1 py-2.5 text-sm font-medium transition ${tab === 'create' ? 'border-b-2 border-[#1e293b] text-[#1e293b]' : 'text-gray-500 hover:text-gray-700'}`}>
-                        + New
-                    </button>
-                    <button onClick={() => { setTab('list'); loadSubstitutions(); }}
-                        className={`flex-1 py-2.5 text-sm font-medium transition ${tab === 'list' ? 'border-b-2 border-[#1e293b] text-[#1e293b]' : 'text-gray-500 hover:text-gray-700'}`}>
-                        Pending ({substitutions.length})
-                    </button>
-                </div>
+                <div className="p-6 space-y-4 max-h-[62vh] overflow-y-auto">
 
-                {tab === 'create' && (
-                    <>
-                        <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
-                            {/* Slot info if opened from slot */}
-                            {slot && (
-                                <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 text-sm text-blue-800">
-                                    Slot: <strong>{slot.subject?.label}</strong> — {slot.teacher?.name}
-                                </div>
-                            )}
-
-                            {errors.submit && <p className="text-xs text-red-500 bg-red-50 px-3 py-2 rounded-lg">{errors.submit}</p>}
-
-                            {/* Date */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Date <span className="text-red-500">*</span>
-                                </label>
-                                <input type="date" value={form.date} onChange={e => set('date', e.target.value)}
-                                    className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100
-                        ${errors.date ? 'border-red-300' : 'border-gray-200'}`} />
-                                {errors.date && <p className="text-xs text-red-500 mt-1">{errors.date}</p>}
-                            </div>
-
-                            {/* Teachers */}
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Original Teacher <span className="text-red-500">*</span>
-                                    </label>
-                                    <select value={form.originalTeacherId} onChange={e => set('originalTeacherId', e.target.value)}
-                                        className={`w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-100
-                          ${errors.originalTeacherId ? 'border-red-300' : 'border-gray-200'}`}>
-                                        <option value="">Select teacher</option>
-                                        {teachers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                                    </select>
-                                    {errors.originalTeacherId && <p className="text-xs text-red-500 mt-1">{errors.originalTeacherId}</p>}
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Substitute <span className="text-red-500">*</span>
-                                    </label>
-                                    <select value={form.substituteTeacherId} onChange={e => set('substituteTeacherId', e.target.value)}
-                                        className={`w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-100
-                          ${errors.substituteTeacherId ? 'border-red-300' : 'border-gray-200'}`}>
-                                        <option value="">Select substitute</option>
-                                        {teachers.filter(t => t.id !== originalTeacherId).map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                                    </select>
-                                    {errors.substituteTeacherId && <p className="text-xs text-red-500 mt-1">{errors.substituteTeacherId}</p>}
-                                </div>
-                            </div>
-
-                            {/* Reason */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Reason</label>
-                                <select value={form.reason} onChange={e => set('reason', e.target.value)}
-                                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-100">
-                                    <option value="">Select reason</option>
-                                    {REASONS.map(r => <option key={r}>{r}</option>)}
-                                </select>
-                            </div>
-
-                            {/* Notes */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Additional Notes</label>
-                                <textarea value={form.notes} onChange={e => set('notes', e.target.value)}
-                                    placeholder="Any extra instructions..."
-                                    rows={2}
-                                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 resize-none" />
+                    {/* Multi-slot picker */}
+                    {selectedSlots.length > 1 && (
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+                                Selected Slot
+                            </label>
+                            <div className="flex flex-wrap gap-1.5">
+                                {selectedSlots.map((s, i) => (
+                                    <button
+                                        key={i}
+                                        onClick={() => setActiveSlotIndex(i)}
+                                        className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition cursor-pointer
+                                            ${activeSlotIndex === i
+                                                ? 'bg-indigo-600 text-white border-indigo-600'
+                                                : 'bg-gray-100 text-gray-600 border-gray-200 hover:border-indigo-400'}`}>
+                                        {s.day} · {s.periodId} · {s.subject?.code || '—'}
+                                    </button>
+                                ))}
                             </div>
                         </div>
+                    )}
 
-                        <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-100">
-                            <button onClick={onClose}
-                                className="px-5 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50">
-                                Cancel
-                            </button>
-                            <button onClick={handleConfirm} disabled={saving}
-                                className="px-5 py-2 bg-[#1e293b] text-white rounded-lg text-sm font-medium hover:bg-[#334155] disabled:opacity-50 transition">
-                                {saving ? 'Saving...' : 'Confirm Substitution'}
-                            </button>
+                    {/* Slot context card */}
+                    {activeSlot && (
+                        <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-sm">
+                            <div className="flex items-center justify-between gap-2">
+                                <div>
+                                    <p className="font-semibold text-blue-900">
+                                        {activeSlot.subject?.label || activeSlot.subject?.code || 'Unknown Subject'}
+                                    </p>
+                                    <p className="text-blue-600 text-xs mt-0.5">
+                                        {activeSlot.day} · {activeSlot.periodId}
+                                        {activeSlot.room ? ` · 📍 ${activeSlot.room}` : ''}
+                                    </p>
+                                </div>
+                                {isUpdate && (
+                                    <span className="text-xs bg-amber-100 text-amber-700 font-semibold px-2 py-0.5 rounded-full border border-amber-200">
+                                        Existing Pending
+                                    </span>
+                                )}
+                            </div>
                         </div>
-                    </>
-                )}
+                    )}
 
-                {tab === 'list' && (
-                    <div className="max-h-[60vh] overflow-y-auto">
-                        {substitutions.length === 0 ? (
-                            <div className="text-center py-12 text-gray-400 text-sm">
-                                <ArrowLeftRight size={32} className="mx-auto mb-2 opacity-20" />
-                                No pending substitutions
+                    {errors.submit && (
+                        <div className="flex items-center gap-2 text-xs text-red-600 bg-red-50 border border-red-200 px-3 py-2 rounded-lg">
+                            <AlertCircle size={14} />
+                            {errors.submit}
+                        </div>
+                    )}
+
+                    {/* Original Teacher */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Original Teacher
+                        </label>
+                        <div className="w-full border border-gray-200 bg-gray-50 rounded-lg px-3 py-2 text-sm text-gray-600 select-none">
+                            {originalTeacherName}
+                        </div>
+                    </div>
+
+                    {/* Date */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Substitution Date <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                            type="date"
+                            value={form.date}
+                            onChange={e => set('date', e.target.value)}
+                            className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100
+                                ${errors.date ? 'border-red-300' : 'border-gray-200'}`}
+                        />
+                        {errors.date && <p className="text-xs text-red-500 mt-1">{errors.date}</p>}
+                    </div>
+
+                    {/* Substitute Teacher */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Substitute Teacher <span className="text-red-500">*</span>
+                        </label>
+
+                        {loadingTeachers ? (
+                            <div className="w-full border border-gray-200 bg-gray-50 rounded-lg px-3 py-2 text-sm text-gray-400">
+                                Loading available teachers…
                             </div>
                         ) : (
-                            <div className="divide-y divide-gray-100">
-                                {substitutions.map(sub => (
-                                    <div key={sub.id} className="px-5 py-4">
-                                        <div className="flex items-start justify-between gap-2">
-                                            <div>
-                                                <p className="text-sm font-medium text-gray-800">
-                                                    {sub.originalTeacherName} → {sub.substituteTeacherName}
-                                                </p>
-                                                <p className="text-xs text-gray-500 mt-0.5">{sub.substituteDate} · {sub.reason}</p>
-                                                <span className={`inline-block mt-1 text-xs px-2 py-0.5 rounded-full font-medium
-                                    ${sub.status === 'CONFIRMED' ? 'bg-green-100 text-green-700' :
-                                                        sub.status === 'CANCELLED' ? 'bg-red-100 text-red-600' :
-                                                            'bg-amber-100 text-amber-700'}`}>
-                                                    {sub.status || 'PENDING'}
+                            <div className="relative">
+
+                                {/* Trigger Button */}
+                                <button
+                                    type="button"
+                                    onClick={() => setTeacherDropdownOpen(o => !o)}
+                                    className={`w-full flex items-center justify-between gap-2 px-3 py-2 border rounded-lg bg-white text-sm transition
+                    ${errors.substituteTeacherId
+                                            ? 'border-red-300'
+                                            : 'border-gray-200 hover:border-blue-300'
+                                        }`}
+                                >
+                                    <span className="flex items-center gap-2 min-w-0">
+                                        {form.substituteTeacherId ? (
+                                            <>
+                                                <span className="w-7 h-7 rounded-full bg-indigo-100 flex items-center justify-center text-xs font-bold text-indigo-600 flex-shrink-0">
+                                                    {teacherInitial(
+                                                        availableTeachers.find(
+                                                            t =>
+                                                                String(t.id || t.teacherId) ===
+                                                                String(form.substituteTeacherId)
+                                                        )
+                                                    )}
                                                 </span>
-                                            </div>
-                                            {(!sub.status || sub.status === 'PENDING') && (
-                                                <div className="flex gap-1 shrink-0">
-                                                    <button
-                                                        onClick={() => handleUpdateStatus(sub.id, 'CONFIRMED')}
-                                                        className="px-2 py-1 text-xs bg-green-600 text-white rounded-lg hover:bg-green-700">
-                                                        Confirm
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleUpdateStatus(sub.id, 'CANCELLED')}
-                                                        className="px-2 py-1 text-xs border border-red-200 text-red-500 rounded-lg hover:bg-red-50">
-                                                        Cancel
-                                                    </button>
-                                                </div>
+
+                                                <span className="truncate">
+                                                    {teacherDisplayName(
+                                                        availableTeachers.find(
+                                                            t =>
+                                                                String(t.id || t.teacherId) ===
+                                                                String(form.substituteTeacherId)
+                                                        )
+                                                    )}
+                                                </span>
+                                            </>
+                                        ) : (
+                                            <span className="text-gray-500">
+                                                Select substitute teacher
+                                            </span>
+                                        )}
+                                    </span>
+
+                                    <ChevronDown
+                                        size={16}
+                                        className={`text-gray-400 transition-transform ${teacherDropdownOpen ? 'rotate-180' : ''
+                                            }`}
+                                    />
+                                </button>
+
+                                {/* Dropdown */}
+                                {teacherDropdownOpen && (
+                                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-30 overflow-hidden">
+
+                                        {/* Search */}
+                                        <div className="p-2 border-b border-gray-100">
+                                            <input
+                                                autoFocus
+                                                value={teacherSearch}
+                                                onChange={(e) => setTeacherSearch(e.target.value)}
+                                                placeholder="Search teacher…"
+                                                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300"
+                                            />
+                                        </div>
+
+                                        {/* List */}
+                                        <div className="max-h-52 overflow-y-auto">
+                                            {filteredTeachers.length === 0 ? (
+                                                <p className="text-xs text-gray-400 text-center py-4">
+                                                    No teachers found
+                                                </p>
+                                            ) : (
+                                                filteredTeachers.map(t => {
+                                                    const teacherId = t.id || t.teacherId;
+
+                                                    return (
+                                                        <button
+                                                            type="button"
+                                                            key={teacherId}
+                                                            onClick={() => {
+                                                                set('substituteTeacherId', String(teacherId));
+                                                                setTeacherDropdownOpen(false);
+                                                                setTeacherSearch('');
+                                                            }}
+                                                            className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left transition
+                                            ${String(form.substituteTeacherId) === String(teacherId)
+                                                                    ? 'bg-blue-50 text-blue-700 font-semibold'
+                                                                    : 'text-gray-700 hover:bg-blue-50'
+                                                                }`}
+                                                        >
+                                                            <span className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-xs font-bold text-indigo-600 flex-shrink-0">
+                                                                {teacherInitial(t)}
+                                                            </span>
+
+                                                            <span className="truncate">
+                                                                {teacherDisplayName(t)}
+                                                            </span>
+                                                        </button>
+                                                    );
+                                                })
                                             )}
                                         </div>
                                     </div>
-                                ))}
+                                )}
                             </div>
                         )}
-                        <div className="px-5 py-4 border-t border-gray-100">
-                            <button onClick={onClose}
-                                className="w-full py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50">
-                                Close
-                            </button>
-                        </div>
+
+                        {errors.substituteTeacherId && (
+                            <p className="text-xs text-red-500 mt-1">
+                                {errors.substituteTeacherId}
+                            </p>
+                        )}
                     </div>
-                )}
+
+                    {/* Reason */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Reason <span className="text-red-500">*</span>
+                        </label>
+                        <select
+                            value={form.reason}
+                            onChange={e => set('reason', e.target.value)}
+                            className={`w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-100
+                                ${errors.reason ? 'border-red-300' : 'border-gray-200'}`}>
+                            <option value="">Select reason</option>
+                            {REASONS.map(r => <option key={r}>{r}</option>)}
+                        </select>
+                        {errors.reason && <p className="text-xs text-red-500 mt-1">{errors.reason}</p>}
+                    </div>
+
+                    {/* "Other" reason */}
+                    {form.reason === 'Other' && (
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Specify Reason <span className="text-red-500">*</span>
+                            </label>
+                            <div className="relative">
+                                <textarea
+                                    value={form.reasonOther}
+                                    onChange={e => {
+                                        if (e.target.value.length <= 100) set('reasonOther', e.target.value);
+                                    }}
+                                    placeholder="Describe the reason (max 100 characters)…"
+                                    rows={2}
+                                    maxLength={100}
+                                    className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 resize-none
+                                        ${errors.reasonOther ? 'border-red-300' : 'border-gray-200'}`}
+                                />
+                                <span className="absolute bottom-2 right-2 text-xs text-gray-400">
+                                    {form.reasonOther.length}/100
+                                </span>
+                            </div>
+                            {errors.reasonOther && <p className="text-xs text-red-500 mt-1">{errors.reasonOther}</p>}
+                        </div>
+                    )}
+
+                    {/* Notes */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Additional Notes
+                        </label>
+                        <textarea
+                            value={form.notes}
+                            onChange={e => set('notes', e.target.value)}
+                            placeholder="Any extra instructions for the substitute…"
+                            rows={2}
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 resize-none"
+                        />
+                    </div>
+                </div>
+
+                <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-100">
+                    <button
+                        onClick={onClose}
+                        className="px-5 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 cursor-pointer transition">
+                        Cancel
+                    </button>
+                    <button
+                        onClick={handleConfirm}
+                        disabled={saving}
+                        className="px-5 py-2 bg-[#1e293b] text-white rounded-lg text-sm font-medium hover:bg-[#334155] disabled:opacity-50 transition cursor-pointer">
+                        {saving
+                            ? 'Saving…'
+                            : isUpdate
+                                ? 'Update Substitution'
+                                : 'Confirm Substitution'}
+                    </button>
+                </div>
             </div>
         </div>
     );

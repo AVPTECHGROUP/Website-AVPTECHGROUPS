@@ -833,13 +833,13 @@ export default function StaffAttendanceRegistration() {
                     <div ref={uploadPanelRef} className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
                         {/* Steps */}
                         <div className="flex items-center gap-1 mb-5 text-xs font-semibold overflow-x-auto pb-1">
-                            {["Select Staff", "Review Info", "Upload Photos", "Enroll"].map((step, i) => (
+                            {["Select Staff", "Upload Photos", "Enroll"].map((step, i) => (
                                 <div key={step} className="flex items-center shrink-0">
                                     <div className={`px-3 py-1.5 rounded-full ${activeStep > i + 1 ? "bg-blue-600 text-white"
                                         : activeStep === i + 1 ? "bg-blue-100 text-blue-700 border border-blue-300"
                                             : "bg-gray-100 text-gray-400"
                                         }`}>{i + 1} · {step}</div>
-                                    {i < 3 && <div className="w-8 h-px bg-gray-300 mx-1" />}
+                                    {i < 2 && <div className="w-8 h-px bg-gray-300 mx-1" />}
                                 </div>
                             ))}
                         </div>

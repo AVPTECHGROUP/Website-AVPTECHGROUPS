@@ -166,8 +166,27 @@ function AddNewStudent() {
         return true;
     };
 
-    const handleNextTab = () => { if (!validatePersonalDetails()) return; setActiveTab('family'); };
-    const handleTabClick = (tab) => { if (tab === 'family' && !validatePersonalDetails()) return; setActiveTab(tab); };
+    // 1. Add this ref at the top of the component (with other refs)
+    const formTopRef = useRef(null);
+
+    // 2. Create a helper scroll function
+    const scrollToTop = () => {
+        formTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+
+    // 3. Update handlers to use it
+    const handleNextTab = () => {
+        if (!validatePersonalDetails()) return;
+        setActiveTab('family');
+        scrollToTop();
+    };
+
+    const handleTabClick = (tab) => {
+        if (tab === 'family' && !validatePersonalDetails()) return;
+        setActiveTab(tab);
+        scrollToTop();
+    };
+
     const handleSubmit = (e) => e.preventDefault();
 
     const handleSaveDetails = async () => {
@@ -246,7 +265,7 @@ function AddNewStudent() {
     const handleDiscard = () => navigate('/students');
 
     return (
-        <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-4">
+        <div ref={formTopRef} className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-4">
             <div className="mx-auto">
                 <button onClick={() => navigate(-1)}
                     className="flex items-center cursor-pointer bg-gray-600 p-2 rounded-xl text-white gap-2 hover:bg-gray-900 transition-colors mb-4">

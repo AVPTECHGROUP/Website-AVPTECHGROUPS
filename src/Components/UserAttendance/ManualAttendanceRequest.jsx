@@ -70,12 +70,25 @@ const ManualAttendance = () => {
 
   /* Form fields */
   const [attendanceDate, setAttendanceDate] = useState(TODAY);
-  const [checkInTime, setCheckInTime] = useState('09:00');
+  const getCurrentTime = () => {
+    const now = new Date();
+
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+
+    return `${hours}:${minutes}`;
+  };
+
+  const [checkInTime, setCheckInTime] = useState(getCurrentTime());
   const [reason, setReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   /* GPS */
   const [gps, setGps] = useState({ latitude: null, longitude: null });
+
+  const MAX_WORDS = 100;
+
+  const countChars = (text) => text.length;
 
   useEffect(() => {
     navigator.geolocation.getCurrentPosition(
@@ -126,6 +139,12 @@ const ManualAttendance = () => {
   };
 
   const handleSubmit = async () => {
+
+    if (reason.trim().length > 500) {
+      toast.error('Reason cannot exceed 500 characters');
+      return;
+    }
+
     if (!selectedStaff) { toast.error('Please select a staff member'); return; }
     if (!selectedStaff.userId) { toast.error('Could not resolve User ID'); return; }
     if (!selectedStaff.userType) { toast.error('Could not resolve User Role'); return; }
@@ -332,11 +351,26 @@ const ManualAttendance = () => {
 
             <textarea
               value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              placeholder="Describe the reason for face verification failure (e.g., poor lighting in room 302, temporary technical glitch, or physical obstruction)..."
+              onChange={(e) => {
+                const value = e.target.value;
+                if (value.length <= 500) {
+                  setReason(value);
+                }
+              }}
+              placeholder="Describe the reason for face verification failure..."
               rows={4}
               className="w-full border border-gray-200 rounded-lg p-3 sm:p-3.5 text-xs sm:text-[13px] text-gray-700 placeholder-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-gray-50"
             />
+            <div className="flex justify-end mt-2">
+              <span
+                className={`text-xs font-medium ${reason.length > 450
+                  ? 'text-orange-500'
+                  : 'text-gray-400'
+                  }`}
+              >
+                {reason.length}/500 characters
+              </span>
+            </div>
 
             <p className="text-[11px] sm:text-[12px] text-gray-400 italic mt-2 sm:mt-2.5 mb-4 sm:mb-6">
               Your request will be sent to the department head for approval.
@@ -353,13 +387,12 @@ const ManualAttendance = () => {
               <button
                 onClick={handleSubmit}
                 disabled={submitting || !isValid}
-                className={`w-full sm:w-auto px-5 sm:px-6 py-2.5 text-xs sm:text-[13.5px] font-semibold text-white rounded-lg transition-all flex items-center justify-center gap-2 ${
-                  submitting
-                    ? 'bg-blue-400 cursor-not-allowed'
-                    : isValid
-                      ? 'bg-blue-600 hover:bg-blue-700 shadow-md hover:shadow-lg'
-                      : 'bg-blue-300 cursor-not-allowed'
-                }`}
+                className={`w-full sm:w-auto px-5 sm:px-6 py-2.5 text-xs sm:text-[13.5px] font-semibold text-white rounded-lg transition-all flex items-center justify-center gap-2 ${submitting
+                  ? 'bg-blue-400 cursor-not-allowed'
+                  : isValid
+                    ? 'bg-blue-600 hover:bg-blue-700 shadow-md hover:shadow-lg'
+                    : 'bg-blue-300 cursor-not-allowed'
+                  }`}
               >
                 {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
                 {submitting ? 'Submitting...' : 'Submit Request'}
