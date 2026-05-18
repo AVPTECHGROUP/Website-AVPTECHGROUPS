@@ -16,6 +16,8 @@ import {
 import { UserContext } from '../../ContextAPI/UserContext';
 import { toast } from 'react-toastify';
 
+// ─── Constants ─────────────────────────────────────────────────────────────────
+
 const cardTopColors = {
   QUARTERLY:   '#1A3A5C',
   MONTHLY:     '#0369A1',
@@ -59,6 +61,7 @@ const formatDate = (dateString) => {
 };
 
 // ─── Period Modal ─────────────────────────────────────────────────────────────
+
 function PeriodModal({ isOpen, onClose, period, academicYear, onSuccess }) {
   const isEdit = !!period;
   const [loading, setLoading] = useState(false);
@@ -77,7 +80,11 @@ function PeriodModal({ isOpen, onClose, period, academicYear, onSuccess }) {
         notes:             period.notes || '',
       });
     } else {
-      setForm({ name: '', type: 'QUARTERLY', academicYearLabel: academicYear?.label || '', dueDate: '', notes: '' });
+      setForm({
+        name: '', type: 'QUARTERLY',
+        academicYearLabel: academicYear?.label || '',
+        dueDate: '', notes: '',
+      });
     }
   }, [isOpen, period, academicYear]);
 
@@ -120,22 +127,41 @@ function PeriodModal({ isOpen, onClose, period, academicYear, onSuccess }) {
       <Modal.Body>
         <div className="space-y-4">
           <div>
-            <Input label="Period Name" value={form.name} onChange={(v) => set('name', v)}
-              placeholder="e.g. Q1, Q3, October, Term 1, Annual..." required />
-            <div className="text-xs text-gray-500 mt-1">A clear name visible to staff when collecting payments.</div>
+            <Input
+              label="Period Name"
+              value={form.name}
+              onChange={(v) => set('name', v)}
+              placeholder="e.g. Q1, Q3, October, Term 1, Annual…"
+              required
+            />
+            <div className="text-xs text-gray-500 mt-1">
+              A clear name visible to staff when collecting payments.
+            </div>
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1.5">Type <span className="text-red-500">*</span></label>
-            <Select value={form.type} onChange={(v) => set('type', v)} options={[
-              { value: 'MONTHLY',     label: 'Monthly'           },
-              { value: 'QUARTERLY',   label: 'Quarterly'         },
-              { value: 'HALF_YEARLY', label: 'Half-Yearly'       },
-              { value: 'YEARLY',      label: 'Yearly'            },
-              { value: 'CUSTOM',      label: 'Custom / One-time' },
-            ]} />
+            <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+              Type <span className="text-red-500">*</span>
+            </label>
+            <Select
+              value={form.type}
+              onChange={(v) => set('type', v)}
+              options={[
+                { value: 'MONTHLY',     label: 'Monthly'           },
+                { value: 'QUARTERLY',   label: 'Quarterly'         },
+                { value: 'HALF_YEARLY', label: 'Half-Yearly'       },
+                { value: 'YEARLY',      label: 'Yearly'            },
+                { value: 'CUSTOM',      label: 'Custom / One-time' },
+              ]}
+            />
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <Input label="Due Date" type="date" value={form.dueDate} onChange={(v) => set('dueDate', v)} required />
+            <Input
+              label="Due Date"
+              type="date"
+              value={form.dueDate}
+              onChange={(v) => set('dueDate', v)}
+              required
+            />
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1.5">Academic Year</label>
               <div className="px-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 text-gray-700 font-semibold">
@@ -145,16 +171,20 @@ function PeriodModal({ isOpen, onClose, period, academicYear, onSuccess }) {
           </div>
           <div>
             <label className="block text-xs font-semibold text-gray-700 mb-1.5">Notes (optional)</label>
-            <textarea value={form.notes} onChange={(e) => set('notes', e.target.value)}
-              placeholder="e.g. Second quarter of the academic year..." rows={2}
-              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all resize-none" />
+            <textarea
+              value={form.notes}
+              onChange={(e) => set('notes', e.target.value)}
+              placeholder="e.g. Second quarter of the academic year…"
+              rows={2}
+              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all resize-none"
+            />
           </div>
         </div>
       </Modal.Body>
       <Modal.Footer>
         <Button variant="secondary" onClick={onClose} disabled={loading}>Cancel</Button>
         <Button variant="primary" onClick={handleSubmit} disabled={loading}>
-          {loading ? 'Saving...' : isEdit ? 'Update Period' : 'Save Period'}
+          {loading ? 'Saving…' : isEdit ? 'Update Period' : 'Save Period'}
         </Button>
       </Modal.Footer>
     </Modal>
@@ -163,16 +193,14 @@ function PeriodModal({ isOpen, onClose, period, academicYear, onSuccess }) {
 
 // ─── FeePeriods ───────────────────────────────────────────────────────────────
 //
-// ✅ Reads academicYear from UserContext directly — same pattern as Overview.
-//    Does NOT rely on prop being passed (prop is kept as optional fallback).
-//
-const FeePeriods = ({ onNavigate }) => {
-  // ✅ Read from context — same source as Overview
+// Props:
+//   onGoToStructures(periodId) — called instead of navigate() so the parent
+//   FeeSynthesisPage can switch tabs without losing the header/nav.
+
+const FeePeriods = ({ onGoToStructures }) => {
   const { currentAcademicYear } = useContext(UserContext);
   const academicYearId    = currentAcademicYear?.id;
   const academicYearLabel = currentAcademicYear?.label;
-
-  console.log('[FeePeriods] Context academic year:', currentAcademicYear);
 
   const [modal,      setModal]      = useState(false);
   const [editPeriod, setEditPeriod] = useState(null);
@@ -183,9 +211,7 @@ const FeePeriods = ({ onNavigate }) => {
     if (!academicYearId) return;
     setLoading(true);
     try {
-      console.log('[FeePeriods] 🔄 fetching periods for academicYearId:', academicYearId);
       const data = await getFeePeriods(academicYearId);
-      console.log('[FeePeriods] ✅ periods:', data);
       setPeriods(Array.isArray(data) ? data : []);
     } catch {
       toast.error('Failed to fetch fee periods');
@@ -203,6 +229,13 @@ const FeePeriods = ({ onNavigate }) => {
   const openEdit      = (p) => { setEditPeriod(p);    setModal(true); };
   const close         = ()  => { setModal(false);     setEditPeriod(null); };
   const handleSuccess = ()  => fetchPeriods();
+
+  // ✅ Use the prop callback instead of navigate() — keeps the wrapper intact
+  const goToStructures = (periodId) => {
+    if (onGoToStructures) {
+      onGoToStructures(periodId);
+    }
+  };
 
   const handleDelete = async (periodId) => {
     if (!window.confirm('Are you sure you want to delete this period? This action cannot be undone.')) return;
@@ -233,6 +266,8 @@ const FeePeriods = ({ onNavigate }) => {
 
   return (
     <div className="space-y-5">
+
+      {/* ── Page header ───────────────────────────────────────────────────── */}
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
           <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">Fee Periods</h1>
@@ -245,43 +280,66 @@ const FeePeriods = ({ onNavigate }) => {
         </Button>
       </div>
 
+      {/* ── Info banner ───────────────────────────────────────────────────── */}
       <div className="bg-blue-50 border-l-[3px] border-blue-500 rounded-lg px-4 py-2.5 text-sm text-blue-800">
         Fee Periods define <strong>when</strong> fee is due. After creating a period, attach class-wise fee
         structures from the <strong>Fee Structures</strong> tab.
       </div>
 
-      {/* Period cards */}
+      {/* ── Period cards ──────────────────────────────────────────────────── */}
       <div className="grid grid-cols-4 gap-4">
         {periods.map((p) => {
           const statusInfo = getStatusInfo(p);
           return (
-            <div key={p.id}
-              onClick={() => onNavigate && onNavigate('structures', { periodId: p.id })}
-              className="bg-white rounded-xl border border-gray-200 p-4 shadow-card cursor-pointer hover:shadow-card-lg hover:-translate-y-0.5 transition-all duration-200"
-              style={{ borderTop: '3px solid ' + (cardTopColors[p.type] || '#CBD5E1') }}>
+            <div
+              key={p.id}
+              onClick={() => goToStructures(p.id)}
+              className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
+              style={{ borderTop: '3px solid ' + (cardTopColors[p.type] || '#CBD5E1') }}
+            >
               <div className="flex items-center justify-between mb-2">
                 <Badge status={p.type}>{typeLabels[p.type] || p.type}</Badge>
-                <Button variant="ghost" size="xs" onClick={(e) => { e.stopPropagation(); openEdit(p); }}>Edit</Button>
+                <Button
+                  variant="ghost"
+                  size="xs"
+                  onClick={(e) => { e.stopPropagation(); openEdit(p); }}
+                >
+                  Edit
+                </Button>
               </div>
               <div className="text-sm font-extrabold text-gray-900">{p.name}</div>
-              <div className="text-[11px] text-gray-500 mt-1">Due: <strong>{formatDate(p.dueDate)}</strong></div>
-              <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-gray-100">
-                <div><div className="text-[11px] text-gray-500">Structures</div><div className="text-sm font-bold mt-0.5">{p.structureCount || 0}</div></div>
-                <div><div className="text-[11px] text-gray-500">Students</div><div className="text-sm font-bold mt-0.5">{p.studentCount || 0}</div></div>
+              <div className="text-[11px] text-gray-500 mt-1">
+                Due: <strong>{formatDate(p.dueDate)}</strong>
               </div>
-              <div className="mt-2"><Badge status={statusInfo.status}>{statusInfo.label}</Badge></div>
+              <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-gray-100">
+                <div>
+                  <div className="text-[11px] text-gray-500">Structures</div>
+                  <div className="text-sm font-bold mt-0.5">{p.structureCount || 0}</div>
+                </div>
+                <div>
+                  <div className="text-[11px] text-gray-500">Students</div>
+                  <div className="text-sm font-bold mt-0.5">{p.studentCount || 0}</div>
+                </div>
+              </div>
+              <div className="mt-2">
+                <Badge status={statusInfo.status}>{statusInfo.label}</Badge>
+              </div>
             </div>
           );
         })}
-        <div onClick={openNew}
-          className="bg-gray-50 border-[1.5px] border-dashed border-gray-300 rounded-xl p-4 flex flex-col items-center justify-center cursor-pointer hover:border-navy hover:bg-navy-light transition-all duration-200 min-h-[160px]">
+
+        {/* Add new period placeholder */}
+        <div
+          onClick={openNew}
+          className="bg-gray-50 border-[1.5px] border-dashed border-gray-300 rounded-xl p-4 flex flex-col items-center justify-center cursor-pointer hover:border-[#1A3A5C] hover:bg-blue-50 transition-all duration-200 min-h-[160px]"
+        >
           <div className="text-2xl text-gray-400">+</div>
           <div className="text-sm font-semibold text-gray-500 mt-2">New Fee Period</div>
           <div className="text-[11px] text-gray-400 mt-1">Add Q3, October, etc.</div>
         </div>
       </div>
 
-      {/* Table */}
+      {/* ── All periods table ─────────────────────────────────────────────── */}
       <Card>
         <Card.Header>All Periods — {academicYearLabel}</Card.Header>
         <Table>
@@ -315,16 +373,23 @@ const FeePeriods = ({ onNavigate }) => {
                   <Table.Cell className="text-gray-600 text-xs">{formatDate(p.dueDate)}</Table.Cell>
                   <Table.Cell>{p.structureCount || 0}</Table.Cell>
                   <Table.Cell>{p.studentCount  || 0}</Table.Cell>
-                  <Table.Cell className={!p.collectedAmount ? 'text-gray-400' : 'text-success font-semibold'}>
+                  <Table.Cell className={!p.collectedAmount ? 'text-gray-400' : 'text-green-700 font-semibold'}>
                     {p.collectedAmount ? formatCurrency(p.collectedAmount) : '—'}
                   </Table.Cell>
-                  <Table.Cell className={outstandingAmt === 0 ? 'text-success' : 'text-[#B45309] font-semibold'}>
+                  <Table.Cell className={outstandingAmt === 0 ? 'text-green-700' : 'text-amber-700 font-semibold'}>
                     {formatCurrency(outstandingAmt)}
                   </Table.Cell>
                   <Table.Cell><Badge status={statusInfo.status}>{statusInfo.label}</Badge></Table.Cell>
                   <Table.Cell>
-                    <div className="flex gap-2">
-                      <Button variant="ghost" size="xs" onClick={() => onNavigate && onNavigate('structures', { periodId: p.id })}>Structures</Button>
+                    <div className="flex gap-2 flex-wrap">
+                      {/* ✅ Uses prop callback — header/nav stays intact */}
+                      <Button
+                        variant="ghost"
+                        size="xs"
+                        onClick={() => goToStructures(p.id)}
+                      >
+                        Structures
+                      </Button>
                       {statusInfo.status !== 'PAID' && (
                         <>
                           <Button variant="secondary" size="xs" onClick={() => openEdit(p)}>Edit</Button>

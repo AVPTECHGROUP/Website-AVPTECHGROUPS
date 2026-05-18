@@ -125,8 +125,6 @@ const Modal = ({ open, onClose, title, wide, children, footer }) => {
 };
 
 // ─── Collect Fee Modal ────────────────────────────────────────────────────────
-// Shows classes assigned to the selected period (via fee structures),
-// then students in the selected class, with a live search bar.
 const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions, onSuccess }) => {
   const [selectedPeriodId, setSelectedPeriodId] = useState('');
   const [form, setForm] = useState({
@@ -135,8 +133,7 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
   });
   const [loading, setLoading] = useState(false);
 
-  // ── Class / student picker state ──────────────────────────────────────────
-  const [periodClasses,    setPeriodClasses]    = useState([]);   // classes linked to period via structures
+  const [periodClasses,    setPeriodClasses]    = useState([]);
   const [classesLoading,   setClassesLoading]   = useState(false);
   const [selectedClassId,  setSelectedClassId]  = useState('');
   const [students,         setStudents]         = useState([]);
@@ -144,7 +141,6 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
   const [studentSearch,    setStudentSearch]    = useState('');
   const [activeStudent,    setActiveStudent]    = useState(initialStudent || null);
 
-  // ── Init when modal opens ─────────────────────────────────────────────────
   useEffect(() => {
     if (!open) return;
     setActiveStudent(initialStudent || null);
@@ -154,7 +150,6 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
     setPeriodClasses([]);
 
     if (initialStudent) {
-      // Pre-fill form from existing student row
       let matched = null;
       if (initialStudent.feePeriodId) matched = periodOptions.find((p) => String(p.value) === String(initialStudent.feePeriodId));
       if (!matched && initialStudent.period) matched = periodOptions.find((p) => p.label?.trim().toLowerCase() === initialStudent.period?.trim().toLowerCase());
@@ -170,7 +165,6 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
     }
   }, [open, initialStudent, periodOptions]);
 
-  // ── Load classes for selected period via fee structures ───────────────────
   useEffect(() => {
     if (!selectedPeriodId) { setPeriodClasses([]); setSelectedClassId(''); setStudents([]); return; }
     const load = async () => {
@@ -179,9 +173,7 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
       setSelectedClassId('');
       setStudents([]);
       try {
-        // getFeeStructures(periodId) returns structures, each has .classes array
         const structures = await getFeeStructures(parseInt(selectedPeriodId));
-        // Flatten all classes across structures, deduplicate by id
         const seen = new Set();
         const classes = [];
         (Array.isArray(structures) ? structures : []).forEach((s) => {
@@ -199,7 +191,6 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
     load();
   }, [selectedPeriodId]);
 
-  // ── Load students for selected class ─────────────────────────────────────
   useEffect(() => {
     if (!selectedClassId) { setStudents([]); return; }
     const load = async () => {
@@ -225,7 +216,6 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
   const isOverdue = activeStudent?.status === 'OVERDUE';
   const netTotal  = (parseFloat(form.amountPaid) || 0) + (parseFloat(form.lateFine) || 0) - (parseFloat(form.discount) || 0);
 
-  // Filter students by search
   const filteredStudents = students.filter((s) => {
     const q = studentSearch.toLowerCase();
     return !q ||
@@ -295,7 +285,7 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
             </select>
           </div>
 
-          {/* Class selector — only shows classes linked to the period */}
+          {/* Class selector */}
           {selectedPeriodId && (
             <div>
               <label className="block text-[11.5px] font-semibold text-gray-600 mb-1">
@@ -547,9 +537,6 @@ const BulkCollectModal = ({ open, onClose, students, onSuccess }) => {
   );
 };
 
-// ─── Receipt Modal ────────────────────────────────────────────────────────────
-
-
 // ─── CollectionsHistory ───────────────────────────────────────────────────────
 const CollectionsHistory = () => {
   const { currentAcademicYear } = useContext(UserContext);
@@ -704,22 +691,37 @@ const CollectionsHistory = () => {
   const selStudents = outstanding.filter((s) => selected.includes(s.id));
   const selTotal    = selStudents.reduce((a, s) => a + s.balance, 0);
 
+  // ─── FIX: Unwrap response.data before building receipt ───────────────────
   const handleCollectSuccess = (response, student) => {
     setCollectModal({ open: false, student: null });
+
+    // API returns { success, message, data: { ... } } — unwrap .data
+    const data = response?.data || response;
+
     setReceiptModal({
       open: true,
       receipt: {
-        receiptNo: response.receiptNo, date: response.paymentDate,
-        studentName: student.studentName, studentCode: student.studentCode,
-        class: student.class, period: student.period,
-        components: response.components || [],
-        amountPaid: response.amountPaid, discount: response.discount || 0,
-        lateFine: response.lateFine || 0, paymentMode: response.paymentMode,
-        referenceNo: response.referenceNo, balanceAfter: response.balanceAfter,
-        recordedBy: response.recordedBy || 'Admin',
+        receiptNo:    data.receiptNo,
+        date:         data.paymentDate,
+        studentName:  data.studentName        || student.studentName,
+        studentCode:  data.admissionNumber    || student.studentCode,
+        class:        data.className          || student.class,
+        period:       data.feePeriodName      || student.period,
+        // Build components from the response amount so receipt always shows correct value
+        components:   data.components         || [{ name: 'Fee Payment', amount: data.amountPaid }],
+        amountPaid:   data.amountPaid,
+        discount:     data.discount           || 0,
+        lateFine:     data.lateFine           || 0,
+        paymentMode:  data.paymentMode,
+        referenceNo:  data.referenceNo,
+        balanceAfter: data.balanceAfter,
+        // API returns collectedBy, not recordedBy
+        recordedBy:   data.collectedBy        || 'Admin',
       },
     });
-    fetchOutstanding(); setSelected([]);
+
+    fetchOutstanding();
+    setSelected([]);
   };
 
   const handleBulkSuccess = (responses) => {
@@ -821,15 +823,13 @@ const CollectionsHistory = () => {
                         <td className="px-3 py-3 text-xs text-gray-600">{s.period}</td>
                         <td className="px-3 py-3 text-sm">{fmtDisp(s.totalFee)}</td>
                         <td className={`px-3 py-3 text-sm font-semibold ${s.paidAmount > 0 ? 'text-emerald-600' : 'text-gray-400'}`}>{fmtDisp(s.paidAmount)}</td>
-                      <td className="px-3 py-3">
-  <span className="font-semibold text-gray-900 text-sm">{fmtDisp(s.balance)}</span>
-  {s.status === 'OVERDUE' && (
-    <div className="text-[11px] text-gray-500 mt-0.5">{s.daysLate}d overdue</div>
-  )}
-</td>
-                       <td className="px-3 py-3 text-xs text-gray-600">
-  {fmtDate(s.dueDate)}
-</td>
+                        <td className="px-3 py-3">
+                          <span className="font-semibold text-gray-900 text-sm">{fmtDisp(s.balance)}</span>
+                          {s.status === 'OVERDUE' && (
+                            <div className="text-[11px] text-gray-500 mt-0.5">{s.daysLate}d overdue</div>
+                          )}
+                        </td>
+                        <td className="px-3 py-3 text-xs text-gray-600">{fmtDate(s.dueDate)}</td>
                         <td className="px-3 py-3"><Badge status={s.status} /></td>
                         <td className="px-3 py-3"><Btn variant="primary" size="xs" onClick={() => setCollectModal({ open: true, student: s })}>Collect</Btn></td>
                       </tr>
@@ -920,12 +920,12 @@ const CollectionsHistory = () => {
         students={bulkModal.students}
         onSuccess={handleBulkSuccess}
       />
-     {receiptModal.open && (
-  <FeeReceiptPrint
-    receipt={receiptModal.receipt}
-    onClose={() => setReceiptModal({ open: false, receipt: null })}
-  />
-)}
+      {receiptModal.open && (
+        <FeeReceiptPrint
+          receipt={receiptModal.receipt}
+          onClose={() => setReceiptModal({ open: false, receipt: null })}
+        />
+      )}
     </div>
   );
 };
