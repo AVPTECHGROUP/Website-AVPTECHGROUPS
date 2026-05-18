@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useContext } from 'react';
+import { useLocation } from 'react-router-dom';
 import Button from '../../Components/FeeModal/Button';
 import Badge from '../../Components/FeeModal/Badge';
 import Modal from '../../Components/FeeModal/Modal';
@@ -16,6 +17,8 @@ import { getFeePeriods } from '../../Api/FeePeriods';
 import { getActiveClasses } from '../../Api/ClassSectionAPI';
 import { UserContext } from '../../ContextAPI/UserContext';
 import { toast } from 'react-toastify';
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const formatCurrency = (amount) => {
   if (!amount || amount === 0) return '₹0';
@@ -43,7 +46,8 @@ const COMPONENT_TYPE_OPTIONS = [
   { value: 'OTHER_FEE',     label: 'Other Fee'      },
 ];
 
-// ─── View Details Modal ───────────────────────────────────────────────────────
+// ─── View Details Modal ────────────────────────────────────────────────────────
+
 function ViewDetailsModal({ isOpen, onClose, structure }) {
   if (!structure) return null;
   const meta = STRUCT_STATUS[structure.status?.toUpperCase()] || STRUCT_STATUS.DRAFT;
@@ -53,40 +57,59 @@ function ViewDetailsModal({ isOpen, onClose, structure }) {
         <div className="space-y-4">
           <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
             <div className="grid grid-cols-2 gap-3 text-sm">
-              <div><div className="text-xs text-gray-500 mb-0.5">Period</div><div className="font-semibold">{structure.feePeriod?.name || '—'}</div></div>
-              <div><div className="text-xs text-gray-500 mb-0.5">Classes</div><div className="font-semibold">{structure.classes?.map((c) => c.name).join(', ') || '—'}</div></div>
-              <div><div className="text-xs text-gray-500 mb-0.5">Status</div><Badge status={meta.badge}>{meta.label}</Badge></div>
-              <div><div className="text-xs text-gray-500 mb-0.5">Students</div><div className="font-semibold">{structure.studentCount || '—'}</div></div>
+              <div>
+                <div className="text-xs text-gray-500 mb-0.5">Period</div>
+                <div className="font-semibold">{structure.feePeriod?.name || '—'}</div>
+              </div>
+              <div>
+                <div className="text-xs text-gray-500 mb-0.5">Classes</div>
+                <div className="font-semibold">{structure.classes?.map((c) => c.name).join(', ') || '—'}</div>
+              </div>
+              <div>
+                <div className="text-xs text-gray-500 mb-0.5">Status</div>
+                <Badge status={meta.badge}>{meta.label}</Badge>
+              </div>
+              <div>
+                <div className="text-xs text-gray-500 mb-0.5">Students</div>
+                <div className="font-semibold">{structure.studentCount || '—'}</div>
+              </div>
             </div>
           </div>
           <div>
             <h4 className="text-xs font-bold text-gray-600 uppercase tracking-wider mb-3">Fee Components</h4>
             <div className="space-y-1">
               {structure.components?.map((comp, i, arr) => (
-                <div key={i} className={`flex justify-between py-2 text-sm${i < arr.length - 1 ? ' border-b border-gray-100' : ''}`}>
+                <div
+                  key={i}
+                  className={`flex justify-between py-2 text-sm${i < arr.length - 1 ? ' border-b border-gray-100' : ''}`}
+                >
                   <span className="text-gray-600">{comp.customName || comp.componentType}</span>
                   <span className="font-semibold">{formatCurrency(comp.amount)}</span>
                 </div>
               ))}
               <div className="flex justify-between py-2 pt-3 border-t-2 border-gray-200">
                 <span className="font-bold text-sm">Total</span>
-                <span className="font-extrabold text-navy text-base">{formatCurrency(structure.totalAmount)}</span>
+                <span className="font-extrabold text-[#1A3A5C] text-base">{formatCurrency(structure.totalAmount)}</span>
               </div>
             </div>
           </div>
         </div>
       </Modal.Body>
-      <Modal.Footer><Button variant="secondary" onClick={onClose}>Close</Button></Modal.Footer>
+      <Modal.Footer>
+        <Button variant="secondary" onClick={onClose}>Close</Button>
+      </Modal.Footer>
     </Modal>
   );
 }
 
-// ─── Structure Modal ──────────────────────────────────────────────────────────
+// ─── Structure Modal ───────────────────────────────────────────────────────────
+
 function StructureModal({ isOpen, onClose, structure, periods, classes, onSuccess, academicYear }) {
   const isEdit = !!structure;
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
-    feePeriodId: '', classIds: [],
+    feePeriodId: '',
+    classIds: [],
     components: [{ componentType: 'TUITION_FEE', customName: '', amount: '', displayOrder: 0 }],
   });
 
@@ -104,14 +127,21 @@ function StructureModal({ isOpen, onClose, structure, periods, classes, onSucces
         })) || [{ componentType: 'TUITION_FEE', customName: '', amount: '', displayOrder: 0 }],
       });
     } else {
-      setForm({ feePeriodId: '', classIds: [], components: [{ componentType: 'TUITION_FEE', customName: '', amount: '', displayOrder: 0 }] });
+      setForm({
+        feePeriodId: '',
+        classIds: [],
+        components: [{ componentType: 'TUITION_FEE', customName: '', amount: '', displayOrder: 0 }],
+      });
     }
   }, [isOpen, structure]);
 
-  const toggleClass    = (id) => setForm((p) => ({ ...p, classIds: p.classIds.includes(id) ? p.classIds.filter((x) => x !== id) : [...p.classIds, id] }));
-  const addComponent   = () => setForm((p) => ({ ...p, components: [...p.components, { componentType: '', customName: '', amount: '', displayOrder: p.components.length }] }));
+  const toggleClass     = (id) => setForm((p) => ({ ...p, classIds: p.classIds.includes(id) ? p.classIds.filter((x) => x !== id) : [...p.classIds, id] }));
+  const addComponent    = () => setForm((p) => ({ ...p, components: [...p.components, { componentType: '', customName: '', amount: '', displayOrder: p.components.length }] }));
   const removeComponent = (i) => setForm((p) => ({ ...p, components: p.components.filter((_, idx) => idx !== i) }));
-  const updateComponent = (i, field, val) => setForm((p) => ({ ...p, components: p.components.map((c, idx) => idx === i ? { ...c, [field]: val } : c) }));
+  const updateComponent = (i, field, val) => setForm((p) => ({
+    ...p,
+    components: p.components.map((c, idx) => idx === i ? { ...c, [field]: val } : c),
+  }));
 
   const totalAmount     = form.components.reduce((s, c) => s + (parseFloat(c.amount) || 0), 0);
   const selectedClasses = classes.filter((c) => form.classIds.includes(c.id));
@@ -122,53 +152,90 @@ function StructureModal({ isOpen, onClose, structure, periods, classes, onSucces
     if (form.classIds.length === 0)   { toast.error('Please select at least one class');      return; }
     if (form.components.length === 0) { toast.error('Please add at least one fee component'); return; }
     for (let i = 0; i < form.components.length; i++) {
-      if (!form.components[i].componentType)                              { toast.error(`Select component type for row ${i + 1}`); return; }
-      if (!form.components[i].amount || parseFloat(form.components[i].amount) <= 0) { toast.error(`Enter valid amount for row ${i + 1}`); return; }
+      if (!form.components[i].componentType)                                               { toast.error(`Select component type for row ${i + 1}`); return; }
+      if (!form.components[i].amount || parseFloat(form.components[i].amount) <= 0)       { toast.error(`Enter valid amount for row ${i + 1}`);     return; }
     }
     setLoading(true);
     try {
       const payload = {
         feePeriodId: parseInt(form.feePeriodId),
         classIds:    form.classIds,
-        components:  form.components.map((c, idx) => ({ componentType: c.componentType, customName: c.customName.trim() || null, amount: parseFloat(c.amount), displayOrder: idx })),
+        components:  form.components.map((c, idx) => ({
+          componentType: c.componentType,
+          customName:    c.customName.trim() || null,
+          amount:        parseFloat(c.amount),
+          displayOrder:  idx,
+        })),
         saveAsDraft,
       };
-      if (isEdit) { await updateFeeStructure(structure.id, payload); toast.success('Fee structure updated'); }
-      else        { await createFeeStructure(payload); toast.success(saveAsDraft ? 'Saved as draft' : 'Fee structure published'); }
-      onSuccess(); onClose();
+      if (isEdit) {
+        await updateFeeStructure(structure.id, payload);
+        toast.success('Fee structure updated');
+      } else {
+        await createFeeStructure(payload);
+        toast.success(saveAsDraft ? 'Saved as draft' : 'Fee structure published');
+      }
+      onSuccess();
+      onClose();
     } catch (error) {
       toast.error(error.message || `Failed to ${isEdit ? 'update' : 'create'} fee structure`);
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={isEdit ? 'Edit Fee Structure' : 'Create Fee Structure'} size="lg">
       <Modal.Body>
         <div className="space-y-5">
-          {/* Step 1 */}
+          {/* Step 1 — Period */}
           <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
             <div className="flex items-center gap-2 mb-3">
-              <div className="w-6 h-6 rounded-full bg-navy text-white flex items-center justify-center text-xs font-bold">1</div>
+              <div className="w-6 h-6 rounded-full bg-[#1A3A5C] text-white flex items-center justify-center text-xs font-bold">1</div>
               <span className="text-xs font-bold text-gray-600 uppercase tracking-wider">Select Period</span>
             </div>
             <div className="mb-3 px-3 py-2 bg-white border border-blue-200 rounded-lg text-sm text-blue-800">
               Academic Year: <strong>{academicYear?.label || '—'}</strong>
             </div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1.5">Fee Period <span className="text-red-500">*</span></label>
-            <Select value={form.feePeriodId} onChange={(v) => setForm((p) => ({ ...p, feePeriodId: v }))}
-              options={[{ value: '', label: '-- Select a period --' }, ...periods.map((p) => ({ value: p.id.toString(), label: p.name }))]} />
+            <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+              Fee Period <span className="text-red-500">*</span>
+            </label>
+            <Select
+              value={form.feePeriodId}
+              onChange={(v) => setForm((p) => ({ ...p, feePeriodId: v }))}
+              options={[
+                { value: '', label: '-- Select a period --' },
+                ...periods.map((p) => ({ value: p.id.toString(), label: p.name })),
+              ]}
+            />
           </div>
-          {/* Step 2 */}
+
+          {/* Step 2 — Classes */}
           <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
             <div className="flex items-center gap-2 mb-3">
-              <div className="w-6 h-6 rounded-full bg-navy text-white flex items-center justify-center text-xs font-bold">2</div>
+              <div className="w-6 h-6 rounded-full bg-[#1A3A5C] text-white flex items-center justify-center text-xs font-bold">2</div>
               <span className="text-xs font-bold text-gray-600 uppercase tracking-wider">Apply to Classes</span>
             </div>
             <div className="flex flex-wrap gap-2 p-4 bg-white rounded-lg border border-gray-200 max-h-48 overflow-y-auto">
               {classes.map((cls) => (
-                <label key={cls.id} className={`flex items-center gap-1.5 px-3 py-2 rounded-md border-2 cursor-pointer transition-all text-xs font-semibold select-none ${form.classIds.includes(cls.id) ? 'bg-navy text-white border-navy' : 'bg-white text-gray-700 border-gray-200 hover:border-gray-400'}`}>
-                  <input type="checkbox" className="sr-only" checked={form.classIds.includes(cls.id)} onChange={() => toggleClass(cls.id)} />
-                  {cls.name}{cls.studentCount > 0 && <span className="text-[10px] opacity-70">({cls.studentCount})</span>}
+                <label
+                  key={cls.id}
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-md border-2 cursor-pointer transition-all text-xs font-semibold select-none ${
+                    form.classIds.includes(cls.id)
+                      ? 'bg-[#1A3A5C] text-white border-[#1A3A5C]'
+                      : 'bg-white text-gray-700 border-gray-200 hover:border-gray-400'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    className="sr-only"
+                    checked={form.classIds.includes(cls.id)}
+                    onChange={() => toggleClass(cls.id)}
+                  />
+                  {cls.name}
+                  {cls.studentCount > 0 && (
+                    <span className="text-[10px] opacity-70">({cls.studentCount})</span>
+                  )}
                 </label>
               ))}
             </div>
@@ -178,14 +245,17 @@ function StructureModal({ isOpen, onClose, structure, periods, classes, onSucces
               </div>
             )}
           </div>
-          {/* Step 3 */}
+
+          {/* Step 3 — Components */}
           <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-full bg-navy text-white flex items-center justify-center text-xs font-bold">3</div>
+                <div className="w-6 h-6 rounded-full bg-[#1A3A5C] text-white flex items-center justify-center text-xs font-bold">3</div>
                 <span className="text-xs font-bold text-gray-600 uppercase tracking-wider">Fee Components</span>
               </div>
-              <Button variant="ghost" size="xs" icon={<Plus size={12} />} onClick={addComponent}>Add Component</Button>
+              <Button variant="ghost" size="xs" icon={<Plus size={12} />} onClick={addComponent}>
+                Add Component
+              </Button>
             </div>
             <div className="space-y-2.5">
               <div className="grid grid-cols-12 gap-3 text-xs font-semibold text-gray-500 uppercase tracking-wider px-1">
@@ -196,11 +266,39 @@ function StructureModal({ isOpen, onClose, structure, periods, classes, onSucces
               </div>
               {form.components.map((comp, i) => (
                 <div key={i} className="grid grid-cols-12 gap-3 items-start">
-                  <div className="col-span-5"><Select value={comp.componentType} onChange={(v) => updateComponent(i, 'componentType', v)} options={[{ value: '', label: '-- Select --' }, ...COMPONENT_TYPE_OPTIONS]} /></div>
-                  <div className="col-span-4"><Input value={comp.customName} onChange={(v) => updateComponent(i, 'customName', v)} placeholder="Optional…" disabled={!['MISC_FEE', 'OTHER_FEE'].includes(comp.componentType)} /></div>
-                  <div className="col-span-2"><Input type="number" value={comp.amount} onChange={(v) => updateComponent(i, 'amount', v)} placeholder="0" /></div>
+                  <div className="col-span-5">
+                    <Select
+                      value={comp.componentType}
+                      onChange={(v) => updateComponent(i, 'componentType', v)}
+                      options={[{ value: '', label: '-- Select --' }, ...COMPONENT_TYPE_OPTIONS]}
+                    />
+                  </div>
+                  <div className="col-span-4">
+                    <Input
+                      value={comp.customName}
+                      onChange={(v) => updateComponent(i, 'customName', v)}
+                      placeholder="Optional…"
+                      disabled={!['MISC_FEE', 'OTHER_FEE'].includes(comp.componentType)}
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <Input
+                      type="number"
+                      value={comp.amount}
+                      onChange={(v) => updateComponent(i, 'amount', v)}
+                      placeholder="0"
+                    />
+                  </div>
                   <div className="col-span-1 flex items-center justify-center pt-1">
-                    {form.components.length > 1 && <button type="button" onClick={() => removeComponent(i)} className="p-1.5 text-red-500 hover:bg-red-50 rounded"><X size={16} /></button>}
+                    {form.components.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeComponent(i)}
+                        className="p-1.5 text-red-500 hover:bg-red-50 rounded"
+                      >
+                        <X size={16} />
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -214,7 +312,11 @@ function StructureModal({ isOpen, onClose, structure, periods, classes, onSucces
       </Modal.Body>
       <Modal.Footer>
         <Button variant="secondary" onClick={onClose} disabled={loading}>Cancel</Button>
-        {!isEdit && <Button variant="ghost" onClick={() => handleSubmit(true)} disabled={loading}>Save as Draft</Button>}
+        {!isEdit && (
+          <Button variant="ghost" onClick={() => handleSubmit(true)} disabled={loading}>
+            Save as Draft
+          </Button>
+        )}
         <Button variant="primary" onClick={() => handleSubmit(false)} disabled={loading}>
           {loading ? 'Saving...' : isEdit ? 'Update Structure' : 'Save Structure'}
         </Button>
@@ -223,17 +325,20 @@ function StructureModal({ isOpen, onClose, structure, periods, classes, onSucces
   );
 }
 
-// ─── FeeStructures ────────────────────────────────────────────────────────────
+// ─── FeeStructures ─────────────────────────────────────────────────────────────
 //
-// ✅ Reads academicYear from UserContext directly — same pattern as Overview.
-//
-const FeeStructures = () => {
-  // ✅ Read from context — same source as Overview
+// Props:
+//   initialPeriodId — when navigated from FeePeriods via the parent tab-switcher,
+//   this pre-selects the period filter. Falls back to location.state for direct
+//   URL access (e.g. bookmark / hard refresh).
+
+const FeeStructures = ({ initialPeriodId: initialPeriodIdProp }) => {
   const { currentAcademicYear } = useContext(UserContext);
   const academicYearId    = currentAcademicYear?.id;
   const academicYearLabel = currentAcademicYear?.label;
 
-  console.log('[FeeStructures] Context academic year:', currentAcademicYear);
+  // Still read location.state so direct-URL / bookmark access keeps working
+  const location = useLocation();
 
   const [periodFilter,      setPeriodFilter]      = useState('');
   const [modal,             setModal]             = useState(null);
@@ -254,17 +359,21 @@ const FeeStructures = () => {
       setStructuresLoading(true);
       const data = await getFeeStructures(periodId ?? '');
       setStructures(Array.isArray(data) ? data : []);
-    } catch { toast.error('Failed to fetch fee structures'); }
-    finally { setStructuresLoading(false); }
+    } catch {
+      toast.error('Failed to fetch fee structures');
+    } finally {
+      setStructuresLoading(false);
+    }
   }, []);
 
   const fetchPeriods = useCallback(async () => {
     if (!academicYearId) return;
     try {
-      console.log('[FeeStructures] 🔄 fetching periods for academicYearId:', academicYearId);
       const data = await getFeePeriods(academicYearId);
       setPeriods(Array.isArray(data) ? data : []);
-    } catch { toast.error('Failed to fetch periods'); }
+    } catch {
+      toast.error('Failed to fetch periods');
+    }
   }, [academicYearId]);
 
   const fetchClasses = useCallback(async () => {
@@ -276,34 +385,84 @@ const FeeStructures = () => {
         Array.isArray(classesData?.data)   ? classesData.data  :
         Array.isArray(classesData?.result) ? classesData.result : [];
       setClasses(normalized);
-    } catch { toast.error('Failed to fetch classes'); }
+    } catch {
+      toast.error('Failed to fetch classes');
+    }
   }, []);
 
+  // ── Initial load ─────────────────────────────────────────────────────────────
+  // Priority: prop (from parent tab-switch) > location.state (from direct URL)
   useEffect(() => {
     if (!academicYearId) return;
+
+    const incomingId      = initialPeriodIdProp ?? location.state?.periodId;
+    const resolvedId      = incomingId ? incomingId.toString() : '';
+
+    if (resolvedId) setPeriodFilter(resolvedId);
+
     const init = async () => {
       setLoading(true);
-      try { await Promise.all([fetchPeriods(), fetchStructures(null), fetchClasses()]); }
-      finally { setLoading(false); }
+      try {
+        await Promise.all([
+          fetchPeriods(),
+          fetchStructures(resolvedId ? parseInt(resolvedId) : null),
+          fetchClasses(),
+        ]);
+      } finally {
+        setLoading(false);
+      }
     };
     init();
-  }, [academicYearId, fetchPeriods, fetchStructures, fetchClasses]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [academicYearId, initialPeriodIdProp]);
 
   const openCreate = () => { setActiveStructure(null); setModal('create'); };
-  const openEdit   = async (s) => { try { const full = await getFeeStructureById(s.id); setActiveStructure(full); setModal('edit'); } catch { toast.error('Failed to load structure details'); } };
-  const openView   = async (s) => { try { const full = await getFeeStructureById(s.id); setActiveStructure(full); setModal('view'); } catch { toast.error('Failed to load structure details'); } };
+
+  const openEdit = async (s) => {
+    try {
+      const full = await getFeeStructureById(s.id);
+      setActiveStructure(full);
+      setModal('edit');
+    } catch {
+      toast.error('Failed to load structure details');
+    }
+  };
+
+  const openView = async (s) => {
+    try {
+      const full = await getFeeStructureById(s.id);
+      setActiveStructure(full);
+      setModal('view');
+    } catch {
+      toast.error('Failed to load structure details');
+    }
+  };
+
   const close         = () => { setModal(null); setActiveStructure(null); };
   const handleSuccess = () => fetchStructures(periodFilter ? parseInt(periodFilter) : null);
 
   const handleDelete = async (structureId) => {
-    if (!window.confirm('Delete this draft structure? This cannot be undone.')) return;
-    try { await deleteFeeStructure(structureId); toast.success('Deleted'); handleSuccess(); }
-    catch (error) { toast.error(error.message || 'Failed to delete'); }
+    if (!window.confirm('Delete this structure? This cannot be undone.')) return;
+    try {
+      await deleteFeeStructure(structureId);
+      toast.success('Structure deleted');
+      handleSuccess();
+    } catch (error) {
+      toast.error(error.message || 'Failed to delete');
+    }
   };
 
-  const handlePeriodFilterChange = (value) => { setPeriodFilter(value); fetchStructures(value ? parseInt(value) : null); };
+  const handlePeriodFilterChange = (value) => {
+    setPeriodFilter(value);
+    fetchStructures(value ? parseInt(value) : null);
+  };
+
   const getStatusMeta = (status) => STRUCT_STATUS[status?.toUpperCase()] || STRUCT_STATUS.DRAFT;
-  const filtered = periodFilter ? structures.filter((s) => s.feePeriodId === parseInt(periodFilter)) : structures;
+
+  // Local filter (belt-and-suspenders in case API doesn't filter server-side)
+  const filtered = periodFilter
+    ? structures.filter((s) => s.feePeriodId === parseInt(periodFilter))
+    : structures;
 
   if (!academicYearId) {
     return (
@@ -323,61 +482,143 @@ const FeeStructures = () => {
 
   return (
     <div className="space-y-5">
+
+      {/* ── Page header ───────────────────────────────────────────────────── */}
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
           <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">Fee Structures</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Class-wise fee components per period · AY {academicYearLabel}</p>
+          <p className="text-sm text-gray-500 mt-0.5">
+            Class-wise fee components per period · AY {academicYearLabel}
+          </p>
         </div>
         <div className="flex gap-2 items-center flex-shrink-0">
           <div className="w-44">
-            <Select value={periodFilter} onChange={handlePeriodFilterChange}
-              options={[{ value: '', label: 'All Periods' }, ...periods.map((p) => ({ value: p.id.toString(), label: p.name }))]} />
+            <Select
+              value={periodFilter}
+              onChange={handlePeriodFilterChange}
+              options={[
+                { value: '', label: 'All Periods' },
+                ...periods.map((p) => ({ value: p.id.toString(), label: p.name })),
+              ]}
+            />
           </div>
-          <Button variant="primary" icon={<Plus size={15} />} onClick={openCreate}>New Structure</Button>
+          <Button variant="primary" icon={<Plus size={15} />} onClick={openCreate}>
+            New Structure
+          </Button>
         </div>
       </div>
 
+      {/* ── Info banner ───────────────────────────────────────────────────── */}
       <div className="bg-blue-50 border-l-[3px] border-blue-500 rounded-lg px-4 py-2.5 text-sm text-blue-800">
         A structure sets fee components and amounts for selected classes under a period.
         Once any payment is recorded it is <strong>locked</strong> and cannot be edited.
       </div>
 
+      {/* ── Structure cards ───────────────────────────────────────────────── */}
       {structuresLoading ? (
-        <div className="flex items-center justify-center h-32"><div className="text-gray-400 text-sm">Loading structures…</div></div>
+        <div className="flex items-center justify-center h-32">
+          <div className="text-gray-400 text-sm">Loading structures…</div>
+        </div>
       ) : (
         <div className="grid grid-cols-3 gap-4">
           {filtered.map((s) => {
-            const meta       = getStatusMeta(s.status);
-            const classNames = s.classes?.map((c) => c.name).join(' & ') || '';
-            const compText   = s.components?.map((c) => (c.customName || c.componentType) + ' ' + formatCurrency(c.amount)).join(' · ') || '';
+            const meta        = getStatusMeta(s.status);
+            const periodName  = s.feePeriod?.name || periods.find((p) => p.id === s.feePeriodId)?.name || 'Unknown Period';
+            const classNames  = s.classes?.map((c) => c.name).join(' & ') || '';
+            const compText    = s.components?.map((c) => (c.customName || c.componentType) + ' ' + formatCurrency(c.amount)).join(' · ') || '';
+            const statusKey   = s.status?.toUpperCase() || 'DRAFT';
+            const canDelete   = statusKey === 'DRAFT' || (statusKey === 'ACTIVE' && !s.studentCount);
+
             return (
-              <div key={s.id} className="bg-white rounded-xl border border-gray-200 p-[18px] shadow-card hover:shadow-card-lg hover:-translate-y-0.5 transition-all duration-200" style={{ borderTop: '3px solid ' + meta.accent }}>
+              <div
+                key={s.id}
+                className="bg-white rounded-xl border border-gray-200 p-[18px] shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
+                style={{ borderTop: '3px solid ' + meta.accent }}
+              >
                 <div className="flex items-start justify-between mb-2">
-                  <div><div className="text-sm font-bold text-gray-800">{s.feePeriod?.name || 'Unknown Period'}</div><div className="text-[11px] text-gray-500 mt-0.5">{classNames}</div></div>
+                  <div>
+                    <div className="text-sm font-bold text-gray-800">{periodName}</div>
+                    <div className="text-[11px] text-gray-500 mt-0.5">{classNames}</div>
+                  </div>
                   <Badge status={meta.badge}>{meta.label}</Badge>
                 </div>
-                <div className="text-2xl font-extrabold mt-3 mb-1" style={{ color: meta.accent }}>{formatCurrency(s.totalAmount)}</div>
+
+                <div
+                  className="text-2xl font-extrabold mt-3 mb-1"
+                  style={{ color: meta.accent }}
+                >
+                  {formatCurrency(s.totalAmount)}
+                </div>
                 <div className="text-xs text-gray-500 leading-relaxed line-clamp-2">{compText}</div>
-                <div className="mt-4 pt-3 border-t border-gray-100 flex items-center gap-2">
-                  {s.status !== 'DRAFT'   && <Button variant="secondary" size="xs" onClick={() => openView(s)}>View Details</Button>}
-                  {s.status !== 'LOCKED'  && <Button variant="ghost" size="xs" onClick={() => openEdit(s)}>{s.status === 'DRAFT' ? 'Edit Draft' : 'Edit'}</Button>}
-                  {s.status === 'DRAFT'   && <Button variant="secondary" size="xs" className="!text-red-600 !border-red-200 !bg-red-50" onClick={() => handleDelete(s.id)}>Delete</Button>}
-                  {s.studentCount > 0     && <span className="ml-auto text-[11px] text-gray-400">{s.studentCount} students</span>}
+
+                <div className="mt-4 pt-3 border-t border-gray-100 flex items-center gap-2 flex-wrap">
+                  {statusKey !== 'DRAFT' && (
+                    <Button variant="secondary" size="xs" onClick={() => openView(s)}>
+                      View Details
+                    </Button>
+                  )}
+                  {statusKey !== 'LOCKED' && (
+                    <Button variant="ghost" size="xs" onClick={() => openEdit(s)}>
+                      {statusKey === 'DRAFT' ? 'Edit Draft' : 'Edit'}
+                    </Button>
+                  )}
+                  {canDelete && (
+                    <Button
+                      variant="secondary"
+                      size="xs"
+                      className="!text-red-600 !border-red-200 !bg-red-50 hover:!bg-red-100"
+                      onClick={() => handleDelete(s.id)}
+                    >
+                      Delete
+                    </Button>
+                  )}
+                  {s.studentCount > 0 && (
+                    <span className="ml-auto text-[11px] text-gray-400">
+                      {s.studentCount} students
+                    </span>
+                  )}
                 </div>
               </div>
             );
           })}
-          <div onClick={openCreate} className="bg-gray-50 border-[1.5px] border-dashed border-gray-300 rounded-xl p-5 flex flex-col items-center justify-center cursor-pointer hover:border-navy hover:bg-blue-50 transition-all duration-200 min-h-[190px]">
+
+          {/* Add new card */}
+          <div
+            onClick={openCreate}
+            className="bg-gray-50 border-[1.5px] border-dashed border-gray-300 rounded-xl p-5 flex flex-col items-center justify-center cursor-pointer hover:border-[#1A3A5C] hover:bg-blue-50 transition-all duration-200 min-h-[190px]"
+          >
             <div className="text-3xl text-gray-400">+</div>
             <div className="text-sm font-semibold text-gray-500 mt-2">New Fee Structure</div>
-            <div className="text-[11px] text-gray-400 mt-1 text-center">Select period, classes &amp; components</div>
+            <div className="text-[11px] text-gray-400 mt-1 text-center">
+              Select period, classes &amp; components
+            </div>
           </div>
         </div>
       )}
 
-      <StructureModal isOpen={modal === 'create'} onClose={close} periods={periods} classes={classes} onSuccess={handleSuccess} academicYear={currentAcademicYear} />
-      <StructureModal isOpen={modal === 'edit'}   onClose={close} structure={activeStructure} periods={periods} classes={classes} onSuccess={handleSuccess} academicYear={currentAcademicYear} />
-      <ViewDetailsModal isOpen={modal === 'view'} onClose={close} structure={activeStructure} />
+      {/* ── Modals ────────────────────────────────────────────────────────── */}
+      <StructureModal
+        isOpen={modal === 'create'}
+        onClose={close}
+        periods={periods}
+        classes={classes}
+        onSuccess={handleSuccess}
+        academicYear={currentAcademicYear}
+      />
+      <StructureModal
+        isOpen={modal === 'edit'}
+        onClose={close}
+        structure={activeStructure}
+        periods={periods}
+        classes={classes}
+        onSuccess={handleSuccess}
+        academicYear={currentAcademicYear}
+      />
+      <ViewDetailsModal
+        isOpen={modal === 'view'}
+        onClose={close}
+        structure={activeStructure}
+      />
     </div>
   );
 };
