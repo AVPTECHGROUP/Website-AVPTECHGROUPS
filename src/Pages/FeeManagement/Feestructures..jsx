@@ -46,6 +46,9 @@ const COMPONENT_TYPE_OPTIONS = [
   { value: 'OTHER_FEE',     label: 'Other Fee'      },
 ];
 
+// Types that REQUIRE a customName (server rejects null for these)
+const REQUIRES_CUSTOM_NAME = ['MISC_FEE', 'OTHER_FEE'];
+
 // ─── View Details Modal ────────────────────────────────────────────────────────
 
 function ViewDetailsModal({ isOpen, onClose, structure }) {
@@ -138,9 +141,19 @@ function StructureModal({ isOpen, onClose, structure, periods, classes, onSucces
   const toggleClass     = (id) => setForm((p) => ({ ...p, classIds: p.classIds.includes(id) ? p.classIds.filter((x) => x !== id) : [...p.classIds, id] }));
   const addComponent    = () => setForm((p) => ({ ...p, components: [...p.components, { componentType: '', customName: '', amount: '', displayOrder: p.components.length }] }));
   const removeComponent = (i) => setForm((p) => ({ ...p, components: p.components.filter((_, idx) => idx !== i) }));
+
+  // When component type changes, clear customName if switching away from MISC/OTHER
   const updateComponent = (i, field, val) => setForm((p) => ({
     ...p,
-    components: p.components.map((c, idx) => idx === i ? { ...c, [field]: val } : c),
+    components: p.components.map((c, idx) => {
+      if (idx !== i) return c;
+      const updated = { ...c, [field]: val };
+      // Clear customName when switching away from a type that requires it
+      if (field === 'componentType' && !REQUIRES_CUSTOM_NAME.includes(val)) {
+        updated.customName = '';
+      }
+      return updated;
+    }),
   }));
 
   const totalAmount     = form.components.reduce((s, c) => s + (parseFloat(c.amount) || 0), 0);
@@ -151,23 +164,45 @@ function StructureModal({ isOpen, onClose, structure, periods, classes, onSucces
     if (!form.feePeriodId)            { toast.error('Please select a fee period');            return; }
     if (form.classIds.length === 0)   { toast.error('Please select at least one class');      return; }
     if (form.components.length === 0) { toast.error('Please add at least one fee component'); return; }
+
     for (let i = 0; i < form.components.length; i++) {
-      if (!form.components[i].componentType)                                               { toast.error(`Select component type for row ${i + 1}`); return; }
-      if (!form.components[i].amount || parseFloat(form.components[i].amount) <= 0)       { toast.error(`Enter valid amount for row ${i + 1}`);     return; }
+      const comp = form.components[i];
+      const rowLabel = `row ${i + 1}`;
+
+      if (!comp.componentType) {
+        toast.error(`Select component type for ${rowLabel}`);
+        return;
+      }
+      if (!comp.amount || parseFloat(comp.amount) <= 0) {
+        toast.error(`Enter valid amount for ${rowLabel}`);
+        return;
+      }
+      // MISC_FEE and OTHER_FEE require a non-empty customName — server returns 500 without it
+      if (REQUIRES_CUSTOM_NAME.includes(comp.componentType) && !comp.customName?.trim()) {
+        const label = comp.componentType === 'MISC_FEE' ? 'Misc Fee' : 'Other Fee';
+        toast.error(`"Custom Name" is required for ${label} (${rowLabel})`);
+        return;
+      }
     }
+
     setLoading(true);
     try {
       const payload = {
         feePeriodId: parseInt(form.feePeriodId),
         classIds:    form.classIds,
-        components:  form.components.map((c, idx) => ({
-          componentType: c.componentType,
-          customName:    c.customName.trim() || null,
-          amount:        parseFloat(c.amount),
-          displayOrder:  idx,
-        })),
+        components:  form.components.map((c, idx) => {
+          const requiresName = REQUIRES_CUSTOM_NAME.includes(c.componentType);
+          return {
+            componentType: c.componentType,
+            // Always send customName for MISC/OTHER (validated above); send null for others
+            customName:    requiresName ? c.customName.trim() : (c.customName.trim() || null),
+            amount:        parseFloat(c.amount),
+            displayOrder:  idx,
+          };
+        }),
         saveAsDraft,
       };
+
       if (isEdit) {
         await updateFeeStructure(structure.id, payload);
         toast.success('Fee structure updated');
@@ -260,48 +295,58 @@ function StructureModal({ isOpen, onClose, structure, periods, classes, onSucces
             <div className="space-y-2.5">
               <div className="grid grid-cols-12 gap-3 text-xs font-semibold text-gray-500 uppercase tracking-wider px-1">
                 <div className="col-span-5">Component</div>
-                <div className="col-span-4">Custom Name</div>
+                <div className="col-span-4">
+                  Custom Name
+                  <span className="ml-1 normal-case font-normal text-gray-400">(required for Misc/Other)</span>
+                </div>
                 <div className="col-span-2">Amount</div>
                 <div className="col-span-1"></div>
               </div>
-              {form.components.map((comp, i) => (
-                <div key={i} className="grid grid-cols-12 gap-3 items-start">
-                  <div className="col-span-5">
-                    <Select
-                      value={comp.componentType}
-                      onChange={(v) => updateComponent(i, 'componentType', v)}
-                      options={[{ value: '', label: '-- Select --' }, ...COMPONENT_TYPE_OPTIONS]}
-                    />
+              {form.components.map((comp, i) => {
+                const needsName = REQUIRES_CUSTOM_NAME.includes(comp.componentType);
+                return (
+                  <div key={i} className="grid grid-cols-12 gap-3 items-start">
+                    <div className="col-span-5">
+                      <Select
+                        value={comp.componentType}
+                        onChange={(v) => updateComponent(i, 'componentType', v)}
+                        options={[{ value: '', label: '-- Select --' }, ...COMPONENT_TYPE_OPTIONS]}
+                      />
+                    </div>
+                    <div className="col-span-4">
+                      <Input
+                        value={comp.customName}
+                        onChange={(v) => updateComponent(i, 'customName', v)}
+                        placeholder={needsName ? 'Required…' : 'Optional…'}
+                        disabled={!needsName}
+                        className={needsName && !comp.customName?.trim() ? 'border-amber-400 focus:ring-amber-300' : ''}
+                      />
+                      {needsName && !comp.customName?.trim() && (
+                        <p className="text-[10px] text-amber-600 mt-0.5 pl-1">Required for this type</p>
+                      )}
+                    </div>
+                    <div className="col-span-2">
+                      <Input
+                        type="number"
+                        value={comp.amount}
+                        onChange={(v) => updateComponent(i, 'amount', v)}
+                        placeholder="0"
+                      />
+                    </div>
+                    <div className="col-span-1 flex items-center justify-center pt-1">
+                      {form.components.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeComponent(i)}
+                          className="p-1.5 text-red-500 hover:bg-red-50 rounded"
+                        >
+                          <X size={16} />
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  <div className="col-span-4">
-                    <Input
-                      value={comp.customName}
-                      onChange={(v) => updateComponent(i, 'customName', v)}
-                      placeholder="Optional…"
-                      disabled={!['MISC_FEE', 'OTHER_FEE'].includes(comp.componentType)}
-                    />
-                  </div>
-                  <div className="col-span-2">
-                    <Input
-                      type="number"
-                      value={comp.amount}
-                      onChange={(v) => updateComponent(i, 'amount', v)}
-                      placeholder="0"
-                    />
-                  </div>
-                  <div className="col-span-1 flex items-center justify-center pt-1">
-                    {form.components.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removeComponent(i)}
-                        className="p-1.5 text-red-500 hover:bg-red-50 rounded"
-                      >
-                        <X size={16} />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
             <div className="mt-4 p-3.5 bg-gray-900 rounded-lg flex justify-between items-center">
               <span className="text-xs text-white/50 uppercase tracking-wider font-semibold">Total Fee Amount</span>
@@ -326,18 +371,12 @@ function StructureModal({ isOpen, onClose, structure, periods, classes, onSucces
 }
 
 // ─── FeeStructures ─────────────────────────────────────────────────────────────
-//
-// Props:
-//   initialPeriodId — when navigated from FeePeriods via the parent tab-switcher,
-//   this pre-selects the period filter. Falls back to location.state for direct
-//   URL access (e.g. bookmark / hard refresh).
 
 const FeeStructures = ({ initialPeriodId: initialPeriodIdProp }) => {
   const { currentAcademicYear } = useContext(UserContext);
   const academicYearId    = currentAcademicYear?.id;
   const academicYearLabel = currentAcademicYear?.label;
 
-  // Still read location.state so direct-URL / bookmark access keeps working
   const location = useLocation();
 
   const [periodFilter,      setPeriodFilter]      = useState('');
@@ -390,13 +429,11 @@ const FeeStructures = ({ initialPeriodId: initialPeriodIdProp }) => {
     }
   }, []);
 
-  // ── Initial load ─────────────────────────────────────────────────────────────
-  // Priority: prop (from parent tab-switch) > location.state (from direct URL)
   useEffect(() => {
     if (!academicYearId) return;
 
-    const incomingId      = initialPeriodIdProp ?? location.state?.periodId;
-    const resolvedId      = incomingId ? incomingId.toString() : '';
+    const incomingId = initialPeriodIdProp ?? location.state?.periodId;
+    const resolvedId = incomingId ? incomingId.toString() : '';
 
     if (resolvedId) setPeriodFilter(resolvedId);
 
@@ -459,7 +496,6 @@ const FeeStructures = ({ initialPeriodId: initialPeriodIdProp }) => {
 
   const getStatusMeta = (status) => STRUCT_STATUS[status?.toUpperCase()] || STRUCT_STATUS.DRAFT;
 
-  // Local filter (belt-and-suspenders in case API doesn't filter server-side)
   const filtered = periodFilter
     ? structures.filter((s) => s.feePeriodId === parseInt(periodFilter))
     : structures;

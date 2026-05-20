@@ -219,17 +219,19 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
   const [loading, setLoading] = useState(false);
 
   // ── Class / student picker ────────────────────────────────────────────────
-  const [periodClasses,   setPeriodClasses]   = useState([]);
-  const [classesLoading,  setClassesLoading]  = useState(false);
-  const [selectedClassId, setSelectedClassId] = useState('');
-  const [students,        setStudents]        = useState([]);
-  const [studentsLoading, setStudentsLoading] = useState(false);
-  const [studentSearch,   setStudentSearch]   = useState('');
-  const [activeStudent,   setActiveStudent]   = useState(null);
+  const [periodStructures,  setPeriodStructures]  = useState([]); // ← NEW: raw structures for feeStructureId lookup
+  const [periodClasses,     setPeriodClasses]     = useState([]);
+  const [classesLoading,    setClassesLoading]    = useState(false);
+  const [selectedClassId,   setSelectedClassId]   = useState('');
+  const [students,          setStudents]          = useState([]);
+  const [studentsLoading,   setStudentsLoading]   = useState(false);
+  const [studentSearch,     setStudentSearch]     = useState('');
+  const [activeStudent,     setActiveStudent]     = useState(null);
 
   // ── Reset on open ─────────────────────────────────────────────────────────
   useEffect(() => {
     if (!open) return;
+    setPeriodStructures([]);
     setPeriodClasses([]);
     setSelectedClassId('');
     setStudents([]);
@@ -258,18 +260,31 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
 
   // ── Load classes for selected period (via fee structures) ─────────────────
   useEffect(() => {
-    if (!selectedPeriodId) { setPeriodClasses([]); setSelectedClassId(''); setStudents([]); setActiveStudent(null); return; }
+    if (!selectedPeriodId) {
+      setPeriodStructures([]);
+      setPeriodClasses([]);
+      setSelectedClassId('');
+      setStudents([]);
+      setActiveStudent(null);
+      return;
+    }
     const load = async () => {
       setClassesLoading(true);
+      setPeriodStructures([]);
       setPeriodClasses([]);
       setSelectedClassId('');
       setStudents([]);
       if (!initialStudent) setActiveStudent(null);
       try {
         const structures = await getFeeStructures(parseInt(selectedPeriodId));
+        const structuresArray = Array.isArray(structures) ? structures : [];
+
+        // ── NEW: persist raw structures so selectStudent can look up feeStructureId ──
+        setPeriodStructures(structuresArray);
+
         const seen = new Set();
         const classes = [];
-        (Array.isArray(structures) ? structures : []).forEach((s) => {
+        structuresArray.forEach((s) => {
           (s.classes || []).forEach((c) => {
             if (!seen.has(c.id)) {
               seen.add(c.id);
@@ -293,7 +308,6 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
     const load = async () => {
       setStudentsLoading(true);
       try {
-        // getStudentByClass from StudentApi — uses VITE_API_BASE_DOUBLE_V1
         const list = await getStudentByClass(selectedClassId);
         setStudents(Array.isArray(list) ? list : []);
       } catch (e) {
@@ -321,12 +335,20 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
   const selectStudent = (s) => {
     const fullName = `${s.firstName || ''} ${s.lastName || ''}`.trim();
     const classObj = periodClasses.find((c) => String(c.id) === selectedClassId);
+
+    // ── NEW: derive feeStructureId from the stored structures ──────────────
+    // Find the fee structure whose classes array contains the currently selected class
+    const matchedStructure = periodStructures.find((struct) =>
+      (struct.classes || []).some((c) => String(c.id) === selectedClassId)
+    );
+    const resolvedFeeStructureId = matchedStructure?.id ?? s.feeStructureId ?? null;
+
     setActiveStudent({
       studentId:      s.id || s.studentId,
       studentName:    fullName,
       studentCode:    s.admissionNumber || s.studentCode,
       class:          s.className || s.class || classObj?.name || '',
-      feeStructureId: s.feeStructureId,
+      feeStructureId: resolvedFeeStructureId,   // ← resolved from structures, not student row
       feePeriodId:    selectedPeriodId,
       balance:        s.balanceDue ?? s.balance ?? 0,
       paidAmount:     s.paidAmount || 0,
@@ -346,6 +368,7 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
     if (!activeStudent)                                              { alert('Please select a student');       return; }
     if (!form.amountPaid || parseFloat(form.amountPaid) <= 0)       { alert('Please enter a valid amount');   return; }
     if (!selectedPeriodId)                                           { alert('Please select a fee period');    return; }
+    if (!activeStudent.feeStructureId)                               { alert('Fee structure not found for this student\'s class. Please ensure a fee structure is configured for this period and class.'); return; }
     try {
       setLoading(true);
       const res = await createFeeCollection({
