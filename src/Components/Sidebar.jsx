@@ -5,7 +5,7 @@ import {
   ChevronDown, UserCog, Package, Bus, Phone, Mail,
   Shield, ChevronUp, ArrowLeftRight, BookOpenText,
   GraduationCap,
-  SchoolIcon, NotebookPen,IndianRupee
+  SchoolIcon, NotebookPen, IndianRupee
 } from 'lucide-react'
 import { useState, useEffect, useContext, useRef } from 'react'
 import { UserContext } from '../ContextAPI/UserContext'
@@ -109,10 +109,10 @@ const menuItems = [
   {
     id: 'FeeManagement', icon: IndianRupee, label: 'Fee Management', route: '/feemanagement',
     roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'],
-     subItems: [
+    subItems: [
       { label: 'Fee Config', route: '/feemanagement/config', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'] },
       { label: 'Collection and History', route: '/feemanagement/collections', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'] },
-  
+
     ]
   },
   {
@@ -365,11 +365,14 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
                 >
                   <div className="mt-1 ml-4 pl-3 border-l-2 border-gray-200 space-y-0.5 pb-1">
                     {item.subItems.map((subItem, index) => {
-                      const isSubActive = subItem.route === '/attendance'
-                        ? location.pathname === '/attendance'
-                        : subItem.route === '/leaves'
-                          ? location.pathname === '/leaves'
-                          : location.pathname.startsWith(subItem.route)
+                      const isSubActive =
+                        location.pathname === subItem.route ||
+                        (
+                          subItem.route !== '/exams' &&
+                          subItem.route !== '/attendance' &&
+                          subItem.route !== '/leaves' &&
+                          location.pathname.startsWith(subItem.route + '/')
+                        )
                       return (
                         <button
                           key={index}

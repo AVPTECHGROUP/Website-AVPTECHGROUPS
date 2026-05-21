@@ -167,8 +167,8 @@ const MainRoutes = () => {
             <Route path="/attendance/usersAttendance/manual" element={<ManualAttendance />} />
 
             <Route path="/exams" element={<Exams />} />
-            <Route path="/exams/marksEntry" element={<MarksEntry />} />
-            <Route path="/exams/reportCard" element={<ReportCards />} />
+            <Route path="/exams/marksEntry/:examId?" element={<MarksEntry />} />
+            <Route path="/exams/reportCard/:examId?" element={<ReportCards />} />
             <Route path="/exams/analytics" element={<Analytics />} />
             <Route path="/exams/examConfig" element={<ExamConfiguration />} />
             <Route path="/academics/classSections" element={<ClassSectionConfig />} />

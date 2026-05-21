@@ -30,6 +30,7 @@ import {
   activateExamType,
   deactivateExamType,
 } from "../../Api/Exams";
+import { toast } from "react-toastify";
 
 // ─── Grade colour helper ──────────────────────────────────────────────────────
 const gradeStyle = (g = "") => {
@@ -81,19 +82,6 @@ const Field = ({
     {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
   </div>
 );
-// ─── Toast ────────────────────────────────────────────────────────────────────
-const Toast = ({ msg, type, onClose }) => {
-  useEffect(() => { const t = setTimeout(onClose, 3000); return () => clearTimeout(t); }, [onClose]);
-  return (
-    <div className={`fixed bottom-5 right-5 z-[9999] flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg text-sm font-medium transition-all
-      ${type === "success" ? "bg-green-50 border border-green-200 text-green-800" : "bg-red-50 border border-red-200 text-red-800"}`}>
-      {type === "success" ? <CheckCircle2 className="h-4 w-4 text-green-600" /> : <AlertTriangle className="h-4 w-4 text-red-600" />}
-      {msg}
-      <button onClick={onClose} className="ml-2 cursor-pointer"><X className="h-4 w-4" /></button>
-    </div>
-  );
-};
-
 // ─── Confirm Delete Modal ─────────────────────────────────────────────────────
 const ConfirmModal = ({ onConfirm, onCancel, loading }) => (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
@@ -127,15 +115,12 @@ const GradeConfigTab = () => {
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
-  const [toast, setToast] = useState(null);
   const [errors, setErrors] = useState({});
-
-  const showToast = (msg, type = "success") => setToast({ msg, type });
 
   const fetchGrades = useCallback(async () => {
     setLoading(true);
     try { setGrades(await getGradeConfigs()); }
-    catch { showToast("Failed to load grade configs", "error"); }
+    catch { toast.error("Failed to load grade configs"); }
     finally { setLoading(false); }
   }, []);
 
@@ -162,17 +147,21 @@ const GradeConfigTab = () => {
       const payload = { gradeName: form.gradeName, minPercentage: Number(form.minPercentage), maxPercentage: Number(form.maxPercentage), description: form.description };
       if (editItem) await updateGradeConfig(editItem.id, payload);
       else await createGradeConfig(payload);
-      showToast(editItem ? "Grade updated successfully!" : "Grade created successfully!");
+      toast.success(
+        editItem
+          ? "Grade updated successfully!"
+          : "Grade created successfully!"
+      );
       closeModal();
       fetchGrades();
-    } catch { showToast("Operation failed. Please try again.", "error"); }
+    } catch { toast.error("Operation failed. Please try again."); }
     finally { setSaving(false); }
   };
 
   const handleDelete = async () => {
     setDeleting(true);
-    try { await deleteGradeConfig(deleteTarget.id); showToast("Grade deleted successfully!"); setDeleteTarget(null); fetchGrades(); }
-    catch { showToast("Delete failed. Please try again.", "error"); }
+    try { await deleteGradeConfig(deleteTarget.id); toast.success("Grade deleted successfully!"); setDeleteTarget(null); fetchGrades(); }
+    catch { toast.error("Delete failed. Please try again."); }
     finally { setDeleting(false); }
   };
 
@@ -249,6 +238,7 @@ const GradeConfigTab = () => {
             <div className="px-6 py-5 space-y-4">
               <Field
                 label="Grade Name"
+                placeholder="Enter grade name"
                 value={form.gradeName}
                 onChange={(e) => setForm(p => ({ ...p, gradeName: e.target.value }))}
                 error={errors.gradeName}
@@ -257,6 +247,7 @@ const GradeConfigTab = () => {
                 <Field
                   label="Min Percentage"
                   type="number"
+                  placeholder='0'
                   value={form.minPercentage}
                   onChange={(e) => setForm(p => ({ ...p, minPercentage: e.target.value }))}
                   error={errors.minPercentage}
@@ -264,6 +255,7 @@ const GradeConfigTab = () => {
                 <Field
                   label="Max Percentage"
                   type="number"
+                  placeholder='100'
                   value={form.maxPercentage}
                   onChange={(e) => setForm(p => ({ ...p, maxPercentage: e.target.value }))}
                   error={errors.maxPercentage}
@@ -271,6 +263,7 @@ const GradeConfigTab = () => {
               </div>
               <Field
                 label="Description"
+                placeholder="Enter grade description"
                 value={form.description}
                 onChange={(e) => setForm(p => ({ ...p, description: e.target.value }))}
                 error={errors.description}
@@ -291,8 +284,6 @@ const GradeConfigTab = () => {
       {/* Delete Confirm */}
       {deleteTarget && <ConfirmModal onConfirm={handleDelete} onCancel={() => setDeleteTarget(null)} loading={deleting} />}
 
-      {/* Toast */}
-      {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
     </div>
   );
 };
@@ -310,15 +301,14 @@ const ExamTypeTab = () => {
   const [form, setForm] = useState(ET_INIT);
   const [saving, setSaving] = useState(false);
   const [toggling, setToggling] = useState(null);
-  const [toast, setToast] = useState(null);
+  
   const [errors, setErrors] = useState({});
 
-  const showToast = (msg, type = "success") => setToast({ msg, type });
 
   const fetchTypes = useCallback(async () => {
     setLoading(true);
     try { setExamTypes(await getExamTypes()); }
-    catch { showToast("Failed to load exam types", "error"); }
+    catch { toast.error("Failed to load exam types"); }
     finally { setLoading(false); }
   }, []);
 
@@ -342,10 +332,14 @@ const ExamTypeTab = () => {
     try {
       if (editItem) await updateExamType(editItem.id, form);
       else await createExamType(form);
-      showToast(editItem ? "Exam type updated!" : "Exam type created!");
+      toast.success(
+        editItem
+          ? "Exam type updated!"
+          : "Exam type created!"
+      );
       closeModal();
       fetchTypes();
-    } catch { showToast("Operation failed. Please try again.", "error"); }
+    } catch { toast.error("Operation failed. Please try again."); }
     finally { setSaving(false); }
   };
 
@@ -354,9 +348,11 @@ const ExamTypeTab = () => {
     try {
       if (t.isActive) await deactivateExamType(t.id);
       else await activateExamType(t.id);
-      showToast(`Exam type ${t.isActive ? "deactivated" : "activated"} successfully!`);
+      toast.success(
+        `Exam type ${t.isActive ? "deactivated" : "activated"} successfully!`
+      );
       fetchTypes();
-    } catch { showToast("Status update failed.", "error"); }
+    } catch { toast.error("Status update failed."); }
     finally { setToggling(null); }
   };
   return (
@@ -458,8 +454,6 @@ const ExamTypeTab = () => {
           </div>
         </div>
       )}
-
-      {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
     </div>
   );
 };
