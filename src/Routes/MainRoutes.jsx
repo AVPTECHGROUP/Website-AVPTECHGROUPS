@@ -80,6 +80,8 @@ import { OverviewPage, FeeSynthesisPage, CollectionsPage } from '../Pages/FeeMan
 import AcademicYear from '../Pages/Attendance/AcademicYear/AcademicYear';
 import TimeTable from '../Pages/Schedule/TimeTable';
 import CreateSchedule from '../Pages/Schedule/CreateSchedule';
+import FeePeriods from '../Pages/FeeManagement/FeePeriods';
+import FeeStructures from '../Pages/FeeManagement/Feestructures.';
 
 // ─── Role Groups ───────────────────────────────────────────────────────────────
 const STOCK_ACCOUNTANT_ROLES = ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'STORE_ACCOUNTANT'];
@@ -192,6 +194,8 @@ const MainRoutes = () => {
 
             <Route path='/feemanagement'             element={<OverviewPage />} />
             <Route path='/feemanagement/config'   element={<FeeSynthesisPage />} />
+             <Route path='/feemanagement/period' element={<FeePeriods/>}/>
+             <Route path='/feemanagement/structures' element={<FeeStructures />} />
             <Route path='/feemanagement/collections' element={<CollectionsPage />} />
 
             {/* Subject Section Assignment */}
