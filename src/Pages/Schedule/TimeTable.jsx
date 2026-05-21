@@ -16,6 +16,8 @@ import {
     publishTimetable,
 } from '../../Api/ScheduleApi';
 import { getListOfValues } from '../../Api/ListOfValues';
+import { getActiveClasses } from '../../Api/TeachersAPI';
+import { toast } from 'react-toastify';
 
 const StatusBadge = ({ status }) => {
     const isDraft = status === 'Draft' || status === 'DRAFT';
@@ -35,7 +37,8 @@ export default function TimeTable() {
     const [deletingId, setDeletingId] = useState(null);
     const [showConfig, setShowConfig] = useState(false);
     const [showAddModal, setShowAddModal] = useState(false);
-    const [showTeacherSchedule, setShowTeacherSchedule] = useState(false); // ← new state
+    const [showTeacherSchedule, setShowTeacherSchedule] = useState(false);
+    const [activeClasses, setActiveClasses] = useState([]);
     const [timetables, setTimetables] = useState([]);
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('All Statuses');
@@ -50,6 +53,7 @@ export default function TimeTable() {
     useEffect(() => {
         loadTimetables();
         loadAcademicYears();
+        loadActiveClasses();
     }, []);
 
     const loadAcademicYears = async () => {
@@ -61,9 +65,13 @@ export default function TimeTable() {
         }
     };
 
-    const showToast = (msg) => {
-        setToastMsg(msg);
-        setTimeout(() => setToastMsg(''), 3000);
+    const loadActiveClasses = async () => {
+        try {
+            const data = await getActiveClasses();
+            setActiveClasses(data || []);
+        } catch (err) {
+            console.error('Failed to load active classes:', err);
+        }
     };
 
     const loadTimetables = async () => {
@@ -74,7 +82,7 @@ export default function TimeTable() {
             setTimetables(list.map(normalizeApiTimetable));
         } catch (err) {
             console.error('Failed to load timetables:', err);
-            showToast('Failed to load timetables');
+            toast.error('Failed to load timetables');
         } finally {
             setLoading(false);
         }
@@ -106,9 +114,9 @@ export default function TimeTable() {
             setTimetables(prev => [newTT, ...prev]);
             setShowAddModal(false);
             setOpenWorkspace({ timetable: newTT, mode: 'edit' });
-            showToast('Timetable created ✓');
+            toast.success('Timetable created successfully');
         } catch (err) {
-            showToast(err.message || 'Failed to create timetable');
+            toast.error(err.message || 'Failed to create timetable');
         }
     };
 
@@ -117,9 +125,9 @@ export default function TimeTable() {
             setPublishingId(id);
             await publishTimetable(id);
             setTimetables(prev => prev.map(t => t.id === id ? { ...t, status: 'Published', lastUpdated: 'Just now' } : t));
-            showToast('Published ✓');
+            toast.success('Published successfully');
         } catch (err) {
-            showToast(err.message || 'Failed to publish');
+            toast.error(err.message || 'Failed to publish');
         } finally {
             setPublishingId(null);
         }
@@ -131,9 +139,9 @@ export default function TimeTable() {
             await deleteTimetable(id);
             setTimetables(prev => prev.filter(t => t.id !== id));
             setDeleteConfirm(null);
-            showToast('Deleted ✓');
+            toast.success('Deleted successfully');
         } catch (err) {
-            showToast(err.message || 'Failed to delete');
+            toast.error(err.message || 'Failed to delete');
         } finally {
             setDeletingId(null);
         }
@@ -152,7 +160,10 @@ export default function TimeTable() {
         return matchSearch && matchStatus && matchClass && matchYear;
     });
 
-    const uniqueClasses = [...new Set(timetables.map(t => t.class))];
+    const uniqueClasses =
+        activeClasses.length > 0
+            ? activeClasses.map(c => c.name)
+            : [...new Set(timetables.map(t => t.class))];
     // Use LOV academic years; fall back to years extracted from loaded timetables
     const uniqueYears = academicYears.length > 0
         ? academicYears.map(y => y.name || y.value)
@@ -170,13 +181,6 @@ export default function TimeTable() {
 
     return (
         <div className="min-h-screen bg-[#f0f4f9] p-4 md:p-6 relative">
-
-            {/* Toast */}
-            {toastMsg && (
-                <div className="fixed bottom-5 right-5 z-[100] bg-[#1e293b] text-white text-sm px-4 py-2.5 rounded-xl shadow-xl">
-                    {toastMsg}
-                </div>
-            )}
 
             {/* Header */}
             <div className="mb-6">
