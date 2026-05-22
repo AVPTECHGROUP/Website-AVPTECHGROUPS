@@ -11,11 +11,11 @@ import SectionSubjectAssignment from "../../Pages/SubjectManagement/SectionSubje
    CONSTANTS
 ═══════════════════════════════════════════ */
 const CAT_CLS = {
-  CORE:     "bg-blue-50    text-blue-700    border-blue-200",
+  CORE: "bg-blue-50    text-blue-700    border-blue-200",
   LANGUAGE: "bg-violet-50  text-violet-700  border-violet-200",
-  SCIENCE:  "bg-emerald-50 text-emerald-700 border-emerald-200",
-  ARTS:     "bg-pink-50    text-pink-700    border-pink-200",
-  SPORTS:   "bg-orange-50  text-orange-700  border-orange-200",
+  SCIENCE: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  ARTS: "bg-pink-50    text-pink-700    border-pink-200",
+  SPORTS: "bg-orange-50  text-orange-700  border-orange-200",
   ELECTIVE: "bg-amber-50   text-amber-700   border-amber-200",
 };
 
@@ -24,12 +24,12 @@ const ROW_OPTIONS = [10, 20, 30];
 /* ═══════════════════════════════════════════
    TINY SVG ICONS
 ═══════════════════════════════════════════ */
-const IPlus  = () => <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4"/></svg>;
-const IEdit  = () => <svg className="w-3.5 h-3.5 text-orange-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>;
-const ITrash = () => <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>;
-const ISearch= () => <svg className="w-4 h-4 text-slate-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35" strokeLinecap="round"/></svg>;
-const ISpin  = () => <svg className="w-6 h-6 animate-spin text-indigo-500" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg>;
-const IChev  = () => <svg className="w-4 h-4 text-slate-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"/></svg>;
+const IPlus = () => <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>;
+const IEdit = () => <svg className="w-3.5 h-3.5 text-orange-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>;
+const ITrash = () => <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>;
+const ISearch = () => <svg className="w-4 h-4 text-slate-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" strokeLinecap="round" /></svg>;
+const ISpin = () => <svg className="w-6 h-6 animate-spin text-indigo-500" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" /></svg>;
+const IChev = () => <svg className="w-4 h-4 text-slate-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>;
 
 /* ═══════════════════════════════════════════
    REUSABLE ATOMS
@@ -45,21 +45,21 @@ function CatBadge({ cat }) {
 
 function StatusBadge({ active }) {
   return (
-    <span className={`inline-block text-xs font-semibold px-2.5 py-0.5 rounded-full whitespace-nowrap ${
-      active ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-500"
-    }`}>
+    <span className={`inline-block text-xs font-semibold px-2.5 py-0.5 rounded-full whitespace-nowrap ${active ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-500"
+      }`}>
       {active ? "Active" : "INACTIVE"}
     </span>
   );
 }
 
-function NativeSelect({ value, onChange, className = "", children }) {
+function NativeSelect({ value, onChange, className = "", children, disabled }) {
   return (
     <div className={`relative ${className}`}>
       <select
         value={value}
         onChange={onChange}
-        className="w-full appearance-none bg-white border border-slate-200 rounded-lg pl-3 pr-8 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300 cursor-pointer"
+        disabled={disabled}
+        className="w-full appearance-none bg-white border border-slate-200 rounded-lg pl-3 pr-8 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
         style={{ minHeight: 38 }}
       >
         {children}
@@ -122,7 +122,7 @@ function DeleteDialog({ subject, onClose, onConfirm }) {
   const [busy, setBusy] = useState(false);
   const go = async () => {
     setBusy(true);
-    try   { await deleteSubject(subject.id); onConfirm(); }
+    try { await deleteSubject(subject.id); onConfirm(); }
     catch { onClose(); }
     finally { setBusy(false); }
   };
@@ -182,9 +182,8 @@ function Pagination({ page, totalPages, onChange }) {
             )}
             <button
               onClick={() => onChange(n)}
-              className={`w-8 h-8 text-sm rounded-lg font-medium transition-colors ${
-                page === n ? "bg-indigo-600 text-white" : "text-slate-600 border border-slate-200 hover:bg-slate-100"
-              }`}
+              className={`w-8 h-8 text-sm rounded-lg font-medium transition-colors ${page === n ? "bg-indigo-600 text-white" : "text-slate-600 border border-slate-200 hover:bg-slate-100"
+                }`}
             >{n + 1}</button>
           </span>
         );
@@ -204,39 +203,55 @@ function Pagination({ page, totalPages, onChange }) {
    MAIN PAGE
 ═══════════════════════════════════════════ */
 export default function SubjectsMaster() {
-  const [subjects,      setSubjects]      = useState([]);
+  const [subjects, setSubjects] = useState([]);
   const [totalElements, setTotalElements] = useState(0);
-  const [totalPages,    setTotalPages]    = useState(1);
-  const [loading,       setLoading]       = useState(false);
-  const [error,         setError]         = useState("");
-  
-  const [categories,    setCategories]    = useState([]);
+  const [totalPages, setTotalPages] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const [categories, setCategories] = useState([]);
   const [categoriesLoading, setCategoriesLoading] = useState(false);
 
-  const [page,           setPage]           = useState(0);
-  const [size,           setSize]           = useState(10);
-  const [statusFilter,   setStatusFilter]   = useState("ALL");
+  const [page, setPage] = useState(0);
+  const [size, setSize] = useState(10);
+  const [statusFilter, setStatusFilter] = useState("ALL");
   const [categoryFilter, setCategoryFilter] = useState("ALL");
-  const [searchQuery,    setSearchQuery]    = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  // ── Debounced value that actually drives the API call ──────────────────────
+  const [debouncedSearch, setDebouncedSearch] = useState("");
 
-  const [modal,        setModal]        = useState(null);
+  const [modal, setModal] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
 
-  //for switch tabs
-  const [activeTab , setActiveTab] = useState('materSubject');
+  const [activeTab, setActiveTab] = useState("materSubject");
 
+  // ── Debounce: update debouncedSearch 800 ms after the user stops typing ───
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // ── Reset to page 0 whenever any filter / size changes ────────────────────
+  useEffect(() => {
+    setPage(0);
+  }, [statusFilter, categoryFilter, size, debouncedSearch]);
+
+  // ── Fetch subjects — depends on debouncedSearch, NOT searchQuery ──────────
   const fetchSubjects = useCallback(async () => {
-    setLoading(true); setError("");
+    setLoading(true);
+    setError("");
     try {
-      const params = { 
-        page, 
-        size, 
+      const params = {
+        page,
+        size,
         sort: "id",
-        search: searchQuery,
+        search: debouncedSearch,
         status: statusFilter === "ALL" ? "" : statusFilter,
         category: categoryFilter === "ALL" ? "" : categoryFilter,
       };
-      
+
       const result = await getSubjectsWithFilters(params);
 
       setSubjects(result?.subjects ?? []);
@@ -247,16 +262,18 @@ export default function SubjectsMaster() {
     } finally {
       setLoading(false);
     }
-  }, [page, size, statusFilter, categoryFilter, searchQuery]);
+  }, [page, size, statusFilter, categoryFilter, debouncedSearch]);
 
-  /* Fetch subject categories on mount */
+  useEffect(() => { fetchSubjects(); }, [fetchSubjects]);
+
+  // ── Fetch categories once on mount ────────────────────────────────────────
   useEffect(() => {
     const fetchCategories = async () => {
       setCategoriesLoading(true);
       try {
         const data = await getSubjectCategoryLov();
-        const categoryList = Array.isArray(data) ? data : data?.data || [];
-        setCategories(categoryList);
+        const list = Array.isArray(data) ? data : data?.data ?? [];
+        setCategories(list);
       } catch (err) {
         setCategories([]);
         console.error("Failed to fetch categories:", err.message);
@@ -267,16 +284,7 @@ export default function SubjectsMaster() {
     fetchCategories();
   }, []);
 
-  useEffect(() => { fetchSubjects(); }, [fetchSubjects]);
-  useEffect(() => { setPage(0); }, [statusFilter, categoryFilter, size, searchQuery]);
-
-  const displayed = subjects.filter((s) => {
-    if (!searchQuery) return true;
-    const q = searchQuery.toLowerCase();
-    return s.name?.toLowerCase().includes(q) || s.code?.toLowerCase().includes(q);
-  });
-
-  const handleSaved   = () => { setModal(null);        fetchSubjects(); };
+  const handleSaved = () => { setModal(null); fetchSubjects(); };
   const handleDeleted = () => { setDeleteTarget(null); fetchSubjects(); };
 
   return (
@@ -295,52 +303,45 @@ export default function SubjectsMaster() {
         <div className="w-full bg-white border-b border-slate-200">
           <div className="px-3 sm:px-4 xl:px-6 pt-4 pb-0">
             <p className="text-[11px] text-slate-400 font-medium uppercase tracking-wider mb-0.5">
-             {activeTab === 'materSubject' ? 'Academic → Subjects' : 'Academic → Section Assignment'}
+              {activeTab === "materSubject" ? "Academic → Subjects" : "Academic → Section Assignment"}
             </p>
             <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-slate-800 tracking-tight">
               Subjects &amp; Section Assignment
             </h1>
+
             {/* Tabs */}
-<div className="sm-tabs mt-3 flex overflow-x-auto border-b border-slate-200 -mb-px gap-0">
+            <div className="sm-tabs mt-3 flex overflow-x-auto border-b border-slate-200 -mb-px gap-0">
+              <button
+                onClick={() => setActiveTab("materSubject")}
+                className={`flex-shrink-0 flex items-center gap-1.5 px-3 sm:px-4 pb-3 text-xs sm:text-sm font-semibold whitespace-nowrap transition-colors border-b-2 ${activeTab === "materSubject"
+                    ? "text-indigo-600 border-indigo-600"
+                    : "text-slate-400 border-transparent hover:text-slate-600"
+                  }`}
+              >
+                Subjects
+              </button>
 
-  {/* Subjects Master */}
-  <button
-    onClick={() => setActiveTab("materSubject")}
-    className={`flex-shrink-0 flex items-center gap-1.5 px-3 sm:px-4 pb-3 text-xs sm:text-sm font-semibold whitespace-nowrap transition-colors border-b-2
-      ${
-        activeTab === "materSubject"
-          ? "text-indigo-600 border-indigo-600"
-          : "text-slate-400 border-transparent hover:text-slate-600"
-      }`}
-  >
-    Subjects 
-  </button>
-
-  {/* Section Assignment */}
-  <button
-    onClick={() => setActiveTab("assignment")}
-    className={`flex-shrink-0 flex items-center gap-1.5 px-3 sm:px-4 pb-3 text-xs sm:text-sm font-semibold whitespace-nowrap transition-colors border-b-2
-      ${
-        activeTab === "assignment"
-          ? "text-indigo-600 border-indigo-600"
-          : "text-slate-400 border-transparent hover:text-slate-600"
-      }`}
-  >
-    <span className="hidden sm:inline">Section–Subject Assignment</span>
-    <span className="sm:hidden">Assignment</span>
-  </button>
-
-</div>
+              <button
+                onClick={() => setActiveTab("assignment")}
+                className={`flex-shrink-0 flex items-center gap-1.5 px-3 sm:px-4 pb-3 text-xs sm:text-sm font-semibold whitespace-nowrap transition-colors border-b-2 ${activeTab === "assignment"
+                    ? "text-indigo-600 border-indigo-600"
+                    : "text-slate-400 border-transparent hover:text-slate-600"
+                  }`}
+              >
+                <span className="hidden sm:inline">Section–Subject Assignment</span>
+                <span className="sm:hidden">Assignment</span>
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* second contetn tab */}
-        <div className={`${activeTab === 'materSubject' ? "hidden" : ""}`}>
-            <SectionSubjectAssignment />
+        {/* ── ASSIGNMENT TAB ── */}
+        <div className={activeTab === "materSubject" ? "hidden" : ""}>
+          <SectionSubjectAssignment />
         </div>
 
-        {/* ── CONTENT ── */}
-        <div className={`${activeTab === 'assignment' ? "hidden" : ""} px-3 sm:px-4 md:px-6 py-3 sm:py-4`}>
+        {/* ── SUBJECTS TAB ── */}
+        <div className={`${activeTab === "assignment" ? "hidden" : ""} px-3 sm:px-4 md:px-6 py-3 sm:py-4`}>
           <div className="w-full bg-white rounded-xl xl:rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
 
             {/* ── TOOLBAR ── */}
@@ -363,28 +364,33 @@ export default function SubjectsMaster() {
                 </button>
               </div>
 
-              {/* Row B: Search + Filters
-                  xs:   search full width, then status+category stacked
-                  sm:   search full width, filters in 2-column grid
-                  md+:  all in one row
-              */}
+              {/* Row B: Search + Filters */}
               <div className="flex flex-col gap-2">
-                {/* Search — always full width on its own line */}
+                {/* Search — always full width */}
                 <div className="relative w-full">
                   <span className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none">
                     <ISearch />
                   </span>
                   <input
                     type="text"
-                    placeholder="Search Subject Name..."
+                    placeholder="Search by name or code…"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full pl-8 pr-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300"
                     style={{ minHeight: 38 }}
                   />
+                  {/* Subtle typing indicator shown while debounce is pending */}
+                  {searchQuery !== debouncedSearch && (
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <svg className="w-3.5 h-3.5 animate-spin text-indigo-400" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                      </svg>
+                    </span>
+                  )}
                 </div>
 
-                {/* Filters row — stacked on mobile, 2-col on sm, inline on md+ */}
+                {/* Filters — stacked on mobile, 2-col on sm, inline on md+ */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:flex md:items-center gap-2">
                   <NativeSelect
                     value={statusFilter}
@@ -403,7 +409,7 @@ export default function SubjectsMaster() {
                     disabled={categoriesLoading}
                   >
                     <option value="ALL">
-                      {categoriesLoading ? "Loading..." : "All Categories"}
+                      {categoriesLoading ? "Loading categories…" : "All Categories"}
                     </option>
                     {categories.map((c) => (
                       <option key={c.value || c.id} value={c.value || c.id}>
@@ -419,7 +425,7 @@ export default function SubjectsMaster() {
             {error && (
               <div className="mx-3 sm:mx-4 xl:mx-5 mt-4 flex items-start gap-2 bg-red-50 border border-red-200 text-red-600 text-xs sm:text-sm px-4 py-3 rounded-lg">
                 <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12A9 9 0 113 12a9 9 0 0118 0z"/>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12A9 9 0 113 12a9 9 0 0118 0z" />
                 </svg>
                 <span className="break-words min-w-0">{error}</span>
               </div>
@@ -434,7 +440,7 @@ export default function SubjectsMaster() {
             )}
 
             {/* Empty */}
-            {!loading && displayed.length === 0 && (
+            {!loading && subjects.length === 0 && (
               <div className="py-16 flex flex-col items-center gap-2 text-slate-400">
                 <svg className="w-10 h-10 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -445,9 +451,9 @@ export default function SubjectsMaster() {
             )}
 
             {/* ── MOBILE CARDS (< 1280px) ── */}
-            {!loading && displayed.length > 0 && (
+            {!loading && subjects.length > 0 && (
               <div className="xl:hidden p-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {displayed.map((s) => (
+                {subjects.map((s) => (
                   <SubjectCard
                     key={s.id}
                     s={s}
@@ -459,19 +465,18 @@ export default function SubjectsMaster() {
             )}
 
             {/* ── DESKTOP TABLE (≥ 1280px) ── */}
-            {!loading && displayed.length > 0 && (
+            {!loading && subjects.length > 0 && (
               <div className="hidden xl:block w-full overflow-x-auto">
                 <table className="w-full text-sm" style={{ minWidth: "100%" }}>
                   <thead>
                     <tr className="bg-slate-50 border-y border-slate-200 text-left">
                       {[
-                        { h: "Code",        cls: "w-20" },
-                        { h: "Subject Name",cls: "" },
-                        { h: "Category",    cls: "w-32" },
+                        { h: "Code", cls: "w-20" },
+                        { h: "Subject Name", cls: "" },
+                        { h: "Category", cls: "w-32" },
                         { h: "Description", cls: "" },
-            
-                        { h: "Status",      cls: "text-center w-24" },
-                        { h: "Actions",     cls: "text-right  w-36" },
+                        { h: "Status", cls: "text-center w-24" },
+                        { h: "Actions", cls: "text-right  w-36" },
                       ].map(({ h, cls }) => (
                         <th key={h}
                           className={`py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap ${cls}`}
@@ -480,7 +485,7 @@ export default function SubjectsMaster() {
                     </tr>
                   </thead>
                   <tbody>
-                    {displayed.map((s) => {
+                    {subjects.map((s) => {
                       const isActive = s.status === "ACTIVE";
                       return (
                         <tr key={s.id} className="border-b border-slate-100 hover:bg-indigo-50/30 transition-colors">
@@ -498,7 +503,6 @@ export default function SubjectsMaster() {
                           <td className="py-3 px-4 text-slate-500 max-w-xs truncate whitespace-nowrap">
                             {s.description || "—"}
                           </td>
-                         
                           <td className="py-3 px-4 text-center whitespace-nowrap">
                             <StatusBadge active={isActive} />
                           </td>
@@ -529,7 +533,7 @@ export default function SubjectsMaster() {
             )}
 
             {/* ── FOOTER — rows per page + pagination ── */}
-            {!loading && displayed.length > 0 && (
+            {!loading && subjects.length > 0 && (
               <div className="px-3 sm:px-5 py-3.5 border-t border-slate-100 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-sm text-slate-500 whitespace-nowrap">Rows per page:</span>
@@ -541,7 +545,7 @@ export default function SubjectsMaster() {
                     {ROW_OPTIONS.map((n) => <option key={n} value={n}>{n}</option>)}
                   </NativeSelect>
                   <span className="text-sm text-slate-400 whitespace-nowrap">
-                    <span className="font-medium text-slate-600">{displayed.length}</span>
+                    <span className="font-medium text-slate-600">{subjects.length}</span>
                     {" "}of{" "}
                     <span className="font-medium text-slate-600">{totalElements}</span>
                     {" "}subjects
@@ -552,7 +556,6 @@ export default function SubjectsMaster() {
             )}
 
           </div>
-        
         </div>
       </div>
 
