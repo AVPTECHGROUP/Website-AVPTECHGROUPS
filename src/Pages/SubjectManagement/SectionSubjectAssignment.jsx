@@ -4,6 +4,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import SectionSubjectService from "../../Api/SectionSubjectService";
+import { Edit, MinusCircle } from "lucide-react";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const INPUT_CLS =
@@ -51,7 +52,19 @@ const IconBtn = ({ onClick, title, variant = "red" }) => {
   return (
     <button onClick={onClick} title={title}
       className={`p-2 rounded-lg transition-all active:scale-90 touch-manipulation ${cls[variant]}`}>
-      {variant === "blue" ? <PencilIcon /> : <TrashIcon />}
+      <div className="flex items-center gap-1">
+        {variant === "blue" ? (
+          <div className="flex cursor-pointer text-xs items-center gap-1 border border-blue-300 text-blue-500 px-1.5 py-0.5 rounded-md">
+            <Edit size={14} />
+            <span>Edit</span>
+          </div>
+        ) : (
+          <div className="flex cursor-pointer text-xs items-center gap-1 border border-red-300 text-rose-500 px-1.5 py-0.5 rounded-md">
+            <MinusCircle size={14} />
+            <span>Remove</span>
+          </div>
+        )}
+      </div>
     </button>
   );
 };
@@ -114,8 +127,8 @@ const SubjectCard = ({ row, onEdit, onRemove }) => (
         </div>
       </div>
       <div className="flex items-center gap-0.5 shrink-0">
-        <IconBtn variant="blue" title="Edit" onClick={() => onEdit(row)} />
-        <IconBtn variant="red" title="Remove" onClick={() => onRemove(row)} />
+        <IconBtn variant="blue" title="Edit" onClick={() => onEdit(row)} />Edit
+        <IconBtn variant="red" title="Remove" onClick={() => onRemove(row)} />Remove
       </div>
     </div>
   </div>
@@ -390,7 +403,7 @@ export default function SectionSubjectAssignment() {
 
   const loadClasses = useCallback(async () => {
     setClassesLoading(true);
-    const data = await SectionSubjectService.getAllClasses();
+    const data = await SectionSubjectService.getActiveClasses();
     setClasses(data);
     if (data.length) setSelectedClassId(String(data[0].id));
     setClassesLoading(false);
@@ -546,11 +559,11 @@ export default function SectionSubjectAssignment() {
             </div>
             <div className="flex items-center gap-2 shrink-0">
               {/* On mobile: icon-only danger button to save space */}
-              <button onClick={handleRemoveAll} disabled={!subjects.length}
+              {/* <button onClick={handleRemoveAll} disabled={!subjects.length}
                 className={`${BTN_DANGER} sm:px-3`}>
                 <TrashIcon />
                 <span className="hidden sm:inline">Remove All</span>
-              </button>
+              </button> */}
               <button onClick={() => setShowAssign(true)} disabled={!selectedSectionId}
                 className={BTN_PRIMARY}>
                 <PlusIcon />

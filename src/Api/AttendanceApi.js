@@ -62,6 +62,40 @@ export const enrollUserFaces = async ({
     throw error;
   }
 };
+
+
+export const markAttendanceByStafffFace = async ({
+  imageFile,
+  gpsLatitude = "28.6139",
+  gpsLongitude = "77.209",
+}) => {
+  try {
+    const formData = new FormData();
+    formData.append("image", imageFile);
+
+    // ✅ URL me bhejna hai toh yahan daal
+    const url = `${BASE_URL}/attendance/mark?gps_latitude=${gpsLatitude}&gps_longitude=${gpsLongitude}`;
+
+    console.log("Calling API:", url);
+
+    const res = await authFetch(url, {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(err || "Face verification failed");
+    }
+
+    return await res.json();
+
+  } catch (error) {
+    console.error("Attendance Mark Error:", error);
+    throw error;
+  }
+};
+
 export const markAttendanceByFace = async ({
   imageFile,
   user_type,
@@ -210,44 +244,6 @@ export const attendanceStatistics = async (date) => {
     throw error;
   }
 };
-
-// All Attendance details list
-export const allAttendanceDetails = async ({
-  attendanceDate,
-  role,
-  status,
-  page = 0,
-  size = 10,
-  sort = 'id'
-} = {}) => {
-  try {
-    const params = new URLSearchParams()
-
-    if (attendanceDate) params.append('attendance_date', attendanceDate)
-    if (role && role !== 'ALL') params.append('user_type', role)
-    if (status && status !== 'ALL') params.append('status', status)
-
-    params.append('page', page)
-    params.append('size', size)
-    params.append('sort', sort)
-
-    const res = await authFetch(
-      `${BASE_URL}/attendance/admin/all?${params.toString()}`,
-      {
-        method: 'GET',
-      }
-    )
-
-    if (!res.ok) {
-      throw new Error('Failed to load attendance details')
-    }
-
-    return await res.json()
-  } catch (error) {
-    console.error('Attendance Details Error:', error)
-    throw error
-  }
-}
 
 // Get Attendance Roster (Full table for UI)
 export const getAttendanceRoster = async (classId, sectionId, date = null) => {
@@ -505,3 +501,197 @@ export const getStudentEnrollment = async (sectionId) => {
     throw error;
   }
 };
+
+export const allAttendanceDetails = async ({
+  attendanceDate,
+  role,
+  status,
+  userName,        // ✅ new
+  userId,          // ✅ new
+  employeeCode,    // ✅ new
+  isManualReview,  // ✅ new
+  page = 0,
+  size = 10,
+  sort = 'id'
+} = {}) => {
+  try {
+    const params = new URLSearchParams()
+
+    if (attendanceDate) params.append('attendance_date', attendanceDate)
+    if (role && role !== 'ALL') params.append('user_type', role)
+    if (status && status !== 'ALL') params.append('status', status)
+    if (userName) params.append('user_name', userName)           // ✅ new
+    if (userId) params.append('user_id', userId)                 // ✅ new
+    if (employeeCode) params.append('employee_code', employeeCode) // ✅ new
+    if (isManualReview !== undefined) params.append('is_manual_review', isManualReview) // ✅ new
+
+    params.append('page', page)
+    params.append('size', size)
+    params.append('sort', sort)
+
+    const res = await authFetch(
+      `${BASE_URL}/attendance/admin/all?${params.toString()}`,
+      { method: 'GET' }
+    )
+
+    if (!res.ok) throw new Error('Failed to load attendance details')
+
+    return await res.json()
+  } catch (error) {
+    console.error('Attendance Details Error:', error)
+    throw error
+  }
+}
+
+// ===============================
+// 📥 Export Attendance CSV      ✅ new
+// ===============================
+export const exportAttendanceCSV = async ({
+  attendanceDate,
+  userType,
+  status,
+  userName,
+} = {}) => {
+  try {
+    const params = new URLSearchParams()
+    if (attendanceDate) params.append('attendance_date', attendanceDate)
+    if (userType) params.append('user_type', userType)
+    if (status) params.append('status', status)
+    if (userName) params.append('user_name', userName)
+
+    const res = await authFetch(
+      `${BASE_URL}/attendance/admin/export-csv?${params.toString()}`,
+      { method: 'GET' }
+    )
+
+    if (!res.ok) throw new Error('Failed to export CSV')
+
+    // Return blob for download
+    const blob = await res.blob()
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `attendance_${attendanceDate || 'today'}.csv`
+    a.click()
+    window.URL.revokeObjectURL(url)
+  } catch (error) {
+    console.error('exportAttendanceCSV error:', error)
+    throw error
+  }
+}
+
+// ===============================
+// 🔢 Pending Approvals Count    ✅ new
+// ===============================
+export const getPendingApprovalsCount = async () => {
+  try {
+    const res = await authFetch(
+      `${BASE_URL}/attendance/pending-approvals/count`,
+      { method: 'GET' }
+    )
+
+    if (!res.ok) throw new Error('Failed to get pending approvals count')
+
+    const data = await res.json()
+    return data.data  // returns number
+  } catch (error) {
+    console.error('getPendingApprovalsCount error:', error)
+    throw error
+  }
+}
+
+// ===============================
+// 📅 User Attendance by Date Range  ✅ new
+// ===============================
+export const getUserAttendanceByRange = async ({
+  userId,
+  userType,
+  startDate,
+  endDate,
+}) => {
+  try {
+    if (!userId || !userType || !startDate || !endDate) {
+      throw new Error('userId, userType, startDate, endDate are required')
+    }
+
+    const params = new URLSearchParams({
+      user_type: userType,
+      start_date: startDate,
+      end_date: endDate,
+    }).toString()
+
+    const res = await authFetch(
+      `${BASE_URL}/attendance/user/${userId}?${params}`,
+      { method: 'GET' }
+    )
+
+    if (!res.ok) throw new Error('Failed to fetch user attendance')
+
+    const data = await res.json()
+    return data.data
+  } catch (error) {
+    console.error('getUserAttendanceByRange error:', error)
+    throw error
+  }
+}
+
+// ===============================
+// 📆 User Monthly Attendance    ✅ new
+// ===============================
+export const getUserMonthlyAttendance = async ({
+  userId,
+  userType,
+  year,
+  month,
+}) => {
+  try {
+    if (!userId || !userType || !year || !month) {
+      throw new Error('userId, userType, year, month are required')
+    }
+
+    const params = new URLSearchParams({
+      user_type: userType,
+      year,
+      month,
+    }).toString()
+
+    const res = await authFetch(
+      `${BASE_URL}/attendance/user/${userId}/monthly?${params}`,
+      { method: 'GET' }
+    )
+
+    if (!res.ok) throw new Error('Failed to fetch monthly attendance')
+
+    const data = await res.json()
+    return data.data
+  } catch (error) {
+    console.error('getUserMonthlyAttendance error:', error)
+    throw error
+  }
+}
+
+// ===============================
+// 📍 User Today's Attendance    ✅ new
+// ===============================
+export const getUserTodayAttendance = async ({ userId, userType }) => {
+  try {
+    if (!userId || !userType) {
+      throw new Error('userId and userType are required')
+    }
+
+    const params = new URLSearchParams({ user_type: userType }).toString()
+
+    const res = await authFetch(
+      `${BASE_URL}/attendance/user/${userId}/today?${params}`,
+      { method: 'GET' }
+    )
+
+    if (!res.ok) throw new Error("Failed to fetch today's attendance")
+
+    const data = await res.json()
+    return data.data
+  } catch (error) {
+    console.error("getUserTodayAttendance error:", error)
+    throw error
+  }
+}

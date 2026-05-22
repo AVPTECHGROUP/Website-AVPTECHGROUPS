@@ -252,6 +252,7 @@ export default function SuperAdminSchools() {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     localStorage.removeItem("school");
+     localStorage.removeItem("requireSchoolSelection");
     navigate("/login");
   };
 
@@ -323,7 +324,7 @@ export default function SuperAdminSchools() {
     }
   }, []);
 
-  useEffect(() => { fetchStats(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { fetchStats(); }, []); 
   useEffect(() => { fetchSchools(); }, [fetchSchools]);
 
   const handleRefresh = () => Promise.all([fetchSchools(), fetchStats()]);

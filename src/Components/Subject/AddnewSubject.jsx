@@ -4,6 +4,9 @@ import { createSubject, updateSubject } from "../../Api/subject";
 import { getSubjectCategoryLov } from "../../Api/ListOfValues";
 
 export default function AddnewSubject({ subject, onSaved, onClose }) {
+  const isEditMode = Boolean(subject?.id);
+
+  // ── Form state ─────────────────────────────────────────────────────────────
   const [formData, setFormData] = useState({
     name: "",
     code: "",
@@ -13,36 +16,70 @@ export default function AddnewSubject({ subject, onSaved, onClose }) {
   });
 
   const [categories, setCategories] = useState([]);
+  const [catLoading, setCatLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
 
-  const isEditMode = subject?.id;
-  const title = isEditMode ? "Edit Subject" : "Add New Subject";
+  // ── 1. Fetch categories ────────────────────────────────────────────────────
+  // We track a "ready" flag so the populate effect below can wait for the list.
+  const [catsReady, setCatsReady] = useState(false);
 
-  /* Fetch categories on mount */
   useEffect(() => {
     const fetchCategories = async () => {
+      setCatLoading(true);
       try {
         const data = await getSubjectCategoryLov();
-        const categoryList = Array.isArray(data) ? data : data?.data || [];
-        setCategories(categoryList);
+        const list = Array.isArray(data) ? data : data?.data ?? [];
+        setCategories(list);
       } catch (err) {
         console.error("Failed to fetch categories:", err.message);
         setCategories([]);
+      } finally {
+        setCatLoading(false);
+        setCatsReady(true); // signal that options are available
       }
     };
     fetchCategories();
   }, []);
 
-  /* Populate form when editing */
+  // ── 2. Populate form — runs when modal opens AND when categories arrive ────
+  //
+  // KEY FIXES:
+  //   a) Depends on [subject, catsReady] so it re-runs once options load.
+  //   b) category field:  API list rows carry `subject.category` (e.g. "CORE"),
+  //                       not `subject.categoryValue`.  We check both so it
+  //                       works regardless of which field the backend sends.
+  //   c) status field:    list rows carry `subject.status === "ACTIVE"`, not a
+  //                       boolean `isActive`.  We handle both shapes.
   useEffect(() => {
     if (isEditMode && subject) {
+      // Resolve category value:
+      //   - subject.categoryValue  → already the LOV value key e.g. "CORE"  (detail/save API)
+      //   - subject.category       → the LOV *label* e.g. "Core" / "Science" (list API)
+      //
+      // LOV <option> values are uppercase keys ("CORE", "SCIENCE" …).
+      // The list API sends the label ("Core", "Science" …), so we first try to
+      // find the matching LOV entry by label (case-insensitive), then fall back
+      // to uppercasing the raw string so "Core" → "CORE" matches the option value.
+      const rawCategory = subject.categoryValue || subject.category || "";
+      const matchedCat = categories.find(
+        (c) => (c.label ?? "").toLowerCase() === rawCategory.toLowerCase()
+          || (c.value ?? "").toLowerCase() === rawCategory.toLowerCase()
+      );
+      const resolvedCategory = matchedCat?.value || rawCategory.toUpperCase() || "";
+
+      // Resolve status — handle both boolean (isActive) and string (status)
+      const resolvedActive =
+        typeof subject.isActive === "boolean"
+          ? subject.isActive                       // detail API: boolean
+          : subject.status === "ACTIVE";           // list API:  "ACTIVE" / "INACTIVE"
+
       setFormData({
-        name: subject.name || "",
-        code: subject.code || "",
-        description: subject.description || "",
-        categoryValue: subject.categoryValue || "",
-        isActive: subject.isActive !== false,
+        name: subject.name ?? "",
+        code: subject.code ?? "",
+        description: subject.description ?? "",
+        categoryValue: resolvedCategory,
+        isActive: resolvedActive,
       });
     } else {
       setFormData({
@@ -54,33 +91,30 @@ export default function AddnewSubject({ subject, onSaved, onClose }) {
       });
     }
     setErrors({});
-  }, [subject]);
+  }, [subject, catsReady]); // <-- catsReady ensures we re-apply after options load
 
+  // ── Validation ─────────────────────────────────────────────────────────────
   const validateForm = () => {
-    const newErrors = {};
-    if (!formData.name?.trim()) newErrors.name = "Name is required";
-    if (!formData.code?.trim()) newErrors.code = "Code is required";
-    if (!formData.categoryValue) newErrors.categoryValue = "Category is required";
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    const e = {};
+    if (!formData.name?.trim()) e.name = "Name is required";
+    if (!formData.code?.trim()) e.code = "Code is required";
+    if (!formData.categoryValue) e.categoryValue = "Category is required";
+    setErrors(e);
+    return Object.keys(e).length === 0;
   };
 
+  // ── Handlers ───────────────────────────────────────────────────────────────
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData((prev) => ({
       ...prev,
       [name]: type === "checkbox" ? checked : value,
     }));
-    if (errors[name]) {
-      setErrors((prev) => ({ ...prev, [name]: "" }));
-    }
+    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
   const handleStatusChange = (e) => {
-    setFormData((prev) => ({
-      ...prev,
-      isActive: e.target.value === "ACTIVE",
-    }));
+    setFormData((prev) => ({ ...prev, isActive: e.target.value === "ACTIVE" }));
   };
 
   const handleSave = async (e) => {
@@ -100,29 +134,23 @@ export default function AddnewSubject({ subject, onSaved, onClose }) {
       if (isEditMode) {
         await updateSubject(subject.id, payload);
         toast.success("Subject updated successfully!", {
-          position: "top-right",
-          autoClose: 3000,
-          closeOnClick: true,
-          pauseOnHover: true,
+          position: "top-right", autoClose: 3000,
+          closeOnClick: true, pauseOnHover: true,
         });
       } else {
         await createSubject(payload);
         toast.success("Subject created successfully!", {
-          position: "top-right",
-          autoClose: 3000,
-          closeOnClick: true,
-          pauseOnHover: true,
+          position: "top-right", autoClose: 3000,
+          closeOnClick: true, pauseOnHover: true,
         });
       }
 
       onSaved?.();
     } catch (err) {
-      const errorMsg = err?.response?.data?.message || err?.message || "Operation failed";
-      toast.error(errorMsg, {
-        position: "top-right",
-        autoClose: 4000,
-        closeOnClick: true,
-        pauseOnHover: true,
+      const msg = err?.response?.data?.message || err?.message || "Operation failed";
+      toast.error(msg, {
+        position: "top-right", autoClose: 4000,
+        closeOnClick: true, pauseOnHover: true,
       });
       console.error("Save error:", err);
     } finally {
@@ -130,46 +158,41 @@ export default function AddnewSubject({ subject, onSaved, onClose }) {
     }
   };
 
+  // ── UI ─────────────────────────────────────────────────────────────────────
   return (
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 z-40 bg-slate-200 bg-opacity-50 transition-opacity"
+        className="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-sm transition-opacity"
         onClick={onClose}
       />
 
       {/* Modal */}
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-lg shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+        <div className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+
           {/* Header */}
-          <div className="sticky top-0 flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-white">
-            <h2 className="text-lg font-bold text-slate-800">{title}</h2>
+          <div className="sticky top-0 flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-white rounded-t-xl">
+            <h2 className="text-lg font-bold text-slate-800">
+              {isEditMode ? "Edit Subject" : "Add New Subject"}
+            </h2>
             <button
               onClick={onClose}
               className="text-slate-400 hover:text-slate-600 transition-colors"
             >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
           </div>
 
           {/* Form */}
           <form onSubmit={handleSave} className="p-6 space-y-4">
+
             {/* Name */}
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">
-                Subject Name *
+                Subject Name <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
@@ -177,21 +200,18 @@ export default function AddnewSubject({ subject, onSaved, onClose }) {
                 value={formData.name}
                 onChange={handleChange}
                 placeholder="e.g., Mathematics"
-                className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 transition-colors ${
-                  errors.name
+                className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 transition-colors ${errors.name
                     ? "border-red-300 focus:ring-red-300"
                     : "border-slate-200 focus:ring-indigo-300"
-                }`}
+                  }`}
               />
-              {errors.name && (
-                <p className="text-xs text-red-600 mt-1">{errors.name}</p>
-              )}
+              {errors.name && <p className="text-xs text-red-600 mt-1">{errors.name}</p>}
             </div>
 
             {/* Code */}
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">
-                Subject Code *
+                Subject Code <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
@@ -199,39 +219,46 @@ export default function AddnewSubject({ subject, onSaved, onClose }) {
                 value={formData.code}
                 onChange={handleChange}
                 placeholder="e.g., MATH101"
-                className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 transition-colors ${
-                  errors.code
+                className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 transition-colors ${errors.code
                     ? "border-red-300 focus:ring-red-300"
                     : "border-slate-200 focus:ring-indigo-300"
-                }`}
+                  }`}
               />
-              {errors.code && (
-                <p className="text-xs text-red-600 mt-1">{errors.code}</p>
-              )}
+              {errors.code && <p className="text-xs text-red-600 mt-1">{errors.code}</p>}
             </div>
 
             {/* Category */}
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">
-                Category *
+                Category <span className="text-red-500">*</span>
               </label>
-              <select
-                name="categoryValue"
-                value={formData.categoryValue}
-                onChange={handleChange}
-                className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 transition-colors appearance-none bg-white ${
-                  errors.categoryValue
-                    ? "border-red-300 focus:ring-red-300"
-                    : "border-slate-200 focus:ring-indigo-300"
-                }`}
-              >
-                <option value="">Select a category</option>
-                {categories.map((cat) => (
-                  <option key={cat.value || cat.id} value={cat.value || cat.id}>
-                    {cat.label || cat.value}
+              <div className="relative">
+                <select
+                  name="categoryValue"
+                  value={formData.categoryValue}
+                  onChange={handleChange}
+                  disabled={catLoading}
+                  className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 transition-colors appearance-none bg-white disabled:opacity-60 disabled:cursor-not-allowed ${errors.categoryValue
+                      ? "border-red-300 focus:ring-red-300"
+                      : "border-slate-200 focus:ring-indigo-300"
+                    }`}
+                >
+                  <option value="">
+                    {catLoading ? "Loading categories…" : "Select a category"}
                   </option>
-                ))}
-              </select>
+                  {categories.map((cat) => (
+                    <option key={cat.value ?? cat.id} value={cat.value ?? cat.id}>
+                      {cat.label ?? cat.value}
+                    </option>
+                  ))}
+                </select>
+                {/* Chevron */}
+                <span className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none">
+                  <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </span>
+              </div>
               {errors.categoryValue && (
                 <p className="text-xs text-red-600 mt-1">{errors.categoryValue}</p>
               )}
@@ -247,24 +274,31 @@ export default function AddnewSubject({ subject, onSaved, onClose }) {
                 value={formData.description}
                 onChange={handleChange}
                 placeholder="Optional description"
-                rows="3"
+                rows={3}
                 className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 transition-colors resize-none"
               />
             </div>
 
-            {/* Active Status */}
+            {/* Status */}
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">
-                Status *
+                Status <span className="text-red-500">*</span>
               </label>
-              <select
-                value={formData.isActive ? "ACTIVE" : "INACTIVE"}
-                onChange={handleStatusChange}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 transition-colors appearance-none bg-white"
-              >
-                <option value="ACTIVE">Active</option>
-                <option value="INACTIVE">Inactive</option>
-              </select>
+              <div className="relative">
+                <select
+                  value={formData.isActive ? "ACTIVE" : "INACTIVE"}
+                  onChange={handleStatusChange}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 transition-colors appearance-none bg-white"
+                >
+                  <option value="ACTIVE">Active</option>
+                  <option value="INACTIVE">Inactive</option>
+                </select>
+                <span className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none">
+                  <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </span>
+              </div>
             </div>
 
             {/* Actions */}
@@ -272,26 +306,26 @@ export default function AddnewSubject({ subject, onSaved, onClose }) {
               <button
                 type="button"
                 onClick={onClose}
-                className="flex-1 px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
                 disabled={loading}
+                className="flex-1 px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors disabled:opacity-50"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="flex-1 px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 disabled={loading}
+                className="flex-1 px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {loading ? (
                   <>
                     <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                     </svg>
-                    Saving...
+                    Saving…
                   </>
                 ) : (
-                  "Save Subject"
+                  isEditMode ? "Update Subject" : "Save Subject"
                 )}
               </button>
             </div>

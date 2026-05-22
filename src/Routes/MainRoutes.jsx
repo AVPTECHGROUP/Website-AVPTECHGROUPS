@@ -19,6 +19,7 @@ import MarkUserAttendance from '../Pages/Attendance/MarkUserAttendance';
 import WarningVerificationFailed from '../Components/UserAttendance/WarningVerificationFailed';
 import ManualAttendance from '../Components/UserAttendance/ManualAttendanceRequest';
 import ExamConfiguration from '../Pages/Exams/ExamConfiguration';
+import ClassSectionConfig from '../Pages/Academics/ClassSectionConfig';
 import StudentAttendance from '../Pages/Attendance/StudentAttendance/StudentAttendance';
 import StaffAttendanceRegistration from '../Pages/Attendance/StaffAttendanceRegistration';
 import StudentAttendanceRegistration from '../Pages/Attendance/StudentAttendanceRegistration';
@@ -35,7 +36,7 @@ import EditSysUser from '../Pages/SuperAdmin/EditSysUser';
 import ManageAllUsers from '../Pages/SuperAdmin/ManageAllUsers';
 import ApplyLeaves from '../Pages/Leaves/ApplyLeaves';
 import MyLeaves from '../Pages/Leaves/MyLeaves';
-import SuperAdminSchools from '../Pages/SuperAdmin/SuperAdminSchools'; 
+import SuperAdminSchools from '../Pages/SuperAdmin/SuperAdminSchools';
 
 // Students
 import Student from '../Pages/Students/Students';
@@ -72,11 +73,20 @@ import Exams from '../Pages/Exams/Exams';
 import MarksEntry from '../Pages/Exams/MarksEntry';
 import ReportCards from '../Pages/Exams/ReportCards';
 import Analytics from '../Pages/Exams/Analytics';
+import SchoolConfig from '../Pages/Schools/SchoolConfig';
+import HomeworkPage from '../Pages/Homework/Homeworkpage';
+import { OverviewPage, FeeSynthesisPage, CollectionsPage } from '../Pages/FeeManagement/FeeManagement';
+
+import AcademicYear from '../Pages/Attendance/AcademicYear/AcademicYear';
+import TimeTable from '../Pages/Schedule/TimeTable';
+import CreateSchedule from '../Pages/Schedule/CreateSchedule';
+import FeePeriods from '../Pages/FeeManagement/FeePeriods';
+import FeeStructures from '../Pages/FeeManagement/Feestructures.';
 
 // ─── Role Groups ───────────────────────────────────────────────────────────────
 const STOCK_ACCOUNTANT_ROLES = ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'STORE_ACCOUNTANT'];
 const STOCK_SELLER_ROLES = ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'STORE_ACCOUNTANT', 'STORE_SELLER'];
-
+const SCHEDULE_ROLES = ['GLOBAL_ADMIN', 'SUPER_ADMIN', 'ADMIN'];
 // ✅ Roles that see the school picker (requiresSchoolSelection: true)
 const SCHOOL_PICKER_ROLES = ['SUPER_ADMIN', 'GLOBAL_ADMIN'];
 
@@ -157,10 +167,16 @@ const MainRoutes = () => {
             <Route path="/attendance/usersAttendance/manual" element={<ManualAttendance />} />
 
             <Route path="/exams" element={<Exams />} />
-            <Route path="/exams/marksEntry" element={<MarksEntry />} />
-            <Route path="/exams/reportCard" element={<ReportCards/>} />
+            <Route path="/exams/marksEntry/:examId?" element={<MarksEntry />} />
+            <Route path="/exams/reportCard/:examId?" element={<ReportCards />} />
             <Route path="/exams/analytics" element={<Analytics />} />
             <Route path="/exams/examConfig" element={<ExamConfiguration />} />
+            <Route path="/academics/classSections" element={<ClassSectionConfig />} />
+
+            <Route element={<RoleProtectedRoute allowedRoles={SCHEDULE_ROLES} />}>
+              <Route path="/schedule" element={<TimeTable />} />
+              <Route path="/schedule/create" element={<CreateSchedule />} />
+            </Route>
 
             <Route path="/teachers" element={<Teachers />} />
             <Route path="/teachers/addTeacher" element={<AddNewTeacher />} />
@@ -173,8 +189,14 @@ const MainRoutes = () => {
             <Route path="/students/:id" element={<StudentDetails />} />
             <Route path="/students/editStudent/:id" element={<EditStudentDetails />} />
 
-            <Route path="/leaves"                         element={<Leaves />} />
-            <Route path="/leaves/manageHolidays"          element={<HolidayManagment />} />
+            <Route path="/leaves" element={<Leaves />} />
+            <Route path="/leaves/manageHolidays" element={<HolidayManagment />} />
+
+            <Route path='/feemanagement'             element={<OverviewPage />} />
+            <Route path='/feemanagement/config'   element={<FeeSynthesisPage />} />
+             <Route path='/feemanagement/period' element={<FeePeriods/>}/>
+             <Route path='/feemanagement/structures' element={<FeeStructures />} />
+            <Route path='/feemanagement/collections' element={<CollectionsPage />} />
 
             {/* Subject Section Assignment */}
             <Route path="/sectionSubjectAssignment" element={<SectionSubjectAssignment />} />
@@ -183,7 +205,7 @@ const MainRoutes = () => {
           {/* Leave Config — GLOBAL_ADMIN, SUPER_ADMIN, PRINCIPAL */}
           <Route element={<RoleProtectedRoute allowedRoles={['GLOBAL_ADMIN', 'SUPER_ADMIN', 'PRINCIPAL']} />}>
             <Route path="/leaves/leaveConfig" element={<LeaveConfig />} />
-            <Route path='/subjectsmaster' element={<SubjectsMaster/>}/>
+            <Route path='/subjectsmaster' element={<SubjectsMaster />} />
           </Route>
 
           {/* Payroll */}
@@ -218,9 +240,20 @@ const MainRoutes = () => {
             <Route path="/route/reports" element={<Reports />} />
           </Route>
 
+          <Route element={<RoleProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'PRINCIPAL', 'TEACHER']} />}>
+            <Route path="/homework" element={<HomeworkPage />} />
+          </Route>
+
+
           {/* Leaves redirect for non-admin */}
           <Route element={<RoleProtectedRoute allowedRoles={['TEACHER', 'PRINCIPAL', 'RECEPTIONIST', 'ACCOUNTANT']} />}>
             <Route path="/leaves" element={<Navigate to="/leaves/myLeaves" replace />} />
+          </Route>
+
+          {/* Schools Management */}
+          <Route element={<RoleProtectedRoute allowedRoles={['SUPER_ADMIN', 'GLOBAL_ADMIN']} />}>
+            <Route path="/schoolConfig" element={<SchoolConfig />} />
+            <Route path="/academicYear" element={<AcademicYear />} />
           </Route>
 
           {/* Fallback */}

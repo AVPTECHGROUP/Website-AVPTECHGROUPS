@@ -5,8 +5,8 @@ import {
   Clock, Info, UserCheck, Wifi, WifiOff,
 } from "lucide-react";
 import CardComponent from "../../Components/CommonComp/CardComponent";
-import CardLoader    from "../../Components/CommonComp/CardLoader";
-import ListLoader    from "../../Components/CommonComp/ListLoader";
+import CardLoader from "../../Components/CommonComp/CardLoader";
+import ListLoader from "../../Components/CommonComp/ListLoader";
 import {
   getActiveRoutes,
   getActiveVehicles,
@@ -158,21 +158,20 @@ function AlertItem({ type, msg }) {
 
 function fmtTime(t) {
   if (!t) return "–";
-  return t.slice(0, 5); 
+  return t.slice(0, 5);
 }
 
 export default function Transport_Management() {
-  const [routes, setRoutes]               = useState([]);
-  const [vehicles, setVehicles]           = useState([]);
-  const [staff, setStaff]                 = useState([]);
-  const [allocations, setAllocations]     = useState({ allocations: [], pagination: null });
+  const [routes, setRoutes] = useState([]);
+  const [vehicles, setVehicles] = useState([]);
+  const [staff, setStaff] = useState([]);
+  const [allocations, setAllocations] = useState({ allocations: [], pagination: null });
   const [capacityReport, setCapacityReport] = useState([]);
-  const [loadingStats, setLoadingStats]     = useState(true);
+  const [loadingStats, setLoadingStats] = useState(true);
   const [loadingCapacity, setLoadingCapacity] = useState(true);
-  const [loadingRoutes, setLoadingRoutes]   = useState(true);
+  const [loadingRoutes, setLoadingRoutes] = useState(true);
 
   useEffect(() => {
-    // Stat cards
     Promise.all([
       getActiveRoutes(),
       getActiveVehicles(),
@@ -198,13 +197,13 @@ export default function Transport_Management() {
     if (!loadingStats) setLoadingRoutes(false);
   }, [loadingStats]);
 
-  const totalVehicles     = vehicles.length;
-  const activeRoutes      = routes.length;
-  const totalStops        = routes.reduce((acc, r) => acc + (r.totalStops || 0), 0);
+  const totalVehicles = vehicles.length;
+  const activeRoutes = routes.length;
+  const totalStops = routes.reduce((acc, r) => acc + (r.totalStops || 0), 0);
   const studentsAllocated = allocations.pagination?.totalElements ?? allocations.allocations.length;
-  const totalCapacity     = vehicles.reduce((acc, v) => acc + (v.capacity || 0), 0);
-  const driverCount       = staff.filter((s) => s.staffRole === "DRIVER").length;
-  const attendantCount    = staff.filter((s) => s.staffRole === "ATTENDANT").length;
+  const totalCapacity = vehicles.reduce((acc, v) => acc + (v.capacity || 0), 0);
+  const driverCount = staff.filter((s) => s.staffRole === "DRIVER").length;
+  const attendantCount = staff.filter((s) => s.staffRole === "ATTENDANT").length;
 
   const alerts = buildAlerts(capacityReport, staff);
 
@@ -213,7 +212,7 @@ export default function Transport_Management() {
 
       {/* Page Header */}
       <div className="px-4 sm:px-6 lg:px-8 pt-8 pb-2">
-        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">🚌 Transport Management</h1>
+        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Transport Management</h1>
         <p className="text-gray-500 text-xs sm:text-sm mt-1">Monitor vehicles, routes, drivers and compliance across your fleet.</p>
       </div>
 
@@ -261,106 +260,109 @@ export default function Transport_Management() {
           )}
         </div>
 
-        {/* ── Vehicle Capacity Utilisation + Alerts ── */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
 
-          {/* ── Capacity Utilisation ── */}
           <div className="bg-white rounded-xl border border-gray-100 shadow-sm flex flex-col overflow-hidden">
             <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-2 shrink-0">
               <Bus className="w-4 h-4 text-blue-500" />
               <span className="font-semibold text-gray-900 text-sm sm:text-base">Vehicle Capacity Utilisation</span>
             </div>
 
-            {/* ── Table header — sm and above ── */}
-            <div className="hidden sm:grid text-xs font-medium text-gray-400 uppercase tracking-wide border-b border-gray-100 px-5 py-3 shrink-0"
-              style={{ gridTemplateColumns: "2fr 1fr 80px 80px 2fr 100px" }}>
-              <span>Vehicle</span>
-              <span className="text-center">Type</span>
-              <span className="text-center">Capacity</span>
-              <span className="text-center">Allocated</span>
-              <span className="text-center">Utilisation</span>
-              <span className="text-center">Status</span>
-            </div>
+            <div className="overflow-x-auto flex-1">
+              {/* Table header */}
+              <div
+                className="hidden sm:grid text-xs font-medium text-gray-400 uppercase tracking-wide border-b border-gray-100 px-5 py-3"
+                style={{ gridTemplateColumns: "2fr 1fr 80px 80px 2fr 100px", minWidth: "600px" }}
+              >
+                <span>Vehicle</span>
+                <span className="text-center">Type</span>
+                <span className="text-center">Capacity</span>
+                <span className="text-center">Allocated</span>
+                <span className="text-center">Utilisation</span>
+                <span className="text-center">Status</span>
+              </div>
 
-            {/* ── Rows ── */}
-            <div className="flex flex-col divide-y divide-gray-50 flex-1">
-              {loadingCapacity ? (
-                <table className="w-full"><tbody><ListLoader rows={3} avatar={false} /></tbody></table>
-              ) : (
-                capacityReport.map((v) => {
-                  const pct      = v.totalCapacity > 0 ? Math.round((v.totalStudentsAllocated / v.totalCapacity) * 100) : 0;
-                  const barColor = pct === 100 ? "bg-red-500" : pct >= 80 ? "bg-orange-400" : pct > 0 ? "bg-blue-500" : "bg-gray-200";
+              {/* Rows */}
+              <div className="flex flex-col divide-y divide-gray-50">
+                {loadingCapacity ? (
+                  <table className="w-full"><tbody><ListLoader rows={3} avatar={false} /></tbody></table>
+                ) : (
+                  capacityReport.map((v) => {
+                    const pct = v.totalCapacity > 0 ? Math.round((v.totalStudentsAllocated / v.totalCapacity) * 100) : 0;
+                    const barColor = pct === 100 ? "bg-red-500" : pct >= 80 ? "bg-orange-400" : pct > 0 ? "bg-blue-500" : "bg-gray-200";
 
-                  return (
-                    <div key={v.vehicleId} className="hover:bg-gray-50 transition-colors">
+                    return (
+                      <div key={v.vehicleId} className="hover:bg-gray-50 transition-colors">
 
-                      {/* ── sm+ : aligned 6-col row ── */}
-                      <div
-                        className="hidden sm:grid items-center px-5 py-4 gap-3"
-                        style={{ gridTemplateColumns: "2fr 1fr 80px 80px 2fr 100px" }}
-                      >
-                        {/* Vehicle */}
-                        <div className="min-w-0">
-                          <p className="font-bold text-gray-900 text-sm">{v.vehicleNumber}</p>
-                          <p className="text-xs text-gray-400">{v.makeModel}</p>
-                        </div>
-
-                        {/* Type */}
-                        <div className="flex justify-center">
-                          <span className={`text-xs font-semibold px-2.5 py-1 rounded-full text-center leading-tight ${typeColors[v.vehicleType] || "bg-gray-100 text-gray-600"}`}>
-                            {typeLabel[v.vehicleType] || v.vehicleType}
-                          </span>
-                        </div>
-
-                        {/* Capacity */}
-                        <p className="text-center text-gray-700 font-medium text-sm">{v.totalCapacity}</p>
-
-                        {/* Allocated */}
-                        <p className="text-center text-gray-700 font-medium text-sm">{v.totalStudentsAllocated}</p>
-
-                        {/* Utilisation bar + % */}
-                        <div className="flex items-center gap-2 min-w-0">
-                          <div className="flex-1 h-2.5 rounded-full bg-gray-100 overflow-hidden min-w-0">
-                            <div className={`h-full rounded-full ${barColor}`} style={{ width: `${pct}%` }} />
-                          </div>
-                          <span className="text-xs font-semibold text-gray-500 shrink-0 w-8 text-right">{pct}%</span>
-                        </div>
-
-                        {/* Status badge */}
-                        <div className="flex justify-center">
-                          <UtilBadge allocated={v.totalStudentsAllocated} capacity={v.totalCapacity} />
-                        </div>
-                      </div>
-
-                      {/* ── xs : stacked card ── */}
-                      <div className="sm:hidden px-4 py-4 space-y-2.5">
-                        <div className="flex items-start justify-between gap-2">
+                        {/* sm+ : aligned 6-col row */}
+                        <div
+                          className="hidden sm:grid items-center px-5 py-4 gap-3"
+                          style={{ gridTemplateColumns: "2fr 1fr 80px 80px 2fr 100px", minWidth: "600px" }}
+                        >
+                          {/* Vehicle */}
                           <div className="min-w-0">
                             <p className="font-bold text-gray-900 text-sm">{v.vehicleNumber}</p>
                             <p className="text-xs text-gray-400">{v.makeModel}</p>
                           </div>
-                          <span className={`text-xs font-semibold px-2.5 py-1 rounded-full shrink-0 leading-tight text-center ${typeColors[v.vehicleType] || "bg-gray-100 text-gray-600"}`}>
-                            {typeLabel[v.vehicleType] || v.vehicleType}
-                          </span>
-                        </div>
-                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
-                          <span>Capacity: <span className="font-bold text-gray-700">{v.totalCapacity}</span></span>
-                          <span>Allocated: <span className="font-bold text-gray-700">{v.totalStudentsAllocated}</span></span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <div className="flex-1 h-2.5 rounded-full bg-gray-100 overflow-hidden">
-                            <div className={`h-full rounded-full ${barColor}`} style={{ width: `${pct}%` }} />
-                          </div>
-                          <span className="text-xs font-semibold text-gray-500 shrink-0 w-8 text-right">{pct}%</span>
-                          <UtilBadge allocated={v.totalStudentsAllocated} capacity={v.totalCapacity} />
-                        </div>
-                      </div>
 
-                    </div>
-                  );
-                })
-              )}
+                          {/* Type */}
+                          <div className="flex justify-center">
+                            <span className={`text-xs font-semibold px-2 py-1 rounded-full text-center leading-tight whitespace-nowrap ${typeColors[v.vehicleType] || "bg-gray-100 text-gray-600"}`}>
+                              {typeLabel[v.vehicleType] || v.vehicleType}
+                            </span>
+                          </div>
+
+                          {/* Capacity */}
+                          <p className="text-center text-gray-700 font-medium text-sm">{v.totalCapacity}</p>
+
+                          {/* Allocated */}
+                          <p className="text-center text-gray-700 font-medium text-sm">{v.totalStudentsAllocated}</p>
+
+                          {/* Utilisation bar + % */}
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className="flex-1 h-2.5 rounded-full bg-gray-100 overflow-hidden min-w-0">
+                              <div className={`h-full rounded-full ${barColor}`} style={{ width: `${pct}%` }} />
+                            </div>
+                            <span className="text-xs font-semibold text-gray-500 shrink-0 w-8 text-right">{pct}%</span>
+                          </div>
+
+                          {/* Status badge */}
+                          <div className="flex justify-center">
+                            <UtilBadge allocated={v.totalStudentsAllocated} capacity={v.totalCapacity} />
+                          </div>
+                        </div>
+
+                        {/* xs : stacked card */}
+                        <div className="sm:hidden px-4 py-4 space-y-2.5">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className="font-bold text-gray-900 text-sm">{v.vehicleNumber}</p>
+                              <p className="text-xs text-gray-400">{v.makeModel}</p>
+                            </div>
+                            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full shrink-0 leading-tight text-center ${typeColors[v.vehicleType] || "bg-gray-100 text-gray-600"}`}>
+                              {typeLabel[v.vehicleType] || v.vehicleType}
+                            </span>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
+                            <span>Capacity: <span className="font-bold text-gray-700">{v.totalCapacity}</span></span>
+                            <span>Allocated: <span className="font-bold text-gray-700">{v.totalStudentsAllocated}</span></span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1 h-2.5 rounded-full bg-gray-100 overflow-hidden">
+                              <div className={`h-full rounded-full ${barColor}`} style={{ width: `${pct}%` }} />
+                            </div>
+                            <span className="text-xs font-semibold text-gray-500 shrink-0 w-8 text-right">{pct}%</span>
+                            <UtilBadge allocated={v.totalStudentsAllocated} capacity={v.totalCapacity} />
+                          </div>
+                        </div>
+
+                      </div>
+                    );
+                  })
+                )}
+              </div>
             </div>
+            {/* ── END Capacity Utilisation card ── */}
           </div>
 
           {/* ── Alerts & Expiry ── */}
@@ -387,9 +389,7 @@ export default function Transport_Management() {
               )}
             </div>
           </div>
-        </div>
-
-        {/* ── Active Routes Summary ── */}
+        </div>        
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
           <div className="px-4 sm:px-5 py-4 border-b border-gray-100 flex items-center gap-2">
             <MapPin className="w-4 h-4 text-teal-500" />
@@ -411,10 +411,10 @@ export default function Transport_Management() {
               </>
             ) : (
               routes.map((r) => {
-                const pct         = r.vehicleCapacity > 0 ? Math.round((r.allocatedStudents / r.vehicleCapacity) * 100) : 0;
-                const barColor    = pct === 100 ? "bg-red-500"       : pct >= 80 ? "bg-orange-400"    : "bg-blue-500";
-                const borderColor = pct === 100 ? "border-red-200"   : pct >= 80 ? "border-orange-200" : "border-blue-200";
-                const bgColor     = pct === 100 ? "bg-red-50"        : pct >= 80 ? "bg-orange-50"     : "bg-blue-50";
+                const pct = r.vehicleCapacity > 0 ? Math.round((r.allocatedStudents / r.vehicleCapacity) * 100) : 0;
+                const barColor = pct === 100 ? "bg-red-500" : pct >= 80 ? "bg-orange-400" : "bg-blue-500";
+                const borderColor = pct === 100 ? "border-red-200" : pct >= 80 ? "border-orange-200" : "border-blue-200";
+                const bgColor = pct === 100 ? "bg-red-50" : pct >= 80 ? "bg-orange-50" : "bg-blue-50";
                 return (
                   <div key={r.id} className={`rounded-xl border-2 ${borderColor} ${bgColor} p-4`}>
                     {/* Route name + status */}
@@ -465,6 +465,7 @@ export default function Transport_Management() {
             )}
           </div>
         </div>
+        {/* ── END Active Routes ── */}
 
       </div>
     </div>

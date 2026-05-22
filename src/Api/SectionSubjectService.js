@@ -2,20 +2,20 @@
 //  SectionSubjectService.js
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { authFetch }        from "../Authfetch/Authfetch";
-import { toast }            from "react-toastify";
+import { authFetch } from "../Authfetch/Authfetch";
+import { toast } from "react-toastify";
 import { getCurrUserDetails } from "../utils/getCurrUserDetails";
 
-const BASE            = import.meta.env.VITE_API_BASE_V1;
-const SECTION_SUBJ    = `${BASE}/section-subjects`;
+const BASE = import.meta.env.VITE_API_BASE_V1;
+const SECTION_SUBJ = `${BASE}/section-subjects`;
 
 // Extracts an array from any common API response shape
 const toArray = (json) => {
-  if (Array.isArray(json))                return json;
-  if (Array.isArray(json?.data))          return json.data;
+  if (Array.isArray(json)) return json;
+  if (Array.isArray(json?.data)) return json.data;
   if (Array.isArray(json?.data?.records)) return json.data.records;
-  if (Array.isArray(json?.records))       return json.records;
-  if (Array.isArray(json?.items))         return json.items;
+  if (Array.isArray(json?.records)) return json.records;
+  if (Array.isArray(json?.items)) return json.items;
   return [];
 };
 
@@ -23,7 +23,7 @@ class SectionSubjectService {
   // silent=true  → no success toast (used for GETs)
   // silent=false → toast.success on success, toast.error on failure
   async #req(method, url, body = null, silent = false) {
-    const res  = await authFetch(url, {
+    const res = await authFetch(url, {
       method,
       headers: { "Content-Type": "application/json" },
       ...(body && { body: JSON.stringify(body) }),
@@ -40,19 +40,68 @@ class SectionSubjectService {
     return json;
   }
 
+  /**
+   * Try primary URL first (Swagger contract), then optional fallback URL
+   * for environments still using legacy endpoints.
+   */
+  async #reqWithFallback(method, primaryUrl, fallbackUrl = null, body = null, silent = true) {
+    try {
+      return await this.#req(method, primaryUrl, body, silent);
+    } catch (err) {
+      if (!fallbackUrl) throw err;
+      return this.#req(method, fallbackUrl, body, silent);
+    }
+  }
+
   // ── Dropdowns ─────────────────────────────────────────────────────────────
 
   async getAllClasses() {
     try {
       const { schoolId } = getCurrUserDetails() ?? {};
-      const json = await this.#req("GET", `${BASE}/classes/school/${schoolId}`, null, true);
+      const json = await this.#reqWithFallback(
+        "GET",
+        `${BASE}/classes`,
+        schoolId ? `${BASE}/classes/school/${schoolId}` : null,
+        null,
+        true
+      );
       return toArray(json);
     } catch { return []; }
   }
 
+
+  async getActiveClasses() {
+    try {
+      const { schoolId } = getCurrUserDetails() ?? {};
+
+      if (!schoolId) {
+        console.warn("getActiveClasses: schoolId missing");
+        return [];
+      }
+
+      const json = await this.#req(
+        "GET",
+        `${BASE}/classes/school/${schoolId}/active`,
+        null,
+        true
+      );
+
+      return toArray(json);
+    } catch (err) {
+      console.error("getActiveClasses error:", err.message);
+      return [];
+    }
+  }
+
   async getSectionsByClass(classId) {
     try {
-      const json = await this.#req("GET", `${BASE}/sections/class/${classId}`, null, true);
+      const json = await this.#reqWithFallback(
+        "GET",
+        `${BASE}/sections/class/${classId}`,
+        `${BASE}/classes/${classId}/sections`,
+        null,
+        true
+      );
       return toArray(json);
     } catch { return []; }
   }
@@ -75,7 +124,13 @@ class SectionSubjectService {
 
   async getActiveSubjectsBySection(sectionId) {
     try {
-      const json = await this.#req("GET", `${SECTION_SUBJ}/section/${sectionId}/active`, null, true);
+      const json = await this.#reqWithFallback(
+        "GET",
+        `${SECTION_SUBJ}/section/${sectionId}/active`,
+        `${BASE}/sections/${sectionId}/subjects`,
+        null,
+        true
+      );
       return toArray(json);
     } catch { return []; }
   }
@@ -84,25 +139,25 @@ class SectionSubjectService {
 
   // POST /assign  payload: { sectionId, subjects: [{ subjectId, weeklyHours, isMandatory, status }] }
   async assignSubjects(payload) {
-    try   { return await this.#req("POST", `${SECTION_SUBJ}/assign`, payload); }
+    try { return await this.#req("POST", `${SECTION_SUBJ}/assign`, payload); }
     catch { return null; }
   }
 
   // PUT /{id}  payload: { subjectId, weeklyHours, isMandatory, status: 'ACTIVE'|'INACTIVE' }
   async updateAssignment(id, payload) {
-    try   { return await this.#req("PUT", `${SECTION_SUBJ}/${id}`, payload); }
+    try { return await this.#req("PUT", `${SECTION_SUBJ}/${id}`, payload); }
     catch { return null; }
   }
 
   // DELETE /section/{sId}/subject/{subId}
   async removeSubject(sectionId, subjectId) {
-    try   { return await this.#req("DELETE", `${SECTION_SUBJ}/section/${sectionId}/subject/${subjectId}`); }
+    try { return await this.#req("DELETE", `${SECTION_SUBJ}/section/${sectionId}/subject/${subjectId}`); }
     catch { return null; }
   }
 
   // DELETE /section/{sectionId}
   async removeAllSubjects(sectionId) {
-    try   { return await this.#req("DELETE", `${SECTION_SUBJ}/section/${sectionId}`); }
+    try { return await this.#req("DELETE", `${SECTION_SUBJ}/section/${sectionId}`); }
     catch { return null; }
   }
 }

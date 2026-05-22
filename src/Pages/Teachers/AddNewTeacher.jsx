@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, GraduationCap, IndianRupee, User } from 'lucide-react';
+import { ChevronLeft, IndianRupee, User, Camera, X } from 'lucide-react';
 import { toast } from 'react-toastify';
-import { createTeachers, updateSalary } from '../../Api/TeachersAPI';
+import { createTeachers, upsertTeacherSalary } from '../../Api/TeachersAPI';
 import PersonalDetailsTab from '../../Components/Teacher/AddTabComponents/AddPersonalInfo';
 import SalaryDetailsTab from '../../Components/Teacher/AddTabComponents/AddSalaryDetails';
 
@@ -10,6 +10,9 @@ function AddNewTeacher() {
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('personal');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [profileImage, setProfileImage] = useState(null);
+    const [imagePreview, setImagePreview] = useState(null);
+    const fileInputRef = useRef(null);
     const [formData, setFormData] = useState({
         name: "",
         gender: "",
@@ -28,6 +31,7 @@ function AddNewTeacher() {
         salaryType: '',
         baseSalary: '',
         leaveDeductionPerDay: '',
+        lateArrivalPenalty: '',
         houseRentAllowance: '',
         travelAllowance: '',
         dearnessAllowance: '',
@@ -55,6 +59,29 @@ function AddNewTeacher() {
             ...prev,
             [name]: value
         }));
+    };
+    const handleImageChange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+        if (!validTypes.includes(file.type)) {
+            toast.error("Only JPEG or PNG images are allowed!");
+            return;
+        }
+        if (file.size > 10 * 1024 * 1024) {
+            toast.error("Image must be smaller than 10 MB!");
+            return;
+        }
+        setProfileImage(file);
+        const reader = new FileReader();
+        reader.onloadend = () => setImagePreview(reader.result);
+        reader.readAsDataURL(file);
+    };
+
+    const handleRemoveImage = () => {
+        setProfileImage(null);
+        setImagePreview(null);
+        if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
     const handleSubmit = async (e) => {
@@ -118,56 +145,51 @@ function AddNewTeacher() {
                 // remarks: "Created from UI"
             };
 
-            const response = await createTeachers(apiPayload);
+            const response = await createTeachers(apiPayload, profileImage);
 
             console.log("Create Teacher Response:", response);
 
             // Only update salary if baseSalary AND salaryType are present
             if (response && formData.salaryType && formData.baseSalary) {
-                // Extract teacher ID from response - adjust based on actual response structure
                 const teacherId = response.data?.id || response.id;
 
-                console.log("Teacher ID for salary update:", teacherId);
-
                 if (!teacherId) {
-                    console.error("No teacher ID found in response:", response);
                     toast.warn("Teacher created but salary update skipped - no teacher ID");
                 } else {
                     const baseSalary = Number(formData.baseSalary) || 0;
-                    const allowanceTotal =
-                        (Number(formData.houseRentAllowance) || 0) +
-                        (Number(formData.travelAllowance) || 0) +
-                        (Number(formData.dearnessAllowance) || 0) +
-                        (Number(formData.specialAllowance) || 0) +
-                        (Number(formData.otherAllowances) || 0) +
-                        (Number(formData.providentFund) || 0);
+                    const hra = Number(formData.houseRentAllowance) || 0;
+                    const ta = Number(formData.travelAllowance) || 0;
+                    const da = Number(formData.dearnessAllowance) || 0;
+                    const sa = Number(formData.specialAllowance) || 0;
+                    const oa = Number(formData.otherAllowances) || 0;
+                    const pf = Number(formData.providentFund) || 0;
+                    const profTax = Number(formData.professionalTax) || 0;
+                    const incomeTax = Number(formData.incomeTax) || 0;
+                    const otherDed = Number(formData.otherDeductions) || 0;
+                    const leaveDeduction = Number(formData.leaveDeductionPerDay) || 0;
 
-                    const deductionTotal =
-                        (Number(formData.professionalTax) || 0) +
-                        (Number(formData.incomeTax) || 0) +
-                        (Number(formData.otherDeductions) || 0) +
-                        (Number(formData.leaveDeductionPerDay) || 0);
-
-                    const grossSalary = baseSalary + allowanceTotal;
-                    const totalDeductions = deductionTotal;
+                    const grossSalary = baseSalary + hra + ta + da + sa + oa + pf;
+                    const totalDeductions = profTax + incomeTax + otherDed + leaveDeduction;
                     const netSalary = grossSalary - totalDeductions;
 
+                    const today = new Date().toISOString().split('T')[0];
+                    const effectiveTo = `${new Date().getFullYear()}-12-31`;
+
                     const salaryPayload = {
-                        // Remove id field for new salary creation
                         salaryType: formData.salaryType,
                         baseSalary,
-                        houseRentAllowance: Number(formData.houseRentAllowance) || 0,
-                        travelAllowance: Number(formData.travelAllowance) || 0,
-                        dearnessAllowance: Number(formData.dearnessAllowance) || 0,
-                        specialAllowance: Number(formData.specialAllowance) || 0,
-                        otherAllowances: Number(formData.otherAllowances) || 0,
-                        providentFund: Number(formData.providentFund) || 0,
-                        professionalTax: Number(formData.professionalTax) || 0,
-                        incomeTax: Number(formData.incomeTax) || 0,
-                        otherDeductions: Number(formData.otherDeductions) || 0,
-                        leaveDeductionPerDay: Number(formData.leaveDeductionPerDay) || 0,
-                        effectiveFrom: new Date().toISOString().split('T')[0],
-                        effectiveTo: new Date().toISOString().split('T')[0],
+                        houseRentAllowance: hra,
+                        travelAllowance: ta,
+                        dearnessAllowance: da,
+                        specialAllowance: sa,
+                        otherAllowances: oa,
+                        providentFund: pf,
+                        professionalTax: profTax,
+                        incomeTax,
+                        otherDeductions: otherDed,
+                        leaveDeductionPerDay: leaveDeduction,
+                        effectiveFrom: today,
+                        effectiveTo,
                         payrollEligible: true,
                         remarks: "Created via AddNewTeacher",
                         grossSalary,
@@ -175,11 +197,8 @@ function AddNewTeacher() {
                         netSalary
                     };
 
-                    console.log("Salary Payload:", salaryPayload);
-                    console.log("Calling updateSalary with teacherId:", teacherId);
-
                     try {
-                        const salaryResponse = await updateSalary(teacherId, salaryPayload);
+                        const salaryResponse = await upsertTeacherSalary(teacherId, salaryPayload);
                         console.log("Salary Update Response:", salaryResponse);
                     } catch (salaryError) {
                         console.error("Salary update failed:", salaryError);
@@ -194,12 +213,11 @@ function AddNewTeacher() {
                 });
             }
 
-            toast.dismiss(loadingToast);
-            toast.success("Teacher added successfully!", {
-                duration: 3000,
-                icon: "✅"
-            });
-
+            toast.dismiss(loadingToast);   // ← ADD THIS
+            toast.success("Teacher added successfully! ✅");
+            if (profileImage) {
+                toast.info("Profile photo may take a few seconds to reflect.", { autoClose: 4000 });  // ← ADD THIS
+            }
             // Navigate after a short delay to show the toast
             setTimeout(() => {
                 navigate('/teachers');
@@ -256,8 +274,8 @@ function AddNewTeacher() {
                                     type="button"
                                     onClick={() => setActiveTab('personal')}
                                     className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'personal'
-                                            ? 'border-blue-600 text-blue-600'
-                                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                        ? 'border-blue-600 text-blue-600'
+                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                                         }`}
                                 >
                                     <User size={20} />
@@ -268,8 +286,8 @@ function AddNewTeacher() {
                                     type="button"
                                     onClick={() => setActiveTab('salary')}
                                     className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'salary'
-                                            ? 'border-blue-600 text-blue-600'
-                                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                        ? 'border-blue-600 text-blue-600'
+                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                                         }`}
                                 >
                                     <IndianRupee size={18} />
@@ -283,11 +301,83 @@ function AddNewTeacher() {
                         {/* Content */}
                         <div className="p-4 sm:p-6 lg:p-8">
                             {activeTab === 'personal' && (
-                                <PersonalDetailsTab
-                                    formData={formData}
-                                    setFormData={setFormData}
-                                    handleInputChange={handleInputChange}
-                                />
+                                <>
+                                    <div className="mb-6">
+                                        <label className="block font-semibold text-gray-600 text-sm mb-3">
+                                            Profile Photo <span className="text-gray-400 text-xs font-normal ml-1">(optional)</span>
+                                        </label>
+                                        <div className="flex items-center gap-5">
+                                            <div className="relative shrink-0">
+                                                <div className="w-20 h-20 rounded-full overflow-hidden bg-blue-100 border-2 border-blue-200 flex items-center justify-center">
+                                                    {imagePreview ? (
+                                                        <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <User className="w-8 h-8 text-blue-400" />
+                                                    )}
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => fileInputRef.current?.click()}
+                                                    className="absolute bottom-0 right-0 w-6 h-6 bg-blue-500 hover:bg-blue-600 rounded-full flex items-center justify-center shadow transition-colors"
+                                                >
+                                                    <Camera className="w-3.5 h-3.5 text-white" />
+                                                </button>
+                                            </div>
+
+                                            <div className="flex-1">
+                                                {!imagePreview ? (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => fileInputRef.current?.click()}
+                                                        className="w-full border-2 border-dashed border-blue-300 hover:border-blue-500 bg-blue-50 hover:bg-blue-100 rounded-lg p-4 text-center transition-colors cursor-pointer"
+                                                    >
+                                                        <Camera className="w-5 h-5 text-blue-400 mx-auto mb-1" />
+                                                        <p className="text-sm font-medium text-blue-600">Click to upload photo</p>
+                                                        <p className="text-xs text-gray-400 mt-0.5">JPEG or PNG, max 10 MB</p>
+                                                    </button>
+                                                ) : (
+                                                    <div className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="text-sm font-medium text-green-700 truncate">{profileImage?.name}</p>
+                                                            <p className="text-xs text-green-500 mt-0.5">
+                                                                {profileImage ? (profileImage.size / 1024).toFixed(1) + ' KB' : ''}
+                                                            </p>
+                                                        </div>
+                                                        <div className="flex gap-2 shrink-0">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => fileInputRef.current?.click()}
+                                                                className="text-xs px-2.5 py-1 bg-white border border-green-300 text-green-700 rounded-md hover:bg-green-50 transition-colors"
+                                                            >
+                                                                Change
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={handleRemoveImage}
+                                                                className="w-7 h-7 flex items-center justify-center bg-white border border-red-200 text-red-500 rounded-md hover:bg-red-50 transition-colors"
+                                                            >
+                                                                <X className="w-3.5 h-3.5" />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <input
+                                            ref={fileInputRef}
+                                            type="file"
+                                            accept="image/jpeg,image/jpg,image/png"
+                                            onChange={handleImageChange}
+                                            className="hidden"
+                                        />
+                                    </div>
+
+                                    <PersonalDetailsTab
+                                        formData={formData}
+                                        setFormData={setFormData}
+                                        handleInputChange={handleInputChange}
+                                    />
+                                </>
                             )}
 
                             {activeTab === 'salary' && (
@@ -297,7 +387,6 @@ function AddNewTeacher() {
                                     handleInputChange={handleInputChange}
                                 />
                             )}
-
                         </div>
 
                         {/* Footer Buttons */}
@@ -320,8 +409,8 @@ function AddNewTeacher() {
                                         disabled={isSubmitting}
                                         type="submit"
                                         className={`px-6 py-2.5 text-sm font-medium rounded-lg transition-all ${isSubmitting
-                                                ? 'bg-blue-300 cursor-not-allowed text-white'
-                                                : 'bg-blue-500 hover:bg-blue-600 cursor-pointer text-white'
+                                            ? 'bg-blue-300 cursor-not-allowed text-white'
+                                            : 'bg-blue-500 hover:bg-blue-600 cursor-pointer text-white'
                                             }`}
                                     >
                                         {isSubmitting ? (

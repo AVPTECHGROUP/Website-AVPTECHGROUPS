@@ -1,24 +1,24 @@
 import { useState, useEffect, useRef } from "react";
-import { X, GraduationCap, Save, Loader2, Info, ChevronDown, Search } from "lucide-react";
+import { X, GraduationCap, Save, Loader2, Info, ChevronDown, Search, XIcon } from "lucide-react";
 import { addTransportAllocation, getActiveRoutes, getTransportFeePlans } from "../../../Api/TransportAPI";
 import { getStudents } from "../../../Api/StudentsApi";
 
 // ─── Constants ────────────────────────────────────────────────────
 const PICKUP_TYPES = [
-  { value: "BOTH",        label: "BOTH" },
+  { value: "BOTH", label: "BOTH" },
   { value: "PICKUP_ONLY", label: "PICKUP ONLY" },
-  { value: "DROP_ONLY",   label: "DROP ONLY" },
+  { value: "DROP_ONLY", label: "DROP ONLY" },
 ];
 
 const EMPTY = {
-  studentId:      "",
-  routeId:        "",
-  stopId:         "",
+  studentId: "",
+  routeId: "",
+  stopId: "",
   pickupDropType: "BOTH",
-  effectiveFrom:  "",
-  effectiveTo:    "",
-  feePlanId:      "",
-  remarks:        "",
+  effectiveFrom: "",
+  effectiveTo: "",
+  feePlanId: "",
+  remarks: "",
 };
 
 // ─── Styles ───────────────────────────────────────────────────────
@@ -42,20 +42,20 @@ function Field({ label, required, children }) {
 
 // ─── Custom Scrollable SelectInput ────────────────────────────────
 function SelectInput({ value, onChange, options = [], placeholder = "— Select —", hasError = false, disabled = false, loading = false }) {
-  const [open,    setOpen]    = useState(false);
-  const [query,   setQuery]   = useState("");
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
   const [focused, setFocused] = useState(-1);
 
   const containerRef = useRef(null);
-  const searchRef    = useRef(null);
-  const listRef      = useRef(null);
+  const searchRef = useRef(null);
+  const listRef = useRef(null);
 
   const showSearch = options.length > 6;
-  const filtered   = query.trim()
+  const filtered = query.trim()
     ? options.filter((o) => o.label.toLowerCase().includes(query.toLowerCase()))
     : options;
   const selectedLabel = options.find((o) => String(o.value) === String(value))?.label ?? "";
-  const isDisabled    = disabled || loading;
+  const isDisabled = disabled || loading;
 
   // Close on outside click
   useEffect(() => {
@@ -97,9 +97,9 @@ function SelectInput({ value, onChange, options = [], placeholder = "— Select 
       if (["Enter", " ", "ArrowDown"].includes(e.key)) { e.preventDefault(); setOpen(true); }
       return;
     }
-    if (e.key === "Escape")    { setOpen(false); setQuery(""); setFocused(-1); }
+    if (e.key === "Escape") { setOpen(false); setQuery(""); setFocused(-1); }
     if (e.key === "ArrowDown") { e.preventDefault(); setFocused((f) => Math.min(f + 1, filtered.length - 1)); }
-    if (e.key === "ArrowUp")   { e.preventDefault(); setFocused((f) => Math.max(f - 1, -1)); }
+    if (e.key === "ArrowUp") { e.preventDefault(); setFocused((f) => Math.max(f - 1, -1)); }
     if (e.key === "Enter" && focused >= 0) { e.preventDefault(); select(filtered[focused].value); }
   };
 
@@ -174,21 +174,21 @@ function SelectInput({ value, onChange, options = [], placeholder = "— Select 
             {filtered.length === 0
               ? <li className="px-3 py-6 text-xs text-center text-gray-400">No results found</li>
               : filtered.map((o, i) => {
-                  const isSel = String(o.value) === String(value);
-                  const isFoc = i === focused;
-                  return (
-                    <li key={o.value} onClick={() => select(o.value)} onMouseEnter={() => setFocused(i)}
-                      role="option" aria-selected={isSel}
-                      className={[
-                        "px-3 py-2.5 text-sm cursor-pointer transition-colors",
-                        isSel              ? "bg-blue-50 text-blue-700 font-semibold" : "text-gray-700",
-                        isFoc && !isSel    ? "bg-gray-100" : "",
-                        !isSel && !isFoc   ? "hover:bg-gray-50" : "",
-                      ].join(" ")}>
-                      {o.label}
-                    </li>
-                  );
-                })
+                const isSel = String(o.value) === String(value);
+                const isFoc = i === focused;
+                return (
+                  <li key={o.value} onClick={() => select(o.value)} onMouseEnter={() => setFocused(i)}
+                    role="option" aria-selected={isSel}
+                    className={[
+                      "px-3 py-2.5 text-sm cursor-pointer transition-colors",
+                      isSel ? "bg-blue-50 text-blue-700 font-semibold" : "text-gray-700",
+                      isFoc && !isSel ? "bg-gray-100" : "",
+                      !isSel && !isFoc ? "hover:bg-gray-50" : "",
+                    ].join(" ")}>
+                    {o.label}
+                  </li>
+                );
+              })
             }
           </ul>
 
@@ -206,18 +206,18 @@ function SelectInput({ value, onChange, options = [], placeholder = "— Select 
 
 // ─── Main Component ───────────────────────────────────────────────
 export default function AllocateStudentCard({ isOpen, onClose, onSave }) {
-  const [form,     setForm]     = useState(EMPTY);
-  const [saving,   setSaving]   = useState(false);
-  const [errors,   setErrors]   = useState({});
+  const [form, setForm] = useState(EMPTY);
+  const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState({});
   const [apiError, setApiError] = useState("");
 
-  const [students,  setStudents]  = useState([]);
-  const [routes,    setRoutes]    = useState([]);
-  const [feePlans,  setFeePlans]  = useState([]);
-  const [stops,     setStops]     = useState([]);
+  const [students, setStudents] = useState([]);
+  const [routes, setRoutes] = useState([]);
+  const [feePlans, setFeePlans] = useState([]);
+  const [stops, setStops] = useState([]);
 
   const [loadingStudents, setLoadingStudents] = useState(false);
-  const [loadingRoutes,   setLoadingRoutes]   = useState(false);
+  const [loadingRoutes, setLoadingRoutes] = useState(false);
   const [loadingFeePlans, setLoadingFeePlans] = useState(false);
 
   // Fetch on open
@@ -288,12 +288,12 @@ export default function AllocateStudentCard({ isOpen, onClose, onSave }) {
 
   const validate = () => {
     const e = {};
-    if (!form.studentId)      e.studentId      = "Please select a student";
-    if (!form.routeId)        e.routeId        = "Please select a route";
-    if (!form.stopId)         e.stopId         = "Please select a stop";
+    if (!form.studentId) e.studentId = "Please select a student";
+    if (!form.routeId) e.routeId = "Please select a route";
+    if (!form.stopId) e.stopId = "Please select a stop";
     if (!form.pickupDropType) e.pickupDropType = "Please select pickup/drop type";
-    if (!form.effectiveFrom)  e.effectiveFrom  = "Effective from date is required";
-    if (!form.feePlanId)      e.feePlanId      = "Please select a fee plan";
+    if (!form.effectiveFrom) e.effectiveFrom = "Effective from date is required";
+    if (!form.feePlanId) e.feePlanId = "Please select a fee plan";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -304,14 +304,14 @@ export default function AllocateStudentCard({ isOpen, onClose, onSave }) {
     setApiError("");
     try {
       await addTransportAllocation({
-        studentId:      Number(form.studentId),
-        routeId:        Number(form.routeId),
-        stopId:         Number(form.stopId),
+        studentId: Number(form.studentId),
+        routeId: Number(form.routeId),
+        stopId: Number(form.stopId),
         pickupDropType: form.pickupDropType,
-        effectiveFrom:  form.effectiveFrom,
-        effectiveTo:    form.effectiveTo || null,
-        feePlanId:      Number(form.feePlanId),
-        remarks:        form.remarks || null,
+        effectiveFrom: form.effectiveFrom,
+        effectiveTo: form.effectiveTo || null,
+        feePlanId: Number(form.feePlanId),
+        remarks: form.remarks || null,
       });
       onSave?.();
       onClose();

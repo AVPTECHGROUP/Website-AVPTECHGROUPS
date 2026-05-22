@@ -64,7 +64,7 @@ const ManageAllUsers = () => {
                 const rolesRes = await getAllUserRoles();
                 const fetchedRoles = rolesRes.data || [];
                 const roleOpt = fetchedRoles
-                    .filter(val => val.name !== 'SUPER_ADMIN' && val.name !== 'GLOBAL_ADMIN')
+                    .filter(val => val.name !== 'SUPER_ADMIN' && val.name !== 'TEACHER' && val.name !== 'GLOBAL_ADMIN' && val.name !== 'PARENT')
                     .map(val => ({ roleKey: val.id, roleVal: val.name, roleDisplay: val.displayName }));
                 setRoleOptions(roleOpt);
             } catch (e) {

@@ -2,6 +2,7 @@ import { authFetch } from "../Authfetch/Authfetch";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_DOUBLE_V1;
 
+
 // Listing of Students
 export const getStudents = async (page = 0, size = 10, sort = 'id') => {
   try {
@@ -72,6 +73,30 @@ export const getStudentById = async (id) => {
   }
 };
 
+export const getStudentByClass = async (id) => {
+  try {
+    const res = await authFetch(
+      `${BASE_URL}/students/class/${id}?status=ACTIVE`,
+      {
+        method: "GET",
+      }
+    );
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(
+        data?.message || data?.error || "Failed to fetch student"
+      );
+    }
+
+    return data?.data;
+  } catch (error) {
+    console.error("getStudentByClass error:", error.message);
+    throw error;
+  }
+};
+
 export const updateStudent = async (id, updatedStudent, imageFile) => {
   try {
     const formData = new FormData();
@@ -104,19 +129,38 @@ export const updateStudent = async (id, updatedStudent, imageFile) => {
     throw error;
   }
 };
-export const searchStudents = async (filters = {}, page, size = 10, sort = 'id') => {
+
+export const searchStudents = async (
+  filters = {},
+  page = 0,
+  size = 10,
+  sort = ['id']
+) => {
   try {
-    const res = await authFetch(`${BASE_URL}/students/search/paginated?page=${page}&size=${size}&sort=${sort}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(filters),
-    });
+    const pageable = encodeURIComponent(
+      JSON.stringify({
+        page,
+        size,
+        sort,
+      })
+    );
+
+    const res = await authFetch(
+      `${BASE_URL}/students/search/paginated?pageable=${pageable}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(filters),
+      }
+    );
+
     if (!res.ok) {
       const errorText = await res.text();
       throw new Error(errorText || 'Failed to Search Students...');
     }
+
     const data = await res.json();
     return data;
   } catch (error) {

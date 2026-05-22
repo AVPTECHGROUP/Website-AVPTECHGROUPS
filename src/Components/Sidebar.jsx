@@ -5,6 +5,7 @@ import {
   ChevronDown, UserCog, Package, Bus, Phone, Mail,
   Shield, ChevronUp, ArrowLeftRight, BookOpenText,
   GraduationCap,
+  SchoolIcon, NotebookPen, IndianRupee
 } from 'lucide-react'
 import { useState, useEffect, useContext, useRef } from 'react'
 import { UserContext } from '../ContextAPI/UserContext'
@@ -28,24 +29,27 @@ const menuItems = [
   // ── Academics (Exams + Subjects merged) ──────────────────────────────────
   {
     id: 'academics', icon: GraduationCap, label: 'Academics', route: '/subjectsmaster',
-    roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'],
+    roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'TEACHER'],
     subItems: [
       { label: 'Subjects', route: '/subjectsmaster', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'] },
-      { label: 'Exams', route: '/exams', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN'] },
+      { label: 'Exams', route: '/exams', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'PRINCIPAL', 'TEACHER'] },
       { label: 'Marks Entry', route: '/exams/marksEntry', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN'] },
       { label: 'Report Cards', route: '/exams/reportCard', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN'] },
       { label: 'Analytics', route: '/exams/analytics', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN'] },
+      { label: 'Time Table', route: '/schedule', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN'] },
       { label: 'Exam Configuration', route: '/exams/examConfig', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN'] },
+      { label: 'Class & Sections', route: '/academics/classSections', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'] },
+      { label: 'HomeWork', route: '/homework', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'PRINCIPAL', 'TEACHER'] }
     ]
   },
   {
     id: 'attendance', icon: Calendar, label: 'Attendance', route: '/attendance',
     roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'TEACHER', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST'],
     subItems: [
-      { label: 'Mark Attendance', route: '/attendance/markUserAttendance', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'TEACHER', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST'] },
+      { label: 'Attendance Overview', route: '/attendance', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'TEACHER', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST'] }, // ✅ ye add karo
       { label: 'Staff Enrollment', route: '/attendance/staffImgReg', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN'] },
+      { label: 'Staff Attendance', route: '/attendance/markUserAttendance', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'TEACHER', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST'] },
       { label: 'Student Enrollment', route: '/attendance/studentImgReg', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'TEACHER'] },
-      { label: 'Pending Approvals', route: '/attendance/usersAttendance', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN'] },
       { label: 'Student Attendance', route: '/attendance/studentAttendance', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'TEACHER'] },
     ]
   },
@@ -54,10 +58,10 @@ const menuItems = [
     roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'],
   },
   {
-    id: 'leaves', icon: FileText, label: 'Manage Leaves', route: '/leaves',
+    id: 'leaves', icon: FileText, label: 'Leaves', route: '/leaves/applyLeaves',
     roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'TEACHER', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST'],
     subItems: [
-      { label: 'Apply Leave', route: '/leaves/applyLeaves', roles: ['ADMIN', 'TEACHER', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST'] },
+      { label: 'Manage Leave', route: '/leaves', roles: ['ADMIN', 'TEACHER', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST'] },
       { label: 'My Leaves', route: '/leaves/myLeaves', roles: ['ADMIN', 'TEACHER', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST'] },
       { label: 'Holiday Management', route: '/leaves/manageHolidays', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'] },
       { label: 'Leave Config', route: '/leaves/leaveConfig', roles: ['GLOBAL_ADMIN', 'SUPER_ADMIN', 'PRINCIPAL'] },
@@ -91,12 +95,36 @@ const menuItems = [
       { label: 'Reports', route: '/route/reports', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'] },
     ]
   },
-    {
+  {
+    id: 'academicYear',
+    icon: BookOpenText,
+    label: 'Academic Years',
+    route: '/academicYear',
+    roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN'],
+  },
+  // {
+  //   id: 'Homework', icon: NotebookPen, label: 'Homework', route: '/homework',
+  //   roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN','ADMIN','PRINCIPAL','TEACHER'],
+  // },
+  {
+    id: 'FeeManagement', icon: IndianRupee, label: 'Fee Management', route: '/feemanagement',
+    roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'],
+    subItems: [
+      { label: 'Fee Config', route: '/feemanagement/config', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'] },
+      { label: 'Collection and History', route: '/feemanagement/collections', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'] },
+
+    ]
+  },
+  {
     id: 'Permission',
     icon: Shield,
     label: 'Permissions',
     route: '/rolesPermissions',
-    roles: [ 'GLOBAL_ADMIN'],
+    roles: ['GLOBAL_ADMIN'],
+  },
+  {
+    id: 'schoolConfig', icon: SchoolIcon, label: 'School Config', route: '/schoolConfig',
+    roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN'],
   },
 ]
 
@@ -120,7 +148,29 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
   const [profileOpen, setProfileOpen] = useState(false)
   const profileRef = useRef(null)
 
-  const { user: ctxUser } = useContext(UserContext)
+
+  const { user: ctxUser, schoolInfo: ctxSchoolInfo } = useContext(UserContext)
+
+  const [schoolInfo, setSchoolInfo] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('school')) || null }
+    catch { return null }
+  })
+
+  useEffect(() => {
+    const syncSchool = () => {
+      try {
+        const latest = JSON.parse(localStorage.getItem('school')) || null
+        setSchoolInfo(latest)
+      } catch { setSchoolInfo(null) }
+    }
+
+    window.addEventListener('storage', syncSchool)
+    return () => window.removeEventListener('storage', syncSchool)
+  }, [])
+
+  useEffect(() => {
+    if (ctxSchoolInfo) setSchoolInfo(ctxSchoolInfo)
+  }, [ctxSchoolInfo])
 
   const storedUser = (() => {
     try { return JSON.parse(localStorage.getItem('user')) || null }
@@ -132,11 +182,6 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
     || (Array.isArray(ctxUser?.roles) ? ctxUser.roles[0] : null)
     || (Array.isArray(storedUser?.roles) ? storedUser.roles[0] : null)
     || null
-
-  const schoolInfo = (() => {
-    try { return JSON.parse(localStorage.getItem('school')) || null }
-    catch { return null }
-  })()
 
   const schoolDisplayName = schoolInfo?.schoolName || 'Delhi Public International School'
   const schoolDisplayCode = schoolInfo?.schoolCode || ''
@@ -151,11 +196,9 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
     .filter(item => item.roles.includes(userRole))
     .map(item => ({
       ...item,
-      route: item.id === 'attendance' && !ADMIN_ROLES.includes(userRole)
-        ? '/attendance/markUserAttendance'
-        : item.id === 'leaves' && !ADMIN_ROLES.includes(userRole)
-          ? '/leaves/myLeaves'
-          : item.route,
+      route: item.id === 'leaves' && !ADMIN_ROLES.includes(userRole)
+        ? '/leaves/myLeaves'
+        : item.route,
       subItems: item.subItems
         ? item.subItems.filter(sub => !sub.roles || sub.roles.includes(userRole))
         : undefined
@@ -240,7 +283,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
           <button onClick={handleLogoClick} className="shrink-0">
             <img
               src={schoolLogoUrl}
-              className="w-12 h-12 cursor-pointer object-contain rounded-lg bg-white border border-gray-100"
+              className="w-12 h-12 cursor-pointer object-contain rounded-sm bg-white border border-gray-100"
               alt="School Logo"
               onError={(e) => { e.currentTarget.src = dpis }}
             />
@@ -322,7 +365,14 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
                 >
                   <div className="mt-1 ml-4 pl-3 border-l-2 border-gray-200 space-y-0.5 pb-1">
                     {item.subItems.map((subItem, index) => {
-                      const isSubActive = location.pathname.startsWith(subItem.route)
+                      const isSubActive =
+                        location.pathname === subItem.route ||
+                        (
+                          subItem.route !== '/exams' &&
+                          subItem.route !== '/attendance' &&
+                          subItem.route !== '/leaves' &&
+                          location.pathname.startsWith(subItem.route + '/')
+                        )
                       return (
                         <button
                           key={index}
@@ -359,7 +409,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
               ${!sidebarOpen ? 'justify-center' : ''}`}
             title={!sidebarOpen ? displayName : ''}
           >
-            <div className="shrink-0 w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-blue-700
+            <div className="shrink-0 w-9 h-9 rounded-full bg-linear-to-br from-blue-500 to-blue-700
               flex items-center justify-center text-white font-bold text-sm shadow-sm">
               {initials}
             </div>
@@ -385,10 +435,10 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
                 ${sidebarOpen ? 'left-0 right-0' : 'left-0 w-64'}`}
               style={{ animation: 'slideUp 0.18s ease-out' }}
             >
-              <div className="h-12 bg-gradient-to-r from-blue-600 to-blue-500 relative">
+              <div className="h-12 bg-linear-to-r from-blue-600 to-blue-500 relative">
                 <div className="absolute -bottom-5 left-4">
                   <div className="w-10 h-10 rounded-full bg-white p-0.5 shadow-md">
-                    <div className="w-full h-full rounded-full bg-gradient-to-br from-blue-500 to-blue-700
+                    <div className="w-full h-full rounded-full bg-linear-to-br from-blue-500 to-blue-700
                       flex items-center justify-center text-white font-bold text-sm">
                       {initials}
                     </div>

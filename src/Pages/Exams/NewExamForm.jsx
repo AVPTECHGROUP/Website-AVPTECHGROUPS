@@ -42,7 +42,7 @@ export default function NewExamForm({ onClose, onSuccess }) {
           ...prev,
           examTypeId: types[0]?.id ?? "",
           schoolClassId: cls[0]?.id ?? "",
-          academicYearId: years[0]?.id ?? "",
+          academicYearId: 1,
         }));
       } catch (err) {
         setError("Failed to load form data. Please close and try again.");
@@ -161,13 +161,16 @@ export default function NewExamForm({ onClose, onSuccess }) {
               Academic Year <span className="text-red-500">*</span>
             </label>
             {loadingMeta ? <Skeleton /> : (
-              <select name="academicYearId" value={formData.academicYearId} onChange={handleChange} className={selectCls}>
-                <option value="" disabled>Select academic year</option>
-                {academicYears.map((y) => (
-                  <option key={y.id} value={y.id}>
-                    {y.value ?? y.label ?? y.name ?? y.id}
-                  </option>
-                ))}
+              <select
+                name="academicYearId"
+                value={formData.academicYearId}
+                onChange={handleChange}
+                className={selectCls}
+              >
+                <option value={1}>2023-24</option>
+                <option value={2}>2024-25</option>
+                <option value={3}>2025-26</option>
+                <option value={4}>2026-27</option>
               </select>
             )}
           </div>

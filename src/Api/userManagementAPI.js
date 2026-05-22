@@ -115,15 +115,28 @@ export const filterUserByStatus = async (userStatus, page = 0, size = 10, sort =
   }
 };
 
-// Creating new user
-export const createUser = async (user) => {
+
+export const createUser = async (user, imageFile) => {
+  const formData = new FormData();
+
+  // JSON part (IMPORTANT)
+  formData.append(
+    "data",
+    new Blob([JSON.stringify(user)], { type: "application/json" })
+  );
+
+  // Image (optional)
+  if (imageFile) {
+    formData.append("image", imageFile);
+  }
+
   const res = await authFetch(`${BASE_URL}/users`, {
     method: "POST",
-    body: JSON.stringify(user),
+    body: formData,
   });
 
-  const text = await res.text();
-  const data = text ? JSON.parse(text) : {};
+  const data = await res.json();
+
   console.log("CREATE USER RESPONSE:", data);
 
   if (!res.ok) {
@@ -234,16 +247,75 @@ export const getUserById = async (id) => {
 };
 
 // Update user by id
-export const updateUserById = async (id, updatedUser) => {
+export const updateUserById = async (id, updatedUser, imageFile) => {
   try {
+    const formData = new FormData();
+
+    // JSON part
+    formData.append(
+      "data",
+      new Blob([JSON.stringify(updatedUser)], {
+        type: "application/json",
+      })
+    );
+
+    // Image (optional)
+    if (imageFile) {
+      formData.append("image", imageFile);
+    }
+
     const res = await authFetch(`${BASE_URL}/users/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(updatedUser),
+      method: "PUT",
+      body: formData,
     });
-    if (!res.ok) throw new Error('Failed to update User');
-    return res.json();
+
+    const data = await res.json();
+
+    if (!res.ok) throw new Error(data?.message || "Failed to update User");
+
+    return data;
   } catch (error) {
     console.error("Update user error:", error.message);
+    throw error;
+  }
+};
+
+//  Get Users Summary List
+export const getUsersSummary = async ({
+  search,
+  role,
+  page = 0,
+  size = 200,
+  sort = "firstName,asc",
+} = {}) => {
+  try {
+    const params = new URLSearchParams();
+
+    if (search) params.append("search", search);
+    if (role) params.append("role", role);
+
+    params.append("page", page);
+    params.append("size", size);
+    params.append("sort", sort);
+
+    const res = await authFetch(
+      `${BASE_URL}/users/summary?${params.toString()}`,
+      {
+        method: "GET",
+      }
+    );
+
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(errText || "Failed to fetch users summary");
+    }
+
+    const data = await res.json();
+
+    return data;
+
+  } catch (error) {
+    console.error("getUsersSummary error:", error.message);
     throw error;
   }
 };

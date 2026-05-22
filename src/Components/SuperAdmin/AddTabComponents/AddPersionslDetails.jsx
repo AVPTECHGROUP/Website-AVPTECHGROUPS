@@ -12,7 +12,7 @@ const AddPersonalDetails = ({ formData, setFormData, handleInputChange }) => {
                 const rolesRes = await getAllUserRoles();
                 const fetchedRoles = rolesRes.data || [];
                 roleOpt = fetchedRoles
-                    .filter(val => val.name !== 'SUPER_ADMIN' && val.name !== 'TEACHER' && val.name !== 'GLOBAL_ADMIN')
+                    .filter(val => val.name !== 'SUPER_ADMIN' && val.name !== 'TEACHER' && val.name !== 'GLOBAL_ADMIN' && val.name !== 'PARENT')
                     .map(val => ({
                         key: val.id,
                         value: val.name,

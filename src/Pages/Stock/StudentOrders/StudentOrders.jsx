@@ -7,11 +7,14 @@ import {
   ClipboardList, Eye, Pencil, Ban, AlertTriangle, Loader2,
   ChevronLeft, ChevronRight, SearchIcon, IndianRupee,
 } from "lucide-react";
+import { useContext } from "react";
+import { UserContext } from "../../../ContextAPI/UserContext";
 import CardComponent from "../../../Components/CommonComp/CardComponent";
 import CardLoader from "../../../Components/CommonComp/CardLoader";
 import ListLoader from "../../../Components/CommonComp/ListLoader";
 import ActionDropDownComp from "../../../Components/CommonComp/ActionDropDownComp";
 import ViewStudentOrder from "./ViewOrder";
+import { useDecodedUser } from "../../../ContextAPI/UserContext";
 import { getOrderStats, getStudentOrders, cancelStudentOrder } from "../../../Api/StudentOrder";
 import { getClasses } from "../../../Api/TeachersAPI";
 
@@ -34,44 +37,74 @@ const statusColors = {
   CANCELLED: "bg-red-100    text-red-600     border border-red-200",
 };
 
-// ── Cancel Confirm Modal ──────────────────────────────────────────
+const CANCEL_CONFIRMED_ROLES = ["SUPER_ADMIN", "GLOBAL_ADMIN", "STORE_ACCOUNTANT"];
+
 function CancelConfirmModal({ order, onConfirm, onClose, loading }) {
+  const [confirmInput, setConfirmInput] = useState("");
+
   if (!order) return null;
+
+  const isConfirmed = order.status === "CONFIRMED";
+
+  const isMatch = confirmInput === String(order.id);
+
   return (
     <div className="fixed inset-0 z-60 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm z-10 p-6 space-y-4 ccm-anim">
-        <style>{`
-          @keyframes ccmIn { from{opacity:0;transform:scale(.94) translateY(8px)} to{opacity:1;transform:scale(1) translateY(0)} }
-          .ccm-anim { animation: ccmIn .18s ease-out forwards; }
-        `}</style>
+
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm z-10 p-6 space-y-4">
         <div className="flex items-start gap-4">
-          <div className="w-11 h-11 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+          <div className="w-11 h-11 rounded-full bg-red-100 flex items-center justify-center">
             <AlertTriangle className="w-5 h-5 text-red-500" />
           </div>
+
           <div>
             <h3 className="text-base font-bold text-gray-800">Cancel Order?</h3>
+
             <p className="text-sm text-gray-500 mt-1">
               Are you sure you want to cancel{" "}
-              <span className="font-semibold text-gray-700">Order #{order.id}</span>{" "}
+              <span className="font-semibold text-gray-700">
+                Order #{order.id}
+              </span>{" "}
               for{" "}
               <span className="font-semibold text-gray-700">
-                {order.studentName || order.student?.name || "this student"}
+                {order.studentName || "this student"}
               </span>?
-              <span className="text-red-500 text-xs mt-1 block">This action cannot be undone.</span>
             </p>
+
+            {isConfirmed && (
+              <p className="text-xs text-red-500 mt-2">
+                ⚠ Type order number to confirm cancellation
+              </p>
+            )}
           </div>
         </div>
-        <div className="flex items-center justify-end gap-3 pt-2">
-          <button onClick={onClose} disabled={loading}
-            className="px-5 py-2 text-sm font-semibold text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50">
+
+        {isConfirmed && (
+          <input
+            type="text"
+            placeholder={`Type Order ID`}
+            value={confirmInput}
+            onChange={(e) => setConfirmInput(e.target.value)}
+            className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+          />
+        )}
+
+        <div className="flex justify-end gap-3 pt-2">
+          <button
+            onClick={onClose}
+            disabled={loading}
+            className="px-4 py-2 border rounded-lg text-gray-600"
+          >
             Keep Order
           </button>
-          <button onClick={onConfirm} disabled={loading}
-            className="flex items-center gap-2 px-5 py-2 text-sm font-semibold text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
-            {loading
-              ? <><Loader2 className="w-4 h-4 animate-spin" /> Cancelling…</>
-              : <><Ban className="w-4 h-4" /> Yes, Cancel</>}
+
+          <button
+            onClick={() => onConfirm()}
+            disabled={loading || (isConfirmed && !isMatch)}
+            className="px-4 py-2 bg-red-500 text-white rounded-lg disabled:opacity-50"
+          >
+            {loading ? "Cancelling..." : "Yes, Cancel"}
           </button>
         </div>
       </div>
@@ -106,18 +139,74 @@ function getPageNumbers(currentPage, totalPages) {
   pages.push(totalPages);
   return pages;
 }
-
-function buildActionOptions(status) {
+function buildActionOptions(status, userRole) {
   const s = (status || "").toUpperCase();
+  const normalize = (v) => (v || "").toLowerCase().replace(/[\s_]/g, "");
+  const normalizedUserRole = normalize(userRole);
+  const normalizedAllowed = CANCEL_CONFIRMED_ROLES.map(normalize);
+  const canCancelConfirmed = normalizedAllowed.includes(normalizedUserRole);
+
   if (s === "DRAFT") {
     return [
-      { value: "edit", label: "Edit", icon: Pencil, text: "text-blue-600", bg: "bg-blue-50", hover: "hover:bg-blue-100" },
-      { value: "view", label: "View", icon: Eye, text: "text-gray-600", bg: "bg-gray-50", hover: "hover:bg-gray-100" },
-      { value: "cancel", label: "Cancel", icon: Ban, text: "text-red-500", bg: "bg-red-50", hover: "hover:bg-red-100" },
+      {
+        value: "edit",
+        label: "Edit",
+        icon: Pencil,
+        text: "text-blue-600",
+        bg: "bg-blue-50",
+        hover: "hover:bg-blue-100"
+      },
+      {
+        value: "view",
+        label: "View",
+        icon: Eye,
+        text: "text-gray-600",
+        bg: "bg-gray-50",
+        hover: "hover:bg-gray-100",
+      },
+      {
+        value: "cancel",
+        label: "Cancel",
+        icon: Ban,
+        text: "text-red-500",
+        bg: "bg-red-50",
+        hover: "hover:bg-red-100",
+      },
     ];
   }
+
+  if (s === "CONFIRMED") {
+    return [
+      {
+        value: "view",
+        label: "View",
+        icon: Eye,
+        text: "text-gray-600",
+        bg: "bg-gray-50",
+        hover: "hover:bg-gray-100"
+      },
+      // Sirf privileged roles ko cancel dikhega
+      ...(canCancelConfirmed ? [{
+        value: "cancel",
+        label: "Cancel",
+        icon: Ban,
+        text: "text-red-500",
+        bg: "bg-red-50",
+        hover: "hover:bg-red-100"
+      }] : []),
+    ];
+  }
+
+  // CANCELLED, DELIVERED, etc. — sirf view
   return [
-    { value: "view", label: "View", icon: Eye, text: "text-blue-600", bg: "bg-blue-50", hover: "hover:bg-blue-100" },
+    {
+      value: "view",
+      label: "View",
+      icon: Eye,
+      text: "text-blue-600",
+      bg: "bg-blue-50",
+      hover: "hover:bg-blue-100",
+    },
   ];
 }
 
@@ -154,6 +243,8 @@ function PageButtons({ page, totalPages, onPageChange }) {
 export default function StudentOrders() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useDecodedUser();
+  console.log("userType:", user?.userType);
 
   const [orders, setOrders] = useState([]);
   const [pagination, setPagination] = useState(null);
@@ -162,8 +253,7 @@ export default function StudentOrders() {
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
-  const [stats, setStats] = useState({ draftOrders: 0, confirmedOrders: 0, cancelledOrders: 0 });
-
+ const [stats, setStats] = useState({ draftOrders: 0, confirmedOrders: 0, cancelledOrders: 0 });
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -270,18 +360,27 @@ export default function StudentOrders() {
   useEffect(() => { fetchOrders(); }, [fetchOrders]);
   const totalItems = pagination?.totalElements ?? orders.length;
   const totalPages = pagination?.totalPages ?? Math.max(1, Math.ceil(totalItems / rowsPerPage));
-
   const handleCancelOrder = async () => {
     if (!cancelTarget) return;
+
     setCancelling(true);
+
     try {
-      await cancelStudentOrder(cancelTarget.id, "Cancelled by admin");
+      await cancelStudentOrder(
+        cancelTarget.id,
+        "Cancelled by admin - restore stock"
+      );
+
       toast.success(`Order #${cancelTarget.id} cancelled.`);
+
       setCancelTarget(null);
-      fetchOrders(); fetchStats();
+      fetchOrders();
+      fetchStats();
     } catch (e) {
       toast.error(`Failed to cancel: ${e.message}`);
-    } finally { setCancelling(false); }
+    } finally {
+      setCancelling(false);
+    }
   };
 
   const handleAction = (val, order) => {
@@ -411,7 +510,7 @@ export default function StudentOrders() {
                   <input
                     type="date"
                     value={toDate}
-                    min={fromDate || undefined} 
+                    min={fromDate || undefined}
                     onChange={(e) => {
                       const value = e.target.value;
                       setToDate(value);
@@ -473,7 +572,7 @@ export default function StudentOrders() {
                         </div>
                         <div className="flex justify-start items-center pt-1">
                           <ActionDropDownComp
-                            actionOptions={buildActionOptions(order.status)}
+                            actionOptions={buildActionOptions(order.status, user?.userType)}
                             onAction={(val) => handleAction(val, order)}
                           />
                         </div>
@@ -587,7 +686,7 @@ export default function StudentOrders() {
 
                             <td className={tdStyle}>
                               <ActionDropDownComp
-                                actionOptions={buildActionOptions(order.status)}
+                                actionOptions={buildActionOptions(order.status, user?.userType)}
                                 onAction={(val) => handleAction(val, order)}
                               />
                             </td>
