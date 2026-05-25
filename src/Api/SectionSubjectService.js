@@ -126,8 +126,8 @@ class SectionSubjectService {
     try {
       const json = await this.#reqWithFallback(
         "GET",
-        `${BASE}/sections/${sectionId}/subjects`,
         `${SECTION_SUBJ}/section/${sectionId}/active`,
+        `${BASE}/sections/${sectionId}/subjects`,
         null,
         true
       );
