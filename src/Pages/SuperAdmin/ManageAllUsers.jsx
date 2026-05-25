@@ -24,6 +24,7 @@ import ListLoader from '../../Components/CommonComp/ListLoader';
 import { UserContext } from '../../ContextAPI/UserContext';
 import PasswordResetModal from '../../Components/PopupResetPassword/ResetPasswordComponent';
 import TooltipComponent from '../../Components/CommonComp/Tooltip_comp/TooltipComp';
+import ConfirmationModal from '../../Components/CommonComp/ConfirmationModel/ConfirmationModal';
 
 const ManageAllUsers = () => {
     const [search, setsearch] = useState('');
@@ -48,6 +49,9 @@ const ManageAllUsers = () => {
     const [isResetOpen, setisResetOpen] = useState(false);
     const [selectedUser, setSelectedUser] = useState(null);
     const [refressStat, setRefressStat] = useState(0);
+
+    const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+    //const [selectedTeacherId, setSelectedTeacherId] = useState(null);
 
     function compareAndGetLabel(data, compareValue) {
         const found = data.find(item => item.roleVal === compareValue);
@@ -89,7 +93,8 @@ const ManageAllUsers = () => {
                 setstatistics(statistics_res.data);
             } catch (e) {
                 console.error("get statistics error:", e.message);
-            }finally {                setStatLoading(false);
+            } finally {
+                setStatLoading(false);
             }
         };
         fetchStatistics();
@@ -272,7 +277,16 @@ const ManageAllUsers = () => {
     };
 
     const callAllActions = async (optVal, sys_user) => {
-        if (optVal === 'editUser') navigate(`/dashboard/editUser/${sys_user.id}`);
+        if (optVal === 'editUser' && sys_user.role[0] !== 'TEACHER') {
+            navigate(`/dashboard/editUser/${sys_user.id}`);
+        }
+
+        if (optVal === 'editUser' && sys_user.role[0] === 'TEACHER') {
+          //  setSelectedTeacherId(sys_user.id);
+            if (sys_user.id !== null) {
+                setIsConfirmOpen(true);
+            }
+        }
         else if (optVal === 'resetPassword') { setSelectedUser(sys_user); setisResetOpen(true); }
         else if (optVal === 'toogleStatus') handleToggleStatus(sys_user.id, sys_user.name, sys_user.status);
     };
@@ -388,6 +402,21 @@ const ManageAllUsers = () => {
                             </div>
                         ))}
                     </div>
+
+                    {/* Confirmation Modal */}
+                    <ConfirmationModal
+                        isOpen={isConfirmOpen}
+                        onConfirm={() => {
+                            navigate(`/teachers`);
+                            setIsConfirmOpen(false);
+                        }}
+                        onCancel={() => setIsConfirmOpen(false)}
+                        title="Redirect to Teachers Module"
+                        message="You will be redirected to the Teachers Module to manage this teacher. Do you wish to continue?"
+                        confirmLabel="Yes, Continue"
+                        cancelLabel="Cancel"
+                    />
+
 
                     {/* DESKTOP TABLE */}
                     <div className="hidden lg:block bg-white rounded-xl border border-gray-200">
