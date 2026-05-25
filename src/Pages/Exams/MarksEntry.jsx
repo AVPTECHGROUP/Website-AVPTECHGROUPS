@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Save, RotateCcw, ChevronDown, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
 import TooltipComponent from "../../Components/CommonComp/Tooltip_comp/TooltipComp";
+import { useParams } from "react-router-dom";
 
 import {
     getMarksSheet,
@@ -9,7 +10,7 @@ import {
     getExams,
     getExamSubjects,
 } from "../../Api/Exams";
-import { getClasses, getAllSections } from "../../Api/TeachersAPI";
+import { getActiveClasses, getAllSections } from "../../Api/TeachersAPI";
 
 // ─── Grade colour helper ──────────────────────────────────────────────────────
 function getGrade(marks, max, absent) {
@@ -143,6 +144,8 @@ export default function MarksEntry() {
     const anyAlreadySaved = savedRows.some((r) => r.marksId != null && r.marksId !== 0);
     const isUpdateMode = anyAlreadySaved && hasChanges;
 
+    const { examId: paramExamId } = useParams();
+
     const selectedSubjectConfig = subjects.find(
         (s) => String(s.sectionSubjectId) === selectedSectionSubjectId
     );
@@ -163,20 +166,65 @@ export default function MarksEntry() {
         const load = async () => {
             setLoadingMeta(true);
             try {
-                const [cls, secsRaw] = await Promise.all([getClasses(), getAllSections()]);
+                const [cls, secsRaw] = await Promise.all([
+                    getActiveClasses(),
+                    getAllSections()
+                ]);
+
                 setClasses(cls);
-                const secArr = Array.isArray(secsRaw) ? secsRaw : secsRaw?.data ?? [];
+
+                const secArr = Array.isArray(secsRaw)
+                    ? secsRaw
+                    : secsRaw?.data ?? [];
+
                 setSections(secArr);
-                if (cls.length > 0) setSelectedClassId(String(cls[0].id));
-                if (secArr.length > 0) setSelectedSectionId(String(secArr[0].id));
+
+                if (cls.length > 0) {
+                    setSelectedClassId(String(cls[0].id));
+                }
+
+                if (secArr.length > 0) {
+                    setSelectedSectionId(String(secArr[0].id));
+                }
+
             } catch (err) {
                 console.error("MarksEntry meta load error:", err);
             } finally {
                 setLoadingMeta(false);
             }
         };
+
         load();
     }, []);
+
+    useEffect(() => {
+        if (!paramExamId || !classes.length) return;
+
+        const resolveRouteExamClass = async () => {
+            try {
+                const allExams = await getExams();
+                const matchedExam = Array.isArray(allExams)
+                    ? allExams.find((e) => String(e.id) === String(paramExamId))
+                    : null;
+
+                if (!matchedExam) return;
+
+                const examClassId =
+                    matchedExam.schoolClassId ??
+                    matchedExam.classId ??
+                    matchedExam.class_id ??
+                    null;
+
+                if (examClassId) {
+                    setSelectedClassId(String(examClassId));
+                }
+            } catch (err) {
+                console.error("MarksEntry route exam resolve error:", err);
+            }
+        };
+
+        resolveRouteExamClass();
+    }, [paramExamId, classes]);
 
     // ── 2. Load exams when class changes ──────────────────────────────────────
     useEffect(() => {
@@ -193,6 +241,13 @@ export default function MarksEntry() {
             try {
                 const data = await getExams({ classId: selectedClassId });
                 setExams(data);
+                if (paramExamId) {
+                    const matchedExam = data.find((e) => String(e.id) === String(paramExamId));
+                    if (matchedExam) {
+                        setSelectedExamId(String(matchedExam.id));
+                        return;
+                    }
+                }
                 if (data.length > 0) setSelectedExamId(String(data[0].id));
             } catch (err) {
                 console.error("Load exams error:", err);
@@ -201,7 +256,7 @@ export default function MarksEntry() {
             }
         };
         load();
-    }, [selectedClassId]);
+    }, [selectedClassId, paramExamId]);
 
     // ── 3. Load subject configs when exam + section changes ───────────────────
     useEffect(() => {

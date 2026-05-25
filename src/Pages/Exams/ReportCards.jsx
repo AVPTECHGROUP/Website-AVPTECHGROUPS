@@ -10,15 +10,16 @@ import CardLoader from "../../Components/CommonComp/CardLoader";
 import ListLoader from "../../Components/CommonComp/ListLoader";
 import StudentReportCard from "./StudentReportCard";
 import TooltipComponent from "../../Components/CommonComp/Tooltip_comp/TooltipComp";
+import { useParams } from "react-router-dom";
 
 import {
     generateReportCards,
     getReportCards,
     getStudentReportCard,
     updateReportCardRemarks,
-} from "../../Api/Exams";                       
+} from "../../Api/Exams";
 import { getExams } from "../../Api/Exams";
-import { getClasses, getAllSections } from "../../Api/TeachersAPI";
+import { getActiveClasses, getAllSections } from "../../Api/TeachersAPI";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function getGrade(pct, absent) {
@@ -52,7 +53,7 @@ function getRankDisplay(rank) {
     const bg = colors[rank - 1] || "bg-blue-100";
     const text = rank <= 3 ? "text-white" : "text-blue-700";
     return (
-        <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-extrabold ${bg} ${text} shadow-sm`}>
+        <span className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-extrabold ${bg} ${text} shadow-sm`}>
             {rank}
         </span>
     );
@@ -63,24 +64,17 @@ function exportStudentsCSV({ students, examName, sectionLabel }) {
     try {
         const esc = (val) => `"${String(val ?? "").replace(/"/g, '""')}"`;
         const row = (arr) => arr.map(esc).join(",");
-
         const lines = [];
-
-        // Meta header
         lines.push(row(["Report Cards Export"]));
         if (examName) lines.push(row(["Exam", examName]));
         if (sectionLabel) lines.push(row(["Section", sectionLabel]));
         lines.push(row(["Total Students", students.length]));
         lines.push("");
-
-        // Column headers
         lines.push(row([
             "Rank", "Student Name", "Roll No.", "Admission No.",
             "Section", "Marks Obtained", "Max Marks",
             "Percentage", "Grade", "Status"
         ]));
-
-        // Data rows
         students.forEach((s) => {
             const pct = s.percentage ?? 0;
             const grade = getGrade(pct, s.isAbsent);
@@ -98,12 +92,10 @@ function exportStudentsCSV({ students, examName, sectionLabel }) {
                 status.label,
             ]));
         });
-
         const csvString = lines.join("\r\n");
         const dataUri = "data:text/csv;charset=utf-8,\uFEFF" + encodeURIComponent(csvString);
         const fileName = `report_cards_${examName ?? "export"}_${sectionLabel ?? "all"}.csv`
             .replace(/[^a-z0-9_.\-]/gi, "_");
-
         const link = document.createElement("a");
         link.href = dataUri;
         link.download = fileName;
@@ -144,12 +136,12 @@ function StudentCard({ student, onView }) {
     const rowBg = getRowBg(student);
 
     return (
-        <div className={`p-4 border-b border-gray-100 last:border-0 ${rowBg}`}>
-            <div className="flex items-start justify-between gap-2 mb-3">
-                <div className="flex items-center gap-3">
+        <div className={`p-3 border-b border-gray-100 last:border-0 ${rowBg}`}>
+            <div className="flex items-start justify-between gap-2 mb-2">
+                <div className="flex items-center gap-2 min-w-0">
                     {getRankDisplay(student.classRank)}
-                    <div>
-                        <p className="text-sm font-semibold text-gray-800">{student.studentName}</p>
+                    <div className="min-w-0">
+                        <p className="text-sm font-semibold text-gray-800 truncate">{student.studentName}</p>
                         <p className="text-xs text-gray-400">
                             Roll {student.rollNumber || "—"} · {student.admissionNumber || "—"}
                         </p>
@@ -157,23 +149,23 @@ function StudentCard({ student, onView }) {
                 </div>
                 <button
                     onClick={() => onView(student)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 transition-all shrink-0"
+                    className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 transition-all shrink-0"
                 >
-                    <Eye className="w-3.5 h-3.5" />
+                    <Eye className="w-3 h-3" />
                     View
                 </button>
             </div>
-            <div className="flex flex-wrap gap-2 items-center">
+            <div className="flex flex-wrap gap-1.5 items-center">
                 <span className="text-xs text-gray-600 font-medium">
                     {student.totalMarksObtained}/{student.totalMaxMarks}
                 </span>
                 <span className={`text-xs font-bold ${student.isAbsent ? "text-gray-300" : "text-gray-800"}`}>
                     {student.isAbsent ? "—" : `${pct.toFixed(1)}%`}
                 </span>
-                <span className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold ${grade.bg}`}>
+                <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${grade.bg}`}>
                     {grade.label}
                 </span>
-                <span className={`px-2.5 py-1 rounded-full text-xs font-bold border ${status.cls}`}>
+                <span className={`px-2 py-0.5 rounded-full text-xs font-bold border ${status.cls}`}>
                     {status.label}
                 </span>
             </div>
@@ -183,6 +175,8 @@ function StudentCard({ student, onView }) {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function ReportCards() {
+
+    const { examId: paramExamId } = useParams();
 
     // ── Meta ──────────────────────────────────────────────────────────────────
     const [classes, setClasses] = useState([]);
@@ -198,7 +192,7 @@ export default function ReportCards() {
 
     // ── Report cards data ─────────────────────────────────────────────────────
     const [students, setStudents] = useState([]);
-    const studentsRef = useRef([]); // ← always holds latest students for export
+    const studentsRef = useRef([]);
     const [loadingCards, setLoadingCards] = useState(false);
     const [cardsError, setCardsError] = useState(null);
     const [cardsLoaded, setCardsLoaded] = useState(false);
@@ -218,12 +212,23 @@ export default function ReportCards() {
     const failed = students.filter((s) => !s.isPassed && !s.isAbsent).length;
     const absent = students.filter((s) => s.isAbsent).length;
 
+
     const STATS = [
         { key: "Total Students", val: students.length, icon: Users, iconBgColor: "bg-blue-50", iconTxColor: "text-blue-600" },
         { key: "Passed", val: students.length ? `${passed} — ${((passed / students.length) * 100).toFixed(1)}%` : "0", icon: CheckSquare, iconBgColor: "bg-green-50", iconTxColor: "text-green-600" },
         { key: "Failed", val: failed, icon: XCircle, iconBgColor: "bg-red-50", iconTxColor: "text-red-500" },
         { key: "Absent (All)", val: absent, icon: UserMinus, iconBgColor: "bg-gray-100", iconTxColor: "text-gray-500" },
     ];
+
+    const filteredSections = selectedClassId
+        ? sections.filter((s) => {
+            return (
+                String(s.classId) === String(selectedClassId) ||
+                String(s.schoolClassId) === String(selectedClassId) ||
+                String(s.class_id) === String(selectedClassId)
+            );
+        })
+        : sections;
 
     const sectionLabel = (s) => {
         if (!s) return "—";
@@ -232,29 +237,102 @@ export default function ReportCards() {
         return s.name ?? "—";
     };
 
-    // ── 1. Load classes + sections on mount ───────────────────────────────────
+    // ── 1. Load active classes + sections on mount ─────────────────────────
     useEffect(() => {
+
+        let mounted = true;
+
         const load = async () => {
             setLoadingMeta(true);
+
             try {
-                const [cls, secsRaw] = await Promise.all([getClasses(), getAllSections()]);
+                const [cls, secsRaw] = await Promise.all([
+                    getActiveClasses(),
+                    getAllSections()
+                ]);
+
+                if (!mounted) return;
+
                 setClasses(cls);
-                const secArr = Array.isArray(secsRaw) ? secsRaw : secsRaw?.data ?? [];
+
+                const secArr = Array.isArray(secsRaw)
+                    ? secsRaw
+                    : secsRaw?.data ?? [];
+
                 setSections(secArr);
-                if (cls.length > 0) setSelectedClassId(String(cls[0].id));
-                if (secArr.length > 0) setSelectedSectionId(String(secArr[0].id));
+
+                if (!paramExamId && cls.length > 0) {
+                    setSelectedClassId(String(cls[0].id));
+                }
+
             } catch (err) {
                 console.error("ReportCards meta load error:", err);
             } finally {
-                setLoadingMeta(false);
+                if (mounted) {
+                    setLoadingMeta(false);
+                }
             }
         };
+
         load();
+
+        return () => {
+            mounted = false;
+        };
+
     }, []);
+
+    useEffect(() => {
+        if (!paramExamId || !classes.length) return;
+
+        const resolveRouteExamClass = async () => {
+            try {
+                const allExams = await getExams();
+                const matchedExam = Array.isArray(allExams)
+                    ? allExams.find((e) => String(e.id) === String(paramExamId))
+                    : null;
+
+                if (!matchedExam) return;
+
+                const examClassId =
+                    matchedExam.schoolClassId ??
+                    matchedExam.classId ??
+                    matchedExam.class_id ??
+                    null;
+
+                if (examClassId) {
+                    setSelectedClassId(String(examClassId));
+                }
+            } catch (err) {
+                console.error("ReportCards route exam resolve error:", err);
+            }
+        };
+
+        resolveRouteExamClass();
+    }, [paramExamId, classes]);
+
+    useEffect(() => {
+
+        if (filteredSections.length === 0) {
+            setSelectedSectionId("");
+            return;
+        }
+
+        const hasCurrent = filteredSections.some(
+            (s) => String(s.id) === String(selectedSectionId)
+        );
+
+        if (!hasCurrent) {
+            setSelectedSectionId(String(filteredSections[0].id));
+        }
+
+    }, [selectedClassId, sections, filteredSections, selectedSectionId]);
 
     // ── 2. Load exams when class changes ──────────────────────────────────────
     useEffect(() => {
-        if (!selectedClassId) return;
+
+        let mounted = true;
+
         const load = async () => {
             setLoadingExams(true);
             setExams([]);
@@ -262,19 +340,54 @@ export default function ReportCards() {
             setCardsLoaded(false);
             setStudents([]);
             studentsRef.current = [];
+            setCardsError(null);
+
             try {
                 const data = await getExams({ classId: selectedClassId });
-                const declared = data.filter((e) => e.resultDeclared);
-                setExams(declared);
-                if (declared.length > 0) setSelectedExamId(String(declared[0].id));
+
+                const allExams = Array.isArray(data) ? data : [];
+
+                if (!mounted) return;
+
+                setExams(allExams);
+
+                // ── AUTO SELECT ROUTE EXAM ──
+                if (paramExamId) {
+                    const matchedExam = allExams.find(
+                        (e) => String(e.id) === String(paramExamId)
+                    );
+
+                    if (matchedExam) {
+                        setSelectedExamId(String(matchedExam.id));
+                        return;
+                    }
+                }
+
+                // fallback
+                const declared = allExams.filter((e) => e.resultDeclared);
+
+                if (declared.length > 0) {
+                    setSelectedExamId(String(declared[0].id));
+                } else if (allExams.length > 0) {
+                    setSelectedExamId(String(allExams[0].id));
+                }
+
             } catch (err) {
                 console.error("Load exams error:", err);
             } finally {
-                setLoadingExams(false);
+                if (mounted) {
+                    setLoadingExams(false);
+                }
             }
         };
+
         load();
-    }, [selectedClassId]);
+
+        return () => {
+            mounted = false;
+        };
+
+    }, [selectedClassId, paramExamId]);
 
     // ── 3. Load report cards ──────────────────────────────────────────────────
     const loadReportCards = useCallback(async () => {
@@ -289,10 +402,12 @@ export default function ReportCards() {
                 Number(selectedExamId),
                 selectedSectionId ? Number(selectedSectionId) : null
             );
-            setStudents(data);
-            studentsRef.current = data; // ← keep ref in sync
+            const arr = Array.isArray(data) ? data : [];
+            setStudents(arr);
+            studentsRef.current = arr;
             setCardsLoaded(true);
         } catch (err) {
+            console.error("loadReportCards error:", err);
             setCardsError("Failed to load report cards. Click Generate All first if not yet generated.");
         } finally {
             setLoadingCards(false);
@@ -300,7 +415,14 @@ export default function ReportCards() {
     }, [selectedExamId, selectedSectionId]);
 
     useEffect(() => {
-        if (selectedExamId) loadReportCards();
+        if (selectedExamId) {
+            loadReportCards();
+        } else {
+            setStudents([]);
+            studentsRef.current = [];
+            setCardsLoaded(false);
+            setCardsError(null);
+        }
     }, [loadReportCards]);
 
     // ── Generate All ──────────────────────────────────────────────────────────
@@ -353,7 +475,7 @@ export default function ReportCards() {
             return;
         }
         const selectedExamObj = exams.find((e) => String(e.id) === selectedExamId);
-        const selectedSectionObj = sections.find((s) => String(s.id) === selectedSectionId);
+        const selectedSectionObj = filteredSections.find((s) => String(s.id) === selectedSectionId);
         exportStudentsCSV({
             students: data,
             examName: selectedExamObj?.name ?? "",
@@ -361,16 +483,16 @@ export default function ReportCards() {
         });
     };
 
-    const selectedSectionObj = sections.find((s) => String(s.id) === selectedSectionId);
+    const selectedSectionObj = filteredSections.find((s) => String(s.id) === selectedSectionId);
     const selectedExamObj = exams.find((e) => String(e.id) === selectedExamId);
 
     // ─────────────────────────────────────────────────────────────────────────
     return (
-        <div className="min-h-screen bg-[#f3f6fb] p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6">
+        <div className="min-h-screen bg-[#f3f6fb] p-2 sm:p-3 lg:p-6 space-y-3 sm:space-y-4 lg:space-y-6">
 
             {/* Page Title */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <h2 className="text-lg sm:text-xl lg:text-3xl font-bold text-gray-900">
                     <TooltipComponent message="Efficiently manage report cards." direction="right" color="nocolor">
                         Manage Report Cards
                     </TooltipComponent>
@@ -378,76 +500,105 @@ export default function ReportCards() {
             </div>
 
             {/* ── Top Filter Bar ── */}
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm px-4 sm:px-5 py-4">
-                <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3">
+            <div className="bg-white rounded-xl sm:rounded-2xl border border-gray-200 shadow-sm px-3 sm:px-4 lg:px-5 py-3 sm:py-4">
 
-                    <Select
-                        value={selectedClassId}
-                        onChange={(v) => { setSelectedClassId(v); setCardsLoaded(false); }}
-                        options={classes.map((c) => ({ value: String(c.id), label: c.name }))}
-                        disabled={loadingMeta}
-                        className="w-full sm:w-40"
-                    />
+                {/* FIX: Two-row layout at lg (1024px), single row only at xl+ */}
+                <div className="flex flex-col gap-2 sm:gap-3">
 
-                    <Select
-                        value={selectedSectionId}
-                        onChange={(v) => { setSelectedSectionId(v); }}
-                        options={sections.map((s) => ({ value: String(s.id), label: sectionLabel(s) }))}
-                        disabled={loadingMeta}
-                        className="w-full sm:w-52"
-                    />
+                    {/* Row 1: Selects + Reload */}
+                    <div className="flex flex-col xs:flex-row flex-wrap xl:flex-nowrap items-stretch xl:items-center gap-2 sm:gap-3">
 
-                    <Select
-                        value={selectedExamId}
-                        onChange={(v) => setSelectedExamId(v)}
-                        options={exams.map((e) => ({ value: String(e.id), label: e.name }))}
-                        disabled={loadingExams || !selectedClassId}
-                        className="w-full sm:w-72"
-                    />
+                        {/* Class */}
+                        <Select
+                            value={selectedClassId}
+                            onChange={(v) => { setSelectedClassId(v); setCardsLoaded(false); }}
+                            options={[
+                                ...(loadingMeta ? [{ value: "", label: "Loading..." }] : []),
+                                ...classes.map((c) => ({ value: String(c.id), label: c.name }))
+                            ]}
+                            disabled={loadingMeta}
+                            className="w-full xs:w-32 shrink-0"
+                        />
 
-                    <button
-                        onClick={loadReportCards}
-                        disabled={!selectedExamId || loadingCards}
-                        className="flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-all disabled:opacity-60"
-                    >
-                        {loadingCards
-                            ? <Loader2 className="w-4 h-4 animate-spin" />
-                            : <RefreshCw className="w-4 h-4" />}
-                        Reload
-                    </button>
+                        {/* Section */}
+                        <Select
+                            value={selectedSectionId}
+                            onChange={(v) => { setSelectedSectionId(v); }}
+                            options={[
+                                { value: "", label: "All Sections" },
+                                ...filteredSections.map((s) => ({ value: String(s.id), label: sectionLabel(s) }))
+                            ]}
+                            disabled={loadingMeta}
+                            className="w-full xs:w-44 shrink-0"
+                        />
 
-                    <div className="hidden sm:block flex-1" />
+                        {/* Exam — grows to fill remaining space */}
+                        <Select
+                            value={selectedExamId}
+                            onChange={(v) => setSelectedExamId(v)}
+                            options={[
+                                { value: "", label: loadingExams ? "Loading exams..." : "Select Exam" },
+                                ...exams.map((e) => ({
+                                    value: String(e.id),
+                                    label: e.resultDeclared ? e.name : `${e.name} (Pending)`
+                                }))
+                            ]}
+                            disabled={loadingExams || !selectedClassId}
+                            className="w-full xl:flex-1 xl:min-w-0"
+                        />
 
-                    <button
-                        onClick={handleGenerate}
-                        disabled={!selectedExamId || generating}
-                        className="flex items-center justify-center gap-2 w-full sm:w-auto px-4 sm:px-5 py-2 text-sm font-semibold text-white bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700 rounded-lg transition-all shadow-sm active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
-                    >
-                        {generating
-                            ? <Loader2 className="w-4 h-4 animate-spin" />
-                            : <Sparkles className="w-4 h-4" />}
-                        {generating ? "Generating..." : "Generate All"}
-                    </button>
+                        {/* Reload button */}
+                        <button
+                            onClick={loadReportCards}
+                            disabled={!selectedExamId || loadingCards}
+                            className="flex items-center justify-center gap-2 w-full xs:w-auto px-3 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-all disabled:opacity-60 shrink-0"
+                        >
+                            {loadingCards
+                                ? <Loader2 className="w-4 h-4 animate-spin" />
+                                : <RefreshCw className="w-4 h-4" />}
+                            <span>Reload</span>
+                        </button>
+                    </div>
 
-                    {/* ← Export button now wired up */}
-                    <button
-                        onClick={handleExport}
-                        disabled={!cardsLoaded || students.length === 0}
-                        className="flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2 text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        <Download className="w-4 h-4" />
-                        Export CSV
-                    </button>
+                    {/* Row 2: Action buttons — always visible, aligned right on larger screens */}
+                    <div className="flex flex-col xs:flex-row items-stretch xs:items-center gap-2 sm:gap-3 xl:justify-end">
+
+                        {/* Generate All */}
+                        <button
+                            onClick={handleGenerate}
+                            disabled={!selectedExamId || generating}
+                            className="flex items-center justify-center gap-2 w-full xs:w-auto px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700 rounded-lg transition-all shadow-sm active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed shrink-0"
+                        >
+                            {generating
+                                ? <Loader2 className="w-4 h-4 animate-spin" />
+                                : <Sparkles className="w-4 h-4" />}
+                            <span>{generating ? "Generating..." : "Generate All"}</span>
+                        </button>
+
+                        {/* Export CSV */}
+                        <button
+                            onClick={handleExport}
+                            disabled={
+                                loadingCards ||
+                                !cardsLoaded ||
+                                students.length === 0
+                            }
+                            className="flex items-center justify-center gap-2 w-full xs:w-auto px-4 py-2 text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                        >
+                            <Download className="w-4 h-4" />
+                            <span>Export CSV</span>
+                        </button>
+                    </div>
                 </div>
 
                 {generateMsg && (
-                    <div className="mt-3 px-4 py-2.5 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700 flex items-center gap-2">
+                    <div className="mt-3 px-3 py-2.5 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700 flex items-center gap-2">
                         <CheckSquare className="w-4 h-4 shrink-0" />
                         {generateMsg}
                     </div>
                 )}
                 {generateError && (
-                    <div className="mt-3 px-4 py-2.5 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600 flex items-center gap-2">
+                    <div className="mt-3 px-3 py-2.5 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600 flex items-center gap-2">
                         <AlertCircle className="w-4 h-4 shrink-0" />
                         {generateError}
                     </div>
@@ -455,7 +606,8 @@ export default function ReportCards() {
             </div>
 
             {/* ── Stats ── */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            {/* FIX: Always 4 columns at lg, 2 below */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
                 {loadingCards || loadingMeta
                     ? Array(4).fill(0).map((_, i) => <CardLoader key={i} />)
                     : STATS.map((s) => (
@@ -471,58 +623,58 @@ export default function ReportCards() {
             </div>
 
             {studentCardError && (
-                <div className="bg-red-50 border border-red-200 rounded-2xl px-6 py-4 flex items-center gap-3 text-sm text-red-600">
+                <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 flex items-center gap-3 text-sm text-red-600">
                     <AlertCircle className="w-4 h-4 shrink-0" />
                     {studentCardError}
                 </div>
             )}
 
             {loadingStudentCard && (
-                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm px-6 py-8 flex items-center justify-center gap-3 text-sm text-gray-500">
+                <div className="bg-white rounded-xl border border-gray-200 shadow-sm px-4 py-6 flex items-center justify-center gap-3 text-sm text-gray-500">
                     <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
                     Loading report card...
                 </div>
             )}
 
             {/* ── Class Rank Table ── */}
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-                <div className="px-4 sm:px-6 py-4 border-b border-gray-100 flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                        <Medal className="w-5 h-5 text-yellow-500 shrink-0" />
-                        <h2 className="text-sm sm:text-base font-semibold text-gray-800">
+            <div className="bg-white rounded-xl sm:rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                <div className="px-3 sm:px-4 lg:px-5 py-3 sm:py-4 border-b border-gray-100 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                        <Medal className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-500 shrink-0" />
+                        <h2 className="text-xs sm:text-sm lg:text-base font-semibold text-gray-800 truncate">
                             Class Rank
                             {selectedSectionObj && (
                                 <> — <span className="text-blue-600">{sectionLabel(selectedSectionObj)}</span></>
                             )}
                             {selectedExamObj && (
-                                <span className="text-gray-400 font-normal text-xs ml-2">
+                                <span className="text-gray-400 font-normal text-xs ml-1 hidden sm:inline">
                                     {selectedExamObj.name}
                                 </span>
                             )}
                         </h2>
                     </div>
-                    <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2.5 py-1 rounded-full shrink-0">
+                    <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded-full shrink-0">
                         {students.length} students
                     </span>
                 </div>
 
                 {cardsError && (
-                    <div className="px-6 py-4 text-sm text-amber-700 bg-amber-50 flex items-center gap-2 border-b border-amber-100">
+                    <div className="px-4 py-3 text-sm text-amber-700 bg-amber-50 flex items-center gap-2 border-b border-amber-100">
                         <AlertCircle className="w-4 h-4 shrink-0" />
-                        {cardsError}
+                        <span className="text-xs sm:text-sm">{cardsError}</span>
                     </div>
                 )}
 
-                {/* Mobile */}
-                <div className="block md:hidden">
+                {/* Mobile & Tablet: shown below lg (1024px) */}
+                <div className="block lg:hidden">
                     {loadingCards ? (
                         <div className="p-4 space-y-3">
                             {Array.from({ length: 5 }).map((_, i) => (
-                                <div key={i} className="h-4 bg-gray-200 rounded animate-pulse"></div>
+                                <div key={i} className="h-16 bg-gray-100 rounded-lg animate-pulse" />
                             ))}
                         </div>
                     ) : students.length === 0 ? (
-                        <p className="text-sm text-gray-400 text-center py-12">
+                        <p className="text-sm text-gray-400 text-center py-10">
                             {cardsLoaded ? "No report cards found." : "Select an exam and click Generate All or Reload."}
                         </p>
                     ) : (
@@ -532,14 +684,15 @@ export default function ReportCards() {
                     )}
                 </div>
 
-                {/* Desktop */}
-                <div className="hidden md:block overflow-x-auto">
-                    <table className="w-full text-sm">
+                {/* Desktop: shown at lg (1024px) and above */}
+                {/* FIX: min-w on table + tighter padding at lg, normal at xl */}
+                <div className="hidden lg:block overflow-x-auto">
+                    <table className="w-full min-w-[720px] text-sm">
                         <thead>
                             <tr className="bg-gray-50 border-b border-gray-100">
                                 {["Rank", "Student Name", "Roll No.", "Adm. No.", "Section",
                                     "Total", "%", "Grade", "Status", "Action"].map((h) => (
-                                        <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                                        <th key={h} className="text-left px-2 xl:px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
                                             {h}
                                         </th>
                                     ))}
@@ -562,35 +715,38 @@ export default function ReportCards() {
                                 const status = getStatus(student);
                                 const rowBg = getRowBg(student);
                                 return (
-                                    <tr key={student.studentId} className={`border-b border-gray-50 transition-colors ${rowBg}`}>
-                                        <td className="px-4 py-3">{getRankDisplay(student.classRank)}</td>
-                                        <td className="px-4 py-3 font-semibold text-gray-800 whitespace-nowrap">{student.studentName}</td>
-                                        <td className="px-4 py-3 text-gray-500">{student.rollNumber || "—"}</td>
-                                        <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{student.admissionNumber || "—"}</td>
-                                        <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{student.sectionName || "—"}</td>
-                                        <td className="px-4 py-3 font-medium text-gray-700">
+                                    <tr
+                                        key={student.studentId}
+                                        className={`border-b border-gray-50 transition-colors hover:bg-blue-50/40 ${rowBg}`}
+                                    >
+                                        <td className="px-2 xl:px-4 py-3">{getRankDisplay(student.classRank)}</td>
+                                        <td className="px-2 xl:px-4 py-3 font-semibold text-gray-800 whitespace-nowrap">{student.studentName}</td>
+                                        <td className="px-2 xl:px-4 py-3 text-gray-500">{student.rollNumber || "—"}</td>
+                                        <td className="px-2 xl:px-4 py-3 text-gray-500 whitespace-nowrap">{student.admissionNumber || "—"}</td>
+                                        <td className="px-2 xl:px-4 py-3 text-gray-500 whitespace-nowrap">{student.sectionName || "—"}</td>
+                                        <td className="px-2 xl:px-4 py-3 font-medium text-gray-700 whitespace-nowrap">
                                             {student.totalMarksObtained} / {student.totalMaxMarks}
                                         </td>
-                                        <td className={`px-4 py-3 font-bold ${student.isAbsent ? "text-gray-300" : "text-gray-800"}`}>
+                                        <td className={`px-2 xl:px-4 py-3 font-bold whitespace-nowrap ${student.isAbsent ? "text-gray-300" : "text-gray-800"}`}>
                                             {student.isAbsent ? "—" : `${pct.toFixed(1)}%`}
                                         </td>
-                                        <td className="px-4 py-3">
-                                            <span className={`inline-flex items-center justify-center w-9 h-9 rounded-full text-xs font-bold ${grade.bg}`}>
+                                        <td className="px-2 xl:px-4 py-3">
+                                            <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold ${grade.bg}`}>
                                                 {student.overallGrade || grade.label}
                                             </span>
                                         </td>
-                                        <td className="px-4 py-3">
-                                            <span className={`px-2.5 py-1 rounded-full text-xs font-bold border ${status.cls}`}>
+                                        <td className="px-2 xl:px-4 py-3">
+                                            <span className={`px-2 py-1 rounded-full text-xs font-bold border whitespace-nowrap ${status.cls}`}>
                                                 {status.label}
                                             </span>
                                         </td>
-                                        <td className="px-4 py-3">
+                                        <td className="px-2 xl:px-4 py-3">
                                             <button
                                                 onClick={() => handleViewStudent(student)}
-                                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 transition-all"
+                                                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 transition-all whitespace-nowrap"
                                             >
                                                 <Eye className="w-3.5 h-3.5" />
-                                                View Card
+                                                View
                                             </button>
                                         </td>
                                     </tr>
