@@ -19,7 +19,7 @@ const menuItems = [
     roles: ['ADMIN', 'TEACHER', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST', 'PARENT', 'STORE_ACCOUNTANT'],
   },
   {
-    id: 'manageUsers', icon: UserCog, label: 'Manage Users', route: '/dashboard/manageUsers',
+    id: 'manageUsers', icon: UserCog, label: 'Manage Users', route: '/manageUsers',
     roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'],
   },
   {
@@ -252,9 +252,28 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
     navigate(route)
     if (window.innerWidth < 1024) setMobileSidebarOpen(false)
   }
-  const isRouteActive = (item) =>
-    location.pathname === item.route ||
-    (item.subItems && item.subItems.some(s => location.pathname.startsWith(s.route)))
+  const isRouteActive = (item) => {
+    // exact match
+    if (location.pathname === item.route) return true;
+
+    // nested routes match
+    if (
+      item.route !== '/' &&
+      location.pathname.startsWith(item.route + '/')
+    ) {
+      return true;
+    }
+
+    // sub items match
+    if (item.subItems) {
+      return item.subItems.some(sub =>
+        location.pathname === sub.route ||
+        location.pathname.startsWith(sub.route + '/')
+      );
+    }
+
+    return false;
+  };
 
   const displayName =
     user?.fullName ||

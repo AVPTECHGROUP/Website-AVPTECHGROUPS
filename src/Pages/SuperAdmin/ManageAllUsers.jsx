@@ -278,7 +278,7 @@ const ManageAllUsers = () => {
 
     const callAllActions = async (optVal, sys_user) => {
         if (optVal === 'editUser' && sys_user.role[0] !== 'TEACHER') {
-            navigate(`/dashboard/editUser/${sys_user.id}`);
+            navigate(`/manageUsers/editUser/${sys_user.id}`);
         }
 
         if (optVal === 'editUser' && sys_user.role[0] === 'TEACHER') {
@@ -322,7 +322,7 @@ const ManageAllUsers = () => {
 
                     {/* Filters */}
                     <div className="bg-white grid grid-cols-2 lg:grid-cols-5 gap-3 px-4 py-3 rounded-xl border border-gray-200 mb-4 mt-4">
-                        <button onClick={() => navigate('/dashboard/adduser')}
+                        <button onClick={() => navigate('/manageUsers/adduser')}
                             className="col-span-2 lg:col-span-1 px-4 py-2.5 w-full cursor-pointer rounded-lg font-medium flex items-center justify-center gap-2 transition-all bg-blue-600 text-white">
                             <UserPlusIcon className="w-5 h-5" /> Add User
                         </button>

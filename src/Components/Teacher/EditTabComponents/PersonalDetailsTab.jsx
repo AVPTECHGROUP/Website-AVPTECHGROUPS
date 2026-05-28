@@ -97,8 +97,9 @@ const PersonalDetailsTab = ({ formData, setFormData, handleInputChange }) => {
                                 name="email"
                                 value={formData.email}
                                 onChange={handleInputChange}
+                                readOnly
                                 placeholder="Enter email address"
-                                className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                className="block w-full pl-10 pr-3 py-2.5 border bg-gray-50 cursor-not-allowed border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                             />
                         </div>
                     </div>
@@ -146,8 +147,7 @@ const PersonalDetailsTab = ({ formData, setFormData, handleInputChange }) => {
                                 name="dob"
                                 value={formData.dob}
                                 onChange={handleInputChange}
-                                readOnly
-                                className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-gray-50"
+                                className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                             />
                         </div>
                     </div>
@@ -245,8 +245,7 @@ const PersonalDetailsTab = ({ formData, setFormData, handleInputChange }) => {
                                 name="joiningDate"
                                 value={formData.joiningDate}
                                 onChange={handleInputChange}
-                                readOnly
-                                className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-gray-50"
+                                className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                             />
                         </div>
                     </div>
@@ -290,6 +289,7 @@ const PersonalDetailsTab = ({ formData, setFormData, handleInputChange }) => {
                                 type="email"
                                 name="loginEmail"
                                 value={formData.loginEmail}
+                                readOnly
                                 onChange={handleInputChange}
                                 placeholder="Email / username"
                                 className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
