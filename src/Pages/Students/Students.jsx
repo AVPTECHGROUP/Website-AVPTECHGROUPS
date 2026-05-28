@@ -398,7 +398,19 @@ const Student = () => {
                             students.map((student) => (
                                 <div key={student.id} className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
                                     <div className="flex items-center gap-3 mb-3">
-                                        <div className={`w-9 h-9 rounded-full ${getAvatarColor(student.name)} flex items-center justify-center text-white text-sm font-semibold shrink-0`}>
+                                        {student.image ? (
+                                            <img 
+                                                src={student.image} 
+                                                alt={student.name}
+                                                className="w-9 h-9 rounded-full object-cover shrink-0"
+                                                onError={(e) => {
+                                                    e.target.style.display = 'none';
+                                                    e.target.nextElementSibling.style.display = 'flex';
+                                                }}
+                                            />
+                                        ) : null}
+                                        <div className={`w-9 h-9 rounded-full ${getAvatarColor(student.name)} flex items-center justify-center text-white text-sm font-semibold shrink-0 ${student.image ? 'hidden' : ''}`}
+                                             style={student.image ? { display: 'none' } : {}}>
                                             {student.avatar}
                                         </div>
                                         <div className="flex flex-col min-w-0">
@@ -501,7 +513,19 @@ const Student = () => {
                                             <tr key={student.id} className="hover:bg-gray-50 transition-colors">
                                                 <td className="px-4 py-3 text-gray-700 text-sm">
                                                     <div className="flex items-center gap-3">
-                                                        <div className={`w-9 h-9 rounded-full ${getAvatarColor(student.name)} flex items-center justify-center text-white text-sm font-semibold shrink-0`}>
+                                                        {student.image ? (
+                                                            <img 
+                                                                src={student.image} 
+                                                                alt={student.name}
+                                                                className="w-9 h-9 rounded-full object-cover shrink-0"
+                                                                onError={(e) => {
+                                                                    e.target.style.display = 'none';
+                                                                    e.target.nextElementSibling.style.display = 'flex';
+                                                                }}
+                                                            />
+                                                        ) : null}
+                                                        <div className={`w-9 h-9 rounded-full ${getAvatarColor(student.name)} flex items-center justify-center text-white text-sm font-semibold shrink-0 ${student.image ? 'hidden' : ''}`}
+                                                             style={student.image ? { display: 'none' } : {}}>
                                                             {student.avatar}
                                                         </div>
                                                         <div className="flex flex-col min-w-0">
