@@ -43,7 +43,8 @@ function ClassAssignment() {
     isClassTeacher: false,
     empCode: '',
     currStatus: '',
-    dessignation: ''
+    dessignation: '',
+    image:null
   });
 
   // ── CHANGED: multi-select set instead of single string ──
@@ -90,7 +91,8 @@ function ClassAssignment() {
             teacherName: teacher.fullName,
             empCode: teacher.employeeCode,
             currStatus: teacher.status,
-            dessignation: teacher.designation
+            dessignation: teacher.designation,
+            image: teacher.profileImageUrl
           }));
         } catch (err) {
           setError('Failed to fetch teacher details');
@@ -566,9 +568,25 @@ function ClassAssignment() {
             {formData.teacherName && (
               <div className="flex items-center justify-between w-full gap-2.5 bg-white border rounded-xl p-4 shadow-sm border-gray-200">
                 <div className="min-w-50 flex items-center gap-2">
-                  <span className="w-14 h-14 rounded-full bg-linear-to-br from-blue-800 to-indigo-600 flex items-center justify-center text-white text-xl font-bold shadow-sm">
-                    {getInitials(formData.teacherName)}
-                  </span>
+                   {formData?.image ? (
+  <img
+    src={formData.image}
+    alt={formData.teacherName}
+    className="w-14 h-14 rounded-full object-cover shadow-sm border border-slate-200"
+    onError={(e) => {
+      e.target.style.display = "none";
+      e.target.nextSibling.style.display = "flex";
+    }}
+  />
+) : null}
+
+<span
+  className={`w-14 h-14 rounded-full bg-linear-to-br from-blue-800 to-indigo-600 items-center justify-center text-white text-xl font-bold shadow-sm ${
+    formData?.image ? "hidden" : "flex"
+  }`}
+>
+  {getInitials(formData.teacherName)}
+</span>
                   <div className="flex flex-col leading-tight">
                     <span className="text-lg font-medium text-gray-800">{formData.teacherName}</span>
                     <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-500">
