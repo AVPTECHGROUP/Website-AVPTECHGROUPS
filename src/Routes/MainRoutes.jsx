@@ -154,9 +154,9 @@ const MainRoutes = () => {
 
           {/* ADMIN, SUPER_ADMIN & GLOBAL_ADMIN */}
           <Route element={<RoleProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN']} />}>
-            <Route path="/dashboard/addUser" element={<AddnewSystemUser />} />
-            <Route path="/dashboard/editUser/:id" element={<EditSysUser />} />
-            <Route path="/dashboard/manageUsers" element={<ManageAllUsers />} />
+            <Route path="/manageUsers/addUser" element={<AddnewSystemUser />} />
+            <Route path="/manageUsers/editUser/:id" element={<EditSysUser />} />
+            <Route path="/manageUsers" element={<ManageAllUsers />} />
 
             <Route path="/attendance" element={<Attendance />} />
             <Route path="/attendance/staffImgReg" element={<StaffAttendanceRegistration />} />

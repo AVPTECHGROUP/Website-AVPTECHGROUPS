@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, IndianRupee, User, Camera, X } from 'lucide-react';
 import { toast } from 'react-toastify';
@@ -13,6 +13,7 @@ function AddNewTeacher() {
     const [profileImage, setProfileImage] = useState(null);
     const [imagePreview, setImagePreview] = useState(null);
     const fileInputRef = useRef(null);
+    const salarySectionRef = useRef(null);
     const [formData, setFormData] = useState({
         name: "",
         gender: "",
@@ -28,7 +29,7 @@ function AddNewTeacher() {
         payrollStatus: "ACTIVE",
         accountStatus: false,
         // Salary fields
-        salaryType: '',
+        salaryType: 'MONTHLY',
         baseSalary: '',
         leaveDeductionPerDay: '',
         lateArrivalPenalty: '',
@@ -240,8 +241,15 @@ function AddNewTeacher() {
     };
 
     const handleNext = () => {
-        setActiveTab('salary')
-    }
+        setActiveTab('salary');
+
+        setTimeout(() => {
+            salarySectionRef.current?.scrollIntoView({
+                behavior: "smooth",
+                block: "start",
+            });
+        }, 100);
+    };
 
     return (
         <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-4">
@@ -381,11 +389,13 @@ function AddNewTeacher() {
                             )}
 
                             {activeTab === 'salary' && (
-                                <SalaryDetailsTab
-                                    formData={formData}
-                                    setFormData={setFormData}
-                                    handleInputChange={handleInputChange}
-                                />
+                                <div ref={salarySectionRef}>
+                                    <SalaryDetailsTab
+                                        formData={formData}
+                                        setFormData={setFormData}
+                                        handleInputChange={handleInputChange}
+                                    />
+                                </div>
                             )}
                         </div>
 
@@ -401,7 +411,13 @@ function AddNewTeacher() {
                                 </button>
                                 {/* Showing next button */}
                                 {activeTab === 'personal' && (
-                                    <button type='submit' onClick={handleNext} className="px-6 py-2.5 text-sm font-medium rounded-lg bg-blue-500 hover:bg-blue-600 text-white">Next</button>
+                                    <button
+                                        type='button'
+                                        onClick={handleNext}
+                                        className="px-6 py-2.5 text-sm font-medium rounded-lg bg-blue-500 hover:bg-blue-600 text-white"
+                                    >
+                                        Next
+                                    </button>
                                 )}
                                 {/* Show save button after reaching salaryTab...*/}
                                 {activeTab === 'salary' && (

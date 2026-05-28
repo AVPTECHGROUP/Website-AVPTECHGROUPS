@@ -39,7 +39,6 @@ const Teachers = () => {
     totalTeachers: 0,
     activeTeachers: 0,
     inactiveTeachers: 0,
-    attendanceBlockedTeachers: 0,
   });
   const [statsLoading, setStatsLoading] = useState(false);
 
@@ -218,7 +217,6 @@ const Teachers = () => {
   const active = statistics.activeTeachers || 0;
   const inActive = statistics.inactiveTeachers || 0;
   const payrollIncluded = teachers.filter((t) => t.payroll === 'INCLUDED').length || 0;
-  const attendanceBlocked = statistics.attendanceBlockedTeachers || 0;
 
   const activePercent = total > 0 ? Math.round((active / total) * 100) : 0;
   const inActivePercent = total > 0 ? Math.round((inActive / total) * 100) : 0;
@@ -230,7 +228,6 @@ const Teachers = () => {
     inActive,
     inActivePercent,
     payrollIncluded,
-    attendanceBlocked,
   };
 
   return (

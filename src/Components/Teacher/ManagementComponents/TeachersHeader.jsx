@@ -39,13 +39,6 @@ const TeachersHeader = ({ stats, loading }) => {
       iconTxColor: 'text-teal-600',
       iconBgColor: 'bg-teal-50',
     },
-    {
-      iconName: ShieldBanIcon,
-      keyName: 'Attendance Blocked',
-      val: stats.attendanceBlocked,
-      iconTxColor: 'text-orange-600',
-      iconBgColor: 'bg-orange-50',
-    },
   ];
 
   return (
