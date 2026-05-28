@@ -49,6 +49,10 @@ const TeachersTable = ({
     return colors[(name?.charCodeAt(0) ?? 0) % colors.length];
   };
 
+  const resolveTeacherName = (teacher) => teacher.name || teacher.fullName || 'User';
+  const resolveTeacherImage = (teacher) => teacher.profileImageUrl || teacher.image || '';
+  const resolveTeacherAvatar = (teacher) => teacher.avatar || (resolveTeacherName(teacher)[0] || 'U').toUpperCase();
+
   const handleToggleStatus = async (teacher) => {
     // 1. Optimistic row flip
     setTeachers((prev) =>
@@ -201,9 +205,24 @@ const TeachersTable = ({
                         )}
                       </div>
                     )}
-                    <div className={`w-12 h-12 rounded-full ${getAvatarColor(teacher.name)} flex items-center justify-center text-white font-semibold`}>
-                      {teacher.avatar}
+                    {resolveTeacherImage(teacher) ? (
+                      <img 
+                        src={resolveTeacherImage(teacher)} 
+                        alt={resolveTeacherName(teacher)}
+                        className="w-9 h-9 rounded-full object-cover shrink-0"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          e.target.nextElementSibling.style.display = 'flex';
+                        }}
+                      />
+                    ) : null}
+                    <div className={`w-9 h-9 rounded-full ${getAvatarColor(resolveTeacherName(teacher))} flex items-center justify-center text-white text-sm font-semibold shrink-0 ${resolveTeacherImage(teacher) ? 'hidden' : ''}`}
+                         style={resolveTeacherImage(teacher) ? { display: 'none' } : {}}>
+                      {resolveTeacherAvatar(teacher)}
                     </div>
+                    {/* <div className={`w-12 h-12 rounded-full ${getAvatarColor(teacher.name)} flex items-center justify-center text-white font-semibold`}>
+                      {teacher.avatar}
+                    </div> */}
                     <div>
                       <h3 className="font-semibold text-gray-900">{teacher.name}</h3>
                       <p className="text-sm text-gray-500">{teacher.role}</p>
@@ -338,10 +357,25 @@ const TeachersTable = ({
 
                       {/* ── Full Name ── */}
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center gap-3">
-                          <img src={teacher.image} className="w-10 h-10 rounded-full" alt="" />
+                        <div className="flex items-center gap-3 border border-transparent hover:border-gray-300 rounded transition-colors cursor-pointer">
+                          {resolveTeacherImage(teacher) ? (
+                            <img 
+                              src={resolveTeacherImage(teacher)} 
+                              alt={resolveTeacherName(teacher)}
+                              fit="cover"
+                              className="w-10 h-10 rounded-full object-cover"
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                                e.target.nextElementSibling.style.display = 'flex';
+                              }}
+                            />
+                          ) : null}
+                          <div className={`w-10 h-10 rounded-full ${getAvatarColor(resolveTeacherName(teacher))} flex items-center justify-center text-white text-sm font-semibold shrink-0 ${resolveTeacherImage(teacher) ? 'hidden' : ''}`}
+                               style={resolveTeacherImage(teacher) ? { display: 'none' } : {}}>
+                            {resolveTeacherAvatar(teacher)}
+                          </div>
                           <div>
-                            <div className="text-sm font-medium text-gray-900">{teacher.name}</div>
+                            <div className="text-sm font-medium text-gray-900">{resolveTeacherName(teacher)}</div>
                             <div className="text-xs font-medium text-gray-800 bg-gray-100 w-fit rounded-xs px-1 py-0.5">{teacher.employeeCode}</div>
                           </div>
                         </div>

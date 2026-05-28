@@ -123,6 +123,7 @@ const Teachers = () => {
         name: teacher.fullName || 'Unknown',
         avatar: (teacher.fullName || 'U')[0].toUpperCase(),
         image:
+          teacher.profileImageUrl ||
           teacher.imageUrl ||
           teacher.profileImage ||
           `https://ui-avatars.com/api/?name=${encodeURIComponent(
