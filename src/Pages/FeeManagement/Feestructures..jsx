@@ -125,11 +125,11 @@ const COMPONENT_TYPE_OPTIONS = [
   { value: 'ACTIVITY_FEE',  label: 'Activity Fee'   },
   { value: 'SPORTS_FEE',    label: 'Sports Fee'     },
   { value: 'EXAM_FEE',      label: 'Exam Fee'       },
-  { value: 'MISC_FEE',      label: 'Misc Fee'       },
-  { value: 'OTHER_FEE',     label: 'Other Fee'      },
+  { value: 'MISC',      label: 'Misc Fee'       },
+  { value: 'OTHER',     label: 'Other Fee'      },
 ];
 
-const REQUIRES_CUSTOM_NAME = ['MISC_FEE', 'OTHER_FEE'];
+const REQUIRES_CUSTOM_NAME = ['MISC', 'OTHER'];
 
 // ─── Status Pill ──────────────────────────────────────────────────────────────
 const StatusPill = ({ status }) => {

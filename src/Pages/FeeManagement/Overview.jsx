@@ -12,9 +12,15 @@ import {
   CheckCircle2, TrendingUp, Users, Calendar, Layers,
   IndianRupee, Clock, BarChart2,
 } from 'lucide-react';
-import { getFeeDashboard } from '../../Api/FeeDashboard';
-import { getFeePeriods } from '../../Api/FeePeriods';
-import { getFeeStructures } from '../../Api/FeeStructures';
+import {
+  getActivePeriods,
+  getClassSummary,
+  getOverdueAlerts,
+  getRecentPayments,
+  getFeeDashboardStats,
+} from '../../Api/FeeDashboard';
+import { getFeePeriods }     from '../../Api/FeePeriods';
+import { getFeeStructures }  from '../../Api/FeeStructures';
 import { getStudentByClass } from '../../Api/StudentsApi';
 import {
   getOutstandingFees, createFeeCollection,
@@ -32,10 +38,10 @@ const ONE_MONTH_AGO = (() => {
 const fmt = (n) => '₹' + (Number(n) || 0).toLocaleString('en-IN');
 const fmtCompact = (n) => {
   n = Number(n) || 0;
-  if (n >= 10000000) return '₹' + (n / 10000000).toFixed(1) + 'Cr';
-  if (n >= 100000)   return '₹' + (n / 100000).toFixed(1) + 'L';
-  if (n >= 1000)     return '₹' + (n / 1000).toFixed(1) + 'K';
-  return '₹' + n.toLocaleString('en-IN');
+  return '₹' + n.toLocaleString('en-IN', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 };
 const fmtDate = (d) => {
   if (!d) return '—';
@@ -122,7 +128,6 @@ const Av = ({ name, status, size = 'md' }) => {
   );
 };
 
-// Status pill — matches FeeStructures/FeePeriods
 const StatusPill = ({ status, label }) => {
   const map = {
     PAID:     'bg-emerald-50 text-emerald-700 border-emerald-200',
@@ -150,7 +155,6 @@ const StatusPill = ({ status, label }) => {
   );
 };
 
-// Type badge (period type)
 const TypeBadge = ({ type }) => {
   const cls = PERIOD_TYPE_BADGE[type] || 'bg-gray-50 text-gray-600 border-gray-200';
   return (
@@ -160,7 +164,6 @@ const TypeBadge = ({ type }) => {
   );
 };
 
-// Progress bar
 const ProgressBar = ({ pct }) => {
   const color = pct >= 100 ? 'bg-emerald-500' : pct >= 70 ? 'bg-amber-500' : 'bg-red-400';
   return (
@@ -200,7 +203,6 @@ const Modal = ({ open, onClose, title, subtitle, wide, children, footer }) => {
   );
 };
 
-// Shared button
 const Btn = ({ children, variant = 'primary', size = 'md', onClick, disabled, className = '' }) => {
   const sz = { xs: 'px-2 py-1 text-[11px]', sm: 'px-3 py-1.5 text-xs', md: 'px-4 py-2 text-[12.5px]' }[size];
   const v = {
@@ -304,12 +306,12 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
   const [studentSearch, setStudentSearch] = useState('');
   const [activeStudent, setActiveStudent] = useState(null);
 
-  const balanceDue          = Number(activeStudent?.balance) || 0;
-  const isFullyPaid         = activeStudent !== null && balanceDue <= 0;
-  const amountNum           = parseFloat(form.amountPaid)  || 0;
-  const discountNum         = parseFloat(form.discount)    || 0;
-  const lateFineNum         = parseFloat(form.lateFine)    || 0;
-  const netTotal            = amountNum + lateFineNum - discountNum;
+  const balanceDue             = Number(activeStudent?.balance) || 0;
+  const isFullyPaid            = activeStudent !== null && balanceDue <= 0;
+  const amountNum              = parseFloat(form.amountPaid)  || 0;
+  const discountNum            = parseFloat(form.discount)    || 0;
+  const lateFineNum            = parseFloat(form.lateFine)    || 0;
+  const netTotal               = amountNum + lateFineNum - discountNum;
   const amountExceedsBalance   = amountNum > balanceDue && balanceDue > 0;
   const discountExceedsAmount  = discountNum > amountNum;
 
@@ -435,7 +437,7 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
         </>
       }>
       <div className="grid grid-cols-2 gap-6">
-        {/* LEFT: Period → Class → Student */}
+        {/* LEFT */}
         <div className="space-y-4">
           <div>
             <label className="block text-xs font-semibold text-gray-700 mb-1.5">Fee Period <span className="text-red-500">*</span></label>
@@ -445,7 +447,6 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
               {periodOptions.map((p) => <option key={p.value} value={String(p.value)}>{p.label}</option>)}
             </select>
           </div>
-
           {selectedPeriodId && (
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1.5">
@@ -476,7 +477,6 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
               )}
             </div>
           )}
-
           {selectedClassId && (
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1.5">
@@ -527,7 +527,6 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
               </div>
             </div>
           )}
-
           {activeStudent && (
             <div className={`border rounded-xl p-3 flex items-center gap-3 ${isFullyPaid ? 'bg-emerald-50 border-emerald-200' : 'bg-blue-50 border-blue-200'}`}>
               <Av name={activeStudent.studentName} status={activeStudent.status} size="lg" />
@@ -544,7 +543,6 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
               </div>
             </div>
           )}
-
           {activeStudent && (
             <div className="grid grid-cols-2 gap-2">
               <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2 text-center">
@@ -557,7 +555,6 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
               </div>
             </div>
           )}
-
           {isFullyPaid && (
             <div className="flex items-start gap-2 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2.5">
               <CheckCircle size={15} className="text-emerald-600 mt-0.5 flex-shrink-0" />
@@ -569,7 +566,7 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
           )}
         </div>
 
-        {/* RIGHT: Payment form */}
+        {/* RIGHT */}
         <div className={`space-y-4 ${isFullyPaid ? 'opacity-40 pointer-events-none select-none' : ''}`}>
           {activeStudent && !isFullyPaid && (
             <div className="flex items-start gap-2 bg-blue-50 border border-blue-100 rounded-xl px-3 py-2">
@@ -579,7 +576,6 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
               </div>
             </div>
           )}
-
           <div>
             <label className="block text-xs font-semibold text-gray-700 mb-1.5">Amount to Collect <span className="text-red-500">*</span></label>
             <div className="relative">
@@ -605,7 +601,6 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
               </p>
             )}
           </div>
-
           <div>
             <label className="block text-xs font-semibold text-gray-700 mb-1.5">Payment Mode <span className="text-red-500">*</span></label>
             <div className="grid grid-cols-4 gap-2">
@@ -620,7 +615,6 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
               ))}
             </div>
           </div>
-
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1.5">Payment Date <span className="text-red-500">*</span></label>
@@ -631,7 +625,6 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
               <Inp value={form.referenceNo} placeholder="TXN / Cheque no." onChange={(e) => setForm((p) => ({ ...p, referenceNo: e.target.value }))} />
             </div>
           </div>
-
           <div>
             <label className="block text-xs font-semibold text-gray-700 mb-1.5">Discount <span className="text-gray-400 font-normal">(optional)</span></label>
             <Inp type="number" value={form.discount} placeholder="Discount amount"
@@ -645,7 +638,6 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
               placeholder="Reason e.g. Sibling discount, scholarship…"
               className="w-full mt-2 px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 resize-none" />
           </div>
-
           {isOverdue && (
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
               <div className="flex items-start gap-2 mb-2">
@@ -661,7 +653,6 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
                 onChange={(e) => setForm((p) => ({ ...p, lateFine: e.target.value }))} />
             </div>
           )}
-
           <div>
             <label className="block text-xs font-semibold text-gray-700 mb-1.5">Remarks</label>
             <textarea value={form.remarks} rows={2}
@@ -669,8 +660,6 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
               placeholder="Optional note…"
               className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 resize-none" />
           </div>
-
-          {/* Net total bar */}
           <div className="flex justify-between items-center bg-[#1E3A5F] rounded-xl px-4 py-3">
             <div>
               <div className="text-[10px] text-white/50 uppercase tracking-wider">Receipt No.</div>
@@ -709,10 +698,10 @@ const BulkCollectModal = ({ open, onClose, students, onSuccess }) => {
     }
   }, [open, students]);
 
-  const update    = (id, field, val) => setRows((p) => p.map((r) => r.id === id ? { ...r, [field]: val } : r));
-  const applyAll  = () => setRows((p) => p.map((r) => ({ ...r, paymentMode: commonMode, paymentDate: commonDate })));
-  const grandTotal= rows.reduce((s, r) => s + (parseFloat(r.collectAmount) || 0), 0);
-  const MODES     = [{ value: 'CASH', label: 'Cash' }, { value: 'ONLINE', label: 'Online' }, { value: 'CHEQUE', label: 'Cheque' }, { value: 'DD', label: 'DD' }];
+  const update     = (id, field, val) => setRows((p) => p.map((r) => r.id === id ? { ...r, [field]: val } : r));
+  const applyAll   = () => setRows((p) => p.map((r) => ({ ...r, paymentMode: commonMode, paymentDate: commonDate })));
+  const grandTotal = rows.reduce((s, r) => s + (parseFloat(r.collectAmount) || 0), 0);
+  const MODES      = [{ value: 'CASH', label: 'Cash' }, { value: 'ONLINE', label: 'Online' }, { value: 'CHEQUE', label: 'Cheque' }, { value: 'DD', label: 'DD' }];
 
   const handleSubmit = async () => {
     const bad = rows.find((r) => !r.collectAmount || parseFloat(r.collectAmount) <= 0);
@@ -817,81 +806,66 @@ const Overview = ({ onNavigate }) => {
   const academicYearId    = currentAcademicYear?.id;
   const academicYearLabel = currentAcademicYear?.label;
 
-  const [dashboard,      setDashboard]      = useState(null);
-  const [periods,        setPeriods]        = useState([]);
-  const [periodOptions,  setPeriodOptions]  = useState([]);
-  const [loading,        setLoading]        = useState(false);
-  const [periodFilter,   setPeriodFilter]   = useState('');
-  const [history,        setHistory]        = useState([]);
-  const [historyLoading, setHistoryLoading] = useState(false);
+  // ── Separate state per API ──────────────────────────────────────────────────
+  const [stats,          setStats]          = useState(null);   // getFeeDashboardStats
+  const [activePeriods,  setActivePeriods]  = useState([]);     // getActivePeriods
+  const [classSummary,   setClassSummary]   = useState([]);     // getClassSummary
+  const [overdueAlerts,  setOverdueAlerts]  = useState([]);     // getOverdueAlerts
+  const [recentPayments, setRecentPayments] = useState([]);     // getRecentPayments
+
+  const [selectedPeriodId, setSelectedPeriodId] = useState(null);
+  const [periodOptions,    setPeriodOptions]    = useState([]);
+  const [loading,          setLoading]          = useState(false);
 
   const [collectModal, setCollectModal] = useState({ open: false, student: null });
   const [bulkModal,    setBulkModal]    = useState({ open: false, students: [] });
   const [receiptModal, setReceiptModal] = useState({ open: false, receipt: null });
 
-  const fetchHistory = useCallback(async () => {
-    try {
-      setHistoryLoading(true);
-      const res = await getFeeCollectionHistory({ fromDate: ONE_MONTH_AGO, toDate: TODAY, page: 0, size: 10 });
-      const records = res?.records || [];
-      setHistory(records.map((item) => ({
-        id: item.id, receiptNo: item.receiptNo, studentName: item.studentName,
-        studentCode: item.admissionNumber || item.studentCode,
-        class: item.className || item.class, section: item.sectionName || item.section,
-        period: item.feePeriodName || item.period,
-        amount: item.amountPaid || item.amount, discount: item.discount || 0,
-        lateFine: item.lateFine || 0, balanceAfter: item.balanceAfter || 0,
-        mode: item.paymentMode || item.mode, date: item.paymentDate || item.date,
-        referenceNo: item.referenceNo, recordedBy: item.collectedBy || item.recordedBy,
-      })));
-    } catch (err) { console.error('History fetch error:', err); }
-    finally { setHistoryLoading(false); }
-  }, []);
-
-  useEffect(() => { fetchHistory(); }, [fetchHistory]);
-
+  // ── Load everything that only needs academicYearId ─────────────────────────
   const loadAll = useCallback(async () => {
     if (!academicYearId) return;
     setLoading(true);
     try {
-      const [dash, perds] = await Promise.all([
-        getFeeDashboard(academicYearId).catch(() => null),
-        getFeePeriods(academicYearId).catch(() => []),
+      const [statsData, periodsData, alertsData, paymentsData] = await Promise.all([
+        getFeeDashboardStats(academicYearId).catch(() => ({})),
+        getActivePeriods(academicYearId).catch(() => []),
+        getOverdueAlerts(academicYearId, 5).catch(() => []),
+        getRecentPayments(academicYearId, 6).catch(() => []),
       ]);
-      setDashboard(dash || {});
-      const periodsArray = Array.isArray(perds) ? perds : [];
-      setPeriods(periodsArray);
-      setPeriodOptions(periodsArray.map((p) => ({ value: String(p.id), label: p.name || p.periodName || `Period ${p.id}` })));
-    } catch (e) {
+
+      // Stats — use exactly as returned from API, no remapping
+      setStats(statsData);
+
+      // Active periods — used for the period cards and period selector in modal
+      const periodsArray = Array.isArray(periodsData) ? periodsData : [];
+      setActivePeriods(periodsArray);
+      setPeriodOptions(periodsArray.map((p) => ({ value: String(p.id), label: p.name })));
+
+      // Auto-select first period for class summary
+      if (periodsArray.length > 0 && !selectedPeriodId) {
+        setSelectedPeriodId(periodsArray[0].id);
+      }
+
+      setOverdueAlerts(Array.isArray(alertsData) ? alertsData : []);
+      setRecentPayments(Array.isArray(paymentsData) ? paymentsData : []);
+    } catch {
       toast.error('Load Failed', 'Could not fetch fee data. Please refresh.');
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   }, [academicYearId]);
 
   useEffect(() => { loadAll(); }, [loadAll]);
 
-  const stats = {
-    totalBilled:      dashboard?.totalBilled           || dashboard?.totalFee        || 0,
-    collected:        dashboard?.totalCollected        || dashboard?.collected       || 0,
-    partial:          dashboard?.totalPartialOrPending || dashboard?.partialAmount   || 0,
-    overdue:          dashboard?.totalOverdue          || dashboard?.overdueAmount   || 0,
-    discounts:        dashboard?.totalDiscounts        || dashboard?.totalDiscount   || 0,
-    collectedPct:     dashboard?.collectionRate        || dashboard?.collectionRatio || 0,
-    partialStudents:  dashboard?.partialStudentCount   || dashboard?.partialStudents || 0,
-    overdueStudents:  dashboard?.overdueStudentCount   || dashboard?.overdueStudents || 0,
-    discountStudents: dashboard?.discountStudentCount  || dashboard?.discountStudents|| 0,
-    totalStudents:    dashboard?.totalStudents         || 0,
-    totalPeriods:     dashboard?.totalPeriods          || periods.length,
-  };
+  // ── Reload class summary whenever selected period changes ──────────────────
+  useEffect(() => {
+    if (!academicYearId || !selectedPeriodId) return;
+    getClassSummary(academicYearId, selectedPeriodId)
+      .then((data) => setClassSummary(Array.isArray(data) ? data : []))
+      .catch(() => setClassSummary([]));
+  }, [academicYearId, selectedPeriodId]);
 
-  const classData = dashboard?.classRows || dashboard?.classWiseCollection || dashboard?.classCollection || dashboard?.classData || [];
-
-  const getPeriodStatus = (p) => {
-    if (p.collectedAmount >= p.totalAmount && p.totalAmount > 0) return { label: 'Closed',   key: 'CLOSED'   };
-    if (new Date(p.dueDate) < new Date())                        return { label: 'Overdue',  key: 'OVERDUE'  };
-    if (p.collectedAmount > 0)                                   return { label: 'Active',   key: 'ACTIVE'   };
-    return                                                              { label: 'Upcoming', key: 'PENDING'  };
-  };
-
+  // ── Receipt / success handlers ─────────────────────────────────────────────
   const openReceipt = (res, student) => {
     setReceiptModal({
       open: true,
@@ -908,12 +882,12 @@ const Overview = ({ onNavigate }) => {
   const handleCollectSuccess = (res, student) => {
     setCollectModal({ open: false, student: null });
     openReceipt(res, student);
-    loadAll(); fetchHistory();
+    loadAll();
   };
 
   const handleBulkSuccess = () => {
     setBulkModal({ open: false, students: [] });
-    loadAll(); fetchHistory();
+    loadAll();
   };
 
   if (!academicYearId) {
@@ -928,7 +902,7 @@ const Overview = ({ onNavigate }) => {
     <div className="space-y-5">
       <ToastContainer />
 
-      {/* ── Page header ───────────────────────────────────────────────────── */}
+      {/* ── Page header ─────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">Fee Dashboard</h1>
@@ -954,29 +928,63 @@ const Overview = ({ onNavigate }) => {
         </div>
       )}
 
-      {/* ── Stat cards ────────────────────────────────────────────────────── */}
+      {/* ── Stat cards — values directly from getFeeDashboardStats ──────────── */}
       <div className="grid grid-cols-5 gap-4">
-        <StatCard title="Total Billed"      value={fmtCompact(stats.totalBilled)} subtitle={`${stats.totalStudents} students · ${stats.totalPeriods} periods`}                         type="total"    icon={IndianRupee} />
-        <StatCard title="Collected"         value={fmtCompact(stats.collected)}   subtitle={`${stats.collectedPct ? Number(stats.collectedPct).toFixed(1) : '—'}% collection rate`}    type="paid"     icon={TrendingUp}  />
-        <StatCard title="Partial / Pending" value={fmtCompact(stats.partial)}     subtitle={`${stats.partialStudents} students with balance`}                                           type="partial"  icon={Clock}       />
-        <StatCard title="Overdue"           value={fmtCompact(stats.overdue)}     subtitle={`${stats.overdueStudents} students past due date`}                                          type="overdue"  icon={AlertCircle} />
-        <StatCard title="Discounts Given"   value={fmtCompact(stats.discounts)}   subtitle={`${stats.discountStudents} students`}                                                       type="discount" icon={Users}       />
+        <StatCard
+          title="Total Billed"
+          value={fmtCompact(stats?.totalBilled ?? 0)}
+          subtitle={`${stats?.totalStudents ?? 0} students`}
+          type="total"
+          icon={IndianRupee}
+        />
+        <StatCard
+          title="Collected"
+          value={fmtCompact(stats?.totalCollected ?? 0)}
+          subtitle={`${stats?.collectionRate != null ? Number(stats.collectionRate).toFixed(1) : '—'}% collection rate`}
+          type="paid"
+          icon={TrendingUp}
+        />
+        <StatCard
+          title="Partial / Pending"
+          value={fmtCompact(stats?.totalPartialOrPending ?? 0)}
+          subtitle={`${stats?.partialStudentCount ?? 0} students with balance`}
+          type="partial"
+          icon={Clock}
+        />
+        <StatCard
+          title="Overdue"
+          value={fmtCompact(stats?.totalOverdue ?? 0)}
+          subtitle={`${stats?.overdueStudentCount ?? 0} students past due date`}
+          type="overdue"
+          icon={AlertCircle}
+        />
+        <StatCard
+          title="Discounts Given"
+          value={fmtCompact(stats?.totalDiscounts ?? 0)}
+          subtitle="Total discount awarded"
+          type="discount"
+          icon={Users}
+        />
       </div>
 
-      {/* ── 2-col body ────────────────────────────────────────────────────── */}
+      {/* ── 2-col body ────────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-3 gap-4">
 
-        {/* Collection by Class */}
+        {/* Collection by Class — from getClassSummary */}
         <div className="col-span-2 bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
             <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2">
               <span className="w-1 h-4 rounded-full bg-[#2563EB] inline-block" />
               Collection by Class
             </h3>
-            <select value={periodFilter} onChange={(e) => setPeriodFilter(e.target.value)}
+            {/* Period selector — switches class summary */}
+            <select
+              value={selectedPeriodId ?? ''}
+              onChange={(e) => setSelectedPeriodId(Number(e.target.value))}
               className="px-3 py-1.5 text-xs border border-gray-200 rounded-lg bg-white text-gray-700 outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400">
-              <option value="">All Periods</option>
-              {periods.map((p) => <option key={p.id} value={p.name || p.periodName}>{p.name || p.periodName}</option>)}
+              {activePeriods.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
             </select>
           </div>
           <div className="overflow-x-auto">
@@ -989,33 +997,32 @@ const Overview = ({ onNavigate }) => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {classData.length > 0 ? classData.map((row) => {
-                  const billed    = row.totalBilled    || row.billed    || 0;
-                  const collected = row.totalCollected || row.collected || 0;
-                  const pct       = row.progressPercent != null ? Math.round(row.progressPercent) : (billed > 0 ? Math.round((collected / billed) * 100) : 0);
-                  const bal       = billed - collected;
+                {classSummary.length > 0 ? classSummary.map((row) => {
+                  const pct = row.progressPercent != null ? Math.round(row.progressPercent) : 0;
                   return (
-                    <tr key={row.className || row.classId} className="hover:bg-gray-50/60 transition-colors">
-                      <td className="px-4 py-3 font-semibold text-sm text-gray-900">{row.className || row.class}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600">{row.studentCount || row.students || '—'}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{fmtCompact(billed)}</td>
-                      <td className="px-4 py-3 text-sm font-semibold text-emerald-600">{fmtCompact(collected)}</td>
-                      <td className={`px-4 py-3 text-sm font-semibold ${bal > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>{bal > 0 ? fmtCompact(bal) : '₹0'}</td>
+                    <tr key={row.classId} className="hover:bg-gray-50/60 transition-colors">
+                      <td className="px-4 py-3 font-semibold text-sm text-gray-900">{row.className}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">{row.studentCount}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700">{fmtCompact(row.billed)}</td>
+                      <td className="px-4 py-3 text-sm font-semibold text-emerald-600">{fmtCompact(row.collected)}</td>
+                      <td className={`px-4 py-3 text-sm font-semibold ${row.balance > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
+                        {row.balance > 0 ? fmtCompact(row.balance) : '₹0'}
+                      </td>
                       <td className="px-4 py-3"><ProgressBar pct={pct} /></td>
                       <td className="px-4 py-3">
-                        <StatusPill status={pct >= 100 ? 'PAID' : 'PARTIAL'} label={pct >= 100 ? 'Paid' : 'Partial'} />
+                        <StatusPill status={row.status} label={row.status.charAt(0) + row.status.slice(1).toLowerCase()} />
                       </td>
                     </tr>
                   );
                 }) : (
-                  <tr><td colSpan={7} className="text-center py-12 text-sm text-gray-400">No class data available</td></tr>
+                  <tr><td colSpan={7} className="text-center py-12 text-sm text-gray-400">No class data for this period</td></tr>
                 )}
               </tbody>
             </table>
           </div>
         </div>
 
-        {/* Recent Collections */}
+        {/* Recent Collections — from getRecentPayments */}
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
             <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2">
@@ -1027,21 +1034,17 @@ const Overview = ({ onNavigate }) => {
               View all <ArrowRight size={11} />
             </button>
           </div>
-          {historyLoading ? (
-            <div className="flex items-center justify-center py-10 gap-2">
-              <span className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-              <span className="text-xs text-gray-400">Loading…</span>
-            </div>
-          ) : history.length > 0 ? history.slice(0, 6).map((item, i, arr) => (
-            <div key={item.id || i} className={`flex items-center gap-3 px-4 py-3 ${i < arr.length - 1 ? 'border-b border-gray-50' : ''} hover:bg-gray-50/60 transition-colors`}>
+          {recentPayments.length > 0 ? recentPayments.map((item, i, arr) => (
+            <div key={item.id || i}
+              className={`flex items-center gap-3 px-4 py-3 ${i < arr.length - 1 ? 'border-b border-gray-50' : ''} hover:bg-gray-50/60 transition-colors`}>
               <Av name={item.studentName} size="md" />
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-semibold text-gray-900 truncate">{item.studentName}</div>
-                <div className="text-[11px] text-gray-400">{item.class} · {item.period}</div>
+                <div className="text-[11px] text-gray-400">{item.className} · {item.feePeriodName}</div>
               </div>
               <div className="text-right flex-shrink-0">
-                <div className="text-sm font-bold text-emerald-600">{fmtCompact(item.amount)}</div>
-                <div className="text-[11px] text-gray-400">{item.mode}</div>
+                <div className="text-sm font-bold text-emerald-600">{fmtCompact(item.amountPaid)}</div>
+                <div className="text-[11px] text-gray-400">{item.paymentMode}</div>
               </div>
             </div>
           )) : (
@@ -1050,13 +1053,63 @@ const Overview = ({ onNavigate }) => {
         </div>
       </div>
 
-      {/* ── Active Fee Periods ─────────────────────────────────────────────── */}
+      {/* ── Overdue Alerts — from getOverdueAlerts ────────────────────────────── */}
+      {overdueAlerts.length > 0 && (
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+            <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2">
+              <span className="w-1 h-4 rounded-full bg-red-500 inline-block" />
+              Overdue Alerts
+              <span className="ml-1 px-2 py-0.5 bg-red-50 text-red-600 text-[11px] font-bold rounded-full border border-red-100">{overdueAlerts.length}</span>
+            </h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-gray-50/80 border-b border-gray-100">
+                  {['Student', 'Class', 'Period', 'Total Fee', 'Paid', 'Balance Due', 'Due Date', 'Overdue By'].map((h) => (
+                    <th key={h} className="px-4 py-3 text-left text-[10.5px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {overdueAlerts.map((alert, i) => (
+                  <tr key={`${alert.studentId}-${alert.feeStructureId}-${i}`} className="hover:bg-red-50/30 transition-colors">
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <Av name={alert.studentName} status="OVERDUE" size="sm" />
+                        <div>
+                          <div className="font-semibold text-sm text-gray-900">{alert.studentName}</div>
+                          <div className="text-[11px] text-gray-400">{alert.admissionNumber}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{alert.className} · {alert.sectionName}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{alert.feePeriodName}</td>
+                    <td className="px-4 py-3 text-sm text-gray-700">{fmt(alert.totalFee)}</td>
+                    <td className="px-4 py-3 text-sm text-emerald-600 font-semibold">{fmt(alert.paidAmount)}</td>
+                    <td className="px-4 py-3 text-sm text-red-600 font-bold">{fmt(alert.balanceDue)}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{fmtDate(alert.dueDate)}</td>
+                    <td className="px-4 py-3">
+                      <span className="px-2 py-1 bg-red-50 text-red-700 border border-red-200 text-[11px] font-bold rounded-lg">
+                        {alert.overdueDays}d overdue
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ── Active Fee Periods — from getActivePeriods ────────────────────────── */}
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2">
             <span className="w-1 h-4 rounded-full bg-[#2563EB] inline-block" />
             Active Fee Periods
-            <span className="ml-1 px-2 py-0.5 bg-blue-50 text-blue-600 text-[11px] font-bold rounded-full border border-blue-100">{periods.length}</span>
+            <span className="ml-1 px-2 py-0.5 bg-blue-50 text-blue-600 text-[11px] font-bold rounded-full border border-blue-100">{activePeriods.length}</span>
           </h3>
           <button onClick={() => navigate('/feemanagement/config')}
             className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-[#1E3A5F] border border-blue-200 rounded-lg bg-blue-50 hover:bg-blue-100 transition-colors">
@@ -1064,15 +1117,14 @@ const Overview = ({ onNavigate }) => {
           </button>
         </div>
         <div className="p-5">
-          {periods.length > 0 ? (
+          {activePeriods.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {periods.map((p) => {
-                const st = getPeriodStatus(p);
+              {activePeriods.map((p) => {
                 const grad = PERIOD_TYPE_GRADIENT[p.type] || 'from-gray-400 to-gray-500';
                 return (
                   <div key={p.id}
                     className="bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden cursor-pointer group"
-                    onClick={() => onNavigate && onNavigate('periods')}>
+                    onClick={() => { setSelectedPeriodId(p.id); }}>
                     <div className={`h-1 w-full bg-gradient-to-r ${grad}`} />
                     <div className="p-4 space-y-3">
                       <div className="flex items-start justify-between gap-2">
@@ -1081,11 +1133,11 @@ const Overview = ({ onNavigate }) => {
                             <Calendar size={12} className="text-[#1E3A5F]" />
                           </div>
                           <div className="min-w-0">
-                            <div className="text-[13px] font-bold text-gray-900 truncate">{p.name || p.periodName}</div>
+                            <div className="text-[13px] font-bold text-gray-900 truncate">{p.name}</div>
                             <TypeBadge type={p.type} />
                           </div>
                         </div>
-                        <StatusPill status={st.key} label={st.label} />
+                        <StatusPill status={p.status} label={p.status.charAt(0) + p.status.slice(1).toLowerCase()} />
                       </div>
                       <div className="text-[11px] text-gray-500 flex items-center gap-1">
                         <Clock size={10} className="text-gray-400" />
@@ -1094,11 +1146,11 @@ const Overview = ({ onNavigate }) => {
                       <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-100">
                         <div>
                           <div className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Structures</div>
-                          <div className="text-sm font-bold text-gray-800 mt-0.5">{p.structureCount || 0}</div>
+                          <div className="text-sm font-bold text-gray-800 mt-0.5">{p.structureCount ?? 0}</div>
                         </div>
                         <div>
                           <div className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Students</div>
-                          <div className="text-sm font-bold text-gray-800 mt-0.5">{p.studentCount || 0}</div>
+                          <div className="text-sm font-bold text-gray-800 mt-0.5">{p.studentCount ?? 0}</div>
                         </div>
                       </div>
                     </div>
@@ -1107,12 +1159,12 @@ const Overview = ({ onNavigate }) => {
               })}
             </div>
           ) : (
-            <div className="text-center py-10 text-sm text-gray-400">No fee periods found</div>
+            <div className="text-center py-10 text-sm text-gray-400">No active fee periods found</div>
           )}
         </div>
       </div>
 
-      {/* ── Modals ────────────────────────────────────────────────────────── */}
+      {/* ── Modals ────────────────────────────────────────────────────────────── */}
       <CollectFeeModal
         open={collectModal.open}
         onClose={() => setCollectModal({ open: false, student: null })}
