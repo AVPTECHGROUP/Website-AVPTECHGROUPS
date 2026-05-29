@@ -296,9 +296,9 @@ const TeachersTable = ({
 
       {/* ── DESKTOP TABLE (≥ 1024px) ─────────────────────────────────────── */}
       <div className="hidden lg:block bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <div className="overflow-x-auto min-h-[calc(250px)] max-h-[calc(100vh-480px)] overflow-y-auto">
+        <div className="overflow-x-auto min-h-[calc(250px)] max-h-[calc(100vh-400px)] overflow-y-auto">
           <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
+            <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-10 ">
               <tr>
                 {/* Empty header cell for the checkbox column */}
                 {!isUserTable && <th className="w-10 pl-4 pr-1 py-3" />}
