@@ -66,7 +66,7 @@ const AddPersonalInfo = ({ formData, setFormData, handleInputChange }) => {
 
                     <div>
                         <label htmlFor="email" className='block font-semibold text-gray-600 text-sm mb-2'>
-                            Email Address
+                            Email Address<span className="text-red-600 ml-1">*</span>
                         </label>
                         <input
                             type="email"
@@ -74,6 +74,7 @@ const AddPersonalInfo = ({ formData, setFormData, handleInputChange }) => {
                             value={formData.email}
                             onChange={handleInputChange}
                             placeholder='Enter email address'
+                            required
                             className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
                         />
                     </div>
@@ -188,7 +189,7 @@ const AddPersonalInfo = ({ formData, setFormData, handleInputChange }) => {
                 <div className="grid lg:grid-cols-3 md:grid-cols-3 sm:grid-cols-1 gap-4">
                     <div>
                         <label htmlFor="loginEmail" className='block font-semibold text-gray-600 text-sm mb-2'>
-                            Login Email/Username
+                            Login Email/Username<span className="text-red-600 ml-1">*</span>
                         </label>
                         <input
                             type="email"
@@ -196,13 +197,14 @@ const AddPersonalInfo = ({ formData, setFormData, handleInputChange }) => {
                             value={formData.loginEmail}
                             onChange={handleInputChange}
                             placeholder='Email/username'
+                            required
                             className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
                         />
                     </div>
 
                     <div>
                         <label htmlFor="role" className='block font-semibold text-gray-600 text-sm mb-2'>
-                            Role
+                            Role<span className="text-red-600 ml-1">*</span>
                         </label>
                         <input
                             readOnly

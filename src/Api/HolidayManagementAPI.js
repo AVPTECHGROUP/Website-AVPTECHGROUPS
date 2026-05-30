@@ -1,6 +1,62 @@
 import { authFetch } from "../Authfetch/Authfetch";
 
 const BASE_URL = `${import.meta.env.VITE_API_BASE_DOUBLE}/holidays`;
+const academicYearBaseURL = `${import.meta.env.VITE_API_BASE_V1}/academic-years`;
+
+//get curernt academi  year
+export const getCurrentAcademicYear = async () => {
+  try {
+    const res = await authFetch(
+      `${academicYearBaseURL}/current`,
+      {
+        method: "GET",
+      }
+    );
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(errorText || "Failed to fetch current academic year");
+    }
+
+    const data = await res.json();
+
+    return data;
+  } catch (error) {
+    console.error(
+      "Get Current Academic Year Error:",
+      error.message
+    );
+    throw error;
+  }
+};
+
+// Fetch list of academic years
+//get curernt academi  year
+export const getAcademicYearsLov = async () => {
+  try {
+    const res = await authFetch(
+      `${academicYearBaseURL}`,
+      {
+        method: "GET",
+      }
+    );
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(errorText || "Failed to fetch current academic year");
+    }
+
+    const data = await res.json();
+
+    return data;
+  } catch (error) {
+    console.error(
+      "Get Current Academic Year Error:",
+      error.message
+    );
+    throw error;
+  }
+};
 
 // Fetch all statistics for holiday
 export const fetchAllHolidayStatistics = async (year = '') => {

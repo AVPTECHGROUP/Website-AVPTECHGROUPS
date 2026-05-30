@@ -57,7 +57,7 @@ const TeachersHeader = ({ stats, loading }) => {
       {/* STATISTICS CARDS */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-5">
         {loading
-          ? Array.from({ length: 5 }).map((_, i) => <CardLoader key={i} />)
+          ? Array.from({ length: 4 }).map((_, i) => <CardLoader key={i} />)
           : cards.map((card, i) => (
             <CardComponent
               key={i}

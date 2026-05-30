@@ -239,9 +239,9 @@ const Teachers = () => {
         <TeachersHeader stats={stats} loading={statsLoading} />
 
         {/* Page Content */}
-        <div className="flex-1 overflow-auto p-4 sm:p-5 lg:p-4">
+        <div className="flex-1 overflow-auto p-4 pt-0 sm:p-5 sm:pt-0 lg:p-4 lg:pt-0">
 
-          <div className="flex items-center gap-3 mb-4">
+          <div className="flex items-center gap-2">  
 
             <QuickActions
               teacherId={selectedTeacher?.id ?? null}
