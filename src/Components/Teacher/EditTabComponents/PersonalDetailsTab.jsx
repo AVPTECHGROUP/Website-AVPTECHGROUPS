@@ -83,7 +83,7 @@ const PersonalDetailsTab = ({ formData, setFormData, handleInputChange }) => {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Email Address
+                            Email Address<span className="text-red-600 ml-1">*</span>
                         </label>
                         <div className="relative">
                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -276,7 +276,7 @@ const PersonalDetailsTab = ({ formData, setFormData, handleInputChange }) => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Login Email/Username
+                            Login Email/Username<span className="text-red-600 ml-1">*</span>
                         </label>
                         <div className="relative">
                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
