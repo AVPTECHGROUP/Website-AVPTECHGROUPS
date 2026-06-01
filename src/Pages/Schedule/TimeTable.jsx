@@ -43,12 +43,12 @@ export default function TimeTable() {
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('All Statuses');
     const [classFilter, setClassFilter] = useState('All Classes');
-    const [yearFilter, setYearFilter] = useState('All Years');
+    // yearFilter now stores the full LOV object { id, label, value } or null for "All Years"
+    const [yearFilter, setYearFilter] = useState(null);
     const [sort, setSort] = useState('Recently Added');
     const [academicYears, setAcademicYears] = useState([]);
     const [openWorkspace, setOpenWorkspace] = useState(null);
     const [deleteConfirm, setDeleteConfirm] = useState(null);
-    const [toastMsg, setToastMsg] = useState('');
 
     useEffect(() => {
         loadTimetables();
@@ -74,10 +74,12 @@ export default function TimeTable() {
         }
     };
 
-    const loadTimetables = async () => {
+    // ✅ Accepts optional academicYearId and passes it to the API
+    // API signature: getTimetables(page, size, sort, academicYearId)
+    const loadTimetables = async (academicYearId = null) => {
         try {
             setLoading(true);
-            const res = await getTimetables(0, 50);
+            const res = await getTimetables(0, 50, 'id', academicYearId);
             const list = res?.content || res?.data?.content || res?.data || [];
             setTimetables(list.map(normalizeApiTimetable));
         } catch (err) {
@@ -147,6 +149,21 @@ export default function TimeTable() {
         }
     };
 
+    // ✅ Year dropdown change handler — finds the LOV object by label, triggers API reload
+    const handleYearChange = (e) => {
+        const selectedLabel = e.target.value;
+        if (selectedLabel === 'All Years') {
+            setYearFilter(null);
+            loadTimetables(null);
+        } else {
+            const found = academicYears.find(
+                y => (y.label || y.value) === selectedLabel
+            );
+            setYearFilter(found || null);
+            loadTimetables(found?.id || null);
+        }
+    };
+
     const total = timetables.length;
     const published = timetables.filter(t => t.status === 'Published').length;
     const draft = timetables.filter(t => t.status === 'Draft').length;
@@ -156,25 +173,20 @@ export default function TimeTable() {
             t.section.toLowerCase().includes(search.toLowerCase());
         const matchStatus = statusFilter === 'All Statuses' || t.status === statusFilter;
         const matchClass = classFilter === 'All Classes' || t.class === classFilter;
-        const matchYear = yearFilter === 'All Years' || t.year === yearFilter;
-        return matchSearch && matchStatus && matchClass && matchYear;
+        return matchSearch && matchStatus && matchClass;
     });
 
     const uniqueClasses =
         activeClasses.length > 0
             ? activeClasses.map(c => c.name)
             : [...new Set(timetables.map(t => t.class))];
-    // Use LOV academic years; fall back to years extracted from loaded timetables
-    const uniqueYears = academicYears.length > 0
-        ? academicYears.map(y => y.name || y.value)
-        : [...new Set(timetables.map(t => t.year))];
 
     if (openWorkspace) {
         return (
             <CreateSchedule
                 timetable={openWorkspace.timetable}
                 mode={openWorkspace.mode}
-                onBack={() => { setOpenWorkspace(null); loadTimetables(); }}
+                onBack={() => { setOpenWorkspace(null); loadTimetables(yearFilter?.id || null); }}
             />
         );
     }
@@ -229,26 +241,55 @@ export default function TimeTable() {
 
                 {/* Filters */}
                 <div className="p-4 border-b border-gray-100 flex flex-col sm:flex-row gap-3 flex-wrap">
+
+                    {/* Search */}
                     <div className="relative flex-1 min-w-[180px]">
                         <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                         <input value={search} onChange={e => setSearch(e.target.value)}
                             placeholder="Search class or section..."
                             className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-100" />
                     </div>
-                    {[
-                        { val: statusFilter, set: setStatusFilter, opts: ['All Statuses', 'Draft', 'Published'] },
-                        { val: classFilter, set: setClassFilter, opts: ['All Classes', ...uniqueClasses] },
-                        { val: yearFilter, set: setYearFilter, opts: ['All Years', ...uniqueYears] },
-                    ].map(({ val, set, opts }, i) => (
-                        <div key={i} className="relative">
-                            <select value={val} onChange={e => set(e.target.value)}
-                                className="appearance-none pl-3 pr-8 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 cursor-pointer">
-                                {opts.map(o => <option key={o}>{o}</option>)}
-                            </select>
-                            <ChevronDown size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                        </div>
-                    ))}
-                    <button onClick={loadTimetables}
+
+                    {/* Status Filter */}
+                    <div className="relative">
+                        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
+                            className="appearance-none pl-3 pr-8 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 cursor-pointer">
+                            {['All Statuses', 'Draft', 'Published'].map(o => (
+                                <option key={o}>{o}</option>
+                            ))}
+                        </select>
+                        <ChevronDown size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                    </div>
+
+                    {/* Class Filter */}
+                    <div className="relative">
+                        <select value={classFilter} onChange={e => setClassFilter(e.target.value)}
+                            className="appearance-none pl-3 pr-8 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 cursor-pointer">
+                            {['All Classes', ...uniqueClasses].map(o => (
+                                <option key={o}>{o}</option>
+                            ))}
+                        </select>
+                        <ChevronDown size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                    </div>
+
+                    {/* ✅ Year Filter — uses academicYearId for API call */}
+                    <div className="relative">
+                        <select
+                            value={yearFilter ? (yearFilter.label || yearFilter.value) : 'All Years'}
+                            onChange={handleYearChange}
+                            className="appearance-none pl-3 pr-8 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 cursor-pointer">
+                            <option value="All Years">All Years</option>
+                            {academicYears.map(y => (
+                                <option key={y.id} value={y.label || y.value}>
+                                    {y.label || y.value}
+                                </option>
+                            ))}
+                        </select>
+                        <ChevronDown size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                    </div>
+
+                    {/* ✅ Refresh respects current year filter */}
+                    <button onClick={() => loadTimetables(yearFilter?.id || null)}
                         className="px-3 py-2 border border-gray-200 rounded-lg text-sm cursor-pointer text-gray-600 hover:bg-gray-50 transition font-medium">
                         ↻ Refresh
                     </button>
@@ -362,7 +403,7 @@ export default function TimeTable() {
                 />
             )}
 
-            {/* ── Teacher Schedule Viewer Modal ── */}
+            {/* Teacher Schedule Viewer Modal */}
             {showTeacherSchedule && (
                 <TeacherScheduleViewer onClose={() => setShowTeacherSchedule(false)} />
             )}
