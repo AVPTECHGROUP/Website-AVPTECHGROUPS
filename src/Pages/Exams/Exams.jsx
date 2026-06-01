@@ -545,9 +545,9 @@ export default function Exams() {
                                     <th className="px-1.5 md:px-2 py-1.5 md:py-2 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">Type</th>
                                     <th className="px-1.5 md:px-2 py-1.5 md:py-2 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">Class</th>
                                     <th className="px-1.5 md:px-2 py-1.5 md:py-2 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">Dates</th>
-                                    <th className="px-1.5 md:px-2 py-1.5 md:py-2 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">Subjects</th>
-                                    <th className="px-1.5 md:px-2 py-1.5 md:py-2 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">Status</th>
-                                    <th className="px-1.5 md:px-2 py-1.5 md:py-2 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">Result</th>
+                                    <th className="px-1.5 md:px-2 py-1.5 md:py-2 text-center text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">Subjects</th>
+                                    <th className="px-1.5 md:px-2 py-1.5 md:py-2 text-center text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">Status</th>
+                                    <th className="px-1.5 md:px-2 py-1.5 md:py-2 text-center text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">Result</th>
                                     <th className="px-1.5 md:px-2 py-1.5 md:py-2 text-center text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">Actions</th>
                                 </tr>
                             </thead>
@@ -670,10 +670,10 @@ export default function Exams() {
                                     <th className="px-1.5 md:px-2 py-1.5 md:py-2 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">Subject</th>
                                     <th className="px-1.5 md:px-2 py-1.5 md:py-2 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">Code</th>
                                     <th className="px-1.5 md:px-2 py-1.5 md:py-2 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">Section</th>
-                                    <th className="px-1.5 md:px-2 py-1.5 md:py-2 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">Max</th>
-                                    <th className="px-1.5 md:px-2 py-1.5 md:py-2 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">Pass</th>
+                                    <th className="px-1.5 md:px-2 py-1.5 md:py-2 text-center text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">Max</th>
+                                    <th className="px-1.5 md:px-2 py-1.5 md:py-2 text-center text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">Pass</th>
                                     <th className="px-1.5 md:px-2 py-1.5 md:py-2 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">Type</th>
-                                    <th className="px-1.5 md:px-2 py-1.5 md:py-2 text-center text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">Act</th>
+                                    <th className="px-1.5 md:px-2 py-1.5 md:py-2 text-center text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
