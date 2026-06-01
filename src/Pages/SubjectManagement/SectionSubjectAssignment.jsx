@@ -28,14 +28,14 @@ const BTN_DANGER =
 
 const Badge = ({ children, variant = "default" }) => {
   const cls = {
-    default: "bg-slate-100 text-slate-500",
-    code: "bg-blue-50 text-blue-600 font-mono text-[11px] tracking-wide",
+    default:   "bg-slate-100 text-slate-500",
+    code:      "bg-blue-50 text-blue-600 font-mono text-[11px] tracking-wide",
     mandatory: "bg-violet-50 text-violet-600 border border-violet-100",
-    optional: "bg-slate-50 text-slate-400 border border-slate-100",
-    active: "bg-emerald-50 text-emerald-600 border border-emerald-100",
-    inactive: "bg-rose-50 text-rose-400 border border-rose-100",
-    hours: "bg-sky-50 text-sky-600 border border-sky-100",
-    count: "bg-blue-100 text-blue-700 font-semibold",
+    optional:  "bg-slate-50 text-slate-400 border border-slate-100",
+    active:    "bg-emerald-50 text-emerald-600 border border-emerald-100",
+    inactive:  "bg-rose-50 text-rose-400 border border-rose-100",
+    hours:     "bg-sky-50 text-sky-600 border border-sky-100",
+    count:     "bg-blue-100 text-blue-700 font-semibold",
   };
   return (
     <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-xs font-medium ${cls[variant]}`}>
@@ -46,7 +46,7 @@ const Badge = ({ children, variant = "default" }) => {
 
 const IconBtn = ({ onClick, title, variant = "red" }) => {
   const cls = {
-    red: "text-slate-300 hover:text-rose-500 hover:bg-rose-50",
+    red:  "text-slate-300 hover:text-rose-500 hover:bg-rose-50",
     blue: "text-slate-300 hover:text-blue-500 hover:bg-blue-50",
   };
   return (
@@ -231,31 +231,52 @@ const AssignModal = ({ sectionId, allSubjects, assignedSubjectIds, onClose, onAs
 
               {/* Hours + toggles row */}
               <div className="flex flex-wrap items-center gap-2">
-                {/* Weekly hours */}
-                <div className="space-y-1 w-24 shrink-0">
-                  <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Hrs/wk</label>
-                  <input type="number" min={1} max={40} value={row.weeklyHours}
-                    onChange={e => setRow(i, "weeklyHours", Number(e.target.value))}
-                    className="border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-300 w-full" />
+                <div className="flex flex-wrap items-end gap-2">
+                  <div className="flex items-end gap-2">
+                    {/* Weekly hours */}
+                    <div className="space-y-1 w-24">
+                      <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">
+                        Hrs/wk
+                      </label>
+                      <input
+                        type="number"
+                        min={1}
+                        max={40}
+                        value={row.weeklyHours}
+                        onChange={e => setRow(i, "weeklyHours", Number(e.target.value))}
+                        className="h-10 border border-slate-200 rounded-xl px-3 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-300 w-full"
+                      />
+                    </div>
+
+                    {/* Mandatory */}
+                    <button
+                      type="button"
+                      onClick={() => setRow(i, "isMandatory", !row.isMandatory)}
+                      className={`h-10 px-4 rounded-xl border text-xs font-medium ${
+                        row.isMandatory
+                          ? "bg-violet-50 border-violet-200 text-violet-700"
+                          : "bg-white border-slate-200 text-slate-400"
+                      }`}
+                    >
+                      {row.isMandatory ? "Mandatory" : "Optional"}
+                    </button>
+
+                    {/* Status */}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setRow(i, "status", row.status === "ACTIVE" ? "INACTIVE" : "ACTIVE")
+                      }
+                      className={`h-10 px-4 rounded-xl border text-xs font-medium ${
+                        row.status === "ACTIVE"
+                          ? "bg-emerald-50 border-emerald-200 text-emerald-700"
+                          : "bg-white border-slate-200 text-slate-400"
+                      }`}
+                    >
+                      {row.status === "ACTIVE" ? "Active" : "Inactive"}
+                    </button>
+                  </div>
                 </div>
-
-                {/* Mandatory */}
-                <button type="button" onClick={() => setRow(i, "isMandatory", !row.isMandatory)}
-                  className={`px-3 py-2 rounded-xl border text-xs font-medium transition-all touch-manipulation ${row.isMandatory
-                    ? "bg-violet-50 border-violet-200 text-violet-700"
-                    : "bg-white border-slate-200 text-slate-400"
-                    }`}>
-                  {row.isMandatory ? "Mandatory" : "Optional"}
-                </button>
-
-                {/* Status */}
-                <button type="button" onClick={() => setRow(i, "status", row.status === "ACTIVE" ? "INACTIVE" : "ACTIVE")}
-                  className={`px-3 py-2 rounded-xl border text-xs font-medium transition-all touch-manipulation ${row.status === "ACTIVE"
-                    ? "bg-emerald-50 border-emerald-200 text-emerald-700"
-                    : "bg-white border-slate-200 text-slate-400"
-                    }`}>
-                  {row.status === "ACTIVE" ? "Active" : "Inactive"}
-                </button>
 
                 {/* Remove row */}
                 {rows.length > 1 && (
@@ -291,10 +312,10 @@ const AssignModal = ({ sectionId, allSubjects, assignedSubjectIds, onClose, onAs
 // ─────────────────────────────────────────────────────────────────────────────
 const EditModal = ({ row, onClose, onSave }) => {
   const [form, setForm] = useState({
-    subjectId: row.subjectId,
+    subjectId:   row.subjectId,
     weeklyHours: row.weeklyHours ?? 1,
     isMandatory: row.isMandatory ?? false,
-    status: row.status === "ACTIVE" ? "ACTIVE" : "INACTIVE",
+    status:      row.status === "ACTIVE" ? "ACTIVE" : "INACTIVE",
   });
 
   const set = (key, value) => setForm(prev => ({ ...prev, [key]: value }));
@@ -324,19 +345,21 @@ const EditModal = ({ row, onClose, onSave }) => {
 
           <div className="flex gap-3">
             <button type="button" onClick={() => set("isMandatory", !form.isMandatory)}
-              className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-medium transition-all touch-manipulation ${form.isMandatory
-                ? "bg-blue-50 border-blue-200 text-blue-700"
-                : "bg-slate-50 border-slate-200 text-slate-400"
-                }`}>
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-medium transition-all touch-manipulation ${
+                form.isMandatory
+                  ? "bg-blue-50 border-blue-200 text-blue-700"
+                  : "bg-slate-50 border-slate-200 text-slate-400"
+              }`}>
               <span className={`w-2 h-2 rounded-full shrink-0 ${form.isMandatory ? "bg-blue-500" : "bg-slate-300"}`} />
               Mandatory
             </button>
 
             <button type="button" onClick={() => set("status", form.status === "ACTIVE" ? "INACTIVE" : "ACTIVE")}
-              className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-medium transition-all touch-manipulation ${form.status === "ACTIVE"
-                ? "bg-emerald-50 border-emerald-200 text-emerald-700"
-                : "bg-slate-50 border-slate-200 text-slate-400"
-                }`}>
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-medium transition-all touch-manipulation ${
+                form.status === "ACTIVE"
+                  ? "bg-emerald-50 border-emerald-200 text-emerald-700"
+                  : "bg-slate-50 border-slate-200 text-slate-400"
+              }`}>
               <span className={`w-2 h-2 rounded-full shrink-0 ${form.status === "ACTIVE" ? "bg-emerald-500" : "bg-slate-300"}`} />
               {form.status === "ACTIVE" ? "Active" : "Inactive"}
             </button>
@@ -354,50 +377,90 @@ const EditModal = ({ row, onClose, onSave }) => {
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  Confirm Dialog
+//  FIX: Added `busy` state so the Confirm button is disabled immediately after
+//  the first click. This prevents multiple API calls when the user double/
+//  triple-clicks the button before the async operation completes.
 // ─────────────────────────────────────────────────────────────────────────────
-const ConfirmDialog = ({ message, onConfirm, onCancel }) => (
-  <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-0 sm:p-4">
-    <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-sm p-5 space-y-4 animate-slideUp">
-      <div className="flex items-start gap-3">
-        <div className="w-9 h-9 rounded-xl bg-rose-50 flex items-center justify-center text-rose-500 shrink-0">
-          <TrashIcon />
+const ConfirmDialog = ({ message, onConfirm, onCancel }) => {
+  // `busy` is set to true the instant the button is clicked, disabling it for
+  // all subsequent clicks while the async onConfirm() is running.
+  const [busy, setBusy] = useState(false);
+
+  const handleConfirm = async () => {
+    if (busy) return;          // extra guard — belt-and-suspenders
+    setBusy(true);
+    try {
+      await onConfirm();       // onConfirm already calls setConfirmDg(null) on success
+    } catch {
+      // If the API call fails, re-enable the button so the user can retry
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-0 sm:p-4">
+      <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-sm p-5 space-y-4 animate-slideUp">
+        <div className="flex items-start gap-3">
+          <div className="w-9 h-9 rounded-xl bg-rose-50 flex items-center justify-center text-rose-500 shrink-0">
+            <TrashIcon />
+          </div>
+          <p className="text-sm text-slate-700 pt-1.5 leading-relaxed">{message}</p>
         </div>
-        <p className="text-sm text-slate-700 pt-1.5 leading-relaxed">{message}</p>
-      </div>
-      <div className="flex gap-2">
-        <button onClick={onCancel} className={`${BTN_GHOST} flex-1`}>Cancel</button>
-        <button onClick={onConfirm}
-          className="flex-1 px-4 py-2 text-sm rounded-xl bg-rose-500 text-white hover:bg-rose-600 active:scale-95 transition font-medium touch-manipulation">
-          Confirm
-        </button>
+        <div className="flex gap-2">
+          {/* Cancel is also disabled while busy to prevent closing mid-flight */}
+          <button
+            onClick={onCancel}
+            disabled={busy}
+            className={`${BTN_GHOST} flex-1 disabled:opacity-50 disabled:cursor-not-allowed`}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleConfirm}
+            disabled={busy}
+            className="flex-1 px-4 py-2 text-sm rounded-xl bg-rose-500 text-white hover:bg-rose-600 active:scale-95 transition font-medium touch-manipulation disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100 flex items-center justify-center gap-2"
+          >
+            {busy ? (
+              <>
+                <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                </svg>
+                Removing…
+              </>
+            ) : (
+              "Confirm"
+            )}
+          </button>
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  Main Component
 // ─────────────────────────────────────────────────────────────────────────────
 export default function SectionSubjectAssignment() {
 
-  const [classes, setClasses] = useState([]);
-  const [sections, setSections] = useState([]);
-  const [subjects, setSubjects] = useState([]);
+  const [classes,   setClasses]   = useState([]);
+  const [sections,  setSections]  = useState([]);
+  const [subjects,  setSubjects]  = useState([]);
   const [allSubjects, setAllSubjects] = useState([]);
 
-  const [selectedClassId, setSelectedClassId] = useState("");
+  const [selectedClassId,   setSelectedClassId]   = useState("");
   const [selectedSectionId, setSelectedSectionId] = useState("");
 
-  const [classesLoading, setClassesLoading] = useState(false);
+  const [classesLoading,  setClassesLoading]  = useState(false);
   const [sectionsLoading, setSectionsLoading] = useState(false);
-  const [tableLoading, setTableLoading] = useState(false);
+  const [tableLoading,    setTableLoading]    = useState(false);
 
   const [filterStatus, setFilterStatus] = useState("all");
-  const [search, setSearch] = useState("");
+  const [search,       setSearch]       = useState("");
 
-  const [editRow, setEditRow] = useState(null);
+  const [editRow,    setEditRow]    = useState(null);
   const [showAssign, setShowAssign] = useState(false);
-  const [confirmDg, setConfirmDg] = useState(null);
+  const [confirmDg,  setConfirmDg]  = useState(null);
 
   // ─── Loaders ──────────────────────────────────────────────────────────────
 
@@ -457,6 +520,8 @@ export default function SectionSubjectAssignment() {
     if (selectedSectionId) loadSubjects(selectedSectionId);
   };
 
+  // FIX: onConfirm is now an async function. ConfirmDialog awaits it, keeping
+  // the button in "Removing…" / disabled state until the API call resolves.
   const handleRemove = (row) => setConfirmDg({
     message: `Remove "${row.subjectName}" from this section?`,
     onConfirm: async () => {
@@ -477,9 +542,9 @@ export default function SectionSubjectAssignment() {
 
   // ─── Derived ──────────────────────────────────────────────────────────────
 
-  const selectedClassName = classes.find(c => String(c.id) === selectedClassId)?.name ?? "";
+  const selectedClassName   = classes.find(c => String(c.id) === selectedClassId)?.name ?? "";
   const selectedSectionName = sections.find(s => String(s.id) === selectedSectionId)?.name ?? "";
-  const assignedSubjectIds = subjects.map(s => String(s.subjectId));
+  const assignedSubjectIds  = subjects.map(s => String(s.subjectId));
 
   const filteredSubjects = subjects.filter(s => {
     if (!search) return true;
@@ -504,20 +569,11 @@ export default function SectionSubjectAssignment() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-5 sm:pb-8 space-y-4 sm:space-y-5">
 
-        {/* ── Page header ─────────────────────────────────────────────────── */}
-        <div>
-          {/* <p className="text-xs text-slate-400 uppercase tracking-widest mb-1">Academic → Subjects</p>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-800 tracking-tight">
-            Section–Subject Assignment
-          </h1> */}
-        </div>
-
         {/* ── Class & Section selector ─────────────────────────────────────── */}
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5">
           <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-3">
             Select Class &amp; Section
           </p>
-          {/* Stack vertically on mobile, side-by-side on sm+ */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-slate-500">Class</label>
@@ -548,22 +604,20 @@ export default function SectionSubjectAssignment() {
 
           {/* Card header */}
           <div className="flex items-center justify-between gap-2 px-4 sm:px-6 py-4 border-b border-slate-100">
-            <div className="flex items-center gap-2 min-w-0">
-              <div className="min-w-0">
-                <p className="text-xs text-slate-400 font-medium hidden sm:block">Assigned Subjects</p>
-                <h2 className="text-sm sm:text-base font-semibold text-slate-800 truncate">
-                  {selectedClassName || "—"}&nbsp;/&nbsp;{selectedSectionName || "—"}
-                </h2>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <p className="text-xs text-slate-400 font-medium hidden sm:block">
+                  Assigned Subjects
+                </p>
+                <Badge variant="count">
+                  {filteredSubjects.length}
+                </Badge>
               </div>
-              <Badge variant="count">{filteredSubjects.length}</Badge>
+              <h2 className="text-sm sm:text-base font-semibold text-slate-800 truncate">
+                {selectedClassName || "—"} / {selectedSectionName || "—"}
+              </h2>
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              {/* On mobile: icon-only danger button to save space */}
-              {/* <button onClick={handleRemoveAll} disabled={!subjects.length}
-                className={`${BTN_DANGER} sm:px-3`}>
-                <TrashIcon />
-                <span className="hidden sm:inline">Remove All</span>
-              </button> */}
               <button onClick={() => setShowAssign(true)} disabled={!selectedSectionId}
                 className={BTN_PRIMARY}>
                 <PlusIcon />
@@ -575,15 +629,12 @@ export default function SectionSubjectAssignment() {
 
           {/* Filter bar */}
           <div className="flex items-center gap-2 px-4 sm:px-6 py-2.5 bg-slate-50/60 border-b border-slate-100">
-            {/* Status filter — shrinks on mobile */}
             <div className="w-32 sm:w-36 shrink-0">
               <Select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
-                <option value="all">All Statuses</option>
+                <option value="all">All Status</option>
                 <option value="active">Active Only</option>
               </Select>
             </div>
-
-            {/* Search */}
             <div className="relative flex-1">
               <span className="absolute left-3 top-1/2 -translate-y-1/2"><SearchIcon /></span>
               <input
@@ -599,26 +650,26 @@ export default function SectionSubjectAssignment() {
           <div className="md:hidden">
             {tableLoading
               ? <div className="py-12 flex flex-col items-center gap-2">
-                <SpinnerIcon />
-                <p className="text-xs text-slate-400">Loading subjects…</p>
-              </div>
-              : filteredSubjects.length === 0
-                ? <div className="flex flex-col items-center justify-center py-12 gap-3">
-                  <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-2xl">📚</div>
-                  <p className="text-sm text-slate-400 text-center px-4">
-                    {!selectedSectionId
-                      ? "Select a section to view subjects."
-                      : subjects.length === 0
-                        ? "No subjects assigned to this section."
-                        : "No results match your search."}
-                  </p>
+                  <SpinnerIcon />
+                  <p className="text-xs text-slate-400">Loading subjects…</p>
                 </div>
+              : filteredSubjects.length === 0
+                ? <div className="flex flex-col items-center justify-center gap-3">
+                    <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-2xl">📚</div>
+                    <p className="text-sm text-slate-400 text-center py-5">
+                      {!selectedSectionId
+                        ? "Select a section to view subjects."
+                        : subjects.length === 0
+                          ? "No subjects assigned to this section."
+                          : "No results match your search."}
+                    </p>
+                  </div>
                 : filteredSubjects.map(row => (
-                  <SubjectCard key={row.id} row={row}
-                    onEdit={setEditRow}
-                    onRemove={handleRemove}
-                  />
-                ))
+                    <SubjectCard key={row.id} row={row}
+                      onEdit={setEditRow}
+                      onRemove={handleRemove}
+                    />
+                  ))
             }
           </div>
 
@@ -639,35 +690,35 @@ export default function SectionSubjectAssignment() {
                   ? [...Array(4)].map((_, i) => <SkeletonRow key={i} cols={6} />)
                   : filteredSubjects.length === 0
                     ? <EmptyState cols={6} message={
-                      !selectedSectionId
-                        ? "Select a section to view subjects."
-                        : subjects.length === 0
-                          ? "No subjects assigned to this section."
-                          : "No results match your search."
-                    } />
+                        !selectedSectionId
+                          ? "Select a section to view subjects."
+                          : subjects.length === 0
+                            ? "No subjects assigned to this section."
+                            : "No results match your search."
+                      } />
                     : filteredSubjects.map(row => (
-                      <tr key={row.id} className="row-hover transition-colors fade-row">
-                        <td className="px-6 py-3.5 font-semibold text-slate-800 whitespace-nowrap">{row.subjectName}</td>
-                        <td className="px-6 py-3.5"><Badge variant="code">{row.subjectCode}</Badge></td>
-                        <td className="px-6 py-3.5"><Badge variant="hours">{row.weeklyHours} hrs</Badge></td>
-                        <td className="px-6 py-3.5">
-                          <Badge variant={row.isMandatory ? "mandatory" : "optional"}>
-                            {row.isMandatory ? "Mandatory" : "Optional"}
-                          </Badge>
-                        </td>
-                        <td className="px-6 py-3.5">
-                          <Badge variant={row.status === "ACTIVE" ? "active" : "inactive"}>
-                            {row.status === "ACTIVE" ? "Active" : "Inactive"}
-                          </Badge>
-                        </td>
-                        <td className="px-6 py-3.5">
-                          <div className="flex items-center gap-0.5">
-                            <IconBtn variant="blue" title="Edit" onClick={() => setEditRow(row)} />
-                            <IconBtn variant="red" title="Remove" onClick={() => handleRemove(row)} />
-                          </div>
-                        </td>
-                      </tr>
-                    ))
+                        <tr key={row.id} className="row-hover transition-colors fade-row">
+                          <td className="px-6 py-3.5 font-semibold text-slate-800 whitespace-nowrap">{row.subjectName}</td>
+                          <td className="px-6 py-3.5"><Badge variant="code">{row.subjectCode}</Badge></td>
+                          <td className="px-6 py-3.5"><Badge variant="hours">{row.weeklyHours} hrs</Badge></td>
+                          <td className="px-6 py-3.5">
+                            <Badge variant={row.isMandatory ? "mandatory" : "optional"}>
+                              {row.isMandatory ? "Mandatory" : "Optional"}
+                            </Badge>
+                          </td>
+                          <td className="px-6 py-3.5">
+                            <Badge variant={row.status === "ACTIVE" ? "active" : "inactive"}>
+                              {row.status === "ACTIVE" ? "Active" : "Inactive"}
+                            </Badge>
+                          </td>
+                          <td className="px-6 py-3.5">
+                            <div className="flex items-center gap-0.5">
+                              <IconBtn variant="blue" title="Edit"   onClick={() => setEditRow(row)} />
+                              <IconBtn variant="red"  title="Remove" onClick={() => handleRemove(row)} />
+                            </div>
+                          </td>
+                        </tr>
+                      ))
                 }
               </tbody>
             </table>
