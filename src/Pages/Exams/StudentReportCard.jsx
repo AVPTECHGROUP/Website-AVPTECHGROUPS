@@ -28,33 +28,13 @@ function getSchoolInfo() {
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
-/**
- * Props:
- *   student        — raw API response object from GET /exams/{examId}/report-cards/{studentId}
- *   examId         — number, needed for PATCH remarks
- *   onClose        — fn
- *   onUpdateRemarks — optional fn(studentId, { teacherRemarks, principalRemarks })
- *                     called after successful PATCH so parent can refresh list
- */
 export default function StudentReportCard({ student, examId, onClose, onUpdateRemarks }) {
     const school = getSchoolInfo();
-
-    // ── Map API fields ────────────────────────────────────────────────────────
-    // API response shape (from real response):
-    //   student.studentName, admissionNumber, rollNumber, className, sectionName,
-    //   examName, examTypeName, totalMarksObtained, totalMaxMarks, percentage,
-    //   overallGrade, classRank, sectionRank, isPassed, teacherRemarks,
-    //   principalRemarks, generatedAt, subjectMarks[]
-    //
-    // subjectMarks[]:
-    //   subjectName, theoryMarks, practicalMarks, totalMarks, maxMarks,
-    //   isAbsent, grade, remarks
 
     const subjects = student?.subjectMarks ?? [];
     const pct = student?.percentage ?? 0;
     const overallGrade = getGrade(Number(pct));
     const isPassed = student?.isPassed ?? false;
-    // A student is "absent" if ALL subjects are absent
     const isAbsent = subjects.length > 0 && subjects.every((s) => s.isAbsent);
 
     const initials = school.name.split(" ").map((w) => w[0]).join("").slice(0, 3).toUpperCase();
@@ -92,9 +72,42 @@ export default function StudentReportCard({ student, examId, onClose, onUpdateRe
         <>
             <style>{`
                 @media print {
-                    body > * { display: none !important; }
-                    .report-print-root { display: block !important; position: fixed; inset: 0; z-index: 9999; background: white; overflow: auto; padding: 16px; }
+                    /* Hide everything first */
+                    body * { visibility: hidden !important; }
+
+                    /* Make only the report content visible */
+                    .rc-print-content,
+                    .rc-print-content * { visibility: visible !important; }
+
+                    /* Stretch the content to fill the printed page */
+                    .rc-print-content {
+                        position: fixed !important;
+                        inset: 0 !important;
+                        z-index: 99999 !important;
+                        background: white !important;
+                        overflow: visible !important;
+                        height: auto !important;
+                        max-height: none !important;
+                        padding: 16px !important;
+                    }
+
+                    /* Remove scroll clipping so nothing gets cut off */
+                    .rc-scroll {
+                        overflow: visible !important;
+                        height: auto !important;
+                        max-height: none !important;
+                    }
+
+                    /* Hide the sticky header and footer (buttons etc.) */
+                    .rc-no-print {
+                        display: none !important;
+                        visibility: hidden !important;
+                    }
+
+                    /* Prevent subject rows splitting across pages */
+                    tr { page-break-inside: avoid; }
                 }
+
                 .rc-scroll::-webkit-scrollbar { width: 4px; }
                 .rc-scroll::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 99px; }
                 .rc-scroll::-webkit-scrollbar-thumb { background: #c7d2fe; border-radius: 99px; }
@@ -104,11 +117,11 @@ export default function StudentReportCard({ student, examId, onClose, onUpdateRe
 
             <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm sm:p-4 overflow-y-auto">
                 <div
-                    className="rc-root report-print-root bg-white w-full sm:rounded-2xl sm:shadow-2xl sm:max-w-2xl flex flex-col rounded-t-2xl"
+                    className="rc-root bg-white w-full sm:rounded-2xl sm:shadow-2xl sm:max-w-2xl flex flex-col rounded-t-2xl"
                     style={{ maxHeight: "96vh", height: "100vh" }}
                 >
                     {/* ── Sticky Header ── */}
-                    <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-3.5 border-b border-gray-100 shrink-0 rounded-t-2xl bg-white z-10">
+                    <div className="rc-no-print flex items-center justify-between px-4 sm:px-6 py-3 sm:py-3.5 border-b border-gray-100 shrink-0 rounded-t-2xl bg-white z-10">
                         <div className="flex items-center gap-2">
                             <BookOpen className="w-4 h-4 text-indigo-500" />
                             <span className="text-sm font-semibold text-gray-800">Report Card</span>
@@ -133,8 +146,8 @@ export default function StudentReportCard({ student, examId, onClose, onUpdateRe
                         </div>
                     </div>
 
-                    {/* ── Scrollable Content ── */}
-                    <div className="rc-scroll overflow-y-auto flex-1">
+                    {/* ── Scrollable Content (this is what gets printed) ── */}
+                    <div className="rc-scroll rc-print-content overflow-y-auto flex-1">
                         <div className="p-3 sm:p-4 lg:p-6 space-y-3 sm:space-y-4">
 
                             {/* ══ School Header ══ */}
@@ -237,7 +250,6 @@ export default function StudentReportCard({ student, examId, onClose, onUpdateRe
                                                 const subPct = sub.maxMarks
                                                     ? Math.round((sub.totalMarks / sub.maxMarks) * 100)
                                                     : 0;
-                                                // Use server-returned grade string if available, else compute
                                                 const g = getGrade(subPct);
                                                 const pass = !sub.isAbsent && sub.totalMarks >= (sub.passingMarks ?? 0);
 
@@ -274,7 +286,6 @@ export default function StudentReportCard({ student, examId, onClose, onUpdateRe
                                                             </div>
                                                         </td>
                                                         <td className="px-2.5 sm:px-3 py-2">
-                                                            {/* Prefer server-returned grade string */}
                                                             <span className={`inline-flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-full text-[10px] font-extrabold border-2 ${g.bg} ${g.color} ${g.border}`}>
                                                                 {sub.isAbsent ? "AB" : (sub.grade || g.label)}
                                                             </span>
@@ -317,7 +328,6 @@ export default function StudentReportCard({ student, examId, onClose, onUpdateRe
                                 </div>
                                 <div className={`rounded-xl border-2 p-3 text-center ${overallGrade.bg} ${overallGrade.border}`}>
                                     <p className="text-[10px] font-bold uppercase tracking-widest mb-1 text-gray-400">Grade</p>
-                                    {/* Prefer server-returned overallGrade string */}
                                     <span className={`text-2xl font-extrabold ${overallGrade.color}`}>
                                         {student?.overallGrade || overallGrade.label}
                                     </span>
@@ -370,7 +380,7 @@ export default function StudentReportCard({ student, examId, onClose, onUpdateRe
                                     {!editingRemarks && (
                                         <button
                                             onClick={() => { setEditingRemarks(true); setRemarksSaved(false); setRemarksError(null); }}
-                                            className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 px-2 py-1 rounded-lg hover:bg-indigo-100 transition-all"
+                                            className="rc-no-print text-xs font-semibold text-indigo-600 hover:text-indigo-800 px-2 py-1 rounded-lg hover:bg-indigo-100 transition-all"
                                         >
                                             {(student?.teacherRemarks || student?.principalRemarks) ? "Edit" : "+ Add Remarks"}
                                         </button>
@@ -432,7 +442,7 @@ export default function StudentReportCard({ student, examId, onClose, onUpdateRe
 
                                 {/* Edit mode action buttons */}
                                 {editingRemarks && (
-                                    <div className="flex items-center justify-end gap-2 px-4 pb-4">
+                                    <div className="rc-no-print flex items-center justify-end gap-2 px-4 pb-4">
                                         <button
                                             onClick={() => {
                                                 setTeacherRemarks(student?.teacherRemarks ?? "");
@@ -480,7 +490,7 @@ export default function StudentReportCard({ student, examId, onClose, onUpdateRe
                     </div>
 
                     {/* ── Sticky Footer ── */}
-                    <div className="flex items-center justify-end gap-2 sm:gap-3 px-4 sm:px-6 py-3 sm:py-3.5 border-t border-gray-100 shrink-0 bg-gray-50/80 rounded-b-2xl">
+                    <div className="rc-no-print flex items-center justify-end gap-2 sm:gap-3 px-4 sm:px-6 py-3 sm:py-3.5 border-t border-gray-100 shrink-0 bg-gray-50/80 rounded-b-2xl">
                         <button
                             onClick={onClose}
                             className="flex-1 sm:flex-none px-4 sm:px-5 py-2 text-sm font-semibold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-all"
