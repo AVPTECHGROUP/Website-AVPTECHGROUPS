@@ -10,13 +10,25 @@ import SectionSubjectAssignment from "../../Pages/SubjectManagement/SectionSubje
 /* ═══════════════════════════════════════════
    CONSTANTS
 ═══════════════════════════════════════════ */
+
+// FIX 1: Added all 10 API category values + label-based fallback keys
+// The list API sends `subject.category` as a LABEL (e.g. "Social Studies"),
+// so we also key by LABEL_UPPERCASED_NO_SPACES to cover both shapes.
 const CAT_CLS = {
-  CORE: "bg-blue-50    text-blue-700    border-blue-200",
-  LANGUAGE: "bg-violet-50  text-violet-700  border-violet-200",
-  SCIENCE: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  ARTS: "bg-pink-50    text-pink-700    border-pink-200",
-  SPORTS: "bg-orange-50  text-orange-700  border-orange-200",
-  ELECTIVE: "bg-amber-50   text-amber-700   border-amber-200",
+  // ── by VALUE key (what the LOV/edit API sends) ──────────────────────────
+  CORE:           "bg-blue-50    text-blue-700    border-blue-200",
+  LANGUAGE:       "bg-violet-50  text-violet-700  border-violet-200",
+  SCIENCE:        "bg-emerald-50 text-emerald-700 border-emerald-200",
+  ARTS:           "bg-pink-50    text-pink-700    border-pink-200",
+  SPORTS:         "bg-orange-50  text-orange-700  border-orange-200",
+  ELECTIVE:       "bg-amber-50   text-amber-700   border-amber-200",
+  SOCIAL:         "bg-teal-50    text-teal-700    border-teal-200",
+  COMPUTER:       "bg-cyan-50    text-cyan-700    border-cyan-200",
+  VOCATIONAL:     "bg-lime-50    text-lime-700    border-lime-200",
+  OTHER:          "bg-slate-100  text-slate-600   border-slate-200",
+  // ── by LABEL uppercased + spaces stripped (what the list API sends) ─────
+  SOCIALSTUDIES:  "bg-teal-50    text-teal-700    border-teal-200",
+  COMPUTERSCIENCE:"bg-cyan-50    text-cyan-700    border-cyan-200",
 };
 
 const ROW_OPTIONS = [10, 20, 30];
@@ -24,18 +36,22 @@ const ROW_OPTIONS = [10, 20, 30];
 /* ═══════════════════════════════════════════
    TINY SVG ICONS
 ═══════════════════════════════════════════ */
-const IPlus = () => <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>;
-const IEdit = () => <svg className="w-3.5 h-3.5 text-orange-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>;
+const IPlus  = () => <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>;
+const IEdit  = () => <svg className="w-3.5 h-3.5 text-orange-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>;
 const ITrash = () => <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>;
-const ISearch = () => <svg className="w-4 h-4 text-slate-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" strokeLinecap="round" /></svg>;
-const ISpin = () => <svg className="w-6 h-6 animate-spin text-indigo-500" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" /></svg>;
-const IChev = () => <svg className="w-4 h-4 text-slate-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>;
+const ISearch= () => <svg className="w-4 h-4 text-slate-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" strokeLinecap="round" /></svg>;
+const ISpin  = () => <svg className="w-6 h-6 animate-spin text-indigo-500" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" /></svg>;
+const IChev  = () => <svg className="w-4 h-4 text-slate-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>;
 
 /* ═══════════════════════════════════════════
    REUSABLE ATOMS
 ═══════════════════════════════════════════ */
+
+// FIX 1 (continued): Normalise `cat` → uppercase + no spaces before lookup.
+// This handles both "SOCIAL" (value) and "Social Studies" (label) correctly.
 function CatBadge({ cat }) {
-  const cls = CAT_CLS[cat] || "bg-slate-100 text-slate-600 border-slate-200";
+  const key = (cat ?? "").toUpperCase().replace(/\s+/g, "");
+  const cls = CAT_CLS[key] || "bg-slate-100 text-slate-600 border-slate-200";
   return (
     <span className={`inline-block border text-[11px] font-bold px-2 py-0.5 rounded uppercase tracking-wide whitespace-nowrap ${cls}`}>
       {cat || "—"}
@@ -45,8 +61,9 @@ function CatBadge({ cat }) {
 
 function StatusBadge({ active }) {
   return (
-    <span className={`inline-block text-xs font-semibold px-2.5 py-0.5 rounded-full whitespace-nowrap ${active ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-500"
-      }`}>
+    <span className={`inline-block text-xs font-semibold px-2.5 py-0.5 rounded-full whitespace-nowrap ${
+      active ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-500"
+    }`}>
       {active ? "Active" : "INACTIVE"}
     </span>
   );
@@ -182,8 +199,9 @@ function Pagination({ page, totalPages, onChange }) {
             )}
             <button
               onClick={() => onChange(n)}
-              className={`w-8 h-8 text-sm rounded-lg font-medium transition-colors ${page === n ? "bg-indigo-600 text-white" : "text-slate-600 border border-slate-200 hover:bg-slate-100"
-                }`}
+              className={`w-8 h-8 text-sm rounded-lg font-medium transition-colors ${
+                page === n ? "bg-indigo-600 text-white" : "text-slate-600 border border-slate-200 hover:bg-slate-100"
+              }`}
             >{n + 1}</button>
           </span>
         );
@@ -203,42 +221,37 @@ function Pagination({ page, totalPages, onChange }) {
    MAIN PAGE
 ═══════════════════════════════════════════ */
 export default function SubjectsMaster() {
-  const [subjects, setSubjects] = useState([]);
+  const [subjects,      setSubjects]      = useState([]);
   const [totalElements, setTotalElements] = useState(0);
-  const [totalPages, setTotalPages] = useState(1);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [totalPages,    setTotalPages]    = useState(1);
+  const [loading,       setLoading]       = useState(false);
+  const [error,         setError]         = useState("");
 
-  const [categories, setCategories] = useState([]);
+  const [categories,        setCategories]        = useState([]);
   const [categoriesLoading, setCategoriesLoading] = useState(false);
 
-  const [page, setPage] = useState(0);
-  const [size, setSize] = useState(10);
-  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [page,           setPage]           = useState(0);
+  const [size,           setSize]           = useState(10);
+  const [statusFilter,   setStatusFilter]   = useState("ALL");
   const [categoryFilter, setCategoryFilter] = useState("ALL");
-  const [searchQuery, setSearchQuery] = useState("");
-  // ── Debounced value that actually drives the API call ──────────────────────
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [searchQuery,    setSearchQuery]    = useState("");
+  const [debouncedSearch,setDebouncedSearch]= useState("");
 
-  const [modal, setModal] = useState(null);
+  const [modal,        setModal]        = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
 
   const [activeTab, setActiveTab] = useState("materSubject");
 
-  // ── Debounce: update debouncedSearch 800 ms after the user stops typing ───
+  // ── Debounce ──────────────────────────────────────────────────────────────
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(searchQuery);
-    }, 800);
+    const timer = setTimeout(() => setDebouncedSearch(searchQuery), 800);
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // ── Reset to page 0 whenever any filter / size changes ────────────────────
-  useEffect(() => {
-    setPage(0);
-  }, [statusFilter, categoryFilter, size, debouncedSearch]);
+  // ── Reset page on filter/size change ─────────────────────────────────────
+  useEffect(() => { setPage(0); }, [statusFilter, categoryFilter, size, debouncedSearch]);
 
-  // ── Fetch subjects — depends on debouncedSearch, NOT searchQuery ──────────
+  // ── Fetch subjects ────────────────────────────────────────────────────────
   const fetchSubjects = useCallback(async () => {
     setLoading(true);
     setError("");
@@ -248,12 +261,10 @@ export default function SubjectsMaster() {
         size,
         sort: "id",
         search: debouncedSearch,
-        status: statusFilter === "ALL" ? "" : statusFilter,
+        status:   statusFilter   === "ALL" ? "" : statusFilter,
         category: categoryFilter === "ALL" ? "" : categoryFilter,
       };
-
       const result = await getSubjectsWithFilters(params);
-
       setSubjects(result?.subjects ?? []);
       setTotalElements(result?.pagination?.totalElements ?? result?.subjects?.length ?? 0);
       setTotalPages(result?.pagination?.totalPages ?? 1);
@@ -266,7 +277,7 @@ export default function SubjectsMaster() {
 
   useEffect(() => { fetchSubjects(); }, [fetchSubjects]);
 
-  // ── Fetch categories once on mount ────────────────────────────────────────
+  // ── Fetch categories once ─────────────────────────────────────────────────
   useEffect(() => {
     const fetchCategories = async () => {
       setCategoriesLoading(true);
@@ -284,7 +295,7 @@ export default function SubjectsMaster() {
     fetchCategories();
   }, []);
 
-  const handleSaved = () => { setModal(null); fetchSubjects(); };
+  const handleSaved   = () => { setModal(null);        fetchSubjects(); };
   const handleDeleted = () => { setDeleteTarget(null); fetchSubjects(); };
 
   return (
@@ -313,20 +324,21 @@ export default function SubjectsMaster() {
             <div className="sm-tabs mt-3 flex overflow-x-auto border-b border-slate-200 -mb-px gap-0">
               <button
                 onClick={() => setActiveTab("materSubject")}
-                className={`flex-shrink-0 flex items-center gap-1.5 px-3 sm:px-4 pb-3 text-xs sm:text-sm font-semibold whitespace-nowrap transition-colors border-b-2 ${activeTab === "materSubject"
+                className={`flex-shrink-0 flex items-center gap-1.5 px-3 sm:px-4 pb-3 text-xs sm:text-sm font-semibold whitespace-nowrap transition-colors border-b-2 ${
+                  activeTab === "materSubject"
                     ? "text-indigo-600 border-indigo-600"
                     : "text-slate-400 border-transparent hover:text-slate-600"
-                  }`}
+                }`}
               >
                 Subjects
               </button>
-
               <button
                 onClick={() => setActiveTab("assignment")}
-                className={`flex-shrink-0 flex items-center gap-1.5 px-3 sm:px-4 pb-3 text-xs sm:text-sm font-semibold whitespace-nowrap transition-colors border-b-2 ${activeTab === "assignment"
+                className={`flex-shrink-0 flex items-center gap-1.5 px-3 sm:px-4 pb-3 text-xs sm:text-sm font-semibold whitespace-nowrap transition-colors border-b-2 ${
+                  activeTab === "assignment"
                     ? "text-indigo-600 border-indigo-600"
                     : "text-slate-400 border-transparent hover:text-slate-600"
-                  }`}
+                }`}
               >
                 <span className="hidden sm:inline">Section–Subject Assignment</span>
                 <span className="sm:hidden">Assignment</span>
@@ -366,7 +378,6 @@ export default function SubjectsMaster() {
 
               {/* Row B: Search + Filters */}
               <div className="flex flex-col gap-2">
-                {/* Search — always full width */}
                 <div className="relative w-full">
                   <span className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none">
                     <ISearch />
@@ -379,7 +390,6 @@ export default function SubjectsMaster() {
                     className="w-full pl-8 pr-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300"
                     style={{ minHeight: 38 }}
                   />
-                  {/* Subtle typing indicator shown while debounce is pending */}
                   {searchQuery !== debouncedSearch && (
                     <span className="absolute right-3 top-1/2 -translate-y-1/2">
                       <svg className="w-3.5 h-3.5 animate-spin text-indigo-400" fill="none" viewBox="0 0 24 24">
@@ -390,7 +400,6 @@ export default function SubjectsMaster() {
                   )}
                 </div>
 
-                {/* Filters — stacked on mobile, 2-col on sm, inline on md+ */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:flex md:items-center gap-2">
                   <NativeSelect
                     value={statusFilter}
@@ -471,12 +480,12 @@ export default function SubjectsMaster() {
                   <thead>
                     <tr className="bg-slate-50 border-y border-slate-200 text-left">
                       {[
-                        { h: "Code", cls: "w-20" },
-                        { h: "Subject Name", cls: "" },
-                        { h: "Category", cls: "w-32" },
-                        { h: "Description", cls: "" },
-                        { h: "Status", cls: "text-center w-24" },
-                        { h: "Actions", cls: "text-right  w-36" },
+                        { h: "Code",         cls: "w-20"         },
+                        { h: "Subject Name", cls: ""             },
+                        { h: "Category",     cls: "w-36"         },
+                        { h: "Description",  cls: ""             },
+                        { h: "Status",       cls: "text-center w-24" },
+                        { h: "Actions",      cls: "text-right  w-36" },
                       ].map(({ h, cls }) => (
                         <th key={h}
                           className={`py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap ${cls}`}
@@ -532,7 +541,7 @@ export default function SubjectsMaster() {
               </div>
             )}
 
-            {/* ── FOOTER — rows per page + pagination ── */}
+            {/* ── FOOTER ── */}
             {!loading && subjects.length > 0 && (
               <div className="px-3 sm:px-5 py-3.5 border-t border-slate-100 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div className="flex flex-wrap items-center gap-2">
