@@ -339,28 +339,28 @@ export default function HolidayManagement() {
   const cardsArray = [
     {
       IconName: FileSignature,
-      keyName: 'Total Holidays',
+      keyName: 'Total Active Holidays',
       val: statistics.totalHolidays,
       iconTxColor: 'text-blue-600',
       iconBgColor: 'bg-blue-50',
     },
     {
       IconName: CalendarClock,
-      keyName: 'National Holidays',
+      keyName: 'National Active Holidays',
       val: statistics.nationalHolidays,
       iconTxColor: 'text-green-600',
       iconBgColor: 'bg-green-50',
     },
     {
       IconName: CalendarClock,
-      keyName: 'Religious Holidays',
+      keyName: 'Religious Active Holidays',
       val: statistics.religiousHolidays,
       iconTxColor: 'text-purple-600',
       iconBgColor: 'bg-purple-50',
     },
     {
       IconName: CalendarClock,
-      keyName: 'Regional Holidays',
+      keyName: 'Regional Active Holidays',
       val: statistics.regionalHolidays,
       iconTxColor: 'text-yellow-600',
       iconBgColor: 'bg-yellow-50',
@@ -670,7 +670,7 @@ export default function HolidayManagement() {
               <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
                 <tr className="text-sm">
                   <th className="px-4 lg:px-6 py-3 text-left font-semibold text-gray-600 uppercase tracking-wide">
-                    Holiday Name
+                    Holiday Name <span className="text-[11px] bg-blue-50 text-gray-800 px-2 py-1 rounded-full">Status</span>
                   </th>
                   <th className="px-4 lg:px-6 py-3 text-center font-semibold text-gray-600 uppercase tracking-wide">
                     Date
@@ -729,7 +729,7 @@ export default function HolidayManagement() {
                     >
                       <td className="px-4 lg:px-6 py-4">
                         <p className="font-semibold text-gray-900 text-xs lg:text-sm">
-                          {holiday.name}
+                          {holiday.name} <span className={`text-[11px] ${holiday.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'} px-2 py-1 rounded-full`}>{holiday.isActive ? 'Active' : 'Inactive'}</span>
                         </p>
                       </td>
                       <td className="px-4 lg:px-6 py-4 text-center">
@@ -808,7 +808,7 @@ export default function HolidayManagement() {
                     <div className="flex justify-between items-start mb-3">
                       <div className="flex-1 pr-3">
                         <h3 className="font-semibold text-gray-900 text-sm mb-1">
-                          {holiday.name}
+                          {holiday.name} <span className={`text-[11px] ${holiday.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'} px-2 py-1 rounded-full`}>{holiday.isActive ? 'Active' : 'Inactive'}</span>
                         </h3>
                         <p className="text-sm text-gray-600 mb-2">
                           {new Date(holiday.holidayDate).toDateString()}
