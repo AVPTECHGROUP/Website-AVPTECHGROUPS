@@ -8,22 +8,20 @@ export default function AddnewSubject({ subject, onSaved, onClose }) {
 
   // ── Form state ─────────────────────────────────────────────────────────────
   const [formData, setFormData] = useState({
-    name: "",
-    code: "",
-    description: "",
-    categoryValue: "",
-    isActive: true,
+    name:          "",
+    code:          "",
+    description:   "",
+    category: "",
+    isActive:      true,
   });
 
   const [categories, setCategories] = useState([]);
   const [catLoading, setCatLoading] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState({});
+  const [loading,    setLoading]    = useState(false);
+  const [errors,     setErrors]     = useState({});
+  const [catsReady,  setCatsReady]  = useState(false);
 
   // ── 1. Fetch categories ────────────────────────────────────────────────────
-  // We track a "ready" flag so the populate effect below can wait for the list.
-  const [catsReady, setCatsReady] = useState(false);
-
   useEffect(() => {
     const fetchCategories = async () => {
       setCatLoading(true);
@@ -36,69 +34,72 @@ export default function AddnewSubject({ subject, onSaved, onClose }) {
         setCategories([]);
       } finally {
         setCatLoading(false);
-        setCatsReady(true); // signal that options are available
+        setCatsReady(true);
       }
     };
     fetchCategories();
   }, []);
 
-  // ── 2. Populate form — runs when modal opens AND when categories arrive ────
+  // ── 2. Populate form on open / when categories arrive ────────────────────
   //
-  // KEY FIXES:
-  //   a) Depends on [subject, catsReady] so it re-runs once options load.
-  //   b) category field:  API list rows carry `subject.category` (e.g. "CORE"),
-  //                       not `subject.categoryValue`.  We check both so it
-  //                       works regardless of which field the backend sends.
-  //   c) status field:    list rows carry `subject.status === "ACTIVE"`, not a
-  //                       boolean `isActive`.  We handle both shapes.
+  // FIX 2 — Category auto-population
+  // The list API sends `subject.category` as the LOV *label* (e.g. "Social Studies"),
+  // while `<option value>` uses the LOV *value* key (e.g. "SOCIAL").
+  // Strategy (in priority order):
+  //   a) subject.category  → already the value key (detail/save API shape)
+  //   b) match categories list by label (case-insensitive)   ← catches list API shape
+  //   c) match categories list by value (case-insensitive)   ← defensive fallback
+  //   d) uppercase the raw string                            ← last resort
   useEffect(() => {
     if (isEditMode && subject) {
-      // Resolve category value:
-      //   - subject.categoryValue  → already the LOV value key e.g. "CORE"  (detail/save API)
-      //   - subject.category       → the LOV *label* e.g. "Core" / "Science" (list API)
-      //
-      // LOV <option> values are uppercase keys ("CORE", "SCIENCE" …).
-      // The list API sends the label ("Core", "Science" …), so we first try to
-      // find the matching LOV entry by label (case-insensitive), then fall back
-      // to uppercasing the raw string so "Core" → "CORE" matches the option value.
-      const rawCategory = subject.categoryValue || subject.category || "";
-      const matchedCat = categories.find(
-        (c) => (c.label ?? "").toLowerCase() === rawCategory.toLowerCase()
-          || (c.value ?? "").toLowerCase() === rawCategory.toLowerCase()
-      );
-      const resolvedCategory = matchedCat?.value || rawCategory.toUpperCase() || "";
+      const rawCategory = subject.category || subject.category || "";
 
-      // Resolve status — handle both boolean (isActive) and string (status)
+      let resolvedCategory = "";
+      if (rawCategory) {
+        const needle = rawCategory.toLowerCase();
+        const matched = categories.find(
+          (c) =>
+            (c.label ?? "").toLowerCase() === needle ||
+            (c.value ?? "").toLowerCase() === needle
+        );
+        resolvedCategory = matched?.value ?? rawCategory.toUpperCase();
+      }
+
+      // FIX 3 — Status resolution
+      // Handles both API shapes:
+      //   • list API   → subject.status = "ACTIVE" | "INACTIVE"  (string)
+      //   • detail API → subject.isActive = true | false          (boolean)
       const resolvedActive =
         typeof subject.isActive === "boolean"
-          ? subject.isActive                       // detail API: boolean
-          : subject.status === "ACTIVE";           // list API:  "ACTIVE" / "INACTIVE"
+          ? subject.isActive
+          : subject.status === "ACTIVE";
 
       setFormData({
-        name: subject.name ?? "",
-        code: subject.code ?? "",
-        description: subject.description ?? "",
-        categoryValue: resolvedCategory,
-        isActive: resolvedActive,
+        name:          subject.name        ?? "",
+        code:          subject.code        ?? "",
+        description:   subject.description ?? "",
+        category: resolvedCategory,
+        isActive:      resolvedActive,
       });
     } else {
       setFormData({
-        name: "",
-        code: "",
-        description: "",
-        categoryValue: "",
-        isActive: true,
+        name:          "",
+        code:          "",
+        description:   "",
+        category: "",
+        isActive:      true,
       });
     }
     setErrors({});
-  }, [subject, catsReady]); // <-- catsReady ensures we re-apply after options load
+    // Re-run once categories have loaded so the select shows the correct value
+  }, [subject, catsReady]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Validation ─────────────────────────────────────────────────────────────
   const validateForm = () => {
     const e = {};
-    if (!formData.name?.trim()) e.name = "Name is required";
-    if (!formData.code?.trim()) e.code = "Code is required";
-    if (!formData.categoryValue) e.categoryValue = "Category is required";
+    if (!formData.name?.trim())      e.name          = "Name is required";
+    if (!formData.code?.trim())      e.code          = "Code is required";
+    if (!formData.category)     e.category = "Category is required";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -117,18 +118,23 @@ export default function AddnewSubject({ subject, onSaved, onClose }) {
     setFormData((prev) => ({ ...prev, isActive: e.target.value === "ACTIVE" }));
   };
 
+  // ── Save ───────────────────────────────────────────────────────────────────
   const handleSave = async (e) => {
     e.preventDefault();
     if (!validateForm()) return;
 
     setLoading(true);
     try {
+      // FIX 3 — Status payload
+      // Send BOTH `isActive` (boolean) AND `status` (string) so the backend
+      // accepts whichever field it expects, regardless of API shape.
       const payload = {
-        name: formData.name.trim(),
-        code: formData.code.trim(),
-        description: formData.description.trim(),
-        categoryValue: formData.categoryValue,
-        isActive: formData.isActive,
+        name:          formData.name.trim(),
+        code:          formData.code.trim(),
+        description:   formData.description.trim(),
+        category: formData.category,
+        isActive:      formData.isActive,                            // boolean shape
+        status:        formData.isActive ? "ACTIVE" : "INACTIVE",   // string shape
       };
 
       if (isEditMode) {
@@ -200,10 +206,11 @@ export default function AddnewSubject({ subject, onSaved, onClose }) {
                 value={formData.name}
                 onChange={handleChange}
                 placeholder="e.g., Mathematics"
-                className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 transition-colors ${errors.name
+                className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 transition-colors ${
+                  errors.name
                     ? "border-red-300 focus:ring-red-300"
                     : "border-slate-200 focus:ring-indigo-300"
-                  }`}
+                }`}
               />
               {errors.name && <p className="text-xs text-red-600 mt-1">{errors.name}</p>}
             </div>
@@ -219,10 +226,11 @@ export default function AddnewSubject({ subject, onSaved, onClose }) {
                 value={formData.code}
                 onChange={handleChange}
                 placeholder="e.g., MATH101"
-                className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 transition-colors ${errors.code
+                className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 transition-colors ${
+                  errors.code
                     ? "border-red-300 focus:ring-red-300"
                     : "border-slate-200 focus:ring-indigo-300"
-                  }`}
+                }`}
               />
               {errors.code && <p className="text-xs text-red-600 mt-1">{errors.code}</p>}
             </div>
@@ -234,14 +242,15 @@ export default function AddnewSubject({ subject, onSaved, onClose }) {
               </label>
               <div className="relative">
                 <select
-                  name="categoryValue"
-                  value={formData.categoryValue}
+                  name="category"
+                  value={formData.category}
                   onChange={handleChange}
                   disabled={catLoading}
-                  className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 transition-colors appearance-none bg-white disabled:opacity-60 disabled:cursor-not-allowed ${errors.categoryValue
+                  className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 transition-colors appearance-none bg-white disabled:opacity-60 disabled:cursor-not-allowed ${
+                    errors.category
                       ? "border-red-300 focus:ring-red-300"
                       : "border-slate-200 focus:ring-indigo-300"
-                    }`}
+                  }`}
                 >
                   <option value="">
                     {catLoading ? "Loading categories…" : "Select a category"}
@@ -252,15 +261,14 @@ export default function AddnewSubject({ subject, onSaved, onClose }) {
                     </option>
                   ))}
                 </select>
-                {/* Chevron */}
                 <span className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none">
                   <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                   </svg>
                 </span>
               </div>
-              {errors.categoryValue && (
-                <p className="text-xs text-red-600 mt-1">{errors.categoryValue}</p>
+              {errors.category && (
+                <p className="text-xs text-red-600 mt-1">{errors.category}</p>
               )}
             </div>
 
