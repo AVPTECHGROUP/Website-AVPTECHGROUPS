@@ -1,160 +1,410 @@
-import { CircleCheckBig, X } from "lucide-react";
-import { useState } from "react";
+import {
+    CircleCheckBig,
+    X,
+    CalendarDays,
+    Clock3,
+    FileText,
+    MessageSquareText,
+    Info
+} from "lucide-react";
 
-export default function LeavesReqInfoComponent({ isOpen, onClose, userData, handleLeaveApprove, handleLeaveReject, setRemarks, remarks, listLeavetype }) {
+export default function LeavesReqInfoComponent({
+    isOpen,
+    onClose,
+    userData,
+    handleLeaveApprove,
+    handleLeaveReject,
+    setRemarks,
+    remarks,
+    listLeavetype
+}) {
     if (!isOpen || !userData) return null;
 
     const getAvatarColor = (name) => {
         const colors = [
-            'bg-blue-500',
-            'bg-green-500',
-            'bg-purple-500',
-            'bg-pink-500',
-            'bg-indigo-500',
-            'bg-yellow-500'
+            "from-blue-500 to-indigo-600",
+            "from-green-500 to-emerald-600",
+            "from-purple-500 to-violet-600",
+            "from-pink-500 to-rose-600",
+            "from-cyan-500 to-sky-600",
+            "from-amber-500 to-orange-600"
         ];
-        const index = name?.charCodeAt(0) % colors.length || 0;
-        return colors[index];
+
+        return colors[name?.charCodeAt(0) % colors.length || 0];
     };
 
+    // Status badge styles
     const statusStyles = {
-        PENDING: 'bg-yellow-50 text-yellow-800 border-yellow-200',
-        APPROVED: 'bg-green-50 text-green-800 border-green-200',
-        REJECTED: 'bg-red-50 text-red-800 border-red-200',
-        CANCELLED: 'bg-orange-50 text-orange-800 border-orange-200',
-        WITHDRAWN: 'bg-gray-50 text-gray-800 border-gray-200'
+        PENDING:
+            "bg-yellow-100 text-yellow-700 border-yellow-300",
+
+        APPROVED:
+            "bg-green-100 text-green-700 border-green-300",
+
+        REJECTED:
+            "bg-red-100 text-red-700 border-red-300",
+
+        CANCELLED:
+            "bg-orange-100 text-orange-700 border-orange-300",
+
+        WITHDRAWN:
+            "bg-gray-100 text-gray-700 border-gray-300"
     };
 
-    //Compare and get lable function
+    // Header gradients
+    const headerGradients = {
+        PENDING:
+            "from-yellow-500 via-amber-500 to-orange-500",
+
+        APPROVED:
+            "from-green-700 via-green-600 to-emerald-500",
+
+        REJECTED:
+            "from-red-700 via-red-600 to-rose-500",
+
+        CANCELLED:
+            "from-orange-700 via-orange-600 to-amber-500",
+
+        WITHDRAWN:
+            "from-gray-700 via-gray-600 to-gray-500"
+    };
+
+    // Disable buttons if not pending
+    const isLocked = userData.currEmpstatus !== "PENDING";
+
     function compareAndGetLabel(data, compareValue) {
-        const found = data.find(item => item.value === compareValue);
-        return found ? <span> {found.label} </span> : "";
+        const found = data.find(
+            item => item.value === compareValue
+        );
+
+        return found ? found.label : "";
     }
 
     return (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 sm:p-3">
-            <div className="bg-white rounded-lg sm:rounded-xl shadow-2xl w-full max-w-[95%] sm:max-w-md max-h-[95vh] overflow-hidden relative animate-fadeIn">
-                {/* Close Button */}
-                <button
-                    onClick={onClose}
-                    className="absolute top-2 sm:top-3 right-2 sm:right-3 z-10 text-gray-400 hover:text-gray-600 transition-colors p-0.5"
-                    aria-label="Close"
+        <div className="fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-sm flex items-center justify-center p-4">
+
+            {/* Modal */}
+            <div className="w-full max-w-sm max-h-[95vh] overflow-hidden rounded-3xl bg-white shadow-2xl border border-slate-200 flex flex-col">
+
+                {/* Header */}
+                <div
+                    className={`relative bg-gradient-to-r ${headerGradients[userData.currEmpstatus] ||
+                        headerGradients.PENDING
+                        } px-5 pt-5 pb-6 overflow-hidden`}
                 >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </button>
 
-                {/* Header with Avatar */}
-                <div className="flex ml-4 mr-4 sm:px-4 pt-8 sm:pt-10 pb-3 sm:pb-4 w-full justify-between border-b border-gray-100">
-                    <div className="flex items-center gap-1.5 sm:gap-2">
-                        <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full text-lg sm:text-xl lg-text-2xl ${getAvatarColor(userData.name)} flex items-center justify-center text-white font-semibold`}>
-                            {userData.avatar}
-                        </div>
-                        <p className="flex flex-col font-semibold text-gray-900 md:text-xl sm:text-base">
-                            {userData.name}
-                            <span className="font-normal text-sm text-gray-400"> {userData.empCode || userData.id}</span>
-                        </p>
+                    {/* Top Right */}
+                    <div className="absolute top-7 right-3 flex items-center gap-2 z-10">
+
+                        {/* Status */}
+                        <span
+                            className={`text-[10px] font-semibold px-2.5 py-1 rounded-full border shadow-sm backdrop-blur-sm whitespace-nowrap ${statusStyles[userData.currEmpstatus]
+                                }`}
+                        >
+                            {userData.currEmpstatus}
+                        </span>
+
+                        {/* Close */}
+                        <button
+                            onClick={onClose}
+                            className="w-8 h-8 rounded-xl bg-white/15 hover:bg-white/25 border border-white/20 flex items-center justify-center text-white transition-all shrink-0"
+                        >
+                            <X size={14} />
+                        </button>
                     </div>
-                    {/* Status Badge */}
-                    <span className={`mr-8 sm:px-2.5 px-2 py-1 rounded-md text-xs font-medium h-fit w-fit border  ${statusStyles[userData.currEmpstatus]}`}>
-                        {userData.currEmpstatus}
-                    </span>
-                </div>
 
-                {/* Content */}
-                <div className="mx-6 my-4 mt-0 sm:px-4 py-3 sm:py-4 space-y-2">
-                    {/* Leave Type and Duration */}
-                    <div className="grid grid-cols-2 gap-2.5  sm:gap-2">
-                        <div className=" p-2 sm:p-2.5">
-                            <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-1">
-                                Leave Type
-                            </p>
-                            <div className="flex items-center gap-1.5">
-                                <span className="w-1.5 h-1.5 bg-blue-500 rounded-full shrink-0"></span>
-                                <p className="text-xs sm:text-sm font-semibold text-gray-900 truncate">
-                                    {compareAndGetLabel(listLeavetype ,userData.leaveType)}
-                                </p>
+                    {/* User Row */}
+                    <div className="flex items-start gap-3 pr-24">
+
+                        {/* Avatar */}
+                        <div className="relative shrink-0">
+
+                            {/* Glow */}
+                            <div className="absolute inset-0 rounded-full bg-white/30 blur-md scale-110" />
+
+                            {/* Border */}
+                            <div className="relative p-[2px] rounded-full bg-white/40 shadow-lg">
+
+                                {/* Avatar */}
+                                <div
+                                    className={`w-14 h-14 rounded-full bg-gradient-to-br ${getAvatarColor(
+                                        userData.name
+                                    )} flex items-center justify-center text-white font-semibold text-2xl border border-white/30`}
+                                >
+                                    {userData.avatar}
+                                </div>
                             </div>
                         </div>
-                        <div className=" p-2 sm:p-2.5 ">
-                            <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-1">
-                                Duration
+
+                        {/* User Info */}
+                        <div className="flex-1 min-w-0">
+
+                            {/* Name */}
+                            <p className="text-white font-semibold text-[15px] truncate">
+                                {userData.name}
                             </p>
-                            <p className="text-xs sm:text-sm font-semibold text-gray-900">
-                                {userData.totalDays} {userData.totalDays === 1 ? 'day' : 'days'}
-                            </p>
+
+                            {/* Emp ID + Role */}
+                            {/* <div className="flex items-center flex-wrap gap-x-2 gap-y-1 mt-1">
+
+                                <span className="text-white/80 text-xs">
+                                    {userData.empCode !== null
+                                        ? "Emp Id: " + userData.empCode
+                                        : userData.id !== null
+                                            ? "Id: " + userData.id
+                                            : ""}
+                                </span>
+
+                                {userData.role && (
+                                    <>
+                                        <span className="w-1 h-1 rounded-full bg-white/50"></span>
+
+                                        <span className="text-white/80 text-xs">
+                                            {"Role : " +
+                                                userData.role.toUpperCase()}
+                                        </span>
+                                    </>
+                                )}
+                            </div> */}
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-white/85 text-[11px] sm:text-xs">
+
+                                {/* Employee ID */}
+                                {(userData.empCode || userData.id) && (
+                                    <div className="flex items-center gap-1.5 min-w-0">
+                                        <span className="font-medium text-white/70 whitespace-nowrap">
+                                            {userData.empCode ? "Emp ID" : "ID"}
+                                        </span>
+
+                                        <span className="w-1 h-1 rounded-full bg-white/40 shrink-0"></span>
+
+                                        <span className="font-semibold truncate">
+                                            {userData.empCode || userData.id}
+                                        </span>
+                                    </div>
+                                )}
+
+                                {/* Divider */}
+                                {userData.role && (
+                                    <span className="w-1 h-1 rounded-full bg-white/40 hidden sm:block"></span>
+                                )}
+
+                                {/* Role */}
+                                {userData.role && (
+                                    <div className="flex items-center gap-1.5 min-w-0">
+                                        <span className="font-medium text-white/70 whitespace-nowrap">
+                                            Role
+                                        </span>
+
+                                        <span className="w-1 h-1 rounded-full bg-white/40 shrink-0"></span>
+
+                                        <span className="font-semibold uppercase tracking-wide truncate">
+                                            {userData.role}
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Body */}
+                <div className="px-4 py-4 flex flex-col gap-3 overflow-y-auto bg-slate-50">
+
+                    {/* Leave Type + Duration */}
+                    <div className="grid grid-cols-2 gap-3">
+
+                        {/* Leave Type */}
+                        <div className="bg-white border border-slate-200 rounded-2xl p-3 shadow-sm hover:shadow-md transition-all">
+
+                            <div className="flex items-start gap-3">
+
+                                <div className="w-11 h-11 rounded-2xl bg-violet-100 flex items-center justify-center shrink-0">
+                                    <CalendarDays
+                                        size={20}
+                                        className="text-violet-600"
+                                    />
+                                </div>
+
+                                <div className="min-w-0">
+                                    <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-1">
+                                        Leave Type
+                                    </p>
+
+                                    <p className="text-sm font-semibold text-slate-800 leading-snug">
+                                        {compareAndGetLabel(
+                                            listLeavetype,
+                                            userData.leaveType
+                                        )}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Duration */}
+                        <div className="bg-white border border-slate-200 rounded-2xl p-3 shadow-sm hover:shadow-md transition-all">
+
+                            <div className="flex items-start gap-3">
+
+                                <div className="w-11 h-11 rounded-2xl bg-blue-100 flex items-center justify-center shrink-0">
+                                    <Clock3
+                                        size={20}
+                                        className="text-blue-600"
+                                    />
+                                </div>
+
+                                <div>
+                                    <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-1">
+                                        Duration
+                                    </p>
+
+                                    <p className="text-sm font-semibold text-slate-800">
+                                        {userData.totalDays}{" "}
+                                        {userData.totalDays === 1
+                                            ? "day"
+                                            : "days"}
+                                    </p>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    {/* Period */}
-                    <div className=" p-2 sm:p-2.5">
-                        <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-1">
-                            Period
-                        </p>
-                        <div className="flex sm:items-center gap-0.5 sm:gap-1.5">
-                            <p className="text-xs sm:text-sm font-semibold text-gray-900">
-                                {userData.fromDate}
-                            </p>
-                            <span className="text-xs text-gray-400 lowercase text-center pt-0 md:pt-1">to</span>
-                            <p className="text-xs sm:text-sm font-semibold text-gray-900">
-                                {userData.toDate}
-                            </p>
+                    {/* Leave Period */}
+                    <div className="bg-white border border-slate-200 rounded-2xl p-3 shadow-sm">
+
+                        <div className="flex items-start gap-3">
+
+                            {/* Icon */}
+                            <div className="w-11 h-11 rounded-2xl bg-green-100 flex items-center justify-center shrink-0">
+                                <CalendarDays
+                                    size={20}
+                                    className="text-green-600"
+                                />
+                            </div>
+
+                            {/* Content */}
+                            <div className="flex-1">
+
+                                <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-2">
+                                    Period
+                                </p>
+
+                                <div className="flex items-center gap-2">
+
+                                    {/* From */}
+                                    <p className="text-sm font-semibold text-slate-800">
+                                        {userData.fromDate}
+                                    </p>
+
+                                    <span className="text-xs text-slate-400">
+                                        to
+                                    </span>
+
+                                    {/* To */}
+                                    <p className="text-sm font-semibold text-slate-800">
+                                        {userData.toDate}
+                                    </p>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
                     {/* Reason */}
                     <div>
-                        <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-1">
+
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-2">
                             Reason
                         </p>
-                        <div className="bg-gray-50 p-2 sm:p-2.5 rounded-md border border-gray-200">
-                            <p className="text-xs text-gray-700 leading-snug">
-                                {userData.reason}
-                            </p>
+
+                        <div className="bg-white border border-slate-200 rounded-2xl p-3 shadow-sm">
+
+                            <div className="flex items-start gap-3">
+
+                                {/* Icon */}
+                                <div className="w-11 h-11 rounded-2xl bg-orange-100 flex items-center justify-center shrink-0">
+                                    <FileText
+                                        size={20}
+                                        className="text-orange-500"
+                                    />
+                                </div>
+
+                                {/* Text */}
+                                <p className="text-sm text-slate-700 leading-relaxed break-words">
+                                    {userData.reason}
+                                </p>
+                            </div>
                         </div>
                     </div>
 
                     {/* Remarks */}
-                    <div>
-                        <label htmlFor="remarks" className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-1">
-                            Remarks
-                        </label>
-                        <textarea
-                            disabled={userData.currEmpstatus === 'APPROVED' || userData.currEmpstatus === 'REJECTED' || userData.currEmpstatus === 'CANCELLED'}
-                            id="remarks"
-                            name="remarks"
-                            value={remarks}
-                            onChange={(e) => setRemarks(e.target.value)}
-                            placeholder={`${userData.reviewRemarks === "" ? userData.currEmpstatus === "PENDING" ? "Add your remarks here..." : "No review remark mentioned!" : "No review remark mentioned!"}`}
-                            rows="2"
-                            className="w-full text-xs text-gray-700 bg-white p-2 sm:p-2.5 border border-gray-300 rounded-md leading-snug focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
-                        />
-                    </div>
+                    {remarks === "" || remarks === null ? '' : (
+                        <div>
 
-                    {/* Action Buttons */}
-                    <div className="flex flex-col sm:flex-row gap-2 pt-2">
+                            <label className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-2 block">
+                                Remarks
+                            </label>
+
+                            <div className="bg-white border border-slate-200 rounded-2xl p-3 shadow-sm">
+
+                                <div className="flex items-start gap-3">
+
+                                    {/* Icon */}
+                                    <div className="w-11 h-11 rounded-2xl bg-blue-100 flex items-center justify-center shrink-0">
+                                        <Info
+                                            size={20}
+                                            className="text-blue-500"
+                                        />
+                                    </div>
+
+                                    {/* Textarea */}
+                                    <div className="flex-1">
+                                        <textarea
+                                            disabled={isLocked}
+                                            value={remarks}
+                                            onChange={(e) =>
+                                                setRemarks(e.target.value)
+                                            }
+                                            placeholder={
+                                                userData.reviewRemarks === ""
+                                                    ? userData.currEmpstatus ===
+                                                        "PENDING"
+                                                        ? "Add your remarks here..."
+                                                        : "No review remark mentioned!"
+                                                    : userData.reviewRemarks
+                                            }
+                                            rows={3}
+                                            className="w-full bg-transparent text-sm text-slate-700 resize-none focus:outline-none disabled:bg-transparent disabled:cursor-not-allowed placeholder:text-slate-400"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>)}
+
+                    {/* Actions */}
+                    <div className="grid grid-cols-2 gap-3 pt-1">
+
+                        {/* Reject */}
                         <button
-                            disabled={userData.currEmpstatus === 'APPROVED' || userData.currEmpstatus === 'REJECTED' || userData.currEmpstatus === 'CANCELLED'}
+                            disabled={isLocked}
                             onClick={() => {
                                 handleLeaveReject();
                                 onClose();
                             }}
-                            className={`${userData.currEmpstatus === 'APPROVED' || userData.currEmpstatus === 'REJECTED' || userData.currEmpstatus === 'CANCELLED' ? 'cursor-not-allowed bg-red-300' : 'bg-red-400 hover:bg-red-500 active:bg-red-800'} w-full flex gap-2 justify-center sm:flex-1 py-1 px-4  text-white font-semibold rounded-md  transition-colors text-xs sm:text-sm`}
+                            className="flex items-center justify-center gap-2 py-2.5 rounded-2xl text-sm font-semibold border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 transition-all enabled:cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            <X className="p-0.5" />
+                            <X size={14} />
                             Reject
                         </button>
+
+                        {/* Approve */}
                         <button
-                            disabled={userData.currEmpstatus === 'APPROVED' || userData.currEmpstatus === 'REJECTED' || userData.currEmpstatus === 'CANCELLED'}
+                            disabled={isLocked}
                             onClick={() => {
-                                //  alert(`Approved leave for ${userData.name}`);
                                 handleLeaveApprove();
                                 onClose();
                             }}
-                            className={`${userData.currEmpstatus === 'APPROVED' || userData.currEmpstatus === 'REJECTED' || userData.currEmpstatus === 'CANCELLED' ? 'cursor-not-allowed bg-blue-400' : 'bg-blue-600  hover:bg-blue-700 active:bg-blue-800'} w-full flex gap-2 justify-center sm:flex-1 py-1 px-4  text-white font-semibold rounded-md transition-colors text-xs sm:text-sm`}
+                            className="flex items-center justify-center gap-2 py-2.5 rounded-2xl text-sm font-semibold bg-gradient-to-r from-green-700 to-emerald-500 text-white hover:opacity-90 shadow-lg shadow-green-200 transition-all disabled:opacity-50 enabled:cursor-pointer disabled:cursor-not-allowed"
                         >
-                            <CircleCheckBig className="p-0.5" />
+                            <CircleCheckBig size={14} />
                             Approve
                         </button>
                     </div>

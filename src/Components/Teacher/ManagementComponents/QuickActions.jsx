@@ -13,8 +13,8 @@ const QuickActions = ({ teacherId, onResetPassword }) => {
   const hasSelection = disablebtn !== null;
 
   return (
-    <div className="px-3 mb-6">
-      <h1 className="text-lg sm:text-xl font-bold mb-5 text-center lg:text-start sm:text-start md:text-start">
+    <div className="px-3 mb-3 pt-0 sm:pt-0 lg:pt-0">
+      <h1 className="text-lg sm:text-xl font-bold mb-2 text-center lg:text-start sm:text-start md:text-start">
         Quick Actions
       </h1>
 

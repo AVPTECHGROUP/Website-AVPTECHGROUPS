@@ -1,10 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import CardComponent from '../../Components/CommonComp/CardComponent';
 import CardLoader from '../../Components/CommonComp/CardLoader';
 import {
   ThumbsUpIcon,
   ClockIcon,
-  CalendarDaysIcon,
   CalendarX2,
   CalendarRange,
   LucideCalendarDays,
@@ -13,9 +12,14 @@ import {
   ChevronRight,
   SearchX,
   UserRoundXIcon,
+  XIcon,
 } from 'lucide-react';
 import LeavesReqInfoComponent from '../../Components/LeavesComponents/LeaveReqInfoComponent';
-import { approoveRejLeaveReq, getAllLeaveRequest, getALLLeavesStatistics, } from '../../Api/LeavesManagementAPI';
+import {
+  approoveRejLeaveReq,
+  getAllLeaveRequest,
+  getALLLeavesStatistics,
+} from '../../Api/LeavesManagementAPI';
 import { toast } from 'react-toastify';
 import { getListOfValues } from '../../Api/ListOfValues';
 import ListLoader from '../../Components/CommonComp/ListLoader';
@@ -26,186 +30,102 @@ const Leaves = () => {
   const [error, setError] = useState(null);
   const [totalElements, setTotalElements] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
-  const [page, setpage] = useState(1);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [rowsPerpage, setrowsPerpage] = useState(10);
-  const [noUserFound, set_noUserFound] = useState(null);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [noUserFound, setNoUserFound] = useState(null);
 
-  const [search, setsearch] = useState('');
+  const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [leavestatusFilter, setleavestatusFilter] = useState('All Status');
-  const [leaveType, setleaveType] = useState('');
-  const [frommDateFilter, setfrommDateFilter] = useState('');
-  const [toDateFilter, settoDateFilter] = useState('');
-
-  const [resetFiltersCallApiDependency, setresetFiltersCallApiDependency] = useState(0);
+  const [leaveStatusFilter, setLeaveStatusFilter] = useState('');
+  const [leaveType, setLeaveType] = useState('');
+  const [fromDateFilter, setFromDateFilter] = useState('');
+  const [toDateFilter, setToDateFilter] = useState('');
 
   const [leaveReq, setLeaveReq] = useState([]);
-  const [statistics, setstatistics] = useState({
+  const [statistics, setStatistics] = useState({
     pendingRequests: 0,
     approvedThisMonth: 0,
     rejectedThisMonth: 0,
     totalLeavesToday: 0,
     totalThisMonth: 0,
-    totalLeavesThisWeek: 0
+    totalLeavesThisWeek: 0,
   });
 
-  const [listOfLeaveType, setListofLeavetype] = useState([]);
-  const [listOfLeaveStatus, setlistOfLeaveStatus] = useState([]);
+  const [listOfLeaveType, setListOfLeaveType] = useState([]);
+  const [listOfLeaveStatus, setListOfLeaveStatus] = useState([]);
+  const [statLoading, setStatLoading] = useState(true);
+  const [refreshStat, setRefreshStat] = useState(0);
 
+  // ── List of values ──────────────────────────────────────────────────────────
   useEffect(() => {
-    let fetchListOfValues = async () => {
+    const fetchListOfValues = async () => {
       try {
         const leaveTypeRes = await getListOfValues('LEAVE_TYPE');
-        // const formattedLeaveType = leaveTypeRes.map(item => ({
-        //   id: item.id,
-        //   value: item.value,
-        //   label: item.label
-        // }));
-
-        const formattedLeaveType = leaveTypeRes
-          .filter(item => item.isActive === true)
-          .map(item => ({
-            id: item.id,
-            value: item.value,
-            label: item.label
-          }));
-
-        setListofLeavetype(formattedLeaveType);
+        setListOfLeaveType(
+          leaveTypeRes
+            .filter((i) => i.isActive)
+            .map(({ id, value, label }) => ({ id, value, label }))
+        );
 
         const leaveStatusRes = await getListOfValues('LEAVE_STATUS');
-        const formattedStatus = leaveStatusRes.map(item => ({
-          id: item.id,
-          value: item.value,
-          label: item.label
-        }));
-        setlistOfLeaveStatus(formattedStatus);
+        setListOfLeaveStatus(
+          leaveStatusRes
+            .filter((i) => i.isActive && i.value !== 'WITHDRAWN')
+            .map(({ id, value, label }) => ({ id, value, label }))
+        );
+      } catch (e) {
+        console.error('get list of values error:', e.message);
       }
-      catch (e) {
-        console.error("get list of values error:", e.message);
-        throw error;
-      }
-    }
+    };
     fetchListOfValues();
   }, []);
 
-  function compareAndGetLabel(data, compareValue) {
-    const found = data.find(item => item.value === compareValue);
-    return found ? <span> {found.label} </span> : "";
-  }
-
-  const [refressStat, setRefressStat] = useState(0);
-  const [statLoading, setStatLoading] = useState(true);
-  const [refressfeth, setRefressfetch] = useState(0);
-
+  // ── Statistics ──────────────────────────────────────────────────────────────
   useEffect(() => {
-    let fetchStatistics = async () => {
-      setStatLoading(true); // ← shimmer ON
+    const fetchStatistics = async () => {
+      setStatLoading(true);
       try {
-        const statistics_res = await getALLLeavesStatistics();
-        const res = statistics_res.data;
-        setstatistics(res);
+        const res = await getALLLeavesStatistics();
+        setStatistics(res.data);
+      } catch (e) {
+        console.error('get statistics error:', e.message);
+      } finally {
+        setStatLoading(false);
       }
-      catch (e) {
-        console.error("get statistics error:", e.message);
-        throw error;
-      }
-      finally {
-        setStatLoading(false); // ← shimmer OFF
-      }
-    }
+    };
     fetchStatistics();
-  }, [refressStat])
+  }, [refreshStat]);
 
-  const getAvatarColor = (name) => {
-    const colors = [
-      'bg-blue-500', 'bg-green-500', 'bg-purple-500',
-      'bg-pink-500', 'bg-indigo-500', 'bg-yellow-500'
-    ];
-    const index = name?.charCodeAt(0) % colors.length || 0;
-    return colors[index];
-  };
-
+  // ── Debounce search ─────────────────────────────────────────────────────────
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(search);
-    }, 500);
-    return () => clearTimeout(timer);
+    const t = setTimeout(() => setDebouncedSearch(search), 500);
+    return () => clearTimeout(t);
   }, [search]);
 
-  const fetchWithFilters = (async () => {
+  // ── Fetch leave requests whenever any filter / page changes ─────────────────
+  const fetchLeaveRequests = useCallback(async () => {
     setLoading(true);
-    try {
-      const filters = { userName: '', status: '', leaveType: '', frommDate: '', toDate: '' };
-      if (debouncedSearch.trim()) filters.userName = debouncedSearch.trim();
-      if (leavestatusFilter !== 'All Status') filters.status = leavestatusFilter;
-      if (leaveType !== 'All Types') filters.leaveType = leaveType;
-      if (frommDateFilter !== "") filters.frommDate = frommDateFilter;
-      if (toDateFilter !== "") filters.toDate = toDateFilter;
+    setError(null);
+    setNoUserFound(false);
 
-      const res = await getAllLeaveRequest(page - 1, rowsPerpage, 'id', filters.status, filters.leaveType, filters.userName, filters.frommDate, filters.toDate);
+    try {
+      const res = await getAllLeaveRequest(
+        page - 1,
+        rowsPerPage,
+        'id',
+        leaveStatusFilter,
+        leaveType === 'All Types' ? '' : leaveType,
+        debouncedSearch.trim(),
+        fromDateFilter,
+        toDateFilter
+      );
+
       const leaveRequests = res.data || [];
+      setNoUserFound(leaveRequests.length === 0);
 
-      set_noUserFound(leaveRequests.length === 0);
-
-      const mappedRequests = leaveRequests.map((employee) => ({
-        leaveId: employee.id,
-        id: employee.userId,
-        name: employee.userName || 'Unknown',
-        leaveType: employee.leaveType,
-        fromDate: employee.fromDate,
-        toDate: employee.toDate,
-        totalDays: employee.totalDays,
-        reason: employee.reason,
-        reviewRemarks: employee.reviewRemarks,
-        status: employee.status,
-        empCode: employee.employeeCode,
-        avatar: (employee.userName || 'U')[0].toUpperCase(),
-        image: employee.imageUrl || employee.profileImage || `https://ui-avatars.com/api/?name=${encodeURIComponent(employee.userName)}&background=random`,
-        role: employee.userType || 'N/A',
-        currEmpstatus: employee.status,
-      }));
-
-      setLeaveReq(mappedRequests);
-    }
-    catch (err) {
-      console.error("Error fetching users:", err);
-      setError(err.message || "Something went wrong");
-      setLeaveReq([]);
-    }
-    finally {
-      setLoading(false);
-    }
-  });
-
-  function resetFiltersCallApi() {
-    try {
-      setError(null);
-      setsearch('');
-      setleavestatusFilter('All Status');
-      setleaveType('All Types');
-      setfrommDateFilter('');
-      settoDateFilter('');
-      setresetFiltersCallApiDependency(prev => prev + 1);
-    } catch (err) {
-      console.error("Error resetting filters:", err);
-      setError(err.message || "Something went wrong");
-      setLeaveReq([]);
-    }
-  }
-
-  useEffect(() => {
-    const fetchLeaveRequest = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        set_noUserFound(false);
-        const res = await getAllLeaveRequest(page - 1, rowsPerpage);
-        const leaveRequests = res.data || [];
-
-        set_noUserFound(leaveRequests.length === 0);
-
-        const mappedRequests = leaveRequests.map((employee) => ({
+      setLeaveReq(
+        leaveRequests.map((employee) => ({
           leaveId: employee.id,
           id: employee.userId,
           name: employee.userName || 'Unknown',
@@ -218,48 +138,86 @@ const Leaves = () => {
           status: employee.status,
           empCode: employee.employeeCode,
           avatar: (employee.userName || 'U')[0].toUpperCase(),
-          image: employee.imageUrl || employee.profileImage || `https://ui-avatars.com/api/?name=${encodeURIComponent(employee.userName)}&background=random`,
+          image:
+            employee.imageUrl ||
+            employee.profileImage ||
+            `https://ui-avatars.com/api/?name=${encodeURIComponent(employee.userName)}&background=random`,
           role: employee.userType || 'N/A',
           currEmpstatus: employee.status,
-        }));
+        }))
+      );
 
-        setLeaveReq(mappedRequests);
-        setTotalElements(res.pagination?.totalElements || 0);
-        setTotalPages(res.pagination?.totalPages || 0);
-      } catch (err) {
-        console.error("Error fetching users:", err);
-        setError(err.message || "Something went wrong");
-        setLeaveReq([]);
-      } finally {
-        setLoading(false);
-      }
-    };
+      setTotalElements(res.pagination?.totalElements || 0);
+      setTotalPages(res.pagination?.totalPages || 0);
+    } catch (err) {
+      console.error('Error fetching leave requests:', err);
+      setError(err.message || 'Something went wrong');
+      setLeaveReq([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [page, rowsPerPage, debouncedSearch, leaveStatusFilter, leaveType, fromDateFilter, toDateFilter]);
 
-    fetchLeaveRequest();
-  }, [page, rowsPerpage, resetFiltersCallApiDependency, refressfeth]);
+  // Auto-fetch whenever dependencies change; also reset to page 1 when filters change
+  const isFirstRender = React.useRef(true);
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      fetchLeaveRequests();
+      return;
+    }
+    // Reset to page 1 when a filter changes (not pagination itself)
+    setPage(1);
+  }, [debouncedSearch, leaveStatusFilter, leaveType, fromDateFilter, toDateFilter]);
 
+  useEffect(() => {
+    fetchLeaveRequests();
+  }, [page, rowsPerPage, fetchLeaveRequests]);
+
+  // ── Helpers ─────────────────────────────────────────────────────────────────
+  const getAvatarColor = (name) => {
+    const colors = ['bg-blue-500', 'bg-emerald-500', 'bg-violet-500', 'bg-pink-500', 'bg-indigo-500', 'bg-amber-500'];
+    return colors[(name?.charCodeAt(0) || 0) % colors.length];
+  };
+
+  function getLabelFromValue(data, value) {
+    return data.find((i) => i.value === value)?.label ?? value;
+  }
+
+  const hasActiveFilters =
+    search || leaveStatusFilter || (leaveType && leaveType !== 'All Types') || fromDateFilter || toDateFilter;
+
+  const clearAllFilters = () => {
+    setSearch('');
+    setLeaveStatusFilter('');
+    setLeaveType('');
+    setFromDateFilter('');
+    setToDateFilter('');
+  };
+
+  // ── Cards config ────────────────────────────────────────────────────────────
   const cardsArray = [
-    { IconName: ClockIcon, keyName: "Pending request", val: statistics.pendingRequests, iconTxColor: "text-orange-600", iconBgColor: "bg-orange-50" },
-    { IconName: ThumbsUpIcon, keyName: "Approved Leaves month", val: statistics.approvedThisMonth, iconTxColor: "text-green-600", iconBgColor: "bg-green-50" },
-    { IconName: CalendarX2, keyName: "Rejected leaves month", val: statistics.rejectedThisMonth, iconTxColor: "text-red-600", iconBgColor: "bg-red-50" },
-    { IconName: CalendarRange, keyName: "Total leaves month", val: statistics.totalThisMonth, iconTxColor: "text-blue-600", iconBgColor: "bg-blue-50" },
-    { IconName: CalendarDaysIcon, keyName: "Total leaves week", val: statistics.totalLeavesThisWeek, iconTxColor: "text-yellow-600", iconBgColor: "bg-yellow-50" },
+    { IconName: ClockIcon, keyName: 'Pending', val: statistics.pendingRequests, iconTxColor: 'text-orange-600', iconBgColor: 'bg-orange-50' },
+    { IconName: ThumbsUpIcon, keyName: 'Approved / Month', val: statistics.approvedThisMonth, iconTxColor: 'text-green-600', iconBgColor: 'bg-green-50' },
+    { IconName: CalendarX2, keyName: 'Rejected / Month', val: statistics.rejectedThisMonth, iconTxColor: 'text-red-600', iconBgColor: 'bg-red-50' },
+    { IconName: CalendarRange, keyName: 'Total / Month', val: statistics.totalThisMonth, iconTxColor: 'text-blue-600', iconBgColor: 'bg-blue-50' },
   ];
 
   const statusStyles = {
-    PENDING: 'bg-yellow-50 text-yellow-800',
-    APPROVED: 'bg-green-50 text-green-800',
-    REJECTED: 'bg-red-50 text-red-800',
-    CANCELLED: 'bg-orange-50 text-orange-800',
-    WITHDRAWN: 'bg-gray-50 text-gray-800'
+    PENDING: 'bg-amber-50   text-amber-800  border border-amber-200',
+    APPROVED: 'bg-emerald-50 text-emerald-800 border border-emerald-200',
+    REJECTED: 'bg-red-50     text-red-800    border border-red-200',
+    CANCELLED: 'bg-orange-50  text-orange-800 border border-orange-200',
+    WITHDRAWN: 'bg-gray-50    text-gray-700   border border-gray-200',
   };
 
+  // ── Popup state ─────────────────────────────────────────────────────────────
   const [selectedUser, setSelectedUser] = useState(null);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [remarkVal, setRemarksVal] = useState('As per the policy');
 
   const handleViewClick = (user) => {
-    setRemarksVal(user.reviewRemarks);
+    setRemarksVal(user.reviewRemarks || 'As per the policy');
     setSelectedUser(user);
     setIsPopupOpen(true);
   };
@@ -274,45 +232,64 @@ const Leaves = () => {
     try {
       const res = await approoveRejLeaveReq(selectedUser.leaveId, remarkVal);
       toast.success(res.message);
-      setRefressfetch((prev) => prev + 1);
+      handleClosePopup();
+      fetchLeaveRequests();
+      setRefreshStat((p) => p + 1);
     } catch (error) {
       toast.error(error.message || 'Leave Approval failed');
     }
-  }
+  };
 
   const handleLeaveRejectReq = async () => {
     try {
       const res = await approoveRejLeaveReq(selectedUser.leaveId, remarkVal, 'REJECTED');
       toast.success(res.message);
-      setRefressfetch((prev) => prev + 1);
+      handleClosePopup();
+      fetchLeaveRequests();
+      setRefreshStat((p) => p + 1);
     } catch (error) {
       toast.error(error.message || 'Leave Rejection failed');
     }
-  }
+  };
+
+  // ── Pagination helpers ──────────────────────────────────────────────────────
+  const safeTotalElements = Number(totalElements) || 0;
+  const safeRowsPerPage = Number(rowsPerPage) || 10;
+  const safePage = Number(page) || 1;
+  const showingFrom = (safePage - 1) * safeRowsPerPage + 1;
+  const showingTo = Math.min(safePage * safeRowsPerPage, safeTotalElements);
+
+  const pageNumbers = () => {
+    if (totalPages <= 7) return [...Array(totalPages)].map((_, i) => i + 1);
+    const pages = new Set([1, totalPages, page, page - 1, page + 1].filter((p) => p >= 1 && p <= totalPages));
+    return [...pages].sort((a, b) => a - b);
+  };
 
   return (
     <div className="flex h-screen overflow-hidden">
       <div className="flex-1 flex flex-col overflow-hidden w-full">
-        <div className="flex-1 bg-linear-to-b from-sky-50 to-sky-100 overflow-auto p-4 pt-2 lg:pt-4 sm:p-6 lg:p-8">
+        <div className="flex-1 bg-gradient-to-b from-sky-50 to-slate-100 overflow-auto p-4 pt-2 lg:pt-4 sm:p-6 lg:p-8">
 
-          {/* Page Title */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
+          {/* ── Page Title ── */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-5 gap-3">
             <div>
-              <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">Manage All Leaves</h2>
-              <p className="text-gray-500 mt-1 font-medium text-sm sm:text-base">Review and manage employee leave requests for the current academic session.</p>
+              <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
+                Leave Management
+              </h2>
+              <p className="text-gray-500 mt-0.5 text-sm">
+                Review and manage employee leave requests for the current academic session.
+              </p>
             </div>
-            <div className="flex object-fill">
-              <button className="px-4 py-2 border bg-white border-gray-200 rounded-lg flex items-center gap-2 hover:bg-gray-50 transition-all text-sm shadow-md">
-                <LucideCalendarDays className="w-4 h-4 text-blue-400" />
-                <span>{date}</span>
-              </button>
-            </div>
+            <button className="self-start sm:self-auto px-3 py-1.5 border bg-white border-gray-200 rounded-lg flex items-center gap-2 hover:bg-gray-50 transition-all text-sm shadow-sm whitespace-nowrap">
+              <LucideCalendarDays className="w-4 h-4 text-blue-400" />
+              <span className="text-gray-600 font-medium">{date}</span>
+            </button>
           </div>
 
-          {/* ── Stats Cards: CardLoader shimmer while fetching, real cards after ── */}
-          <div className='grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 text-sm mb-6'>
+          {/* ── Stats Cards ── */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
             {statLoading
-              ? cardsArray.map((_, i) => <CardLoader key={i} />)       // shimmer placeholders
+              ? cardsArray.map((_, i) => <CardLoader key={i} />)
               : cardsArray.map((card) => (
                 <CardComponent
                   key={card.keyName}
@@ -322,200 +299,352 @@ const Leaves = () => {
                   iconTxColor={card.iconTxColor}
                   iconBgColor={card.iconBgColor}
                 />
-              ))
-            }
+              ))}
           </div>
 
-          {/* Filters */}
-          <div className="bg-white grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 px-4 py-3 rounded-xl border border-gray-200 mb-4">
-            <div className="flex items-center gap-2 border rounded-lg border-gray-200 bg-gray-100 px-3 py-2 focus-within:shadow-sm focus-within:shadow-blue-200 md:col-span-2">
-              <SearchIcon className="w-5 h-5 text-gray-500" />
-              <input
-                value={search}
-                onChange={(e) => { setsearch(e.target.value) }}
-                placeholder="Search by name ..."
-                className="text-sm font-normal focus:outline-none appearance-none text-gray-600 w-full bg-transparent"
-              />
+          {/* ── Filters ── */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm px-4 py-3 mb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5 items-center">
+              {/* Search */}
+              <div className="sm:col-span-2 lg:col-span-2 flex items-center gap-2 border rounded-lg border-gray-200 bg-gray-50 px-3 py-2 focus-within:ring-2 focus-within:ring-blue-200 focus-within:border-blue-300 transition-all">
+                <SearchIcon className="w-4 h-4 text-gray-400 shrink-0" />
+                <input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search by employee name…"
+                  className="text-sm focus:outline-none text-gray-600 w-full bg-transparent placeholder-gray-400"
+                />
+                {search && (
+                  <button onClick={() => setSearch('')} className="text-gray-400 hover:text-gray-600">
+                    <XIcon className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+
+              {/* Leave Type */}
+              <select
+                value={leaveType}
+                onChange={(e) => setLeaveType(e.target.value)}
+                className="px-3 py-2 border border-gray-200 bg-gray-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-200 text-sm text-gray-600 w-full"
+              >
+                <option value="">All Leave Types</option>
+                <option value="All Types">All Types</option>
+                {listOfLeaveType.map((v) => (
+                  <option key={v.id} value={v.value}>{v.label}</option>
+                ))}
+              </select>
+
+              {/* Status */}
+              <select
+                value={leaveStatusFilter}
+                onChange={(e) => setLeaveStatusFilter(e.target.value)}
+                className="px-3 py-2 border border-gray-200 bg-gray-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-200 text-sm text-gray-600 w-full"
+              >
+                <option value="">All Status</option>
+                {listOfLeaveStatus.map((v) => (
+                  <option key={v.id} value={v.value}>{v.label}</option>
+                ))}
+              </select>
+
+              {/* Clear filters pill */}
+              {hasActiveFilters ? (
+                <button
+                  onClick={clearAllFilters}
+                  className="flex items-center justify-center gap-1.5 px-3 py-2 bg-red-50 text-red-600 border border-red-200 rounded-lg text-sm font-medium hover:bg-red-100 transition-all"
+                >
+                  <XIcon className="w-3.5 h-3.5" /> Clear filters
+                </button>
+              ) : (
+                <div /> /* placeholder to preserve grid */
+              )}
+
+              {/* Date range */}
+              <div className="sm:col-span-2 lg:col-span-2 flex items-center gap-2">
+                <input
+                  value={fromDateFilter}
+                  onChange={(e) => setFromDateFilter(e.target.value)}
+                  type="date"
+                  className="px-3 py-2 border border-gray-200 bg-gray-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-200 text-sm w-full text-gray-600"
+                />
+                <span className="text-gray-400 text-xs font-medium">to</span>
+                <input
+                  value={toDateFilter}
+                  onChange={(e) => setToDateFilter(e.target.value)}
+                  type="date"
+                  className="px-3 py-2 border border-gray-200 bg-gray-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-200 text-sm w-full text-gray-600"
+                />
+              </div>
             </div>
-            <select
-              value={leaveType}
-              onChange={(e) => { setleaveType(e.target.value) }}
-              className="px-4 py-2 border border-gray-200 bg-gray-100 rounded-lg focus:outline-none focus:shadow-sm focus:shadow-blue-200 text-sm w-full">
-              <option value="All Types">All Leave Types</option>
-              {listOfLeaveType.map((val) => (<option key={val.id} value={val.value}>{val.label}</option>))}
-            </select>
-            <select
-              value={leavestatusFilter}
-              onChange={(e) => { setleavestatusFilter(e.target.value) }}
-              className="px-4 py-2 border border-gray-200 bg-gray-100 rounded-lg focus:outline-none focus:shadow-sm focus:shadow-blue-200 text-sm w-full">
-              <option value="All Status">All Status</option>
-              {listOfLeaveStatus.map((val) => (<option key={val.id} value={val.value}>{val.label}</option>))}
-            </select>
-            <div className='flex gap-2 col-span-2 items-center align-middle'>
-              <input value={frommDateFilter} onChange={(e) => setfrommDateFilter(e.target.value)} type="date" className="px-4 py-2 border border-gray-200 bg-gray-100 rounded-lg focus:outline-none focus:shadow-sm focus:shadow-blue-200 text-sm w-full" />
-              <span className='font-medium text-gray-600'>to</span>
-              <input value={toDateFilter} onChange={(e) => settoDateFilter(e.target.value)} type="date" className="px-4 py-2 border border-gray-200 bg-gray-100 rounded-lg focus:outline-none focus:shadow-sm focus:shadow-blue-200 text-sm w-full" />
-            </div>
-            <button onClick={fetchWithFilters} className='bg-blue-400 rounded-lg text-white sm:text-xs lg:text-sm hover:bg-blue-500 cursor-pointer px-2'>Apply</button>
-            <button onClick={() => (resetFiltersCallApi())} className='bg-gray-200 rounded-lg text-black text-sm py-1 hover:bg-gray-300 cursor-pointer px-2'>Reset</button>
+
+            {/* Active filter chips */}
+            {hasActiveFilters && (
+              <div className="flex flex-wrap gap-1.5 mt-2.5 pt-2.5 border-t border-gray-100">
+                {search && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full text-xs font-medium border border-blue-200">
+                    Search: {search}
+                    <button onClick={() => setSearch('')}><XIcon className="w-3 h-3" /></button>
+                  </span>
+                )}
+                {leaveType && leaveType !== 'All Types' && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full text-xs font-medium border border-blue-200">
+                    Type: {getLabelFromValue(listOfLeaveType, leaveType)}
+                    <button onClick={() => setLeaveType('')}><XIcon className="w-3 h-3" /></button>
+                  </span>
+                )}
+                {leaveStatusFilter && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full text-xs font-medium border border-blue-200">
+                    Status: {getLabelFromValue(listOfLeaveStatus, leaveStatusFilter)}
+                    <button onClick={() => setLeaveStatusFilter('')}><XIcon className="w-3 h-3" /></button>
+                  </span>
+                )}
+                {fromDateFilter && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full text-xs font-medium border border-blue-200">
+                    From: {fromDateFilter}
+                    <button onClick={() => setFromDateFilter('')}><XIcon className="w-3 h-3" /></button>
+                  </span>
+                )}
+                {toDateFilter && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full text-xs font-medium border border-blue-200">
+                    To: {toDateFilter}
+                    <button onClick={() => setToDateFilter('')}><XIcon className="w-3 h-3" /></button>
+                  </span>
+                )}
+              </div>
+            )}
           </div>
 
-          {/* Leaves Requests Table */}
-          <div className="bg-white rounded-xl border border-gray-200">
-
-            {/* ================= DESKTOP TABLE ================= */}
-            <div className="hidden lg:block bg-white rounded-t-xl border border-gray-200 shadow-sm overflow-hidden">
-              <div className="overflow-y-auto overflow-x-auto min-h-30 max-h-[calc(100vh-450px)]">
-                <table className="w-full table-auto">
-                  <thead className="bg-gray-50 sticky top-0 z-10">
-                    <tr className="border-b border-gray-200">
-                      {['Employee Name', 'Leave Type', 'Leave from', 'Leave to', 'Total', 'Status', 'Action'].map((h, index) => (
-                        <th key={index} className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider bg-gray-50">{h}</th>
+          {/* ── Table ── */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+            {/* DESKTOP TABLE */}
+            <div className="hidden lg:block overflow-hidden rounded-t-xl">
+              <div className="overflow-y-auto overflow-x-auto max-h-[calc(100vh-380px)]">
+                <table className="w-full table-fixed">
+                  <colgroup>
+                    <col className="w-[22%]" />
+                    <col className="w-[16%]" />
+                    <col className="w-[11%]" />
+                    <col className="w-[11%]" />
+                    <col className="w-[8%]" />
+                    <col className="w-[14%]" />
+                    <col className="w-[18%]" />
+                  </colgroup>
+                  <thead className="bg-gray-50 sticky top-0 z-10 border-b border-gray-200">
+                    <tr>
+                      {['Employee', 'Leave Type', 'From', 'To', 'Days', 'Status', 'Action'].map((h) => (
+                        <th key={h} className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                          {h}
+                        </th>
                       ))}
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  <tbody className="bg-white divide-y divide-gray-100">
                     {loading ? (
                       <ListLoader />
                     ) : error ? (
                       <tr>
-                        <td colSpan="11" className="px-6 py-8 text-center">
-                          <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <UserRoundXIcon className="w-6 h-6 text-red-400" />
+                        <td colSpan="7" className="px-6 py-10 text-center">
+                          <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <UserRoundXIcon className="w-5 h-5 text-red-400" />
                           </div>
-                          <h3 className="text-lg font-bold text-gray-900 mb-2">Error Loading Users</h3>
-                          <p className="text-gray-600 mb-4">{error}</p>
-                          <button onClick={() => window.location.reload()} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Retry</button>
+                          <p className="text-sm font-semibold text-gray-800 mb-1">Error Loading Requests</p>
+                          <p className="text-xs text-gray-500 mb-3">{error}</p>
+                          <button onClick={() => fetchLeaveRequests()} className="px-4 py-1.5 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
+                            Retry
+                          </button>
                         </td>
                       </tr>
                     ) : noUserFound ? (
                       <tr>
-                        <td colSpan="7" className="px-6 py-8 text-center">
-                          <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-1">
-                            <SearchX className="w-6 h-6 text-blue-600" />
+                        <td colSpan="7" className="px-6 py-10 text-center">
+                          <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                            <SearchX className="w-5 h-5 text-blue-400" />
                           </div>
-                          <h3 className="text-sm font-bold text-gray-700 mb-2">No Request Found</h3>
+                          <p className="text-sm font-semibold text-gray-600">No requests found</p>
+                          {hasActiveFilters && (
+                            <button onClick={clearAllFilters} className="mt-2 text-xs text-blue-600 hover:underline">
+                              Clear all filters
+                            </button>
+                          )}
                         </td>
                       </tr>
-                    ) : leaveReq.map((emp) => (
-                      <tr key={emp.leaveId} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-3">
-                            <div className={`w-10 h-10 rounded-full ${getAvatarColor(emp.name)} flex items-center justify-center text-white font-semibold shrink-0`}>
-                              {emp.avatar}
+                    ) : (
+                      leaveReq.map((emp) => (
+                        <tr key={emp.leaveId} className="hover:bg-slate-50 transition-colors">
+                          {/* Employee */}
+                          <td className="px-3 py-2">
+                            <div className="flex items-center gap-2.5">
+                              <div className={`w-7 h-7 rounded-full ${getAvatarColor(emp.name)} flex items-center justify-center text-white text-xs font-semibold shrink-0`}>
+                                {emp.avatar}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-sm font-medium text-gray-900 truncate">{emp.name}</p>
+                                <p className="text-xs text-gray-400 truncate">{emp.empCode}</p>
+                              </div>
                             </div>
-                            <p className="font-medium text-gray-900 text-sm">{emp.name}</p>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-700">{compareAndGetLabel(listOfLeaveType, emp.leaveType)}</td>
-                        <td className="px-4 py-3 text-sm text-gray-700">{emp.fromDate}</td>
-                        <td className="px-4 py-3 text-sm text-gray-700">{emp.toDate}</td>
-                        <td className="px-4 py-3 text-sm font-medium text-gray-900">{emp.totalDays} {emp.totalDays === 1 ? 'day' : 'days'}</td>
-                        <td className="px-4 py-3">
-                          <span className={`px-3 py-1 rounded-full text-xs font-semibold inline-block ${statusStyles[emp.currEmpstatus]}`}>
-                            {emp.currEmpstatus}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <button onClick={() => handleViewClick(emp)} className="px-4 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-100 transition-colors">
-                            View
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                          </td>
+                          {/* Leave Type */}
+                          <td className="px-3 py-2 text-xs text-gray-600 truncate">
+                            {getLabelFromValue(listOfLeaveType, emp.leaveType)}
+                          </td>
+                          {/* Dates */}
+                          <td className="px-3 py-2 text-xs text-gray-600 tabular-nums">{emp.fromDate}</td>
+                          <td className="px-3 py-2 text-xs text-gray-600 tabular-nums">{emp.toDate}</td>
+                          {/* Days */}
+                          <td className="px-3 py-2 text-xs font-semibold text-gray-800 tabular-nums">
+                            {emp.totalDays}d
+                          </td>
+                          {/* Status */}
+                          <td className="px-3 py-2">
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${statusStyles[emp.currEmpstatus] ?? 'bg-gray-100 text-gray-700'}`}>
+                              {emp.currEmpstatus}
+                            </span>
+                          </td>
+                          {/* Action */}
+                          <td className="px-3 py-2">
+                            {emp.currEmpstatus === 'PENDING' ? (
+                              <div className="flex gap-1.5">
+                                <button
+                                  onClick={() => handleViewClick(emp)}
+                                  className="px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-md text-xs font-medium hover:bg-emerald-100 transition-colors border border-emerald-200"
+                                >
+                                  Approve
+                                </button>
+                                <button
+                                  onClick={() => handleViewClick(emp)}
+                                  className="px-2.5 py-1 bg-red-50 text-red-600 rounded-md text-xs font-medium hover:bg-red-100 transition-colors border border-red-200"
+                                >
+                                  Reject
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => handleViewClick(emp)}
+                                className="px-2.5 py-1 bg-blue-50 text-blue-700 rounded-md text-xs font-medium hover:bg-blue-100 transition-colors border border-blue-200"
+                              >
+                                View
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
             </div>
 
-            {/* ================= MOBILE CARDS ================= */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:hidden p-4 space-y-4">
+            {/* MOBILE CARDS */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:hidden p-3">
               {loading ? (
-                <div className="text-center py-8">
-                  <div className="flex flex-col items-center">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-2"></div>
-                    <span className="text-gray-600">Loading requests...</span>
-                  </div>
+                <div className="col-span-full text-center py-8">
+                  <div className="animate-spin rounded-full h-7 w-7 border-b-2 border-blue-600 mx-auto mb-2" />
+                  <span className="text-sm text-gray-500">Loading requests…</span>
                 </div>
               ) : error ? (
-                <div className="flex flex-col items-center justify-center py-12 text-center">
-                  <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mb-4">
-                    <UserRoundXIcon className="w-6 h-6 text-red-500" />
+                <div className="col-span-full flex flex-col items-center py-10 text-center">
+                  <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center mb-3">
+                    <UserRoundXIcon className="w-5 h-5 text-red-500" />
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Error Loading Users</h3>
-                  <p className="text-gray-600 mb-4 max-w-md">{error}</p>
-                  <button onClick={() => window.location.reload()} className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">Retry</button>
-                </div>
-              ) : noUserFound ? (
-                <div className="px-6 py-8 text-center">
-                  <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-1">
-                    <SearchX className="w-6 h-6 text-blue-600" />
-                  </div>
-                  <h3 className="text-sm font-bold text-gray-700 mb-2">No Request Found</h3>
-                </div>
-              ) : leaveReq.map((emp) => (
-                <div key={emp.leaveId} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
-                  <div className="flex items-center gap-3 mb-4 pb-4 border-b border-gray-100">
-                    <div className={`w-12 h-12 rounded-full ${getAvatarColor(emp.name)} flex items-center justify-center text-white font-semibold`}>
-                      {emp.avatar}
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-semibold text-gray-900 text-base">{emp.name}</p>
-                      <p className="text-xs text-gray-500">{emp.empCode}</p>
-                    </div>
-                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${statusStyles[emp.currEmpstatus]}`}>
-                      {emp.currEmpstatus}
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4 mb-4">
-                    <div>
-                      <p className="text-xs font-medium text-gray-500 mb-1">Leave Type</p>
-                      <p className="text-sm font-semibold text-gray-900">{compareAndGetLabel(listOfLeaveType, emp.leaveType)}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs font-medium text-gray-800 mb-1">Duration</p>
-                      <p className="text-sm font-semibold text-gray-900">{emp.totalDays} {emp.totalDays === 1 ? 'day' : 'days'}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs font-medium text-gray-500 mb-1">From Date</p>
-                      <p className="text-sm text-gray-700">{emp.fromDate}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs font-medium text-gray-500 mb-1">To Date</p>
-                      <p className="text-sm text-gray-700">{emp.toDate}</p>
-                    </div>
-                  </div>
-                  <p className="text-xs font-medium text-gray-500 mb-1">Reason</p>
-                  <p className="text-sm text-gray-700 pb-4"><li className='ml-6'>{emp.reason}</li></p>
-                  <button onClick={() => handleViewClick(emp)} className="w-full px-4 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-100 transition-colors">
-                    View Details
+                  <p className="text-sm font-semibold text-gray-800 mb-1">Error Loading Requests</p>
+                  <p className="text-xs text-gray-500 mb-3">{error}</p>
+                  <button onClick={() => fetchLeaveRequests()} className="px-4 py-1.5 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
+                    Retry
                   </button>
                 </div>
-              ))}
+              ) : noUserFound ? (
+                <div className="col-span-full text-center py-10">
+                  <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                    <SearchX className="w-5 h-5 text-blue-500" />
+                  </div>
+                  <p className="text-sm font-semibold text-gray-600">No requests found</p>
+                </div>
+              ) : (
+                leaveReq.map((emp) => (
+                  <div key={emp.leaveId} className="bg-white border border-gray-200 rounded-xl p-3.5 shadow-sm hover:shadow-md transition-shadow">
+                    <div className="flex items-center gap-3 mb-3 pb-3 border-b border-gray-100">
+                      <div className={`w-9 h-9 rounded-full ${getAvatarColor(emp.name)} flex items-center justify-center text-white text-sm font-semibold`}>
+                        {emp.avatar}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-gray-900 text-sm truncate">{emp.name}</p>
+                        <p className="text-xs text-gray-400">{emp.empCode}</p>
+                      </div>
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold shrink-0 ${statusStyles[emp.currEmpstatus] ?? ''}`}>
+                        {emp.currEmpstatus}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 mb-3 text-xs">
+                      <div>
+                        <p className="text-gray-400 mb-0.5">Leave Type</p>
+                        <p className="font-medium text-gray-800">{getLabelFromValue(listOfLeaveType, emp.leaveType)}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-400 mb-0.5">Duration</p>
+                        <p className="font-medium text-gray-800">{emp.totalDays} {emp.totalDays === 1 ? 'day' : 'days'}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-400 mb-0.5">From</p>
+                        <p className="text-gray-700">{emp.fromDate}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-400 mb-0.5">To</p>
+                        <p className="text-gray-700">{emp.toDate}</p>
+                      </div>
+                    </div>
+                    {emp.reason && (
+                      <p className="text-xs text-gray-500 mb-3 line-clamp-2">{emp.reason}</p>
+                    )}
+                    {/* <button
+                      onClick={() => handleViewClick(emp)}
+                      className="w-full px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-xs font-medium hover:bg-blue-100 transition-colors border border-blue-200"
+                    >
+                      View Details
+                    </button> */}
+                    <div className="w-full">
+                      {emp.currEmpstatus === "PENDING" ? (
+                        <div className="flex gap-2 w-full">
+                          <button
+                            onClick={() => handleViewClick(emp)}
+                            className="flex-1 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-lg text-xs font-medium hover:bg-emerald-100 transition-colors border border-emerald-200"
+                          >
+                            Approve
+                          </button>
+
+                          <button
+                            onClick={() => handleViewClick(emp)}
+                            className="flex-1 px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-xs font-medium hover:bg-red-100 transition-colors border border-red-200"
+                          >
+                            Reject
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => handleViewClick(emp)}
+                          className="w-full px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-xs font-medium hover:bg-blue-100 transition-colors border border-blue-200"
+                        >
+                          View Details
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
 
-            {/* Pagination */}
-            <div className="px-6 py-4 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="flex flex-col sm:flex-row items-center gap-4">
-                <span className="text-sm text-gray-700">
-                  {(() => {
-                    const safeTotalElements = Number(totalElements) || 0;
-                    const safeRowsPerPage = Number(rowsPerpage) || 10;
-                    const safePage = Number(page) || 1;
-                    return (
-                      <>
-                        Showing {(safePage - 1) * safeRowsPerPage + 1} to{' '}
-                        {Math.min(safePage * safeRowsPerPage, safeTotalElements)} of {safeTotalElements}
-                      </>
-                    );
-                  })()}
+            {/* ── Pagination ── */}
+            <div className="px-4 py-3 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div className="flex items-center gap-4 text-sm text-gray-500">
+                <span>
+                  {safeTotalElements > 0
+                    ? `${showingFrom}–${showingTo} of ${safeTotalElements}`
+                    : '0 results'}
                 </span>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-700">Rows per page:</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs">Rows:</span>
                   <select
-                    value={rowsPerpage}
-                    onChange={(e) => { setrowsPerpage(Number(e.target.value)); setpage(1); }}
-                    className="px-3 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={rowsPerPage}
+                    onChange={(e) => { setRowsPerPage(Number(e.target.value)); setPage(1); }}
+                    className="px-2 py-1 border border-gray-200 rounded text-xs focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
                   >
                     <option value={10}>10</option>
                     <option value={25}>25</option>
@@ -523,39 +652,58 @@ const Leaves = () => {
                   </select>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+
+              <div className="flex items-center gap-1">
                 <button
-                  onClick={() => setpage(prev => Math.max(1, prev - 1))}
-                  disabled={page === 1 || loading || error}
-                  className="px-3 py-1 text-gray-600 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1 || loading}
+                  className="p-1.5 text-gray-500 hover:bg-gray-100 rounded disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
-                {[...Array(totalPages)].map((_, idx) => (
-                  <button
-                    key={idx + 1}
-                    onClick={() => setpage(idx + 1)}
-                    className={`px-3 py-1 rounded transition-all ${page === idx + 1 ? 'bg-blue-500 text-white' : 'text-gray-600 hover:bg-gray-100'}`}
-                  >
-                    {idx + 1}
-                  </button>
+
+                {pageNumbers().map((pNum, idx, arr) => (
+                  <React.Fragment key={pNum}>
+                    {idx > 0 && arr[idx - 1] !== pNum - 1 && (
+                      <span className="px-1 text-gray-400 text-xs">…</span>
+                    )}
+                    <button
+                      onClick={() => setPage(pNum)}
+                      className={`w-7 h-7 text-xs rounded font-medium transition-all ${page === pNum
+                        ? 'bg-blue-500 text-white shadow-sm'
+                        : 'text-gray-600 hover:bg-gray-100'
+                        }`}
+                    >
+                      {pNum}
+                    </button>
+                  </React.Fragment>
                 ))}
+
                 <button
-                  type='button'
-                  onClick={() => setpage(prev => Math.min(totalPages, prev + 1))}
-                  disabled={page === totalPages || loading || error}
-                  className="px-3 py-1 text-gray-600 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages || loading || totalPages === 0}
+                  className="p-1.5 text-gray-500 hover:bg-gray-100 rounded disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                 >
                   <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
             </div>
           </div>
+
         </div>
       </div>
 
       {/* Popup */}
-      <LeavesReqInfoComponent isOpen={isPopupOpen} onClose={handleClosePopup} userData={selectedUser} handleLeaveApprove={handleLeaveApproveReq} handleLeaveReject={handleLeaveRejectReq} setRemarks={setRemarksVal} remarks={remarkVal} listLeavetype={listOfLeaveType} />
+      <LeavesReqInfoComponent
+        isOpen={isPopupOpen}
+        onClose={handleClosePopup}
+        userData={selectedUser}
+        handleLeaveApprove={handleLeaveApproveReq}
+        handleLeaveReject={handleLeaveRejectReq}
+        setRemarks={setRemarksVal}
+        remarks={remarkVal}
+        listLeavetype={listOfLeaveType}
+      />
     </div>
   );
 };

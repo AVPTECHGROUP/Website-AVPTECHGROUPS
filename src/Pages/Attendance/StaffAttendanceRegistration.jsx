@@ -678,10 +678,10 @@ export default function StaffAttendanceRegistration() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     {statsLoading ? Array(4).fill(0).map((_, i) => <CardLoader key={i} />) : (
                         <>
-                            <CardComponent IconName={Shield} keyName="Total Staff" val={`${stats?.totalStaff ?? 0} registered`} iconTxColor="text-blue-600" iconBgColor="bg-blue-100" />
-                            <CardComponent IconName={UserCheck} keyName="Staff Enrolled" val={`${stats?.staffEnrolled ?? 0} of ${stats?.totalStaff ?? 0}`} iconTxColor="text-emerald-600" iconBgColor="bg-emerald-100" />
-                            <CardComponent IconName={UserX} keyName="Not Enrolled" val={`${(stats?.totalStaff ?? 0) - (stats?.staffEnrolled ?? 0)} pending`} iconTxColor="text-red-500" iconBgColor="bg-red-100" />
-                            <CardComponent IconName={Users} keyName="Enrollment %" val={`${stats?.enrollmentPercentage ?? 0}% complete`} iconTxColor="text-purple-600" iconBgColor="bg-purple-100" />
+                            <CardComponent IconName={Shield} keyName="Total Staff Registered" val={`${stats?.totalStaff ?? 0} `} iconTxColor="text-blue-600" iconBgColor="bg-blue-100" />
+                            <CardComponent IconName={UserCheck} keyName="Staff Enrolled" val={`${stats?.staffEnrolled ?? 0} / ${stats?.totalStaff ?? 0}`} iconTxColor="text-emerald-600" iconBgColor="bg-emerald-100" />
+                            <CardComponent IconName={UserX} keyName="Not Enrolled" val={`${(stats?.totalStaff ?? 0) - (stats?.staffEnrolled ?? 0)} `} iconTxColor="text-red-500" iconBgColor="bg-red-100" />
+                            <CardComponent IconName={Users} keyName="Enrollment completed" val={`${stats?.enrollmentPercentage ?? 0}% `} iconTxColor="text-purple-600" iconBgColor="bg-purple-100" />
                         </>
                     )}
                 </div>
