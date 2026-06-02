@@ -34,10 +34,17 @@ const TeachersHeader = ({ stats, loading }) => {
     },
     {
       iconName: IndianRupee,
-      keyName: 'Payroll Included',
-      val: stats.payrollIncluded,
+      keyName: 'Monthly Salary',
+      val: stats.monthlyTeachers,
       iconTxColor: 'text-teal-600',
       iconBgColor: 'bg-teal-50',
+    },
+    {
+      iconName: ShieldBanIcon,
+      keyName: 'Per Day Salary',
+      val: stats.perDayTeachers,
+      iconTxColor: 'text-orange-600',
+      iconBgColor: 'bg-orange-50',
     },
   ];
 
@@ -55,7 +62,7 @@ const TeachersHeader = ({ stats, loading }) => {
       </div>
 
       {/* STATISTICS CARDS */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-6">
         {loading
           ? Array.from({ length: 5 }).map((_, i) => <CardLoader key={i} />)
           : cards.map((card, i) => (
