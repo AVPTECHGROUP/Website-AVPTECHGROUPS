@@ -30,33 +30,45 @@ function ApplyLeaves() {
   });
 
   const [listOfLeaveType, setListofLeavetype] = useState([]);
+  const [isHalfDay, setIsHalfDay] = useState(false);
   useEffect(() => {
     const currUser = JSON.parse(localStorage.getItem('user'));
     setCurrentUser(currUser);
     // FIX: Use prev state to maintain all fields
-    setFormData(prev => ({ 
+    setFormData(prev => ({
       ...prev,
-      mobile: currUser.phone || '' 
+      mobile: currUser.phone || ''
     }));
     //FOR LIST OF VALUES
     let fetchListOfValues = async () => {
-        try {
-          const leaveTypeRes = await getListOfValues('LEAVE_TYPE');
-          const formattedLeaveType = leaveTypeRes.map(item => ({
-            id: item.id,
-            value: item.value,
-            label: item.label
-          }));
-          console.log(formattedLeaveType);
-          setListofLeavetype(formattedLeaveType);
-        }
-        catch (e) {
-          console.error("get list of values error error:", e.message);
-          throw error;
-        }
+      try {
+        const leaveTypeRes = await getListOfValues('LEAVE_TYPE');
+        const formattedLeaveType = leaveTypeRes.map(item => ({
+          id: item.id,
+          value: item.value,
+          label: item.label
+        }));
+        console.log(formattedLeaveType);
+        setListofLeavetype(formattedLeaveType);
       }
-      fetchListOfValues();
+      catch (e) {
+        console.error("get list of values error error:", e.message);
+        throw error;
+      }
+    }
+    fetchListOfValues();
   }, []);
+
+  const isSingleDayLeave =
+    formData.fromDate &&
+    formData.toDate &&
+    formData.fromDate === formData.toDate;
+
+  useEffect(() => {
+    if (!isSingleDayLeave) {
+      setIsHalfDay(false);
+    }
+  }, [isSingleDayLeave]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -125,7 +137,7 @@ function ApplyLeaves() {
     if (formData.fromDate && formData.toDate) {
       const fromDate = new Date(formData.fromDate);
       const toDate = new Date(formData.toDate);
-      
+
       if (toDate < fromDate) {
         newErrors.toDate = 'To leave date must be after from leave date';
         isValid = false;
@@ -154,12 +166,13 @@ function ApplyLeaves() {
         fromDate: formData.fromDate,
         toDate: formData.toDate,
         reason: formData.reason,
-        contactDuringLeave: formData.mobile
+        contactDuringLeave: formData.mobile,
+        isHalfDay: isHalfDay
       }
       console.log(leavePayload);
       const resLeaveReq = await createLeaveRequest(leavePayload);
       toast.success(resLeaveReq.message);
-      
+
       // Only clear form and navigate on success
       setFormData({
         leaveType: '',
@@ -174,11 +187,11 @@ function ApplyLeaves() {
         toDate: '',
         reason: ''
       });
-      
+
       navigate('/leaves/myLeaves');
     } catch (error) {
       console.error("Error creating leave request:", error);
-      
+
       // Handle validation errors from server
       if (error?.response?.data?.data && typeof error.response.data.data === 'object') {
         const serverErrors = error.response.data.data;
@@ -192,10 +205,10 @@ function ApplyLeaves() {
         toast.error(error.response.data.message || 'Validation failed');
         return;
       }
-      
+
       // Handle other error formats
       let errorMessage = 'Failed to create leave request';
-      
+
       if (error?.response?.data?.message) {
         errorMessage = error.response.data.message;
       } else if (error?.message) {
@@ -203,13 +216,13 @@ function ApplyLeaves() {
       } else if (typeof error === 'string') {
         errorMessage = error;
       }
-      
+
       toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
   }
-  
+
   return (
     <div className='p-4 md:p-12 bg-gray-50 h-screen pb-0 mb-0'>
       {/* Header */}
@@ -250,11 +263,10 @@ function ApplyLeaves() {
                   name="leaveType"
                   value={formData.leaveType}
                   onChange={handleInputChange}
-                  className={`px-4 py-2 border rounded-lg focus:outline-none focus:shadow-sm focus:shadow-blue-200 text-sm w-full ${
-                    errors.leaveType 
-                      ? 'border-red-500 bg-red-50' 
+                  className={`px-4 py-2 border rounded-lg focus:outline-none focus:shadow-sm focus:shadow-blue-200 text-sm w-full ${errors.leaveType
+                      ? 'border-red-500 bg-red-50'
                       : 'border-gray-200 bg-gray-100'
-                  }`}>
+                    }`}>
                   <option disabled value='' >Select Leave Type</option>
                   {listOfLeaveType.map((val) => (<option key={val.id} value={val.value}>{val.label}</option>))}
                 </select>
@@ -274,11 +286,10 @@ function ApplyLeaves() {
                     type="date"
                     name="fromDate"
                     onChange={handleInputChange}
-                    className={`font-normal text-gray-800 border p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                      errors.fromDate 
-                        ? 'border-red-500 bg-red-50' 
+                    className={`font-normal text-gray-800 border p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.fromDate
+                        ? 'border-red-500 bg-red-50'
                         : 'border-gray-300 bg-gray-100'
-                    }`}
+                      }`}
                   />
                   {errors.fromDate && (
                     <p className="mt-1 text-xs text-red-600">{errors.fromDate}</p>
@@ -294,11 +305,10 @@ function ApplyLeaves() {
                     type="date"
                     name="toDate"
                     onChange={handleInputChange}
-                    className={`font-normal text-gray-800 border p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                      errors.toDate 
-                        ? 'border-red-500 bg-red-50' 
+                    className={`font-normal text-gray-800 border p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.toDate
+                        ? 'border-red-500 bg-red-50'
                         : 'border-gray-300 bg-gray-100'
-                    }`}
+                      }`}
                   />
                   {errors.toDate && (
                     <p className="mt-1 text-xs text-red-600">{errors.toDate}</p>
@@ -319,6 +329,44 @@ function ApplyLeaves() {
                   className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500' />
               </div>
 
+              <div>
+                <label className="block font-semibold text-gray-600 text-sm mb-2">
+                  Half Day Leave
+                </label>
+
+                <div
+                  className={`flex items-center justify-between p-3 rounded-lg border ${isSingleDayLeave
+                      ? 'bg-gray-100 border-gray-300'
+                      : 'bg-gray-50 border-gray-200 opacity-60'
+                    }`}
+                >
+                  <div>
+                    <p className="text-sm font-medium text-gray-700">
+                      Enable Half Day
+                    </p>
+
+                    {!isSingleDayLeave && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Select the same From and To date to enable half day leave.
+                      </p>
+                    )}
+                  </div>
+
+                  <button
+                    type="button"
+                    disabled={!isSingleDayLeave}
+                    onClick={() => setIsHalfDay((prev) => !prev)}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isHalfDay ? 'bg-blue-600' : 'bg-gray-300'
+                      }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isHalfDay ? 'translate-x-6' : 'translate-x-1'
+                        }`}
+                    />
+                  </button>
+                </div>
+              </div>
+
               <div className="lg:col-span-2">
                 <label htmlFor="reason" className='block font-semibold text-gray-600 text-sm mb-2'>
                   Reason For Leave<span className="text-red-600 ml-1">*</span>
@@ -330,11 +378,10 @@ function ApplyLeaves() {
                   name="reason"
                   onChange={handleInputChange}
                   placeholder='Please describe the reason for your absence...'
-                  className={`font-normal text-gray-800 border p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                    errors.reason 
-                      ? 'border-red-500 bg-red-50' 
+                  className={`font-normal text-gray-800 border p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.reason
+                      ? 'border-red-500 bg-red-50'
                       : 'border-gray-300 bg-gray-100'
-                  }`} />
+                    }`} />
                 {errors.reason && (
                   <p className="mt-1 text-xs text-red-600">{errors.reason}</p>
                 )}
@@ -346,19 +393,18 @@ function ApplyLeaves() {
               <div className="flex flex-col sm:flex-row justify-end gap-3">
                 <button
                   type="button"
-                  onClick={()=>handleDiscardButton()}
+                  onClick={() => handleDiscardButton()}
                   className="px-6 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
                   Discard Changes
                 </button>
                 <button
                   type="submit"
                   disabled={loading}
-                  className={`flex gap-2 justify-center px-6 py-2.5 text-sm font-medium rounded-lg transition-all ${
-                    loading 
-                      ? 'bg-blue-400 cursor-not-allowed' 
+                  className={`flex gap-2 justify-center px-6 py-2.5 text-sm font-medium rounded-lg transition-all ${loading
+                      ? 'bg-blue-400 cursor-not-allowed'
                       : 'bg-blue-600 hover:bg-blue-700'
-                  } text-white`}>
-                  <p>{loading?'Submitting ...':'Submit Request'}</p> <SendHorizonal className='p-1' />
+                    } text-white`}>
+                  <p>{loading ? 'Submitting ...' : 'Submit Request'}</p> <SendHorizonal className='p-1' />
                 </button>
               </div>
             </div>
