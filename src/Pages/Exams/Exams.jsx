@@ -15,9 +15,7 @@ import UpdateSubjectForm       from "./UpdateExamForm";
 
 import { getExams, getExamSubjects, deleteExamSubject, declareExamResult, getExamTypes } from "../../Api/Exams";
 import { getActiveClasses }    from "../../Api/TeachersAPI";
-import { getListOfValues }     from "../../Api/ListOfValues";
-
-const ACADEMIC_YEAR_LOV = "ACADEMIC_YEAR";
+import { getAcademicYears, getCurrentAcademicYear } from "../../Api/AcademicYear";
 
 // ─── tiny helpers ─────────────────────────────────────────────────────────────
 function examTypeBg(name = "") {
@@ -282,6 +280,7 @@ export default function Exams() {
     const [classId,   setClassId]   = useState("");
     const [yearId,    setYearId]    = useState("");
     const [typeId,    setTypeId]    = useState("");
+    const [currentYearId, setCurrentYearId] = useState(null);
 
     // exams
     const [exams,          setExams]          = useState([]);
@@ -314,12 +313,28 @@ export default function Exams() {
         (async () => {
             setLoadingMeta(true);
             try {
-                const [cls, yrs, types] = await Promise.all([
-                    getActiveClasses(), getListOfValues(ACADEMIC_YEAR_LOV), getExamTypes(),
+                const [cls, types] = await Promise.all([
+                    getActiveClasses(),
+                    getExamTypes(),
                 ]);
-                setClasses(Array.isArray(cls)   ? cls   : []);
-                setAcademicYears(Array.isArray(yrs)   ? yrs   : []);
+                
+                // Fetch academic years
+                const yearsResponse = await getAcademicYears();
+                const yearsList = yearsResponse.years || [];
+                
+                // Fetch current academic year and set it as default
+                const currentYear = await getCurrentAcademicYear();
+                const currentYearId = currentYear?.id || null;
+                
+                setClasses(Array.isArray(cls) ? cls : []);
+                setAcademicYears(Array.isArray(yearsList) ? yearsList : []);
                 setExamTypes(Array.isArray(types) ? types : []);
+                setCurrentYearId(currentYearId);
+                
+                // Set current year as default filter
+                if (currentYearId) {
+                    setYearId(currentYearId);
+                }
             } catch { setErrorMeta("Failed to load filters. Please refresh."); }
             finally  { setLoadingMeta(false); }
         })();
@@ -334,7 +349,8 @@ export default function Exams() {
             if (yearId)  f.academicYearId = yearId;
             if (typeId)  f.examTypeId    = typeId;
 
-            const list = Array.isArray(await getExams(f)) ? await getExams(f) : [];
+            const response = await getExams(f);
+            const list = Array.isArray(response) ? response : [];
             setExams(list);
 
             if (list.length > 0 && !autoSelected.current) {
