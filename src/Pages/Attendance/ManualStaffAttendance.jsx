@@ -6,6 +6,7 @@ import { requestManualAttendance } from '../../Api/AttendanceApi';
 import { getSchoolLocation } from "../../utils/getSchoolLocation";
 
 const TODAY = new Date().toISOString().split('T')[0];
+const REMARKS_MAX = 200;
 
 const resolveStaff = (raw) => {
     const userId =
@@ -148,6 +149,10 @@ const ManualStaffAttendance = ({ onClose, onSuccess }) => {
         }
         if (!remarks.trim()) {
             toast.error('Please enter a reason / remarks');
+            return;
+        }
+        if (remarks.trim().length > REMARKS_MAX) {
+            toast.error(`Remarks cannot exceed ${REMARKS_MAX} characters`);
             return;
         }
 
@@ -296,10 +301,16 @@ const ManualStaffAttendance = ({ onClose, onSuccess }) => {
                         <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1.5">
                             Reason / Remarks <span className="text-red-500">*</span>
                         </label>
-                        <textarea value={remarks} onChange={(e) => setRemarks(e.target.value)} rows={3}
+                        <textarea value={remarks} onChange={(e) => setRemarks(e.target.value.slice(0, REMARKS_MAX))} rows={3} maxLength={REMARKS_MAX}
                             placeholder="e.g. Face recognition device unavailable, manual entry requested by HOD..."
                             className="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-amber-400 transition-all resize-none"
                         />
+                        <div className="mt-2 flex items-center justify-between">
+                            <div className={`text-xs ${remarks.trim().length > REMARKS_MAX ? 'text-red-600' : 'text-gray-500'}`}>{remarks.trim().length}/{REMARKS_MAX} characters</div>
+                            {remarks.trim().length > REMARKS_MAX && (
+                                <div className="text-xs text-red-600">Remarks exceed maximum length</div>
+                            )}
+                        </div>
                     </div>
                 </div>
 
@@ -309,7 +320,7 @@ const ManualStaffAttendance = ({ onClose, onSuccess }) => {
                         className="flex-1 px-4 py-2.5 border border-gray-300 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-100 transition-all">
                         Cancel
                     </button>
-                    <button onClick={handleSubmit} disabled={submitting}
+                    <button onClick={handleSubmit} disabled={submitting || remarks.trim().length > REMARKS_MAX}
                         className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-amber-500 hover:bg-amber-600 disabled:opacity-60 rounded-xl text-sm font-semibold text-white transition-all">
                         {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
                         {submitting ? 'Submitting...' : 'Submit for Review'}

@@ -265,7 +265,7 @@ const Student = () => {
                     </div>
 
                     {/* Cards */}
-                    <div className="flex flex-wrap gap-3 sm:gap-4">
+                    <div className="flex flex-wrap gap-3 sm:gap-4 w-50">
                         {loading
                             ? cardsArray.map((_, i) => (
                                 <div
