@@ -11,7 +11,7 @@ export default function AddnewSubject({ subject, onSaved, onClose }) {
     name:          "",
     code:          "",
     description:   "",
-    categoryValue: "",
+    category: "",
     isActive:      true,
   });
 
@@ -46,13 +46,13 @@ export default function AddnewSubject({ subject, onSaved, onClose }) {
   // The list API sends `subject.category` as the LOV *label* (e.g. "Social Studies"),
   // while `<option value>` uses the LOV *value* key (e.g. "SOCIAL").
   // Strategy (in priority order):
-  //   a) subject.categoryValue  → already the value key (detail/save API shape)
+  //   a) subject.category  → already the value key (detail/save API shape)
   //   b) match categories list by label (case-insensitive)   ← catches list API shape
   //   c) match categories list by value (case-insensitive)   ← defensive fallback
   //   d) uppercase the raw string                            ← last resort
   useEffect(() => {
     if (isEditMode && subject) {
-      const rawCategory = subject.categoryValue || subject.category || "";
+      const rawCategory = subject.category || subject.category || "";
 
       let resolvedCategory = "";
       if (rawCategory) {
@@ -78,7 +78,7 @@ export default function AddnewSubject({ subject, onSaved, onClose }) {
         name:          subject.name        ?? "",
         code:          subject.code        ?? "",
         description:   subject.description ?? "",
-        categoryValue: resolvedCategory,
+        category: resolvedCategory,
         isActive:      resolvedActive,
       });
     } else {
@@ -86,7 +86,7 @@ export default function AddnewSubject({ subject, onSaved, onClose }) {
         name:          "",
         code:          "",
         description:   "",
-        categoryValue: "",
+        category: "",
         isActive:      true,
       });
     }
@@ -99,7 +99,7 @@ export default function AddnewSubject({ subject, onSaved, onClose }) {
     const e = {};
     if (!formData.name?.trim())      e.name          = "Name is required";
     if (!formData.code?.trim())      e.code          = "Code is required";
-    if (!formData.categoryValue)     e.categoryValue = "Category is required";
+    if (!formData.category)     e.category = "Category is required";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -132,7 +132,7 @@ export default function AddnewSubject({ subject, onSaved, onClose }) {
         name:          formData.name.trim(),
         code:          formData.code.trim(),
         description:   formData.description.trim(),
-        categoryValue: formData.categoryValue,
+        category: formData.category,
         isActive:      formData.isActive,                            // boolean shape
         status:        formData.isActive ? "ACTIVE" : "INACTIVE",   // string shape
       };
@@ -242,12 +242,12 @@ export default function AddnewSubject({ subject, onSaved, onClose }) {
               </label>
               <div className="relative">
                 <select
-                  name="categoryValue"
-                  value={formData.categoryValue}
+                  name="category"
+                  value={formData.category}
                   onChange={handleChange}
                   disabled={catLoading}
                   className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 transition-colors appearance-none bg-white disabled:opacity-60 disabled:cursor-not-allowed ${
-                    errors.categoryValue
+                    errors.category
                       ? "border-red-300 focus:ring-red-300"
                       : "border-slate-200 focus:ring-indigo-300"
                   }`}
@@ -267,8 +267,8 @@ export default function AddnewSubject({ subject, onSaved, onClose }) {
                   </svg>
                 </span>
               </div>
-              {errors.categoryValue && (
-                <p className="text-xs text-red-600 mt-1">{errors.categoryValue}</p>
+              {errors.category && (
+                <p className="text-xs text-red-600 mt-1">{errors.category}</p>
               )}
             </div>
 
