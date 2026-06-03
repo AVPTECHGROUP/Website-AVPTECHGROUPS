@@ -217,8 +217,6 @@ const Teachers = () => {
   const total = statistics.totalTeachers || 0;
   const active = statistics.activeTeachers || 0;
   const inActive = statistics.inactiveTeachers || 0;
-  const payrollIncluded = teachers.filter((t) => t.payroll === 'INCLUDED').length || 0;
-
   const activePercent = total > 0 ? Math.round((active / total) * 100) : 0;
   const inActivePercent = total > 0 ? Math.round((inActive / total) * 100) : 0;
 
@@ -228,7 +226,8 @@ const Teachers = () => {
     activePercent,
     inActive,
     inActivePercent,
-    payrollIncluded,
+    monthlyTeachers: statistics.monthlyTeachers || 0,
+    perDayTeachers: statistics.perDayTeachers || 0,
   };
 
   return (
