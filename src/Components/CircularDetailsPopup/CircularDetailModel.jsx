@@ -15,7 +15,12 @@ import {
     FileImage,
     FileSpreadsheet,
     FileType,
-    File
+    File,
+    // TargetArrow,
+    Clipboard,
+    ArchiveIcon,
+    Link2Icon,
+    LucideTarget
 } from 'lucide-react';
 import { fetchCircularById } from '../../Api/CircularApi.js';
 
@@ -239,7 +244,7 @@ export default function CircularDetailModal({ circularId, onClose }) {
             />
 
             {/* Modal panel */}
-            <div
+            <div className='border-t border-t-blue-600 border-t-6'
                 onClick={(e) => e.stopPropagation()}
                 style={{
                     position: 'fixed', top: '50%', left: '50%', zIndex: 51,
@@ -248,7 +253,6 @@ export default function CircularDetailModal({ circularId, onClose }) {
                     maxHeight: '88vh', overflowY: 'auto',
                     background: 'rgba(255,255,255,0.97)',
                     borderRadius: 20,
-                    border: '1.5px solid #bfdbfe',
                     boxShadow: '0 0 0 4px rgba(147,197,253,0.18), 0 24px 60px rgba(30,64,175,0.14), 0 6px 20px rgba(0,0,0,0.06)',
                     animation: 'modalIn .25s cubic-bezier(.22,1,.36,1)',
                 }}
@@ -340,8 +344,8 @@ export default function CircularDetailModal({ circularId, onClose }) {
                         background: 'linear-gradient(135deg, #f8fbff 0%, #f0f6ff 100%)',
                         border: '1px solid #dbeafe', borderRadius: 14, padding: '16px 18px', marginBottom: 20,
                     }}>
-                        <p style={{ fontSize: 11, fontWeight: 700, color: '#3b82f6', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 8 }}>
-                            📋 Content
+                        <p  className='flex items-center gap-2' style={{ fontSize: 11, fontWeight: 700, color: '#3b82f6', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 8 }}>
+                            <Clipboard size={14} /> Content
                         </p>
                         {loading
                             ? <><Skeleton mb={6} /><Skeleton w="90%" mb={6} /><Skeleton w="70%" /></>
@@ -350,7 +354,7 @@ export default function CircularDetailModal({ circularId, onClose }) {
                     </div>
 
                     {/* Meta grid */}
-                    <div style={{
+                    <div className='border-b pb-8 border-b-blue-600' style={{
                         display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 20,
                     }}>
                         {loading ? (
@@ -372,8 +376,9 @@ export default function CircularDetailModal({ circularId, onClose }) {
 
                     {/* Targets */}
                     <div style={{ marginBottom: 20 }}>
-                        <p style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 10 }}>
-                            🎯 Target Audience
+                        <p className='flex items-center gap-2' style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 10 }}>
+                           <LucideTarget size={16}/> Target Audience
+                           
                         </p>
                         {loading ? (
                             <div style={{ display: 'flex', gap: 8 }}>
@@ -394,8 +399,8 @@ export default function CircularDetailModal({ circularId, onClose }) {
                     {/* Attachments */}
                     {(loading || (c?.attachments?.length > 0)) && (
                         <div>
-                            <p style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 10 }}>
-                                📎 Attachments
+                            <p  className='flex items-center gap-2' style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 10 }}>
+                                <Link2Icon size={16}/> Attachments
                             </p>
                             {loading ? (
                                 <Skeleton h={52} r={12} />
