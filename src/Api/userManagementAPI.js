@@ -231,6 +231,26 @@ export const getAllUserRoles = async () => {
   }
 };
 
+// Get Roles Summary
+export const getRolesSummary = async () => {
+  try {
+    const res = await authFetch(`${BASE_URL}/roles/summary`, {
+      method: "GET",
+    });
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(errorText || "Failed to fetch roles summary");
+    }
+
+    const data = await res.json();
+    return data;
+  } catch (error) {
+    console.error("getRolesSummary error:", error.message);
+    throw error;
+  }
+};
+
 // Get User by Id
 export const getUserById = async (id) => {
   try {
