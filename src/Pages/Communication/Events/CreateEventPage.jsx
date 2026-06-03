@@ -1,306 +1,325 @@
-import { useState } from "react";
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Clock, MapPin, CalendarDays, Users, Upload,
-  Check, ChevronDown, Loader2, AlertCircle, X, FileText,
-  Globe, BookOpen, Plus
-} from "lucide-react";
-import { SchoolEventsAPI } from '../../../Api/api.js';
+  CheckCircle2, ChevronDown, Loader2, AlertCircle, X, FileText,
+  Globe, BookOpen, GraduationCap
+} from 'lucide-react';
+import { createEvent, uploadEventAttachment } from '../../../Api/CircularApi';
 import { useClasses } from '../../../ContextAPI/ClassContext.jsx';
 
-// ── Constants ──────────────────────────────────────────────────────────────
+// ── Constants ──────────────────────────────────────────────────────────────────
+
 const EVENT_TYPES = [
-  { value: "SCHOOL_WIDE", label: "School-Wide", icon: Globe },
-  { value: "CLASS_SPECIFIC", label: "Class-Specific", icon: BookOpen },
+  { value: 'SCHOOL_WIDE', label: 'School-Wide', icon: Globe },
+  { value: 'CLASS_SPECIFIC', label: 'Class-Specific', icon: BookOpen },
 ];
 
-const TARGET_OPTIONS = [
-  { label: "All Staff", value: "ALL_STAFF", color: "blue" },
-  { label: "All Teachers", value: "ALL_TEACHERS", color: "indigo" },
-  { label: "All Parents", value: "ALL_PARENTS", color: "violet" },
-  { label: "All Students", value: "ALL_STUDENTS", color: "cyan" },
+// Broadcast target groups (no class/section needed)
+const BROADCAST_TARGETS = [
+  { value: 'ALL_STAFF', label: 'All Staff', icon: <Users size={16} />, desc: 'Every staff member' },
+  { value: 'ALL_TEACHERS', label: 'All Teachers', icon: <GraduationCap size={16} />, desc: 'All teaching staff' },
+  { value: 'ALL_PARENTS', label: 'All Parents', icon: <Users size={16} />, desc: 'Parents & guardians' },
 ];
 
-// ── Helpers ────────────────────────────────────────────────────────────────
+const INITIAL_FORM = {
+  title: '',
+  description: '',
+  location: '',
+  startDatetime: '',
+  endDatetime: '',
+  type: 'SCHOOL_WIDE',
+};
+
+const inputCls = (err) =>
+  `w-full border ${err ? 'border-red-300 focus:ring-red-100' : 'border-gray-200 focus:border-blue-400 focus:ring-blue-50'
+  } rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-900 focus:outline-none focus:ring-2 transition-all`;
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
 function calcDuration(start, end) {
   try {
     const s = new Date(start), e = new Date(end);
     if (isNaN(s) || isNaN(e) || e <= s) return null;
     const hrs = Math.round((e - s) / 36e5);
     return hrs < 24
-      ? `${hrs} hour${hrs !== 1 ? "s" : ""}`
-      : `${Math.round(hrs / 24)} day${Math.round(hrs / 24) !== 1 ? "s" : ""}`;
+      ? `${hrs} hour${hrs !== 1 ? 's' : ''}`
+      : `${Math.round(hrs / 24)} day${Math.round(hrs / 24) !== 1 ? 's' : ''}`;
   } catch { return null; }
 }
 
-function toISOString(localDatetime) {
-  if (!localDatetime) return null;
-  try { return new Date(localDatetime).toISOString(); } catch { return null; }
+function toISO(localDt) {
+  if (!localDt) return null;
+  try { return new Date(localDt).toISOString(); } catch { return null; }
 }
 
-function fmtDisplay(localDatetime) {
-  if (!localDatetime) return "—";
+function fmtDisplay(localDt) {
+  if (!localDt) return '—';
   try {
-    return new Date(localDatetime).toLocaleString("en-IN", {
-      day: "numeric", month: "short", year: "numeric",
-      hour: "2-digit", minute: "2-digit",
+    return new Date(localDt).toLocaleString('en-IN', {
+      day: 'numeric', month: 'short', year: 'numeric',
+      hour: '2-digit', minute: '2-digit',
     });
-  } catch { return "—"; }
+  } catch { return '—'; }
 }
 
-// ── Sub-components ─────────────────────────────────────────────────────────
-function Spinner({ size = 16 }) {
-  return <Loader2 size={size} className="animate-spin" />;
-}
-
-// Required field asterisk asterisk
-function Req() {
-  return <span className="text-red-500 ml-0.5">*</span>;
-}
+// ── Sub-components ─────────────────────────────────────────────────────────────
 
 function FormCard({ title, children }) {
   return (
-    <div className="bg-white border border-blue-100 rounded-2xl p-5 shadow-sm">
-      <div className="text-sm font-bold text-slate-800 mb-4 pb-3 border-b border-blue-50">
-        {title}
-      </div>
+    <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+      <p className="text-sm font-bold text-gray-800 mb-4 pb-3 border-b border-gray-100">{title}</p>
       {children}
     </div>
   );
 }
 
-function Label({ children, htmlFor }) {
+function Field({ label, required, error, hint, children }) {
   return (
-    <label htmlFor={htmlFor} className="block text-xs font-semibold text-slate-500 mb-1.5">
+    <div>
+      <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+        {label}{required && <span className="text-red-500 ml-0.5">*</span>}
+      </label>
       {children}
-    </label>
+      {hint && !error && <p className="text-[11px] text-gray-400 mt-1">{hint}</p>}
+      {error && (
+        <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+          <AlertCircle size={11} />{error}
+        </p>
+      )}
+    </div>
   );
 }
-
-const inputCls =
-  "w-full border-[1.5px] border-blue-100 rounded-xl py-2.5 px-3.5 text-sm text-slate-800 bg-blue-50/30 outline-none focus:border-blue-400 focus:bg-white transition-colors placeholder:text-slate-300";
 
 function SumRow({ icon: Icon, label, value }) {
   return (
     <div className="flex items-start gap-2.5 text-[12.5px]">
       <Icon size={13} className="text-blue-400 mt-0.5 shrink-0" />
-      <span className="text-slate-400 w-16 shrink-0">{label}</span>
-      <span className="text-slate-700 font-medium truncate flex-1">{value || "—"}</span>
+      <span className="text-gray-400 w-16 shrink-0">{label}</span>
+      <span className="text-gray-700 font-medium truncate flex-1">{value || '—'}</span>
     </div>
   );
 }
 
-// ── Main Component ─────────────────────────────────────────────────────────
-export default function CreateEventPage({ onBack }) {
-  const { classes, getClassLabel } = useClasses();
+// ── Main component ─────────────────────────────────────────────────────────────
 
-  const [form, setForm] = useState({
-    title: "",
-    description: "",
-    location: "",
-    startDatetime: "",
-    endDatetime: "",
-    type: "SCHOOL_WIDE",
-  });
+export default function CreateEventPage() {
+  const navigate = useNavigate();
 
-  const [targets, setTargets] = useState([]);
-  const [classInput, setClassInput] = useState({ classId: "", sectionId: "" });
-
-  const [drag, setDrag] = useState(false);
+  const [form, setForm] = useState(INITIAL_FORM);
   const [files, setFiles] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(false);
+  const [drag, setDrag] = useState(false);
+  const [submitting, setSub] = useState(false);
+  const [toast, setToast] = useState(null);
+  const [errors, setErrors] = useState({});
 
-  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+  // ── Broadcast audience selections
+  const [selectedBroadcast, setSelectedBroadcast] = useState([]);
 
-  // Toggle quick selection targets (ALL_STAFF, ALL_TEACHERS, etc.)
-  const toggleTarget = (targetType) => {
-    setTargets((prev) =>
-      prev.find((t) => t.targetType === targetType)
-        ? prev.filter((t) => t.targetType !== targetType)
-        : [...prev, { targetType, classId: null, sectionId: null }] // 👈 Set null instead of 0
+  // ── Class / section audience selections
+  const [selectedClassTargets, setSelectedClassTargets] = useState([]);
+
+  // ── API data from ClassContext
+  const { classes, loading: classesLoading } = useClasses();
+
+  // ── State Handlers ─────────────────────────────────────────────────────────
+  const setField = (k) => (e) => {
+    setForm((p) => ({ ...p, [k]: e.target.value }));
+    setErrors((p) => ({ ...p, [k]: '' }));
+  };
+
+  const toggleBroadcast = (val) => {
+    setSelectedBroadcast((p) =>
+      p.includes(val) ? p.filter((x) => x !== val) : [...p, val]
     );
+    setErrors((p) => ({ ...p, targets: '' }));
   };
 
-  // Add specific targeted class configurations
-  const addClassTarget = () => {
-    const cId = classInput.classId ? parseInt(classInput.classId) : null;
-    const sId = classInput.sectionId ? parseInt(classInput.sectionId) : null;
+  const addClassTarget = (classId, sectionId = null) => {
+    const cls = classes.find((c) => c.id === classId);
+    if (!cls) return;
 
-    if (!cId) return;
+    const key = sectionId ? `section-${sectionId}` : `class-${classId}`;
+    const alreadyExists = selectedClassTargets.some((t) => t.key === key);
+    if (alreadyExists) return;
 
-    // Check for duplicate targets inside arrays
-    const exists = targets.some(t => t.targetType === "CLASS" && t.classId === cId && t.sectionId === sId);
-    if (exists) { setError("This class target target is already added."); return; }
+    const sectionName = sectionId
+      ? (cls.sections ?? []).find((s) => s.id === sectionId)?.name
+      : null;
 
-    setTargets((p) => [...p, { targetType: "CLASS", classId: cId, sectionId: sId }]);
-    setClassInput({ classId: "", sectionId: "" });
+    setSelectedClassTargets((p) => [
+      ...p,
+      {
+        key,
+        classId,
+        sectionId,
+        label: sectionName ? `${cls.name} – Section ${sectionName}` : `${cls.name} (All Sections)`,
+      },
+    ]);
+    setErrors((p) => ({ ...p, targets: '' }));
   };
 
-  const removeTargetIndex = (targetToRemove) => {
-    setTargets((p) => p.filter((t) => t !== targetToRemove));
-  };
+  const removeClassTarget = (key) =>
+    setSelectedClassTargets((p) => p.filter((t) => t.key !== key));
 
-  const handleDrop = (e) => {
-    e.preventDefault(); setDrag(false);
-    const dropped = Array.from(e.dataTransfer.files);
-    setFiles((p) => [...p, ...dropped]);
-  };
-
-  const handleFileInput = (e) => {
-    setFiles((p) => [...p, ...Array.from(e.target.files)]);
-  };
-
-  // ── Payload builder formatting null outputs ───────────────────────────────
-  const buildPayload = () => ({
-    title: form.title,
-    description: form.description || "",
-    location: form.location || "",
-    startDatetime: toISOString(form.startDatetime),
-    endDatetime: toISOString(form.endDatetime),
-    type: form.type,
-    targets: targets.map((t) => ({
-      targetType: t.targetType,
-      classId: t.classId !== undefined ? t.classId : null,    // 👈 Fixed payload rules
-      sectionId: t.sectionId !== undefined ? t.sectionId : null, // 👈 Fixed payload rules
-    })),
-  });
-
-  const handleSubmit = async (asDraft = false) => {
-    if (!form.title.trim()) { setError("Event title is required."); return; }
-    if (!form.startDatetime) { setError("Start date & time is required."); return; }
-    if (!form.endDatetime) { setError("End date & time is required."); return; }
-    if (targets.length === 0) { setError("Select at least one target recipient."); return; }
-
-    setLoading(true); setError(null);
-    try {
-      const payload = buildPayload();
-      if (asDraft) payload.status = "DRAFT";
-
-      const res = await SchoolEventsAPI.create(payload);
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(data?.message || "Failed to create event.");
-        setLoading(false);
-        return;
-      }
-
-      if (files.length && data?.id) {
-        const fd = new FormData();
-        files.forEach((f) => fd.append("files", f));
-        await SchoolEventsAPI.uploadAttachment(data.id, fd);
-      }
-
-      setSuccess(true);
-      setTimeout(() => { onBack?.(); }, 1500);
-    } catch (err) {
-      setError(err?.message || "Something went wrong.");
-    } finally {
-      setLoading(false);
+  const handleClassSectionSelect = (e) => {
+    const val = e.target.value;
+    if (!val) return;
+    e.target.value = ''; // reset
+    if (val.startsWith('class-')) {
+      addClassTarget(Number(val.replace('class-', '')));
+    } else if (val.startsWith('section-')) {
+      const [, classIdStr, sectionIdStr] = val.split('-');
+      addClassTarget(Number(classIdStr), Number(sectionIdStr));
     }
   };
 
+  const addFile = (fileList) => {
+    const newFiles = Array.from(fileList).filter((f) => f.size <= 10 * 1024 * 1024);
+    setFiles((p) => [...p, ...newFiles]);
+  };
+
+  // ── Validation & Submission ────────────────────────────────────────────────
+  const validate = () => {
+    const e = {};
+    if (!form.title.trim()) e.title = 'Event title is required';
+    if (!form.startDatetime) e.startDatetime = 'Start date & time is required';
+    if (!form.endDatetime) e.endDatetime = 'End date & time is required';
+    if (selectedBroadcast.length === 0 && selectedClassTargets.length === 0)
+      e.targets = 'Select at least one recipient group';
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+  const showToast = (type, msg) => {
+    setToast({ type, msg });
+    setTimeout(() => setToast(null), 3500);
+  };
+
+  const buildTargets = () => {
+    const targets = [];
+    selectedBroadcast.forEach((targetType) => {
+      targets.push({ targetType, classId: null, sectionId: null });
+    });
+    selectedClassTargets.forEach(({ classId, sectionId }) => {
+      targets.push({
+        targetType: sectionId ? 'SECTION' : 'CLASS',
+        classId,
+        sectionId: sectionId ?? null,
+      });
+    });
+    return targets;
+  };
+
+  const handleSubmit = async (asDraft = false) => {
+    if (!validate()) return;
+    setSub(true);
+
+    const payload = {
+      title: form.title.trim(),
+      description: form.description.trim(),
+      location: form.location.trim(),
+      startDatetime: toISO(form.startDatetime),
+      endDatetime: toISO(form.endDatetime),
+      type: form.type,
+      targets: buildTargets(),
+      ...(asDraft ? { status: 'DRAFT' } : {}),
+    };
+
+    const { data, error } = await createEvent(payload);
+
+    if (error) {
+      showToast('error', error);
+      setSub(false);
+      return;
+    }
+
+    if (files.length > 0 && data?.id) {
+      const fd = new FormData();
+      files.forEach((f) => fd.append('files', f));
+      await uploadEventAttachment(data.id, fd);
+    }
+
+    showToast('success', asDraft ? 'Saved as draft.' : 'Event published successfully.');
+    setTimeout(() => navigate('/communication/events'), 1200);
+  };
+
+  // ── Derived Data for Previews ──────────────────────────────────────────────
   const dur = calcDuration(form.startDatetime, form.endDatetime);
-  const allSelected = (v) => targets.some((t) => t.targetType === v);
+  const allTargetLabels = [
+    ...selectedBroadcast.map((v) => BROADCAST_TARGETS.find((t) => t.value === v)?.label ?? v),
+    ...selectedClassTargets.map((t) => t.label),
+  ];
 
-  const renderingClassTargets = targets.filter(t => t.targetType === "CLASS");
-  const activeSelectedClass = classes?.find(c => c.id === parseInt(classInput.classId));
-
-  if (success) {
-    return (
-      <div className="min-h-screen bg-blue-50/60 flex items-center justify-center p-6">
-        <div className="bg-white rounded-2xl border border-blue-100 shadow-sm p-10 flex flex-col items-center gap-4 max-w-sm w-full text-center">
-          <div className="w-16 h-16 rounded-full bg-green-50 border border-green-200 flex items-center justify-center">
-            <Check size={28} className="text-green-600" />
-          </div>
-          <div className="text-lg font-bold text-slate-800">Event Created!</div>
-          <p className="text-sm text-slate-400">Your event has been published and recipients will be notified.</p>
-        </div>
-      </div>
-    );
-  }
-
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="bg-blue-50/60 min-h-screen p-4 sm:p-6 font-sans text-slate-800">
+    <div className="p-3 sm:p-6 bg-gray-50 min-h-screen relative">
+
+      {/* Toast */}
+      {toast && (
+        <div className={`fixed top-4 right-4 z-50 flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lg text-sm font-medium border
+          ${toast.type === 'success' ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'}`}>
+          {toast.type === 'success' ? <CheckCircle2 size={15} /> : <AlertCircle size={15} />}
+          {toast.msg}
+        </div>
+      )}
 
       {/* Header */}
-      <div className="flex items-center gap-3 mb-6">
-        <button
-          type="button"
-          onClick={onBack}
-          className="w-9 h-9 rounded-xl border border-blue-100 bg-white flex items-center justify-center text-slate-400 hover:bg-blue-50 cursor-pointer transition-colors shrink-0"
-        >
-          <ArrowLeft size={16} />
+      <div className="flex items-center gap-3 mb-5">
+        <button onClick={() => navigate(-1)}
+          className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-500 transition-colors flex-shrink-0">
+          <ArrowLeft size={15} />
         </button>
-        <div>
-          <h1 className="text-lg font-extrabold text-slate-800 leading-none">Create New Event</h1>
-          <p className="text-xs text-slate-400 mt-1">
+        <div className="min-w-0">
+          <h1 className="text-lg sm:text-xl font-extrabold text-gray-900 tracking-tight flex items-center gap-2">
+            <CalendarDays size={18} className="text-blue-600 flex-shrink-0" />
+            Create New Event
+          </h1>
+          <p className="text-xs sm:text-sm text-gray-500 mt-0.5 hidden sm:block">
             Schedule a school event and notify parents, staff, or specific classes.
           </p>
         </div>
       </div>
 
-      {/* Error Banner */}
-      {error && (
-        <div className="flex items-center gap-2.5 px-4 py-3 mb-5 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">
-          <AlertCircle size={15} className="shrink-0" />
-          <span className="flex-1">{error}</span>
-          <button type="button" onClick={() => setError(null)} className="text-red-400 hover:text-red-600 cursor-pointer">
-            <X size={14} />
-          </button>
-        </div>
-      )}
+      <div className="grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-5 items-start">
 
-      {/* Grid layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_288px] gap-4 max-w-5xl">
-
-        {/* ════ LEFT COLUMN ════ */}
-        <div className="flex flex-col gap-4">
+        {/* ── Left: Form ─────────────────────────────────────────────────────── */}
+        <div className="space-y-4">
 
           {/* Event Details */}
           <FormCard title="Event Details">
-            <div className="flex flex-col gap-4">
-              <div>
-                <Label htmlFor="title">Event Title <Req /></Label>
+            <div className="space-y-4">
+              <Field label="Event Title" required error={errors.title}>
                 <input
-                  id="title"
-                  className={inputCls}
                   value={form.title}
-                  onChange={set("title")}
+                  onChange={setField('title')}
                   placeholder="e.g. Annual Sports Day 2025"
+                  className={inputCls(errors.title)}
                 />
-              </div>
+              </Field>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="type">Event Type <Req /></Label>
+                <Field label="Event Type" required>
                   <div className="relative">
-                    <select
-                      id="type"
-                      className={`${inputCls} cursor-pointer appearance-none pr-9`}
-                      value={form.type}
-                      onChange={set("type")}
-                    >
+                    <select value={form.type} onChange={setField('type')} className={`${inputCls()} appearance-none pr-9 cursor-pointer`}>
                       {EVENT_TYPES.map((et) => (
                         <option key={et.value} value={et.value}>{et.label}</option>
                       ))}
                     </select>
-                    <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                    <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                   </div>
-                </div>
-                <div>
-                  <Label htmlFor="location">Location</Label>
+                </Field>
+
+                <Field label="Location">
                   <div className="relative">
-                    <MapPin size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-300 pointer-events-none" />
+                    <MapPin size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                     <input
-                      id="location"
-                      className={`${inputCls} pl-8`}
                       value={form.location}
-                      onChange={set("location")}
+                      onChange={setField('location')}
                       placeholder="e.g. School Ground"
+                      className={`${inputCls()} pl-8`}
                     />
                   </div>
-                </div>
+                </Field>
               </div>
             </div>
           </FormCard>
@@ -308,26 +327,14 @@ export default function CreateEventPage({ onBack }) {
           {/* Date & Time */}
           <FormCard title="Date & Time">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="startDatetime">Start Date & Time <Req /></Label>
-                <input
-                  id="startDatetime"
-                  type="datetime-local"
-                  className={inputCls}
-                  value={form.startDatetime}
-                  onChange={set("startDatetime")}
-                />
-              </div>
-              <div>
-                <Label htmlFor="endDatetime">End Date & Time <Req /></Label>
-                <input
-                  id="endDatetime"
-                  type="datetime-local"
-                  className={inputCls}
-                  value={form.endDatetime}
-                  onChange={set("endDatetime")}
-                />
-              </div>
+              <Field label="Start Date & Time" required error={errors.startDatetime}>
+                <input type="datetime-local" value={form.startDatetime} onChange={setField('startDatetime')}
+                  className={inputCls(errors.startDatetime)} style={{ colorScheme: 'light' }} />
+              </Field>
+              <Field label="End Date & Time" required error={errors.endDatetime}>
+                <input type="datetime-local" value={form.endDatetime} onChange={setField('endDatetime')}
+                  className={inputCls(errors.endDatetime)} style={{ colorScheme: 'light' }} />
+              </Field>
             </div>
             {dur && (
               <div className="mt-3 flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-700 font-medium">
@@ -338,106 +345,143 @@ export default function CreateEventPage({ onBack }) {
 
           {/* Description */}
           <FormCard title="Description">
-            <Label htmlFor="description">Event Description</Label>
-            <textarea
-              id="description"
-              className={`${inputCls} resize-y min-h-[108px] leading-relaxed`}
-              value={form.description}
-              onChange={set("description")}
-              placeholder="Describe the event, schedule, and what participants can expect…"
-            />
+            <Field label="Event Description">
+              <textarea
+                value={form.description}
+                onChange={setField('description')}
+                placeholder="Describe the event, schedule, and what participants can expect…"
+                className={`${inputCls()} resize-y min-h-[100px] leading-relaxed`}
+              />
+            </Field>
           </FormCard>
 
-          {/* Target Recipients */}
+          {/* Target Recipients (Mirrored from Circulars) */}
           <FormCard title="Target Recipients">
-            <Label>Who should be notified? <Req /></Label>
+            <div className="space-y-4">
 
-            {/* Quick targets */}
-            <div className="flex flex-wrap gap-2 mb-4">
-              {TARGET_OPTIONS.map((t) => {
-                const sel = allSelected(t.value);
-                const colorMap = {
-                  blue: sel ? "border-blue-500 bg-blue-50 text-blue-700" : "border-blue-100 bg-white text-slate-500 hover:border-blue-300",
-                  indigo: sel ? "border-indigo-500 bg-indigo-50 text-indigo-700" : "border-blue-100 bg-white text-slate-500 hover:border-indigo-300",
-                  violet: sel ? "border-violet-500 bg-violet-50 text-violet-700" : "border-blue-100 bg-white text-slate-500 hover:border-violet-300",
-                  cyan: sel ? "border-cyan-500 bg-cyan-50 text-cyan-700" : "border-blue-100 bg-white text-slate-500 hover:border-cyan-300",
-                };
-                return (
-                  <button
-                    key={t.value}
-                    type="button"
-                    onClick={() => toggleTarget(t.value)}
-                    className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-semibold border-[1.5px] cursor-pointer transition-all ${colorMap[t.color]}`}
-                  >
-                    {sel && <Check size={11} />}
-                    {t.label}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Context Dropdown Layer selectors */}
-            <div className="flex flex-wrap gap-2 items-end p-3.5 bg-blue-50/50 rounded-xl border border-blue-100">
-              <div className="flex flex-col gap-1 flex-1 min-w-[140px]">
-                <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Select Class</span>
-                <div className="relative">
-                  <select
-                    className="border border-blue-100 rounded-lg py-1.5 pl-2.5 pr-8 text-sm bg-white outline-none focus:border-blue-400 w-full appearance-none cursor-pointer"
-                    value={classInput.classId}
-                    onChange={(e) => setClassInput({ classId: e.target.value, sectionId: "" })}
-                  >
-                    <option value="">-- Choose Class --</option>
-                    {classes?.map((cls) => (
-                      <option key={cls.id} value={cls.id}>{cls.name}</option>
-                    ))}
-                  </select>
-                  <ChevronDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              {/* Broadcast groups */}
+              <Field label="Broadcast to groups" error={errors.targets}>
+                <div className="flex flex-wrap gap-2">
+                  {BROADCAST_TARGETS.map((t) => {
+                    const sel = selectedBroadcast.includes(t.value);
+                    return (
+                      <button
+                        key={t.value}
+                        type="button"
+                        onClick={() => toggleBroadcast(t.value)}
+                        className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-semibold border transition-all ${sel
+                          ? 'bg-blue-600 border-blue-600 text-white shadow-sm'
+                          : 'bg-white border-gray-200 text-gray-600 hover:border-blue-300 hover:text-blue-600'}`}
+                      >
+                        <span>{t.icon}</span>
+                        {t.label}
+                        {sel && <CheckCircle2 size={13} className="ml-0.5" />}
+                      </button>
+                    );
+                  })}
                 </div>
+              </Field>
+
+              {/* Divider */}
+              <div className="flex items-center gap-3">
+                <div className="flex-1 border-t border-gray-100" />
+                <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">or specific class / section</span>
+                <div className="flex-1 border-t border-gray-100" />
               </div>
 
-              <div className="flex flex-col gap-1 flex-1 min-w-[140px]">
-                <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-                  Select Section <span className="normal-case text-slate-300">(opt)</span>
-                </span>
+              {/* Class / Section grouped dropdown */}
+              <Field label="Add a class or section">
                 <div className="relative">
                   <select
-                    className="border border-blue-100 rounded-lg py-1.5 pl-2.5 pr-8 text-sm bg-white outline-none focus:border-blue-400 w-full appearance-none cursor-pointer disabled:bg-slate-100 disabled:text-slate-400"
-                    value={classInput.sectionId}
-                    disabled={!classInput.classId}
-                    onChange={(e) => setClassInput((p) => ({ ...p, sectionId: e.target.value }))}
+                    onChange={handleClassSectionSelect}
+                    defaultValue=""
+                    disabled={classesLoading}
+                    className={`${inputCls()} appearance-none pr-8 cursor-pointer`}
                   >
-                    <option value="">All Sections (Entire Class)</option>
-                    {activeSelectedClass?.sections?.map((sec) => (
-                      <option key={sec.id} value={sec.id}>{sec.name}</option>
+                    <option value="" disabled>
+                      {classesLoading ? 'Loading classes…' : '— Select a class or section —'}
+                    </option>
+                    {classes.map((cls) => (
+                      <optgroup key={cls.id} label={`📚 ${cls.name}`}>
+                        <option value={`class-${cls.id}`}>
+                          {cls.name} — All Sections
+                        </option>
+                        {(cls.sections ?? []).map((sec) => (
+                          <option key={sec.id} value={`section-${cls.id}-${sec.id}`}>
+                            {cls.name} · Section {sec.name}
+                            {sec.roomNumber ? ` (${sec.roomNumber})` : ''}
+                          </option>
+                        ))}
+                      </optgroup>
                     ))}
                   </select>
-                  <ChevronDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                  <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                 </div>
-              </div>
+              </Field>
 
-              <button
-                type="button"
-                onClick={addClassTarget}
-                disabled={!classInput.classId}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 cursor-pointer transition-colors shrink-0 disabled:opacity-40 disabled:cursor-not-allowed h-[34px]"
-              >
-                <Plus size={13} /> Add Target
-              </button>
+              {/* Selected class/section chips */}
+              {selectedClassTargets.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {selectedClassTargets.map((t) => (
+                    <span
+                      key={t.key}
+                      className="flex items-center gap-1.5 bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-semibold px-2.5 py-1.5 rounded-lg"
+                    >
+                      <GraduationCap size={11} />
+                      {t.label}
+                      <button
+                        onClick={() => removeClassTarget(t.key)}
+                        className="text-indigo-400 hover:text-red-500 ml-0.5 transition-colors"
+                      >
+                        <X size={11} />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* Validation error for targets */}
+              {errors.targets && (
+                <p className="text-xs text-red-500 flex items-center gap-1">
+                  <AlertCircle size={11} />{errors.targets}
+                </p>
+              )}
+            </div>
+          </FormCard>
+
+          {/* Attachments */}
+          <FormCard title="Attachments">
+            <div
+              onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
+              onDragLeave={() => setDrag(false)}
+              onDrop={(e) => { e.preventDefault(); setDrag(false); addFile(e.dataTransfer.files); }}
+              onClick={() => document.getElementById('file-input').click()}
+              className={`border-2 border-dashed rounded-xl p-6 sm:p-8 text-center cursor-pointer transition-all ${drag ? 'border-blue-400 bg-blue-50' : 'border-gray-200 bg-gray-50 hover:border-blue-300 hover:bg-blue-50/40'}`}
+            >
+              <Upload size={22} className="mx-auto mb-2 text-gray-400" />
+              <p className="text-sm font-medium text-gray-600">Click to upload or drag & drop</p>
+              <p className="text-xs text-gray-400 mt-1">PDF, Images — up to 10 MB each</p>
+              <input
+                id="file-input"
+                type="file"
+                multiple
+                hidden
+                onChange={(e) => addFile(e.target.files)}
+                accept=".pdf,.png,.jpg,.jpeg"
+              />
             </div>
 
-            {/* Display active targeting badges pills */}
-            {renderingClassTargets.length > 0 && (
+            {files.length > 0 && (
               <div className="flex flex-wrap gap-2 mt-3">
-                {renderingClassTargets.map((target, i) => (
+                {files.map((f, i) => (
                   <span
                     key={i}
-                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200"
+                    className="flex items-center gap-1.5 bg-blue-50 border border-blue-200 text-blue-700 text-xs font-medium px-2.5 py-1.5 rounded-lg"
                   >
-                    {getClassLabel(target.classId, target.sectionId)}
+                    📄 {f.name}
                     <button
-                      type="button"
-                      onClick={() => removeTargetIndex(target)}
-                      className="text-indigo-400 hover:text-indigo-700 cursor-pointer"
+                      onClick={() => setFiles((p) => p.filter((_, j) => j !== i))}
+                      className="text-gray-400 hover:text-red-500 transition-colors"
                     >
                       <X size={11} />
                     </button>
@@ -447,122 +491,73 @@ export default function CreateEventPage({ onBack }) {
             )}
           </FormCard>
 
-          {/* Attachments */}
-          <FormCard title="Attachments">
-            <div
-              onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
-              onDragLeave={() => setDrag(false)}
-              onDrop={handleDrop}
-              onClick={() => document.getElementById("fileInput").click()}
-              className={`border-2 border-dashed rounded-xl p-7 text-center cursor-pointer transition-all ${drag ? "border-blue-500 bg-blue-50" : "border-blue-100 bg-slate-50/60 hover:border-blue-300 hover:bg-blue-50/30"
-                }`}
-            >
-              <Upload size={26} className="text-blue-300 mx-auto mb-2" />
-              <div className="text-sm font-semibold text-slate-500">Click to upload or drag & drop</div>
-              <div className="text-xs text-slate-400 mt-1">PDF, Images up to 10 MB</div>
-              <input id="fileInput" type="file" multiple className="hidden" onChange={handleFileInput} />
-            </div>
-            {files.length > 0 && (
-              <div className="flex flex-col gap-1.5 mt-3">
-                {files.map((f, i) => (
-                  <div key={i} className="flex items-center gap-2.5 px-3 py-2 bg-blue-50 rounded-lg border border-blue-100 text-xs text-slate-600">
-                    <FileText size={13} className="text-blue-400 shrink-0" />
-                    <span className="flex-1 truncate">{f.name}</span>
-                    <span className="text-slate-400 shrink-0">{(f.size / 1024).toFixed(0)} KB</span>
-                    <button
-                      type="button"
-                      onClick={() => setFiles((p) => p.filter((_, j) => j !== i))}
-                      className="text-slate-400 hover:text-red-500 cursor-pointer"
-                    >
-                      <X size={12} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </FormCard>
-
           {/* Actions */}
-          <div className="flex flex-wrap gap-2 justify-end pb-6">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2.5 pt-1">
             <button
-              type="button"
-              onClick={onBack}
-              className="px-5 py-2.5 rounded-xl border border-blue-100 bg-white text-slate-500 text-sm font-semibold hover:bg-slate-50 cursor-pointer transition-colors"
+              onClick={() => navigate(-1)}
+              className="px-4 cursor-pointer py-2 text-sm font-semibold text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
             >
               Cancel
             </button>
             <button
-              type="button"
               onClick={() => handleSubmit(true)}
-              disabled={loading}
-              className="px-5 py-2.5 rounded-xl border border-blue-100 bg-white text-slate-700 text-sm font-semibold hover:bg-blue-50 cursor-pointer transition-colors disabled:opacity-50"
+              disabled={submitting}
+              className={`flex items-center ${submitting ? 'cursor-not-allowed' : 'cursor-pointer'}  justify-center gap-2 px-4 py-2 text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors`}
             >
               Save as Draft
             </button>
             <button
-              type="button"
               onClick={() => handleSubmit(false)}
-              disabled={loading}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 cursor-pointer transition-colors disabled:opacity-60 shadow-md shadow-blue-200"
+              disabled={submitting}
+              className={`flex items-center ${submitting ? 'cursor-not-allowed' : 'cursor-pointer'}  justify-center gap-2 px-5 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg disabled:opacity-50 transition-colors`}
             >
-              {loading ? <><Spinner size={14} /> Publishing…</> : "Publish & Notify"}
+              {submitting ? <Loader2 size={14} className="animate-spin" /> : null}
+              {submitting ? 'Publishing…' : 'Publish & Notify'}
             </button>
           </div>
         </div>
 
-        {/* ════ RIGHT COLUMN — Summary ════ */}
-        <div>
-          <div className="bg-white border border-blue-100 rounded-2xl p-5 shadow-sm sticky top-4">
-            <div className="text-sm font-bold text-slate-800 mb-4 pb-3 border-b border-blue-50">
-              Event Summary
-            </div>
+        {/* ── Right: Info panels ─────────────────────────────────────────────── */}
+        <div className="space-y-4">
+          <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm sticky top-6">
+            <p className="text-sm font-bold text-gray-800 mb-4 pb-3 border-b border-gray-100">Event Summary</p>
 
             <div className="flex flex-col gap-3 mb-4">
               <SumRow icon={FileText} label="Title" value={form.title} />
-              <SumRow icon={Globe} label="Type" value={form.type === "SCHOOL_WIDE" ? "School-Wide" : "Class-Specific"} />
+              <SumRow icon={Globe} label="Type" value={form.type === 'SCHOOL_WIDE' ? 'School-Wide' : 'Class-Specific'} />
               <SumRow icon={MapPin} label="Location" value={form.location} />
               <SumRow icon={CalendarDays} label="Start" value={fmtDisplay(form.startDatetime)} />
               <SumRow icon={CalendarDays} label="End" value={fmtDisplay(form.endDatetime)} />
-              {dur && (
-                <SumRow icon={Clock} label="Duration" value={dur} />
-              )}
+              {dur && <SumRow icon={Clock} label="Duration" value={dur} />}
             </div>
 
-            {/* Target Display Summary Section */}
-            <div className="pt-4 border-t border-blue-50">
-              <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-3">
-                Notifying
-              </div>
-              {targets.length === 0 ? (
-                <div className="flex items-center gap-2 text-xs text-slate-300">
+            {/* Notifying summary */}
+            <div className="pt-3 border-t border-gray-100">
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Notifying</p>
+              {allTargetLabels.length === 0 ? (
+                <p className="flex items-center gap-2 text-xs text-gray-400">
                   <Users size={12} /> No recipients selected
-                </div>
+                </p>
               ) : (
                 <div className="flex flex-col gap-1.5">
-                  {targets.map((t, i) => (
-                    <div
-                      key={i}
-                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 border border-blue-200 text-[11.5px] font-semibold"
-                    >
+                  {allTargetLabels.map((label, i) => (
+                    <div key={i}
+                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 border border-blue-100 text-[11.5px] font-semibold text-blue-700">
                       <Users size={10} className="shrink-0" />
-                      {t.targetType === "CLASS"
-                        ? getClassLabel(t.classId, t.sectionId)
-                        : TARGET_OPTIONS.find((o) => o.value === t.targetType)?.label || t.targetType}
+                      {label}
                     </div>
                   ))}
                 </div>
               )}
             </div>
 
-            {/* Live JSON preview */}
-            <div className="mt-4 pt-4 border-t border-blue-50">
-              <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">
-                Payload Preview
-              </div>
-              <pre className="text-[10px] text-slate-500 bg-blue-50/60 rounded-lg p-3 overflow-x-auto leading-relaxed whitespace-pre-wrap break-all">
-                {JSON.stringify(buildPayload(), null, 2)}
-              </pre>
-            </div>
+            {/* Attachments note */}
+            {files.length > 0 && (
+              <p className="text-xs text-violet-600 mt-3 flex items-center gap-1.5 pt-3 border-t border-gray-100">
+                <span>📎</span>
+                {files.length} attachment{files.length > 1 ? 's' : ''} will be included
+              </p>
+            )}
           </div>
         </div>
 

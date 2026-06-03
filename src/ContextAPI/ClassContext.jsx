@@ -1,29 +1,57 @@
 import { createContext, useContext, useState, useEffect } from "react";
+import sectionSubjectService from "../Api/SectionSubjectService";
 
 const ClassContext = createContext(null);
 
 export function ClassProvider({ children }) {
-  // In production, you can replace this initial state with an API call inside useEffect
-  const [classes] = useState([
-    // { id: 9, name: "Class 9", sections: [{ id: 1, name: "A" }, { id: 2, name: "B" }] },
-    // { id: 10, name: "Class 10", sections: [{ id: 1, name: "A" }, { id: 2, name: "B" }, { id: 3, name: "C" }] },
-    // { id: 11, name: "Class 11", sections: [{ id: 1, name: "Science" }, { id: 2, name: "Commerce" }] },
-    // { id: 12, name: "Class 12", sections: [{ id: 1, name: "Science" }, { id: 2, name: "Commerce" }] },
-  ]);
+  const [classes, setClasses] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Helper utility to get readable strings from IDs
+  useEffect(() => {
+    const fetchClassesAndSections = async () => {
+      try {
+        setLoading(true);
+        // 1. Fetch your active classes list
+        const classList = await sectionSubjectService.getActiveClasses();
+
+        // 2. Fetch all sections for each class in parallel to attach them
+        const populatedClasses = await Promise.all(
+          classList.map(async (cls) => {
+            try {
+              const sections = await sectionSubjectService.getSectionsByClass(cls.id);
+              return { ...cls, sections }; // Attach sections array into each class object
+            } catch (err) {
+              console.error(`Failed to load sections for class ${cls.id}:`, err);
+              return { ...cls, sections: [] }; // Fallback to avoid breaking layout execution
+            }
+          })
+        );
+
+        setClasses(populatedClasses);
+      } catch (error) {
+        console.error("Failed to initialize system classes data layer:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchClassesAndSections();
+  }, []);
+
+  // Helper utility to safely extract names from context mapping parameters
   const getClassLabel = (classId, sectionId) => {
+    if (!classId) return "—";
     const targetClass = classes.find((c) => c.id === parseInt(classId));
     if (!targetClass) return `Class ${classId}`;
     
     if (!sectionId) return targetClass.name;
     
-    const targetSection = targetClass.sections.find((s) => s.id === parseInt(sectionId));
+    const targetSection = targetClass.sections?.find((s) => s.id === parseInt(sectionId));
     return `${targetClass.name} – ${targetSection ? targetSection.name : `Sec ${sectionId}`}`;
   };
 
   return (
-    <ClassContext.Provider value={{ classes, getClassLabel }}>
+    <ClassContext.Provider value={{ classes, getClassLabel, loading }}>
       {children}
     </ClassContext.Provider>
   );
