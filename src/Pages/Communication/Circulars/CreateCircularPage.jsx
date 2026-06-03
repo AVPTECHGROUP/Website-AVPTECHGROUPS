@@ -1,21 +1,24 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, ScrollText, Upload, X, Send,
   Save, Info, AlertCircle, CheckCircle2, Loader2,
   Users, GraduationCap, ChevronDown,
   BellIcon,
+  UserRoundCheckIcon,
+  LucideClockPlus,
+  PiIcon,
 } from 'lucide-react';
 import { createCircular, uploadCircularAttachment } from '../../../Api/CircularApi';
-import sectionSubjectService from '../../../Api/SectionSubjectService';
+import { useClasses } from '../../../ContextAPI/ClassContext.jsx';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
 // Broadcast target groups (no class/section needed)
 const BROADCAST_TARGETS = [
-  { value: 'ALL_STAFF', label: 'All Staff', icon: '👤', desc: 'Every staff member' },
-  { value: 'ALL_TEACHERS', label: 'All Teachers', icon: '🧑‍🏫', desc: 'All teaching staff' },
-  { value: 'ALL_PARENTS', label: 'All Parents', icon: '👨‍👩‍👧', desc: 'Parents & guardians' },
+  { value: 'ALL_STAFF', label: 'All Staff', icon: <Users size={16} />, desc: 'Every staff member' },
+  { value: 'ALL_TEACHERS', label: 'All Teachers', icon: <GraduationCap size={16} />, desc: 'All teaching staff' },
+  { value: 'ALL_PARENTS', label: 'All Parents', icon: <Users size={16} />, desc: 'Parents & guardians' },
 ];
 
 const INITIAL_FORM = {
@@ -74,40 +77,8 @@ export default function CreateCircularPage() {
   // ── Class / section audience selections: [{ classId, sectionId | null, label }]
   const [selectedClassTargets, setSelectedClassTargets] = useState([]);
 
-  // ── API data
-  const [classes, setClasses] = useState([]);
-  const [sectionsMap, setSectionsMap] = useState({}); // { classId: [section] }
-  const [classesLoading, setClassesLoading] = useState(false);
-
-  // ── Fetch classes on mount ─────────────────────────────────────────────────
-  useEffect(() => {
-    const fetchClasses = async () => {
-      setClassesLoading(true);
-      try {
-        const list = await sectionSubjectService.getActiveClasses();
-
-        setClasses(list);
-
-        // Fetch all sections for each class in parallel
-        const entries = await Promise.all(
-          list.map(async (cls) => {
-            try {
-              const sections = await sectionSubjectService.getSectionsByClass(cls.id);
-              return [cls.id, sections];
-            } catch {
-              return [cls.id, []];
-            }
-          })
-        );
-        setSectionsMap(Object.fromEntries(entries));
-      } catch (err) {
-        console.error('Failed to fetch classes:', err);
-      } finally {
-        setClassesLoading(false);
-      }
-    };
-    fetchClasses();
-  }, []);
+  // ── API data from ClassContext
+  const { classes, getClassLabel, loading: classesLoading } = useClasses();
 
   // ── Helpers ────────────────────────────────────────────────────────────────
   const setField = (k) => (e) => {
@@ -132,7 +103,7 @@ export default function CreateCircularPage() {
     if (alreadyExists) return;
 
     const sectionName = sectionId
-      ? (sectionsMap[classId] ?? []).find((s) => s.id === sectionId)?.name
+      ? (cls.sections ?? []).find((s) => s.id === sectionId)?.name
       : null;
 
     setSelectedClassTargets((p) => [
@@ -330,7 +301,7 @@ export default function CreateCircularPage() {
                         key={t.value}
                         type="button"
                         onClick={() => toggleBroadcast(t.value)}
-                        className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-semibold border transition-all ${sel
+                        className={`cursor-pointer flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-semibold border transition-all ${sel
                           ? 'bg-blue-600 border-blue-600 text-white shadow-sm'
                           : 'bg-white border-gray-200 text-gray-600 hover:border-blue-300 hover:text-blue-600'}`}
                       >
@@ -367,7 +338,7 @@ export default function CreateCircularPage() {
                         <option value={`class-${cls.id}`}>
                           {cls.name} — All Sections
                         </option>
-                        {(sectionsMap[cls.id] ?? []).map((sec) => (
+                        {(cls.sections ?? []).map((sec) => (
                           <option key={sec.id} value={`section-${cls.id}-${sec.id}`}>
                             {cls.name} · Section {sec.name}
                             {sec.roomNumber ? ` (${sec.roomNumber})` : ''}
@@ -456,21 +427,21 @@ export default function CreateCircularPage() {
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2.5 pt-1">
             <button
               onClick={() => navigate(-1)}
-              className="px-4 py-2 text-sm font-semibold text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+              className="px-4 py-2 cursor-pointer text-sm font-semibold text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
             >
               Cancel
             </button>
             <button
               onClick={() => handleSubmit(true)}
               disabled={submitting}
-              className="flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors"
+              className="flex items-center cursor-pointer justify-center gap-2 px-4 py-2 text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors"
             >
               <Save size={14} /> Save as Draft
             </button>
             <button
               onClick={() => handleSubmit(false)}
               disabled={submitting}
-              className="flex items-center justify-center gap-2 px-5 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg disabled:opacity-50 transition-colors"
+              className="flex items-center cursor-pointer justify-center gap-2 px-5 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg disabled:opacity-50 transition-colors"
             >
               {submitting ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
               {form.type === 'CLASS_SPECIFIC' ? 'Publish Circular' : 'Submit for Approval'}
@@ -493,7 +464,7 @@ export default function CreateCircularPage() {
             <div className="space-y-3">
               {/* Rule 1 */}
               <div className="flex gap-3 p-3 rounded-lg bg-green-50 border border-green-100">
-                <span className="text-base flex-shrink-0 mt-0.5">✅</span>
+                <span className="text-base flex-shrink-0 mt-0.5"><UserRoundCheckIcon className="text-green-500" /></span>
                 <div>
                   <p className="text-xs font-bold text-green-800">Admin / Principal</p>
                   <p className="text-xs text-green-700 mt-0.5 leading-relaxed">
@@ -504,7 +475,7 @@ export default function CreateCircularPage() {
 
               {/* Rule 2 */}
               <div className="flex gap-3 p-3 rounded-lg bg-amber-50 border border-amber-100">
-                <span className="text-base flex-shrink-0 mt-0.5">⏳</span>
+                <span className="text-base flex-shrink-0 mt-0.5"><LucideClockPlus className="text-amber-500" /></span>
                 <div>
                   <p className="text-xs font-bold text-amber-800">Teacher</p>
                   <p className="text-xs text-amber-700 mt-0.5 leading-relaxed">
@@ -515,7 +486,7 @@ export default function CreateCircularPage() {
 
               {/* Rule 3 */}
               <div className="flex gap-3 p-3 rounded-lg bg-blue-50 border border-blue-100">
-                <span className="text-base flex-shrink-0 mt-0.5">📌</span>
+                <span className="text-base flex-shrink-0 mt-0.5"><PiIcon className="text-blue-500" /></span>
                 <div>
                   <p className="text-xs font-bold text-blue-800">Any Role — Class-Specific</p>
                   <p className="text-xs text-blue-700 mt-0.5 leading-relaxed">
@@ -530,7 +501,7 @@ export default function CreateCircularPage() {
           <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
             <div className="flex items-center gap-2 mb-4">
               <div className="w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0">
-                <span className="text-sm"><BellIcon  size={14} /></span>
+                <span className="text-sm"><BellIcon size={14} /></span>
               </div>
               <p className="text-sm font-bold text-gray-900">Notification Preview</p>
             </div>
