@@ -15,7 +15,7 @@ import {
   attendanceStatistics,
 } from '../../Api/AttendanceApi';
 
-import { getListOfValues } from '../../Api/ListOfValues';
+import { getRolesSummary } from '../../Api/userManagementAPI';
 // ─────────────────────────────────────────────────────────────────────────────
 
 const TODAY = new Date().toISOString().split('T')[0];
@@ -128,19 +128,28 @@ const Attendance = () => {
     return timeString || '—';
   };
 
-  // ── Fetch USER_TYPE LOV for "All Roles" dropdown ─────────────────────────
   useEffect(() => {
-    const fetchUserTypes = async () => {
+    const fetchRoles = async () => {
       try {
-        // Returns array of { id, lovType, label, value, ... }
-        const data = await getListOfValues('USER_TYPE');
-        setRoles(data);
+        const response = await getRolesSummary();
+
+        const formattedRoles =
+          response?.data
+            ?.filter((role) => role.name !== "GLOBAL_ADMIN")
+            ?.map((role) => ({
+              id: role.id,
+              value: role.name,
+              label: role.displayName,
+            })) || [];
+
+        setRoles(formattedRoles);
       } catch (err) {
-        console.error('Failed to fetch USER_TYPE LOV:', err);
+        console.error("Failed to fetch roles:", err);
         setRoles([]);
       }
     };
-    fetchUserTypes();
+
+    fetchRoles();
   }, []);
 
   // ── Fetch stats on date change ────────────────────────────────────────────
