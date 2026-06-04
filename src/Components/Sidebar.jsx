@@ -56,21 +56,21 @@ const menuItems = [
         // icon: ScrollText,
         label: 'Circulars',
         route: '/communication/circulars',
-        roles: ['ADMIN', 'PRINCIPAL', 'TEACHER', 'GLOBAL_ADMIN'],
+        roles: ['ADMIN', 'PRINCIPAL', 'TEACHER', 'GLOBAL_ADMIN','SUPER_ADMIN'],
       },
       {
         // id: 'events',
         // icon: CalendarDays,     // or CalendarDays
         label: 'School Events',
         route: '/communication/events',
-        roles: ['ADMIN', 'PRINCIPAL', 'TEACHER', 'GLOBAL_ADMIN'],
+        roles: ['ADMIN', 'PRINCIPAL', 'TEACHER', 'GLOBAL_ADMIN','SUPER_ADMIN'],
       },
       {
         // id: 'approvalQueue',
         // icon: ClipboardCheck,
         label: 'Approval Queue',
         route: '/communication/approval',
-        roles: ['ADMIN', 'PRINCIPAL', 'GLOBAL_ADMIN'],  // teachers don't see this
+        roles: ['ADMIN', 'PRINCIPAL', 'GLOBAL_ADMIN','SUPER_ADMIN'],  // teachers don't see this
         badge: 3,               // optional — you can make this dynamic
       },
       {
@@ -78,7 +78,7 @@ const menuItems = [
         // icon: Bell,
         label: 'Notifications',
         route: '/communication/notifications',
-        roles: ['ADMIN', 'PRINCIPAL', 'TEACHER', 'GLOBAL_ADMIN'],
+        roles: ['ADMIN', 'PRINCIPAL', 'TEACHER', 'GLOBAL_ADMIN','SUPER_ADMIN'],
         badge: 7,
       },
       {
@@ -86,7 +86,7 @@ const menuItems = [
         // icon: Smartphone,
         label: 'Device Tokens',
         route: '/communication/device-token',
-        roles: ['ADMIN', 'PRINCIPAL', 'GLOBAL_ADMIN'],
+        roles: ['ADMIN', 'PRINCIPAL', 'GLOBAL_ADMIN','SUPER_ADMIN'],
       },
     ],
   },
