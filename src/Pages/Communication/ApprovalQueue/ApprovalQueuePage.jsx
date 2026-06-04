@@ -1,180 +1,295 @@
-import { useState } from "react";
-import { CircularsAPI, SchoolEventsAPI } from "../../../Api/api";
+import React, { useState, useEffect, useCallback } from 'react';
+import { CheckCircle, X, AlertCircle, Inbox } from 'lucide-react';
+import CircularCard from '../../../Components/ApprovalQueue/CircularCard';
+import EventCard from '../../../Components/ApprovalQueue/EventCard';
+import RejectModal from '../../../Components/ApprovalQueue/RejectModal';
+import {
+  fetchPendingCirculars,
+  approveCircular,
+  rejectCircular,
+  fetchPendingEvents,
+  approveEvent,
+  rejectEvent,
+} from '../../../Api/CircularApi';
 
-const T = {
-  bg: "#f5f7fa", white: "#ffffff", border: "#e8ecf0", borderLight: "#f0f2f5",
-  blue: "#2563eb", blueLight: "#eff6ff", blueMid: "#dbeafe",
-  text: "#111827", textSub: "#6b7280", textMuted: "#9ca3af",
-  green: "#16a34a", greenBg: "#f0fdf4", greenBorder: "#bbf7d0",
-  amber: "#d97706", amberBg: "#fffbeb", amberBorder: "#fde68a",
-  red: "#dc2626", redBg: "#fef2f2", redBorder: "#fecaca",
-  shadow: "0 1px 3px rgba(0,0,0,0.06)",
+// ─── Toast ────────────────────────────────────────────────────────────────────
+const useToast = () => {
+  const [toasts, setToasts] = useState([]);
+
+  const show = useCallback((type, title, message) => {
+    const id = Date.now();
+    setToasts((p) => [...p, { id, type, title, message }]);
+    setTimeout(() => setToasts((p) => p.filter((t) => t.id !== id)), 4000);
+  }, []);
+
+  const dismiss = useCallback((id) => {
+    setToasts((p) => p.filter((t) => t.id !== id));
+  }, []);
+
+  return { toasts, show, dismiss };
 };
 
-const QUEUE = [
-  {
-    id: 1, kind: "circular",
-    title: "Revised Exam Schedule — Term 2",
-    type: "School-Wide", date: "23 May 2025", author: "Ravi Kumar",
-    authorRole: "Teacher",
-    preview: "Due to unavoidable circumstances, the Term 2 examination schedule has been revised. Parents are requested to ensure students prepare accordingly.",
-    targets: [{ label: "All Parents", kind: "all" }, { label: "All Teachers", kind: "staff" }],
-    warn: "Approving will instantly send push notifications to all parents and teachers.",
-  },
-  {
-    id: 2, kind: "event",
-    title: "Science Exhibition — Class 9 & 10",
-    date: "19 Dec 2025 · 10:00 AM", author: "Meena Patel",
-    authorRole: "Teacher",
-    preview: "Annual Science Exhibition for Class 9 and 10 students at the School Auditorium.",
-    targets: [{ label: "Parents of Class 9", kind: "parent" }, { label: "Parents of Class 10", kind: "parent" }],
-    warn: "Approving will send push notification to parents of Class 9 & Class 10.",
-  },
-  {
-    id: 3, kind: "circular",
-    title: "Fee Payment Reminder — Q3",
-    type: "School-Wide", date: "22 May 2025", author: "Anita Sharma",
-    authorRole: "Teacher",
-    preview: "Reminder to all parents regarding the Q3 fee payment due by 30th May 2025. Late fee will apply after the due date.",
-    targets: [{ label: "All Parents", kind: "all" }],
-    warn: "Approving will send push notification to all parent devices.",
-  },
-];
-
-const TARGET_COLORS = {
-  all:    { bg: T.blueLight, color: T.blue,    border: T.blueMid },
-  staff:  { bg: "#f5f3ff",   color: "#7c3aed", border: "#ddd6fe" },
-  parent: { bg: "#fff7ed",   color: "#c2410c", border: "#fed7aa" },
-};
-
-export default function ApprovalQueuePage() {
-  const [tab, setTab]   = useState("All");
-  const [items, setItems] = useState(QUEUE);
-  const [actioned, setActioned] = useState(null);
-
-  const tabs = [
-    { label: "All",       count: items.length },
-    { label: "Circulars", count: items.filter((i) => i.kind === "circular").length },
-    { label: "Events",    count: items.filter((i) => i.kind === "event").length },
-  ];
-
-  const visible = items.filter((i) => tab === "Circulars" ? i.kind === "circular" : tab === "Events" ? i.kind === "event" : true);
-
-  const handleAction = (id) => {
-    setActioned(id);
-    setTimeout(() => { setItems((p) => p.filter((i) => i.id !== id)); setActioned(null); }, 500);
+const ToastList = ({ toasts, dismiss }) => {
+  const icons = {
+    success: <CheckCircle size={15} className="text-emerald-500 flex-shrink-0" />,
+    error: <AlertCircle size={15} className="text-red-500 flex-shrink-0" />,
   };
 
   return (
-    <div style={{ background: T.bg, minHeight: "100vh", padding: 24, fontFamily: "'Plus Jakarta Sans','Segoe UI',sans-serif", color: T.text }}>
+    <div className="fixed top-5 right-5 z-50 flex flex-col gap-2 pointer-events-none">
+      {toasts.map((t) => (
+        <div
+          key={t.id}
+          className="bg-white border border-gray-200 rounded-xl shadow-lg px-4 py-3 flex items-start gap-3 min-w-[280px] max-w-sm pointer-events-auto"
+        >
+          {icons[t.type]}
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-gray-900">{t.title}</p>
+            {t.message && <p className="text-xs text-gray-500 mt-0.5">{t.message}</p>}
+          </div>
+          <button onClick={() => dismiss(t.id)} className="text-gray-400 hover:text-gray-600">
+            <X size={13} />
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+// ─── Skeleton ─────────────────────────────────────────────────────────────────
+const Skeleton = () => (
+  <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4 animate-pulse">
+    <div className="flex justify-between">
+      <div className="space-y-2 flex-1">
+        <div className="h-5 bg-gray-200 rounded w-1/2" />
+        <div className="h-3 bg-gray-100 rounded w-1/3" />
+      </div>
+      <div className="h-6 w-28 bg-gray-100 rounded-full" />
+    </div>
+    <div className="space-y-2">
+      <div className="h-3 bg-gray-100 rounded w-full" />
+      <div className="h-3 bg-gray-100 rounded w-3/4" />
+    </div>
+    <div className="h-16 bg-amber-50 rounded-lg" />
+  </div>
+);
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/**
+ * Safely extract an array from any API response shape:
+ *   { success, data: [...], pagination }   ← actual shape from this API
+ *   { content: [...] }                     ← Spring Page
+ *   { data: { content: [...] } }           ← nested Spring Page
+ *   [...]                                  ← bare array
+ */
+const extractArray = (json) => {
+  if (!json) return [];
+  // { data: [...] }  — the actual shape returned by this backend
+  if (Array.isArray(json.data)) return json.data;
+  // { content: [...] }  — Spring Page at root
+  if (Array.isArray(json.content)) return json.content;
+  // { data: { content: [...] } }  — nested Spring Page
+  if (Array.isArray(json.data?.content)) return json.data.content;
+  // bare array
+  if (Array.isArray(json)) return json;
+  return [];
+};
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
+const ApprovalQueue = () => {
+  const [activeTab, setActiveTab] = useState('all');
+  const [circulars, setCirculars] = useState([]);
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [actingId, setActingId] = useState(null); // { id, action: 'approve'|'reject' }
+  const [rejectTarget, setRejectTarget] = useState(null); // { id, type } | null
+  const { toasts, show: showToast, dismiss } = useToast();
+
+  // ── Fetch ──────────────────────────────────────────────────────────────────
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      // Both functions now consistently return { data, error }
+      const [cirRes, evtRes] = await Promise.all([
+        fetchPendingCirculars(),
+        fetchPendingEvents(),
+      ]);
+
+      if (cirRes.error) throw new Error(cirRes.error);
+      if (evtRes.error) throw new Error(evtRes.error);
+
+      setCirculars(extractArray(cirRes.data));
+      setEvents(extractArray(evtRes.data));
+    } catch (err) {
+      setError('Could not load pending items. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  // ── Approve ────────────────────────────────────────────────────────────────
+  const handleApprove = async (id, type) => {
+    setActingId({ id, action: 'approve' });
+    try {
+      const res = type === 'circular'
+        ? await approveCircular(id)
+        : await approveEvent(id);
+
+      if (res.error) throw new Error(res.error);
+
+      showToast('success', 'Approved', 'Item approved and notifications sent.');
+      load();
+    } catch {
+      showToast('error', 'Approval Failed', 'Something went wrong. Please try again.');
+    } finally {
+      setActingId(null);
+    }
+  };
+
+  // ── Reject ─────────────────────────────────────────────────────────────────
+  const handleRejectSubmit = async (reason) => {
+    if (!rejectTarget) return;
+    const { id, type } = rejectTarget;
+    setActingId({ id, action: 'reject' });
+    try {
+      const res = type === 'circular'
+        ? await rejectCircular(id, reason)
+        : await rejectEvent(id, reason);
+
+      if (res.error) throw new Error(res.error);
+
+      showToast('success', 'Rejected', 'Item has been rejected.');
+      setRejectTarget(null);
+      load();
+    } catch {
+      showToast('error', 'Rejection Failed', 'Something went wrong. Please try again.');
+    } finally {
+      setActingId(null);
+    }
+  };
+
+  // ── Tab config ─────────────────────────────────────────────────────────────
+  const all = [
+    ...circulars.map((c) => ({ ...c, _type: 'circular' })),
+    ...events.map((e) => ({ ...e, _type: 'event' })),
+  ];
+
+  const tabs = [
+    { key: 'all',       label: 'All Pending', items: all },
+    { key: 'circulars', label: 'Circulars',   items: circulars.map((c) => ({ ...c, _type: 'circular' })) },
+    { key: 'events',    label: 'Events',      items: events.map((e) => ({ ...e, _type: 'event' })) },
+  ];
+
+  const activeItems = tabs.find((t) => t.key === activeTab)?.items ?? [];
+
+  // ── Render ─────────────────────────────────────────────────────────────────
+  return (
+    <div className="space-y-5">
+      <ToastList toasts={toasts} dismiss={dismiss} />
 
       {/* Header */}
-      <div style={{ marginBottom: 20 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 800, color: T.text, margin: 0 }}>Approval Queue</h1>
-        <p style={{ fontSize: 13, color: T.textSub, margin: "4px 0 0" }}>Review and approve pending circulars and events submitted by teachers.</p>
+      <div>
+        <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">Approval Queue</h1>
+        <p className="text-sm text-gray-400 mt-0.5">Review and approve pending circulars and events</p>
       </div>
 
-      {/* Summary alert */}
-      {items.length > 0 && (
-        <div style={{ background: T.amberBg, border: `1px solid ${T.amberBorder}`, borderRadius: 10, padding: "12px 16px", marginBottom: 20, display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ fontSize: 18, flexShrink: 0 }}>⚠️</span>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: T.amber }}>{items.length} item{items.length !== 1 ? "s" : ""} awaiting your approval</div>
-            <div style={{ fontSize: 12, color: "#92400e", marginTop: 1 }}>Approvals will immediately trigger push notifications to recipients.</div>
-          </div>
+      {/* Error banner */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 flex items-center gap-3">
+          <AlertCircle size={15} className="text-red-500 flex-shrink-0" />
+          <span className="text-sm text-red-700 flex-1">{error}</span>
+          <button
+            onClick={load}
+            className="text-red-600 hover:text-red-800 font-semibold text-sm"
+          >
+            Retry
+          </button>
         </div>
       )}
 
       {/* Tabs */}
-      <div style={{ display: "inline-flex", gap: 4, background: T.white, border: `1px solid ${T.border}`, borderRadius: 10, padding: 3, marginBottom: 16, boxShadow: T.shadow }}>
+      <div className="flex border-b border-gray-200">
         {tabs.map((t) => (
-          <button key={t.label} onClick={() => setTab(t.label)}
-            style={{ padding: "7px 16px", borderRadius: 8, fontSize: 13, fontWeight: 600, border: "none", cursor: "pointer", background: tab === t.label ? T.blue : "transparent", color: tab === t.label ? "#fff" : T.textSub, transition: "all .15s", display: "flex", alignItems: "center", gap: 6 }}>
+          <button
+            key={t.key}
+            onClick={() => setActiveTab(t.key)}
+            className={`inline-flex items-center gap-2 px-4 py-3 text-[12.5px] font-semibold border-b-2 -mb-px transition-colors ${
+              activeTab === t.key
+                ? 'border-[#2563EB] text-[#2563EB]'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
             {t.label}
-            <span style={{ padding: "1px 6px", borderRadius: 9, fontSize: 10, fontWeight: 700, background: tab === t.label ? "rgba(255,255,255,.25)" : T.blueLight, color: tab === t.label ? "#fff" : T.blue }}>
-              {t.count}
+            <span
+              className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                activeTab === t.key ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'
+              }`}
+            >
+              {loading ? '—' : t.items.length}
             </span>
           </button>
         ))}
       </div>
 
-      {/* Items */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        {visible.length === 0 && (
-          <div style={{ background: T.white, border: `1px solid ${T.border}`, borderRadius: 12, padding: "48px 20px", textAlign: "center", boxShadow: T.shadow }}>
-            <div style={{ fontSize: 36, marginBottom: 8 }}>🎉</div>
-            <div style={{ fontSize: 15, fontWeight: 700, color: T.text }}>All clear!</div>
-            <div style={{ fontSize: 12.5, color: T.textSub, marginTop: 4 }}>No pending items in this category.</div>
-          </div>
-        )}
+      {/* Content */}
+      {loading ? (
+        <div className="space-y-4">
+          <Skeleton /><Skeleton /><Skeleton />
+        </div>
+      ) : activeItems.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <Inbox size={40} className="text-gray-300 mb-3" />
+          <p className="text-gray-500 font-semibold">All caught up</p>
+          <p className="text-gray-400 text-sm mt-1">No pending items to review</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {activeItems.map((item) =>
+            item._type === 'circular' ? (
+              <CircularCard
+                key={`c-${item.id}`}
+                item={item}
+                isApproving={actingId?.id === item.id && actingId?.action === 'approve'}
+                isRejecting={actingId?.id === item.id && actingId?.action === 'reject'}
+                onApprove={() => handleApprove(item.id, 'circular')}
+                onReject={() => setRejectTarget({ id: item.id, type: 'circular' })}
+              />
+            ) : (
+              <EventCard
+                key={`e-${item.id}`}
+                item={item}
+                isApproving={actingId?.id === item.id && actingId?.action === 'approve'}
+                isRejecting={actingId?.id === item.id && actingId?.action === 'reject'}
+                onApprove={() => handleApprove(item.id, 'event')}
+                onReject={() => setRejectTarget({ id: item.id, type: 'event' })}
+              />
+            )
+          )}
+        </div>
+      )}
 
-        {visible.map((item) => (
-          <div key={item.id} style={{ background: T.white, border: `1px solid ${T.border}`, borderLeft: `4px solid ${T.amber}`, borderRadius: 12, padding: 20, boxShadow: T.shadow, transition: "opacity .4s", opacity: actioned === item.id ? 0.3 : 1 }}>
-            {/* Row 1: title + kind badge */}
-            <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 10 }}>
-              <div style={{ width: 40, height: 40, borderRadius: 10, background: item.kind === "circular" ? T.blueLight : "#f5f3ff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0, border: `1px solid ${T.border}` }}>
-                {item.kind === "circular" ? "📜" : "📅"}
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-                  <div style={{ fontSize: 14.5, fontWeight: 700, color: T.text }}>{item.title}</div>
-                  <span style={{ padding: "2px 9px", borderRadius: 9, fontSize: 11, fontWeight: 700, background: item.kind === "circular" ? T.blueLight : "#f5f3ff", color: item.kind === "circular" ? T.blue : "#7c3aed", border: `1px solid ${item.kind === "circular" ? T.blueMid : "#ddd6fe"}` }}>
-                    {item.kind === "circular" ? "Circular" : "Event"}
-                  </span>
-                  <span style={{ padding: "2px 9px", borderRadius: 9, fontSize: 11, fontWeight: 700, background: T.amberBg, color: T.amber, border: `1px solid ${T.amberBorder}` }}>
-                    ⏳ Awaiting Approval
-                  </span>
-                </div>
-                <div style={{ display: "flex", gap: 14, fontSize: 12.5, color: T.textSub, flexWrap: "wrap" }}>
-                  {item.type && <span>🌐 {item.type}</span>}
-                  <span>📅 {item.date}</span>
-                  <span>👤 {item.author} <span style={{ color: T.textMuted }}>({item.authorRole})</span></span>
-                </div>
-              </div>
-            </div>
-
-            {/* Preview */}
-            <div style={{ fontSize: 12.5, color: T.textSub, lineHeight: 1.55, marginBottom: 10, paddingLeft: 52 }}>{item.preview}</div>
-
-            {/* Targets */}
-            {item.targets.length > 0 && (
-              <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 12, paddingLeft: 52 }}>
-                {item.targets.map((tg) => {
-                  const cc = TARGET_COLORS[tg.kind];
-                  return <span key={tg.label} style={{ padding: "2px 9px", borderRadius: 9, fontSize: 11, fontWeight: 600, background: cc.bg, color: cc.color, border: `1px solid ${cc.border}` }}>{tg.label}</span>;
-                })}
-              </div>
-            )}
-
-            {/* Divider */}
-            <div style={{ height: 1, background: T.borderLight, marginBottom: 12 }} />
-
-            {/* Warning + actions */}
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <div style={{ flex: 1, display: "flex", alignItems: "flex-start", gap: 8, padding: "10px 12px", background: T.amberBg, borderRadius: 8, border: `1px solid ${T.amberBorder}` }}>
-                <span style={{ fontSize: 14, flexShrink: 0 }}>ℹ️</span>
-                <div>
-                  <div style={{ fontSize: 12.5, fontWeight: 600, color: T.amber }}>
-                    {item.kind === "circular" ? "School-Wide Circular" : "School Event"} — Admin Approval Required
-                  </div>
-                  <div style={{ fontSize: 12, color: "#92400e", marginTop: 1 }}>{item.warn}</div>
-                </div>
-              </div>
-              <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-                <button onClick={() => handleAction(item.id)}
-                  style={{ padding: "8px 20px", borderRadius: 8, background: T.green, color: "#fff", border: "none", fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
-                  ✓ Approve & Notify
-                </button>
-                <button onClick={() => handleAction(item.id)}
-                  style={{ padding: "8px 16px", borderRadius: 8, background: T.white, color: T.red, border: `1px solid ${T.redBorder}`, fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
-                  ✕ Reject
-                </button>
-                <button style={{ padding: "8px 12px", borderRadius: 8, background: "#f9fafb", color: T.textSub, border: `1px solid ${T.border}`, fontSize: 13, cursor: "pointer" }}>View</button>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
+      {/*
+        RejectModal — rendered conditionally.
+        isOpen is derived from rejectTarget being non-null so the modal
+        itself no longer needs to guard with if (!isOpen) return null,
+        but we still pass it for completeness / animation hooks.
+      */}
+      {rejectTarget && (
+        <RejectModal
+          isOpen={!!rejectTarget}
+          type={rejectTarget.type}
+          isLoading={actingId?.id === rejectTarget.id && actingId?.action === 'reject'}
+          onSubmit={handleRejectSubmit}
+          onClose={() => setRejectTarget(null)}
+        />
+      )}
     </div>
   );
-}
+};
+
+export default ApprovalQueue;

@@ -1,4 +1,7 @@
 import { CircularsAPI, SchoolEventsAPI, NotificationsAPI } from './api';
+import { authFetch } from '../Authfetch/Authfetch';
+
+const BASE_URL = import.meta.env.VITE_API_BASE_V1;
 
 // ─── Circulars ────────────────────────────────────────────────────────────────
 
@@ -46,9 +49,13 @@ export const uploadCircularAttachment = async (id, formData) => {
 
 export const approveCircular = async (id) => {
   try {
-    const res = await CircularsAPI.approve(id);
+    const res = await authFetch(`${BASE_URL}/circulars/${id}/approve`, {
+      method: 'PATCH',
+    });
     const data = await res.json();
-    if (!res.ok) return { data: null, error: data.message || 'Approval failed' };
+    if (!res.ok || data.success === false) {
+      return { data: null, error: data.message || 'Approval failed' };
+    }
     return { data, error: null };
   } catch (err) {
     return { data: null, error: err.message || 'Approval failed' };
@@ -57,9 +64,15 @@ export const approveCircular = async (id) => {
 
 export const rejectCircular = async (id, reason = '') => {
   try {
-    const res = await CircularsAPI.reject(id, reason);
+    const res = await authFetch(`${BASE_URL}/circulars/${id}/reject`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason }),
+    });
     const data = await res.json();
-    if (!res.ok) return { data: null, error: data.message || 'Rejection failed' };
+    if (!res.ok || data.success === false) {
+      return { data: null, error: data.message || 'Rejection failed' };
+    }
     return { data, error: null };
   } catch (err) {
     return { data: null, error: err.message || 'Rejection failed' };
@@ -79,11 +92,21 @@ export const deleteCircular = async (id) => {
   }
 };
 
+/**
+ * Fetches pending circulars.
+ * Always returns { data, error } — never a raw Response.
+ * Backend shape: { success, message, data: [...], pagination, timestamp }
+ */
 export const fetchPendingCirculars = async () => {
   try {
-    const res = await CircularsAPI.getPendingApproval();
-    const data = await res.json();
-    return { data, error: null };
+    const res = await authFetch(
+      `${BASE_URL}/circulars/pending-approval?page=0&size=50&sort=id`
+    );
+    const json = await res.json();
+    if (!res.ok || json.success === false) {
+      return { data: null, error: json.message || 'Failed to load pending circulars' };
+    }
+    return { data: json, error: null };
   } catch (err) {
     return { data: null, error: err.message || 'Failed to load pending circulars' };
   }
@@ -135,9 +158,13 @@ export const uploadEventAttachment = async (id, formData) => {
 
 export const approveEvent = async (id) => {
   try {
-    const res = await SchoolEventsAPI.approve(id);
+    const res = await authFetch(`${BASE_URL}/school-events/${id}/approve`, {
+      method: 'PATCH',
+    });
     const data = await res.json();
-    if (!res.ok) return { data: null, error: data.message || 'Approval failed' };
+    if (!res.ok || data.success === false) {
+      return { data: null, error: data.message || 'Approval failed' };
+    }
     return { data, error: null };
   } catch (err) {
     return { data: null, error: err.message || 'Approval failed' };
@@ -157,11 +184,42 @@ export const cancelEvent = async (id) => {
   }
 };
 
+/**
+ * Rejects an event with an optional reason.
+ * Always returns { data, error } — never a raw Response.
+ */
+export const rejectEvent = async (id, reason = '') => {
+  try {
+    const res = await authFetch(`${BASE_URL}/school-events/${id}/reject`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason }),
+    });
+    const data = await res.json();
+    if (!res.ok || data.success === false) {
+      return { data: null, error: data.message || 'Rejection failed' };
+    }
+    return { data, error: null };
+  } catch (err) {
+    return { data: null, error: err.message || 'Rejection failed' };
+  }
+};
+
+/**
+ * Fetches pending events.
+ * Always returns { data, error } — never a raw Response.
+ * Backend shape: { success, message, data: [...], pagination, timestamp }
+ */
 export const fetchPendingEvents = async () => {
   try {
-    const res = await SchoolEventsAPI.getPendingApproval();
-    const data = await res.json();
-    return { data, error: null };
+    const res = await authFetch(
+      `${BASE_URL}/school-events/pending-approval?page=0&size=50&sort=id`
+    );
+    const json = await res.json();
+    if (!res.ok || json.success === false) {
+      return { data: null, error: json.message || 'Failed to load pending events' };
+    }
+    return { data: json, error: null };
   } catch (err) {
     return { data: null, error: err.message || 'Failed to load pending events' };
   }

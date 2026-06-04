@@ -10,8 +10,8 @@ export const registerUserDeviceToken = async (deviceToken) => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         fcmToken: deviceToken,
-        // deviceType: "WEB",  
-        deviceType:"ANDROID"      // staff/teacher are always WEB
+        deviceType: "WEB",  
+        // deviceType:"ANDROID"      // staff/teacher are always WEB
       }),
     }
   );
