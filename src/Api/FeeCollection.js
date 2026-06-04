@@ -8,14 +8,13 @@ const BASE_URL = import.meta.env.VITE_API_BASE_V1;
  */
 const buildQueryParams = (params) => {
   const searchParams = new URLSearchParams();
-  
+
   Object.entries(params).forEach(([key, value]) => {
-    // Only add parameter if it has a real value
     if (value !== undefined && value !== null && value !== '') {
       searchParams.append(key, value);
     }
   });
-  
+
   return searchParams.toString();
 };
 
@@ -29,9 +28,7 @@ export const createFeeCollection = async (payload) => {
 
     const res = await authFetch(`${BASE_URL}/fee/collections`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
 
@@ -60,9 +57,7 @@ export const createBulkFeeCollection = async (payload) => {
 
     const res = await authFetch(`${BASE_URL}/fee/collections/bulk`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
 
@@ -84,6 +79,8 @@ export const createBulkFeeCollection = async (payload) => {
 /**
  * Get fee collection history with filters
  * GET /v1/fee/collections/history
+ *
+ * Returns: { records: [...], pagination: { totalPages, totalElements, size, number } }
  */
 export const getFeeCollectionHistory = async ({
   fromDate,
@@ -95,25 +92,11 @@ export const getFeeCollectionHistory = async ({
   size = 10,
 } = {}) => {
   try {
-    const queryString = buildQueryParams({
-      fromDate,
-      toDate,
-      classId,
-      periodId,
-      mode,
-      page,
-      size,
-    });
-
-    const url = `${BASE_URL}/fee/collections/history${
-      queryString ? "?" + queryString : ""
-    }`;
-
+    const queryString = buildQueryParams({ fromDate, toDate, classId, periodId, mode, page, size });
+    const url = `${BASE_URL}/fee/collections/history${queryString ? "?" + queryString : ""}`;
     console.log("🌐 Fetching history:", url);
 
-    const res = await authFetch(url, {
-      method: "GET",
-    });
+    const res = await authFetch(url, { method: "GET" });
 
     if (!res.ok) {
       const errorText = await res.text();
@@ -124,16 +107,16 @@ export const getFeeCollectionHistory = async ({
     const data = await res.json();
     console.log('✅ History response:', data);
 
+    // API returns { success, data: { content: [...], totalPages, ... } }
     return {
       records: data?.data?.content || [],
       pagination: {
-        totalPages: data?.data?.totalPages || 0,
+        totalPages:    data?.data?.totalPages    || 0,
         totalElements: data?.data?.totalElements || 0,
-        size: data?.data?.size || size,
-        number: data?.data?.number || page,
-      }
+        size:          data?.data?.size          || size,
+        number:        data?.data?.number        || page,
+      },
     };
-
   } catch (error) {
     console.error("❌ getFeeCollectionHistory error:", error.message);
     throw error;
@@ -143,21 +126,19 @@ export const getFeeCollectionHistory = async ({
 /**
  * Get outstanding fees with optional filters
  * GET /v1/fee/collections/outstanding
+ *
+ * Returns: { records: [...], pagination: { totalPages, totalElements } }
+ *
+ * FIX: data.data is the Spring Page object { content: [...], totalPages, ... }
+ *      We must return data.data.content as the records array, NOT data.data itself.
  */
 export const getOutstandingFees = async ({ classId, periodId } = {}) => {
   try {
-    // Build query string with only defined values
-    const queryString = buildQueryParams({
-      classId,
-      periodId
-    });
-
+    const queryString = buildQueryParams({ classId, periodId });
     const url = `${BASE_URL}/fee/collections/outstanding${queryString ? '?' + queryString : ''}`;
     console.log('🌐 Fetching outstanding:', url);
 
-    const res = await authFetch(url, {
-      method: "GET",
-    });
+    const res = await authFetch(url, { method: "GET" });
 
     if (!res.ok) {
       const errorText = await res.text();
@@ -168,11 +149,19 @@ export const getOutstandingFees = async ({ classId, periodId } = {}) => {
     const data = await res.json();
     console.log('✅ Outstanding response:', data);
 
-    return {
-      records: data.data || [],
-      pagination: data.pagination || {}
-    };
+    // API returns { success: true, data: { content: [...], totalPages: 2, ... } }
+    // data.data is the Page object — extract .content for the records array
+    const pageObj = data?.data || {};
 
+    return {
+      records: Array.isArray(pageObj.content) ? pageObj.content : [],
+      pagination: {
+        totalPages:    pageObj.totalPages    || 0,
+        totalElements: pageObj.totalElements || 0,
+        size:          pageObj.size          || 20,
+        number:        pageObj.number        || 0,
+      },
+    };
   } catch (error) {
     console.error("❌ getOutstandingFees error:", error.message);
     throw error;
@@ -185,16 +174,12 @@ export const getOutstandingFees = async ({ classId, periodId } = {}) => {
  */
 export const getFeeReceiptById = async (id) => {
   try {
-    if (!id) {
-      throw new Error("Receipt ID is required");
-    }
+    if (!id) throw new Error("Receipt ID is required");
 
     const url = `${BASE_URL}/fee/collections/receipt/${id}`;
     console.log('🌐 Fetching receipt:', url);
 
-    const res = await authFetch(url, {
-      method: "GET",
-    });
+    const res = await authFetch(url, { method: "GET" });
 
     if (!res.ok) {
       const errorText = await res.text();
@@ -204,9 +189,8 @@ export const getFeeReceiptById = async (id) => {
 
     const data = await res.json();
     console.log('✅ Receipt response:', data);
-    
-    return data.data || {};
 
+    return data.data || {};
   } catch (error) {
     console.error("❌ getFeeReceiptById error:", error.message);
     throw error;
