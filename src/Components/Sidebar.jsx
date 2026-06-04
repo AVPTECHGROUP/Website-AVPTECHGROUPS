@@ -49,7 +49,7 @@ const menuItems = [
     icon: MessageSquare,       // from lucide-react
     label: 'Communication',
     route: '/communication/circulars',
-    roles: ['ADMIN', 'PRINCIPAL', 'TEACHER', 'GLOBAL_ADMIN'],
+    roles: ['ADMIN', 'PRINCIPAL', 'TEACHER', 'GLOBAL_ADMIN','SUPER_ADMIN'],
     subItems: [
       {
         // id: 'circulars',
