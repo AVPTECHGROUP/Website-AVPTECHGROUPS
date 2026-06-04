@@ -57,6 +57,18 @@ const Leaves = () => {
   const [statLoading, setStatLoading] = useState(true);
   const [refreshStat, setRefreshStat] = useState(0);
 
+  // Auto-fetch whenever dependencies change; also reset to page 1 when filters change
+  const isFirstRender = React.useRef(true);
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      fetchLeaveRequests();
+      return;
+    }
+    // Reset to page 1 when a filter changes (not pagination itself)
+    setPage(1);
+  }, [debouncedSearch, leaveStatusFilter, leaveType, fromDateFilter, toDateFilter]);
+
   // ── List of values ──────────────────────────────────────────────────────────
   useEffect(() => {
     const fetchListOfValues = async () => {
@@ -138,6 +150,7 @@ const Leaves = () => {
           status: employee.status,
           empCode: employee.employeeCode,
           avatar: (employee.userName || 'U')[0].toUpperCase(),
+          isHalfDay: employee.isHalfDay === true || employee.isHalfDay === 'true' || employee.isHalfDay === 'TRUE',
           image:
             employee.imageUrl ||
             employee.profileImage ||
@@ -158,17 +171,7 @@ const Leaves = () => {
     }
   }, [page, rowsPerPage, debouncedSearch, leaveStatusFilter, leaveType, fromDateFilter, toDateFilter]);
 
-  // Auto-fetch whenever dependencies change; also reset to page 1 when filters change
-  const isFirstRender = React.useRef(true);
-  useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      fetchLeaveRequests();
-      return;
-    }
-    // Reset to page 1 when a filter changes (not pagination itself)
-    setPage(1);
-  }, [debouncedSearch, leaveStatusFilter, leaveType, fromDateFilter, toDateFilter]);
+
 
   useEffect(() => {
     fetchLeaveRequests();
@@ -197,10 +200,10 @@ const Leaves = () => {
 
   // ── Cards config ────────────────────────────────────────────────────────────
   const cardsArray = [
-    { IconName: ClockIcon, keyName: 'Pending', val: statistics.pendingRequests, iconTxColor: 'text-orange-600', iconBgColor: 'bg-orange-50' },
-    { IconName: ThumbsUpIcon, keyName: 'Approved / Month', val: statistics.approvedThisMonth, iconTxColor: 'text-green-600', iconBgColor: 'bg-green-50' },
-    { IconName: CalendarX2, keyName: 'Rejected / Month', val: statistics.rejectedThisMonth, iconTxColor: 'text-red-600', iconBgColor: 'bg-red-50' },
-    { IconName: CalendarRange, keyName: 'Total / Month', val: statistics.totalThisMonth, iconTxColor: 'text-blue-600', iconBgColor: 'bg-blue-50' },
+    { IconName: ClockIcon, keyName: 'Pending Requests', val: statistics.pendingRequests, iconTxColor: 'text-orange-600', iconBgColor: 'bg-orange-50' },
+    { IconName: ThumbsUpIcon, keyName: 'Approved This Month', val: statistics.approvedThisMonth, iconTxColor: 'text-green-600', iconBgColor: 'bg-green-50' },
+    { IconName: CalendarX2, keyName: 'Rejected This Month', val: statistics.rejectedThisMonth, iconTxColor: 'text-red-600', iconBgColor: 'bg-red-50' },
+    { IconName: CalendarRange, keyName: 'Leaves This Month', val: statistics.totalThisMonth, iconTxColor: 'text-blue-600', iconBgColor: 'bg-blue-50' },
   ];
 
   const statusStyles = {
@@ -252,6 +255,32 @@ const Leaves = () => {
     }
   };
 
+  const getLeaveDurationText = (emp) => {
+    // console.log('Calculating leave duration for emp:', emp);
+    // console.log('totalDays:', emp.totalDays, 'isHalfDay:', emp.isHalfDay);
+
+    const days = Number(emp.totalDays || 0);
+    console.log('Parsed isHalfday emp:', emp.isHalfDay, 'Parsed days:', days);
+
+    const isHalfDay = emp.isHalfDay === true || emp.isHalfDay === 'true' || emp.isHalfDay === 'TRUE';
+    console.log('Parsed isHalfDay:', isHalfDay);
+
+    if (days === 0 && isHalfDay === true) {
+      return 'Half Day';
+      console.log('Half day detected for emp:', emp);
+    }
+
+    if (days === 0 && isHalfDay !== true) {
+      return 'Weekend /Holiday';
+    }
+
+    const totalDuration = isHalfDay === true
+      ? days + 0.5
+      : days;
+
+    return `${totalDuration} ${totalDuration === 1 ? 'Day' : 'Days'}`;
+  };
+
   // ── Pagination helpers ──────────────────────────────────────────────────────
   const safeTotalElements = Number(totalElements) || 0;
   const safeRowsPerPage = Number(rowsPerPage) || 10;
@@ -260,9 +289,23 @@ const Leaves = () => {
   const showingTo = Math.min(safePage * safeRowsPerPage, safeTotalElements);
 
   const pageNumbers = () => {
-    if (totalPages <= 7) return [...Array(totalPages)].map((_, i) => i + 1);
-    const pages = new Set([1, totalPages, page, page - 1, page + 1].filter((p) => p >= 1 && p <= totalPages));
-    return [...pages].sort((a, b) => a - b);
+    const tp = Number(totalPages) || 0;
+    const cur = Math.min(Math.max(1, Number(page) || 1), tp);
+
+    // If small number of pages, show them all
+    if (tp <= 5) return [...Array(tp)].map((_, i) => i + 1);
+
+    // Build pagination: always show first and last, and a sliding window of 3 pages around current
+    let start = Math.max(2, cur - 1);
+    let end = Math.min(tp - 1, start + 2); // window size 3 (start..end)
+    if (end - start < 2) start = Math.max(2, end - 2);
+
+    const pages = [1];
+    for (let p = start; p <= end; p++) pages.push(p);
+    pages.push(tp);
+
+    // ensure unique and sorted
+    return [...new Set(pages)].sort((a, b) => a - b);
   };
 
   return (
@@ -490,8 +533,11 @@ const Leaves = () => {
                           <td className="px-3 py-2 text-xs text-gray-600 tabular-nums">{emp.fromDate}</td>
                           <td className="px-3 py-2 text-xs text-gray-600 tabular-nums">{emp.toDate}</td>
                           {/* Days */}
-                          <td className="px-3 py-2 text-xs font-semibold text-gray-800 tabular-nums">
-                            {emp.totalDays}d
+                          {/* <td className="px-3 py-2 text-xs font-semibold text-gray-800 tabular-nums">
+                            {emp.totalDays === 0 ? 'Weekend/Holiday'  :  emp.totalDays === 1 ? '1 day' : `${emp.totalDays} days`}
+                          </td> */}
+                          <td className="px-2 py-1 text-[11px] font-semibold text-gray-800 tabular-nums">
+                            {getLeaveDurationText(emp)}
                           </td>
                           {/* Status */}
                           <td className="px-3 py-2">
@@ -689,7 +735,6 @@ const Leaves = () => {
               </div>
             </div>
           </div>
-
         </div>
       </div>
 

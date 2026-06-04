@@ -328,9 +328,11 @@ export default function LeavesReqInfoComponent({
                                 </div>
 
                                 {/* Text */}
-                                <p className="text-sm text-slate-700 leading-relaxed break-words">
-                                    {userData.reason}
-                                </p>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm text-slate-700 leading-relaxed break-words whitespace-normal">
+                                        {userData.reason || 'No reason provided'}
+                                    </p>
+                                </div>
                             </div>
                         </div>
                     </div>

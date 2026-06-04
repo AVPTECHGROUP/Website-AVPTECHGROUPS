@@ -37,6 +37,8 @@ const EMPTY_ATTENDANCE = {
   faceConfidenceThreshold: "", schoolLatitude: null,
   schoolLongitude: null, allowedRadiusMeters: 0,
   gpsCheckEnabled: false,
+  saturdayWorking: false,
+  sundayWorking: false,
 };
 
 // ── Validation helpers ────────────────────────────────────────────────────────
@@ -347,6 +349,8 @@ export default function SchoolConfig() {
             schoolLongitude: ac.schoolLongitude ?? null,
             allowedRadiusMeters: ac.allowedRadiusMeters ?? 0,
             gpsCheckEnabled: ac.gpsCheckEnabled ?? false,
+            saturdayWorking: ac.saturdayWorking ?? false,
+            sundayWorking: ac.sundayWorking ?? false,
           });
           localStorage.setItem("attendanceConfig", JSON.stringify({
             schoolLatitude: ac.schoolLatitude,
@@ -410,6 +414,8 @@ export default function SchoolConfig() {
         pincode: schoolData.pincode?.trim() || "",
         affiliationNumber: schoolData.affiliationNumber?.trim() || "",
         logoUrl: schoolData.logoUrl || null,
+        saturdayWorking: attendanceData.saturdayWorking,
+        sundayWorking: attendanceData.sundayWorking,
       };
       await updateSchool(schoolId, payload);
       const fresh = await getSchoolById(schoolId);
@@ -466,6 +472,8 @@ export default function SchoolConfig() {
         schoolLatitude: attendanceData.gpsCheckEnabled ? attendanceData.schoolLatitude : null,
         schoolLongitude: attendanceData.gpsCheckEnabled ? attendanceData.schoolLongitude : null,
         allowedRadiusMeters: attendanceData.gpsCheckEnabled ? attendanceData.allowedRadiusMeters : 0,
+        saturdayWorking: attendanceData.saturdayWorking ?? false,
+        sundayWorking: attendanceData.sundayWorking ?? false,
       };
       await updateAttendanceConfig(schoolId, payload);
 
@@ -482,6 +490,8 @@ export default function SchoolConfig() {
             schoolLongitude: ac.schoolLongitude ?? null,
             allowedRadiusMeters: ac.allowedRadiusMeters ?? 0,
             gpsCheckEnabled: ac.gpsCheckEnabled ?? false,
+            saturdayWorking: ac.saturdayWorking ?? false,
+            sundayWorking: ac.sundayWorking ?? false,
           });
         }
       } catch (_) { /* silent — save already succeeded */ }
@@ -523,6 +533,8 @@ export default function SchoolConfig() {
             localStorage.setItem("school", JSON.stringify({
               ...currentSchool,
               logoUrl: newLogoUrl,
+              saturdayWorking: ac.saturdayWorking ?? false,
+              sundayWorking: ac.sundayWorking ?? false,
             }));
             window.dispatchEvent(new Event("storage"));
 
@@ -990,6 +1002,77 @@ export default function SchoolConfig() {
                       <FieldError error={attErrors.gracePeriodMinutes} />
                       {!attErrors.gracePeriodMinutes && <FieldHint hint="0–120 minutes" />}
                     </div>
+                  </div>
+                </div>
+
+                {/* Working Days */}
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                  <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-slate-100 bg-slate-50/60">
+                    <CalendarClock className="w-4 h-4 text-amber-500" />
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500">Working Days</h3>
+                  </div>
+                  <div className="p-5 space-y-3">
+
+                    {/* Saturday */}
+                    <div className="flex items-center gap-3 p-3 rounded-xl border border-slate-200 bg-slate-50">
+                      <div className={`shrink-0 w-9 h-9 rounded-xl flex items-center justify-center transition-colors ${attendanceData.saturdayWorking ? "bg-amber-100" : "bg-slate-200"}`}>
+                        <CalendarClock className={`w-4 h-4 ${attendanceData.saturdayWorking ? "text-amber-600" : "text-slate-400"}`} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-slate-800 text-sm">Saturday Working</p>
+                        <p className="text-xs text-slate-500 mt-0.5">Mark Saturday as a working day for attendance.</p>
+                      </div>
+                      <button
+                        onClick={() => handleAttendanceChange("saturdayWorking", !attendanceData.saturdayWorking)}
+                        role="switch"
+                        aria-checked={attendanceData.saturdayWorking}
+                        className="cursor-pointer shrink-0 relative rounded-full focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
+                        style={{
+                          width: 44, height: 24,
+                          backgroundColor: attendanceData.saturdayWorking ? "#d97706" : "#cbd5e1",
+                          transition: "background-color 200ms ease",
+                        }}
+                      >
+                        <span style={{
+                          position: "absolute", top: 2, left: 2, width: 20, height: 20,
+                          borderRadius: "50%", backgroundColor: "white",
+                          boxShadow: "0 1px 4px rgba(0,0,0,0.25)",
+                          transform: attendanceData.saturdayWorking ? "translateX(20px)" : "translateX(0px)",
+                          transition: "transform 200ms cubic-bezier(0.4,0,0.2,1)", display: "block",
+                        }} />
+                      </button>
+                    </div>
+
+                    {/* Sunday */}
+                    <div className="flex items-center gap-3 p-3 rounded-xl border border-slate-200 bg-slate-50">
+                      <div className={`shrink-0 w-9 h-9 rounded-xl flex items-center justify-center transition-colors ${attendanceData.sundayWorking ? "bg-rose-100" : "bg-slate-200"}`}>
+                        <CalendarClock className={`w-4 h-4 ${attendanceData.sundayWorking ? "text-rose-600" : "text-slate-400"}`} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-slate-800 text-sm">Sunday Working</p>
+                        <p className="text-xs text-slate-500 mt-0.5">Mark Sunday as a working day for attendance.</p>
+                      </div>
+                      <button
+                        onClick={() => handleAttendanceChange("sundayWorking", !attendanceData.sundayWorking)}
+                        role="switch"
+                        aria-checked={attendanceData.sundayWorking}
+                        className="cursor-pointer shrink-0 relative rounded-full focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2"
+                        style={{
+                          width: 44, height: 24,
+                          backgroundColor: attendanceData.sundayWorking ? "#e11d48" : "#cbd5e1",
+                          transition: "background-color 200ms ease",
+                        }}
+                      >
+                        <span style={{
+                          position: "absolute", top: 2, left: 2, width: 20, height: 20,
+                          borderRadius: "50%", backgroundColor: "white",
+                          boxShadow: "0 1px 4px rgba(0,0,0,0.25)",
+                          transform: attendanceData.sundayWorking ? "translateX(20px)" : "translateX(0px)",
+                          transition: "transform 200ms cubic-bezier(0.4,0,0.2,1)", display: "block",
+                        }} />
+                      </button>
+                    </div>
+
                   </div>
                 </div>
 
