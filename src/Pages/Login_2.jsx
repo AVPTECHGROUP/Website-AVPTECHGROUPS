@@ -7,7 +7,7 @@ import { UserContext } from '../ContextAPI/UserContext'
 import SS_logo from "../assets/Images/ss_logo.png"
 import cstech from "../assets/Images/cstech.png"
 import { motion } from 'framer-motion'
-
+import SS_logo_3 from "../assets/Images/SS_logo_3.png";
 // ─── School Floating SVGs (same as TransformSchool) ───────────────────────────
 const SchoolSVGs = {
   graduation: (
@@ -73,7 +73,7 @@ const SchoolSVGs = {
 }
 
 const floatingItems = [
-  { key: 'graduation', top: '5%', left: '2%', size: 64, delay: 0, duration: 7 },
+  // { key: 'graduation', top: '5%', left: '2%', size: 64, delay: 0, duration: 7 },
   { key: 'book', top: '10%', left: '87%', size: 54, delay: 1.2, duration: 8 },
   { key: 'pencil', top: '70%', left: '4%', size: 50, delay: 0.6, duration: 9 },
   { key: 'atom', top: '78%', left: '83%', size: 58, delay: 1.8, duration: 7.5 },
@@ -85,6 +85,30 @@ const floatingItems = [
 function FloatingSchoolBg() {
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      {/* Top Left Logo */}
+      <motion.div
+        className="
+    absolute
+    top-2 left-2
+    sm:top-4 sm:left-4
+    md:top-6 md:left-6
+    lg:top-8 lg:left-8
+    z-10
+  "
+      >
+        <img
+          src={SS_logo_3}
+          alt="School Logo"
+          className="
+    w-[48px] h-[48px]
+    sm:w-[64px] sm:h-[64px]
+    md:w-[80px] md:h-[80px]
+    lg:w-[96px] lg:h-[96px]
+    xl:w-[120px] xl:h-[120px]
+    object-contain
+  "
+        />
+      </motion.div>
       {floatingItems.map(({ key, top, left, size, delay, duration }) => (
         <motion.div
           key={key}
@@ -265,7 +289,7 @@ const Login_2 = ({ onLoginSuccess }) => {
       >
         <h1
           className="text-center font-bold text-gray-800 text-sm md:text-lg lg:text-3xl tracking-wide"
-          
+
         >
           SCHOOL MANAGEMENT PORTAL
         </h1>
@@ -276,7 +300,7 @@ const Login_2 = ({ onLoginSuccess }) => {
         initial={{ opacity: 0, y: 30, scale: 0.97 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.65, delay: 0.1 }}
-        className="relative z-10 flex flex-col sm:flex-row w-full max-w-3xl overflow-hidden rounded-2xl"
+        className="relative z-10 flex flex-col md:flex-row w-full max-w-3xl overflow-hidden rounded-2xl"
         style={{
           background: 'rgba(255,255,255,0.05)',
           backdropFilter: 'blur(24px)',
@@ -456,8 +480,7 @@ const Login_2 = ({ onLoginSuccess }) => {
         <Link
           to="https://computesofttech.com/"
           target="_blank"
-          rel="noopener noreferrer"
-        >
+          rel="noopener noreferrer">
           <img className="h-7 w-auto" src={cstech} alt="CSTech" />
         </Link>
       </motion.div>
