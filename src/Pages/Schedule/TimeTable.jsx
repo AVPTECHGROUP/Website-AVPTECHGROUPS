@@ -246,7 +246,7 @@ export default function TimeTable() {
                     <div className="relative flex-1 min-w-[180px]">
                         <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                         <input value={search} onChange={e => setSearch(e.target.value)}
-                            placeholder="Search class or section..."
+                            placeholder="Search class ..."
                             className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-100" />
                     </div>
 
@@ -273,7 +273,7 @@ export default function TimeTable() {
                     </div>
 
                     {/* ✅ Year Filter — uses academicYearId for API call */}
-                    <div className="relative">
+                    {/* <div className="relative">
                         <select
                             value={yearFilter ? (yearFilter.label || yearFilter.value) : 'All Years'}
                             onChange={handleYearChange}
@@ -286,7 +286,7 @@ export default function TimeTable() {
                             ))}
                         </select>
                         <ChevronDown size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                    </div>
+                    </div> */}
 
                     {/* ✅ Refresh respects current year filter */}
                     <button onClick={() => loadTimetables(yearFilter?.id || null)}
@@ -300,7 +300,7 @@ export default function TimeTable() {
                     <table className="w-full text-sm">
                         <thead>
                             <tr className="bg-gray-50 border-b border-gray-100">
-                                {['CLASS', 'SECTION', 'YEAR', 'STATUS', 'LAST UPDATED', 'ACTIONS'].map(h => (
+                                {['CLASS', 'SECTION',  'STATUS', 'LAST UPDATED', 'ACTIONS'].map(h => (
                                     <th key={h} className="text-left px-5 py-3 text-xs font-semibold text-gray-500 tracking-wider">{h}</th>
                                 ))}
                             </tr>
@@ -319,7 +319,7 @@ export default function TimeTable() {
                                 <tr key={tt.id} className="hover:bg-gray-50/60 transition">
                                     <td className="px-5 py-4 font-medium text-gray-900">{tt.class}</td>
                                     <td className="px-5 py-4 text-gray-600">{tt.section}</td>
-                                    <td className="px-5 py-4 text-gray-600">{tt.year}</td>
+                                    
                                     <td className="px-5 py-4"><StatusBadge status={tt.status} /></td>
                                     <td className="px-5 py-4 text-gray-500">{tt.lastUpdated}</td>
                                     <td className="px-5 py-4">
