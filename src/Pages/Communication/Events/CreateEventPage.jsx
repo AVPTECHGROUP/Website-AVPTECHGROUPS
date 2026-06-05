@@ -49,7 +49,8 @@ function calcDuration(start, end) {
 
 function toISO(localDt) {
   if (!localDt) return null;
-  try { return new Date(localDt).toISOString(); } catch { return null; }
+  // Strip seconds fractions and the trailing Z — backend expects "2025-12-15T09:00:00"
+  return localDt.length === 16 ? `${localDt}:00` : localDt.slice(0, 19);
 }
 
 function fmtDisplay(localDt) {
