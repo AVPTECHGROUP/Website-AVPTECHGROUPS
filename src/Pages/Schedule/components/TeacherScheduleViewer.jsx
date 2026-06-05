@@ -122,9 +122,9 @@ export default function TeacherScheduleViewer({ onClose }) {
     const teacherInitial = (t) => (teacherDisplayName(t)[0] ?? '?').toUpperCase();
 
     return (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-50 flex items-center justify-center p-3 sm:p-4">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
             <div
-                className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[92vh] flex flex-col overflow-hidden"
+                className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-2xl max-h-[92vh] flex flex-col overflow-hidden"
                 style={{ animation: 'popIn 0.22s cubic-bezier(.22,1,.36,1)' }}
             >
                 {/* ── Header ─────────────────────────────────────────────── */}

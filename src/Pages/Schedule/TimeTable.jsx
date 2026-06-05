@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
     Calendar, Plus, Eye, Pencil, Trash2, Send,
-    Search, ChevronDown, Settings2, BookOpen, Clock, UserSearch
+    Search, ChevronDown, Settings2, BookOpen, Clock, UserSearch,RefreshCw
 } from 'lucide-react';
 import CardComponent from '../../Components/CommonComp/CardComponent';
 import CardLoader from '../../Components/CommonComp/CardLoader';
@@ -41,8 +41,8 @@ export default function TimeTable() {
     const [activeClasses, setActiveClasses] = useState([]);
     const [timetables, setTimetables] = useState([]);
     const [search, setSearch] = useState('');
-    const [statusFilter, setStatusFilter] = useState('All Statuses');
-    const [classFilter, setClassFilter] = useState('All Classes');
+    const [statusFilter, setStatusFilter] = useState('All Status');
+    const [classFilter, setClassFilter] = useState('All Class');
     // yearFilter now stores the full LOV object { id, label, value } or null for "All Years"
     const [yearFilter, setYearFilter] = useState(null);
     const [sort, setSort] = useState('Recently Added');
@@ -171,8 +171,8 @@ export default function TimeTable() {
     const filtered = timetables.filter(t => {
         const matchSearch = t.class.toLowerCase().includes(search.toLowerCase()) ||
             t.section.toLowerCase().includes(search.toLowerCase());
-        const matchStatus = statusFilter === 'All Statuses' || t.status === statusFilter;
-        const matchClass = classFilter === 'All Classes' || t.class === classFilter;
+        const matchStatus = statusFilter === 'All Status' || t.status === statusFilter;
+        const matchClass = classFilter === 'All Class' || t.class === classFilter;
         return matchSearch && matchStatus && matchClass;
     });
 
@@ -195,9 +195,9 @@ export default function TimeTable() {
         <div className="min-h-screen bg-[#f0f4f9] p-4 md:p-6 relative">
 
             {/* Header */}
-            <div className="mb-6">
-                <h1 className="text-2xl font-bold text-gray-900">Timetable Directory</h1>
-                <p className="text-sm text-gray-500 mt-0.5">List of all class-section timetables. Choose view or edit.</p>
+            <div className="mb-4 sm:mb-6">
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Timetable Directory</h1>
+                <p className="text-xs sm:text-sm text-gray-500 mt-0.5">List of all class-section timetables. Choose view or edit.</p>
             </div>
 
             {/* Stat Cards */}
@@ -218,82 +218,101 @@ export default function TimeTable() {
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
 
                 {/* Quick Actions */}
-                <div className="px-5 pt-4 pb-3 border-b border-gray-100">
+                <div className="px-4 sm:px-5 pt-4 pb-3 border-b border-gray-100">
                     <p className="text-sm font-bold text-gray-700 mb-2.5">Quick Actions</p>
-                    <div className="flex items-center gap-2 flex-wrap">
+                    <div className="grid grid-cols-1 sm:flex sm:flex-wrap gap-2">
                         <button onClick={() => setShowAddModal(true)}
-                            className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition cursor-pointer">
+                            className="flex items-center justify-center sm:justify-start gap-1.5 px-4 py-2.5 sm:py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition cursor-pointer w-full sm:w-auto">
                             <Plus size={15} />
                             Add Timetable
                         </button>
                         <button onClick={() => setShowTeacherSchedule(true)}
-                            className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition cursor-pointer">
+                            className="flex items-center justify-center sm:justify-start gap-1.5 px-4 py-2.5 sm:py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition cursor-pointer w-full sm:w-auto">
                             <UserSearch size={15} />
-                            Teacher Schedule
+                            <span className="truncate">Teacher Schedule</span>
                         </button>
                         <button onClick={() => setShowConfig(true)}
-                            className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition cursor-pointer">
+                            className="flex items-center justify-center sm:justify-start gap-1.5 px-4 py-2.5 sm:py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition cursor-pointer w-full sm:w-auto">
                             <Settings2 size={15} />
-                            School Time Config
+                            <span className="truncate">School Time Config</span>
                         </button>
                     </div>
                 </div>
 
-                {/* Filters */}
-                <div className="p-4 border-b border-gray-100 flex flex-col sm:flex-row gap-3 flex-wrap">
+               {/* Filters */}
+<div className="p-4 border-b border-gray-100">
+  <div className="flex flex-col lg:flex-row gap-3">
 
-                    {/* Search */}
-                    <div className="relative flex-1 min-w-[180px]">
-                        <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                        <input value={search} onChange={e => setSearch(e.target.value)}
-                            placeholder="Search class ..."
-                            className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-100" />
-                    </div>
+    {/* Search */}
+    <div className="relative flex-1">
+      <Search
+        size={16}
+        className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+      />
+      <input
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="Search class..."
+        className="w-full h-11 pl-10 pr-4 border border-gray-300 rounded-lg text-sm
+        focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400"
+      />
+    </div>
 
-                    {/* Status Filter */}
-                    <div className="relative">
-                        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
-                            className="appearance-none pl-3 pr-8 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 cursor-pointer">
-                            {['All Statuses', 'Draft', 'Published'].map(o => (
-                                <option key={o}>{o}</option>
-                            ))}
-                        </select>
-                        <ChevronDown size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                    </div>
+    {/* Status Filter */}
+    <div className="relative min-w-[220px]">
+      <select
+        value={statusFilter}
+        onChange={(e) => setStatusFilter(e.target.value)}
+        className="w-full h-11 appearance-none bg-white border border-gray-300
+        rounded-lg pl-4 pr-10 text-sm text-gray-700
+        focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400"
+      >
+        <option>All Status</option>
+        <option>Draft</option>
+        <option>Published</option>
+      </select>
 
-                    {/* Class Filter */}
-                    <div className="relative">
-                        <select value={classFilter} onChange={e => setClassFilter(e.target.value)}
-                            className="appearance-none pl-3 pr-8 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 cursor-pointer">
-                            {['All Classes', ...uniqueClasses].map(o => (
-                                <option key={o}>{o}</option>
-                            ))}
-                        </select>
-                        <ChevronDown size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                    </div>
+      <ChevronDown
+        size={16}
+        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+      />
+    </div>
 
-                    {/* ✅ Year Filter — uses academicYearId for API call */}
-                    {/* <div className="relative">
-                        <select
-                            value={yearFilter ? (yearFilter.label || yearFilter.value) : 'All Years'}
-                            onChange={handleYearChange}
-                            className="appearance-none pl-3 pr-8 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 cursor-pointer">
-                            <option value="All Years">All Years</option>
-                            {academicYears.map(y => (
-                                <option key={y.id} value={y.label || y.value}>
-                                    {y.label || y.value}
-                                </option>
-                            ))}
-                        </select>
-                        <ChevronDown size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                    </div> */}
+    {/* Class Filter */}
+    <div className="relative min-w-[220px]">
+      <select
+        value={classFilter}
+        onChange={(e) => setClassFilter(e.target.value)}
+        className="w-full h-11 appearance-none bg-white border border-gray-300
+        rounded-lg pl-4 pr-10 text-sm text-gray-700
+        focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400"
+      >
+        <option>All Class</option>
+        {uniqueClasses.map((cls) => (
+          <option key={cls}>{cls}</option>
+        ))}
+      </select>
 
-                    {/* ✅ Refresh respects current year filter */}
-                    <button onClick={() => loadTimetables(yearFilter?.id || null)}
-                        className="px-3 py-2 border border-gray-200 rounded-lg text-sm cursor-pointer text-gray-600 hover:bg-gray-50 transition font-medium">
-                        ↻ Refresh
-                    </button>
-                </div>
+      <ChevronDown
+        size={16}
+        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+      />
+    </div>
+
+    {/* Refresh */}
+    <button
+      onClick={() => loadTimetables(yearFilter?.id || null)}
+      className="h-11 px-5 flex items-center justify-center gap-2
+      border border-gray-300 rounded-lg bg-white
+      text-sm font-medium text-gray-700
+      hover:bg-gray-50 transition whitespace-nowrap"
+    >
+      <RefreshCw size={16} />
+      Refresh
+    </button>
+
+  </div>
+</div>
 
                 {/* Table Desktop */}
                 <div className="hidden md:block overflow-x-auto">
