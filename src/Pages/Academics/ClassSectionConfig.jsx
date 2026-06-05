@@ -21,8 +21,8 @@ const getSchoolId = () => {
 };
 
 const GRADE_OPTIONS = [
-  { value: 0, label: 'Nursery / KG' },
-  ...Array.from({ length: 12 }, (_, i) => ({ value: i + 1, label: `Grade ${i + 1}` })),
+  { value: 0, label: 'PG' },
+  ...Array.from({ length: 12 }, (_, i) => ({ value: i + 1, label: `${i + 1}` })),
   { value: 13, label: 'Grade 13' },
   { value: 14, label: 'Grade 14' },
   { value: 15, label: 'Grade 15' },
@@ -578,7 +578,7 @@ export default function ClassSectionConfig() {
       { IconName: BookOpen,     keyName: 'Total Classes',    val: totalClasses,    iconTxColor: 'text-blue-600',   iconBgColor: 'bg-blue-50'   },
       { IconName: CheckCircle,  keyName: 'Active Classes',   val: activeClasses,   iconTxColor: 'text-green-600',  iconBgColor: 'bg-green-50'  },
       { IconName: Layers,       keyName: 'Total Sections',   val: totalSections,   iconTxColor: 'text-purple-600', iconBgColor: 'bg-purple-50' },
-      { IconName: GraduationCap, keyName: 'Grade Range',     val: gradeRange,      iconTxColor: 'text-orange-600', iconBgColor: 'bg-orange-50' },
+      { IconName: GraduationCap, keyName: 'Grade Range',     val: gradeRange,      iconTxColor: 'text-orange-400', iconBgColor: 'bg-orange-50'  },
     ];
 
     return (
