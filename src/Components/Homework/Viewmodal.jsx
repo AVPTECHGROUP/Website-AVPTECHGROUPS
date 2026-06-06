@@ -2,11 +2,10 @@ import { useState } from "react";
 import {
   X, Pencil, ExternalLink, FileText,
   Image as ImageIcon, Link2, Download, Eye, EyeOff,
-  AlignLeft, CalendarDays, User, BookOpen,
+  AlignLeft, CalendarDays, User, BookOpen, Loader2,
 } from "lucide-react";
 import { DuePill, StatusBadge, AttachChip } from "./Badges";
 
-// ── colour palette ────────────────────────────────────────────────────────────
 const SUBJECT_COLOURS = [
   { dot: "bg-amber-400",    text: "text-amber-700"   },
   { dot: "bg-blue-500",     text: "text-blue-700"    },
@@ -63,7 +62,6 @@ function getAssignedLabel(hw) {
   return "—";
 }
 
-// ── Tab button ────────────────────────────────────────────────────────────────
 function Tab({ active, onClick, icon: Icon, label, dot }) {
   return (
     <button
@@ -83,7 +81,6 @@ function Tab({ active, onClick, icon: Icon, label, dot }) {
   );
 }
 
-// ── Read-only Field wrapper ───────────────────────────────────────────────────
 function Field({ label, children }) {
   return (
     <div>
@@ -93,7 +90,6 @@ function Field({ label, children }) {
   );
 }
 
-// ── Read-only input look-alike ────────────────────────────────────────────────
 function ReadBox({ children, className = "" }) {
   return (
     <div className={`w-full border-[1.5px] border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-700 ${className}`}>
@@ -102,7 +98,6 @@ function ReadBox({ children, className = "" }) {
   );
 }
 
-// ── Download helper — tries blob download, falls back to new tab ──────────────
 async function triggerDownload(url) {
   try {
     const res  = await fetch(url);
@@ -116,12 +111,10 @@ async function triggerDownload(url) {
     a.remove();
     URL.revokeObjectURL(blobUrl);
   } catch {
-    // CORS may block direct blob download — open in new tab as fallback
     window.open(url, "_blank", "noopener,noreferrer");
   }
 }
 
-// ── Attachment Section ────────────────────────────────────────────────────────
 function AttachmentSection({ hw }) {
   const [open, setOpen] = useState(false);
   const type = getAttachType(hw);
@@ -134,7 +127,6 @@ function AttachmentSection({ hw }) {
 
   return (
     <div className="border border-gray-200 rounded-xl overflow-hidden">
-      {/* ── Header bar ── */}
       <div className="flex items-center justify-between px-3 py-2.5 bg-gray-50">
         <div className="flex items-center gap-1.5">
           {isPdf   && <FileText  size={13} className="text-red-500"  />}
@@ -144,32 +136,22 @@ function AttachmentSection({ hw }) {
             {isPdf ? "PDF Attachment" : isImage ? "Image Attachment" : "Resource Link"}
           </span>
         </div>
-
         <div className="flex items-center gap-2">
-          {/* View/Hide toggle — only for file types, not links */}
           {!isLink && (
-            <button
-              type="button"
-              onClick={() => setOpen((v) => !v)}
+            <button type="button" onClick={() => setOpen((v) => !v)}
               className="inline-flex items-center gap-1 text-xs font-semibold text-blue-700 hover:text-blue-900 transition-colors"
             >
               {open ? <EyeOff size={12} /> : <Eye size={12} />}
               {open ? "Hide" : "View"}
             </button>
           )}
-
-          {/* Download — only for file types */}
           {(isPdf || isImage) && (
-            <button
-              type="button"
-              onClick={() => triggerDownload(url)}
+            <button type="button" onClick={() => triggerDownload(url)}
               className="inline-flex items-center gap-1 text-xs font-semibold text-gray-500 hover:text-gray-700 transition-colors"
             >
               <Download size={12} /> Download
             </button>
           )}
-
-          {/* Open in new tab — always shown */}
           <a
             href={isPdf ? `https://docs.google.com/viewer?url=${encodeURIComponent(url)}` : url}
             target="_blank" rel="noopener noreferrer"
@@ -180,16 +162,13 @@ function AttachmentSection({ hw }) {
         </div>
       </div>
 
-      {/* ── Inline preview panel ── */}
       {open && (
         <div className="border-t border-gray-200">
           {isPdf && (
             <div className="bg-gray-100" style={{ height: 380 }}>
               <iframe
                 src={`https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`}
-                title="PDF Preview"
-                width="100%"
-                height="100%"
+                title="PDF Preview" width="100%" height="100%"
                 style={{ border: "none", display: "block" }}
               />
             </div>
@@ -197,8 +176,7 @@ function AttachmentSection({ hw }) {
           {isImage && (
             <div className="bg-gray-100 flex items-center justify-center p-3 min-h-[80px]">
               <img
-                src={url}
-                alt="Homework attachment"
+                src={url} alt="Homework attachment"
                 className="max-w-full max-h-72 rounded-lg object-contain shadow-sm"
                 onError={(e) => {
                   e.currentTarget.style.display = "none";
@@ -215,12 +193,8 @@ function AttachmentSection({ hw }) {
         </div>
       )}
 
-      {/* ── Link row (always visible for links) ── */}
       {isLink && (
-        <a
-          href={url}
-          target="_blank"
-          rel="noopener noreferrer"
+        <a href={url} target="_blank" rel="noopener noreferrer"
           className="flex items-center gap-3 px-4 py-3 bg-white hover:bg-blue-50 transition-colors group border-t border-gray-200"
         >
           <div className="flex-shrink-0 w-7 h-7 rounded-lg bg-blue-100 flex items-center justify-center">
@@ -238,7 +212,7 @@ function AttachmentSection({ hw }) {
 }
 
 // ── ViewModal ─────────────────────────────────────────────────────────────────
-export default function ViewModal({ hw, onClose, onEdit }) {
+export default function ViewModal({ hw, loading = false, onClose, onEdit }) {
   const [activeTab, setActiveTab] = useState("details");
 
   if (!hw) return null;
@@ -248,6 +222,9 @@ export default function ViewModal({ hw, onClose, onEdit }) {
   const { dot, text } = subjectColour(subjectName);
   const attachType    = getAttachType(hw);
   const hasContent    = !!(hw.description ?? hw.desc) || attachType !== "none";
+
+  // Resolved academic year — list rows have neither field; full record has academicYearLabel
+  const academicYear  = hw.academicYearLabel ?? hw.academicYear ?? null;
 
   return (
     <div
@@ -265,22 +242,19 @@ export default function ViewModal({ hw, onClose, onEdit }) {
             <BookOpen size={16} className="text-blue-700" />
             <h2 className="text-sm font-bold text-gray-900">Homework Details</h2>
           </div>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 p-1 rounded-md hover:bg-gray-100"
-          >
-            <X size={18} />
-          </button>
+          <div className="flex items-center gap-2">
+            {loading && (
+              <Loader2 size={14} className="text-blue-400 animate-spin" />
+            )}
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1 rounded-md hover:bg-gray-100">
+              <X size={18} />
+            </button>
+          </div>
         </div>
 
         {/* ── Tabs ── */}
         <div className="flex border-b border-gray-100 px-5 flex-shrink-0">
-          <Tab
-            active={activeTab === "details"}
-            onClick={() => setActiveTab("details")}
-            icon={FileText}
-            label="Details"
-          />
+          <Tab active={activeTab === "details"} onClick={() => setActiveTab("details")} icon={FileText} label="Details" />
           <Tab
             active={activeTab === "content"}
             onClick={() => setActiveTab("content")}
@@ -317,7 +291,10 @@ export default function ViewModal({ hw, onClose, onEdit }) {
                   <div className="relative">
                     <CalendarDays size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                     <ReadBox className="pl-8">
-                      {hw.academicYear ?? "—"}
+                      {loading && !academicYear
+                        ? <span className="text-gray-300 italic">Loading…</span>
+                        : (academicYear ?? "—")
+                      }
                     </ReadBox>
                   </div>
                 </Field>
@@ -338,9 +315,7 @@ export default function ViewModal({ hw, onClose, onEdit }) {
 
               {/* Title */}
               <Field label="Title">
-                <ReadBox className="font-semibold text-gray-900">
-                  {hw.title}
-                </ReadBox>
+                <ReadBox className="font-semibold text-gray-900">{hw.title}</ReadBox>
               </Field>
 
               {/* Assigned Date + Due Date */}
@@ -361,8 +336,6 @@ export default function ViewModal({ hw, onClose, onEdit }) {
           {/* ══ TAB 2: Description & Attachment ══ */}
           {activeTab === "content" && (
             <div className="space-y-4">
-
-              {/* Description */}
               <Field label="Description">
                 <div
                   className="w-full border-[1.5px] border-gray-200 rounded-lg px-3 py-2.5 text-sm bg-gray-50 text-gray-700
@@ -376,24 +349,19 @@ export default function ViewModal({ hw, onClose, onEdit }) {
                 </div>
               </Field>
 
-              {/* Attachment type label */}
               <Field label="Attachment Type">
                 <div className="w-full border-[1.5px] border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 flex items-center gap-2">
                   <AttachChip type={attachType} />
                 </div>
               </Field>
 
-              {/* Attachment viewer with View + Download + Open */}
               <AttachmentSection hw={hw} />
-
             </div>
           )}
         </div>
 
         {/* ── Footer ── */}
         <div className="flex items-center justify-between gap-2.5 px-5 py-3.5 border-t border-gray-100 bg-gray-50 rounded-b-2xl flex-shrink-0">
-
-          {/* Tab dots */}
           <div className="flex gap-1.5 items-center">
             {["details", "content"].map((t) => (
               <button
@@ -404,8 +372,7 @@ export default function ViewModal({ hw, onClose, onEdit }) {
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              onClick={onClose}
+            <button onClick={onClose}
               className="px-4 py-2 text-xs font-semibold border border-gray-300 rounded-lg text-gray-600 bg-white hover:bg-gray-50 transition-colors"
             >
               Close
