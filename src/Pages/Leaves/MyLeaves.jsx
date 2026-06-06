@@ -441,7 +441,8 @@ const formatDateRange = (fromDate, toDate) => {
                           </span>
                         </td>
 
-                        {/* Reason */}
+
+                        {/* Reason  field*/}
                         <td className="px-5 py-4 max-w-xs">
                           <div className="flex items-start gap-2">
                             <FileText className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" />
