@@ -7,7 +7,7 @@ import {
   teachers,
   transport,
   users,
-} from "../../../assets/Images/mockups"
+} from "../../../assets/Images/Mockups"
 
 const laptopImgs = [
   dashboard,

@@ -17,7 +17,7 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import {
   attendance, dashboard, student_enrolment, teachers, transport,
   holidays, login_page, parent_attendance, parent_dashboard, parent_transport,
-} from '../../../assets/Images/mockups'
+} from '../../../assets/Images/Mockups'
 
 gsap.registerPlugin(ScrollTrigger)
 
