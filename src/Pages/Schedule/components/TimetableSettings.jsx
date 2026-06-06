@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { X, Settings } from 'lucide-react';
 import { getTimetableById, updateTimetable } from '../../../Api/ScheduleApi';
 
-const YEARS = ['2025-2026', '2024-2025', '2026-2027'];
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 export default function TimetableSettings({ timetable, timetableId, onClose, onApply }) {
@@ -20,7 +19,6 @@ export default function TimetableSettings({ timetable, timetableId, onClose, onA
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
 
-    // ── Load timetable info from API → pre-fill form ──
     useEffect(() => {
         if (!timetableId) return;
         const loadInfo = async () => {
@@ -81,26 +79,26 @@ export default function TimetableSettings({ timetable, timetableId, onClose, onA
             <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-md max-h-[92vh] overflow-hidden flex flex-col">
 
                 {/* Header */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+                <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-100">
                     <div className="flex items-center gap-2">
-                        <Settings size={18} className="text-gray-600" />
-                        <h2 className="text-lg font-semibold text-gray-900">Timetable Settings</h2>
+                        <Settings size={17} className="text-gray-600" />
+                        <h2 className="text-base sm:text-lg font-semibold text-gray-900">Timetable Settings</h2>
                     </div>
                     <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100">
-                        <X size={18} className="text-gray-500" />
+                        <X size={17} className="text-gray-500" />
                     </button>
                 </div>
 
                 {loading ? (
                     <div className="p-8 text-center text-gray-400 text-sm">Loading...</div>
                 ) : (
-                    <div className="p-6 space-y-5 max-h-[60vh] overflow-y-auto">
+                    <div className="p-4 sm:p-6 space-y-4 sm:space-y-5 max-h-[65vh] sm:max-h-[60vh] overflow-y-auto">
                         {error && (
                             <p className="text-xs text-red-500 bg-red-50 px-3 py-2 rounded-lg">{error}</p>
                         )}
 
-                        {/* Class & Section — READ ONLY from API */}
-                        <div className="grid grid-cols-2 gap-4">
+                        {/* Class & Section */}
+                        <div className="grid grid-cols-2 gap-3 sm:gap-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Class</label>
                                 <div className="w-full border border-gray-100 rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-700 font-medium min-h-[38px] flex items-center">
@@ -118,11 +116,9 @@ export default function TimetableSettings({ timetable, timetableId, onClose, onA
                         </div>
 
                         {/* Academic Year & Status */}
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-2 gap-3 sm:gap-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Academic Year
-                                </label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Academic Year</label>
                                 <div className="w-full border border-gray-100 rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-700 font-medium min-h-[38px] flex items-center">
                                     {form.academicYear || '—'}
                                 </div>
@@ -140,7 +136,7 @@ export default function TimetableSettings({ timetable, timetableId, onClose, onA
                             </div>
                         </div>
 
-                        {/* Notes — EDITABLE */}
+                        {/* Notes */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
                             <textarea
@@ -152,7 +148,7 @@ export default function TimetableSettings({ timetable, timetableId, onClose, onA
                             />
                         </div>
 
-                        {/* Working Days — visual only, informational */}
+                        {/* Working Days */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
                                 Working Days
@@ -160,10 +156,8 @@ export default function TimetableSettings({ timetable, timetableId, onClose, onA
                             </label>
                             <div className="flex flex-wrap gap-2">
                                 {DAYS.map(day => (
-                                    <button
-                                        key={day}
-                                        onClick={() => toggleDay(day)}
-                                        className={`px-4 py-2 rounded-lg text-sm font-medium transition
+                                    <button key={day} onClick={() => toggleDay(day)}
+                                        className={`px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition
                                             ${form.workingDays.includes(day)
                                                 ? 'bg-[#1e293b] text-white'
                                                 : 'bg-gray-100 text-gray-400 hover:bg-gray-200'}`}>
@@ -176,15 +170,13 @@ export default function TimetableSettings({ timetable, timetableId, onClose, onA
                 )}
 
                 {/* Footer */}
-                <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-100">
+                <div className="flex gap-3 px-4 sm:px-6 py-3.5 sm:py-4 border-t border-gray-100">
                     <button onClick={onClose}
-                        className="px-5 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50">
+                        className="flex-1 sm:flex-none px-5 py-2.5 sm:py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 text-center">
                         Cancel
                     </button>
-                    <button
-                        onClick={handleApply}
-                        disabled={saving || loading}
-                        className="px-5 py-2 bg-[#1e293b] text-white rounded-lg text-sm font-medium hover:bg-[#334155] disabled:opacity-50 transition">
+                    <button onClick={handleApply} disabled={saving || loading}
+                        className="flex-1 sm:flex-none px-5 py-2.5 sm:py-2 bg-[#1e293b] text-white rounded-lg text-sm font-medium hover:bg-[#334155] disabled:opacity-50 transition text-center">
                         {saving ? 'Saving...' : 'Apply Changes'}
                     </button>
                 </div>
