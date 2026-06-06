@@ -3,16 +3,24 @@ import { useContext } from 'react';
 import { UserContext } from '../ContextAPI/UserContext';
 
 const RoleProtectedRoute = ({ allowedRoles, fallback, children }) => {
-  const { user } = useContext(UserContext);
+  const { user: ctxUser } = useContext(UserContext);
 
-  if (!user) return null;
+  // fallback to localStorage in case UserContext hasn't hydrated yet
+  const storedUser = (() => {
+    try { return JSON.parse(localStorage.getItem('user')) || null } catch { return null }
+  })();
 
-  const userType = user.userType;
+  const user = ctxUser || storedUser;
+
+  // if still no user, redirect to login
+  if (!user) return <Navigate to="/login" replace />;
+
+  const userType = user.userType || (Array.isArray(user.roles) ? user.roles[0] : null);
 
   if (!allowedRoles.includes(userType)) {
     return fallback ? fallback : <Navigate to="/dashboard" replace />
   }
- 
+
   return children ? children : <Outlet />
 }
 
