@@ -1,22 +1,18 @@
-// context/UserContext.jsx  ← UPDATED with FCM integration
+// context/UserContext.jsx
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { getCurrUserDetails } from "../utils/getCurrUserDetails";
-
 import { useFcmToken } from "../hooks/useFcmtoken";
 
 export const UserContext = createContext();
 
-/**
- * Lightweight foreground notification display.
- * Replace with your own toast/notification system if preferred.
- */
+// ✅ Defined outside component — stable reference, never recreated
 function showForegroundNotification(payload) {
   const title = payload?.notification?.title ?? "New Notification";
   const body  = payload?.notification?.body  ?? "";
-  // Uses the native Notification API; feel free to swap for a toast library
-  if (Notification.permission === "granted") {
-    new Notification(title, { body, icon: "/logo.png" });
-  }
+  if (Notification.permission !== "granted") return;
+  navigator.serviceWorker.ready.then(reg => {
+    reg.showNotification(title, { body, icon: "/logo.png" });
+  });
 }
 
 export const UserProvider = ({ children }) => {
@@ -61,8 +57,8 @@ export const UserProvider = ({ children }) => {
   }, [token]);
 
   // ── FCM hook ──────────────────────────────────────────────────────────────
-  // Pass the role so the hook knows which endpoint to call.
-  // "PARENT" uses /device-token/parent; everything else uses /device-token/user
+  // showForegroundNotification is module-level so its reference never changes —
+  // no useCallback needed, no re-subscription risk
   const { deleteCurrentToken } = useFcmToken({
     role: user?.userType ?? null,
     onForegroundMessage: showForegroundNotification,
@@ -101,15 +97,9 @@ export const UserProvider = ({ children }) => {
     setCurrentAcademicYear(yearData);
   };
 
-  /**
-   * logout
-   *
-   * 1. Deletes the FCM token from Firebase so no more pushes arrive on this device.
-   * 2. Clears all local state and localStorage.
-   */
+  // ── Logout ────────────────────────────────────────────────────────────────
   const logout = useCallback(async () => {
     // ① Unregister FCM token BEFORE clearing auth state
-    //    (the API call needs the JWT still in localStorage)
     await deleteCurrentToken();
 
     // ② Clear auth
