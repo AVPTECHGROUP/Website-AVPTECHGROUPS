@@ -900,34 +900,51 @@ const CollectionsHistory = () => {
     loadOptions();
   }, [academicYearId]);
 
-  const fetchOutstanding = useCallback(async () => {
-    try {
-      setLoading(true); setError(null);
-      const params = {};
-      if (classF)  params.classId  = classF;
-      if (periodF) params.periodId = periodF;
-      const res = await getOutstandingFees(params);
-      setOutstanding(
-        (res.records || []).map((r, i) => {
-          let status = 'PENDING';
-          if ((r.paidAmount || 0) > 0 && r.balanceDue > 0) status = 'PARTIAL';
-          if (r.balanceDue <= 0)                            status = 'PAID';
-          if (r.overdueDays > 0 && r.balanceDue > 0)       status = 'OVERDUE';
-          return {
-            id: i + 1, studentId: r.studentId, studentName: r.studentName,
-            studentCode: r.admissionNumber, class: r.className, section: r.sectionName,
-            period: r.feePeriodName, feePeriodId: r.feePeriodId || r.periodId,
-            balance: r.balanceDue, totalFee: r.totalFee, paidAmount: r.paidAmount,
-            daysLate: r.overdueDays || 0, feeStructureId: r.feeStructureId,
-            dueDate: r.dueDate, status,
-          };
-        })
-      );
-    } catch (e) {
-      setError(e.message || 'Failed to load outstanding fees.');
-      setOutstanding([]);
-    } finally { setLoading(false); }
-  }, [classF, periodF]);
+ const fetchOutstanding = useCallback(async () => {
+  try {
+    setLoading(true); setError(null);
+    const params = {};
+    if (classF)  params.classId  = classF;
+    if (periodF) params.periodId = periodF;
+    const res = await getOutstandingFees(params);
+     console.log('Outstanding API response:', res);
+
+    // Handle all possible API response shapes
+    const raw = res?.content ?? res?.data?.content ?? res?.records ?? res ?? [];
+    const records = Array.isArray(raw) ? raw : [];
+    console.log('Records to render:', records.length);
+
+    setOutstanding(
+      records.map((r, i) => {
+        let status = 'PENDING';
+        if ((r.paidAmount || 0) > 0 && r.balanceDue > 0) status = 'PARTIAL';
+        if (r.balanceDue <= 0)                            status = 'PAID';
+        if (r.overdueDays > 0 && r.balanceDue > 0)       status = 'OVERDUE';
+        return {
+          id:             i + 1,
+          studentId:      r.studentId,
+          studentName:    r.studentName,
+          studentCode:    r.admissionNumber,
+          class:          r.className,
+          section:        r.sectionName,
+          period:         r.feePeriodName,
+          feePeriodId:    r.feePeriodId || r.periodId,
+          balance:        r.balanceDue,
+          totalFee:       r.totalFee,
+          paidAmount:     r.paidAmount,
+          daysLate:       r.overdueDays || 0,
+          feeStructureId: r.feeStructureId,
+          dueDate:        r.dueDate,
+          status,
+        };
+      })
+    );
+  } catch (e) {
+    console.error('fetchOutstanding error:', e);
+    setError(e.message || 'Failed to load outstanding fees.');
+    setOutstanding([]);
+  } finally { setLoading(false); }
+}, [classF, periodF]);
 
   const fetchHistory = useCallback(async () => {
     try {
@@ -937,7 +954,8 @@ const CollectionsHistory = () => {
       if (periodF) params.periodId = periodF;
       if (modeF)   params.mode     = modeF;
       const res = await getFeeCollectionHistory(params);
-      const records = res?.records || [];
+      // FIX: Handle both API response formats
+      const records = res.data?.content || res.records || [];
       setHistory(records.map((r) => ({
         id: r.id, receiptNo: r.receiptNo, date: r.paymentDate, studentName: r.studentName,
         studentCode: r.admissionNumber,
@@ -946,7 +964,7 @@ const CollectionsHistory = () => {
         lateFine: r.lateFine || 0, mode: r.paymentMode, referenceNo: r.referenceNo,
         recordedBy: r.collectedBy, status: 'Completed',
       })));
-      setTotalPages(res?.pagination?.totalPages || 1);
+      setTotalPages(res?.data?.totalPages || res?.pagination?.totalPages || 1);
     } catch (e) {
       setError(e.message || 'Failed to load history');
       setHistory([]);

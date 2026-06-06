@@ -1,10 +1,26 @@
-import { createContext, useContext, useEffect, useState } from "react";
+// context/UserContext.jsx  ← UPDATED with FCM integration
+import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { getCurrUserDetails } from "../utils/getCurrUserDetails";
+
+import { useFcmToken } from "../hooks/useFcmtoken";
 
 export const UserContext = createContext();
 
+/**
+ * Lightweight foreground notification display.
+ * Replace with your own toast/notification system if preferred.
+ */
+function showForegroundNotification(payload) {
+  const title = payload?.notification?.title ?? "New Notification";
+  const body  = payload?.notification?.body  ?? "";
+  // Uses the native Notification API; feel free to swap for a toast library
+  if (Notification.permission === "granted") {
+    new Notification(title, { body, icon: "/logo.png" });
+  }
+}
+
 export const UserProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+  const [user, setUser]   = useState(null);
   const [token, setToken] = useState(localStorage.getItem("token"));
 
   const [schoolInfo, setSchoolInfo] = useState(() => {
@@ -17,16 +33,16 @@ export const UserProvider = ({ children }) => {
     catch { return null; }
   });
 
-  // ✅ Academic year stored once at login — used across fee module
- const [currentAcademicYear, setCurrentAcademicYear] = useState(() => {
+  const [currentAcademicYear, setCurrentAcademicYear] = useState(() => {
     try {
-        const saved = localStorage.getItem("currentAcademicYear");
-        return saved ? JSON.parse(saved) : null;
+      const saved = localStorage.getItem("currentAcademicYear");
+      return saved ? JSON.parse(saved) : null;
     } catch {
-        return null;
+      return null;
     }
-});
+  });
 
+  // ── Decode JWT on every token change ─────────────────────────────────────
   useEffect(() => {
     try {
       const decodedToken = getCurrUserDetails();
@@ -39,11 +55,20 @@ export const UserProvider = ({ children }) => {
           schoolId:    decodedToken.schoolId,
         });
       }
-    } catch (error) {
+    } catch {
       setUser(null);
     }
   }, [token]);
 
+  // ── FCM hook ──────────────────────────────────────────────────────────────
+  // Pass the role so the hook knows which endpoint to call.
+  // "PARENT" uses /device-token/parent; everything else uses /device-token/user
+  const { deleteCurrentToken } = useFcmToken({
+    role: user?.userType ?? null,
+    onForegroundMessage: showForegroundNotification,
+  });
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
   const saveToken = (newToken) => {
     localStorage.setItem("token", newToken);
     setToken(newToken);
@@ -67,11 +92,6 @@ export const UserProvider = ({ children }) => {
     setSchoolInfo(school);
   };
 
-  /**
-   * Call this right after login with the response from:
-   * GET /api/v1/academic-years/current
-   * Shape: { id, label, ... }
-   */
   const saveCurrentAcademicYear = (yearData) => {
     if (yearData) {
       localStorage.setItem("currentAcademicYear", JSON.stringify(yearData));
@@ -81,7 +101,18 @@ export const UserProvider = ({ children }) => {
     setCurrentAcademicYear(yearData);
   };
 
-  const logout = () => {
+  /**
+   * logout
+   *
+   * 1. Deletes the FCM token from Firebase so no more pushes arrive on this device.
+   * 2. Clears all local state and localStorage.
+   */
+  const logout = useCallback(async () => {
+    // ① Unregister FCM token BEFORE clearing auth state
+    //    (the API call needs the JWT still in localStorage)
+    await deleteCurrentToken();
+
+    // ② Clear auth
     localStorage.removeItem("token");
     localStorage.removeItem("school");
     localStorage.removeItem("profile");
@@ -91,7 +122,7 @@ export const UserProvider = ({ children }) => {
     setSchoolInfo(null);
     setProfile(null);
     setCurrentAcademicYear(null);
-  };
+  }, [deleteCurrentToken]);
 
   return (
     <UserContext.Provider

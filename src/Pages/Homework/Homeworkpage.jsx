@@ -16,6 +16,7 @@ import {
   cancelHomework,
   uploadHomeworkAttachment,
   getHomework,
+  getHomeworkById,
   getActiveSubjectsBySection,
   getTeacherLookup,
 } from "../../Api/Homework";
@@ -44,10 +45,6 @@ const normClass   = (item) => ({ id: item.id ?? item.classId ?? "",   label: ite
 const normSection = (item) => ({ id: item.id ?? item.sectionId ?? "", label: item.name ?? item.sectionName ?? item.label ?? "" });
 const normSubject = (item) => ({ id: item.subjectId ?? item.id ?? "", label: item.subjectName ?? item.name ?? item.label ?? "" });
 
-// ── Normalise teacher records from the lookup API { id, name } ──────────────
-// The lookup endpoint returns { id, name }. We keep the raw shape as-is so
-// AssignModal can resolve it with its own resolveTeacherName helper, but we
-// also normalise here in case any other part of the page reads teacher.name.
 const normTeacher = (item) => ({
   ...item,
   id: item.id ?? item.userId ?? item.profile?.id ?? "",
@@ -58,6 +55,18 @@ const normTeacher = (item) => ({
     `${item.firstName ?? ""} ${item.lastName ?? ""}`.trim()
   ) || item.email || `Teacher #${item.id ?? "?"}`,
 });
+
+/**
+ * Fetch the full homework detail record.
+ * The list endpoint omits academicYearLabel, subjectName, teacherName.
+ * The GET /homework/:id endpoint returns all of them.
+ */
+async function fetchFullRecord(id) {
+  const res  = await getHomeworkById(id);
+  const full = res?.data ?? res;
+  return (full?.id) ? full : null;
+}
+
 export default function HomeworkPage() {
 
   const { user, profile } = useDecodedUser();
@@ -66,29 +75,26 @@ export default function HomeworkPage() {
   const teacherId = isTeacher ? profile?.id : null;
 
   // ── Teachers ──────────────────────────────────────────────────────────────
-  // Only loaded for non-teacher users (admin, principal, staff, etc.)
-  // so they can assign homework on behalf of a teacher.
   const [teachers,        setTeachers]        = useState([]);
   const [teachersLoading, setTeachersLoading] = useState(false);
 
-  // Around line where teachers are fetched:
-useEffect(() => {
-  if (isTeacher) return;
-  const fetch_ = async () => {
-    setTeachersLoading(true);
-    try {
-      const list = await getTeacherLookup();
-      const raw  = Array.isArray(list) ? list : [];
-      console.log("[HomeworkPage] teachers loaded:", raw); // ← confirm shape here
-      setTeachers(raw.map(normTeacher));
-    } catch (err) {
-      showError(err, "Failed to load teachers");
-    } finally {
-      setTeachersLoading(false);
-    }
-  };
-  fetch_();
-}, [isTeacher]);
+  useEffect(() => {
+    if (isTeacher) return;
+    const fetch_ = async () => {
+      setTeachersLoading(true);
+      try {
+        const list = await getTeacherLookup();
+        const raw  = Array.isArray(list) ? list : [];
+        console.log("[HomeworkPage] teachers loaded:", raw);
+        setTeachers(raw.map(normTeacher));
+      } catch (err) {
+        showError(err, "Failed to load teachers");
+      } finally {
+        setTeachersLoading(false);
+      }
+    };
+    fetch_();
+  }, [isTeacher]);
 
   // ── Classes ───────────────────────────────────────────────────────────────
   const [classes,        setClasses]        = useState([]);
@@ -153,7 +159,6 @@ useEffect(() => {
   const [listLoading, setListLoading] = useState(false);
   const [submitting,  setSubmitting]  = useState(false);
 
-  // Returns the fresh rows so callers can sync dependent state (e.g. viewHw)
   const fetchHomework = useCallback(async (currentFilters) => {
     if (!selectedClassId || !selectedSectionId) {
       toast.warn("Please select a class and section first.");
@@ -208,12 +213,46 @@ useEffect(() => {
   }), [rows]);
 
   // ── Modals ────────────────────────────────────────────────────────────────
-  const [assignOpen, setAssignOpen] = useState(false);
-  const [viewHw,     setViewHw]     = useState(null);
-  const [editHw,     setEditHw]     = useState(null);
+  const [assignOpen,  setAssignOpen]  = useState(false);
+  const [viewHw,      setViewHw]      = useState(null);
+  const [viewLoading, setViewLoading] = useState(false);
+  const [editHw,      setEditHw]      = useState(null);
 
-  const openEdit    = (hw) => { setEditHw(hw); setAssignOpen(true); };
-  const closeAssign = ()   => { setAssignOpen(false); setEditHw(null); };
+  const closeAssign = () => { setAssignOpen(false); setEditHw(null); };
+
+  // ── Open ViewModal — fetch full record so academicYearLabel is present ────
+  const handleView = useCallback(async (hw) => {
+    setViewLoading(true);
+    setViewHw(hw); // open immediately with list row (no blank flash)
+    try {
+      const full = await fetchFullRecord(hw.id);
+      if (full) setViewHw(full);
+    } catch {
+      // keep the list row — modal still shows without full detail
+    } finally {
+      setViewLoading(false);
+    }
+  }, []);
+
+  // ── Open EditModal — always use full record so academicYearLabel is set ───
+  // If ViewModal already fetched the full record for this hw, reuse it.
+  // Otherwise fetch it fresh so the edit form gets the correct academic year.
+  const openEdit = useCallback(async (hw) => {
+    // If viewHw is already the full record for this hw, use it directly
+    if (viewHw?.id === hw.id && viewHw?.academicYearLabel != null) {
+      setEditHw(viewHw);
+      setAssignOpen(true);
+      return;
+    }
+    // Otherwise fetch the full record first
+    try {
+      const full = await fetchFullRecord(hw.id);
+      setEditHw(full ?? hw); // fallback to list row if fetch fails
+    } catch {
+      setEditHw(hw);
+    }
+    setAssignOpen(true);
+  }, [viewHw]);
 
   // ── Save ──────────────────────────────────────────────────────────────────
   const handleSave = async (payload, file) => {
@@ -236,11 +275,6 @@ useEffect(() => {
 
       const savedId = saved?.id ?? saved?.data?.id ?? saved?.data?.homeworkId;
 
-      /*
-        Only call uploadHomeworkAttachment when the user actually picked a new file.
-        If file is null (user kept existing attachment), we skip the upload entirely
-        so the backend never overwrites / clears the stored file.
-      */
       if (file && savedId) {
         await uploadHomeworkAttachment(savedId, file);
       }
@@ -248,12 +282,18 @@ useEffect(() => {
       toast.success(editHw ? "Homework updated!" : "Homework published!");
       closeAssign();
 
-      // Re-fetch and refresh viewHw so the ViewModal reflects the latest data
-      const freshRows = await fetchHomework(filters);
-      if (editingId && freshRows.length > 0) {
-        const updated = freshRows.find((r) => r.id === editingId);
-        if (updated) {
-          setViewHw((prev) => (prev?.id === editingId ? updated : prev));
+      // Refresh the list
+      await fetchHomework(filters);
+
+      // Re-fetch the full detail record so ViewModal shows correct data.
+      // The PUT response omits academicYearLabel/subjectName/teacherName,
+      // so we always go back to GET /homework/:id for the canonical data.
+      if (editingId) {
+        try {
+          const full = await fetchFullRecord(editingId);
+          if (full) setViewHw(full);
+        } catch {
+          // ViewModal already closed — no action needed
         }
       }
     } catch (err) {
@@ -324,7 +364,7 @@ useEffect(() => {
                 rows       = {visibleRows}
                 loading    = {listLoading}
                 submitting = {submitting}
-                onView     = {(hw) => setViewHw(hw)}
+                onView     = {handleView}
                 onEdit     = {openEdit}
                 onCancel   = {handleCancel}
             />
@@ -334,7 +374,8 @@ useEffect(() => {
         {viewHw && (
             <ViewModal
                 hw      = {viewHw}
-                onClose = {() => setViewHw(null)}
+                loading = {viewLoading}
+                onClose = {() => { setViewHw(null); setViewLoading(false); }}
                 onEdit  = {openEdit}
             />
         )}

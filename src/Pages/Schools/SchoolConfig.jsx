@@ -110,8 +110,8 @@ function validateAttendance(data) {
       errors.schoolLongitude = "Longitude is required when GPS is enabled";
     else if (isNaN(data.schoolLongitude) || data.schoolLongitude < -180 || data.schoolLongitude > 180)
       errors.schoolLongitude = "Longitude must be between -180 and 180";
-    if (data.allowedRadiusMeters > 10000)
-      errors.allowedRadiusMeters = "Radius cannot exceed 10,000 metres";
+    // if (data.allowedRadiusMeters > 10000)
+    //   errors.allowedRadiusMeters = "Radius cannot exceed 10,000 metres";
   }
   return errors;
 }
