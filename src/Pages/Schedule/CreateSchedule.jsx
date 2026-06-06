@@ -440,7 +440,7 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
                                 <Pencil size={12} className="text-gray-600" />
                             </button>
                             <button
-                                title="Assign Teacher"
+                                title="Change Teacher"
                                 onClick={() => setAssignTeacherTarget({ day, period, slot })}
                                 className="w-7 h-7 sm:w-6 sm:h-6 rounded cursor-pointer bg-white/90 border border-gray-200 shadow flex items-center justify-center hover:bg-blue-100 hover:border-blue-500 transition">
                                 <User size={12} className="text-gray-600" />
