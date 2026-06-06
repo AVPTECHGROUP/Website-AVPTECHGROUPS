@@ -5,7 +5,7 @@ import {
   ChevronDown, UserCog, Package, Bus, Phone, Mail,
   Shield, ChevronUp, ArrowLeftRight, BookOpenText,
   GraduationCap,
-  SchoolIcon, NotebookPen, IndianRupee
+  SchoolIcon, NotebookPen, IndianRupee, MessageSquare, ScrollText, CalendarDays, ClipboardCheck, Bell, Smartphone
 } from 'lucide-react'
 import { useState, useEffect, useContext, useRef } from 'react'
 import { UserContext } from '../ContextAPI/UserContext'
@@ -42,6 +42,55 @@ const menuItems = [
       { label: 'HomeWork', route: '/homework', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'PRINCIPAL', 'TEACHER'] }
     ]
   },
+
+  // ── Communication (Circulars + Events merged) ───────────────────────────────
+  {
+    id: 'communication',
+    icon: MessageSquare,       // from lucide-react
+    label: 'Communication',
+    route: '/communication/circulars',
+    roles: ['ADMIN', 'PRINCIPAL', 'TEACHER', 'GLOBAL_ADMIN','SUPER_ADMIN'],
+    subItems: [
+      {
+        // id: 'circulars',
+        // icon: ScrollText,
+        label: 'Circulars',
+        route: '/communication/circulars',
+        roles: ['ADMIN', 'PRINCIPAL', 'TEACHER', 'GLOBAL_ADMIN','SUPER_ADMIN'],
+      },
+      {
+        // id: 'events',
+        // icon: CalendarDays,     // or CalendarDays
+        label: 'School Events',
+        route: '/communication/events',
+        roles: ['ADMIN', 'PRINCIPAL', 'TEACHER', 'GLOBAL_ADMIN','SUPER_ADMIN'],
+      },
+      {
+        // id: 'approvalQueue',
+        // icon: ClipboardCheck,
+        label: 'Approval Queue',
+        route: '/communication/approval',
+        roles: ['ADMIN', 'PRINCIPAL', 'GLOBAL_ADMIN','SUPER_ADMIN'],  // teachers don't see this
+        badge: 3,               // optional — you can make this dynamic
+      },
+      {
+        // id: 'notifications',
+        // icon: Bell,
+        label: 'Notifications',
+        route: '/communication/notifications',
+        roles: ['ADMIN', 'PRINCIPAL', 'TEACHER', 'GLOBAL_ADMIN','SUPER_ADMIN'],
+        badge: 7,
+      },
+      {
+        // id: 'deviceToken',
+        // icon: Smartphone,
+        label: 'Device Tokens',
+        route: '/communication/device-token',
+        roles: ['ADMIN', 'PRINCIPAL', 'GLOBAL_ADMIN','SUPER_ADMIN'],
+      },
+    ],
+  },
+
   {
     id: 'attendance', icon: Calendar, label: 'Attendance', route: '/attendance',
     roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'TEACHER', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST'],

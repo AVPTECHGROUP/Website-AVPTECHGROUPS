@@ -450,7 +450,7 @@ const formatDateRange = (fromDate, toDate) => {
                               className="text-sm text-slate-600 leading-relaxed"
                               title={leaveReq.reason}
                             >
-                              {truncateText(leaveReq.reason, 50)}
+                              {truncateText(leaveReq.reason, 20)}
                             </p>
                           </div>
                         </td>
