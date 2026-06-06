@@ -1,4 +1,4 @@
-// hooks/useFcmToken.js
+// hooks/useFcmtoken.js
 import { useEffect, useRef, useCallback } from "react";
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getMessaging, getToken, onMessage, deleteToken } from "firebase/messaging";
@@ -6,13 +6,19 @@ import { vapidKey, serviceWorkerPath, firebaseConfig as fbConfig } from "../Fire
 import { registerUserDeviceToken, registerParentDeviceToken } from "../Api/Notification";
 
 export function useFcmToken({ role, onForegroundMessage } = {}) {
-  const messagingRef = useRef(null);
-  const tokenRef     = useRef(null);
+  const messagingRef          = useRef(null);
+  const tokenRef              = useRef(null);
+  const registeredRef         = useRef(false);
+  const onForegroundMessageRef = useRef(onForegroundMessage); // ✅ stable ref for callback
+
+  // ── Keep the callback ref in sync without re-subscribing onMessage ────────
+  useEffect(() => {
+    onForegroundMessageRef.current = onForegroundMessage;
+  }, [onForegroundMessage]);
 
   const getMessagingInstance = useCallback(() => {
     if (messagingRef.current) return messagingRef.current;
     try {
-      // initialize if not already done
       const app = getApps().length ? getApp() : initializeApp(fbConfig);
       messagingRef.current = getMessaging(app);
       return messagingRef.current;
@@ -23,11 +29,15 @@ export function useFcmToken({ role, onForegroundMessage } = {}) {
   }, []);
 
   const registerToken = useCallback(async () => {
-    console.log("[FCM] registerToken called, role:", role);
-    console.log("[FCM] vapidKey:", vapidKey);
-    console.log("[FCM] serviceWorkerPath:", serviceWorkerPath);
-
     if (!role) return;
+
+    // ✅ Bail out if already registered in this session
+    if (registeredRef.current) {
+      console.log("[FCM] Token already registered, skipping.");
+      return;
+    }
+
+    console.log("[FCM] registerToken called, role:", role);
 
     const messaging = getMessagingInstance();
     if (!messaging) {
@@ -43,15 +53,17 @@ export function useFcmToken({ role, onForegroundMessage } = {}) {
         return;
       }
 
-      const swReg = await navigator.serviceWorker.register(serviceWorkerPath);
+      // ✅ Only register SW if not already registered
+      let swReg = await navigator.serviceWorker.getRegistration(serviceWorkerPath);
+      if (!swReg) {
+        await navigator.serviceWorker.register(serviceWorkerPath);
+      }
+      swReg = await navigator.serviceWorker.ready;
 
-// wait for the service worker to become active
-await navigator.serviceWorker.ready;
-
-const token = await getToken(messaging, {
-  vapidKey,
-  serviceWorkerRegistration: swReg,
-});
+      const token = await getToken(messaging, {
+        vapidKey,
+        serviceWorkerRegistration: swReg,
+      });
 
       if (!token) {
         console.warn("[FCM] No token received");
@@ -59,7 +71,8 @@ const token = await getToken(messaging, {
       }
 
       console.log("[FCM] Token received:", token);
-      tokenRef.current = token;
+      tokenRef.current      = token;
+      registeredRef.current = true; // ✅ mark as done
 
       if (role === "PARENT") {
         await registerParentDeviceToken(token);
@@ -78,25 +91,28 @@ const token = await getToken(messaging, {
     if (!messaging || !tokenRef.current) return;
     try {
       await deleteToken(messaging);
-      tokenRef.current = null;
+      tokenRef.current      = null;
+      registeredRef.current = false; // ✅ allow re-registration after logout
       console.info("[FCM] Token deleted on logout");
     } catch (err) {
       console.error("[FCM] Failed to delete token:", err);
     }
   }, [getMessagingInstance]);
 
+  // ── Foreground message listener ───────────────────────────────────────────
+  // ✅ onForegroundMessage is NOT in the dep array — uses ref instead
+  // This means onMessage subscribes exactly ONCE per role, never re-subscribes
   useEffect(() => {
     const messaging = getMessagingInstance();
     if (!messaging || !role) return;
     const unsubscribe = onMessage(messaging, (payload) => {
       console.info("[FCM] Foreground message:", payload);
-      if (typeof onForegroundMessage === "function") {
-        onForegroundMessage(payload);
-      }
+      onForegroundMessageRef.current?.(payload);
     });
     return unsubscribe;
-  }, [role, getMessagingInstance, onForegroundMessage]);
+  }, [role, getMessagingInstance]); // ← no onForegroundMessage here
 
+  // ── Register token when role becomes available ────────────────────────────
   useEffect(() => {
     if (role) {
       registerToken();
