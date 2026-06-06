@@ -1,4 +1,4 @@
-import { initializeApp } from "firebase/app";
+import { initializeApp, getApps } from "firebase/app";
 
 const firebaseConfig = {
   apiKey:            import.meta.env.VITE_FIREBASE_API_KEY,
@@ -9,6 +9,10 @@ const firebaseConfig = {
   appId:             import.meta.env.VITE_FIREBASE_APP_ID,
   measurementId:     import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
+
+if (!getApps().length) {
+  initializeApp(firebaseConfig);
+}
 
 export const vapidKey          = import.meta.env.VITE_FIREBASE_VAPID_KEY;
 export const serviceWorkerPath = "/firebase-messaging-sw-dev.js";
