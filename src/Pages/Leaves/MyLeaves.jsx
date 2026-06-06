@@ -441,7 +441,8 @@ const formatDateRange = (fromDate, toDate) => {
                           </span>
                         </td>
 
-                        {/* Reason */}
+
+                        {/* Reason  field*/}
                         <td className="px-5 py-4 max-w-xs">
                           <div className="flex items-start gap-2">
                             <FileText className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" />
@@ -450,7 +451,7 @@ const formatDateRange = (fromDate, toDate) => {
                               className="text-sm text-slate-600 leading-relaxed"
                               title={leaveReq.reason}
                             >
-                              {truncateText(leaveReq.reason, 50)}
+                              {truncateText(leaveReq.reason, 20)}
                             </p>
                           </div>
                         </td>

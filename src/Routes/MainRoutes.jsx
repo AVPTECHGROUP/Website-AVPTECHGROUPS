@@ -87,6 +87,15 @@ import LandingApp from "../Pages/SchoolSpineWeb/pages/Landing";
 import About from "../Pages/SchoolSpineWeb/pages/About";
 import Contact from "../Pages/SchoolSpineWeb/pages/Contact";
 import PrivacyPolicy from "../Pages/SchoolSpineWeb/pages/Privacy_Policy";
+// Circulars and Events
+import CircularsPage from '../Pages/Communication/Circulars/CircularsPage';
+import CreateCircularPage from '../Pages/Communication/Circulars/CreateCircularPage';
+import EventsPage from '../Pages/Communication/Events/EventsPage';
+import CreateEventPage from '../Pages/Communication/Events/CreateEventPage';
+import ApprovalQueuePage from '../Pages/Communication/ApprovalQueue/ApprovalQueuePage';
+import NotificationsPage from '../Pages/Communication/Notifications/NotificationsPage';
+import DeviceTokenPage from '../Pages/Communication/DeviceToken/DeviceTokenPage';
+
 
 // ─── Role Groups ───────────────────────────────────────────────────────────────
 const STOCK_ACCOUNTANT_ROLES = ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'STORE_ACCOUNTANT'];
@@ -266,6 +275,60 @@ const MainRoutes = () => {
             <Route path="/schoolConfig" element={<SchoolConfig />} />
             <Route path="/academicYear" element={<AcademicYear />} />
           </Route>
+
+          {/* for events and notifications */}
+
+          {/* Circulars */}
+          <Route path="/communication/circulars" element={
+            <RoleProtectedRoute allowedRoles={['ADMIN', 'PRINCIPAL', 'TEACHER', 'GLOBAL_ADMIN','SUPER_ADMIN']}>
+              <CircularsPage />
+            </RoleProtectedRoute>
+          } />
+          <Route path="/communication/circulars/:id" element={
+            <RoleProtectedRoute allowedRoles={['ADMIN', 'PRINCIPAL', 'TEACHER', 'GLOBAL_ADMIN','SUPER_ADMIN']}>
+              <CircularsPage />
+            </RoleProtectedRoute>
+          } />
+
+          <Route path="/communication/circulars/create" element={
+            <RoleProtectedRoute allowedRoles={['ADMIN', 'PRINCIPAL', 'TEACHER', 'GLOBAL_ADMIN','SUPER_ADMIN']}>
+              <CreateCircularPage />
+            </RoleProtectedRoute>
+          } />
+
+          {/* Events */}
+          <Route path="/communication/events" element={
+            <RoleProtectedRoute allowedRoles={['ADMIN', 'PRINCIPAL', 'TEACHER', 'GLOBAL_ADMIN','SUPER_ADMIN']}>
+              <EventsPage />
+            </RoleProtectedRoute>
+          } />
+
+          <Route path="/communication/events/create" element={
+            <RoleProtectedRoute allowedRoles={['ADMIN', 'PRINCIPAL', 'TEACHER', 'GLOBAL_ADMIN','SUPER_ADMIN']}>
+              <CreateEventPage />
+            </RoleProtectedRoute>
+          } />
+
+          {/* Approval Queue — admin/principal only */}
+          <Route path="/communication/approval" element={
+            <RoleProtectedRoute allowedRoles={['ADMIN', 'PRINCIPAL', 'GLOBAL_ADMIN','SUPER_ADMIN']}>
+              <ApprovalQueuePage />
+            </RoleProtectedRoute>
+          } />
+
+          {/* Notifications */}
+          <Route path="/communication/notifications" element={
+            <RoleProtectedRoute allowedRoles={['ADMIN', 'PRINCIPAL', 'TEACHER', 'GLOBAL_ADMIN','SUPER_ADMIN']}>
+              <NotificationsPage />
+            </RoleProtectedRoute>
+          } />
+
+          {/* Device Token — admin only */}
+          <Route path="/communication/device-token" element={
+            <RoleProtectedRoute allowedRoles={['ADMIN', 'PRINCIPAL', 'GLOBAL_ADMIN','SUPER_ADMIN']}>
+              <DeviceTokenPage />
+            </RoleProtectedRoute>
+          } />
 
           {/* Fallback */}
           <Route path="*" element={<RootRedirect />} />

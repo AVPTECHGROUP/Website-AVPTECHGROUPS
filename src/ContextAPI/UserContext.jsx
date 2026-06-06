@@ -1,10 +1,22 @@
-import { createContext, useContext, useEffect, useState } from "react";
+// context/UserContext.jsx
+import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { getCurrUserDetails } from "../utils/getCurrUserDetails";
+import { useFcmToken } from "../hooks/useFcmtoken";
 
 export const UserContext = createContext();
 
+// ✅ Defined outside component — stable reference, never recreated
+function showForegroundNotification(payload) {
+  const title = payload?.notification?.title ?? "New Notification";
+  const body  = payload?.notification?.body  ?? "";
+  if (Notification.permission !== "granted") return;
+  navigator.serviceWorker.ready.then(reg => {
+    reg.showNotification(title, { body, icon: "/logo.png" });
+  });
+}
+
 export const UserProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+  const [user, setUser]   = useState(null);
   const [token, setToken] = useState(localStorage.getItem("token"));
 
   const [schoolInfo, setSchoolInfo] = useState(() => {
@@ -17,16 +29,16 @@ export const UserProvider = ({ children }) => {
     catch { return null; }
   });
 
-  // ✅ Academic year stored once at login — used across fee module
- const [currentAcademicYear, setCurrentAcademicYear] = useState(() => {
+  const [currentAcademicYear, setCurrentAcademicYear] = useState(() => {
     try {
-        const saved = localStorage.getItem("currentAcademicYear");
-        return saved ? JSON.parse(saved) : null;
+      const saved = localStorage.getItem("currentAcademicYear");
+      return saved ? JSON.parse(saved) : null;
     } catch {
-        return null;
+      return null;
     }
-});
+  });
 
+  // ── Decode JWT on every token change ─────────────────────────────────────
   useEffect(() => {
     try {
       const decodedToken = getCurrUserDetails();
@@ -39,11 +51,20 @@ export const UserProvider = ({ children }) => {
           schoolId:    decodedToken.schoolId,
         });
       }
-    } catch (error) {
+    } catch {
       setUser(null);
     }
   }, [token]);
 
+  // ── FCM hook ──────────────────────────────────────────────────────────────
+  // showForegroundNotification is module-level so its reference never changes —
+  // no useCallback needed, no re-subscription risk
+  const { deleteCurrentToken } = useFcmToken({
+    role: user?.userType ?? null,
+    onForegroundMessage: showForegroundNotification,
+  });
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
   const saveToken = (newToken) => {
     localStorage.setItem("token", newToken);
     setToken(newToken);
@@ -67,11 +88,6 @@ export const UserProvider = ({ children }) => {
     setSchoolInfo(school);
   };
 
-  /**
-   * Call this right after login with the response from:
-   * GET /api/v1/academic-years/current
-   * Shape: { id, label, ... }
-   */
   const saveCurrentAcademicYear = (yearData) => {
     if (yearData) {
       localStorage.setItem("currentAcademicYear", JSON.stringify(yearData));
@@ -81,7 +97,12 @@ export const UserProvider = ({ children }) => {
     setCurrentAcademicYear(yearData);
   };
 
-  const logout = () => {
+  // ── Logout ────────────────────────────────────────────────────────────────
+  const logout = useCallback(async () => {
+    // ① Unregister FCM token BEFORE clearing auth state
+    await deleteCurrentToken();
+
+    // ② Clear auth
     localStorage.removeItem("token");
     localStorage.removeItem("school");
     localStorage.removeItem("profile");
@@ -91,7 +112,7 @@ export const UserProvider = ({ children }) => {
     setSchoolInfo(null);
     setProfile(null);
     setCurrentAcademicYear(null);
-  };
+  }, [deleteCurrentToken]);
 
   return (
     <UserContext.Provider

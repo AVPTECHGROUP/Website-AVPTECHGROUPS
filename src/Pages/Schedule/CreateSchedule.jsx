@@ -1,9 +1,9 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
     ChevronLeft, LayoutGrid, BarChart2, Wand2, ArrowLeftRight,
     Settings, Send, Printer, Trash2, Undo2, Redo2, Plus,
     Search, AlertTriangle, X, Eye, Pencil, User, RefreshCw, Clock,
-    Menu, ChevronDown, ChevronUp
+    PanelLeft, PanelLeftClose
 } from 'lucide-react';
 import AddSlotModal from './components/AddSlotModal';
 import TimetableSettings from './components/TimetableSettings';
@@ -153,16 +153,6 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
     const [showPrint, setShowPrint] = useState(false);
     const [savingAll, setSavingAll] = useState(false);
 
-    // Mobile UI states
-    const [showMobileSidebar, setShowMobileSidebar] = useState(false);
-    const [showMobileActions, setShowMobileActions] = useState(false);
-    const [showMobileStats, setShowMobileStats] = useState(false);
-
-    // Touch scroll ref for timetable
-    const tableScrollRef = useRef(null);
-    const touchStartX = useRef(null);
-    const touchStartScrollLeft = useRef(null);
-
     // ── Slot selection for substitution ──
     const [selectedSlotKey, setSelectedSlotKey] = useState(null);
 
@@ -170,7 +160,7 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
     const [addSlotTarget, setAddSlotTarget] = useState(null);
     const [assignTeacherTarget, setAssignTeacherTarget] = useState(null);
     const [substitutionTarget, setSubstitutionTarget] = useState(null);
-    const [showPendingSubstitutions, setShowPendingSubstitutions] = useState(false);
+    const [showPendingSubstitutions, setShowPendingSubstitutions] = useState(false); // ← NEW
     const [showSettings, setShowSettings] = useState(false);
     const [showSubstitution, setShowSubstitution] = useState(false);
     const [showPublishConfirm, setShowPublishConfirm] = useState(false);
@@ -181,6 +171,8 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
     const [subjectFilter, setSubjectFilter] = useState('All');
     const [sidebarTab, setSidebarTab] = useState('subjects');
     const [toastMsg, setToastMsg] = useState('');
+    const [mobileDay, setMobileDay] = useState('Mon');
+    const [showMobileSidebar, setShowMobileSidebar] = useState(false);
 
     const [timetableConfig, setTimetableConfig] = useState(null);
     const [workingDays, setWorkingDays] = useState(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']);
@@ -189,28 +181,17 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
     const [subjectsList, setSubjectsList] = useState([]);
     const sectionId = timetable?.sectionId || timetableInfo?.sectionId || null;
 
-    // Touch handlers for horizontal scroll on mobile/tablet
-    const handleTouchStart = (e) => {
-        touchStartX.current = e.touches[0].clientX;
-        touchStartScrollLeft.current = tableScrollRef.current?.scrollLeft || 0;
-    };
-
-    const handleTouchMove = (e) => {
-        if (!touchStartX.current || !tableScrollRef.current) return;
-        const diff = touchStartX.current - e.touches[0].clientX;
-        tableScrollRef.current.scrollLeft = touchStartScrollLeft.current + diff;
-    };
-
-    const handleTouchEnd = () => {
-        touchStartX.current = null;
-        touchStartScrollLeft.current = null;
-    };
-
     useEffect(() => {
         if (!timetable?.id) return;
         loadTimetableData();
         loadConfig();
     }, [timetable?.id]);
+
+    useEffect(() => {
+        if (workingDays.length && !workingDays.includes(mobileDay)) {
+            setMobileDay(workingDays[0]);
+        }
+    }, [workingDays, mobileDay]);
 
     const showToast = (msg) => {
         setToastMsg(msg);
@@ -311,9 +292,14 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
 
     const toggleSlotSelection = (slot) => {
         const key = slotKey(slot);
-        setSelectedSlotKey(prev => prev === key ? null : key);
+
+        setSelectedSlotKey(prev =>
+            prev === key ? null : key
+        );
     };
-    const selectedSlots = slots.filter(s => slotKey(s) === selectedSlotKey);
+    const selectedSlots = slots.filter(
+        s => slotKey(s) === selectedSlotKey
+    );
 
     const handleOpenSubstitution = () => {
         if (selectedSlots.length === 0) return;
@@ -356,7 +342,9 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
             setSlots(newSlots);
             pushHistory(newSlots);
             const key = `${day}_${periodId}`;
-            if (selectedSlotKey === key) setSelectedSlotKey(null);
+            if (selectedSlotKey === key) {
+                setSelectedSlotKey(null);
+            }
             showToast('Slot removed');
         } catch (err) {
             showToast(err.message || 'Failed to remove slot');
@@ -427,166 +415,265 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
 
     const uniqueTeacherNames = [...new Set(slots.map(s => s.teacher?.name).filter(Boolean))];
 
+    const renderSlotCard = (day, period, slot, subjectMeta, teacherColor, isSelected) => {
+        if (slot) {
+            return (
+                <div className={`relative rounded-lg border p-2.5 sm:p-2 group transition
+                    ${isSelected ? 'ring-2 ring-indigo-500 ring-offset-1' : ''}
+                    ${subjectMeta ? `${subjectMeta.bg} ${subjectMeta.border}` : 'bg-gray-50 border-gray-200'}`}>
+                    {!isViewOnly && (
+                        <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleSlotSelection(slot)}
+                            onClick={(e) => e.stopPropagation()}
+                            className="absolute top-1.5 right-1.5 w-4 h-4 sm:w-3.5 sm:h-3.5 accent-indigo-600 cursor-pointer z-10"
+                            title="Select for substitution"
+                        />
+                    )}
+                    {!isViewOnly && (
+                        <div className="flex items-center justify-end gap-1.5 mt-1 sm:absolute sm:inset-x-0 sm:bottom-1.5 sm:justify-center sm:opacity-0 sm:group-hover:opacity-100 transition-all duration-150 z-10">
+                            <button
+                                title="Edit Slot"
+                                onClick={() => setAddSlotTarget({ day, period, editSlot: slot })}
+                                className="w-7 h-7 sm:w-6 sm:h-6 rounded bg-white/90 border border-gray-200 cursor-pointer shadow flex items-center justify-center hover:bg-blue-100 hover:border-blue-500 transition">
+                                <Pencil size={12} className="text-gray-600" />
+                            </button>
+                            <button
+                                title="Change Teacher"
+                                onClick={() => setAssignTeacherTarget({ day, period, slot })}
+                                className="w-7 h-7 sm:w-6 sm:h-6 rounded cursor-pointer bg-white/90 border border-gray-200 shadow flex items-center justify-center hover:bg-blue-100 hover:border-blue-500 transition">
+                                <User size={12} className="text-gray-600" />
+                            </button>
+                            <button
+                                title="Remove Slot"
+                                onClick={() => handleRemoveSlot(day, period.id)}
+                                className="w-7 h-7 sm:w-6 sm:h-6 rounded bg-white/90 border border-gray-200 cursor-pointer shadow flex items-center justify-center hover:bg-red-50 hover:border-red-300 transition">
+                                <Trash2 size={12} className="text-red-400" />
+                            </button>
+                        </div>
+                    )}
+                    <p className={`text-xs font-bold mb-0.5 pr-5 ${subjectMeta?.color || 'text-gray-600'}`}>
+                        {slot.subject?.code}
+                    </p>
+                    <p className="text-xs sm:text-xs font-semibold text-gray-800 leading-tight">{slot.subject?.label}</p>
+                    {slot.teacher?.name && (
+                        <div className="flex items-center gap-1 mt-1">
+                            <span className={`w-5 h-5 sm:w-4 sm:h-4 rounded-full ${teacherColor} text-white flex items-center justify-center shrink-0`} style={{ fontSize: '8px' }}>
+                                {getInitials(slot.teacher.name)}
+                            </span>
+                            <span className="text-xs text-gray-500 truncate">{slot.teacher.name.split(' ')[0]}</span>
+                        </div>
+                    )}
+                    {slot.room && <p className="text-xs text-gray-400 mt-0.5">📍 {slot.room}</p>}
+                </div>
+            );
+        }
+        if (isViewOnly) return null;
+        return (
+            <button
+                onClick={() => setAddSlotTarget({ day, period })}
+                onDragOver={(e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'copy';
+                    setDragOverCell({ day, periodId: period.id });
+                }}
+                onDragLeave={() => setDragOverCell(null)}
+                onDrop={(e) => {
+                    e.preventDefault();
+                    setDragOverCell(null);
+                    if (draggedSubject) {
+                        setAddSlotTarget({ day, period, prefillSubject: draggedSubject });
+                        setDraggedSubject(null);
+                    }
+                }}
+                className={`w-full min-h-16 sm:min-h-20 flex items-center justify-center rounded-lg transition border-2 border-dashed
+                    ${dragOverCell?.day === day && dragOverCell?.periodId === period.id
+                        ? 'border-blue-500 bg-blue-50 text-blue-600 scale-[1.02] shadow-sm'
+                        : 'border-transparent hover:border-gray-200 text-gray-300 hover:text-gray-400 hover:bg-gray-100/60'
+                    }`}>
+                <Plus size={18} />
+            </button>
+        );
+    };
+
+    const sidebarPanel = (
+        <>
+            <div className="flex border-b border-gray-100 shrink-0">
+                <button onClick={() => setSidebarTab('subjects')}
+                    className={`flex-1 py-2.5 text-xs font-medium transition cursor-pointer ${sidebarTab === 'subjects' ? 'border-b-2 border-blue-600 text-blue-600 bg-blue-50' : 'text-gray-500'}`}>
+                    Subjects
+                </button>
+                <button onClick={() => setSidebarTab('hours')}
+                    className={`flex-1 py-2.5 text-xs font-medium cursor-pointer transition flex items-center justify-center gap-1 ${sidebarTab === 'hours' ? 'border-b-2 border-[#1e293b] text-[#1e293b]' : 'text-gray-500'}`}>
+                    <BarChart2 size={12} /> Hours
+                </button>
+            </div>
+            {sidebarTab === 'subjects' && (
+                <div className="flex-1 min-h-0 overflow-y-auto p-3">
+                    <div className="relative mb-2">
+                        <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                        <input value={subjectSearch} onChange={e => setSubjectSearch(e.target.value)}
+                            placeholder="Search subjects..."
+                            className="w-full pl-8 pr-3 py-2 sm:py-1.5 text-sm sm:text-xs border border-gray-200 rounded-lg focus:outline-none" />
+                    </div>
+                    <p className="text-xs text-gray-400 mb-2">Click empty slot to add subjects</p>
+                    <div className="space-y-1">
+                        {filteredSubjects.map(s => (
+                            <div
+                                key={s.code}
+                                draggable
+                                onDragStart={(e) => {
+                                    setDraggedSubject(s);
+                                    e.dataTransfer.effectAllowed = 'copy';
+                                }}
+                                onDragEnd={() => setDraggedSubject(null)}
+                                className="flex items-center gap-2 px-2 py-2.5 sm:py-2 rounded-lg hover:bg-gray-50 cursor-grab active:cursor-grabbing select-none"
+                                title="Drag to a slot">
+                                <span className={`w-1 h-6 rounded-full ${s.dot}`} />
+                                <span className={`text-xs font-bold ${s.color}`}>{s.code}</span>
+                                <span className="text-xs text-gray-700 flex-1 truncate">{s.label}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+            {sidebarTab === 'hours' && (
+                <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-2">
+                    {subjectCounts.map(s => {
+                        const hourPct = s.total ? Math.round((s.count / s.total) * 100) : 0;
+                        return (
+                            <div key={s.code}>
+                                <div className="flex justify-between text-xs mb-1">
+                                    <span className={`font-bold ${s.color}`}>{s.code}</span>
+                                    <span className="text-gray-400">{s.count}/{s.total}</span>
+                                </div>
+                                <div className="w-full bg-gray-100 rounded-full h-1.5">
+                                    <div className={`h-1.5 rounded-full ${s.dot}`} style={{ width: `${hourPct}%` }} />
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
+        </>
+    );
+
     return (
-        <div className="min-h-screen bg-[#f0f4f9] flex flex-col relative">
+        <div className="min-h-screen bg-[#f0f4f9] flex flex-col relative overflow-x-hidden">
 
             {/* Toast */}
             {toastMsg && (
-                <div className="fixed bottom-4 right-4 left-4 sm:left-auto z-[100] bg-[#1e293b] text-white text-sm px-4 py-2.5 rounded-xl shadow-xl animate-fade-in text-center sm:text-left">
+                <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-5 sm:max-w-sm z-100 bg-[#1e293b] text-white text-sm px-4 py-2.5 rounded-xl shadow-xl animate-fade-in">
                     {toastMsg}
                 </div>
             )}
 
             {/* Draft Banner */}
             {showDraftBanner && status === 'Draft' && !isViewOnly && (
-                <div className="bg-amber-50 border-b border-amber-200 px-3 sm:px-4 py-2 flex items-start sm:items-center justify-between gap-2 sm:gap-3 flex-wrap sm:flex-nowrap">
-                    <div className="flex items-start sm:items-center gap-2 text-amber-800 text-xs sm:text-sm">
-                        <AlertTriangle size={15} className="text-amber-500 shrink-0 mt-0.5 sm:mt-0" />
+                <div className="bg-amber-50 border-b border-amber-200 px-3 sm:px-4 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3">
+                    <div className="flex items-start sm:items-center gap-2 text-amber-800 text-sm">
+                        <AlertTriangle size={16} className="text-amber-500 shrink-0 mt-0.5 sm:mt-0" />
                         <span>This timetable is in <strong>DRAFT</strong> mode. Review and publish when ready.</span>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0 ml-auto">
+                    <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
                         <button onClick={() => setShowPublishConfirm(true)}
-                            className="px-2.5 sm:px-3 py-1 sm:py-1.5 bg-amber-600 cursor-pointer text-white text-xs font-semibold rounded-lg hover:bg-amber-700 transition whitespace-nowrap">
+                            className="flex-1 sm:flex-none px-3 py-1.5 bg-amber-600 cursor-pointer text-white text-xs font-semibold rounded-lg hover:bg-amber-700 transition">
                             Publish Now
                         </button>
                         <button onClick={() => setShowDraftBanner(false)}
-                            className="px-2.5 sm:px-3 py-1 sm:py-1.5 bg-white border cursor-pointer border-amber-200 text-amber-700 text-xs font-semibold rounded-lg hover:bg-amber-50 transition">
+                            className="flex-1 sm:flex-none px-3 py-1.5 bg-white border cursor-pointer border-amber-200 text-amber-700 text-xs font-semibold rounded-lg hover:bg-amber-50 transition">
                             Dismiss
                         </button>
                     </div>
                 </div>
             )}
 
-            {/* ── TOOLBAR ── */}
-            <div className="bg-white border-b border-gray-200 px-3 sm:px-4 py-2.5 sm:py-3 flex items-center gap-2 sm:gap-3">
-                {/* Back + Title */}
-                <button onClick={onBack} className="flex items-center cursor-pointer gap-1 text-sm text-gray-600 hover:text-gray-900 font-medium shrink-0">
-                    <ChevronLeft size={16} /> <span className="hidden xs:inline">Back</span>
-                </button>
-                <div className="h-5 w-px bg-gray-200 shrink-0" />
-
-                <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                    <span className="font-bold text-gray-900 text-sm sm:text-base truncate">
-                        {timetableInfo?.class || timetableInfo?.className}
-                    </span>
-                    <span className="text-gray-500 text-sm hidden sm:inline truncate">
-                        {timetableInfo?.section || timetableInfo?.sectionName}
-                    </span>
-                    <span className={`text-xs font-semibold px-1.5 sm:px-2 py-0.5 rounded-full border ml-1 shrink-0
-                        ${status === 'Draft'
-                            ? 'bg-amber-50 text-amber-700 border-amber-200'
-                            : 'bg-blue-50 text-blue-700 border-blue-200'}`}>
-                        {isViewOnly ? 'View' : `${status}`}
-                    </span>
-                </div>
-
-                {/* Tab switcher - hidden on very small screens, shown as icons */}
-                <div className="flex items-center gap-1">
-                    <button onClick={() => setActiveTab('planner')}
-                        className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 cursor-pointer rounded-lg text-xs sm:text-sm font-medium transition
-                            ${activeTab === 'planner' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-600'}`}>
-                        <LayoutGrid size={14} /> <span className="hidden sm:inline">Planner</span>
+            {/* Toolbar */}
+            <div className="bg-white border-b border-gray-200 px-3 sm:px-4 py-2.5 sm:py-3 space-y-2.5">
+                <div className="flex items-center gap-2 min-w-0">
+                    <button onClick={onBack} className="flex items-center cursor-pointer gap-1 text-sm text-gray-600 hover:text-gray-900 font-medium shrink-0">
+                        <ChevronLeft size={16} /> Back
                     </button>
-                    <button onClick={() => setActiveTab('analytics')}
-                        className={`flex items-center cursor-pointer gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition
-                            ${activeTab === 'analytics' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-600'}`}>
-                        <BarChart2 size={14} /> <span className="hidden sm:inline">Analytics</span>
-                    </button>
-                </div>
-
-                {/* Desktop actions */}
-                <div className="hidden md:flex items-center gap-1.5 ml-auto flex-wrap">
-                    {!isViewOnly && (
-                        <>
-                            <button onClick={undo} disabled={historyIdx === 0}
-                                className="p-2 rounded-lg text-gray-500 cursor-pointer hover:bg-gray-100 disabled:opacity-30 transition" title="Undo">
-                                <Undo2 size={15} />
-                            </button>
-                            <button onClick={redo} disabled={historyIdx === history.length - 1}
-                                className="p-2 rounded-lg text-gray-500 cursor-pointer hover:bg-gray-100 disabled:opacity-30 transition" title="Redo">
-                                <Redo2 size={15} />
-                            </button>
-                            <button onClick={handleAutoFill}
-                                className="flex items-center gap-1.5 px-3 cursor-pointer py-1.5 border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition">
-                                <Wand2 size={13} /> Auto-fill
-                            </button>
-                            <button onClick={handleBulkSave} disabled={savingAll}
-                                className={`flex items-center gap-1.5 px-3 cursor-pointer py-1.5 rounded-lg text-sm font-medium transition shadow-sm ${savingAll
-                                    ? 'bg-blue-400 cursor-not-allowed opacity-80'
-                                    : 'bg-blue-600 hover:bg-blue-700 text-white'}`}>
-                                {savingAll ? <><RefreshCw size={13} className="animate-spin" /> Saving...</> : <>💾 Save All</>}
-                            </button>
-                            <button onClick={() => setShowSettings(true)}
-                                className="flex items-center gap-1.5 px-3 cursor-pointer py-1.5 border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition">
-                                <Settings size={13} /> Settings
-                            </button>
-                            {status === 'Draft' && (
-                                <button onClick={() => setShowPublishConfirm(true)}
-                                    className="flex items-center gap-1.5 cursor-pointer px-4 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition shadow-sm">
-                                    <Send size={13} /> Publish
-                                </button>
-                            )}
-                        </>
-                    )}
-                    {isViewOnly && (
-                        <button onClick={() => setShowPrint(true)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 border cursor-pointer border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-50">
-                            <Printer size={13} /> Print
-                        </button>
-                    )}
-                </div>
-
-                {/* Mobile actions menu */}
-                {!isViewOnly && (
-                    <div className="flex md:hidden items-center gap-1 ml-auto">
-                        <button onClick={handleBulkSave} disabled={savingAll}
-                            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition ${savingAll ? 'bg-blue-400 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}>
-                            {savingAll ? <RefreshCw size={12} className="animate-spin" /> : '💾'}
-                        </button>
-                        <div className="relative">
-                            <button onClick={() => setShowMobileActions(!showMobileActions)}
-                                className="p-2 rounded-lg text-gray-600 hover:bg-gray-100 cursor-pointer">
-                                <Menu size={18} />
-                            </button>
-                            {showMobileActions && (
-                                <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-50 min-w-44 overflow-hidden">
-                                    <button onClick={() => { undo(); setShowMobileActions(false); }} disabled={historyIdx === 0}
-                                        className="flex items-center gap-2 w-full px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-40">
-                                        <Undo2 size={15} /> Undo
-                                    </button>
-                                    <button onClick={() => { redo(); setShowMobileActions(false); }} disabled={historyIdx === history.length - 1}
-                                        className="flex items-center gap-2 w-full px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-40">
-                                        <Redo2 size={15} /> Redo
-                                    </button>
-                                    <button onClick={() => { handleAutoFill(); setShowMobileActions(false); }}
-                                        className="flex items-center gap-2 w-full px-4 py-3 text-sm text-gray-700 hover:bg-gray-50">
-                                        <Wand2 size={15} /> Auto-fill
-                                    </button>
-                                    <button onClick={() => { setShowSettings(true); setShowMobileActions(false); }}
-                                        className="flex items-center gap-2 w-full px-4 py-3 text-sm text-gray-700 hover:bg-gray-50">
-                                        <Settings size={15} /> Settings
-                                    </button>
-                                    <button onClick={() => { setShowPrint(true); setShowMobileActions(false); }}
-                                        className="flex items-center gap-2 w-full px-4 py-3 text-sm text-gray-700 hover:bg-gray-50">
-                                        <Printer size={15} /> Print
-                                    </button>
-                                    {status === 'Draft' && (
-                                        <button onClick={() => { setShowPublishConfirm(true); setShowMobileActions(false); }}
-                                            className="flex items-center gap-2 w-full px-4 py-3 text-sm font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100">
-                                            <Send size={15} /> Publish
-                                        </button>
-                                    )}
-                                </div>
-                            )}
-                        </div>
+                    <div className="h-5 w-px bg-gray-200 hidden sm:block shrink-0" />
+                    <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-wrap">
+                        <span className="font-bold text-gray-900 text-sm sm:text-base truncate">
+                            {timetableInfo?.class || timetableInfo?.className}
+                        </span>
+                        <span className="text-gray-500 text-sm truncate">
+                            {timetableInfo?.section || timetableInfo?.sectionName}
+                        </span>
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border shrink-0
+                            ${status === 'Draft'
+                                ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                : 'bg-blue-50 text-blue-700 border-blue-200'
+                            }`}>
+                            {isViewOnly ? 'View' : `${status}`}
+                        </span>
                     </div>
-                )}
-                {isViewOnly && (
-                    <button onClick={() => setShowPrint(true)}
-                        className="flex md:hidden items-center gap-1 px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs text-gray-700 hover:bg-gray-50 ml-auto">
-                        <Printer size={13} />
-                    </button>
-                )}
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap justify-between">
+                    <div className="flex items-center gap-1">
+                        <button onClick={() => setActiveTab('planner')}
+                            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 cursor-pointer rounded-lg text-xs sm:text-sm font-medium transition
+                                ${activeTab === 'planner' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-600'}`}>
+                            <LayoutGrid size={15} /> Planner
+                        </button>
+                        <button onClick={() => setActiveTab('analytics')}
+                            className={`flex items-center cursor-pointer gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition
+                                ${activeTab === 'analytics' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-600'}`}>
+                            <BarChart2 size={15} /> Analytics
+                        </button>
+                    </div>
+
+                    <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap">
+                        {!isViewOnly && (
+                            <>
+                                <button onClick={undo} disabled={historyIdx === 0}
+                                    className="p-2 rounded-lg text-gray-500 cursor-pointer hover:bg-gray-100 disabled:opacity-30 transition" title="Undo">
+                                    <Undo2 size={16} />
+                                </button>
+                                <button onClick={redo} disabled={historyIdx === history.length - 1}
+                                    className="p-2 rounded-lg text-gray-500 cursor-pointer hover:bg-gray-100 disabled:opacity-30 transition" title="Redo">
+                                    <Redo2 size={16} />
+                                </button>
+                                <button onClick={handleAutoFill}
+                                    className="flex items-center gap-1.5 px-2 sm:px-3 cursor-pointer py-1.5 border border-gray-200 rounded-lg text-xs sm:text-sm text-gray-700 hover:bg-gray-50 transition">
+                                    <Wand2 size={14} /> <span className="hidden sm:inline">Auto-fill</span>
+                                </button>
+                                <button
+                                    onClick={handleBulkSave}
+                                    disabled={savingAll}
+                                    className={`flex items-center gap-1.5 px-2 sm:px-3 cursor-pointer py-1.5 rounded-lg text-xs sm:text-sm font-medium transition shadow-sm ${savingAll
+                                        ? 'bg-blue-400 cursor-not-allowed opacity-80'
+                                        : 'bg-blue-600 hover:bg-blue-700 text-white'}`}>
+                                    {savingAll ? (
+                                        <><RefreshCw size={14} className="animate-spin" /> <span className="hidden sm:inline">Saving...</span></>
+                                    ) : (
+                                        <><span className="sm:hidden">💾</span><span className="hidden sm:inline">💾 Save All</span></>
+                                    )}
+                                </button>
+                                <button onClick={() => setShowSettings(true)}
+                                    className="flex items-center gap-1.5 px-2 sm:px-3 cursor-pointer py-1.5 border border-gray-200 rounded-lg text-xs sm:text-sm text-gray-700 hover:bg-gray-50 transition">
+                                    <Settings size={14} /> <span className="hidden sm:inline">Settings</span>
+                                </button>
+                                {status === 'Draft' && (
+                                    <button onClick={() => setShowPublishConfirm(true)}
+                                        className="flex items-center gap-1.5 cursor-pointer px-2.5 sm:px-4 py-1.5 bg-blue-600 text-white rounded-lg text-xs sm:text-sm font-semibold hover:bg-blue-700 transition shadow-sm">
+                                        <Send size={14} /> <span className="hidden sm:inline">Publish</span>
+                                    </button>
+                                )}
+                            </>
+                        )}
+                        {isViewOnly && (
+                            <button onClick={() => setShowPrint(true)}
+                                className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 border cursor-pointer border-gray-200 rounded-lg text-xs sm:text-sm text-gray-700 hover:bg-gray-50">
+                                <Printer size={14} /> <span className="hidden sm:inline">Print</span>
+                            </button>
+                        )}
+                    </div>
+                </div>
             </div>
 
             {activeTab === 'analytics' ? (
@@ -602,450 +689,323 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
                 </div>
             ) : (
                 <>
-                    {/* ── STATS BAR ── */}
-                    {/* Mobile: collapsible stats */}
-                    <div className="bg-white border-b border-gray-100">
-                        {/* Mobile stats toggle */}
-                        <div className="flex md:hidden items-center justify-between px-3 py-2">
-                            <div className="flex items-center gap-3">
-                                <span className="text-xs text-gray-500">{filledCount}/{totalSlots} slots · {pct}% done</span>
-                                {emptyCount > 0 && <span className="text-xs text-orange-500 font-medium">{emptyCount} empty</span>}
-                                {selectedSlots.length > 0 && <span className="text-xs text-indigo-600 font-medium">{selectedSlots.length} selected</span>}
+                    {/* Stats Bar */}
+                    <div className="bg-white border-b border-gray-100 px-3 sm:px-5 py-2.5 grid grid-cols-2 md:grid-cols-3 xl:flex xl:flex-wrap xl:items-center gap-2">
+
+                        {/* Working Days */}
+                        <div className="flex items-center gap-2 sm:gap-2.5 px-3 sm:px-4 py-2 sm:py-2.5 border border-gray-200 rounded-xl bg-white">
+                            <svg className="text-slate-500 shrink-0" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.6" viewBox="0 0 24 24">
+                                <rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
+                            </svg>
+                            <div>
+                                <p className="text-[20px] font-bold text-slate-900 leading-none">{workingDays.length}</p>
+                                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mt-0.5">Working Days</p>
                             </div>
-                            <button onClick={() => setShowMobileStats(!showMobileStats)}
-                                className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-800 px-2 py-1 rounded-lg hover:bg-gray-100">
-                                Stats {showMobileStats ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-                            </button>
                         </div>
 
-                        {/* Stats content - desktop always visible, mobile collapsible */}
-                        <div className={`${showMobileStats ? 'flex' : 'hidden'} md:flex px-3 sm:px-4 lg:px-5 py-2.5 items-center gap-2 flex-wrap`}>
-                            {/* Working Days */}
-                            <div className="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-xl bg-white">
-                                <svg className="text-slate-500 shrink-0" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.6" viewBox="0 0 24 24">
-                                    <rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
+                        {/* Periods / Day */}
+                        <div className="flex items-center gap-2 sm:gap-2.5 px-3 sm:px-4 py-2 sm:py-2.5 border border-gray-200 rounded-xl bg-white">
+                            <svg className="text-slate-500 shrink-0" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.6" viewBox="0 0 24 24">
+                                <circle cx="12" cy="12" r="9" /><polyline points="12 7 12 12 15 15" />
+                            </svg>
+                            <div>
+                                <p className="text-[20px] font-bold text-slate-900 leading-none">{timetableConfig?.periodsPerDay || periods.filter(p => !p.isBreak).length || 8}</p>
+                                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mt-0.5">Periods / Day</p>
+                            </div>
+                        </div>
+
+                        {/* Slots Filled */}
+                        <div className="flex items-center gap-2 sm:gap-3.5 px-3 sm:px-4 py-2 sm:py-2.5 border border-gray-200 rounded-xl bg-white col-span-2 md:col-span-1">
+                            <div className="relative w-10 h-10 sm:w-[52px] sm:h-[52px] shrink-0">
+                                <svg viewBox="0 0 36 36" width="52" height="52" style={{ transform: 'rotate(-90deg)' }}>
+                                    <circle cx="18" cy="18" r="14" fill="none" stroke="#e2e8f0" strokeWidth="3.5" />
+                                    <circle cx="18" cy="18" r="14" fill="none" stroke="#2563eb" strokeWidth="3.5"
+                                        strokeDasharray={`${pct} ${100 - pct}`} strokeLinecap="round" />
                                 </svg>
-                                <div>
-                                    <p className="text-lg font-bold text-slate-900 leading-none">{workingDays.length}</p>
-                                    <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-widest mt-0.5">Working Days</p>
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                    <span className="text-[11px] font-bold text-slate-800">{pct}%</span>
                                 </div>
                             </div>
-
-                            {/* Periods / Day */}
-                            <div className="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-xl bg-white">
-                                <svg className="text-slate-500 shrink-0" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.6" viewBox="0 0 24 24">
-                                    <circle cx="12" cy="12" r="9" /><polyline points="12 7 12 12 15 15" />
-                                </svg>
-                                <div>
-                                    <p className="text-lg font-bold text-slate-900 leading-none">{timetableConfig?.periodsPerDay || periods.filter(p => !p.isBreak).length || 8}</p>
-                                    <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-widest mt-0.5">Periods/Day</p>
+                            <div>
+                                <div className="flex items-baseline gap-1 leading-none">
+                                    <span className="text-[22px] font-bold text-slate-900">{filledCount}</span>
+                                    <span className="text-sm font-medium text-slate-400">/{totalSlots}</span>
+                                </div>
+                                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mt-1">Slots Filled</p>
+                                <div className="w-[90px] h-[3px] bg-gray-200 rounded-full mt-1.5">
+                                    <div className="h-[3px] bg-blue-600 rounded-full transition-all" style={{ width: `${pct}%` }} />
                                 </div>
                             </div>
+                        </div>
 
-                            {/* Slots Filled */}
-                            <div className="flex items-center gap-3 px-3 py-2 border border-gray-200 rounded-xl bg-white">
-                                <div className="relative w-11 h-11 shrink-0">
-                                    <svg viewBox="0 0 36 36" width="44" height="44" style={{ transform: 'rotate(-90deg)' }}>
-                                        <circle cx="18" cy="18" r="14" fill="none" stroke="#e2e8f0" strokeWidth="3.5" />
-                                        <circle cx="18" cy="18" r="14" fill="none" stroke="#2563eb" strokeWidth="3.5"
-                                            strokeDasharray={`${pct} ${100 - pct}`} strokeLinecap="round" />
-                                    </svg>
-                                    <div className="absolute inset-0 flex items-center justify-center">
-                                        <span className="text-[9px] font-bold text-slate-800">{pct}%</span>
-                                    </div>
-                                </div>
-                                <div>
-                                    <div className="flex items-baseline gap-1 leading-none">
-                                        <span className="text-xl font-bold text-slate-900">{filledCount}</span>
-                                        <span className="text-xs font-medium text-slate-400">/{totalSlots}</span>
-                                    </div>
-                                    <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-widest mt-0.5">Slots Filled</p>
-                                </div>
+                        {/* Empty Slots */}
+                        <div className="flex items-center gap-2 sm:gap-2.5 px-3 sm:px-4 py-2 sm:py-2.5 border border-gray-200 rounded-xl bg-white">
+                            <svg className="text-slate-500 shrink-0" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.6" viewBox="0 0 24 24">
+                                <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
+                            </svg>
+                            <div>
+                                <p className={`text-[20px] font-bold leading-none ${emptyCount > 0 ? 'text-orange-500' : 'text-slate-900'}`}>{emptyCount}</p>
+                                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mt-0.5">Empty Slots</p>
                             </div>
+                        </div>
 
-                            {/* Empty Slots */}
-                            <div className="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-xl bg-white">
-                                <div>
-                                    <p className={`text-lg font-bold leading-none ${emptyCount > 0 ? 'text-orange-500' : 'text-slate-900'}`}>{emptyCount}</p>
-                                    <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-widest mt-0.5">Empty Slots</p>
-                                </div>
-                            </div>
-
-                            {/* Teachers + substitution buttons */}
-                            <div className="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-xl bg-white flex-wrap sm:flex-nowrap">
-                                <div className="flex items-center gap-2">
-                                    <div className="flex items-center">
-                                        {uniqueTeacherNames.slice(0, 4).map((n, i) => (
-                                            <span key={n}
-                                                className={`w-6 h-6 rounded-full border-2 border-white ${TEACHER_COLORS[n] || 'bg-gray-400'} text-white flex items-center justify-center shrink-0`}
-                                                style={{ fontSize: '8px', fontWeight: 700, marginLeft: i === 0 ? 0 : '-6px' }}>
-                                                {getInitials(n)}
-                                            </span>
-                                        ))}
-                                        {uniqueTeacherNames.length > 4 && (
-                                            <span className="w-6 h-6 rounded-full border-2 border-white bg-indigo-500 text-white flex items-center justify-center shrink-0"
-                                                style={{ fontSize: '8px', fontWeight: 700, marginLeft: '-6px' }}>
-                                                +{uniqueTeacherNames.length - 4}
-                                            </span>
-                                        )}
-                                    </div>
-                                    <div>
-                                        <p className="text-lg font-bold text-slate-900 leading-none">{uniqueTeacherNames.length}</p>
-                                        <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-widest mt-0.5">Teachers</p>
-                                    </div>
-                                </div>
-
-                                {!isViewOnly && (
-                                    <div className="flex items-center gap-1 ml-1 flex-wrap">
-                                        <button
-                                            onClick={handleOpenSubstitution}
-                                            disabled={selectedSlots.length === 0}
-                                            className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-semibold border transition
-                                                ${selectedSlots.length > 0
-                                                    ? 'bg-indigo-600 text-white border-indigo-600 hover:bg-indigo-700 cursor-pointer shadow-sm'
-                                                    : 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'}`}>
-                                            <ArrowLeftRight size={11} />
-                                            <span className="hidden sm:inline">
-                                                {selectedSlots.length > 0 ? `Substitution (${selectedSlots.length})` : 'Substitution'}
-                                            </span>
-                                            <span className="sm:hidden">Sub.</span>
-                                        </button>
-                                        <button
-                                            onClick={() => setShowPendingSubstitutions(true)}
-                                            className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-semibold border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 cursor-pointer transition">
-                                            <Clock size={11} />
-                                            <span className="hidden sm:inline">Pending</span>
-                                        </button>
-                                    </div>
+                        {/* Teachers stat + Substitution buttons */}
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 border border-gray-200 rounded-xl bg-white col-span-2 md:col-span-1 xl:col-span-auto">
+                            <div className="flex items-center">
+                                {uniqueTeacherNames.length > 5 && (
+                                    <span className="w-7 h-7 rounded-full border-2 border-white bg-indigo-500 text-white flex items-center justify-center shrink-0"
+                                        style={{ fontSize: '9px', fontWeight: 700 }}>
+                                        +{uniqueTeacherNames.length - 5}
+                                    </span>
                                 )}
+                                {uniqueTeacherNames.slice(0, 5).map((n, i) => (
+                                    <span key={n}
+                                        className={`w-7 h-7 rounded-full border-2 border-white ${TEACHER_COLORS[n] || 'bg-gray-400'} text-white flex items-center justify-center shrink-0`}
+                                        style={{ fontSize: '9px', fontWeight: 700, marginLeft: (i === 0 && uniqueTeacherNames.length <= 5) ? 0 : '-8px' }}>
+                                        {getInitials(n)}
+                                    </span>
+                                ))}
+                            </div>
+                            <div>
+                                <p className="text-[20px] font-bold text-slate-900 leading-none">{uniqueTeacherNames.length}</p>
+                                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mt-0.5">Teachers</p>
                             </div>
 
-                            {/* Desktop filters + actions */}
                             {!isViewOnly && (
-                                <div className="ml-auto hidden lg:flex items-center gap-2 flex-wrap">
-                                    <div className="flex gap-1 flex-wrap">
-                                        <button onClick={() => setSubjectFilter('All')}
-                                            className={`px-2 py-1 rounded-full text-xs cursor-pointer font-medium transition ${subjectFilter === 'All'
-                                                ? 'bg-blue-600 text-white shadow-sm'
-                                                : 'bg-gray-100 text-gray-600 hover:bg-blue-50 hover:text-blue-600'}`}>
-                                            All
-                                        </button>
-                                        {subjectCounts.slice(0, 5).map(s => (
-                                            <button key={s.code} onClick={() => setSubjectFilter(s.code === subjectFilter ? 'All' : s.code)}
-                                                className={`px-2 py-1 rounded-full cursor-pointer text-xs font-medium transition flex items-center gap-1 ${subjectFilter === s.code
-                                                    ? 'bg-blue-600 text-white shadow-sm'
-                                                    : 'bg-gray-100 text-gray-600 hover:bg-blue-50 hover:text-blue-600'}`}>
-                                                <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
-                                                {s.code} {s.count}
-                                            </button>
-                                        ))}
-                                    </div>
-                                    <button onClick={() => setShowPrint(true)} className="flex items-center gap-1 px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs text-gray-600 cursor-pointer hover:bg-gray-50">
-                                        <Printer size={12} /> Print
+                                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-1.5 sm:ml-2 w-full sm:w-auto">
+                                    <button
+                                        onClick={handleOpenSubstitution}
+                                        disabled={selectedSlots.length === 0}
+                                        title={selectedSlots.length === 0 ? 'Select one or more slots to arrange substitution' : `Arrange substitution for ${selectedSlots.length} slot(s)`}
+                                        className={`flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold border transition
+                                            ${selectedSlots.length > 0
+                                                ? 'bg-indigo-600 text-white border-indigo-600 hover:bg-indigo-700 cursor-pointer shadow-sm'
+                                                : 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
+                                            }`}>
+                                        <ArrowLeftRight size={13} />
+                                        <span className="truncate">
+                                            {selectedSlots.length > 0
+                                                ? `Substitute (${selectedSlots.length})`
+                                                : 'Substitute'}
+                                        </span>
                                     </button>
-                                    <button onClick={handleClearAll} className="flex items-center gap-1 px-2.5 py-1.5 border border-red-100 rounded-lg text-xs cursor-pointer text-red-500 hover:bg-red-50">
-                                        <Trash2 size={12} /> Clear
+                                    <button
+                                        onClick={() => setShowPendingSubstitutions(true)}
+                                        title="View pending substitutions"
+                                        className="flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 cursor-pointer transition">
+                                        <Clock size={13} />
+                                        <span className="truncate">Pending</span>
                                     </button>
                                 </div>
                             )}
                         </div>
 
-                        {/* Mobile subject filter strip */}
+                        {/* Mobile sidebar toggle */}
                         {!isViewOnly && (
-                            <div className="flex lg:hidden items-center gap-1.5 px-3 pb-2 overflow-x-auto scrollbar-hide">
-                                <button onClick={() => setSubjectFilter('All')}
-                                    className={`px-2.5 py-1 rounded-full text-xs cursor-pointer font-medium transition shrink-0 ${subjectFilter === 'All'
-                                        ? 'bg-blue-600 text-white shadow-sm'
-                                        : 'bg-gray-100 text-gray-600'}`}>
-                                    All
-                                </button>
-                                {subjectCounts.map(s => (
-                                    <button key={s.code} onClick={() => setSubjectFilter(s.code === subjectFilter ? 'All' : s.code)}
-                                        className={`px-2.5 py-1 rounded-full cursor-pointer text-xs font-medium transition flex items-center gap-1 shrink-0 ${subjectFilter === s.code
+                            <button
+                                onClick={() => setShowMobileSidebar(true)}
+                                className="lg:hidden col-span-2 flex items-center justify-center gap-2 px-3 py-2 border border-gray-200 rounded-xl bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition">
+                                <PanelLeft size={16} /> Subjects Panel
+                            </button>
+                        )}
+
+                        {/* Right side filters */}
+                        {!isViewOnly && (
+                            <div className="col-span-2 xl:col-span-auto xl:ml-auto flex items-center gap-2 flex-wrap w-full xl:w-auto">
+                                <div className="flex gap-1 flex-wrap">
+                                    <button onClick={() => setSubjectFilter('All')}
+                                        className={`px-2.5 py-1 rounded-full text-xs cursor-pointer font-medium transition ${subjectFilter === 'All'
                                             ? 'bg-blue-600 text-white shadow-sm'
-                                            : 'bg-gray-100 text-gray-600'}`}>
-                                        <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
-                                        {s.code}
+                                            : 'bg-gray-100 text-gray-600 hover:bg-blue-50 hover:text-blue-600'}`}>
+                                        All
                                     </button>
-                                ))}
-                                <button onClick={handleClearAll} className="flex items-center gap-1 px-2.5 py-1 border border-red-100 rounded-full text-xs cursor-pointer text-red-500 shrink-0">
-                                    <Trash2 size={11} /> Clear
+                                    {subjectCounts.map(s => (
+                                        <button key={s.code} onClick={() => setSubjectFilter(s.code === subjectFilter ? 'All' : s.code)}
+                                            className={`px-2.5 py-1 rounded-full cursor-pointer text-xs font-medium transition flex items-center gap-1 ${subjectFilter === s.code
+                                                ? 'bg-blue-600 text-white shadow-sm'
+                                                : 'bg-gray-100 text-gray-600 hover:bg-blue-50 hover:text-blue-600'}`}>
+                                            <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
+                                            {s.code} {s.count}
+                                        </button>
+                                    ))}
+                                </div>
+                                <button onClick={() => setShowPrint(true)} className="flex items-center gap-1 px-3 py-1.5 border border-gray-200 rounded-lg text-xs text-gray-600 cursor-pointer hover:bg-gray-50">
+                                    <Printer size={13} /> Print
+                                </button>
+                                <button onClick={handleClearAll} className="flex items-center gap-1 px-3 py-1.5 border border-red-100 rounded-lg text-xs cursor-pointer text-red-500 hover:bg-red-50">
+                                    <Trash2 size={13} /> Clear All
                                 </button>
                             </div>
                         )}
                     </div>
 
-                    {/* ── PLANNER GRID ── */}
-                    <div className="flex flex-1 overflow-hidden">
-
-                        {/* Sidebar - desktop only */}
-                        {!isViewOnly && (
-                            <div className="hidden lg:flex w-52 shrink-0 bg-white border-r border-gray-200 flex-col min-h-0">
-                                <div className="flex border-b border-gray-100">
-                                    <button onClick={() => setSidebarTab('subjects')}
-                                        className={`flex-1 py-2.5 text-xs font-medium transition cursor-pointer ${sidebarTab === 'subjects' ? 'border-b-2 border-blue-600 text-blue-600 bg-blue-50' : 'text-gray-500'}`}>
-                                        Subjects
-                                    </button>
-                                    <button onClick={() => setSidebarTab('hours')}
-                                        className={`flex-1 py-2.5 text-xs font-medium cursor-pointer transition flex items-center justify-center gap-1 ${sidebarTab === 'hours' ? 'border-b-2 border-[#1e293b] text-[#1e293b]' : 'text-gray-500'}`}>
-                                        <BarChart2 size={12} /> Hours
-                                    </button>
-                                </div>
-
-                                {sidebarTab === 'subjects' && (
-                                    <div className="flex-1 min-h-0 overflow-y-auto p-3">
-                                        <div className="relative mb-2">
-                                            <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
-                                            <input value={subjectSearch} onChange={e => setSubjectSearch(e.target.value)}
-                                                placeholder="Search subjects..."
-                                                className="w-full pl-8 pr-3 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none" />
-                                        </div>
-                                        <p className="text-xs text-gray-400 mb-2">Click empty slot to add subjects</p>
-                                        <div className="space-y-1">
-                                            {filteredSubjects.map(s => (
-                                                <div key={s.code} draggable
-                                                    onDragStart={(e) => { setDraggedSubject(s); e.dataTransfer.effectAllowed = 'copy'; }}
-                                                    onDragEnd={() => setDraggedSubject(null)}
-                                                    className="flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-gray-50 cursor-grab active:cursor-grabbing select-none">
-                                                    <span className={`w-1 h-6 rounded-full ${s.dot}`} />
-                                                    <span className={`text-xs font-bold ${s.color}`}>{s.code}</span>
-                                                    <span className="text-xs text-gray-700 flex-1">{s.label}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {sidebarTab === 'hours' && (
-                                    <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-2">
-                                        {subjectCounts.map(s => {
-                                            const pct = s.total ? Math.round((s.count / s.total) * 100) : 0;
-                                            return (
-                                                <div key={s.code}>
-                                                    <div className="flex justify-between text-xs mb-1">
-                                                        <span className={`font-bold ${s.color}`}>{s.code}</span>
-                                                        <span className="text-gray-400">{s.count}/{s.total}</span>
-                                                    </div>
-                                                    <div className="w-full bg-gray-100 rounded-full h-1.5">
-                                                        <div className={`h-1.5 rounded-full ${s.dot}`} style={{ width: `${pct}%` }} />
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                )}
-                            </div>
-                        )}
-
+                    {/* Planner Grid */}
+                    <div className="flex flex-col lg:flex-row flex-1 overflow-hidden min-h-0">
                         {/* Mobile sidebar drawer */}
                         {!isViewOnly && showMobileSidebar && (
-                            <div className="fixed inset-0 z-40 flex lg:hidden">
-                                <div className="absolute inset-0 bg-black/30" onClick={() => setShowMobileSidebar(false)} />
-                                <div className="absolute left-0 top-0 bottom-0 w-64 bg-white shadow-xl flex flex-col">
-                                    <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-                                        <span className="font-semibold text-gray-900 text-sm">Subjects</span>
-                                        <button onClick={() => setShowMobileSidebar(false)} className="p-1.5 rounded-lg hover:bg-gray-100">
-                                            <X size={16} className="text-gray-500" />
+                            <>
+                                <div
+                                    className="lg:hidden fixed inset-0 bg-black/40 z-40"
+                                    onClick={() => setShowMobileSidebar(false)}
+                                />
+                                <div className="lg:hidden fixed inset-y-0 left-0 z-50 w-72 max-w-[88vw] bg-white border-r border-gray-200 shadow-xl flex flex-col min-h-0">
+                                    <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 shrink-0">
+                                        <span className="text-sm font-semibold text-gray-800">Subjects Panel</span>
+                                        <button
+                                            onClick={() => setShowMobileSidebar(false)}
+                                            className="p-1.5 rounded-lg hover:bg-gray-100 transition">
+                                            <PanelLeftClose size={18} className="text-gray-500" />
                                         </button>
                                     </div>
-                                    <div className="flex-1 overflow-y-auto p-3">
-                                        <p className="text-xs text-gray-400 mb-3">Tap any subject then tap an empty slot</p>
-                                        <div className="space-y-1">
-                                            {filteredSubjects.map(s => (
-                                                <div key={s.code}
-                                                    className="flex items-center gap-2 px-3 py-2.5 rounded-lg hover:bg-gray-50 cursor-pointer select-none border border-gray-100"
-                                                    onClick={() => { setDraggedSubject(s); setShowMobileSidebar(false); }}>
-                                                    <span className={`w-1 h-6 rounded-full ${s.dot}`} />
-                                                    <span className={`text-sm font-bold ${s.color}`}>{s.code}</span>
-                                                    <span className="text-sm text-gray-700 flex-1">{s.label}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
+                                    {sidebarPanel}
                                 </div>
+                            </>
+                        )}
+
+                        {/* Desktop sidebar */}
+                        {!isViewOnly && (
+                            <div className="hidden lg:flex w-52 shrink-0 bg-white border-r border-gray-200 flex-col min-h-0">
+                                {sidebarPanel}
                             </div>
                         )}
 
-                        {/* Timetable grid with touch-enabled horizontal scroll */}
-                        <div className="flex-1 overflow-hidden flex flex-col min-w-0">
-                            {/* Mobile scroll hint */}
-                            <div className="flex md:hidden items-center justify-between px-3 py-1.5 bg-blue-50 border-b border-blue-100">
-                                <span className="text-xs text-blue-600">← Swipe timetable left/right →</span>
-                                {!isViewOnly && (
-                                    <button onClick={() => setShowMobileSidebar(true)}
-                                        className="text-xs text-blue-700 font-medium bg-blue-100 px-2.5 py-1 rounded-lg">
-                                        + Subjects
-                                    </button>
-                                )}
-                            </div>
-
-                            {/* Scrollable timetable container */}
-                            <div
-                                ref={tableScrollRef}
-                                className="flex-1 overflow-auto"
-                                style={{ WebkitOverflowScrolling: 'touch' }}
-                                onTouchStart={handleTouchStart}
-                                onTouchMove={handleTouchMove}
-                                onTouchEnd={handleTouchEnd}
-                            >
-                                {loadingSlots ? (
-                                    <div className="flex items-center justify-center h-64 text-gray-400 text-sm">
-                                        Loading timetable...
-                                    </div>
-                                ) : (
-                                    <table className="border-collapse" style={{ minWidth: `${Math.max(600, workingDays.length * 130 + 140)}px`, width: '100%' }}>
-                                        <thead>
-                                            <tr>
-                                                <th className="bg-gray-50 border-b border-r border-gray-200 px-3 py-3 text-left text-xs font-semibold text-gray-500 sticky left-0 z-10 bg-gray-50"
-                                                    style={{ minWidth: '120px', maxWidth: '140px' }}>
-                                                    <span className="hidden sm:inline">PERIOD / TIME</span>
-                                                    <span className="sm:hidden">TIME</span>
-                                                </th>
-                                                {workingDays.map(day => (
-                                                    <th key={day}
-                                                        className="border-b border-r border-gray-200 px-2 sm:px-3 py-3 text-center text-xs sm:text-sm font-semibold bg-gray-600 text-gray-200"
-                                                        style={{ minWidth: '110px' }}>
-                                                        {day}
-                                                    </th>
-                                                ))}
-                                            </tr>
-                                        </thead>
-                                        <tbody>
+                        {/* Grid */}
+                        <div className="flex-1 overflow-hidden flex flex-col min-h-0 min-w-0">
+                            {loadingSlots ? (
+                                <div className="flex items-center justify-center h-64 text-gray-400 text-sm">
+                                    Loading timetable...
+                                </div>
+                            ) : (
+                                <>
+                                    {/* Mobile / tablet day view */}
+                                    <div className="lg:hidden flex flex-col flex-1 min-h-0">
+                                        <div className="flex overflow-x-auto gap-1.5 p-2 bg-white border-b border-gray-200 shrink-0 scrollbar-thin">
+                                            {workingDays.map(day => (
+                                                <button
+                                                    key={day}
+                                                    onClick={() => setMobileDay(day)}
+                                                    className={`px-3.5 py-1.5 rounded-lg text-sm font-semibold whitespace-nowrap shrink-0 transition
+                                                    ${mobileDay === day
+                                                            ? 'bg-gray-700 text-white shadow-sm'
+                                                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                                                    {day}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        <div className="flex-1 overflow-y-auto p-3 space-y-2.5">
                                             {periods.map(period => {
                                                 if (period.isBreak) {
                                                     return (
-                                                        <tr key={period.id} className="bg-amber-50/60">
-                                                            <td className="border-b border-r border-gray-200 px-3 py-2 sticky left-0 bg-amber-50/90 z-10"
-                                                                style={{ minWidth: '120px', maxWidth: '140px' }}>
-                                                                <div className="flex items-center gap-1">
-                                                                    <span className="text-sm">{period.emoji}</span>
-                                                                    <span className="text-xs font-semibold text-amber-800 truncate">{period.label}</span>
-                                                                </div>
-                                                                <p className="text-xs text-amber-600">{period.time}</p>
-                                                            </td>
-                                                            {workingDays.map((day, di) => (
-                                                                <td key={day} className="border-b border-r border-gray-200 px-2 py-2">
-                                                                    {di === 0 && (
-                                                                        <div className="flex items-center gap-1.5 flex-wrap">
-                                                                            <span className="text-sm">{period.emoji}</span>
-                                                                            <span className="bg-amber-200 text-amber-800 text-xs font-bold px-1.5 py-0.5 rounded">{period.duration}</span>
-                                                                        </div>
-                                                                    )}
-                                                                </td>
-                                                            ))}
-                                                        </tr>
+                                                        <div key={period.id} className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+                                                            <div className="flex items-center gap-2">
+                                                                <span>{period.emoji}</span>
+                                                                <span className="text-sm font-semibold text-amber-800">{period.label}</span>
+                                                                <span className="text-xs text-amber-600 ml-auto">{period.time}</span>
+                                                                {period.duration && (
+                                                                    <span className="bg-amber-200 text-amber-800 text-xs font-bold px-1.5 py-0.5 rounded">{period.duration}</span>
+                                                                )}
+                                                            </div>
+                                                        </div>
                                                     );
                                                 }
-
+                                                const slot = getSlot(mobileDay, period.id);
+                                                const subjectMeta = slot
+                                                    ? (subjectsList.find(s => s.code === slot.subject?.code || s.id === slot.subject?.id) || null)
+                                                    : null;
+                                                const teacherColor = slot?.teacher?.name ? (TEACHER_COLORS[slot.teacher.name] || 'bg-gray-400') : '';
+                                                const isSelected = slot ? selectedSlotKey === slotKey(slot) : false;
                                                 return (
-                                                    <tr key={period.id} className="hover:bg-gray-50/40 transition">
-                                                        <td className="border-b border-r border-gray-200 px-3 py-2.5 sticky left-0 bg-white z-10"
-                                                            style={{ minWidth: '120px', maxWidth: '140px' }}>
-                                                            <p className="text-xs font-semibold text-gray-400">{period.id}</p>
-                                                            <p className="text-xs sm:text-sm font-medium text-gray-800">{period.label}</p>
-                                                            <p className="text-xs text-gray-400 hidden sm:block">{period.time}</p>
-                                                        </td>
-                                                        {workingDays.map(day => {
-                                                            const slot = getSlot(day, period.id);
-                                                            const subjectMeta = slot
-                                                                ? (subjectsList.find(s => s.code === slot.subject?.code || s.id === slot.subject?.id) || null)
-                                                                : null;
-                                                            const teacherColor = slot?.teacher?.name ? (TEACHER_COLORS[slot.teacher.name] || 'bg-gray-400') : '';
-                                                            const isSelected = slot ? selectedSlotKey === slotKey(slot) : false;
-
-                                                            return (
-                                                                <td key={day} className="border-b border-r border-gray-200 p-1 sm:p-1.5 align-top">
-                                                                    {slot ? (
-                                                                        <div className={`relative rounded-lg border p-1.5 sm:p-2 group transition
-                                                                            ${isSelected ? 'ring-2 ring-indigo-500 ring-offset-1' : ''}
-                                                                            ${subjectMeta ? `${subjectMeta.bg} ${subjectMeta.border}` : 'bg-gray-50 border-gray-200'}`}>
-
-                                                                            {!isViewOnly && (
-                                                                                <input
-                                                                                    type="checkbox"
-                                                                                    checked={isSelected}
-                                                                                    onChange={() => toggleSlotSelection(slot)}
-                                                                                    onClick={(e) => e.stopPropagation()}
-                                                                                    className="absolute top-1 right-1 w-3 h-3 accent-indigo-600 cursor-pointer z-10"
-                                                                                />
-                                                                            )}
-
-                                                                            {/* Desktop hover actions */}
-                                                                            {!isViewOnly && (
-                                                                                <div className="absolute inset-x-0 bottom-1 hidden sm:flex items-center justify-center gap-0.5 opacity-0 group-hover:opacity-100 transition-all duration-150 z-10">
-                                                                                    <button title="Edit" onClick={() => setAddSlotTarget({ day, period, editSlot: slot })}
-                                                                                        className="w-5 h-5 rounded bg-white/90 border border-gray-200 cursor-pointer shadow flex items-center justify-center hover:bg-blue-100 transition">
-                                                                                        <Pencil size={9} className="text-gray-600" />
-                                                                                    </button>
-                                                                                    <button title="Assign Teacher" onClick={() => setAssignTeacherTarget({ day, period, slot })}
-                                                                                        className="w-5 h-5 rounded bg-white/90 border border-gray-200 cursor-pointer shadow flex items-center justify-center hover:bg-blue-100 transition">
-                                                                                        <User size={9} className="text-gray-600" />
-                                                                                    </button>
-                                                                                    <button title="Remove" onClick={() => handleRemoveSlot(day, period.id)}
-                                                                                        className="w-5 h-5 rounded bg-white/90 border border-gray-200 cursor-pointer shadow flex items-center justify-center hover:bg-red-50 transition">
-                                                                                        <Trash2 size={9} className="text-red-400" />
-                                                                                    </button>
-                                                                                </div>
-                                                                            )}
-
-                                                                            {/* Mobile long-press / tap to edit */}
-                                                                            {!isViewOnly && (
-                                                                                <button
-                                                                                    className="sm:hidden absolute top-1 left-1 w-5 h-5 rounded bg-white/80 border border-gray-200 flex items-center justify-center z-10"
-                                                                                    onClick={() => setAddSlotTarget({ day, period, editSlot: slot })}>
-                                                                                    <Pencil size={9} className="text-gray-500" />
-                                                                                </button>
-                                                                            )}
-
-                                                                            <p className={`text-xs font-bold mb-0.5 pr-4 ${subjectMeta?.color || 'text-gray-600'}`}>
-                                                                                {slot.subject?.code}
-                                                                            </p>
-                                                                            <p className="text-xs font-semibold text-gray-800 leading-tight line-clamp-2">{slot.subject?.label}</p>
-                                                                            {slot.teacher?.name && (
-                                                                                <div className="flex items-center gap-0.5 mt-1">
-                                                                                    <span className={`w-3.5 h-3.5 rounded-full ${teacherColor} text-white flex items-center justify-center shrink-0`} style={{ fontSize: '7px' }}>
-                                                                                        {getInitials(slot.teacher.name)}
-                                                                                    </span>
-                                                                                    <span className="text-xs text-gray-500 truncate hidden sm:inline">{slot.teacher.name.split(' ')[0]}</span>
-                                                                                </div>
-                                                                            )}
-                                                                            {slot.room && (
-                                                                                <p className="text-xs text-gray-400 mt-0.5 hidden sm:block">📍 {slot.room}</p>
-                                                                            )}
-                                                                            {!isViewOnly && <div className="h-4 sm:h-5" />}
-                                                                        </div>
-                                                                    ) : (
-                                                                        !isViewOnly && (
-                                                                            <button
-                                                                                onClick={() => setAddSlotTarget({ day, period, prefillSubject: draggedSubject || undefined })}
-                                                                                onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; setDragOverCell({ day, periodId: period.id }); }}
-                                                                                onDragLeave={() => setDragOverCell(null)}
-                                                                                onDrop={(e) => {
-                                                                                    e.preventDefault();
-                                                                                    setDragOverCell(null);
-                                                                                    if (draggedSubject) {
-                                                                                        setAddSlotTarget({ day, period, prefillSubject: draggedSubject });
-                                                                                        setDraggedSubject(null);
-                                                                                    }
-                                                                                }}
-                                                                                className={`w-full h-full min-h-14 sm:min-h-20 flex items-center justify-center rounded-lg transition border-2 border-dashed
-                                                                                    ${dragOverCell?.day === day && dragOverCell?.periodId === period.id
-                                                                                        ? 'border-blue-500 bg-blue-50 text-blue-600'
-                                                                                        : 'border-transparent hover:border-gray-200 text-gray-300 hover:text-gray-400 hover:bg-gray-100/60'}`}>
-                                                                                <Plus size={16} />
-                                                                            </button>
-                                                                        )
-                                                                    )}
-                                                                </td>
-                                                            );
-                                                        })}
-                                                    </tr>
+                                                    <div key={period.id} className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                                                        <div className="px-3 py-2 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
+                                                            <div>
+                                                                <p className="text-xs font-semibold text-gray-400">{period.id}</p>
+                                                                <p className="text-sm font-medium text-gray-800">{period.label}</p>
+                                                            </div>
+                                                            <p className="text-xs text-gray-400">{period.time}</p>
+                                                        </div>
+                                                        <div className="p-2">
+                                                            {renderSlotCard(mobileDay, period, slot, subjectMeta, teacherColor, isSelected)}
+                                                        </div>
+                                                    </div>
                                                 );
                                             })}
-                                        </tbody>
-                                    </table>
-                                )}
-                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Desktop table view */}
+                                    <div className="hidden lg:block flex-1 overflow-auto">
+                                        <table className="w-full border-collapse min-w-[600px] xl:min-w-[750px]">
+                                            <thead>
+                                                <tr>
+                                                    <th className="bg-gray-50 border-b border-r border-gray-200 px-4 py-3 text-left text-xs font-semibold text-gray-500 w-36 sticky left-0 z-10">
+                                                        PERIOD / TIME
+                                                    </th>
+                                                    {workingDays.map(day => (
+                                                        <th key={day}
+                                                            className={`border-b border-r border-gray-200 px-3 py-3 text-center text-sm font-semibold min-w-32.5 ${day === 'Mon' ? 'bg-gray-600 text-white' : 'bg-gray-600 text-gray-200'}`}>
+                                                            {day === 'Mon' ? `• ${day}` : day}
+                                                        </th>
+                                                    ))}
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {periods.map(period => {
+                                                    if (period.isBreak) {
+                                                        return (
+                                                            <tr key={period.id} className="bg-amber-50/60">
+                                                                <td className="border-b border-r border-gray-200 px-4 py-2 sticky left-0 bg-amber-50/80 z-10">
+                                                                    <div className="flex items-center gap-1.5">
+                                                                        <span>{period.emoji}</span>
+                                                                        <span className="text-xs font-semibold text-amber-800">{period.label}</span>
+                                                                    </div>
+                                                                    <p className="text-xs text-amber-600">{period.time}</p>
+                                                                </td>
+                                                                {workingDays.map(day => (
+                                                                    <td key={day} className="border-b border-r border-gray-200 px-3 py-2">
+                                                                        {day === workingDays[0] && (
+                                                                            <div className="flex items-center gap-2">
+                                                                                <span>{period.emoji}</span>
+                                                                                <span className="text-xs text-amber-700 font-medium">{period.time}</span>
+                                                                                <span className="bg-amber-200 text-amber-800 text-xs font-bold px-1.5 py-0.5 rounded">{period.duration}</span>
+                                                                            </div>
+                                                                        )}
+                                                                    </td>
+                                                                ))}
+                                                            </tr>
+                                                        );
+                                                    }
+
+                                                    return (
+                                                        <tr key={period.id} className="hover:bg-gray-50/40 transition">
+                                                            <td className="border-b border-r border-gray-200 px-4 py-3 sticky left-0 bg-white z-10">
+                                                                <p className="text-xs font-semibold text-gray-400">{period.id}</p>
+                                                                <p className="text-sm font-medium text-gray-800">{period.label}</p>
+                                                                <p className="text-xs text-gray-400">{period.time}</p>
+                                                            </td>
+                                                            {workingDays.map(day => {
+                                                                const slot = getSlot(day, period.id);
+                                                                const subjectMeta = slot
+                                                                    ? (subjectsList.find(s => s.code === slot.subject?.code || s.id === slot.subject?.id) || null)
+                                                                    : null;
+                                                                const teacherColor = slot?.teacher?.name ? (TEACHER_COLORS[slot.teacher.name] || 'bg-gray-400') : '';
+                                                                const isSelected = slot
+                                                                    ? selectedSlotKey === slotKey(slot)
+                                                                    : false;
+
+                                                                return (
+                                                                    <td key={day} className="border-b border-r border-gray-200 p-1.5 align-top min-w-[120px]">
+                                                                        {renderSlotCard(day, period, slot, subjectMeta, teacherColor, isSelected)}
+                                                                    </td>
+                                                                );
+                                                            })}
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </>
+                            )}
                         </div>
                     </div>
 
@@ -1054,17 +1014,22 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
                         <span className="truncate">📋 {timetableInfo?.class} — {timetableInfo?.section}</span>
                         <span className="hidden sm:inline">•</span>
                         <span className="hidden sm:inline">📅 {timetableInfo?.year || timetableInfo?.academicYear}</span>
-                        <span className="hidden sm:inline">•</span>
-                        <span className="hidden sm:inline">{workingDays.length} days · {timetableConfig?.periodsPerDay || periods.filter(p => !p.isBreak).length || 8} periods/day</span>
-                        <span className={`ml-auto sm:ml-0 ${status === 'Draft' ? 'text-amber-600 font-medium' : 'text-blue-600 font-medium'}`}>{status}</span>
+                        <span className="hidden md:inline">•</span>
+                        <span className="hidden md:inline">{workingDays.length} days · {timetableConfig?.periodsPerDay || periods.filter(p => !p.isBreak).length || 8} periods/day</span>
+                        <span>•</span>
+                        <span className={status === 'Draft' ? 'text-amber-600 font-medium' : 'text-blue-600 font-medium'}>{status}</span>
                         {selectedSlots.length > 0 && (
-                            <span className="text-indigo-600 font-medium">{selectedSlots.length} selected</span>
+                            <>
+                                <span className="hidden sm:inline">•</span>
+                                <span className="text-indigo-600 font-medium">{selectedSlots.length} selected</span>
+                            </>
                         )}
                     </div>
                 </>
             )}
 
             {/* ── Modals ── */}
+
             {addSlotTarget && !isViewOnly && (
                 <AddSlotModal
                     day={addSlotTarget.day}
@@ -1105,14 +1070,19 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
                 />
             )}
 
+            {/* Arrange Substitution Modal */}
             {substitutionTarget && !isViewOnly && (
                 <SubstitutionModal
                     timetableId={timetable?.id}
                     selectedSlots={substitutionTarget}
-                    onClose={() => { setSubstitutionTarget(null); setSelectedSlotKey(null); }}
+                    onClose={() => {
+                        setSubstitutionTarget(null);
+                        setSelectedSlotKey(null);
+                    }}
                 />
             )}
 
+            {/* Pending Substitutions Modal — separate popup */}
             {showPendingSubstitutions && !isViewOnly && (
                 <PendingSubstitutionsModal
                     timetableId={timetable?.id}
@@ -1125,7 +1095,10 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
                     timetable={timetableInfo}
                     timetableId={timetable?.id}
                     onClose={() => setShowSettings(false)}
-                    onApply={async () => { await loadTimetableData(); setShowSettings(false); }}
+                    onApply={async () => {
+                        await loadTimetableData();
+                        setShowSettings(false);
+                    }}
                 />
             )}
 
@@ -1143,8 +1116,8 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
 
             {showPublishConfirm && (
                 <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-xl shadow-xl p-5 sm:p-6 w-full max-w-sm">
-                        <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2">Publish Timetable?</h3>
+                    <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">Publish Timetable?</h3>
                         <p className="text-sm text-gray-500 mb-5">
                             This will make the timetable visible to all students and teachers for{' '}
                             <strong>{timetableInfo?.class} — {timetableInfo?.section}</strong>.
@@ -1161,11 +1134,6 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
                         </div>
                     </div>
                 </div>
-            )}
-
-            {/* Click-outside for mobile actions dropdown */}
-            {showMobileActions && (
-                <div className="fixed inset-0 z-30" onClick={() => setShowMobileActions(false)} />
             )}
         </div>
     );

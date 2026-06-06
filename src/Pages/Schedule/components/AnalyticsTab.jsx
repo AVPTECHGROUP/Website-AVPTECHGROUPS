@@ -156,10 +156,10 @@ export default function AnalyticsTab({
     return (
         <div className="p-3 sm:p-4 space-y-3 sm:space-y-4">
 
-            {/* Top stat cards - responsive grid */}
+            {/* ── Top stat cards ── */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
                 <div className="bg-white border border-orange-200 rounded-xl p-3 sm:p-4">
-                    <BarChart2 size={16} className="text-orange-400 mb-1" />
+                    <BarChart2 size={18} className="text-orange-400 mb-1" />
                     <p className="text-2xl sm:text-3xl font-bold text-orange-500">{stats.completion}%</p>
                     <p className="text-xs font-semibold text-gray-500 mt-0.5 uppercase tracking-wide">Completion</p>
                     <p className="text-xs text-gray-400 hidden sm:block">{stats.filledSlots} / {stats.totalSlots} filled</p>

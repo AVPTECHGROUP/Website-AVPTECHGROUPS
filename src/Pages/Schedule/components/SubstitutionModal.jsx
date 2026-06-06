@@ -164,13 +164,7 @@ export default function SubstitutionModal({ timetableId, selectedSlots = [], onC
 
     return (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-            {/* Bottom sheet on mobile, centered on sm+ */}
-            <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md overflow-hidden">
-
-                {/* Mobile drag handle */}
-                <div className="flex justify-center pt-3 pb-1 sm:hidden">
-                    <div className="w-10 h-1 rounded-full bg-gray-300" />
-                </div>
+            <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-md max-h-[92vh] overflow-hidden flex flex-col">
 
                 {/* Header */}
                 <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-100">
