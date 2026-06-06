@@ -60,23 +60,15 @@ export default function AssignTeacherModal({ day, period, slot, timetableId, onC
     const loadTeachers = async (periodNumber) => {
         try {
             setLoading(true);
-            const res = await getAvailableTeachersForSlot(
-                timetableId,
-                day,
-                periodNumber,
-                slot?.subject?.id
-            );
+            const res = await getAvailableTeachersForSlot(timetableId, day, periodNumber, slot?.subject?.id);
 
-            // ✅ Same as AddSlotModal — API returns res directly (not res.data)
             const bestMatch = (res?.bestMatch || []).map(normalizeTeacher);
             const others = (res?.others || []).map(normalizeTeacher);
             const busy = (res?.busy || []).map(normalizeTeacher);
 
-            // ✅ If currently assigned teacher is missing from available, move from busy → available
             if (slot?.teacher?.id) {
                 const inBestMatch = bestMatch.find(t => t.id === slot.teacher.id);
                 const inOthers = others.find(t => t.id === slot.teacher.id);
-
                 if (!inBestMatch && !inOthers) {
                     const idx = busy.findIndex(t => t.id === slot.teacher.id);
                     if (idx !== -1) {
@@ -108,11 +100,17 @@ export default function AssignTeacherModal({ day, period, slot, timetableId, onC
     const hasAnyTeacher = teachers.bestMatch.length > 0 || teachers.others.length > 0 || teachers.busy.length > 0;
 
     return (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+            {/* Bottom sheet on mobile, centered modal on sm+ */}
+            <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-sm overflow-hidden">
+
+                {/* Mobile drag handle */}
+                <div className="flex justify-center pt-3 pb-1 sm:hidden">
+                    <div className="w-10 h-1 rounded-full bg-gray-300" />
+                </div>
 
                 {/* Header */}
-                <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                <div className="flex items-center justify-between px-5 py-3 sm:py-4 border-b border-gray-100">
                     <div>
                         <h2 className="text-base font-semibold text-gray-900">Assign Teacher</h2>
                         <p className="text-xs text-gray-400 mt-0.5">{day} · {period?.label}</p>
@@ -122,7 +120,7 @@ export default function AssignTeacherModal({ day, period, slot, timetableId, onC
                     </button>
                 </div>
 
-                <div className="p-5 space-y-4">
+                <div className="p-4 sm:p-5 space-y-4">
 
                     {/* Subject badge */}
                     <div className="flex items-center gap-2 px-3 py-2 border border-orange-200 bg-orange-50 rounded-lg">
@@ -135,11 +133,11 @@ export default function AssignTeacherModal({ day, period, slot, timetableId, onC
                         <div>
                             <p className="text-xs font-semibold text-gray-400 tracking-widest mb-2">CURRENTLY ASSIGNED</p>
                             <div className="flex items-center gap-3 bg-green-50 border border-green-200 rounded-lg px-3 py-2.5">
-                                <span className="w-9 h-9 rounded-full bg-green-600 text-white text-sm font-bold flex items-center justify-center shrink-0">
+                                <span className="w-8 h-8 rounded-full bg-green-600 text-white text-sm font-bold flex items-center justify-center shrink-0">
                                     {slot.teacher.name?.split(' ').map(w => w[0]).join('') || '?'}
                                 </span>
                                 <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-semibold text-gray-900">{slot.teacher.name}</p>
+                                    <p className="text-sm font-semibold text-gray-900 truncate">{slot.teacher.name}</p>
                                     <p className="text-xs text-gray-500">{subjectLabel}</p>
                                 </div>
                             </div>
@@ -150,18 +148,13 @@ export default function AssignTeacherModal({ day, period, slot, timetableId, onC
                     <div>
                         <p className="text-xs font-semibold text-gray-400 tracking-widest mb-2">SELECT TEACHER</p>
 
-                        <div className="border border-gray-200 rounded-lg overflow-hidden max-h-64 overflow-y-auto divide-y divide-gray-100">
+                        <div className="border border-gray-200 rounded-lg overflow-hidden max-h-52 sm:max-h-64 overflow-y-auto divide-y divide-gray-100">
 
-                            {/* Unassigned option */}
                             <label className="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-gray-50">
-                                <input
-                                    type="radio"
-                                    name="assignTeacher"
-                                    value=""
+                                <input type="radio" name="assignTeacher" value=""
                                     checked={!selectedTeacherId}
                                     onChange={() => setSelectedTeacherId(null)}
-                                    className="accent-[#1e293b]"
-                                />
+                                    className="accent-[#1e293b]" />
                                 <span className="text-sm text-gray-400 italic">— Unassigned —</span>
                             </label>
 
@@ -171,42 +164,30 @@ export default function AssignTeacherModal({ day, period, slot, timetableId, onC
                                 <p className="text-sm text-gray-400 py-4 text-center italic">No teachers found</p>
                             ) : (
                                 <>
-                                    {/* Best Match */}
                                     {teachers.bestMatch.length > 0 && (
                                         <div>
                                             <p className="text-xs font-semibold text-gray-400 px-3 pt-2 pb-1 uppercase tracking-wide">⭐ Best Match</p>
                                             {teachers.bestMatch.map(t => (
-                                                <TeacherRow key={t.id} t={t}
-                                                    selectedTeacherId={selectedTeacherId}
-                                                    onSelect={setSelectedTeacherId}
-                                                    colorClass="bg-green-500" />
+                                                <TeacherRow key={t.id} t={t} selectedTeacherId={selectedTeacherId}
+                                                    onSelect={setSelectedTeacherId} colorClass="bg-green-500" />
                                             ))}
                                         </div>
                                     )}
-
-                                    {/* Others */}
                                     {teachers.others.length > 0 && (
                                         <div>
                                             <p className="text-xs font-semibold text-gray-400 px-3 pt-2 pb-1 uppercase tracking-wide">Others</p>
                                             {teachers.others.map(t => (
-                                                <TeacherRow key={t.id} t={t}
-                                                    selectedTeacherId={selectedTeacherId}
-                                                    onSelect={setSelectedTeacherId}
-                                                    colorClass="bg-blue-400" />
+                                                <TeacherRow key={t.id} t={t} selectedTeacherId={selectedTeacherId}
+                                                    onSelect={setSelectedTeacherId} colorClass="bg-blue-400" />
                                             ))}
                                         </div>
                                     )}
-
-                                    {/* Busy */}
                                     {teachers.busy.length > 0 && (
                                         <div>
                                             <p className="text-xs font-semibold text-red-400 px-3 pt-2 pb-1 uppercase tracking-wide">🔴 Busy (Conflict)</p>
                                             {teachers.busy.map(t => (
-                                                <TeacherRow key={t.id} t={t}
-                                                    selectedTeacherId={selectedTeacherId}
-                                                    onSelect={setSelectedTeacherId}
-                                                    colorClass="bg-red-400"
-                                                    dimmed={true} />
+                                                <TeacherRow key={t.id} t={t} selectedTeacherId={selectedTeacherId}
+                                                    onSelect={setSelectedTeacherId} colorClass="bg-red-400" dimmed={true} />
                                             ))}
                                         </div>
                                     )}
@@ -219,11 +200,11 @@ export default function AssignTeacherModal({ day, period, slot, timetableId, onC
                 {/* Footer */}
                 <div className="flex justify-end gap-3 px-5 py-4 border-t border-gray-100">
                     <button onClick={onClose}
-                        className="px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50">
+                        className="flex-1 sm:flex-none px-4 py-2.5 sm:py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 text-center">
                         Cancel
                     </button>
                     <button onClick={handleAssign} disabled={!selectedTeacherId || saving}
-                        className="px-4 py-2 bg-[#1e293b] text-white rounded-lg text-sm font-medium hover:bg-[#334155] disabled:opacity-40 transition">
+                        className="flex-1 sm:flex-none px-4 py-2.5 sm:py-2 bg-[#1e293b] text-white rounded-lg text-sm font-medium hover:bg-[#334155] disabled:opacity-40 transition text-center">
                         {saving ? 'Assigning…' : 'Assign Teacher'}
                     </button>
                 </div>

@@ -70,7 +70,7 @@ function ToastContainer() {
   );
 }
 
-// ─── Mobile Allocation Card ───────────────────────────────────────
+// ─── Mobile / Tablet Allocation Card ─────────────────────────────
 function AllocationCard({ a, onAction, togglingId }) {
   const isBusy = togglingId === a.id;
   const typeKey = a.pickupDropType;
@@ -146,10 +146,10 @@ function AllocationCard({ a, onAction, togglingId }) {
           <p className="font-semibold text-gray-700">
             {a.effectiveFrom
               ? new Date(a.effectiveFrom).toLocaleDateString("en-GB", {
-                  day: "2-digit",
-                  month: "short",
-                  year: "numeric",
-                })
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+              })
               : "—"}
           </p>
         </div>
@@ -314,24 +314,31 @@ export default function Student_Allocations() {
   return (
     <>
       <ToastContainer />
-      <div className="min-h-screen bg-[#f0f2f8] font-sans" style={{ minWidth: 0, width: "100%" }}>
+
+      {/*
+        ── Outer shell ──
+        Full width, fills available space inside whatever sidebar layout wraps this page.
+        No fixed max-width here — let the parent layout control that.
+      */}
+      <div className="min-h-screen bg-[#f0f2f8] font-sans w-full">
 
         {/* ── Page Header ── */}
-        <div className="px-4 sm:px-6 xl:px-10 pt-6 sm:pt-8 pb-2">
-          <h1 className="text-xl sm:text-2xl xl:text-3xl font-bold text-gray-900 flex items-center gap-2">
+        <div className="px-4 sm:px-6 lg:px-8 xl:px-10 pt-6 sm:pt-8 pb-2">
+          <h1 className="text-xl sm:text-2xl lg:text-2xl xl:text-3xl font-bold text-gray-900 flex items-center gap-2.5">
             <GraduationCap className="w-6 h-6 sm:w-7 sm:h-7 text-purple-600 shrink-0" />
             Student Allocation Management
           </h1>
-          <p className="text-gray-500 text-xs sm:text-sm mt-1 max-w-2xl">
+          <p className="text-gray-500 text-xs sm:text-sm mt-1">
             Allocate students to transport routes and stops, manage pickup/drop preferences and fee plans.
           </p>
         </div>
 
-        <div className="px-4 sm:px-6 xl:px-10 py-4 sm:py-6">
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm" style={{ width: "100%", minWidth: 0 }}>
+        {/* ── Content area ── */}
+        <div className="px-4 sm:px-6 lg:px-8 xl:px-10 py-4 sm:py-6 w-full">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm w-full overflow-hidden">
 
             {/* ── Table Header ── */}
-            <div className="px-4 sm:px-6 py-4 sm:py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100">
+            <div className="px-4 sm:px-6 lg:px-6 xl:px-8 py-4 sm:py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100">
               <div className="min-w-0">
                 <h2 className="text-base sm:text-lg font-bold text-gray-900 flex items-center gap-2">
                   <SlidersHorizontal className="w-4 h-4 text-purple-500 shrink-0" />
@@ -355,14 +362,15 @@ export default function Student_Allocations() {
                   className="inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors shadow-sm whitespace-nowrap"
                 >
                   <Plus className="w-4 h-4" />
-                  Allocate Student
+                  <span className="hidden xs:inline sm:inline">Allocate Student</span>
+                  <span className="xs:hidden sm:hidden">Allocate</span>
                 </button>
               </div>
             </div>
 
             {/* ── Search ── */}
-            <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-50">
-              <div className="relative w-full sm:max-w-sm">
+            <div className="px-4 sm:px-6 lg:px-6 xl:px-8 py-3 sm:py-4 border-b border-gray-50">
+              <div className="relative w-full sm:max-w-sm lg:max-w-md xl:max-w-lg">
                 <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                 <input
                   type="text"
@@ -374,7 +382,13 @@ export default function Student_Allocations() {
               </div>
             </div>
 
-            {/* ── Mobile Cards (below lg) ── */}
+            {/*
+              ── Responsive view switching ──
+              Cards:  mobile + tablet  (below lg)
+              Table:  laptop and above (lg+)
+            */}
+
+            {/* Mobile / Tablet — Cards */}
             <div className="block lg:hidden px-4 py-4 space-y-3">
               {loading ? (
                 <table className="w-full">
@@ -395,8 +409,8 @@ export default function Student_Allocations() {
               )}
             </div>
 
-            {/* ── Desktop Table (lg and above) ── */}
-            <div className="hidden lg:block">
+            {/* Laptop and above — Table (full width, no clipping) */}
+            <div className="hidden lg:block w-full overflow-x-auto">
               <AllocationTable
                 data={filtered}
                 loading={loading}
@@ -408,11 +422,12 @@ export default function Student_Allocations() {
 
             {/* ── Pagination Bar ── */}
             {!loading && (
-              <div className="px-4 sm:px-6 py-4 border-t border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 min-w-0">
-                {/* Left: showing X to Y of Z + rows per page */}
+              <div className="px-4 sm:px-6 lg:px-6 xl:px-8 py-4 border-t border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+
+                {/* Left: count + rows per page */}
                 <div className="flex items-center gap-3 flex-wrap">
                   <p className="text-xs text-gray-500 font-medium whitespace-nowrap">
-                    Showing {startItem} to {endItem} of {totalElements}
+                    Showing {startItem}–{endItem} of {totalElements}
                   </p>
                   <div className="flex items-center gap-1.5">
                     <span className="text-xs text-gray-400 whitespace-nowrap">Rows per page:</span>
@@ -430,7 +445,7 @@ export default function Student_Allocations() {
 
                 {/* Right: page buttons */}
                 {totalPages > 1 && (
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1 flex-wrap">
                     {/* Prev */}
                     <button
                       onClick={() => setPage((p) => Math.max(0, p - 1))}

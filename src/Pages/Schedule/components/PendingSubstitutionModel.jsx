@@ -35,14 +35,20 @@ export default function PendingSubstitutionsModal({ timetableId, onClose }) {
     };
 
     return (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+            {/* Bottom sheet on mobile */}
+            <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md overflow-hidden">
+
+                {/* Mobile drag handle */}
+                <div className="flex justify-center pt-3 pb-1 sm:hidden">
+                    <div className="w-10 h-1 rounded-full bg-gray-300" />
+                </div>
 
                 {/* Header */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+                <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-100">
                     <div className="flex items-center gap-2">
-                        <Clock size={18} className="text-amber-500" />
-                        <h2 className="text-lg font-semibold text-gray-900">
+                        <Clock size={17} className="text-amber-500" />
+                        <h2 className="text-base sm:text-lg font-semibold text-gray-900">
                             Pending Substitutions
                         </h2>
                         {substitutions.length > 0 && (
@@ -52,38 +58,40 @@ export default function PendingSubstitutionsModal({ timetableId, onClose }) {
                         )}
                     </div>
                     <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 cursor-pointer">
-                        <X size={18} className="text-gray-500" />
+                        <X size={17} className="text-gray-500" />
                     </button>
                 </div>
 
                 {/* List */}
-                <div className="max-h-[60vh] overflow-y-auto">
+                <div className="max-h-[55vh] sm:max-h-[60vh] overflow-y-auto">
                     {loading ? (
                         <div className="flex items-center justify-center py-12 text-gray-400 text-sm">
                             Loading substitutions…
                         </div>
                     ) : substitutions.length === 0 ? (
-                        <div className="text-center py-14 text-gray-400 text-sm">
-                            <ArrowLeftRight size={32} className="mx-auto mb-2 opacity-20" />
+                        <div className="text-center py-12 sm:py-14 text-gray-400 text-sm">
+                            <ArrowLeftRight size={28} className="mx-auto mb-2 opacity-20" />
                             <p className="font-medium text-gray-500">No substitutions yet</p>
-                            <p className="text-xs mt-1 text-gray-400">Arranged substitutions will appear here</p>
+                            <p className="text-xs mt-1 text-gray-400">Arranged substitutions appear here</p>
                         </div>
                     ) : (
                         <div className="divide-y divide-gray-100">
                             {substitutions.map(sub => (
-                                <div key={sub.id} className="px-5 py-4">
+                                <div key={sub.id} className="px-4 sm:px-5 py-3.5 sm:py-4">
                                     <div className="flex items-start justify-between gap-2">
                                         <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-semibold text-gray-800 truncate">
-                                                {sub.originalTeacherName}
-                                                <span className="mx-1.5 text-gray-400">→</span>
-                                                {sub.substituteTeacherName}
+                                            <p className="text-sm font-semibold text-gray-800">
+                                                <span className="truncate block sm:inline">
+                                                    {sub.originalTeacherName}
+                                                    <span className="mx-1.5 text-gray-400">→</span>
+                                                    {sub.substituteTeacherName}
+                                                </span>
                                             </p>
-                                            <p className="text-xs text-gray-500 mt-0.5">
-                                                {sub.substituteDate}
-                                                {sub.dayOfWeek ? ` · ${sub.dayOfWeek}` : ''}
-                                                {sub.periodNumber ? ` · P${sub.periodNumber}` : ''}
-                                                {sub.reason ? ` · ${sub.reason}` : ''}
+                                            <p className="text-xs text-gray-500 mt-0.5 flex flex-wrap gap-x-1">
+                                                <span>{sub.substituteDate}</span>
+                                                {sub.dayOfWeek && <span>· {sub.dayOfWeek}</span>}
+                                                {sub.periodNumber && <span>· P{sub.periodNumber}</span>}
+                                                {sub.reason && <span>· {sub.reason}</span>}
                                             </p>
                                             {sub.notes && (
                                                 <p className="text-xs text-gray-400 mt-0.5 italic truncate">
@@ -100,17 +108,16 @@ export default function PendingSubstitutionsModal({ timetableId, onClose }) {
                                             </span>
                                         </div>
 
-                                        {/* Action buttons — only for PENDING */}
                                         {(!sub.status || sub.status === 'PENDING') && (
-                                            <div className="flex gap-1 shrink-0 mt-0.5">
+                                            <div className="flex flex-col sm:flex-row gap-1 shrink-0 mt-0.5">
                                                 <button
                                                     onClick={() => handleUpdateStatus(sub.id, 'CONFIRMED')}
-                                                    className="px-2.5 py-1 text-xs bg-green-600 text-white rounded-lg hover:bg-green-700 cursor-pointer transition font-medium">
+                                                    className="px-2.5 py-1.5 text-xs bg-green-600 text-white rounded-lg hover:bg-green-700 cursor-pointer transition font-medium whitespace-nowrap">
                                                     Confirm
                                                 </button>
                                                 <button
                                                     onClick={() => handleUpdateStatus(sub.id, 'CANCELLED')}
-                                                    className="px-2.5 py-1 text-xs border border-red-200 text-red-500 rounded-lg hover:bg-red-50 cursor-pointer transition font-medium">
+                                                    className="px-2.5 py-1.5 text-xs border border-red-200 text-red-500 rounded-lg hover:bg-red-50 cursor-pointer transition font-medium whitespace-nowrap">
                                                     Cancel
                                                 </button>
                                             </div>
@@ -123,10 +130,10 @@ export default function PendingSubstitutionsModal({ timetableId, onClose }) {
                 </div>
 
                 {/* Footer */}
-                <div className="px-5 py-4 border-t border-gray-100">
+                <div className="px-4 sm:px-5 py-3.5 sm:py-4 border-t border-gray-100">
                     <button
                         onClick={onClose}
-                        className="w-full py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 cursor-pointer transition">
+                        className="w-full py-2.5 sm:py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 cursor-pointer transition">
                         Close
                     </button>
                 </div>

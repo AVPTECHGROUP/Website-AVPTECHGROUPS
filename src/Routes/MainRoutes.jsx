@@ -83,11 +83,17 @@ import CreateSchedule from '../Pages/Schedule/CreateSchedule';
 import FeePeriods from '../Pages/FeeManagement/FeePeriods';
 import FeeStructures from '../Pages/FeeManagement/Feestructures.';
 
+import LandingApp from "../Pages/SchoolSpineWeb/pages/Landing";
+import About from "../Pages/SchoolSpineWeb/pages/About";
+import Contact from "../Pages/SchoolSpineWeb/pages/Contact";
+import PrivacyPolicy from "../Pages/SchoolSpineWeb/pages/Privacy_Policy";
+
 // ─── Role Groups ───────────────────────────────────────────────────────────────
 const STOCK_ACCOUNTANT_ROLES = ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'STORE_ACCOUNTANT'];
 const STOCK_SELLER_ROLES = ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'STORE_ACCOUNTANT', 'STORE_SELLER'];
 const SCHEDULE_ROLES = ['GLOBAL_ADMIN', 'SUPER_ADMIN', 'ADMIN'];
 // ✅ Roles that see the school picker (requiresSchoolSelection: true)
+import LandingLayout from "../Pages/SchoolSpineWeb/pages/LandingLayout";
 const SCHOOL_PICKER_ROLES = ['SUPER_ADMIN', 'GLOBAL_ADMIN'];
 
 // ─── Smart root redirect based on role ────────────────────────────────────────
@@ -108,15 +114,20 @@ const MainRoutes = () => {
 
   return (
     <Routes>
+      {/* Public landing pages (redirect to app when logged-in) */}
+      <Route path="/" element={isTokenExist ? <RootRedirect /> : <LandingApp />} />
+      <Route path="/about" element={isTokenExist ? <RootRedirect /> : <LandingLayout><About /></LandingLayout>} />
+      <Route path="/contact" element={isTokenExist ? <RootRedirect /> : <LandingLayout><Contact /></LandingLayout>} />
+      <Route path="/privacy-policy" element={isTokenExist ? <RootRedirect /> : <LandingLayout><PrivacyPolicy /></LandingLayout>} />
+
       {/* PUBLIC */}
+      {/* Redirect logged-in users away from login */}
       <Route path="/login" element={isTokenExist ? <RootRedirect /> : <Login />} />
 
       {/* PROTECTED */}
       <Route element={<ProtectedRoutes />}>
 
-        {/* ✅ School Picker — shared for SUPER_ADMIN + GLOBAL_ADMIN
-            NO AppLayout, NO Sidebar on this screen.
-            AppLayout also guards: if role is in SCHOOL_PICKER_ROLES and no schoolId → redirects here. */}
+        {/* School picker (no AppLayout) - SUPER_ADMIN or GLOBAL_ADMIN */}
         <Route
           path="/superAdmin"
           element={
@@ -192,10 +203,10 @@ const MainRoutes = () => {
             <Route path="/leaves" element={<Leaves />} />
             <Route path="/leaves/manageHolidays" element={<HolidayManagment />} />
 
-            <Route path='/feemanagement'             element={<OverviewPage />} />
-            <Route path='/feemanagement/config'   element={<FeeSynthesisPage />} />
-             <Route path='/feemanagement/period' element={<FeePeriods/>}/>
-             <Route path='/feemanagement/structures' element={<FeeStructures />} />
+            <Route path='/feemanagement' element={<OverviewPage />} />
+            <Route path='/feemanagement/config' element={<FeeSynthesisPage />} />
+            <Route path='/feemanagement/period' element={<FeePeriods />} />
+            <Route path='/feemanagement/structures' element={<FeeStructures />} />
             <Route path='/feemanagement/collections' element={<CollectionsPage />} />
 
             {/* Subject Section Assignment */}

@@ -27,7 +27,6 @@ const getInitials = (name) => {
 const badgeClass = (code) => SUBJECT_BADGE_COLORS[code] || 'bg-gray-100 text-gray-700';
 
 export default function AnalyticsTab({
-    // Props passed from CreateSchedule parent
     slots: slotsProp = [],
     subjectsList: subjectsListProp = [],
     timetableId,
@@ -37,7 +36,6 @@ export default function AnalyticsTab({
 }) {
     const [activeTab, setActiveTab] = useState('coverage');
 
-    // Only fetch what parent didn't provide
     const [fetchedSlots, setFetchedSlots] = useState(null);
     const [fetchedSubjects, setFetchedSubjects] = useState(null);
     const [fetchedTimetable, setFetchedTimetable] = useState(null);
@@ -45,7 +43,6 @@ export default function AnalyticsTab({
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
-    // Prefer parent props, fallback to fetched
     const slots = slotsProp.length > 0 ? slotsProp : (fetchedSlots ?? []);
     const subjectsList = subjectsListProp.length > 0 ? subjectsListProp : (fetchedSubjects ?? []);
     const timetableInfo = timetableInfoProp ?? fetchedTimetable ?? null;
@@ -67,22 +64,13 @@ export default function AnalyticsTab({
         const promises = [];
 
         if (slotsProp.length === 0)
-            promises.push(
-                getTimetableSlots(timetableId)
-                    .then(d => { if (!cancelled) setFetchedSlots(d || []); })
-            );
+            promises.push(getTimetableSlots(timetableId).then(d => { if (!cancelled) setFetchedSlots(d || []); }));
 
         if (!timetableInfoProp)
-            promises.push(
-                getTimetableById(timetableId)
-                    .then(d => { if (!cancelled) setFetchedTimetable(d); })
-            );
+            promises.push(getTimetableById(timetableId).then(d => { if (!cancelled) setFetchedTimetable(d); }));
 
         if (!configProp)
-            promises.push(
-                getTimetableConfig()
-                    .then(d => { if (!cancelled) setFetchedConfig(d); })
-            );
+            promises.push(getTimetableConfig().then(d => { if (!cancelled) setFetchedConfig(d); }));
 
         if (subjectsListProp.length === 0 && sectionId)
             promises.push(
@@ -105,7 +93,6 @@ export default function AnalyticsTab({
         return () => { cancelled = true; };
     }, [timetableId, sectionId]);
 
-    // ── Derived stats ──────────────────────────────────────────
     const stats = useMemo(() => {
         const workingDays = config?.workingDays?.length ?? 6;
         const periodsPerDay = config?.periodsPerDay ?? 4;
@@ -116,9 +103,6 @@ export default function AnalyticsTab({
         const emptySlots = Math.max(0, totalSlots - filledSlots);
         const completion = totalSlots > 0 ? Math.round((filledSlots / totalSlots) * 100) : 0;
 
-        // Subject coverage
-        // Parent's subjectsList has { id, code, label, total (=0 hardcoded) }
-        // weeklyHours comes from API — use it as target if total is 0
         const subjectCoverage = subjectsList.map(s => {
             const target = s.weeklyHours ?? (s.total > 0 ? s.total : 0);
             const filled = slots.filter(sl =>
@@ -126,18 +110,11 @@ export default function AnalyticsTab({
                 sl?.subjectId === s.id ||
                 sl?.subject?.code === s.code
             ).length;
-            return {
-                id: s.id,
-                name: s.label || s.name || s.subjectName || '',
-                code: s.code || '',
-                filled,
-                target,
-            };
+            return { id: s.id, name: s.label || s.name || s.subjectName || '', code: s.code || '', filled, target };
         });
 
         const onTarget = subjectCoverage.filter(s => s.target > 0 && s.filled >= s.target).length;
 
-        // Teacher load from slots
         const teacherMap = {};
         slots.forEach(sl => {
             const id = sl?.teacher?.id ?? sl?.teacherId;
@@ -152,7 +129,6 @@ export default function AnalyticsTab({
         return { totalSlots, filledSlots, emptySlots, completion, subjectCoverage, onTarget, teachers, overloaded, MAX_PERIODS };
     }, [slots, subjectsList, timetableInfo, config]);
 
-    // ── Suggestions ───────────────────────────────────────────
     const behind = stats.subjectCoverage.filter(s => s.target > 0 && s.filled < s.target);
     const suggestions = [
         stats.emptySlots > 0 && `Use Auto-fill to place ${stats.emptySlots} remaining slot${stats.emptySlots > 1 ? 's' : ''}.`,
@@ -162,7 +138,6 @@ export default function AnalyticsTab({
         stats.overloaded > 0 && `${stats.overloaded} teacher${stats.overloaded > 1 ? 's' : ''} exceed ${stats.MAX_PERIODS} periods/week.`,
     ].filter(Boolean);
 
-    // ── Donut ─────────────────────────────────────────────────
     const r = 55, cx = 72, strokeW = 14;
     const circ = 2 * Math.PI * r;
     const dash = (stats.completion / 100) * circ;
@@ -175,48 +150,49 @@ export default function AnalyticsTab({
         );
     }
     if (error) {
-        return <div className="p-6 text-sm text-red-500">Error: {error}</div>;
+        return <div className="p-4 sm:p-6 text-sm text-red-500">Error: {error}</div>;
     }
 
     return (
-        <div className="p-4 space-y-4">
+        <div className="p-3 sm:p-4 space-y-3 sm:space-y-4">
 
-            {/* ── Top stat cards ── */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                <div className="bg-white border border-orange-200 rounded-xl p-4">
-                    <BarChart2 size={18} className="text-orange-400 mb-1" />
-                    <p className="text-3xl font-bold text-orange-500">{stats.completion}%</p>
+            {/* Top stat cards - responsive grid */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+                <div className="bg-white border border-orange-200 rounded-xl p-3 sm:p-4">
+                    <BarChart2 size={16} className="text-orange-400 mb-1" />
+                    <p className="text-2xl sm:text-3xl font-bold text-orange-500">{stats.completion}%</p>
                     <p className="text-xs font-semibold text-gray-500 mt-0.5 uppercase tracking-wide">Completion</p>
-                    <p className="text-xs text-gray-400">{stats.filledSlots} / {stats.totalSlots} slots filled</p>
+                    <p className="text-xs text-gray-400 hidden sm:block">{stats.filledSlots} / {stats.totalSlots} filled</p>
                 </div>
 
-                <div className="bg-white border border-purple-200 rounded-xl p-4">
-                    <Target size={18} className="text-purple-400 mb-1" />
-                    <p className="text-3xl font-bold text-purple-500">{stats.onTarget}</p>
-                    <p className="text-xs font-semibold text-gray-500 mt-0.5 uppercase tracking-wide">Subjects on target</p>
-                    <p className="text-xs text-gray-400">{stats.subjectCoverage.length - stats.onTarget} behind</p>
+                <div className="bg-white border border-purple-200 rounded-xl p-3 sm:p-4">
+                    <Target size={16} className="text-purple-400 mb-1" />
+                    <p className="text-2xl sm:text-3xl font-bold text-purple-500">{stats.onTarget}</p>
+                    <p className="text-xs font-semibold text-gray-500 mt-0.5 uppercase tracking-wide">On target</p>
+                    <p className="text-xs text-gray-400 hidden sm:block">{stats.subjectCoverage.length - stats.onTarget} behind</p>
                 </div>
 
-                <div className="bg-white border border-gray-200 rounded-xl p-4">
-                    <Grid size={18} className="text-gray-400 mb-1" />
-                    <p className="text-3xl font-bold text-gray-700">{stats.emptySlots}</p>
+                <div className="bg-white border border-gray-200 rounded-xl p-3 sm:p-4">
+                    <Grid size={16} className="text-gray-400 mb-1" />
+                    <p className="text-2xl sm:text-3xl font-bold text-gray-700">{stats.emptySlots}</p>
                     <p className="text-xs font-semibold text-gray-500 mt-0.5 uppercase tracking-wide">Empty slots</p>
-                    <p className="text-xs text-gray-400">Auto-fill can resolve these</p>
+                    <p className="text-xs text-gray-400 hidden sm:block">Auto-fill can resolve</p>
                 </div>
 
-                <div className="bg-white border border-red-200 rounded-xl p-4">
-                    <Users size={18} className="text-red-400 mb-1" />
-                    <p className="text-3xl font-bold text-red-500">{stats.overloaded}</p>
-                    <p className="text-xs font-semibold text-gray-500 mt-0.5 uppercase tracking-wide">Overloaded teachers</p>
-                    <p className="text-xs text-gray-400">Above {stats.MAX_PERIODS} periods/week</p>
+                <div className="bg-white border border-red-200 rounded-xl p-3 sm:p-4">
+                    <Users size={16} className="text-red-400 mb-1" />
+                    <p className="text-2xl sm:text-3xl font-bold text-red-500">{stats.overloaded}</p>
+                    <p className="text-xs font-semibold text-gray-500 mt-0.5 uppercase tracking-wide">Overloaded</p>
+                    <p className="text-xs text-gray-400 hidden sm:block">Above {stats.MAX_PERIODS}/week</p>
                 </div>
             </div>
 
-            {/* ── Bottom area ── */}
-            <div className="flex flex-col lg:flex-row gap-4">
+            {/* Bottom area - stacks on mobile, side-by-side on lg */}
+            <div className="flex flex-col lg:flex-row gap-3 sm:gap-4">
 
                 {/* Donut + suggestions */}
-                <div className="bg-white border border-gray-200 rounded-xl p-5 flex flex-col items-center gap-4 w-full lg:w-60 shrink-0">
+                <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-5 flex flex-col items-center gap-4 w-full lg:w-60 shrink-0">
+                    {/* Donut */}
                     <div className="relative" style={{ width: cx * 2, height: cx * 2 }}>
                         <svg viewBox={`0 0 ${cx * 2} ${cx * 2}`} width={cx * 2} height={cx * 2}
                             style={{ transform: 'rotate(-90deg)' }}>
@@ -253,12 +229,12 @@ export default function AnalyticsTab({
                     )}
                 </div>
 
-                {/* Tabs */}
+                {/* Tabs panel */}
                 <div className="flex-1 bg-white border border-gray-200 rounded-xl overflow-hidden min-w-0">
                     <div className="flex border-b border-gray-100">
                         {[['coverage', '📘 Subject coverage'], ['load', '👥 Teacher load']].map(([key, label]) => (
                             <button key={key} onClick={() => setActiveTab(key)}
-                                className={`px-5 py-3 text-sm font-medium transition-colors flex-1 sm:flex-none
+                                className={`px-3 sm:px-5 py-3 text-xs sm:text-sm font-medium transition-colors flex-1 sm:flex-none
                                     ${activeTab === key
                                         ? 'border-b-2 border-[#1e293b] text-[#1e293b] bg-gray-50/50'
                                         : 'text-gray-500 hover:text-gray-700'}`}>
@@ -276,38 +252,24 @@ export default function AnalyticsTab({
                                 {stats.subjectCoverage.map(s => {
                                     const hasTarget = s.target > 0;
                                     const pct = hasTarget ? Math.min(Math.round((s.filled / s.target) * 100), 100) : 0;
-                                    const left = hasTarget ? s.target - s.filled : 0;
                                     return (
-                                        <div key={s.id || s.code} className="flex items-center gap-3 px-4 py-3">
-                                            <span className={`text-xs font-bold px-2 py-0.5 rounded shrink-0 ${badgeClass(s.code)}`}>
+                                        <div key={s.id || s.code} className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3">
+                                            <span className={`text-xs font-bold px-1.5 sm:px-2 py-0.5 rounded shrink-0 ${badgeClass(s.code)}`}>
                                                 {s.code || '--'}
                                             </span>
-                                            <span className="text-sm text-gray-700 flex-1 min-w-0 truncate">
+                                            <span className="text-xs sm:text-sm text-gray-700 flex-1 min-w-0 truncate">
                                                 {s.name || 'Unnamed'}
                                             </span>
                                             {hasTarget && (
-                                                <div className="hidden sm:flex flex-1 max-w-[140px]">
+                                                <div className="hidden sm:flex flex-1 max-w-[120px] lg:max-w-[140px]">
                                                     <div className="flex-1 bg-gray-100 rounded-full h-1.5">
-                                                        <div className="h-1.5 rounded-full bg-blue-400"
-                                                            style={{ width: `${pct}%` }} />
+                                                        <div className="h-1.5 rounded-full bg-blue-400" style={{ width: `${pct}%` }} />
                                                     </div>
                                                 </div>
                                             )}
-                                            <span className="text-xs text-gray-500">
-                                                {hasTarget ? `${s.filled}/${s.target}` : `${s.filled} slots`}
+                                            <span className="text-xs text-gray-500 shrink-0">
+                                                {hasTarget ? `${s.filled}/${s.target}` : `${s.filled}`}
                                             </span>
-                                            {/* {hasTarget ? (
-                                                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${left === 0
-                                                        ? 'bg-green-100 text-green-700'
-                                                        : 'bg-amber-100 text-amber-700'
-                                                    }`}>
-                                                    {left === 0 ? '✓ Done' : `${left} left`}
-                                                </span>
-                                            ) : (
-                                                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
-                                                    No target
-                                                </span>
-                                            )} */}
                                         </div>
                                     );
                                 })}
@@ -325,22 +287,25 @@ export default function AnalyticsTab({
                                     const isOver = t.count > stats.MAX_PERIODS;
                                     const pct = Math.min(Math.round((t.count / stats.MAX_PERIODS) * 100), 100);
                                     return (
-                                        <div key={t.id} className="flex items-center gap-3 px-4 py-3">
-                                            <span className={`w-8 h-8 rounded-full ${colorFor(t.id)} text-white text-xs font-bold flex items-center justify-center shrink-0`}>
+                                        <div key={t.id} className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3">
+                                            <span className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full ${colorFor(t.id)} text-white text-xs font-bold flex items-center justify-center shrink-0`}>
                                                 {getInitials(t.name)}
                                             </span>
-                                            <span className="text-sm text-gray-700 flex-1 min-w-0 truncate">{t.name}</span>
-                                            <div className="hidden sm:flex flex-1 max-w-[140px]">
+                                            <span className="text-xs sm:text-sm text-gray-700 flex-1 min-w-0 truncate">{t.name}</span>
+                                            <div className="hidden sm:flex flex-1 max-w-[120px] lg:max-w-[140px]">
                                                 <div className="flex-1 bg-gray-100 rounded-full h-1.5">
                                                     <div className={`h-1.5 rounded-full ${isOver ? 'bg-red-400' : 'bg-blue-400'}`}
                                                         style={{ width: `${pct}%` }} />
                                                 </div>
                                             </div>
-                                            <span className="text-xs text-gray-500 shrink-0">{t.count} periods/w</span>
+                                            <span className="text-xs text-gray-500 shrink-0">{t.count}p/w</span>
                                             {isOver && (
-                                                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-600 shrink-0">
+                                                <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full bg-red-100 text-red-600 shrink-0 hidden sm:inline">
                                                     Overloaded
                                                 </span>
+                                            )}
+                                            {isOver && (
+                                                <span className="w-2 h-2 rounded-full bg-red-500 shrink-0 sm:hidden" title="Overloaded" />
                                             )}
                                         </div>
                                     );

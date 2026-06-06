@@ -203,13 +203,13 @@ export default function TimeTable() {
             {/* Stat Cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 {loading ? (
-                    Array(4).fill(0).map((_, i) => <CardLoader key={i} />)
+                    Array(3).fill(0).map((_, i) => <CardLoader key={i} />)
                 ) : (
                     <>
                         <CardComponent IconName={BookOpen} keyName="Total" val={total} iconTxColor="text-blue-600" iconBgColor="bg-blue-50" />
                         <CardComponent IconName={Send} keyName="Published" val={published} iconTxColor="text-green-600" iconBgColor="bg-green-50" />
                         <CardComponent IconName={Clock} keyName="Draft" val={draft} iconTxColor="text-yellow-600" iconBgColor="bg-yellow-50" />
-                        <CardComponent IconName={Calendar} keyName="Filtered" val={filtered.length} iconTxColor="text-purple-600" iconBgColor="bg-purple-50" />
+                        {/* <CardComponent IconName={Calendar} keyName="Filtered" val={filtered.length} iconTxColor="text-purple-600" iconBgColor="bg-purple-50" /> */}
                     </>
                 )}
             </div>
@@ -301,7 +301,7 @@ export default function TimeTable() {
                         <thead>
                             <tr className="bg-gray-50 border-b border-gray-100">
                                 {['CLASS', 'SECTION', 'YEAR', 'STATUS', 'LAST UPDATED', 'ACTIONS'].map(h => (
-                                    <th key={h} className="text-left px-5 py-3 text-xs font-semibold text-gray-500 tracking-wider">{h}</th>
+                                    <th key={h} className="text-left px-5 py-3 text-xs font-semibold text-gray-500 tracking-wider ">{h}</th>
                                 ))}
                             </tr>
                         </thead>
