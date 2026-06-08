@@ -68,8 +68,9 @@ export default function ScheduleConfig({ onClose }) {
     const [startTime,     setStartTime]     = useState('08:00');
     const [periodsPerDay, setPeriodsPerDay] = useState(8);
     const [duration,      setDuration]      = useState(45);
-    const [academicYears,   setAcademicYears]   = useState([]);   // list from API
-    const [selectedYearId,  setSelectedYearId]  = useState('');   // chosen year id
+    const [academicYears,   setAcademicYears]   = useState([]);
+    const [selectedYearId,  setSelectedYearId]  = useState('');
+    const [currentYearId,   setCurrentYearId]   = useState(''); // ← tracks which year is "current"
     const [yearsLoading,    setYearsLoading]    = useState(true);
     const [breaks, setBreaks] = useState([
         { label: '🍎 Recess',       afterPeriod: 4, duration: 20 },
@@ -79,10 +80,10 @@ export default function ScheduleConfig({ onClose }) {
     const [preview,     setPreview]     = useState([]);
     const [loading,     setLoading]     = useState(false);
     const [saving,      setSaving]      = useState(false);
-    const [toast,       setToast]       = useState(null); // { type, message }
-    const [fieldErrors, setFieldErrors] = useState({});  // key → message
+    const [toast,       setToast]       = useState(null);
+    const [fieldErrors, setFieldErrors] = useState({});
 
-    // ── Live preview — always uses clamped valid values ───────────────────────
+    // ── Live preview ──────────────────────────────────────────────────────────
     useEffect(() => {
         const safePeriods  = Math.min(Math.max(periodsPerDay  || MIN_PERIODS,  MIN_PERIODS),  MAX_PERIODS);
         const safeDuration = Math.min(Math.max(duration       || MIN_PERIOD_MINS, MIN_PERIOD_MINS), MAX_PERIOD_MINS);
@@ -93,14 +94,13 @@ export default function ScheduleConfig({ onClose }) {
         setPreview(generateSchedule({ startTime, periodsPerDay: safePeriods, duration: safeDuration, breaks: safeBreaks }));
     }, [startTime, periodsPerDay, duration, breaks]);
 
-    // ── Load academic years + existing config ──────────────────────────────────
+    // ── Load academic years + existing config ─────────────────────────────────
     useEffect(() => {
         const loadAll = async () => {
             try {
                 setLoading(true);
                 setYearsLoading(true);
 
-                // Fetch years list and current year in parallel
                 const [yearsResult, currentYear] = await Promise.allSettled([
                     getAcademicYears(),
                     getCurrentAcademicYear(),
@@ -110,21 +110,21 @@ export default function ScheduleConfig({ onClose }) {
                     yearsResult.status === 'fulfilled' ? (yearsResult.value?.years ?? []) : [];
                 setAcademicYears(yearsList);
 
-                // Default selection: current academic year
+                // Store the current year id so we can show the flag in the dropdown
                 if (currentYear.status === 'fulfilled' && currentYear.value?.id) {
-                    setSelectedYearId(String(currentYear.value.id));
+                    const cid = String(currentYear.value.id);
+                    setCurrentYearId(cid);
+                    setSelectedYearId(cid);
                 } else if (yearsList.length > 0) {
                     setSelectedYearId(String(yearsList[0].id));
                 }
 
-                // Load timetable config
                 const config = await getTimetableConfig();
                 if (!config) return;
                 if (config.workingDays)           setWorkingDays(config.workingDays);
                 if (config.startTime)             setStartTime(config.startTime);
                 if (config.periodsPerDay)         setPeriodsPerDay(Math.min(config.periodsPerDay, MAX_PERIODS));
                 if (config.periodDurationMinutes) setDuration(Math.min(config.periodDurationMinutes, MAX_PERIOD_MINS));
-                // Override year selection if config specifies one
                 if (config.academicYearId)        setSelectedYearId(String(config.academicYearId));
                 if (Array.isArray(config.breaks) && config.breaks.length > 0) {
                     setBreaks(
@@ -144,18 +144,16 @@ export default function ScheduleConfig({ onClose }) {
         loadAll();
     }, []);
 
-    // ── Validation ─────────────────────────────────────────────────────────────
+    // ── Validation ────────────────────────────────────────────────────────────
     const validate = () => {
         const errs = {};
 
         if (periodsPerDay < MIN_PERIODS || periodsPerDay > MAX_PERIODS) {
             errs.periodsPerDay = `Must be between ${MIN_PERIODS} and ${MAX_PERIODS} periods.`;
         }
-
         if (duration < MIN_PERIOD_MINS || duration > MAX_PERIOD_MINS) {
             errs.duration = `Period duration must be between ${MIN_PERIOD_MINS} and ${MAX_PERIOD_MINS} minutes.`;
         }
-
         breaks.forEach((b, i) => {
             if (!b.duration || b.duration < MIN_BREAK_MINS) {
                 errs[`break_${i}`] = `Min ${MIN_BREAK_MINS} min.`;
@@ -163,7 +161,6 @@ export default function ScheduleConfig({ onClose }) {
                 errs[`break_${i}`] = `Max ${MAX_BREAK_MINS} min.`;
             }
         });
-
         if (workingDays.length === 0) {
             errs.workingDays = 'Select at least one working day.';
         }
@@ -172,7 +169,7 @@ export default function ScheduleConfig({ onClose }) {
         return Object.keys(errs).length === 0;
     };
 
-    // ── Save ───────────────────────────────────────────────────────────────────
+    // ── Save ──────────────────────────────────────────────────────────────────
     const handleSave = async () => {
         if (!validate()) return;
         try {
@@ -194,24 +191,23 @@ export default function ScheduleConfig({ onClose }) {
         }
     };
 
-    // ── Toast helpers ──────────────────────────────────────────────────────────
+    // ── Toast helpers ─────────────────────────────────────────────────────────
     const showToast = (type, message) => {
         setToast({ type, message });
         setTimeout(() => setToast(null), 3500);
     };
 
-    // ── Periods per day — hard block at MAX, parseInt removes leading zeros ─────
+    // ── Periods per day ───────────────────────────────────────────────────────
     const handlePeriodsChange = (val) => {
         if (val === '') {
-            // Allow field to be cleared while typing; blur will restore min
             setPeriodsPerDay('');
             setFieldErrors((p) => ({ ...p, periodsPerDay: `Required. Enter ${MIN_PERIODS}–${MAX_PERIODS}.` }));
             return;
         }
         const n = parseInt(val, 10);
         if (isNaN(n)) return;
-        if (n > MAX_PERIODS) return;              // hard block — refuse the keystroke
-        setPeriodsPerDay(n);                       // number stored → no leading zeros
+        if (n > MAX_PERIODS) return;
+        setPeriodsPerDay(n);
         if (n < MIN_PERIODS) {
             setFieldErrors((p) => ({ ...p, periodsPerDay: `Minimum is ${MIN_PERIODS} period.` }));
         } else {
@@ -219,7 +215,7 @@ export default function ScheduleConfig({ onClose }) {
         }
     };
 
-    // ── Duration — hard block at MAX, parseInt removes leading zeros ──────────
+    // ── Duration ──────────────────────────────────────────────────────────────
     const handleDurationChange = (val) => {
         if (val === '') {
             setDuration('');
@@ -228,8 +224,8 @@ export default function ScheduleConfig({ onClose }) {
         }
         const n = parseInt(val, 10);
         if (isNaN(n)) return;
-        if (n > MAX_PERIOD_MINS) return;           // hard block — refuse the keystroke
-        setDuration(n);                             // number stored → no leading zeros
+        if (n > MAX_PERIOD_MINS) return;
+        setDuration(n);
         if (n < MIN_PERIOD_MINS) {
             setFieldErrors((p) => ({ ...p, duration: `Min period duration is ${MIN_PERIOD_MINS} minutes.` }));
         } else {
@@ -237,7 +233,7 @@ export default function ScheduleConfig({ onClose }) {
         }
     };
 
-    // ── Break duration — hard block at MAX, parseInt removes leading zeros ──────
+    // ── Break duration — hard block at MAX, parseInt removes leading zeros ─────
     const handleBreakDuration = (idx, val) => {
         if (val === '') {
             const updated = [...breaks];
@@ -248,7 +244,7 @@ export default function ScheduleConfig({ onClose }) {
         }
         const n = parseInt(val, 10);
         if (isNaN(n)) return;
-        if (n > MAX_BREAK_MINS) return;            // hard block — refuse the keystroke
+        if (n > MAX_BREAK_MINS) return;
         const updated = [...breaks];
         updated[idx] = { ...updated[idx], duration: n };
         setBreaks(updated);
@@ -259,12 +255,40 @@ export default function ScheduleConfig({ onClose }) {
         }
     };
 
+    // ── After Period — clamped to [1, periodsPerDay], no leading zeros ─────────
+    const handleAfterPeriodChange = (idx, val) => {
+        if (val === '') {
+            // Allow clearing while typing
+            const updated = [...breaks];
+            updated[idx] = { ...updated[idx], afterPeriod: '' };
+            setBreaks(updated);
+            return;
+        }
+        const n = parseInt(val, 10);
+        if (isNaN(n)) return;
+        const safePeriods = periodsPerDay || MAX_PERIODS;
+        // Hard block: cannot exceed current periodsPerDay (max 10)
+        if (n > safePeriods) return;
+        const updated = [...breaks];
+        updated[idx] = { ...updated[idx], afterPeriod: n }; // store number → no leading zeros
+        setBreaks(updated);
+    };
+
+    const handleAfterPeriodBlur = (idx) => {
+        const cur = breaks[idx].afterPeriod;
+        if (!cur || cur < 1) {
+            const updated = [...breaks];
+            updated[idx] = { ...updated[idx], afterPeriod: 1 };
+            setBreaks(updated);
+        }
+    };
+
     const toggleDay = (day) =>
         setWorkingDays((prev) =>
             prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
         );
 
-    // ─── Render ────────────────────────────────────────────────────────────────
+    // ─── Render ───────────────────────────────────────────────────────────────
     return (
         <>
             {toast && (
@@ -274,7 +298,7 @@ export default function ScheduleConfig({ onClose }) {
             <div className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
                 <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-3xl max-h-[92vh] sm:max-h-[90vh] overflow-hidden flex flex-col">
 
-                    {/* ── Header ─────────────────────────────────────────────────────── */}
+                    {/* ── Header ──────────────────────────────────────────────────── */}
                     <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-100 shrink-0">
                         <div className="flex items-center gap-2 min-w-0">
                             <Settings size={20} className="text-gray-600 shrink-0" />
@@ -292,30 +316,40 @@ export default function ScheduleConfig({ onClose }) {
                     ) : (
                         <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
 
-                            {/* ── LEFT — Config form ─────────────────────────────────────── */}
+                            {/* ── LEFT — Config form ───────────────────────────────────── */}
                             <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 sm:space-y-6">
 
-                                {/* Academic Year — from API */}
+                                {/* Academic Year */}
                                 <div>
                                     <p className="text-xs font-semibold text-gray-500 tracking-widest mb-3">ACADEMIC YEAR</p>
-                                    <select
-                                        value={selectedYearId}
-                                        onChange={(e) => setSelectedYearId(e.target.value)}
-                                        disabled={yearsLoading}
-                                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 bg-white disabled:bg-gray-50 disabled:text-gray-400"
-                                    >
-                                        {yearsLoading ? (
-                                            <option value="">Loading…</option>
-                                        ) : academicYears.length === 0 ? (
-                                            <option value="">No academic years found</option>
-                                        ) : (
-                                            academicYears.map((yr) => (
-                                                <option key={yr.id} value={String(yr.id)}>
-                                                    {yr.label || yr.name || yr.year}
-                                                </option>
-                                            ))
+                                    <div className="relative">
+                                        <select
+                                            value={selectedYearId}
+                                            onChange={(e) => setSelectedYearId(e.target.value)}
+                                            disabled={yearsLoading}
+                                            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 bg-white disabled:bg-gray-50 disabled:text-gray-400 appearance-none pr-28"
+                                        >
+                                            {yearsLoading ? (
+                                                <option value="">Loading…</option>
+                                            ) : academicYears.length === 0 ? (
+                                                <option value="">No academic years found</option>
+                                            ) : (
+                                                academicYears.map((yr) => (
+                                                    <option key={yr.id} value={String(yr.id)}>
+                                                        {yr.label || yr.name || yr.year}
+                                                        {String(yr.id) === currentYearId ? ' (Current)' : ''}
+                                                    </option>
+                                                ))
+                                            )}
+                                        </select>
+                                        {/* Visual "Current" badge shown when selected year IS the current year */}
+                                        {!yearsLoading && selectedYearId === currentYearId && currentYearId !== '' && (
+                                            <span className="pointer-events-none absolute right-8 top-1/2 -translate-y-1/2 flex items-center gap-1 bg-emerald-100 text-emerald-700 text-[10px] font-semibold px-2 py-0.5 rounded-full border border-emerald-200">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
+                                                Current
+                                            </span>
                                         )}
-                                    </select>
+                                    </div>
                                 </div>
 
                                 {/* Working Days */}
@@ -355,7 +389,7 @@ export default function ScheduleConfig({ onClose }) {
                                             />
                                         </div>
 
-                                        {/* Periods per day — max 10 */}
+                                        {/* Periods per day */}
                                         <div>
                                             <label className="text-sm text-gray-600 mb-1 block">
                                                 Periods / Day
@@ -368,7 +402,6 @@ export default function ScheduleConfig({ onClose }) {
                                                 value={periodsPerDay}
                                                 onChange={(e) => handlePeriodsChange(e.target.value)}
                                                 onBlur={() => {
-                                                    // Clamp on blur: restore to valid range if left empty or below min
                                                     if (!periodsPerDay || periodsPerDay < MIN_PERIODS) {
                                                         setPeriodsPerDay(MIN_PERIODS);
                                                         setFieldErrors((p) => { const e = { ...p }; delete e.periodsPerDay; return e; });
@@ -380,7 +413,7 @@ export default function ScheduleConfig({ onClose }) {
                                             <FieldError msg={fieldErrors.periodsPerDay} />
                                         </div>
 
-                                        {/* Duration — max 59 min */}
+                                        {/* Duration */}
                                         <div className="col-span-2">
                                             <label className="text-sm text-gray-600 mb-1 block">
                                                 Period Duration (min)
@@ -412,30 +445,49 @@ export default function ScheduleConfig({ onClose }) {
                                     <div className="space-y-3">
                                         {breaks.map((brk, i) => (
                                             <div key={i} className="bg-gray-50 rounded-lg p-3 space-y-2">
-                                                <div className="flex items-center gap-3 flex-wrap">
-                                                    <span className="text-sm font-medium text-gray-700 flex-1 min-w-[100px]">
+
+                                                {/* Row 1 — label + remove */}
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <span className="text-sm font-medium text-gray-700 truncate">
                                                         {brk.label}
                                                     </span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setBreaks(breaks.filter((_, j) => j !== i));
+                                                            setFieldErrors((p) => { const e = { ...p }; delete e[`break_${i}`]; return e; });
+                                                        }}
+                                                        className="shrink-0 text-red-400 hover:text-red-600 text-xs leading-none"
+                                                    >
+                                                        ✕
+                                                    </button>
+                                                </div>
+
+                                                {/* Row 2 — After Period + Duration, side by side, never wrap */}
+                                                <div className="flex items-center gap-4">
 
                                                     {/* After Period */}
-                                                    <div className="flex items-center gap-2">
-                                                        <label className="text-xs text-gray-500 whitespace-nowrap">After Period</label>
+                                                    <div className="flex items-center gap-2 shrink-0">
+                                                        <label className="text-xs text-gray-500 whitespace-nowrap">
+                                                            After Period
+                                                            <span className="text-gray-400 ml-1">(1–{periodsPerDay || MAX_PERIODS})</span>
+                                                        </label>
                                                         <input
                                                             type="number"
                                                             min={1}
-                                                            max={periodsPerDay}
+                                                            max={periodsPerDay || MAX_PERIODS}
                                                             value={brk.afterPeriod}
-                                                            onChange={(e) => {
-                                                                const updated = [...breaks];
-                                                                updated[i] = { ...updated[i], afterPeriod: Number(e.target.value) };
-                                                                setBreaks(updated);
-                                                            }}
-                                                            className="w-16 border border-gray-200 rounded px-2 py-1 text-xs focus:outline-none"
+                                                            onChange={(e) => handleAfterPeriodChange(i, e.target.value)}
+                                                            onBlur={() => handleAfterPeriodBlur(i)}
+                                                            className="w-14 border border-gray-200 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-200"
                                                         />
                                                     </div>
 
-                                                    {/* Break Duration — validated */}
-                                                    <div className="flex items-center gap-2">
+                                                    {/* Divider */}
+                                                    <div className="w-px h-4 bg-gray-200 shrink-0" />
+
+                                                    {/* Break Duration */}
+                                                    <div className="flex items-center gap-2 shrink-0">
                                                         <label className="text-xs text-gray-500 whitespace-nowrap">
                                                             Duration (min)
                                                         </label>
@@ -454,23 +506,12 @@ export default function ScheduleConfig({ onClose }) {
                                                                     setFieldErrors((p) => { const e = { ...p }; delete e[`break_${i}`]; return e; });
                                                                 }
                                                             }}
-                                                            className={`w-16 border rounded px-2 py-1 text-xs focus:outline-none
+                                                            className={`w-14 border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-200
                                                                 ${fieldErrors[`break_${i}`] ? 'border-red-400 bg-red-50' : 'border-gray-200'}`}
                                                         />
                                                     </div>
-
-                                                    {/* Remove */}
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => {
-                                                            setBreaks(breaks.filter((_, j) => j !== i));
-                                                            setFieldErrors((p) => { const e = { ...p }; delete e[`break_${i}`]; return e; });
-                                                        }}
-                                                        className="text-red-400 hover:text-red-600 text-xs"
-                                                    >
-                                                        ✕
-                                                    </button>
                                                 </div>
+
                                                 <FieldError msg={fieldErrors[`break_${i}`]} />
                                             </div>
                                         ))}
@@ -480,7 +521,7 @@ export default function ScheduleConfig({ onClose }) {
                                             onClick={() =>
                                                 setBreaks([
                                                     ...breaks,
-                                                    { label: '☕ Break', afterPeriod: periodsPerDay, duration: MIN_BREAK_MINS },
+                                                    { label: '☕ Break', afterPeriod: periodsPerDay || 1, duration: MIN_BREAK_MINS },
                                                 ])
                                             }
                                             className="text-sm text-blue-600 hover:underline font-medium"
@@ -491,7 +532,7 @@ export default function ScheduleConfig({ onClose }) {
                                 </div>
                             </div>
 
-                            {/* ── RIGHT — Live preview ────────────────────────────────────── */}
+                            {/* ── RIGHT — Live preview ──────────────────────────────────── */}
                             <div className="w-full md:w-64 border-t md:border-t-0 md:border-l border-gray-100 overflow-y-auto bg-gray-50 p-4">
                                 <p className="text-xs font-semibold text-gray-500 tracking-widest mb-3">LIVE SCHEDULE PREVIEW</p>
                                 <div className="space-y-2">
@@ -529,7 +570,7 @@ export default function ScheduleConfig({ onClose }) {
                         </div>
                     )}
 
-                    {/* ── Footer ─────────────────────────────────────────────────────── */}
+                    {/* ── Footer ──────────────────────────────────────────────────── */}
                     <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3 px-4 sm:px-6 py-4 border-t border-gray-100 shrink-0">
                         <button
                             type="button"

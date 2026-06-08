@@ -1,16 +1,11 @@
 // pages/NotificationsPage.jsx
 import { useState, useEffect, useCallback } from "react";
+import { Bell, RefreshCw, CheckCheck, AlertCircle, Inbox } from "lucide-react";
+import CardComponent from "../../../Components/CommonComp/CardComponent";
+import CardLoader from "../../../Components/CommonComp/CardLoader";
 import { getNotifications } from "../../../Api/Notification";
 
-const T = {
-  bg: "#f5f7fa", white: "#ffffff", border: "#e8ecf0", borderLight: "#f0f2f5",
-  blue: "#2563eb", blueLight: "#eff6ff", blueMid: "#dbeafe",
-  text: "#111827", textSub: "#6b7280", textMuted: "#9ca3af",
-  green: "#16a34a", greenBg: "#f0fdf4", greenBorder: "#bbf7d0",
-  red: "#dc2626", redBg: "#fef2f2",
-  shadow: "0 1px 3px rgba(0,0,0,0.06)",
-};
-
+// ─── Helpers ───────────────────────────────────────────────────────────────────
 function kindIcon(type) {
   if (!type) return "🔔";
   const t = type.toLowerCase();
@@ -23,15 +18,14 @@ function relativeTime(dateStr) {
   if (!dateStr) return "";
   const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60000);
-  if (mins < 1)   return "just now";
-  if (mins < 60)  return `${mins}m ago`;
+  if (mins < 1)  return "just now";
+  if (mins < 60) return `${mins}m ago`;
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24)   return `${hrs}h ago`;
+  if (hrs < 24)  return `${hrs}h ago`;
   const days = Math.floor(hrs / 24);
-  return days === 1 ? "Yesterday" : `${days} days ago`;
+  return days === 1 ? "Yesterday" : `${days}d ago`;
 }
 
-// safely extract array from any backend shape
 function extractItems(data) {
   if (!data) return [];
   if (Array.isArray(data)) return data;
@@ -40,6 +34,20 @@ function extractItems(data) {
   return [];
 }
 
+// ─── Skeleton row ──────────────────────────────────────────────────────────────
+const SkeletonRow = () => (
+  <div className="flex items-start gap-3 px-4 py-3.5 border-b border-gray-50 animate-pulse">
+    <div className="w-2 h-2 rounded-full bg-gray-200 mt-2 shrink-0" />
+    <div className="w-9 h-9 rounded-xl bg-gray-100 shrink-0" />
+    <div className="flex-1 space-y-2 min-w-0">
+      <div className="h-3.5 bg-gray-200 rounded w-2/5" />
+      <div className="h-3 bg-gray-100 rounded w-3/4" />
+    </div>
+    <div className="h-3 w-12 bg-gray-100 rounded shrink-0 mt-1" />
+  </div>
+);
+
+// ─── Main Page ─────────────────────────────────────────────────────────────────
 export default function NotificationsPage() {
   const [notifs,  setNotifs]  = useState([]);
   const [loading, setLoading] = useState(true);
@@ -54,9 +62,7 @@ export default function NotificationsPage() {
     setError(null);
     try {
       const data = await getNotifications({ page: pageNum, size: PAGE_SIZE, sort: "Id" });
-
-      const raw = extractItems(data);
-
+      const raw  = extractItems(data);
       const items = raw.map((n) => ({
         id:     n.id,
         unread: !n.read,
@@ -65,7 +71,6 @@ export default function NotificationsPage() {
         sub:    n.body  ?? n.message  ?? "",
         time:   relativeTime(n.createdAt ?? n.sentAt),
       }));
-
       setNotifs((prev) => append ? [...prev, ...items] : items);
       setHasMore(data?.last === false ? true : items.length === PAGE_SIZE);
     } catch (err) {
@@ -75,9 +80,7 @@ export default function NotificationsPage() {
     }
   }, []);
 
-  useEffect(() => {
-    loadNotifications(0, false);
-  }, [loadNotifications]);
+  useEffect(() => { loadNotifications(0, false); }, [loadNotifications]);
 
   const loadMore = () => {
     const next = page + 1;
@@ -85,90 +88,132 @@ export default function NotificationsPage() {
     loadNotifications(next, true);
   };
 
-  const unread = notifs.filter((n) => n.unread).length;
+  const unread     = notifs.filter((n) => n.unread).length;
   const markAllRead = () => setNotifs((p) => p.map((n) => ({ ...n, unread: false })));
-  const markRead = (id) => setNotifs((p) => p.map((x) => x.id === id ? { ...x, unread: false } : x));
+  const markRead    = (id) => setNotifs((p) => p.map((x) => x.id === id ? { ...x, unread: false } : x));
 
+  // ── Render ──────────────────────────────────────────────────────────────────
   return (
-    <div style={{ background: T.bg, minHeight: "100vh", padding: 24, fontFamily: "'Plus Jakarta Sans','Segoe UI',sans-serif", color: T.text }}>
+    // Same outer shell as Timetable & ApprovalQueue
+    <div className="min-h-screen bg-[#f0f4f9] p-4 md:p-6">
 
-      <div style={{ marginBottom: 20 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 800, color: T.text, margin: 0 }}>Notifications</h1>
-        <p style={{ fontSize: 13, color: T.textSub, margin: "4px 0 0" }}>In-app notification feed and push delivery tracking.</p>
+      {/* Header */}
+      <div className="mb-4 sm:mb-6">
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Notifications</h1>
+        <p className="text-xs sm:text-sm text-gray-500 mt-0.5">In-app notification feed and push delivery tracking.</p>
       </div>
 
-      {/* Feed — full width, no right panel */}
-      <div style={{ background: T.white, border: `1px solid ${T.border}`, borderRadius: 12, boxShadow: T.shadow, overflow: "hidden" }}>
+      {/* Error banner */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 flex items-center gap-3 mb-4">
+          <AlertCircle size={15} className="text-red-500 shrink-0" />
+          <span className="text-sm text-red-700 flex-1">{error}</span>
+          <button
+            onClick={() => { setPage(0); loadNotifications(0, false); }}
+            className="text-red-600 hover:text-red-800 font-semibold text-sm shrink-0"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
+      {/* Main white card */}
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
 
         {/* Toolbar */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 18px", borderBottom: `1px solid ${T.border}`, background: "#fafbfc" }}>
-          <span style={{ fontSize: 16 }}>🔔</span>
-          <span style={{ fontSize: 14, fontWeight: 700, color: T.text, flex: 1 }}>Notification Feed</span>
+        <div className="flex items-center gap-3 px-4 sm:px-5 py-3.5 border-b border-gray-100 bg-gray-50/60">
+          <Bell size={15} className="text-gray-500 shrink-0" />
+          <span className="text-sm font-bold text-gray-800 flex-1">Notification Feed</span>
+
           {unread > 0 && (
-            <span style={{ background: T.redBg, color: T.red, border: `1px solid ${T.border}`, fontSize: 11, fontWeight: 700, padding: "2px 9px", borderRadius: 9 }}>
+            <span className="bg-red-50 text-red-600 border border-red-100 text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0">
               {unread} unread
             </span>
           )}
-          <button onClick={markAllRead}
-            style={{ fontSize: 12.5, color: T.blue, fontWeight: 600, cursor: "pointer", background: "none", border: "none", padding: 0 }}>
-            Mark all read
+
+          <button
+            onClick={markAllRead}
+            className="flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700 transition shrink-0"
+          >
+            <CheckCheck size={13} />
+            <span className="hidden sm:inline">Mark all read</span>
           </button>
-          <button onClick={() => { setPage(0); loadNotifications(0, false); }}
-            style={{ fontSize: 12.5, color: T.textSub, fontWeight: 600, cursor: "pointer", background: "none", border: "none", padding: 0 }}>
-            ↻ Refresh
+
+          <button
+            onClick={() => { setPage(0); loadNotifications(0, false); }}
+            className="flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-gray-700 transition shrink-0"
+          >
+            <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
+            <span className="hidden sm:inline">Refresh</span>
           </button>
         </div>
 
-        {/* Error */}
-        {error && (
-          <div style={{ padding: "14px 18px", color: T.red, fontSize: 13 }}>⚠️ {error}</div>
-        )}
-
-        {/* Loading */}
+        {/* Skeleton — initial load */}
         {loading && notifs.length === 0 && (
-          <div style={{ padding: "40px 18px", color: T.textMuted, fontSize: 13, textAlign: "center" }}>
-            Loading notifications…
+          <div>
+            {Array(6).fill(0).map((_, i) => <SkeletonRow key={i} />)}
           </div>
         )}
 
-        {/* Empty */}
+        {/* Empty state */}
         {!loading && !error && notifs.length === 0 && (
-          <div style={{ padding: "40px 18px", color: T.textMuted, fontSize: 13, textAlign: "center" }}>
-            No notifications yet.
+          <div className="flex flex-col items-center justify-center py-14 text-center">
+            <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-3">
+              <Inbox size={22} className="text-gray-300" />
+            </div>
+            <p className="text-gray-600 font-semibold text-sm">No notifications yet</p>
+            <p className="text-gray-400 text-xs mt-1">You're all caught up</p>
           </div>
         )}
 
-        {/* Items */}
+        {/* Notification rows */}
         {notifs.map((n, i) => (
-          <div key={n.id} onClick={() => markRead(n.id)}
-            style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "13px 18px", borderBottom: i < notifs.length - 1 ? `1px solid ${T.borderLight}` : "none", cursor: "pointer", background: n.unread ? "#f0f7ff" : "transparent", transition: "background .12s" }}
-            onMouseEnter={(e) => !n.unread && (e.currentTarget.style.background = "#fafbff")}
-            onMouseLeave={(e) => !n.unread && (e.currentTarget.style.background = "transparent")}
+          <div
+            key={n.id}
+            onClick={() => markRead(n.id)}
+            className={`flex items-start gap-3 px-4 sm:px-5 py-3.5 cursor-pointer transition-colors
+              ${i < notifs.length - 1 ? 'border-b border-gray-50' : ''}
+              ${n.unread ? 'bg-blue-50/50 hover:bg-blue-50' : 'hover:bg-gray-50/70'}`}
           >
-            <div style={{ width: 8, height: 8, borderRadius: "50%", background: n.unread ? T.blue : "transparent", flexShrink: 0, marginTop: 5 }} />
-            <div style={{ width: 36, height: 36, borderRadius: 9, background: n.kind?.toLowerCase().includes("circular") ? T.blueLight : "#f5f3ff", border: `1px solid ${T.border}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, flexShrink: 0 }}>
+            {/* Unread dot */}
+            <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 transition-colors ${n.unread ? 'bg-blue-500' : 'bg-transparent'}`} />
+
+            {/* Icon badge */}
+            <div className={`w-9 h-9 rounded-xl border border-gray-100 flex items-center justify-center text-base shrink-0
+              ${n.kind?.toLowerCase().includes('circular') ? 'bg-blue-50' : 'bg-violet-50'}`}>
               {kindIcon(n.kind)}
             </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: n.unread ? 700 : 500, color: T.text, marginBottom: 2 }}>{n.title}</div>
-              <div style={{ fontSize: 12, color: T.textSub, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{n.sub}</div>
+
+            {/* Text */}
+            <div className="flex-1 min-w-0">
+              <p className={`text-sm leading-snug ${n.unread ? 'font-semibold text-gray-900' : 'font-medium text-gray-700'}`}>
+                {n.title}
+              </p>
+              <p className="text-xs text-gray-500 truncate mt-0.5">{n.sub}</p>
             </div>
-            <div style={{ fontSize: 11, color: T.textMuted, flexShrink: 0, marginTop: 2 }}>{n.time}</div>
+
+            {/* Time */}
+            <span className="text-[11px] text-gray-400 shrink-0 mt-0.5">{n.time}</span>
           </div>
         ))}
 
-        {/* Load more */}
+        {/* Load more button */}
         {hasMore && !loading && notifs.length > 0 && (
-          <div style={{ padding: "14px 18px", textAlign: "center" }}>
-            <button onClick={loadMore}
-              style={{ fontSize: 12.5, color: T.blue, fontWeight: 600, cursor: "pointer", background: "none", border: `1px solid ${T.blueMid}`, padding: "6px 18px", borderRadius: 7 }}>
+          <div className="px-4 py-3.5 text-center border-t border-gray-50">
+            <button
+              onClick={loadMore}
+              className="text-xs font-semibold text-blue-600 hover:text-blue-700 border border-blue-100 bg-blue-50 hover:bg-blue-100 px-5 py-1.5 rounded-lg transition"
+            >
               Load more
             </button>
           </div>
         )}
 
+        {/* Inline loading spinner for load-more */}
         {loading && notifs.length > 0 && (
-          <div style={{ padding: "10px 18px", textAlign: "center", fontSize: 12, color: T.textMuted }}>Loading…</div>
+          <div className="px-4 py-3 text-center border-t border-gray-50">
+            <span className="text-xs text-gray-400">Loading…</span>
+          </div>
         )}
       </div>
     </div>
