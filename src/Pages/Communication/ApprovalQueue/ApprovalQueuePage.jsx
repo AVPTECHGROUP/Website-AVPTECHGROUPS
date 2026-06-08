@@ -1,5 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { CheckCircle, X, AlertCircle, Inbox } from 'lucide-react';
+import {
+  CheckCircle, X, AlertCircle, Inbox,
+  ChevronLeft, ChevronRight, Clock, FileText, Calendar,
+} from 'lucide-react';
+import CardComponent from '../../../Components/CommonComp/CardComponent';
+import CardLoader from '../../../Components/CommonComp/CardLoader';
 import CircularCard from '../../../Components/ApprovalQueue/CircularCard';
 import EventCard from '../../../Components/ApprovalQueue/EventCard';
 import RejectModal from '../../../Components/ApprovalQueue/RejectModal';
@@ -12,118 +17,160 @@ import {
   rejectEvent,
 } from '../../../Api/CircularApi';
 
-// ─── Toast ────────────────────────────────────────────────────────────────────
+// ─── Toast ─────────────────────────────────────────────────────────────────────
 const useToast = () => {
   const [toasts, setToasts] = useState([]);
-
   const show = useCallback((type, title, message) => {
     const id = Date.now();
     setToasts((p) => [...p, { id, type, title, message }]);
     setTimeout(() => setToasts((p) => p.filter((t) => t.id !== id)), 4000);
   }, []);
-
-  const dismiss = useCallback((id) => {
-    setToasts((p) => p.filter((t) => t.id !== id));
-  }, []);
-
+  const dismiss = useCallback((id) => setToasts((p) => p.filter((t) => t.id !== id)), []);
   return { toasts, show, dismiss };
 };
 
-const ToastList = ({ toasts, dismiss }) => {
-  const icons = {
-    success: <CheckCircle size={15} className="text-emerald-500 flex-shrink-0" />,
-    error: <AlertCircle size={15} className="text-red-500 flex-shrink-0" />,
-  };
-
-  return (
-    <div className="fixed top-5 right-5 z-50 flex flex-col gap-2 pointer-events-none">
-      {toasts.map((t) => (
-        <div
-          key={t.id}
-          className="bg-white border border-gray-200 rounded-xl shadow-lg px-4 py-3 flex items-start gap-3 min-w-[280px] max-w-sm pointer-events-auto"
-        >
-          {icons[t.type]}
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-gray-900">{t.title}</p>
-            {t.message && <p className="text-xs text-gray-500 mt-0.5">{t.message}</p>}
-          </div>
-          <button onClick={() => dismiss(t.id)} className="text-gray-400 hover:text-gray-600">
-            <X size={13} />
-          </button>
+const ToastList = ({ toasts, dismiss }) => (
+  <div className="fixed top-5 right-5 z-50 flex flex-col gap-2 pointer-events-none">
+    {toasts.map((t) => (
+      <div
+        key={t.id}
+        className="bg-white border border-gray-200 rounded-xl shadow-lg px-4 py-3 flex items-start gap-3 min-w-[280px] max-w-sm pointer-events-auto"
+        style={{ animation: 'slideIn .2s ease-out' }}
+      >
+        {t.type === 'success'
+          ? <CheckCircle size={15} className="text-emerald-500 flex-shrink-0 mt-0.5" />
+          : <AlertCircle size={15} className="text-red-500 flex-shrink-0 mt-0.5" />}
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-gray-900">{t.title}</p>
+          {t.message && <p className="text-xs text-gray-500 mt-0.5">{t.message}</p>}
         </div>
-      ))}
-    </div>
-  );
-};
-
-// ─── Skeleton ─────────────────────────────────────────────────────────────────
-const Skeleton = () => (
-  <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4 animate-pulse">
-    <div className="flex justify-between">
-      <div className="space-y-2 flex-1">
-        <div className="h-5 bg-gray-200 rounded w-1/2" />
-        <div className="h-3 bg-gray-100 rounded w-1/3" />
+        <button onClick={() => dismiss(t.id)} className="text-gray-400 hover:text-gray-600 shrink-0">
+          <X size={13} />
+        </button>
+        <style>{`@keyframes slideIn{from{opacity:0;transform:translateX(12px)}to{opacity:1;transform:none}}`}</style>
       </div>
-      <div className="h-6 w-28 bg-gray-100 rounded-full" />
-    </div>
-    <div className="space-y-2">
-      <div className="h-3 bg-gray-100 rounded w-full" />
-      <div className="h-3 bg-gray-100 rounded w-3/4" />
-    </div>
-    <div className="h-16 bg-amber-50 rounded-lg" />
+    ))}
   </div>
 );
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── Skeleton ──────────────────────────────────────────────────────────────────
+const Skeleton = () => (
+  <div className="bg-white rounded-xl border border-gray-200 p-4 animate-pulse">
+    <div className="flex justify-between gap-3">
+      <div className="space-y-2 flex-1">
+        <div className="h-4 bg-gray-200 rounded w-1/2" />
+        <div className="h-3 bg-gray-100 rounded w-1/3" />
+      </div>
+      <div className="h-5 w-24 bg-gray-100 rounded-full self-start" />
+    </div>
+    <div className="space-y-2 mt-3">
+      <div className="h-3 bg-gray-100 rounded w-full" />
+      <div className="h-3 bg-gray-100 rounded w-3/4" />
+    </div>
+    <div className="h-8 bg-amber-50 rounded-lg mt-3" />
+  </div>
+);
 
-/**
- * Safely extract an array from any API response shape:
- *   { success, data: [...], pagination }   ← actual shape from this API
- *   { content: [...] }                     ← Spring Page
- *   { data: { content: [...] } }           ← nested Spring Page
- *   [...]                                  ← bare array
- */
+// ─── Helpers ───────────────────────────────────────────────────────────────────
 const extractArray = (json) => {
   if (!json) return [];
-  // { data: [...] }  — the actual shape returned by this backend
   if (Array.isArray(json.data)) return json.data;
-  // { content: [...] }  — Spring Page at root
   if (Array.isArray(json.content)) return json.content;
-  // { data: { content: [...] } }  — nested Spring Page
   if (Array.isArray(json.data?.content)) return json.data.content;
-  // bare array
   if (Array.isArray(json)) return json;
   return [];
 };
 
-// ─── Main Page ────────────────────────────────────────────────────────────────
+// ─── Pagination ────────────────────────────────────────────────────────────────
+const Pagination = ({ page, totalPages, rowsPerPage, onPageChange, onRowsChange, totalItems }) => {
+  const start = totalItems === 0 ? 0 : (page - 1) * rowsPerPage + 1;
+  const end   = Math.min(page * rowsPerPage, totalItems);
+
+  const pageNums = Array.from({ length: totalPages }, (_, i) => i + 1)
+    .filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
+    .reduce((acc, p, idx, arr) => {
+      if (idx > 0 && p - arr[idx - 1] > 1) acc.push('…');
+      acc.push(p);
+      return acc;
+    }, []);
+
+  return (
+    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-3 border-t border-gray-100 mt-3">
+      <div className="flex items-center gap-3 flex-wrap text-xs text-gray-500">
+        <span>
+          Showing <span className="font-semibold text-gray-700">{start}</span>–<span className="font-semibold text-gray-700">{end}</span> of <span className="font-semibold text-gray-700">{totalItems}</span>
+        </span>
+        <span className="text-gray-300 hidden sm:inline">|</span>
+        <div className="flex items-center gap-1.5">
+          <span className="text-gray-400">Rows per page</span>
+          <select
+            value={rowsPerPage}
+            onChange={(e) => { onRowsChange(Number(e.target.value)); onPageChange(1); }}
+            className="border border-gray-200 rounded-lg px-2 py-1 text-xs font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-100 bg-white"
+          >
+            {[15, 30, 50].map((n) => <option key={n} value={n}>{n}</option>)}
+          </select>
+        </div>
+      </div>
+      <div className="flex items-center gap-1">
+        <button
+          onClick={() => onPageChange(page - 1)}
+          disabled={page === 1}
+          className="flex items-center gap-0.5 px-2.5 py-1.5 rounded-lg border border-gray-200 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+        >
+          <ChevronLeft size={13} /> Prev
+        </button>
+        {pageNums.map((p, idx) =>
+          p === '…' ? (
+            <span key={`el-${idx}`} className="px-1.5 text-gray-400 text-xs">…</span>
+          ) : (
+            <button
+              key={p}
+              onClick={() => onPageChange(p)}
+              className={`w-7 h-7 rounded-lg text-xs font-semibold transition ${
+                p === page ? 'bg-[#1e293b] text-white shadow-sm' : 'border border-gray-200 text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              {p}
+            </button>
+          )
+        )}
+        <button
+          onClick={() => onPageChange(page + 1)}
+          disabled={page === totalPages || totalPages === 0}
+          className="flex items-center gap-0.5 px-2.5 py-1.5 rounded-lg border border-gray-200 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+        >
+          Next <ChevronRight size={13} />
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// ─── Main Page ─────────────────────────────────────────────────────────────────
 const ApprovalQueue = () => {
-  const [activeTab, setActiveTab] = useState('all');
-  const [circulars, setCirculars] = useState([]);
-  const [events, setEvents] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [actingId, setActingId] = useState(null); // { id, action: 'approve'|'reject' }
-  const [rejectTarget, setRejectTarget] = useState(null); // { id, type } | null
+  const [activeTab,    setActiveTab]    = useState('all');
+  const [circulars,    setCirculars]    = useState([]);
+  const [events,       setEvents]       = useState([]);
+  const [loading,      setLoading]      = useState(true);
+  const [error,        setError]        = useState(null);
+  const [actingId,     setActingId]     = useState(null);
+  const [rejectTarget, setRejectTarget] = useState(null);
+  const [page,         setPage]         = useState(1);
+  const [rowsPerPage,  setRowsPerPage]  = useState(15);
   const { toasts, show: showToast, dismiss } = useToast();
 
-  // ── Fetch ──────────────────────────────────────────────────────────────────
+  // ── Fetch ───────────────────────────────────────────────────────────────────
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      // Both functions now consistently return { data, error }
-      const [cirRes, evtRes] = await Promise.all([
-        fetchPendingCirculars(),
-        fetchPendingEvents(),
-      ]);
-
+      const [cirRes, evtRes] = await Promise.all([fetchPendingCirculars(), fetchPendingEvents()]);
       if (cirRes.error) throw new Error(cirRes.error);
       if (evtRes.error) throw new Error(evtRes.error);
-
       setCirculars(extractArray(cirRes.data));
       setEvents(extractArray(evtRes.data));
-    } catch (err) {
+    } catch {
       setError('Could not load pending items. Please try again.');
     } finally {
       setLoading(false);
@@ -131,17 +178,14 @@ const ApprovalQueue = () => {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+  useEffect(() => { setPage(1); }, [activeTab, rowsPerPage]);
 
-  // ── Approve ────────────────────────────────────────────────────────────────
+  // ── Approve ─────────────────────────────────────────────────────────────────
   const handleApprove = async (id, type) => {
     setActingId({ id, action: 'approve' });
     try {
-      const res = type === 'circular'
-        ? await approveCircular(id)
-        : await approveEvent(id);
-
+      const res = type === 'circular' ? await approveCircular(id) : await approveEvent(id);
       if (res.error) throw new Error(res.error);
-
       showToast('success', 'Approved', 'Item approved and notifications sent.');
       load();
     } catch {
@@ -151,18 +195,14 @@ const ApprovalQueue = () => {
     }
   };
 
-  // ── Reject ─────────────────────────────────────────────────────────────────
+  // ── Reject ──────────────────────────────────────────────────────────────────
   const handleRejectSubmit = async (reason) => {
     if (!rejectTarget) return;
     const { id, type } = rejectTarget;
     setActingId({ id, action: 'reject' });
     try {
-      const res = type === 'circular'
-        ? await rejectCircular(id, reason)
-        : await rejectEvent(id, reason);
-
+      const res = type === 'circular' ? await rejectCircular(id, reason) : await rejectEvent(id, reason);
       if (res.error) throw new Error(res.error);
-
       showToast('success', 'Rejected', 'Item has been rejected.');
       setRejectTarget(null);
       load();
@@ -173,112 +213,149 @@ const ApprovalQueue = () => {
     }
   };
 
-  // ── Tab config ─────────────────────────────────────────────────────────────
+  // ── Tab data ────────────────────────────────────────────────────────────────
   const all = [
     ...circulars.map((c) => ({ ...c, _type: 'circular' })),
-    ...events.map((e) => ({ ...e, _type: 'event' })),
+    ...events.map((e)   => ({ ...e, _type: 'event' })),
   ];
-
   const tabs = [
     { key: 'all',       label: 'All Pending', items: all },
     { key: 'circulars', label: 'Circulars',   items: circulars.map((c) => ({ ...c, _type: 'circular' })) },
     { key: 'events',    label: 'Events',      items: events.map((e) => ({ ...e, _type: 'event' })) },
   ];
-
   const activeItems = tabs.find((t) => t.key === activeTab)?.items ?? [];
+  const totalItems  = activeItems.length;
+  const totalPages  = Math.max(1, Math.ceil(totalItems / rowsPerPage));
+  const pagedItems  = activeItems.slice((page - 1) * rowsPerPage, page * rowsPerPage);
 
-  // ── Render ─────────────────────────────────────────────────────────────────
+  // ── Render ──────────────────────────────────────────────────────────────────
   return (
-    <div className="space-y-5">
+    // ↓ Exact same outer shell as Timetable: min-h-screen bg-[#f0f4f9] p-4 md:p-6
+    <div className="min-h-screen bg-[#f0f4f9] p-4 md:p-6">
       <ToastList toasts={toasts} dismiss={dismiss} />
 
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">Approval Queue</h1>
-        <p className="text-sm text-gray-400 mt-0.5">Review and approve pending circulars and events</p>
+      {/* ── Header — matches Timetable header style exactly ───────────────── */}
+      <div className="mb-4 sm:mb-6">
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Approval Queue</h1>
+        <p className="text-xs sm:text-sm text-gray-500 mt-0.5">Review and approve pending circulars and events</p>
       </div>
 
-      {/* Error banner */}
+      {/* ── Stat cards — CardComponent, same grid as Timetable ───────────── */}
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+        {loading ? (
+          Array(3).fill(0).map((_, i) => <CardLoader key={i} />)
+        ) : (
+          <>
+            <CardComponent
+              IconName={Clock}
+              keyName="Total Pending"
+              val={all.length}
+              iconTxColor="text-blue-600"
+              iconBgColor="bg-blue-50"
+            />
+            <CardComponent
+              IconName={FileText}
+              keyName="Circulars"
+              val={circulars.length}
+              iconTxColor="text-amber-500"
+              iconBgColor="bg-amber-50"
+            />
+            <CardComponent
+              IconName={Calendar}
+              keyName="Events"
+              val={events.length}
+              iconTxColor="text-violet-600"
+              iconBgColor="bg-violet-50"
+            />
+          </>
+        )}
+      </div>
+
+      {/* ── Error banner ──────────────────────────────────────────────────── */}
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 flex items-center gap-3">
-          <AlertCircle size={15} className="text-red-500 flex-shrink-0" />
+        <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 flex items-center gap-3 mb-4">
+          <AlertCircle size={15} className="text-red-500 shrink-0" />
           <span className="text-sm text-red-700 flex-1">{error}</span>
-          <button
-            onClick={load}
-            className="text-red-600 hover:text-red-800 font-semibold text-sm"
-          >
-            Retry
-          </button>
+          <button onClick={load} className="text-red-600 hover:text-red-800 font-semibold text-sm shrink-0">Retry</button>
         </div>
       )}
 
-      {/* Tabs */}
-      <div className="flex border-b border-gray-200">
-        {tabs.map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setActiveTab(t.key)}
-            className={`inline-flex items-center gap-2 px-4 py-3 text-[12.5px] font-semibold border-b-2 -mb-px transition-colors ${
-              activeTab === t.key
-                ? 'border-[#2563EB] text-[#2563EB]'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            {t.label}
-            <span
-              className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
-                activeTab === t.key ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'
+      {/* ── Main white card — same shadow/border as Timetable table card ─── */}
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+
+        {/* Tabs */}
+        <div className="flex border-b border-gray-200 overflow-x-auto">
+          {tabs.map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setActiveTab(t.key)}
+              className={`inline-flex items-center gap-2 px-4 sm:px-5 py-3 text-[12.5px] font-semibold border-b-2 -mb-px transition-colors whitespace-nowrap ${
+                activeTab === t.key
+                  ? 'border-[#2563EB] text-[#2563EB]'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              {loading ? '—' : t.items.length}
-            </span>
-          </button>
-        ))}
-      </div>
+              {t.label}
+              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                activeTab === t.key ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'
+              }`}>
+                {loading ? '—' : t.items.length}
+              </span>
+            </button>
+          ))}
+        </div>
 
-      {/* Content */}
-      {loading ? (
-        <div className="space-y-4">
-          <Skeleton /><Skeleton /><Skeleton />
-        </div>
-      ) : activeItems.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <Inbox size={40} className="text-gray-300 mb-3" />
-          <p className="text-gray-500 font-semibold">All caught up</p>
-          <p className="text-gray-400 text-sm mt-1">No pending items to review</p>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {activeItems.map((item) =>
-            item._type === 'circular' ? (
-              <CircularCard
-                key={`c-${item.id}`}
-                item={item}
-                isApproving={actingId?.id === item.id && actingId?.action === 'approve'}
-                isRejecting={actingId?.id === item.id && actingId?.action === 'reject'}
-                onApprove={() => handleApprove(item.id, 'circular')}
-                onReject={() => setRejectTarget({ id: item.id, type: 'circular' })}
+        {/* Content */}
+        <div className="p-4 sm:p-5">
+          {loading ? (
+            <div className="space-y-3"><Skeleton /><Skeleton /><Skeleton /></div>
+          ) : activeItems.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-14 text-center">
+              <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-3">
+                <Inbox size={22} className="text-gray-300" />
+              </div>
+              <p className="text-gray-600 font-semibold text-sm">All caught up</p>
+              <p className="text-gray-400 text-xs mt-1">No pending items to review</p>
+            </div>
+          ) : (
+            <>
+              <div className="space-y-3">
+                {pagedItems.map((item) =>
+                  item._type === 'circular' ? (
+                    <CircularCard
+                      key={`c-${item.id}`}
+                      item={item}
+                      isApproving={actingId?.id === item.id && actingId?.action === 'approve'}
+                      isRejecting={actingId?.id === item.id && actingId?.action === 'reject'}
+                      onApprove={() => handleApprove(item.id, 'circular')}
+                      onReject={() => setRejectTarget({ id: item.id, type: 'circular' })}
+                    />
+                  ) : (
+                    <EventCard
+                      key={`e-${item.id}`}
+                      item={item}
+                      isApproving={actingId?.id === item.id && actingId?.action === 'approve'}
+                      isRejecting={actingId?.id === item.id && actingId?.action === 'reject'}
+                      onApprove={() => handleApprove(item.id, 'event')}
+                      onReject={() => setRejectTarget({ id: item.id, type: 'event' })}
+                    />
+                  )
+                )}
+              </div>
+              <Pagination
+                page={page}
+                totalPages={totalPages}
+                rowsPerPage={rowsPerPage}
+                onPageChange={setPage}
+                onRowsChange={setRowsPerPage}
+                totalItems={totalItems}
               />
-            ) : (
-              <EventCard
-                key={`e-${item.id}`}
-                item={item}
-                isApproving={actingId?.id === item.id && actingId?.action === 'approve'}
-                isRejecting={actingId?.id === item.id && actingId?.action === 'reject'}
-                onApprove={() => handleApprove(item.id, 'event')}
-                onReject={() => setRejectTarget({ id: item.id, type: 'event' })}
-              />
-            )
+            </>
           )}
         </div>
-      )}
+      </div>
 
-      {/*
-        RejectModal — rendered conditionally.
-        isOpen is derived from rejectTarget being non-null so the modal
-        itself no longer needs to guard with if (!isOpen) return null,
-        but we still pass it for completeness / animation hooks.
-      */}
+      {/* Reject modal */}
       {rejectTarget && (
         <RejectModal
           isOpen={!!rejectTarget}
