@@ -2,3 +2,182 @@
 h1{
     font-family: sans-serif;
 }
+
+@theme {
+  /* Backgrounds */
+  --color-bg-white: #FFFFFF;
+  --color-bg-alt: #F4F9F9;
+  --color-bg-dark: #0D1B2A;
+
+  /* Teal */
+  --color-teal: #00C9B1;
+  --color-teal-dark: #1A8A8A;
+  --color-teal-light: #00E5D4;
+
+  /* Gold */
+  --color-gold: #F5A623;
+  --color-gold-dark: #C8860A;
+  --color-gold-light: #FFD166;
+
+  /* Text */
+  --color-text-primary: #0D1B2A;
+  --color-text-secondary: #4A5568;
+  --color-text-muted: #8A9BB0;
+
+  /* Fonts */
+  --font-heading: 'Syne', sans-serif;
+  --font-body: 'DM Sans', sans-serif;
+  --font-mono: 'Space Mono', monospace;
+  --font-display: 'Big Shoulders Inline', sans-serif;
+  --font-accent: 'Big Shoulders', sans-serif;
+}
+
+@layer utilities {
+  .text-grad-teal-gold {
+    background: linear-gradient(to right, #1A8A8A 0%, #00C9B1 40%, #F5A623 70%, #C8860A 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    display: inline-block;
+    width: fit-content;
+    color: transparent !important;
+  }
+}
+
+@keyframes scrollDot {
+  0% {
+    transform: translateY(0);
+    opacity: 0.6;
+  }
+
+  40% {
+    transform: translateY(8px);
+    opacity: 1;
+  }
+
+  80% {
+    transform: translateY(12px);
+    opacity: 0.8;
+  }
+
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes wordPop {
+  0% {
+    transform: scale(2);
+    opacity: 0.4;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes floatUpDown {
+  0% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-12px);
+  }
+
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+@keyframes fadeDown {
+  from {
+    opacity: 0;
+    transform: translateY(-16px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes marquee {
+  0% {
+    transform: translateX(0);
+  }
+
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes floatAttendance {
+
+  0%,
+  100% {
+    transform: translateY(0) translateX(0)
+  }
+
+  33% {
+    transform: translateY(-8px) translateX(4px)
+  }
+
+  66% {
+    transform: translateY(4px) translateX(-3px)
+  }
+}
+
+@keyframes floatFees {
+
+  0%,
+  100% {
+    transform: translateY(0) translateX(0)
+  }
+
+  40% {
+    transform: translateY(-10px) translateX(-5px)
+  }
+
+  70% {
+    transform: translateY(5px) translateX(3px)
+  }
+}
+
+@keyframes floatExams {
+
+  0%,
+  100% {
+    transform: translateY(0)
+  }
+
+  50% {
+    transform: translateY(-12px)
+  }
+}
+
+@keyframes floatReports {
+
+  0%,
+  100% {
+    transform: translateY(0) translateX(0)
+  }
+
+  45% {
+    transform: translateY(-7px) translateX(5px)
+  }
+}
