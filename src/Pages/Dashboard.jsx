@@ -2,8 +2,8 @@ import React, { useState, useEffect } from "react";
 import {
   GraduationCap, Users, AlertTriangle, Calendar,
   RefreshCw, Package, Bus, Banknote, FileBarChart,
-  CheckSquare, UserPlus, Eye, Edit, Clock, TrendingUp, BookOpen,
-  Star
+  CheckSquare, UserPlus, Eye, TrendingUp, BookOpen,
+  Star, ChevronLeft,
 } from "lucide-react";
 import { Chart, ArcElement, Tooltip, Legend } from "chart.js";
 import { Doughnut } from "react-chartjs-2";
@@ -13,6 +13,25 @@ import { getDashboardAnalytics, getUpcomingHolidays } from "../Api/DashboardApi"
 import { useNavigate } from "react-router-dom";
 
 Chart.register(ArcElement, Tooltip, Legend);
+
+// ─── Greeting helper ──────────────────────────────────────────────────────────
+function getGreeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  return "Good evening";
+}
+
+// ─── Check if user came through school selector ───────────────────────────────
+function isSchoolSelectorUser() {
+  try {
+    const user = JSON.parse(localStorage.getItem("user"));
+    const roles = user?.roles || [];
+    return roles.some((r) => ["SUPER_ADMIN", "GLOBAL_ADMIN"].includes(r));
+  } catch {
+    return false;
+  }
+}
 
 const quickActions = [
   { label: "Review Attendance", sub: "pending", subColor: "text-red-500", icon: Eye, bg: "bg-orange-50", iconColor: "text-orange-500", key: "pendingAttendanceApprovals", route: "/attendance/usersAttendance" },
@@ -24,9 +43,6 @@ const quickActions = [
   { label: "Payroll", sub: "Process payroll", subColor: "text-gray-400", icon: Banknote, bg: "bg-emerald-50", iconColor: "text-emerald-600", key: null, route: "/payroll" },
   { label: "Reports", sub: "Attendance / Leave", subColor: "text-gray-400", icon: FileBarChart, bg: "bg-indigo-50", iconColor: "text-indigo-600", key: null, route: "/attendance" },
 ];
-
-const avatarColors = ["bg-blue-500", "bg-green-500", "bg-purple-500", "bg-pink-500", "bg-indigo-500", "bg-yellow-500"];
-const getAvatarColor = (name) => avatarColors[name?.charCodeAt(0) % avatarColors.length || 0];
 
 const doughnutOptions = {
   cutout: "72%",
@@ -50,37 +66,36 @@ const getDaysAway = (dateStr) => {
   today.setHours(0, 0, 0, 0);
   const target = new Date(dateStr);
   target.setHours(0, 0, 0, 0);
-  const diff = Math.round((target - today) / (1000 * 60 * 60 * 24));
-  return diff;
+  return Math.round((target - today) / (1000 * 60 * 60 * 24));
 };
 
 const holidayTypeStyle = (type, isOptional) => {
   if (isOptional) return { label: "OPTIONAL", color: "bg-gray-100 text-gray-600" };
   switch (type) {
-    case "NATIONAL": return { label: "NATIONAL", color: "bg-orange-100 text-orange-600" };
+    case "NATIONAL":  return { label: "NATIONAL",  color: "bg-orange-100 text-orange-600" };
     case "RELIGIOUS": return { label: "RELIGIOUS", color: "bg-purple-100 text-purple-600" };
-    default: return { label: type, color: "bg-blue-100 text-blue-600" };
+    default:          return { label: type,         color: "bg-blue-100 text-blue-600" };
   }
 };
 
 export default function Dashboard() {
-  const [stats, setStats] = useState(null);
-  const [holidays, setHolidays] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [userName, setUserName] = useState("");
+  const [stats,      setStats]      = useState(null);
+  const [holidays,   setHolidays]   = useState([]);
+  const [loading,    setLoading]    = useState(true);
+  const [error,      setError]      = useState(null);
+  const [userName,   setUserName]   = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
 
   const navigate = useNavigate();
+  const showBackToSchools = isSchoolSelectorUser();
+
   const today = new Date().toLocaleDateString("en-GB", {
     weekday: "long", day: "numeric", month: "long", year: "numeric",
   });
 
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem("user"));
-    if (user) {
-      setUserName(user.fullName);
-    }
+    if (user) setUserName(user.fullName);
   }, []);
 
   useEffect(() => {
@@ -99,54 +114,41 @@ export default function Dashboard() {
         console.error(err);
         setError("Failed to load dashboard data. Please refresh.");
       })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
+      .finally(() => { if (!cancelled) setLoading(false); });
 
     return () => { cancelled = true; };
   }, [refreshKey]);
 
-  // ── Derived values from stats ─────────────────────────────────────────────
-  const totalPendingActions = stats
-    ? (stats.pendingLeaveRequests || 0) + (stats.pendingAttendanceApprovals || 0)
-    : 0;
-
+  // ── Derived values ────────────────────────────────────────────────────────
   const peopleStats = stats
     ? [
-      {
-        label: "Total Students",
-        val: stats.totalStudents,
-        active: stats.activeStudents,
-        inactive: stats.totalStudents - stats.activeStudents,
-        inactivePercent: stats.totalStudents ? `${Math.round(((stats.totalStudents - stats.activeStudents) / stats.totalStudents) * 100)}%` : "0%",
-        color: "bg-blue-500", iconColor: "text-blue-600", bgColor: "bg-blue-50", icon: GraduationCap,
-      },
-      {
-        label: "Total Teachers",
-        val: stats.totalTeachers,
-        active: stats.activeTeachers,
-        inactive: stats.inactiveTeachers,
-        inactivePercent: stats.totalTeachers ? `${Math.round((stats.inactiveTeachers / stats.totalTeachers) * 100)}%` : "0%",
-        color: "bg-green-500", iconColor: "text-green-600", bgColor: "bg-green-50", icon: BookOpen,
-      },
-      {
-        label: "Staff / Users",
-        val: stats.totalStaff,
-        active: stats.activeStaff,
-        inactive: stats.totalStaff - stats.activeStaff,
-        inactivePercent: stats.totalStaff ? `${Math.round(((stats.totalStaff - stats.activeStaff) / stats.totalStaff) * 100)}%` : "0%",
-        color: "bg-purple-500", iconColor: "text-purple-600", bgColor: "bg-purple-50", icon: Users,
-      },
-    ]
+        {
+          label: "Total Students", val: stats.totalStudents, active: stats.activeStudents,
+          inactive: stats.totalStudents - stats.activeStudents,
+          inactivePercent: stats.totalStudents ? `${Math.round(((stats.totalStudents - stats.activeStudents) / stats.totalStudents) * 100)}%` : "0%",
+          color: "bg-blue-500", iconColor: "text-blue-600", bgColor: "bg-blue-50", icon: GraduationCap,
+        },
+        {
+          label: "Total Teachers", val: stats.totalTeachers, active: stats.activeTeachers,
+          inactive: stats.inactiveTeachers,
+          inactivePercent: stats.totalTeachers ? `${Math.round((stats.inactiveTeachers / stats.totalTeachers) * 100)}%` : "0%",
+          color: "bg-green-500", iconColor: "text-green-600", bgColor: "bg-green-50", icon: BookOpen,
+        },
+        {
+          label: "Staff / Users", val: stats.totalStaff, active: stats.activeStaff,
+          inactive: stats.totalStaff - stats.activeStaff,
+          inactivePercent: stats.totalStaff ? `${Math.round(((stats.totalStaff - stats.activeStaff) / stats.totalStaff) * 100)}%` : "0%",
+          color: "bg-purple-500", iconColor: "text-purple-600", bgColor: "bg-purple-50", icon: Users,
+        },
+      ]
     : [];
 
-  // Attendance chart derived from stats
-  const attendanceTotalRecords = stats?.attendanceTotalRecords || 0;
-  const attendancePresent = stats?.attendancePresent || 0;
-  const attendanceLate = stats?.attendanceLate || 0;
-  const attendanceAbsent = stats?.attendanceAbsent || 0;
-  const attendanceOnLeave = stats?.attendanceOnLeave || 0;
-  const attendancePending = stats?.attendancePendingApproval || 0;
+  const attendanceTotalRecords = stats?.attendanceTotalRecords   || 0;
+  const attendancePresent      = stats?.attendancePresent        || 0;
+  const attendanceLate         = stats?.attendanceLate           || 0;
+  const attendanceAbsent       = stats?.attendanceAbsent         || 0;
+  const attendanceOnLeave      = stats?.attendanceOnLeave        || 0;
+  const attendancePending      = stats?.attendancePendingApproval || 0;
   const presentPct = attendanceTotalRecords > 0
     ? Math.round((attendancePresent / attendanceTotalRecords) * 100)
     : 0;
@@ -164,42 +166,40 @@ export default function Dashboard() {
   };
 
   const attendanceRows = [
-    { label: "Present", val: attendancePresent, pct: `${attendanceTotalRecords > 0 ? Math.round((attendancePresent / attendanceTotalRecords) * 100) : 0}%`, color: "bg-green-500" },
-    { label: "Late", val: attendanceLate, pct: `${attendanceTotalRecords > 0 ? Math.round((attendanceLate / attendanceTotalRecords) * 100) : 0}%`, color: "bg-yellow-400" },
-    { label: "Absent", val: attendanceAbsent, pct: `${attendanceTotalRecords > 0 ? Math.round((attendanceAbsent / attendanceTotalRecords) * 100) : 0}%`, color: "bg-red-500" },
-    { label: "On Leave", val: attendanceOnLeave, pct: `${attendanceTotalRecords > 0 ? Math.round((attendanceOnLeave / attendanceTotalRecords) * 100) : 0}%`, color: "bg-slate-400" },
+    { label: "Present",        val: attendancePresent, pct: `${attendanceTotalRecords > 0 ? Math.round((attendancePresent / attendanceTotalRecords) * 100) : 0}%`, color: "bg-green-500" },
+    { label: "Late",           val: attendanceLate,    pct: `${attendanceTotalRecords > 0 ? Math.round((attendanceLate    / attendanceTotalRecords) * 100) : 0}%`, color: "bg-yellow-400" },
+    { label: "Absent",         val: attendanceAbsent,  pct: `${attendanceTotalRecords > 0 ? Math.round((attendanceAbsent  / attendanceTotalRecords) * 100) : 0}%`, color: "bg-red-500" },
+    { label: "On Leave",       val: attendanceOnLeave, pct: `${attendanceTotalRecords > 0 ? Math.round((attendanceOnLeave / attendanceTotalRecords) * 100) : 0}%`, color: "bg-slate-400" },
     { label: "Pending Review", val: attendancePending, pct: `${attendanceTotalRecords > 0 ? Math.round((attendancePending / attendanceTotalRecords) * 100) : 0}%`, color: "bg-orange-400" },
   ];
 
-  // Next holiday
-  const nextHoliday = holidays.length > 0 ? holidays[0] : null;
-  const nextHolidayName = nextHoliday?.name || stats?.nextHolidayName || "—";
-  const nextHolidayDate = nextHoliday?.holidayDate || stats?.nextHolidayDate;
-  const nextHolidayDays = nextHolidayDate ? getDaysAway(nextHolidayDate) : stats?.daysUntilNextHoliday;
+  const nextHoliday          = holidays.length > 0 ? holidays[0] : null;
+  const nextHolidayName      = nextHoliday?.name            || stats?.nextHolidayName || "—";
+  const nextHolidayDate      = nextHoliday?.holidayDate     || stats?.nextHolidayDate;
+  const nextHolidayDays      = nextHolidayDate ? getDaysAway(nextHolidayDate) : stats?.daysUntilNextHoliday;
   const nextHolidayFormatted = nextHolidayDate ? formatHolidayDate(nextHolidayDate) : null;
-  const nextHolidayTypeRaw = nextHoliday?.holidayType || stats?.nextHolidayType || "NATIONAL";
+  const nextHolidayTypeRaw   = nextHoliday?.holidayType     || stats?.nextHolidayType || "NATIONAL";
 
-  // Payroll month label
-  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const monthNames   = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   const payrollLabel = stats
     ? `Process ${monthNames[(stats.currentMonth || 3) - 1]} ${stats.currentYear || 2026}`
     : "Process payroll";
 
   const pendingActionsCards = stats
     ? [
-      {
-        id: 1, label: "Pending Leave Requests", val: stats.pendingLeaveRequests || 0,
-        sub: "Awaiting approval", badge: "Needs Action",
-        badgeColor: "text-orange-500", bg: "bg-orange-50", border: "border-orange-200",
-        route: "/leaves"
-      },
-      {
-        id: 2, label: "Attendance Manual Reviews", val: stats.pendingAttendanceApprovals || 0,
-        sub: "Face confidence below threshold", badge: "Review Now",
-        badgeColor: "text-red-500", bg: "bg-red-50", border: "border-red-200",
-        route: "/attendance/usersAttendance"
-      },
-    ]
+        {
+          id: 1, label: "Pending Leave Requests",    val: stats.pendingLeaveRequests      || 0,
+          sub: "Awaiting approval",                  badge: "Needs Action",
+          badgeColor: "text-orange-500", bg: "bg-orange-50", border: "border-orange-200",
+          route: "/leaves",
+        },
+        {
+          id: 2, label: "Attendance Manual Reviews", val: stats.pendingAttendanceApprovals || 0,
+          sub: "Face confidence below threshold",    badge: "Review Now",
+          badgeColor: "text-red-500",    bg: "bg-red-50",    border: "border-red-200",
+          route: "/attendance/usersAttendance",
+        },
+      ]
     : [];
 
   const attendanceDateLabel = stats?.attendanceDate
@@ -212,12 +212,30 @@ export default function Dashboard() {
 
         {/* ── Header ── */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
-              Good morning, {userName || "Admin"}
-            </h1>
-            <p className="text-gray-500 text-sm mt-1">Here's what's happening today · {today}</p>
+          <div className="flex items-center gap-3">
+
+            {/* Back to school selector — only for super/global admins */}
+            {showBackToSchools && (
+              <button
+                onClick={() => navigate("/superAdmin")}
+                title="Back to school selection"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-600 text-sm font-semibold transition-colors cursor-pointer shrink-0 shadow-sm"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                <span className="hidden sm:inline">Schools</span>
+              </button>
+            )}
+
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+                {getGreeting()}, {userName || "Admin"}
+              </h1>
+              <p className="text-gray-500 text-sm mt-1">
+                Here's what's happening today · {today}
+              </p>
+            </div>
           </div>
+
           <button
             onClick={() => setRefreshKey((k) => k + 1)}
             className="flex items-center gap-2 border border-gray-200 bg-white hover:bg-gray-50 text-gray-600 text-sm font-semibold px-4 py-2 rounded-lg transition-colors w-fit cursor-pointer"
@@ -232,7 +250,10 @@ export default function Dashboard() {
           <div className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-6">
             <AlertTriangle className="w-5 h-5 text-red-500 shrink-0" />
             <span className="text-sm font-semibold text-red-700">{error}</span>
-            <button onClick={() => setRefreshKey((k) => k + 1)} className="ml-auto text-xs font-bold text-red-600 underline cursor-pointer">
+            <button
+              onClick={() => setRefreshKey((k) => k + 1)}
+              className="ml-auto text-xs font-bold text-red-600 underline cursor-pointer"
+            >
               Retry
             </button>
           </div>
@@ -246,12 +267,18 @@ export default function Dashboard() {
               <span className="text-sm font-semibold text-amber-800">Action Required</span>
               <div className="ml-auto flex flex-wrap gap-2">
                 {stats.pendingLeaveRequests > 0 && (
-                  <span onClick={() => navigate('/leaves')} className="text-xs font-semibold cursor-pointer text-red-500 bg-red-50 border border-red-200 px-3 py-1 rounded-full">
+                  <span
+                    onClick={() => navigate("/leaves")}
+                    className="text-xs font-semibold cursor-pointer text-red-500 bg-red-50 border border-red-200 px-3 py-1 rounded-full"
+                  >
                     ✕ {stats.pendingLeaveRequests} Leave Request{stats.pendingLeaveRequests !== 1 ? "s" : ""} Pending
                   </span>
                 )}
                 {stats.pendingAttendanceApprovals > 0 && (
-                  <span onClick={() => navigate('/attendance/usersAttendance')} className="text-xs cursor-pointer font-semibold text-orange-500 bg-orange-50 border border-orange-200 px-3 py-1 rounded-full">
+                  <span
+                    onClick={() => navigate("/attendance/usersAttendance")}
+                    className="text-xs cursor-pointer font-semibold text-orange-500 bg-orange-50 border border-orange-200 px-3 py-1 rounded-full"
+                  >
                     ⚠ {stats.pendingAttendanceApprovals} Attendance Manual Review{stats.pendingAttendanceApprovals !== 1 ? "s" : ""}
                   </span>
                 )}
@@ -273,12 +300,17 @@ export default function Dashboard() {
                 Next holiday:{" "}
                 <span className="font-bold">
                   {nextHolidayName}
-                  {nextHolidayFormatted ? ` – ${nextHolidayFormatted.date} ${nextHolidayFormatted.month.charAt(0) + nextHolidayFormatted.month.slice(1).toLowerCase()} ${nextHolidayDate?.split("-")[0]}` : ""}
+                  {nextHolidayFormatted
+                    ? ` – ${nextHolidayFormatted.date} ${nextHolidayFormatted.month.charAt(0) + nextHolidayFormatted.month.slice(1).toLowerCase()} ${nextHolidayDate?.split("-")[0]}`
+                    : ""}
                 </span>{" "}
                 {nextHolidayDays != null ? `(${nextHolidayDays} day${nextHolidayDays !== 1 ? "s" : ""} away)` : ""}
               </span>
             </div>
-            <button onClick={() => navigate('/leaves/manageHolidays')} className="text-xs cursor-pointer font-semibold bg-white text-blue-600 px-3 py-1 rounded-full hover:bg-blue-50 transition whitespace-nowrap">
+            <button
+              onClick={() => navigate("/leaves/manageHolidays")}
+              className="text-xs cursor-pointer font-semibold bg-white text-blue-600 px-3 py-1 rounded-full hover:bg-blue-50 transition whitespace-nowrap"
+            >
               View Calendar →
             </button>
           </div>
@@ -289,27 +321,30 @@ export default function Dashboard() {
           {loading
             ? Array.from({ length: 3 }).map((_, i) => <CardLoader key={i} />)
             : peopleStats.map((s) => (
-              <div key={s.label} className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4">
-                <div className={`w-10 h-10 ${s.bgColor} rounded-xl flex items-center justify-center mb-3`}>
-                  <s.icon className={`w-5 h-5 ${s.iconColor}`} />
+                <div key={s.label} className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4">
+                  <div className={`w-10 h-10 ${s.bgColor} rounded-xl flex items-center justify-center mb-3`}>
+                    <s.icon className={`w-5 h-5 ${s.iconColor}`} />
+                  </div>
+                  <p className={`text-3xl font-bold ${s.iconColor}`}>{s.val}</p>
+                  <p className="text-sm text-gray-500 mt-0.5 mb-3">{s.label}</p>
+                  <div className="w-full bg-gray-100 rounded-full h-1.5 mb-1">
+                    <div
+                      className={`${s.color} h-1.5 rounded-full`}
+                      style={{ width: s.val > 0 ? `${(s.active / s.val) * 100}%` : "0%" }}
+                    />
+                  </div>
+                  <div className="flex justify-between text-xs text-gray-500">
+                    <span>{s.active} <span className="text-green-600 font-semibold ml-1">Active</span></span>
+                    <span>{s.inactive} Inactive <span className="text-gray-400">({s.inactivePercent})</span></span>
+                  </div>
                 </div>
-                <p className={`text-3xl font-bold ${s.iconColor}`}>{s.val}</p>
-                <p className="text-sm text-gray-500 mt-0.5 mb-3">{s.label}</p>
-                <div className="w-full bg-gray-100 rounded-full h-1.5 mb-1">
-                  <div className={`${s.color} h-1.5 rounded-full`} style={{ width: s.val > 0 ? `${(s.active / s.val) * 100}%` : "0%" }} />
-                </div>
-                <div className="flex justify-between text-xs text-gray-500">
-                  <span>{s.active} <span className="text-green-600 font-semibold ml-1">Active</span></span>
-                  <span>{s.inactive} Inactive <span className="text-gray-400">({s.inactivePercent})</span></span>
-                </div>
-              </div>
-            ))}
+              ))}
         </div>
 
-        {/* ── Main 3-col grid: Attendance + Pending Actions | Right column ── */}
+        {/* ── Main 3-col grid ── */}
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6">
 
-          {/* Left column — Attendance chart + Pending Actions */}
+          {/* Left column */}
           <div className="xl:col-span-2 space-y-6">
 
             {/* Attendance chart */}
@@ -321,7 +356,12 @@ export default function Dashboard() {
                     Staff Attendance — {attendanceDateLabel}
                   </h2>
                 </div>
-                <button onClick={()=>navigate('/attendance')} className="text-sm text-blue-600 font-medium hover:underline whitespace-nowrap cursor-pointer">View All →</button>
+                <button
+                  onClick={() => navigate("/attendance")}
+                  className="text-sm text-blue-600 font-medium hover:underline whitespace-nowrap cursor-pointer"
+                >
+                  View All →
+                </button>
               </div>
               <div className="p-5 flex flex-col sm:flex-row gap-6 items-center">
                 <div className="relative w-36 h-36 shrink-0">
@@ -346,7 +386,10 @@ export default function Dashboard() {
                       <span className={`w-2.5 h-2.5 rounded-full ${row.color} shrink-0`} />
                       <span className="text-sm text-gray-600 w-32">{row.label}</span>
                       <div className="flex-1 bg-gray-100 rounded-full h-2">
-                        <div className={`${row.color} h-2 rounded-full`} style={{ width: attendanceTotalRecords > 0 ? row.pct : "0%" }} />
+                        <div
+                          className={`${row.color} h-2 rounded-full`}
+                          style={{ width: attendanceTotalRecords > 0 ? row.pct : "0%" }}
+                        />
                       </div>
                       <span className="text-sm font-bold text-gray-700 w-6 text-right">{row.val}</span>
                       <span className="text-xs text-gray-400 w-8 text-right">({row.pct})</span>
@@ -356,11 +399,11 @@ export default function Dashboard() {
               </div>
               <div className="grid grid-cols-5 divide-x divide-gray-100 border-t border-gray-100">
                 {[
-                  { label: "Total Records", val: attendanceTotalRecords, color: "text-gray-700" },
-                  { label: "Present", val: attendancePresent, color: "text-green-600" },
-                  { label: "Late", val: attendanceLate, color: "text-yellow-500" },
-                  { label: "Absent", val: attendanceAbsent, color: "text-red-500" },
-                  { label: "Reviews", val: attendancePending, color: "text-orange-500" },
+                  { label: "Total Records", val: attendanceTotalRecords, color: "text-gray-700"   },
+                  { label: "Present",        val: attendancePresent,      color: "text-green-600"  },
+                  { label: "Late",           val: attendanceLate,         color: "text-yellow-500" },
+                  { label: "Absent",         val: attendanceAbsent,       color: "text-red-500"    },
+                  { label: "Reviews",        val: attendancePending,      color: "text-orange-500" },
                 ].map((s) => (
                   <div key={s.label} className="flex flex-col items-center py-3">
                     <span className={`text-lg font-bold ${s.color}`}>{s.val}</span>
@@ -375,7 +418,12 @@ export default function Dashboard() {
                   {attendancePending === 0 && attendanceOnLeave === 0 && "No pending reviews today"}
                 </span>
                 {attendancePending > 0 && (
-                  <button onClick={() => navigate('/attendance/usersAttendance')} className="text-xs text-blue-600 font-semibold hover:underline cursor-pointer">Review Pending →</button>
+                  <button
+                    onClick={() => navigate("/attendance/usersAttendance")}
+                    className="text-xs text-blue-600 font-semibold hover:underline cursor-pointer"
+                  >
+                    Review Pending →
+                  </button>
                 )}
               </div>
             </div>
@@ -392,19 +440,22 @@ export default function Dashboard() {
                 {loading
                   ? Array.from({ length: 2 }).map((_, i) => <CardLoader key={i} />)
                   : pendingActionsCards.map((action) => (
-                    <div key={action.id} onClick={() => action.route && navigate(action.route)} className={`border ${action.border} ${action.bg} rounded-xl p-4 cursor-pointer hover:shadow-md transition-shadow`}>
-                      <div className="flex justify-between items-start mb-3">
-                        <AlertTriangle className="w-8 h-8 text-gray-400" />
-                        <span className={`text-xs font-bold ${action.badgeColor}`}>{action.badge}</span>
+                      <div
+                        key={action.id}
+                        onClick={() => action.route && navigate(action.route)}
+                        className={`border ${action.border} ${action.bg} rounded-xl p-4 cursor-pointer hover:shadow-md transition-shadow`}
+                      >
+                        <div className="flex justify-between items-start mb-3">
+                          <AlertTriangle className="w-8 h-8 text-gray-400" />
+                          <span className={`text-xs font-bold ${action.badgeColor}`}>{action.badge}</span>
+                        </div>
+                        <p className="text-3xl font-bold text-gray-800">{action.val}</p>
+                        <p className="text-sm font-semibold text-gray-700 mt-1">{action.label}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">{action.sub}</p>
                       </div>
-                      <p className="text-3xl font-bold text-gray-800">{action.val}</p>
-                      <p className="text-sm font-semibold text-gray-700 mt-1">{action.label}</p>
-                      <p className="text-xs text-gray-500 mt-0.5">{action.sub}</p>
-                    </div>
-                  ))}
+                    ))}
               </div>
             </div>
-
           </div>
 
           {/* Right column */}
@@ -426,10 +477,13 @@ export default function Dashboard() {
                         : "—"}
                     </p>
                   </div>
-                  <span className={`text-xs font-bold px-2 py-1 rounded-lg bg-white ${nextHolidayTypeRaw === "NATIONAL" ? "text-orange-600" :
-                    nextHolidayTypeRaw === "RELIGIOUS" ? "text-purple-600" :
+                  <span
+                    className={`text-xs font-bold px-2 py-1 rounded-lg bg-white ${
+                      nextHolidayTypeRaw === "NATIONAL"  ? "text-orange-600" :
+                      nextHolidayTypeRaw === "RELIGIOUS" ? "text-purple-600" :
                       "text-blue-600"
-                    }`}>
+                    }`}
+                  >
                     {nextHolidayTypeRaw}
                   </span>
                 </div>
@@ -452,45 +506,49 @@ export default function Dashboard() {
               <div className="divide-y divide-gray-100">
                 {loading
                   ? Array.from({ length: 5 }).map((_, i) => (
-                    <div key={i} className="flex items-center gap-3 px-4 py-3 animate-pulse">
-                      <div className="w-10 h-10 bg-gray-200 rounded" />
-                      <div className="flex-1 space-y-1">
-                        <div className="h-3 bg-gray-200 rounded w-3/4" />
-                        <div className="h-2 bg-gray-100 rounded w-1/2" />
+                      <div key={i} className="flex items-center gap-3 px-4 py-3 animate-pulse">
+                        <div className="w-10 h-10 bg-gray-200 rounded" />
+                        <div className="flex-1 space-y-1">
+                          <div className="h-3 bg-gray-200 rounded w-3/4" />
+                          <div className="h-2 bg-gray-100 rounded w-1/2" />
+                        </div>
                       </div>
-                    </div>
-                  ))
+                    ))
                   : holidays.map((h) => {
-                    const fmt = formatHolidayDate(h.holidayDate);
-                    const daysAway = getDaysAway(h.holidayDate);
-                    const typeInfo = holidayTypeStyle(h.holidayType, h.isOptional);
-                    return (
-                      <div key={h.id} className="flex items-center gap-3 px-4 py-3">
-                        <div className="text-center w-10 shrink-0">
-                          <p className="text-lg font-bold text-gray-800 leading-none">{fmt.date}</p>
-                          <p className="text-xs text-gray-400 font-semibold">{fmt.month}</p>
+                      const fmt      = formatHolidayDate(h.holidayDate);
+                      const daysAway = getDaysAway(h.holidayDate);
+                      const typeInfo = holidayTypeStyle(h.holidayType, h.isOptional);
+                      return (
+                        <div key={h.id} className="flex items-center gap-3 px-4 py-3">
+                          <div className="text-center w-10 shrink-0">
+                            <p className="text-lg font-bold text-gray-800 leading-none">{fmt.date}</p>
+                            <p className="text-xs text-gray-400 font-semibold">{fmt.month}</p>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-gray-800 truncate">{h.name}</p>
+                            <p className="text-xs text-gray-400">{fmt.dayLabel} · {daysAway} day{daysAway !== 1 ? "s" : ""} away</p>
+                          </div>
+                          <span className={`text-xs font-bold px-2 py-0.5 rounded ${typeInfo.color} shrink-0`}>
+                            {typeInfo.label}
+                          </span>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-gray-800 truncate">{h.name}</p>
-                          <p className="text-xs text-gray-400">{fmt.dayLabel} · {daysAway} day{daysAway !== 1 ? "s" : ""} away</p>
-                        </div>
-                        <span className={`text-xs font-bold px-2 py-0.5 rounded ${typeInfo.color} shrink-0`}>
-                          {typeInfo.label}
-                        </span>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
               </div>
               <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50">
                 <span className="text-xs text-gray-400">Showing next {holidays.length} holidays</span>
-                <button onClick={() => navigate('/leaves/manageHolidays')} className="text-xs text-blue-600 font-semibold hover:underline cursor-pointer">View Full Calendar →</button>
+                <button
+                  onClick={() => navigate("/leaves/manageHolidays")}
+                  className="text-xs text-blue-600 font-semibold hover:underline cursor-pointer"
+                >
+                  View Full Calendar →
+                </button>
               </div>
             </div>
-
           </div>
         </div>
 
-        {/* ── Full-width Quick Actions (outside the 3-col grid) ── */}
+        {/* ── Quick Actions ── */}
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden mb-6">
           <div className="px-5 py-4 border-b border-gray-100">
             <div className="flex items-center gap-2">
@@ -506,8 +564,7 @@ export default function Dashboard() {
                   : qa.label === "Payroll"
                     ? payrollLabel
                     : qa.sub;
-              const subColor =
-                qa.key && stats && stats[qa.key] > 0 ? "text-red-500" : qa.subColor;
+              const subColor = qa.key && stats && stats[qa.key] > 0 ? "text-red-500" : qa.subColor;
               return (
                 <button
                   key={qa.label}
