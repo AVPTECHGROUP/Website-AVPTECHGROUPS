@@ -10,7 +10,7 @@ import {
   teacher_exam,
   teacher_homework,
   teacher_profile,
-} from "../../../assets/Images/mockups"
+} from "../../../assets/Images/Mockups"
 
 const mobileImgs = [
   parent_dashboard,
