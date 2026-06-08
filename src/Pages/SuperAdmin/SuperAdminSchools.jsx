@@ -16,9 +16,9 @@ const borderAccents = [
 
 const boardBadge = (board) => {
   const map = {
-    CBSE: "bg-blue-50 text-blue-700 border border-blue-200",
-    ICSE: "bg-amber-50 text-amber-700 border border-amber-200",
-    "STATE BOARD": "bg-emerald-50 text-emerald-700 border border-emerald-200",
+    CBSE:         "bg-blue-50 text-blue-700 border border-blue-200",
+    ICSE:         "bg-amber-50 text-amber-700 border border-amber-200",
+    "STATE BOARD":"bg-emerald-50 text-emerald-700 border border-emerald-200",
   };
   return map[(board || "").toUpperCase()] ?? "bg-gray-100 text-gray-600 border border-gray-200";
 };
@@ -27,58 +27,34 @@ const buildStats = (stats) => {
   const boardWise = stats?.boardWiseCount ?? {};
   return [
     {
-      keyName: "Total Schools",
-      val: stats?.totalSchools ?? 0,
-      IconName: School,
-      accentBar: "bg-blue-500",
-      iconBg: "bg-blue-50",
-      iconColor: "text-blue-600",
+      keyName: "Total Schools", val: stats?.totalSchools ?? 0,
+      IconName: School, accentBar: "bg-blue-500", iconBg: "bg-blue-50", iconColor: "text-blue-600",
       sub: "All registered",
     },
     {
-      keyName: "Active",
-      val: stats?.activeSchools ?? 0,
-      IconName: CheckCircle,
-      accentBar: "bg-emerald-500",
-      iconBg: "bg-emerald-50",
-      iconColor: "text-emerald-600",
-      sub: "Currently operating",
-      pulse: true,
+      keyName: "Active", val: stats?.activeSchools ?? 0,
+      IconName: CheckCircle, accentBar: "bg-emerald-500", iconBg: "bg-emerald-50", iconColor: "text-emerald-600",
+      sub: "Currently operating", pulse: true,
     },
     {
-      keyName: "Inactive",
-      val: stats?.inactiveSchools ?? 0,
-      IconName: AlertTriangle,
-      accentBar: "bg-slate-400",
-      iconBg: "bg-slate-50",
-      iconColor: "text-slate-500",
+      keyName: "Inactive", val: stats?.inactiveSchools ?? 0,
+      IconName: AlertTriangle, accentBar: "bg-slate-400", iconBg: "bg-slate-50", iconColor: "text-slate-500",
       sub: "Not operating",
     },
     {
-      keyName: "CBSE",
-      val: boardWise["CBSE"] ?? 0,
-      IconName: GraduationCap,
-      accentBar: "bg-blue-500",
-      iconBg: "bg-blue-50",
-      iconColor: "text-blue-600",
+      keyName: "CBSE", val: boardWise["CBSE"] ?? 0,
+      IconName: GraduationCap, accentBar: "bg-blue-500", iconBg: "bg-blue-50", iconColor: "text-blue-600",
       sub: "Central board",
     },
     {
-      keyName: "ICSE",
-      val: boardWise["ICSE"] ?? 0,
-      IconName: GraduationCap,
-      accentBar: "bg-amber-400",
-      iconBg: "bg-amber-50",
-      iconColor: "text-amber-600",
+      keyName: "ICSE", val: boardWise["ICSE"] ?? 0,
+      IconName: GraduationCap, accentBar: "bg-amber-400", iconBg: "bg-amber-50", iconColor: "text-amber-600",
       sub: "Indian certificate",
     },
     {
       keyName: "State Board",
       val: boardWise["STATE BOARD"] ?? boardWise["State Board"] ?? 0,
-      IconName: TrendingUp,
-      accentBar: "bg-violet-500",
-      iconBg: "bg-violet-50",
-      iconColor: "text-violet-600",
+      IconName: TrendingUp, accentBar: "bg-violet-500", iconBg: "bg-violet-50", iconColor: "text-violet-600",
       sub: "State curriculum",
     },
   ];
@@ -86,16 +62,8 @@ const buildStats = (stats) => {
 
 const getRoleMeta = (role) => {
   if (role === "GLOBAL_ADMIN")
-    return {
-      label: "Global Admin Console",
-      badge: "bg-indigo-100 text-indigo-700 border-indigo-200",
-      roleTag: "GLOBAL ADMIN",
-    };
-  return {
-    label: "Super Admin Console",
-    badge: "bg-blue-100 text-blue-700 border-blue-200",
-    roleTag: "SUPER ADMIN",
-  };
+    return { label: "Global Admin Console", badge: "bg-indigo-100 text-indigo-700 border-indigo-200", roleTag: "GLOBAL ADMIN" };
+  return { label: "Super Admin Console", badge: "bg-blue-100 text-blue-700 border-blue-200", roleTag: "SUPER ADMIN" };
 };
 
 /* ── Stat Card Skeleton ── */
@@ -113,17 +81,14 @@ const StatCardSkeleton = () => (
   </div>
 );
 
-/* ── Beautiful Stat Card ── */
+/* ── Stat Card ── */
 const StatCard = ({ keyName, val, IconName, accentBar, iconBg, iconColor, sub, pulse }) => (
   <div className="relative bg-white rounded-xl border border-gray-100 overflow-hidden hover:border-gray-200 hover:shadow-sm transition-all duration-200 group">
-    {/* top accent bar */}
     <div className={`absolute top-0 left-0 right-0 h-[3px] ${accentBar}`} />
     <div className="py-4 px-4 flex items-center gap-4">
-      {/* Icon */}
       <div className={`w-11 h-11 rounded-xl ${iconBg} flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-200`}>
         <IconName size={22} className={iconColor} />
       </div>
-      {/* Text */}
       <div className="min-w-0">
         <p className="text-2xl font-bold text-gray-900 leading-none mb-1 tabular-nums">{val.toLocaleString()}</p>
         <p className="text-sm font-semibold text-gray-600 truncate">{keyName}</p>
@@ -183,9 +148,7 @@ const PaginationButtons = ({ page, totalPages, setPage }) => {
         const showEllipsis = prev !== undefined && p - prev > 1;
         return (
           <span key={p} className="flex items-center gap-1.5">
-            {showEllipsis && (
-              <span className="text-xs text-gray-400 px-1">…</span>
-            )}
+            {showEllipsis && <span className="text-xs text-gray-400 px-1">…</span>}
             <button
               onClick={() => setPage(p)}
               className={`w-8 h-8 rounded-xl text-xs font-bold transition-all duration-200 shadow-sm
@@ -252,35 +215,32 @@ export default function SuperAdminSchools() {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     localStorage.removeItem("school");
-     localStorage.removeItem("requireSchoolSelection");
+    localStorage.removeItem("requireSchoolSelection");
     navigate("/login");
   };
 
-  const [schools, setSchools] = useState([]);
-  const [statsData, setStatsData] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [statsLoading, setStatsLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [selectedId, setSelectedId] = useState(null);
-  const [modalSchool, setModalSchool] = useState(null);
+  const [schools,       setSchools]       = useState([]);
+  const [statsData,     setStatsData]     = useState([]);
+  const [loading,       setLoading]       = useState(true);
+  const [statsLoading,  setStatsLoading]  = useState(true);
+  const [error,         setError]         = useState(null);
+  const [selectedId,    setSelectedId]    = useState(null);
+  const [modalSchool,   setModalSchool]   = useState(null);
 
-  const [searchInput, setSearchInput] = useState("");
-  const [search, setSearch] = useState("");
-  const [boardFilter, setBoardFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState("ACTIVE");
+  const [searchInput,   setSearchInput]   = useState("");
+  const [search,        setSearch]        = useState("");
+  const [boardFilter,   setBoardFilter]   = useState("");
+  const [statusFilter,  setStatusFilter]  = useState("ACTIVE");
 
-  const [page, setPage] = useState(0);
+  const [page,          setPage]          = useState(0);
   const [totalElements, setTotalElements] = useState(0);
-  const [totalPages, setTotalPages] = useState(1);
-  const PAGE_SIZE = 20;
+  const [totalPages,    setTotalPages]    = useState(1);
+  const PAGE_SIZE   = 20;
   const debounceRef = useRef(null);
 
   useEffect(() => {
     clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      setSearch(searchInput);
-      setPage(0);
-    }, 400);
+    debounceRef.current = setTimeout(() => { setSearch(searchInput); setPage(0); }, 400);
     return () => clearTimeout(debounceRef.current);
   }, [searchInput]);
 
@@ -291,9 +251,9 @@ export default function SuperAdminSchools() {
     setError(null);
     try {
       const isActive =
-        statusFilter === "ACTIVE" ? true :
-          statusFilter === "INACTIVE" ? false :
-            undefined;
+        statusFilter === "ACTIVE"   ? true  :
+        statusFilter === "INACTIVE" ? false :
+        undefined;
 
       const res = await getMySchools(page, PAGE_SIZE, search, boardFilter, isActive);
 
@@ -324,7 +284,7 @@ export default function SuperAdminSchools() {
     }
   }, []);
 
-  useEffect(() => { fetchStats(); }, []); 
+  useEffect(() => { fetchStats(); }, []);
   useEffect(() => { fetchSchools(); }, [fetchSchools]);
 
   const handleRefresh = () => Promise.all([fetchSchools(), fetchStats()]);
@@ -332,8 +292,8 @@ export default function SuperAdminSchools() {
   const getStatusBadge = (school) => {
     const active = school.isActive || school.status === "ACTIVE";
     return active
-      ? { label: "Active", cls: "text-emerald-600 bg-emerald-50 border-emerald-100", dot: "bg-emerald-500" }
-      : { label: "Inactive", cls: "text-red-500 bg-red-50 border-red-100", dot: "bg-red-400" };
+      ? { label: "Active",   cls: "text-emerald-600 bg-emerald-50 border-emerald-100", dot: "bg-emerald-500" }
+      : { label: "Inactive", cls: "text-red-500 bg-red-50 border-red-100",             dot: "bg-red-400"     };
   };
 
   return (
@@ -361,7 +321,6 @@ export default function SuperAdminSchools() {
                 </div>
                 <span className="hidden sm:inline text-sm font-medium text-gray-700 max-w-fit text-nowrap">{displayName}</span>
               </div>
-
               <button
                 onClick={handleSignOut}
                 className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-xl text-xs text-gray-500 hover:text-red-600 hover:bg-red-50 transition-all duration-200 border cursor-pointer border-transparent hover:border-red-100"
@@ -392,9 +351,7 @@ export default function SuperAdminSchools() {
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {statsLoading
               ? Array.from({ length: 6 }).map((_, i) => <StatCardSkeleton key={i} />)
-              : statsData.map((s) => (
-                <StatCard key={s.keyName} {...s} />
-              ))}
+              : statsData.map((s) => <StatCard key={s.keyName} {...s} />)}
           </div>
 
           {/* ── Search + Filters ── */}
@@ -409,7 +366,6 @@ export default function SuperAdminSchools() {
                 className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-9 pr-4 py-2.5 text-sm text-gray-700 placeholder:text-gray-400 focus:outline-none focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-100 transition-all duration-200"
               />
             </div>
-
             <select
               value={boardFilter}
               onChange={(e) => setBoardFilter(e.target.value)}
@@ -420,7 +376,6 @@ export default function SuperAdminSchools() {
               <option value="ICSE">ICSE</option>
               <option value="STATE BOARD">State Board</option>
             </select>
-
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
@@ -430,7 +385,6 @@ export default function SuperAdminSchools() {
               <option value="">All</option>
               <option value="INACTIVE">Inactive only</option>
             </select>
-
             <span className="text-xs text-gray-400 whitespace-nowrap font-medium text-center sm:text-left">
               {loading ? "Loading…" : `${totalElements} school${totalElements !== 1 ? "s" : ""}`}
             </span>
@@ -442,7 +396,7 @@ export default function SuperAdminSchools() {
               <ServerCrash size={18} className="shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="font-semibold">Failed to load schools</p>
-                <p className="text-xs text-red-500 mt-0.5 wrap-break-word">{error}</p>
+                <p className="text-xs text-red-500 mt-0.5 break-words">{error}</p>
               </div>
               <button
                 onClick={handleRefresh}
@@ -466,16 +420,16 @@ export default function SuperAdminSchools() {
                   </div>
                 )
                 : schools.map((school, idx) => {
-                  const accent = borderAccents[idx % borderAccents.length];
+                  const accent     = borderAccents[idx % borderAccents.length];
                   const isSelected = selectedId === school.id;
-                  const badge = getStatusBadge(school);
+                  const badge      = getStatusBadge(school);
                   return (
                     <div
                       key={school.id}
                       onClick={() => setSelectedId(school.id)}
                       className={`relative bg-white rounded-2xl border-t-4 cursor-pointer group transition-all duration-200 overflow-hidden
-                          ${accent}
-                          ${isSelected
+                        ${accent}
+                        ${isSelected
                           ? "border border-blue-300 shadow-xl shadow-blue-100 ring-2 ring-blue-200 scale-[1.02]"
                           : "border border-gray-200 shadow-sm hover:shadow-xl hover:-translate-y-1 hover:border-gray-300"
                         }`}
@@ -541,7 +495,7 @@ export default function SuperAdminSchools() {
                           )}
                         </div>
 
-                        {/* CTA */}
+                        {/* CTA — opens school selection modal */}
                         <button
                           onClick={(e) => { e.stopPropagation(); setModalSchool(school); }}
                           className="w-full flex items-center justify-center gap-2 py-2 sm:py-2.5 rounded-xl bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 active:scale-95 cursor-pointer transition-all duration-200 touch-manipulation"
@@ -563,7 +517,7 @@ export default function SuperAdminSchools() {
         </div>
       </div>
 
-      {/* ── Modal ── */}
+      {/* Modal — SchoolSelectedCard handles new-tab opening internally */}
       {modalSchool && (
         <SchoolSelectedCard
           school={modalSchool}

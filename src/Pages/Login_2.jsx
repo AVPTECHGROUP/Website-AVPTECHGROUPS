@@ -7,7 +7,7 @@ import { UserContext } from '../ContextAPI/UserContext'
 import SS_logo from "../assets/Images/ss_logo.png"
 import cstech from "../assets/Images/cstech.png"
 import { motion } from 'framer-motion'
-import SS_logo_3 from "../assets/Images/SS_logo_3.png";
+import SS_logo_3 from "../assets/Images/loginimageschool.png";
 // ─── School Floating SVGs (same as TransformSchool) ───────────────────────────
 const SchoolSVGs = {
   graduation: (
@@ -97,17 +97,17 @@ function FloatingSchoolBg() {
   "
       >
         <img
-          src={SS_logo_3}
-          alt="School Logo"
-          className="
-    w-[48px] h-[48px]
-    sm:w-[64px] sm:h-[64px]
-    md:w-[80px] md:h-[80px]
-    lg:w-[96px] lg:h-[96px]
-    xl:w-[120px] xl:h-[120px]
+  src={SS_logo_3}
+  alt="School Logo"
+  className="
+    w-[100px] h-[100px]
+    sm:w-[120px] sm:h-[120px]
+    md:w-[150px] md:h-[150px]
+    lg:w-[180px] lg:h-[180px]
+    xl:w-[220px] xl:h-[220px]
     object-contain
   "
-        />
+/>
       </motion.div>
       {floatingItems.map(({ key, top, left, size, delay, duration }) => (
         <motion.div
