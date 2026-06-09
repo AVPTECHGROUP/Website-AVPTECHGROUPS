@@ -1,101 +1,143 @@
-import React, { useState } from 'react';
+import React from 'react';
 
-const AddPersonalInfo = ({ formData, setFormData, handleInputChange }) => {
-    const [enabled, setEnabled] = useState(false);
+// ─── Reusable input class builder ─────────────────────────────────────────────
+const inputCls = (hasError) =>
+    `bg-gray-100 p-2 px-4 w-full rounded-md border focus:outline-none focus:ring-2 transition-colors ${hasError
+        ? 'border-red-500 focus:ring-red-400 bg-red-50'
+        : 'border-gray-300 focus:ring-blue-500'
+    }`;
+
+const ErrorText = ({ msg }) =>
+    msg ? <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+        <span>⚠</span> {msg}
+    </p> : null;
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+const AddPersonalInfo = ({ formData, setFormData, handleInputChange, errors, setErrors }) => {
     const today = new Date().toISOString().split('T')[0];
+
+    // Restrict mobile input to digits only, max 10
+    const handleMobileChange = (e) => {
+        const digits = e.target.value.replace(/\D/g, '').slice(0, 10);
+        handleInputChange({ target: { name: 'mobile', value: digits } });
+    };
+
+    // Validate email on blur
+    const handleEmailBlur = (field) => (e) => {
+        const value = e.target.value.trim();
+        const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (value && !EMAIL_REGEX.test(value)) {
+            setErrors?.(prev => ({ ...prev, [field]: 'Please enter a valid email address' }));
+        }
+    };
 
     return (
         <div className="space-y-6">
-            {/* Personal Details Section */}
+
+            {/* ── Personal Details ──────────────────────────────────────────────── */}
             <div>
                 <div className="flex justify-start items-center mb-4 pb-3 border-b border-gray-200">
                     <i className="fa-solid fa-user text-xl lg:text-2xl text-blue-500 mr-3"></i>
-                    <h2 className='text-xl font-medium text-gray-700'>Personal Details</h2>
+                    <h2 className="text-xl font-medium text-gray-700">Personal Details</h2>
                 </div>
 
                 <div className="grid lg:grid-cols-2 sm:grid-cols-1 gap-4">
+
+                    {/* Full Name */}
                     <div>
-                        <label htmlFor="name" className='block font-semibold text-gray-600 text-sm mb-2'>
-                            Full Name<span className="text-red-600 ml-1">*</span>
+                        <label className="block font-semibold text-gray-600 text-sm mb-2">
+                            Full Name <span className="text-red-600">*</span>
                         </label>
                         <input
                             type="text"
                             name="name"
                             value={formData.name}
                             onChange={handleInputChange}
-                            placeholder='Enter full name'
-                            className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-                            required
+                            placeholder="Enter full name"
+                            className={inputCls(errors?.name)}
                         />
+                        <ErrorText msg={errors?.name} />
                     </div>
 
+                    {/* Gender */}
                     <div>
-                        <label htmlFor="gender" className='block font-semibold text-gray-600 text-sm mb-2'>
-                            Gender<span className="text-red-600 ml-1">*</span>
+                        <label className="block font-semibold text-gray-600 text-sm mb-2">
+                            Gender <span className="text-red-600">*</span>
                         </label>
                         <select
                             name="gender"
                             value={formData.gender}
                             onChange={handleInputChange}
-                            className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-                            required
+                            className={inputCls(errors?.gender)}
                         >
                             <option value="">Select Gender</option>
                             <option value="Male">Male</option>
                             <option value="Female">Female</option>
                         </select>
+                        <ErrorText msg={errors?.gender} />
                     </div>
 
+                    {/* Mobile */}
                     <div>
-                        <label htmlFor="mobile" className='block font-semibold text-gray-600 text-sm mb-2'>
-                            Mobile Number<span className="text-red-600 ml-1">*</span>
+                        <label className="block font-semibold text-gray-600 text-sm mb-2">
+                            Mobile Number <span className="text-red-600">*</span>
                         </label>
                         <input
                             type="tel"
                             name="mobile"
                             value={formData.mobile}
-                            onChange={handleInputChange}
-                            placeholder="Mobile number"
+                            onChange={handleMobileChange}
+                            placeholder="10-digit mobile number"
                             maxLength={10}
-                            pattern="\d{10}"
                             inputMode="numeric"
-                            className="bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            required
+                            className={inputCls(errors?.mobile)}
                         />
+                        {/* Character counter */}
+                        <div className="flex justify-between items-center mt-1">
+                            <ErrorText msg={errors?.mobile} />
+                            <span className={`text-xs ml-auto ${formData.mobile.length === 10 ? 'text-green-500' : 'text-gray-400'}`}>
+                                {formData.mobile.length}/10
+                            </span>
+                        </div>
                     </div>
 
+                    {/* Email */}
                     <div>
-                        <label htmlFor="email" className='block font-semibold text-gray-600 text-sm mb-2'>
-                            Email Address<span className="text-red-600 ml-1">*</span>
+                        <label className="block font-semibold text-gray-600 text-sm mb-2">
+                            Email Address <span className="text-red-600">*</span>
                         </label>
                         <input
                             type="email"
                             name="email"
                             value={formData.email}
                             onChange={handleInputChange}
-                            placeholder='Enter email address'
-                            required
-                            className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                            onBlur={handleEmailBlur('email')}
+                            placeholder="Enter email address"
+                            className={inputCls(errors?.email)}
                         />
+                        <ErrorText msg={errors?.email} />
                     </div>
 
+                    {/* Date of Birth */}
                     <div>
-                        <label htmlFor="dob" className='block font-semibold text-gray-600 text-sm mb-2'>
-                            Date of Birth<span className="text-red-600 ml-1">*</span>
+                        <label className="block font-semibold text-gray-600 text-sm mb-2">
+                            Date of Birth <span className="text-red-600">*</span>
                         </label>
                         <input
                             type="date"
                             name="dob"
-                            max={today}
                             value={formData.dob}
                             onChange={handleInputChange}
-                            className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-                            required
+                            max={today}
+                            className={inputCls(errors?.dob)}
                         />
+                        <ErrorText msg={errors?.dob} />
                     </div>
 
+                    {/* Address */}
                     <div className="lg:col-span-2">
-                        <label htmlFor="address" className='block font-semibold text-gray-600 text-sm mb-2'>
+                        <label className="block font-semibold text-gray-600 text-sm mb-2">
                             Current Address
                         </label>
                         <textarea
@@ -103,23 +145,25 @@ const AddPersonalInfo = ({ formData, setFormData, handleInputChange }) => {
                             name="address"
                             value={formData.address}
                             onChange={handleInputChange}
-                            placeholder='Enter residential address'
-                            className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                            placeholder="Enter residential address"
+                            className="bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                         />
                     </div>
                 </div>
             </div>
 
-            {/* Professional Details Section */}
+            {/* ── Professional Details ──────────────────────────────────────────── */}
             <div>
                 <div className="flex justify-start items-center mb-4 pb-3 border-b border-gray-200">
                     <i className="fa-solid fa-briefcase text-xl lg:text-2xl text-blue-500 mr-3"></i>
-                    <h2 className='text-xl font-medium text-gray-700'>Professional Details</h2>
+                    <h2 className="text-xl font-medium text-gray-700">Professional Details</h2>
                 </div>
 
                 <div className="grid lg:grid-cols-4 md:grid-cols-3 sm:grid-cols-1 gap-4">
+
+                    {/* Employee Code */}
                     <div>
-                        <label htmlFor="employeeCode" className='block font-semibold text-gray-600 text-sm mb-2'>
+                        <label className="block font-semibold text-gray-600 text-sm mb-2">
                             Employee Code
                         </label>
                         <input
@@ -127,13 +171,14 @@ const AddPersonalInfo = ({ formData, setFormData, handleInputChange }) => {
                             name="employeeCode"
                             value={formData.employeeCode}
                             onChange={handleInputChange}
-                            placeholder='Auto-generated if empty'
-                            className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                            placeholder="Auto-generated if empty"
+                            className="bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                     </div>
 
+                    {/* Qualification */}
                     <div className="col-span-2">
-                        <label htmlFor="highestQualification" className='block font-semibold text-gray-600 text-sm mb-2'>
+                        <label className="block font-semibold text-gray-600 text-sm mb-2">
                             Highest Qualification
                         </label>
                         <input
@@ -141,13 +186,14 @@ const AddPersonalInfo = ({ formData, setFormData, handleInputChange }) => {
                             name="highestQualification"
                             value={formData.highestQualification}
                             onChange={handleInputChange}
-                            placeholder='Highest Qualification'
-                            className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                            placeholder="e.g. B.Ed, M.Sc"
+                            className="bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                     </div>
 
+                    {/* Experience */}
                     <div>
-                        <label htmlFor="experience" className='block font-semibold text-gray-600 text-sm mb-2'>
+                        <label className="block font-semibold text-gray-600 text-sm mb-2">
                             Experience (Years)
                         </label>
                         <input
@@ -158,83 +204,98 @@ const AddPersonalInfo = ({ formData, setFormData, handleInputChange }) => {
                                 const value = Math.max(0, parseInt(e.target.value) || 0);
                                 setFormData(prev => ({ ...prev, experience: value }));
                             }}
-                            placeholder='0'
-                            className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                            min={0}
+                            placeholder="0"
+                            className="bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                     </div>
 
+                    {/* Joining Date */}
                     <div className="col-span-2">
-                        <label htmlFor="joiningDate" className='block font-semibold text-gray-600 text-sm mb-2'>
-                            Date of Joining<span className="text-red-600 ml-1">*</span>
+                        <label className="block font-semibold text-gray-600 text-sm mb-2">
+                            Date of Joining <span className="text-red-600">*</span>
                         </label>
                         <input
                             type="date"
                             name="joiningDate"
                             value={formData.joiningDate}
                             onChange={handleInputChange}
-                            className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-                            required
+                            className={inputCls(errors?.joiningDate)}
                         />
+                        <ErrorText msg={errors?.joiningDate} />
                     </div>
                 </div>
             </div>
 
-            {/* System Access Section */}
+            {/* ── System Access ─────────────────────────────────────────────────── */}
             <div>
                 <div className="flex justify-start items-center mb-4 pb-3 border-b border-gray-200">
                     <i className="fa-solid fa-gear text-xl lg:text-2xl text-blue-500 mr-3"></i>
-                    <h2 className='text-xl font-medium text-gray-700'>System Access</h2>
+                    <h2 className="text-xl font-medium text-gray-700">System Access</h2>
                 </div>
 
                 <div className="grid lg:grid-cols-3 md:grid-cols-3 sm:grid-cols-1 gap-4">
+
+                    {/* Login Email */}
                     <div>
-                        <label htmlFor="loginEmail" className='block font-semibold text-gray-600 text-sm mb-2'>
-                            Login Email/Username<span className="text-red-600 ml-1">*</span>
+                        <label className="block font-semibold text-gray-600 text-sm mb-2">
+                            Login Email / Username <span className="text-red-600">*</span>
                         </label>
                         <input
                             type="email"
                             name="loginEmail"
                             value={formData.loginEmail}
                             onChange={handleInputChange}
-                            placeholder='Email/username'
-                            required
-                            className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                            onBlur={handleEmailBlur('loginEmail')}
+                            placeholder="Login email or username"
+                            className={inputCls(errors?.loginEmail)}
                         />
+                        <ErrorText msg={errors?.loginEmail} />
                     </div>
 
+                    {/* Role (read-only) */}
                     <div>
-                        <label htmlFor="role" className='block font-semibold text-gray-600 text-sm mb-2'>
-                            Role<span className="text-red-600 ml-1">*</span>
+                        <label className="block font-semibold text-gray-600 text-sm mb-2">
+                            Role <span className="text-red-600">*</span>
                         </label>
                         <input
                             readOnly
                             type="text"
                             name="role"
-                            placeholder='Teacher'
-                            value='Teacher'
-                            className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none cursor-not-allowed'
+                            value="Teacher"
+                            className="bg-gray-100 font-normal text-gray-500 border border-gray-300 p-2 px-4 w-full rounded-md cursor-not-allowed"
                         />
                     </div>
 
+                    {/* Account Status Toggle */}
                     <div>
-                        <label htmlFor="accountStatus" className='block font-semibold text-gray-600 text-sm mb-2'>
-                            Account Status<span className="text-red-600 ml-1">*</span>
+                        <label className="block font-semibold text-gray-600 text-sm mb-2">
+                            Account Status <span className="text-red-600">*</span>
                         </label>
-                        <button
-                            required
-                            type="button"
-                            onClick={() => {
-                                setEnabled(!enabled);
-                                setFormData(prev => ({ ...prev, accountStatus: !enabled }));
-                            }}
-                            className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors duration-300 ${enabled ? "bg-blue-500" : "bg-gray-300"
-                                }`}
-                        >
-                            <div
-                                className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform duration-300 ${enabled ? "translate-x-6" : "translate-x-0"
+                        <div className="flex items-center gap-3">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setFormData(prev => ({ ...prev, accountStatus: !prev.accountStatus }));
+                                    // Clear error when toggled on
+                                    if (!formData.accountStatus) {
+                                        setErrors?.(prev => ({ ...prev, accountStatus: '' }));
+                                    }
+                                }}
+                                className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors duration-300 ${formData.accountStatus ? 'bg-blue-500' : errors?.accountStatus ? 'bg-red-300' : 'bg-gray-300'
                                     }`}
-                            />
-                        </button>
+                                aria-label="Toggle account status"
+                            >
+                                <div
+                                    className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform duration-300 ${formData.accountStatus ? 'translate-x-6' : 'translate-x-0'
+                                        }`}
+                                />
+                            </button>
+                            <span className={`text-sm font-medium ${formData.accountStatus ? 'text-blue-600' : 'text-gray-400'}`}>
+                                {formData.accountStatus ? 'Active' : 'Inactive'}
+                            </span>
+                        </div>
+                        <ErrorText msg={errors?.accountStatus} />
                     </div>
                 </div>
             </div>
