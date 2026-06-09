@@ -8,7 +8,17 @@ import {
     IndianRupee
 } from 'lucide-react';
 
-const AddSalaryDetails = ({ formData, setFormData, handleInputChange }) => {
+// ─── Reusable error text ──────────────────────────────────────────────────────
+const ErrorText = ({ msg }) =>
+    msg ? (
+        <p className="text-red-500 text-xs mt-1.5 flex items-center gap-1">
+            <span>⚠</span> {msg}
+        </p>
+    ) : null;
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+const AddSalaryDetails = ({ formData, setFormData, handleInputChange, errors = {}, setSalaryErrors }) => {
 
     const [allowances, setAllowances] = useState([]);
     const [penalties, setPenalties] = useState([]);
@@ -36,7 +46,6 @@ const AddSalaryDetails = ({ formData, setFormData, handleInputChange }) => {
         providentFund: "Provident Fund"
     };
 
-    // ✅ FIX: Keys now match the API payload fields exactly
     const DEDUCTION_OPTIONS = [
         { label: 'Professional Tax', key: 'professionalTax' },
         { label: 'Income Tax', key: 'incomeTax' },
@@ -64,13 +73,9 @@ const AddSalaryDetails = ({ formData, setFormData, handleInputChange }) => {
     const handleAddAllowance = (e) => {
         e.preventDefault();
         if (!newAllowance.name || !newAllowance.amount) return;
-
         const amount = parseFloat(newAllowance.amount);
         setAllowances(prev => [...prev, { id: Date.now(), name: newAllowance.name, amount }]);
-
-        // ✅ Sync to formData so handleSubmit can read it
         setFormData(prev => ({ ...prev, [newAllowance.name]: amount }));
-
         setNewAllowance({ name: '', amount: '' });
         setShowAddAllowanceForm(false);
     };
@@ -78,29 +83,22 @@ const AddSalaryDetails = ({ formData, setFormData, handleInputChange }) => {
     const handleAddPenalty = (e) => {
         e.preventDefault();
         if (!newPenalty.name || !newPenalty.amount) return;
-
         const selected = DEDUCTION_OPTIONS.find(o => o.key === newPenalty.name);
         if (!selected) return;
-
         const amount = Math.abs(parseFloat(newPenalty.amount));
         setPenalties(prev => [...prev, { id: Date.now(), key: selected.key, label: selected.label, amount }]);
-
-        // ✅ Sync to formData using the correct API field key
         setFormData(prev => ({ ...prev, [selected.key]: amount }));
-
         setNewPenalty({ name: '', amount: '' });
         setShowAddPenaltyForm(false);
     };
 
     const handleDeleteAllowance = (id, name) => {
         setAllowances(prev => prev.filter(a => a.id !== id));
-        // ✅ Clear the field in formData when removed
         setFormData(prev => ({ ...prev, [name]: 0 }));
     };
 
     const handleDeletePenalty = (id, key) => {
         setPenalties(prev => prev.filter(p => p.id !== id));
-        // ✅ Clear the field in formData when removed
         setFormData(prev => ({ ...prev, [key]: 0 }));
     };
 
@@ -111,9 +109,10 @@ const AddSalaryDetails = ({ formData, setFormData, handleInputChange }) => {
         setNewPenalty({ name: '', amount: '' });
         setFormData(prev => ({
             ...prev,
-            salaryType: '',
+            salaryType: 'MONTHLY',
             baseSalary: '',
             leaveDeductionPerDay: '',
+            lateArrivalPenalty: '',
             houseRentAllowance: 0,
             travelAllowance: 0,
             dearnessAllowance: 0,
@@ -124,13 +123,28 @@ const AddSalaryDetails = ({ formData, setFormData, handleInputChange }) => {
             incomeTax: 0,
             otherDeductions: 0,
         }));
+        setSalaryErrors?.({});
         setLeaveDeductionEnabled(true);
         setShowAddAllowanceForm(false);
         setShowAddPenaltyForm(false);
     };
 
+    // Clear individual salary errors on change
+    const handleBaseSalaryChange = (e) => {
+        setFormData(prev => ({ ...prev, baseSalary: e.target.value }));
+        if (e.target.value && Number(e.target.value) > 0) {
+            setSalaryErrors?.(prev => ({ ...prev, baseSalary: '' }));
+        }
+    };
+
+    const handleSalaryTypeSelect = (type) => {
+        setFormData(prev => ({ ...prev, salaryType: type }));
+        setSalaryErrors?.(prev => ({ ...prev, salaryType: '' }));
+    };
+
     return (
         <div className="max-w-6xl mx-auto p-4 sm:p-6">
+            {/* Header */}
             <div className="mb-4 sm:mb-6">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0 mb-2">
                     <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Teacher Salary Configuration</h1>
@@ -142,59 +156,84 @@ const AddSalaryDetails = ({ formData, setFormData, handleInputChange }) => {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-                {/* Left Column */}
+
+                {/* ── Left Column ────────────────────────────────────────────────── */}
                 <div className="col-span-2 space-y-6">
+
                     {/* Core Compensation */}
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                    <div className={`bg-white rounded-xl shadow-sm border p-6 ${errors?.salaryType || errors?.baseSalary ? 'border-red-300' : 'border-gray-200'}`}>
                         <div className="flex items-center gap-2 mb-6">
                             <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
                                 <Wallet className="w-5 h-5 text-blue-600" />
                             </div>
                             <h2 className="text-lg font-semibold text-gray-900">Core Compensation</h2>
+                            {(errors?.salaryType || errors?.baseSalary) && (
+                                <span className="ml-auto text-xs text-red-500 font-medium bg-red-50 px-2 py-0.5 rounded-full border border-red-200">
+                                    Required
+                                </span>
+                            )}
                         </div>
 
                         <div className="space-y-6">
+
+                            {/* Salary Type */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-3">SALARY TYPE</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-3">
+                                    SALARY TYPE <span className="text-red-500">*</span>
+                                </label>
                                 <div className="grid grid-cols-2 gap-4">
                                     <button
                                         type="button"
-                                        onClick={() => setFormData(prev => ({ ...prev, salaryType: 'MONTHLY' }))}
-                                        className={`py-3 px-4 rounded-lg font-medium transition-colors ${formData.salaryType === 'MONTHLY'
-                                            ? 'bg-blue-50 text-blue-700 border-2 border-blue-500'
-                                            : 'bg-gray-50 text-gray-700 border-2 border-transparent hover:bg-gray-100'
+                                        onClick={() => handleSalaryTypeSelect('MONTHLY')}
+                                        className={`py-3 px-4 rounded-lg font-medium transition-colors border-2 ${formData.salaryType === 'MONTHLY'
+                                            ? 'bg-blue-50 text-blue-700 border-blue-500'
+                                            : errors?.salaryType
+                                                ? 'bg-red-50 text-red-600 border-red-300 hover:border-red-400'
+                                                : 'bg-gray-50 text-gray-700 border-transparent hover:bg-gray-100'
                                             }`}
                                     >
                                         Monthly
                                     </button>
                                     <button
                                         type="button"
-                                        onClick={() => setFormData(prev => ({ ...prev, salaryType: 'PER_DAY' }))}
-                                        className={`py-3 px-4 rounded-lg font-medium transition-colors ${formData.salaryType === 'PER_DAY'
-                                            ? 'bg-blue-50 text-blue-700 border-2 border-blue-500'
-                                            : 'bg-gray-50 text-gray-700 border-2 border-transparent hover:bg-gray-100'
+                                        onClick={() => handleSalaryTypeSelect('PER_DAY')}
+                                        className={`py-3 px-4 rounded-lg font-medium transition-colors border-2 ${formData.salaryType === 'PER_DAY'
+                                            ? 'bg-blue-50 text-blue-700 border-blue-500'
+                                            : errors?.salaryType
+                                                ? 'bg-red-50 text-red-600 border-red-300 hover:border-red-400'
+                                                : 'bg-gray-50 text-gray-700 border-transparent hover:bg-gray-100'
                                             }`}
                                     >
                                         Per Day
                                     </button>
                                 </div>
+                                <ErrorText msg={errors?.salaryType} />
                             </div>
 
+                            {/* Base Salary */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-3">BASE SALARY AMOUNT</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-3">
+                                    BASE SALARY AMOUNT <span className="text-red-500">*</span>
+                                </label>
                                 <div className="relative">
                                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">₹</span>
                                     <input
-                                        name='baseSalary'
+                                        name="baseSalary"
                                         type="number"
+                                        min="0"
                                         value={formData.baseSalary}
-                                        onChange={(e) => setFormData(prev => ({ ...prev, baseSalary: e.target.value }))}
-                                        className="w-full pl-8 pr-24 py-3 border border-gray-300 rounded-lg text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        onChange={handleBaseSalaryChange}
+                                        placeholder="0"
+                                        className={`w-full pl-8 pr-32 py-3 border-2 rounded-lg text-lg font-semibold focus:outline-none focus:ring-2 transition-colors ${errors?.baseSalary
+                                            ? 'border-red-400 bg-red-50 focus:ring-red-300 focus:border-red-500'
+                                            : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                                            }`}
                                     />
                                     <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-gray-500">
                                         {formData.salaryType === 'PER_DAY' ? 'INR / DAY' : 'INR / MONTH'}
                                     </span>
                                 </div>
+                                <ErrorText msg={errors?.baseSalary} />
                                 <p className="text-xs text-gray-500 mt-2">Calculated based on a 22-day working month</p>
                             </div>
                         </div>
@@ -215,9 +254,8 @@ const AddSalaryDetails = ({ formData, setFormData, handleInputChange }) => {
                                     checked={leaveDeductionEnabled}
                                     onChange={(e) => {
                                         setLeaveDeductionEnabled(e.target.checked);
-                                        // ✅ Clear leaveDeductionPerDay in formData if disabled
                                         if (!e.target.checked) {
-                                            setFormData(prev => ({ ...prev, leaveDeductionPerDay: '' }));
+                                            setFormData(prev => ({ ...prev, leaveDeductionPerDay: '', lateArrivalPenalty: '' }));
                                         }
                                     }}
                                     className="sr-only peer"
@@ -228,7 +266,9 @@ const AddSalaryDetails = ({ formData, setFormData, handleInputChange }) => {
 
                         <div className="grid grid-cols-2 gap-6">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-3">UNPAID LEAVE (DAILY)</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-3">
+                                    UNPAID LEAVE (DAILY)
+                                </label>
                                 <div className="relative">
                                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">₹</span>
                                     <input
@@ -237,22 +277,27 @@ const AddSalaryDetails = ({ formData, setFormData, handleInputChange }) => {
                                         value={formData.leaveDeductionPerDay}
                                         onChange={handleInputChange}
                                         disabled={!leaveDeductionEnabled}
-                                        className="w-full pl-8 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                                        min="0"
+                                        placeholder="0"
+                                        className="w-full pl-8 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed"
                                     />
                                 </div>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-3">LATE ARRIVAL PENALTY</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-3">
+                                    LATE ARRIVAL PENALTY
+                                </label>
                                 <div className="relative">
                                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">₹</span>
-                                    {/* ✅ Now synced to formData.lateArrivalPenalty */}
                                     <input
                                         type="number"
                                         name="lateArrivalPenalty"
                                         value={formData.lateArrivalPenalty || ''}
                                         onChange={handleInputChange}
                                         disabled={!leaveDeductionEnabled}
-                                        className="w-full pl-8 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                                        min="0"
+                                        placeholder="0"
+                                        className="w-full pl-8 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed"
                                     />
                                 </div>
                                 <p className="text-xs text-gray-500 mt-2">Deducted per 15 minutes of delay</p>
@@ -261,8 +306,9 @@ const AddSalaryDetails = ({ formData, setFormData, handleInputChange }) => {
                     </div>
                 </div>
 
-                {/* Right Column */}
+                {/* ── Right Column ────────────────────────────────────────────────── */}
                 <div className="space-y-6">
+
                     {/* Allowances */}
                     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                         <div className="flex items-center justify-between mb-4">
@@ -315,6 +361,12 @@ const AddSalaryDetails = ({ formData, setFormData, handleInputChange }) => {
                                 </div>
                             )}
 
+                            {allowances.length === 0 && !showAddAllowanceForm && (
+                                <p className="text-sm text-gray-400 text-center py-4 border border-dashed border-gray-200 rounded-lg">
+                                    No allowances added yet
+                                </p>
+                            )}
+
                             {allowances.map((allowance) => (
                                 <div key={allowance.id} className="flex items-center justify-between gap-4 p-3 rounded-md border border-gray-200 bg-white hover:bg-gray-50 transition">
                                     <div className="w-9 h-9 bg-blue-100 text-blue-600 rounded-md flex items-center justify-center shrink-0">
@@ -328,7 +380,7 @@ const AddSalaryDetails = ({ formData, setFormData, handleInputChange }) => {
                                         <button
                                             type="button"
                                             onClick={() => handleDeleteAllowance(allowance.id, allowance.name)}
-                                            className="w-7 h-7 flex items-center justify-center rounded-md bg-gray-200 text-gray-600 hover:bg-gray-300 transition"
+                                            className="w-7 h-7 flex items-center justify-center rounded-md bg-gray-200 text-gray-600 hover:bg-red-100 hover:text-red-600 transition"
                                         >✕</button>
                                     </div>
                                 </div>
@@ -361,7 +413,6 @@ const AddSalaryDetails = ({ formData, setFormData, handleInputChange }) => {
                                                 className="w-full border-2 border-gray-300 px-2 py-2 text-sm outline-none rounded-sm focus:border-red-500"
                                             >
                                                 <option value="" disabled>Select deduction</option>
-                                                {/* ✅ Now uses { label, key } objects */}
                                                 {getAvailableDeductions().map(option => (
                                                     <option key={option.key} value={option.key}>{option.label}</option>
                                                 ))}
@@ -389,8 +440,14 @@ const AddSalaryDetails = ({ formData, setFormData, handleInputChange }) => {
                                 </div>
                             )}
 
+                            {penalties.length === 0 && !showAddPenaltyForm && (
+                                <p className="text-sm text-gray-400 text-center py-4 border border-dashed border-gray-200 rounded-lg">
+                                    No penalties added yet
+                                </p>
+                            )}
+
                             {penalties.map((penalty) => (
-                                <div key={penalty.id} className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50">
+                                <div key={penalty.id} className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 border border-gray-100">
                                     <div className="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center shrink-0">
                                         <RotateCcw className="w-5 h-5 text-orange-400" />
                                     </div>
@@ -402,7 +459,7 @@ const AddSalaryDetails = ({ formData, setFormData, handleInputChange }) => {
                                         <button
                                             type="button"
                                             onClick={() => handleDeletePenalty(penalty.id, penalty.key)}
-                                            className="text-red-500 hover:text-red-700 text-sm"
+                                            className="text-red-400 hover:text-red-600 text-sm transition-colors"
                                         >✕</button>
                                     </div>
                                 </div>
@@ -413,9 +470,9 @@ const AddSalaryDetails = ({ formData, setFormData, handleInputChange }) => {
                     {/* Net Estimate */}
                     <div className="bg-blue-50 rounded-xl border border-blue-200 p-6 my-6">
                         <div className="text-sm font-medium text-blue-700 mb-2">TOTAL ESTIMATED NET</div>
-                        <div className="text-3xl font-bold text-black-900 mb-1">
+                        <div className="text-3xl font-bold text-gray-900 mb-1">
                             ₹{calculateNet().toLocaleString()}
-                            <span className="text-lg font-normal text-gray-700">
+                            <span className="text-lg font-normal text-gray-600">
                                 {formData.salaryType === 'PER_DAY' ? '/day' : '/month'}
                             </span>
                         </div>
@@ -424,6 +481,7 @@ const AddSalaryDetails = ({ formData, setFormData, handleInputChange }) => {
                 </div>
             </div>
 
+            {/* Warning Banner */}
             <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mt-4 flex items-center gap-3">
                 <AlertTriangle className="w-5 h-5 text-yellow-600 shrink-0" />
                 <p className="text-sm text-orange-800">
@@ -431,6 +489,7 @@ const AddSalaryDetails = ({ formData, setFormData, handleInputChange }) => {
                 </p>
             </div>
 
+            {/* Reset Button */}
             <div className="flex justify-end gap-4 mt-6">
                 <button
                     type="button"

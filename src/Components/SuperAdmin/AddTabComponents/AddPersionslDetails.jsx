@@ -1,123 +1,182 @@
 import React, { useEffect, useState } from 'react';
 import { getAllUserRoles } from '../../../Api/userManagementAPI';
 
-const AddPersonalDetails = ({ formData, setFormData, handleInputChange }) => {
-    const [enabled, setEnabled] = useState(false);
+// ─── Reusable helpers ─────────────────────────────────────────────────────────
+const inputCls = (hasError) =>
+    `bg-gray-100 p-2 px-4 w-full rounded-md border focus:outline-none focus:ring-2 transition-colors font-normal text-gray-800 ${hasError
+        ? 'border-red-500 bg-red-50 focus:ring-red-400'
+        : 'border-gray-300 focus:ring-blue-500'
+    }`;
+
+const ErrorText = ({ msg }) =>
+    msg ? (
+        <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+            <span>⚠</span> {msg}
+        </p>
+    ) : null;
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+const AddPersonalDetails = ({
+    formData,
+    setFormData,
+    handleInputChange,
+    fieldErrors = {},
+    setFieldErrors,
+}) => {
     const [roleSelection, setRoleSelection] = useState([]);
+    const [selectedRole, setSelectedRole] = useState('');
     const today = new Date().toISOString().split('T')[0];
+
+    const PARENT_VAL = 'PARENT';
+
+    // Fetch roles on mount
     useEffect(() => {
         const fetchUserRoles = async () => {
             try {
-                let roleOpt = [];
                 const rolesRes = await getAllUserRoles();
                 const fetchedRoles = rolesRes.data || [];
-                roleOpt = fetchedRoles
-                    .filter(val => val.name !== 'SUPER_ADMIN' && val.name !== 'TEACHER' && val.name !== 'GLOBAL_ADMIN' && val.name !== 'PARENT')
+                const roleOpt = fetchedRoles
+                    .filter(val =>
+                        val.name !== 'SUPER_ADMIN' &&
+                        val.name !== 'TEACHER' &&
+                        val.name !== 'GLOBAL_ADMIN' &&
+                        val.name !== 'PARENT'
+                    )
                     .map(val => ({
                         key: val.id,
                         value: val.name,
-                        displayRole: val.displayName
+                        displayRole: val.displayName,
                     }));
                 setRoleSelection(roleOpt);
-            }
-            catch (e) {
+            } catch (e) {
                 console.error('Fetch roles error:', e.message);
-                throw e;
             }
         };
         fetchUserRoles();
     }, []);
-    const [selectedRole, setSelectedRole] = useState('');
-    const parentVal = 'PARENT';
+
+    // Email format blur validator
+    const handleEmailBlur = (fieldName) => (e) => {
+        const value = e.target.value.trim();
+        const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (value && !EMAIL_REGEX.test(value)) {
+            setFieldErrors?.((prev) => ({
+                ...prev,
+                [fieldName]: 'Please enter a valid email address.',
+            }));
+        }
+    };
+
+    const isParentLike = selectedRole === PARENT_VAL || selectedRole === '';
 
     return (
         <div className="space-y-6">
-            {/* Personal Details Section */}
+
+            {/* ── Personal Details ──────────────────────────────────────────────── */}
             <div>
                 <div className="flex justify-start items-center mb-4 pb-3 border-b border-gray-200">
                     <i className="fa-solid fa-user text-xl lg:text-2xl text-blue-500 mr-3"></i>
-                    <h2 className='text-xl font-medium text-gray-700'>Personal Details</h2>
+                    <h2 className="text-xl font-medium text-gray-700">Personal Details</h2>
                 </div>
 
                 <div className="grid lg:grid-cols-2 sm:grid-cols-1 gap-4">
+
+                    {/* Full Name */}
                     <div>
-                        <label htmlFor="name" className='block font-semibold text-gray-600 text-sm mb-2'>
-                            Full Name<span className="text-red-600 ml-1">*</span>
+                        <label className="block font-semibold text-gray-600 text-sm mb-2">
+                            Full Name <span className="text-red-600">*</span>
                         </label>
                         <input
                             type="text"
                             name="name"
                             value={formData.name}
                             onChange={handleInputChange}
-                            placeholder='Enter full name'
-                            className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-                            required
+                            placeholder="Enter full name"
+                            className={inputCls(fieldErrors?.name)}
                         />
+                        <ErrorText msg={fieldErrors?.name} />
                     </div>
 
+                    {/* Gender */}
                     <div>
-                        <label htmlFor="gender" className='block font-semibold text-gray-600 text-sm mb-2'>
-                            Gender<span className="text-red-600 ml-1">*</span>
+                        <label className="block font-semibold text-gray-600 text-sm mb-2">
+                            Gender <span className="text-red-600">*</span>
                         </label>
                         <select
                             name="gender"
                             value={formData.gender}
                             onChange={handleInputChange}
-                            className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-                            required
+                            className={inputCls(fieldErrors?.gender)}
                         >
                             <option value="">Select Gender</option>
                             <option value="Male">Male</option>
                             <option value="Female">Female</option>
+                            <option value="Other">Other</option>
                         </select>
+                        <ErrorText msg={fieldErrors?.gender} />
                     </div>
 
+                    {/* Mobile */}
                     <div>
-                        <label htmlFor="mobile" className='block font-semibold text-gray-600 text-sm mb-2'>
-                            Mobile Number<span className="text-red-600 ml-1">*</span>
+                        <label className="block font-semibold text-gray-600 text-sm mb-2">
+                            Mobile Number <span className="text-red-600">*</span>
                         </label>
                         <input
                             type="tel"
                             name="mobile"
                             value={formData.mobile}
                             onChange={handleInputChange}
-                            placeholder='Mobile number'
-                            className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-                            required
+                            placeholder="10-digit mobile number"
+                            maxLength={10}
+                            inputMode="numeric"
+                            className={inputCls(fieldErrors?.mobile)}
                         />
+                        {/* Digit counter */}
+                        <div className="flex justify-between items-start mt-1">
+                            <ErrorText msg={fieldErrors?.mobile} />
+                            <span className={`text-xs ml-auto ${formData.mobile.length === 10 ? 'text-green-500' : 'text-gray-400'}`}>
+                                {formData.mobile.length}/10
+                            </span>
+                        </div>
                     </div>
 
+                    {/* Email */}
                     <div>
-                        <label htmlFor="email" className='block font-semibold text-gray-600 text-sm mb-2'>
-                            Email Address
+                        <label className="block font-semibold text-gray-600 text-sm mb-2">
+                            Email Address <span className="text-red-600">*</span>
                         </label>
                         <input
                             type="email"
                             name="email"
                             value={formData.email}
                             onChange={handleInputChange}
-                            placeholder='Enter email address'
-                            className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                            onBlur={handleEmailBlur('email')}
+                            placeholder="Enter email address"
+                            className={inputCls(fieldErrors?.email)}
                         />
+                        <ErrorText msg={fieldErrors?.email} />
                     </div>
 
+                    {/* Date of Birth */}
                     <div>
-                        <label htmlFor="dob" className='block font-semibold text-gray-600 text-sm mb-2'>
-                            Date of Birth<span className="text-red-600 ml-1">*</span>
+                        <label className="block font-semibold text-gray-600 text-sm mb-2">
+                            Date of Birth <span className="text-red-600">*</span>
                         </label>
                         <input
                             type="date"
                             name="dob"
-                            max={today}
                             value={formData.dob}
                             onChange={handleInputChange}
-                            className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-                            required
+                            max={today}
+                            className={inputCls(fieldErrors?.dob)}
                         />
+                        <ErrorText msg={fieldErrors?.dob} />
                     </div>
 
+                    {/* Address */}
                     <div className="lg:col-span-2">
-                        <label htmlFor="address" className='block font-semibold text-gray-600 text-sm mb-2'>
+                        <label className="block font-semibold text-gray-600 text-sm mb-2">
                             Current Address
                         </label>
                         <textarea
@@ -125,88 +184,119 @@ const AddPersonalDetails = ({ formData, setFormData, handleInputChange }) => {
                             name="address"
                             value={formData.address}
                             onChange={handleInputChange}
-                            placeholder='Enter residential address'
-                            className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                            placeholder="Enter residential address"
+                            className={`resize-none ${inputCls(fieldErrors?.address)}`}
                         />
+                        <div className="flex justify-between items-start mt-1">
+                            <ErrorText msg={fieldErrors?.address} />
+                            <span className="text-xs ml-auto text-gray-400">
+                                {formData.address?.length || 0}/300
+                            </span>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            {/* System Access Section */}
+            {/* ── System Access ─────────────────────────────────────────────────── */}
             <div>
                 <div className="flex justify-start items-center mb-4 pb-3 border-b border-gray-200">
                     <i className="fa-solid fa-gear text-xl lg:text-2xl text-blue-500 mr-3"></i>
-                    <h2 className='text-xl font-medium text-gray-700'>System Access</h2>
+                    <h2 className="text-xl font-medium text-gray-700">System Access</h2>
                 </div>
 
                 <div className="grid lg:grid-cols-3 md:grid-cols-3 sm:grid-cols-1 gap-4">
+
+                    {/* Login Email */}
                     <div>
-                        <label htmlFor="loginEmail" className='block font-semibold text-gray-600 text-sm mb-2'>
-                            Login Email/Username
+                        <label className="block font-semibold text-gray-600 text-sm mb-2">
+                            Login Email / Username
                         </label>
                         <input
                             type="email"
                             name="loginEmail"
                             value={formData.loginEmail}
                             onChange={handleInputChange}
-                            placeholder='Email/username'
-                            className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                            onBlur={handleEmailBlur('loginEmail')}
+                            placeholder="Login email or username"
+                            className={inputCls(fieldErrors?.loginEmail)}
                         />
+                        <ErrorText msg={fieldErrors?.loginEmail} />
                     </div>
 
+                    {/* Role */}
                     <div>
-                        <label htmlFor="userRole" className='block font-semibold text-gray-600 text-sm mb-2'>
-                            Select Role<span className="text-red-600 ml-1">*</span>
+                        <label className="block font-semibold text-gray-600 text-sm mb-2">
+                            Select Role <span className="text-red-600">*</span>
                         </label>
                         <select
                             name="userRole"
                             value={formData.userRole}
-                            className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none'
-                            onChange={(e) => { handleInputChange(e); setSelectedRole(e.target.value) }}
-                            required>
+                            onChange={(e) => {
+                                handleInputChange(e);
+                                setSelectedRole(e.target.value);
+                            }}
+                            className={inputCls(fieldErrors?.userRole)}
+                        >
                             <option value="" disabled>Select User Role</option>
-                            {
-                                roleSelection.map((ele) => (
-                                    <option value={ele.value} key={ele.key}> {ele.displayRole} </option>
-                                ))
-                            }
+                            {roleSelection.map((ele) => (
+                                <option value={ele.value} key={ele.key}>
+                                    {ele.displayRole}
+                                </option>
+                            ))}
                         </select>
+                        <ErrorText msg={fieldErrors?.userRole} />
                     </div>
 
+                    {/* Account Status Toggle */}
                     <div>
-                        <label htmlFor="accountStatus" className='block font-semibold text-gray-600 text-sm mb-2'>
-                            Account Status<span className="text-red-600 ml-1">*</span>
+                        <label className="block font-semibold text-gray-600 text-sm mb-2">
+                            Account Status <span className="text-red-600">*</span>
                         </label>
-                        <button
-                            required
-                            type="button"
-                            onClick={() => {
-                                setEnabled(!enabled);
-                                setFormData(prev => ({ ...prev, accountStatus: !enabled }));
-                            }}
-                            className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors duration-300 cursor-pointer ${enabled ? "bg-blue-500" : "bg-gray-300"
-                                }`}
-                        >
-                            <div
-                                className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform duration-300 ${enabled ? "translate-x-6" : "translate-x-0"
+                        <div className="flex items-center gap-3">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    const next = !formData.accountStatus;
+                                    setFormData((prev) => ({ ...prev, accountStatus: next }));
+                                    // Clear error when enabled
+                                    if (next) {
+                                        setFieldErrors?.((prev) => ({ ...prev, accountStatus: '' }));
+                                    }
+                                }}
+                                className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors duration-300 cursor-pointer ${formData.accountStatus
+                                    ? 'bg-blue-500'
+                                    : fieldErrors?.accountStatus
+                                        ? 'bg-red-300'
+                                        : 'bg-gray-300'
                                     }`}
-                            />
-                        </button>
+                                aria-label="Toggle account status"
+                            >
+                                <div
+                                    className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform duration-300 ${formData.accountStatus ? 'translate-x-6' : 'translate-x-0'
+                                        }`}
+                                />
+                            </button>
+                            <span className={`text-sm font-medium ${formData.accountStatus ? 'text-blue-600' : 'text-gray-400'}`}>
+                                {formData.accountStatus ? 'Active' : 'Inactive'}
+                            </span>
+                        </div>
+                        <ErrorText msg={fieldErrors?.accountStatus} />
                     </div>
                 </div>
             </div>
 
-
-            {/* Professional Details Section */}
-            <div className={`${selectedRole === '' || selectedRole === parentVal ? 'hidden' : 'professionalDetails'}`}>
+            {/* ── Professional Details (hidden for parent/no-role) ──────────────── */}
+            <div className={selectedRole === '' || selectedRole === PARENT_VAL ? 'hidden' : ''}>
                 <div className="flex justify-start items-center mb-4 pb-3 border-b border-gray-200">
                     <i className="fa-solid fa-briefcase text-xl lg:text-2xl text-blue-500 mr-3"></i>
-                    <h2 className='text-xl font-medium text-gray-700'>Professional Details</h2>
+                    <h2 className="text-xl font-medium text-gray-700">Professional Details</h2>
                 </div>
 
                 <div className="grid lg:grid-cols-4 md:grid-cols-3 sm:grid-cols-1 gap-4">
+
+                    {/* Employee Code */}
                     <div>
-                        <label htmlFor="employeeCode" className='block font-semibold text-gray-600 text-sm mb-2'>
+                        <label className="block font-semibold text-gray-600 text-sm mb-2">
                             Employee Code
                         </label>
                         <input
@@ -214,13 +304,15 @@ const AddPersonalDetails = ({ formData, setFormData, handleInputChange }) => {
                             name="employeeCode"
                             value={formData.employeeCode}
                             onChange={handleInputChange}
-                            placeholder='Auto-generated if empty'
-                            className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                            placeholder="Auto-generated if empty"
+                            className={inputCls(fieldErrors?.employeeCode)}
                         />
+                        <ErrorText msg={fieldErrors?.employeeCode} />
                     </div>
 
+                    {/* Qualification */}
                     <div className="col-span-2">
-                        <label htmlFor="highestQualification" className='block font-semibold text-gray-600 text-sm mb-2'>
+                        <label className="block font-semibold text-gray-600 text-sm mb-2">
                             Highest Qualification
                         </label>
                         <input
@@ -228,13 +320,14 @@ const AddPersonalDetails = ({ formData, setFormData, handleInputChange }) => {
                             name="highestQualification"
                             value={formData.highestQualification}
                             onChange={handleInputChange}
-                            placeholder='Highest Qualification'
-                            className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                            placeholder="e.g. B.Ed, M.Sc"
+                            className="bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                     </div>
 
+                    {/* Experience */}
                     <div>
-                        <label htmlFor="experience" className='block font-semibold text-gray-600 text-sm mb-2'>
+                        <label className="block font-semibold text-gray-600 text-sm mb-2">
                             Experience (Years)
                         </label>
                         <input
@@ -242,32 +335,34 @@ const AddPersonalDetails = ({ formData, setFormData, handleInputChange }) => {
                             name="experience"
                             value={formData.experience}
                             onChange={(e) => {
-                                const value = Math.max(0, parseInt(e.target.value) || 0);
-                                setFormData(prev => ({ ...prev, experience: value }));
+                                const value = Math.max(0, Math.min(60, parseInt(e.target.value) || 0));
+                                setFormData((prev) => ({ ...prev, experience: value }));
                             }}
-                            placeholder='0'
-                            className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                            min={0}
+                            max={60}
+                            placeholder="0"
+                            className={inputCls(fieldErrors?.experience)}
                         />
+                        <ErrorText msg={fieldErrors?.experience} />
                     </div>
 
+                    {/* Joining Date */}
                     <div className="col-span-2">
-                        <label htmlFor="joiningDate" className='block font-semibold text-gray-600 text-sm mb-2'>
-                            Date of Joining<span className="text-red-600 ml-1">*</span>
+                        <label className="block font-semibold text-gray-600 text-sm mb-2">
+                            Date of Joining <span className="text-red-600">*</span>
                         </label>
                         <input
                             type="date"
                             name="joiningDate"
                             value={formData.joiningDate}
                             onChange={handleInputChange}
-                            className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-                            required={selectedRole !== parentVal}
-                            disabled={selectedRole === parentVal}
+                            max={today}
+                            className={inputCls(fieldErrors?.joiningDate)}
                         />
+                        <ErrorText msg={fieldErrors?.joiningDate} />
                     </div>
                 </div>
             </div>
-
-
         </div>
     );
 };

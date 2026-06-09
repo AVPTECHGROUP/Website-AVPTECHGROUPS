@@ -12,8 +12,11 @@ function AddNewTeacher() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [profileImage, setProfileImage] = useState(null);
     const [imagePreview, setImagePreview] = useState(null);
+    const [errors, setErrors] = useState({});
+    const [salaryErrors, setSalaryErrors] = useState({});
     const fileInputRef = useRef(null);
     const salarySectionRef = useRef(null);
+
     const [formData, setFormData] = useState({
         name: "",
         gender: "",
@@ -50,17 +53,16 @@ function AddNewTeacher() {
         isClassTeacher: false
     });
 
+    const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
     const handleInputChange = (e) => {
         const { name, value } = e.target;
-        if (name === "mobile") {
-            if (!/^\d*$/.test(value)) return; // allow only digits
-            if (value.length > 10) return; // max 10 digits
-        }
-        setFormData(prev => ({
-            ...prev,
-            [name]: value
-        }));
+        setFormData(prev => ({ ...prev, [name]: value }));
+        // Clear error on change
+        setErrors(prev => ({ ...prev, [name]: '' }));
+        setSalaryErrors(prev => ({ ...prev, [name]: '' }));
     };
+
     const handleImageChange = (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -85,72 +87,144 @@ function AddNewTeacher() {
         if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
+    // ─── Personal Details Validation ─────────────────────────────────────────────
+    const validatePersonalDetails = () => {
+        const newErrors = {};
+
+        // Name
+        if (!formData.name.trim()) {
+            newErrors.name = "Full name is required";
+        } else if (formData.name.trim().length < 2) {
+            newErrors.name = "Name must be at least 2 characters";
+        }
+
+        // Gender
+        if (!formData.gender) {
+            newErrors.gender = "Please select a gender";
+        }
+
+        // Mobile
+        if (!formData.mobile) {
+            newErrors.mobile = "Mobile number is required";
+        } else if (!/^\d{10}$/.test(formData.mobile)) {
+            newErrors.mobile = "Mobile number must be exactly 10 digits";
+        }
+
+        // Email
+        if (!formData.email) {
+            newErrors.email = "Email address is required";
+        } else if (!EMAIL_REGEX.test(formData.email)) {
+            newErrors.email = "Please enter a valid email address";
+        }
+
+        // Date of Birth
+        if (!formData.dob) {
+            newErrors.dob = "Date of birth is required";
+        } else {
+            const dobDate = new Date(formData.dob);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            if (dobDate >= today) {
+                newErrors.dob = "Date of birth must be in the past";
+            }
+        }
+
+        // Joining Date
+        if (!formData.joiningDate) {
+            newErrors.joiningDate = "Joining date is required";
+        }
+
+        // Login Email
+        if (!formData.loginEmail) {
+            newErrors.loginEmail = "Login email is required";
+        } else if (!EMAIL_REGEX.test(formData.loginEmail)) {
+            newErrors.loginEmail = "Please enter a valid login email";
+        }
+
+        // Account Status
+        if (!formData.accountStatus) {
+            newErrors.accountStatus = "Account status must be enabled to add teacher";
+        }
+
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
+
+    // ─── Salary Details Validation ────────────────────────────────────────────────
+    const validateSalaryDetails = () => {
+        const newErrors = {};
+
+        if (!formData.salaryType) {
+            newErrors.salaryType = "Please select a salary type";
+        }
+
+        if (!formData.baseSalary || Number(formData.baseSalary) <= 0) {
+            newErrors.baseSalary = "Base salary is required and must be greater than 0";
+        }
+
+        setSalaryErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
+
+    // ─── Next (Personal → Salary) ─────────────────────────────────────────────────
+    const handleNext = () => {
+        const isValid = validatePersonalDetails();
+        if (!isValid) {
+            toast.error("Please fill all required fields correctly");
+            return;
+        }
+        setActiveTab('salary');
+        setTimeout(() => {
+            salarySectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 100);
+    };
+
+    // ─── Submit ───────────────────────────────────────────────────────────────────
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        if (!formData.name || !formData.gender || !formData.mobile) {
-            toast.error("Please fill all required fields!");
+        // Re-validate personal details in case user navigated back and changed something
+        const isPersonalValid = validatePersonalDetails();
+        if (!isPersonalValid) {
+            toast.error("Personal details are incomplete. Please review.");
+            setActiveTab('personal');
             return;
         }
 
-        // Check if account status is disabled
-        if (!formData.accountStatus) {
-            toast.error("Please enable account status to add teacher!", {
-                duration: 3000,
-                icon: "⚠️"
-            });
+        // Validate salary details
+        const isSalaryValid = validateSalaryDetails();
+        if (!isSalaryValid) {
+            toast.error("Please fill all required salary fields!");
             return;
         }
 
-        if (!/^\d{10}$/.test(formData.mobile)) {
-            toast.error("Mobile number must be exactly 10 digits!");
-            return;
-        }
         setIsSubmitting(true);
         const loadingToast = toast.loading("Adding teacher...");
 
         try {
-            const generateEmployeeCode = () => {
-                return "EMP" + Math.floor(100 + Math.random() * 900); // EMP123
-            };
+            const generateEmployeeCode = () => "EMP" + Math.floor(100 + Math.random() * 900);
 
             const apiPayload = {
                 personalDetails: {
                     fullName: formData.name,
                     mobile: formData.mobile,
-                    email: formData.email || "test.teacher@school.com",
+                    email: formData.email,
                     gender: formData.gender.toUpperCase(),
                     dateOfBirth: formData.dob,
                     address: formData.address || "NA",
-                    // emergencyContact: "9999999999",
-                    // emergencyContactName: "NA",
-                    // emergencyContactRelation: "NA"
                 },
                 professionalDetails: {
                     employeeCode: formData.employeeCode || generateEmployeeCode(),
                     qualification: formData.highestQualification || "NA",
                     experienceYears: Number(formData.experience || 1),
                     joiningDate: formData.joiningDate,
-                    // department: "GENERAL",
-                    // designation: "TEACHER"
                 },
-                // bankDetails: {
-                //     accountHolderName: "NA",
-                //     accountNumber: "000000000000",
-                //     bankName: "NA",
-                //     ifscCode: "HDFC0123456",
-                //     branchName: "NA"
-                // },
                 accountStatus: "ACTIVE",
-                // payrollStatus: "INCLUDED",
-                // remarks: "Created from UI"
             };
 
             const response = await createTeachers(apiPayload, profileImage);
-
             console.log("Create Teacher Response:", response);
 
-            // Only update salary if baseSalary AND salaryType are present
             if (response && formData.salaryType && formData.baseSalary) {
                 const teacherId = response.data?.id || response.id;
 
@@ -206,50 +280,25 @@ function AddNewTeacher() {
                         toast.warn("Teacher created but salary update failed");
                     }
                 }
-            } else {
-                console.log("Skipping salary update - missing data:", {
-                    hasResponse: !!response,
-                    hasSalaryType: !!formData.salaryType,
-                    hasBaseSalary: !!formData.baseSalary
-                });
             }
 
-            toast.dismiss(loadingToast);   // ← ADD THIS
+            toast.dismiss(loadingToast);
             toast.success("Teacher added successfully! ✅");
             if (profileImage) {
-                toast.info("Profile photo may take a few seconds to reflect.", { autoClose: 4000 });  // ← ADD THIS
+                toast.info("Profile photo may take a few seconds to reflect.", { autoClose: 4000 });
             }
-            // Navigate after a short delay to show the toast
-            setTimeout(() => {
-                navigate('/teachers');
-            }, 500);
+            setTimeout(() => navigate('/teachers'), 500);
 
         } catch (err) {
             toast.dismiss(loadingToast);
-            toast.error(err.message || "Failed to add teacher. Please try again.", {
-                duration: 4000,
-                icon: "❌"
-            });
+            toast.error(err.message || "Failed to add teacher. Please try again.");
             console.error(err);
         } finally {
             setIsSubmitting(false);
         }
     };
 
-    const handleDiscard = () => {
-        navigate('/teachers');
-    };
-
-    const handleNext = () => {
-        setActiveTab('salary');
-
-        setTimeout(() => {
-            salarySectionRef.current?.scrollIntoView({
-                behavior: "smooth",
-                block: "start",
-            });
-        }, 100);
-    };
+    const handleDiscard = () => navigate('/teachers');
 
     return (
         <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-4">
@@ -265,9 +314,7 @@ function AddNewTeacher() {
 
                 {/* Header */}
                 <div className="mb-6">
-                    <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
-                        Add New Teacher
-                    </h1>
+                    <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Add New Teacher</h1>
                     <p className="text-sm sm:text-base text-gray-500">
                         Enter the details below to onboard a new teacher into the payroll system.
                     </p>
@@ -292,7 +339,15 @@ function AddNewTeacher() {
                                 </button>
                                 <button
                                     type="button"
-                                    onClick={() => setActiveTab('salary')}
+                                    onClick={() => {
+                                        // Validate before allowing tab switch to salary
+                                        const isValid = validatePersonalDetails();
+                                        if (!isValid) {
+                                            toast.error("Please complete personal details first");
+                                            return;
+                                        }
+                                        setActiveTab('salary');
+                                    }}
                                     className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'salary'
                                         ? 'border-blue-600 text-blue-600'
                                         : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -302,7 +357,6 @@ function AddNewTeacher() {
                                     <span className="hidden sm:inline">Salary Details</span>
                                     <span className="sm:hidden">Salary</span>
                                 </button>
-
                             </nav>
                         </div>
 
@@ -310,9 +364,11 @@ function AddNewTeacher() {
                         <div className="p-4 sm:p-6 lg:p-8">
                             {activeTab === 'personal' && (
                                 <>
+                                    {/* Profile Photo Upload */}
                                     <div className="mb-6">
                                         <label className="block font-semibold text-gray-600 text-sm mb-3">
-                                            Profile Photo <span className="text-gray-400 text-xs font-normal ml-1">(optional)</span>
+                                            Profile Photo{' '}
+                                            <span className="text-gray-400 text-xs font-normal ml-1">(optional)</span>
                                         </label>
                                         <div className="flex items-center gap-5">
                                             <div className="relative shrink-0">
@@ -384,6 +440,8 @@ function AddNewTeacher() {
                                         formData={formData}
                                         setFormData={setFormData}
                                         handleInputChange={handleInputChange}
+                                        errors={errors}
+                                        setErrors={setErrors}
                                     />
                                 </>
                             )}
@@ -394,6 +452,8 @@ function AddNewTeacher() {
                                         formData={formData}
                                         setFormData={setFormData}
                                         handleInputChange={handleInputChange}
+                                        errors={salaryErrors}
+                                        setSalaryErrors={setSalaryErrors}
                                     />
                                 </div>
                             )}
@@ -409,17 +469,17 @@ function AddNewTeacher() {
                                 >
                                     Discard Changes
                                 </button>
-                                {/* Showing next button */}
+
                                 {activeTab === 'personal' && (
                                     <button
-                                        type='button'
+                                        type="button"
                                         onClick={handleNext}
-                                        className="px-6 py-2.5 text-sm font-medium rounded-lg bg-blue-500 hover:bg-blue-600 text-white"
+                                        className="px-6 py-2.5 text-sm font-medium rounded-lg bg-blue-500 hover:bg-blue-600 text-white transition-colors"
                                     >
                                         Next
                                     </button>
                                 )}
-                                {/* Show save button after reaching salaryTab...*/}
+
                                 {activeTab === 'salary' && (
                                     <button
                                         disabled={isSubmitting}
