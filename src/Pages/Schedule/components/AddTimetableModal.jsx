@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { X, Calendar } from 'lucide-react';
 import { getClasses, getSectionsByClass } from '../../../Api/TeachersAPI';
-import { getListOfValues } from '../../../Api/ListOfValues';
-
+import { getAcademicYears } from '../../../Api/AcademicYear';
+import { useDecodedUser } from '../../../ContextAPI/UserContext';
 
 export default function AddTimetableModal({ onClose, onSubmit, existingTimetables = [] }) {
     const [classes, setClasses] = useState([]);
@@ -10,7 +10,9 @@ export default function AddTimetableModal({ onClose, onSubmit, existingTimetable
     const [loadingClasses, setLoadingClasses] = useState(false);
     const [loadingSections, setLoadingSections] = useState(false);
     const [academicYears, setAcademicYears] = useState([]);
-
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const { currentAcademicYear } = useDecodedUser();
+    const currentYearId = currentAcademicYear?.id;
     const [form, setForm] = useState({
         classId: '',
         className: '',
@@ -38,26 +40,36 @@ export default function AddTimetableModal({ onClose, onSubmit, existingTimetable
         };
         loadClasses();
     }, []);
+    
+    // Auto-select current academic year when years or current user data become available
+    useEffect(() => {
+        if (!academicYears || academicYears.length === 0) return;
+        // If user already selected an academic year, do not override
+        if (form.academicYear) return;
+
+        const defaultYear = academicYears.find(y => String(y.id) === String(currentAcademicYear?.id)) || academicYears[0];
+        if (defaultYear && defaultYear.id) {
+            setForm(prev => ({ ...prev, academicYear: defaultYear.id }));
+        }
+    }, [academicYears, currentAcademicYear, form.academicYear]);
     useEffect(() => {
         const loadMeta = async () => {
             try {
                 setLoadingClasses(true);
 
-                const [classData, yearData] = await Promise.all([
+                const [classData, yearResp] = await Promise.all([
                     getClasses(),
-                    getListOfValues('ACADEMIC_YEAR')
+                    getAcademicYears()
                 ]);
 
                 setClasses(classData || []);
-                setAcademicYears(yearData || []);
+                // getAcademicYears returns { years: [...] }
+                const yearsList = (yearResp && (yearResp.years || yearResp)) || [];
+                setAcademicYears(Array.isArray(yearsList) ? yearsList : []);
 
-                // Default select first academic year
-                if (yearData?.length > 0) {
-                    setForm(prev => ({
-                        ...prev,
-                        academicYear: yearData[0].id
-                    }));
-                }
+                // Note: we intentionally do not force-select a default here —
+                // a separate effect below will pick the current academic year
+                // once `academicYears` and `currentAcademicYear` are both available.
 
             } catch (err) {
                 console.error('Failed to load data:', err);
@@ -135,10 +147,15 @@ export default function AddTimetableModal({ onClose, onSubmit, existingTimetable
         return errs;
     };
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         const errs = validate();
         if (Object.keys(errs).length > 0) { setErrors(errs); return; }
-        onSubmit(form);
+        try {
+            setIsSubmitting(true);
+            await onSubmit(form);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (
@@ -226,11 +243,17 @@ export default function AddTimetableModal({ onClose, onSubmit, existingTimetable
                         >
                             <option value="">— Select Academic Year —</option>
 
-                            {academicYears.map(year => (
-                                <option key={year.id} value={year.id}>
-                                    {year.name || year.value}
-                                </option>
-                            ))}
+                            {academicYears.map(year => {
+                                const isCurrent = String(currentYearId) === String(year.id);
+                                const display = year.name || year.label || year.value || year.year || year.display || String(year.id);
+                                const label = `${isCurrent ? '★ ' : ''}${display}${isCurrent ? ' (Current Year)' : ''}`;
+
+                                return (
+                                    <option key={year.id ?? display} value={year.id ?? display}>
+                                        {label}
+                                    </option>
+                                );
+                            })}
                         </select>
                         {errors.academicYear && <p className="text-xs text-red-500 mt-1">{errors.academicYear}</p>}
                     </div>
@@ -275,9 +298,17 @@ export default function AddTimetableModal({ onClose, onSubmit, existingTimetable
                         className="w-full sm:w-auto px-5 py-2.5 sm:py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50">
                         Cancel
                     </button>
-                    <button onClick={handleSubmit}
-                        className="w-full sm:w-auto px-5 py-2.5 sm:py-2 bg-[#1e293b] text-white rounded-lg text-sm font-medium hover:bg-[#334155] transition">
-                        Create Schedule
+                    <button
+                        onClick={handleSubmit}
+                        disabled={isSubmitting}
+                        className="w-full sm:w-auto px-5 py-2.5 sm:py-2 bg-[#1e293b] text-white rounded-lg text-sm font-medium hover:bg-[#334155] transition disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                        {isSubmitting ? (
+                            <span className="flex items-center justify-center gap-2">
+                                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                Creating...
+                            </span>
+                        ) : 'Create Schedule'}
                     </button>
                 </div>
             </div>
