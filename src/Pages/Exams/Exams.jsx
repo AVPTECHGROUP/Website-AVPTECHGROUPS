@@ -6,27 +6,28 @@ import {
     LogIn, CheckCircle, Trash2, AlertCircle, RefreshCw,
 } from "lucide-react";
 
-import ActionDropDownComp      from "../../Components/CommonComp/ActionDropDownComp";
-import ListLoader              from "../../Components/CommonComp/ListLoader";
-import NewExamForm             from "./NewExamForm";
-import AddSubjectForm          from "./AddSubjectForm";
-import TooltipComponent        from "../../Components/CommonComp/Tooltip_comp/TooltipComp";
-import UpdateSubjectForm       from "./UpdateExamForm";
+import ActionDropDownComp from "../../Components/CommonComp/ActionDropDownComp";
+import ListLoader from "../../Components/CommonComp/ListLoader";
+import NewExamForm from "./NewExamForm";
+import AddSubjectForm from "./AddSubjectForm";
+import TooltipComponent from "../../Components/CommonComp/Tooltip_comp/TooltipComp";
+import UpdateSubjectForm from "./UpdateExamForm";
 
 import { getExams, getExamSubjects, deleteExamSubject, declareExamResult, getExamTypes } from "../../Api/Exams";
-import { getActiveClasses }    from "../../Api/TeachersAPI";
+import { getActiveClasses } from "../../Api/TeachersAPI";
 import { getAcademicYears, getCurrentAcademicYear } from "../../Api/AcademicYear";
+import { useDecodedUser } from "../../ContextAPI/UserContext";
 
 // ─── tiny helpers ─────────────────────────────────────────────────────────────
 function examTypeBg(name = "") {
     const m = {
         "Unit Test 1": "bg-purple-100 text-purple-700",
         "Unit Test 2": "bg-violet-100 text-violet-700",
-        "Mid Term":    "bg-blue-100 text-blue-700",
-        "Mid Term-1":  "bg-blue-100 text-blue-700",
-        "Mid Term-2":  "bg-cyan-100 text-cyan-700",
-        "Final Term":  "bg-orange-100 text-orange-700",
-        "Pre-Board":   "bg-pink-100 text-pink-700",
+        "Mid Term": "bg-blue-100 text-blue-700",
+        "Mid Term-1": "bg-blue-100 text-blue-700",
+        "Mid Term-2": "bg-cyan-100 text-cyan-700",
+        "Final Term": "bg-orange-100 text-orange-700",
+        "Pre-Board": "bg-pink-100 text-pink-700",
     };
     return m[name] ?? "bg-gray-100 text-gray-700";
 }
@@ -41,28 +42,28 @@ function examActions(exam) {
     if (!exam) return [];
     return exam.resultDeclared
         ? [
-            { label: "Marks",   value: "marks",   icon: Edit2,        bg: "bg-white",      text: "text-gray-700", hover: "hover:bg-gray-50"   },
-            { label: "Reports", value: "reports",  icon: FileText,     bg: "bg-blue-600",   text: "text-white",    hover: "hover:bg-blue-700"  },
-          ]
+            { label: "Marks", value: "marks", icon: Edit2, bg: "bg-white", text: "text-gray-700", hover: "hover:bg-gray-50" },
+            { label: "Reports", value: "reports", icon: FileText, bg: "bg-blue-600", text: "text-white", hover: "hover:bg-blue-700" },
+        ]
         : [
-            { label: "Enter Marks", value: "enter_marks", icon: LogIn,       bg: "bg-white",      text: "text-gray-700", hover: "hover:bg-gray-50"    },
-            { label: "Declare",     value: "declare",     icon: CheckCircle, bg: "bg-orange-500", text: "text-white",    hover: "hover:bg-orange-600" },
-          ];
+            { label: "Enter Marks", value: "enter_marks", icon: LogIn, bg: "bg-white", text: "text-gray-700", hover: "hover:bg-gray-50" },
+            { label: "Declare", value: "declare", icon: CheckCircle, bg: "bg-orange-500", text: "text-white", hover: "hover:bg-orange-600" },
+        ];
 }
 
 // ─── stat data builder ────────────────────────────────────────────────────────
 function buildStats(exams) {
-    const list      = Array.isArray(exams) ? exams : [];
-    const total     = list.length;
-    const declared  = list.filter(e => e.resultDeclared).length;
-    const pending   = total - declared;
-    const classes   = new Set(list.map(e => e.schoolClassName).filter(Boolean));
+    const list = Array.isArray(exams) ? exams : [];
+    const total = list.length;
+    const declared = list.filter(e => e.resultDeclared).length;
+    const pending = total - declared;
+    const classes = new Set(list.map(e => e.schoolClassName).filter(Boolean));
 
     return [
-        { label: "Total Exams",       count: total,      sub: "Scheduled",               Icon: ClipboardList, bg: "bg-blue-50",   ic: "text-blue-500",   num: "text-blue-700"   },
-        { label: "Results Declared",  count: declared,   sub: "Marks Locked",            Icon: CheckSquare,   bg: "bg-green-50",  ic: "text-green-500",  num: "text-green-700"  },
-        { label: "Pending Result",    count: pending,    sub: pending ? "Awaiting" : "All clear", Icon: Clock, bg: "bg-amber-50",  ic: "text-amber-500",  num: "text-amber-600"  },
-        { label: "Classes Covered",   count: classes.size, sub: classes.size ? [...classes].join(", ") : "None yet", Icon: School, bg: "bg-indigo-50", ic: "text-indigo-500", num: "text-indigo-700" },
+        { label: "Total Exams", count: total, sub: "Scheduled", Icon: ClipboardList, bg: "bg-blue-50", ic: "text-blue-500", num: "text-blue-700" },
+        { label: "Results Declared", count: declared, sub: "Marks Locked", Icon: CheckSquare, bg: "bg-green-50", ic: "text-green-500", num: "text-green-700" },
+        { label: "Pending Result", count: pending, sub: pending ? "Awaiting" : "All clear", Icon: Clock, bg: "bg-amber-50", ic: "text-amber-500", num: "text-amber-600" },
+        { label: "Classes Covered", count: classes.size, sub: classes.size ? [...classes].join(", ") : "None yet", Icon: School, bg: "bg-indigo-50", ic: "text-indigo-500", num: "text-indigo-700" },
     ];
 }
 
@@ -270,43 +271,44 @@ export default function Exams() {
     const navigate = useNavigate();
 
     // meta
-    const [classes,       setClasses]       = useState([]);
+    const [classes, setClasses] = useState([]);
     const [academicYears, setAcademicYears] = useState([]);
-    const [examTypes,     setExamTypes]     = useState([]);
-    const [loadingMeta,   setLoadingMeta]   = useState(true);
-    const [errorMeta,     setErrorMeta]     = useState(null);
+    const [examTypes, setExamTypes] = useState([]);
+    const [loadingMeta, setLoadingMeta] = useState(true);
+    const [errorMeta, setErrorMeta] = useState(null);
 
     // filters
-    const [classId,   setClassId]   = useState("");
-    const [yearId,    setYearId]    = useState("");
-    const [typeId,    setTypeId]    = useState("");
-    const [currentYearId, setCurrentYearId] = useState(null);
+    const [classId, setClassId] = useState("");
+    const [yearId, setYearId] = useState("");
+    const [typeId, setTypeId] = useState("");
+
 
     // exams
-    const [exams,          setExams]          = useState([]);
-    const [loadingExams,   setLoadingExams]   = useState(false);
-    const [errorExams,     setErrorExams]     = useState(null);
+    const [exams, setExams] = useState([]);
+    const [loadingExams, setLoadingExams] = useState(false);
+    const [errorExams, setErrorExams] = useState(null);
 
     // selected exam
     const [selExam, setSelExam] = useState(null);
     const autoSelected = useRef(false);
 
     // subjects
-    const [subjects,        setSubjects]        = useState([]);
+    const [subjects, setSubjects] = useState([]);
     const [loadingSubjects, setLoadingSubjects] = useState(false);
-    const [errorSubjects,   setErrorSubjects]   = useState(null);
+    const [errorSubjects, setErrorSubjects] = useState(null);
 
     // modals / forms
-    const [showNewExam,        setShowNewExam]        = useState(false);
-    const [showAddSubject,     setShowAddSubject]     = useState(false);
+    const [showNewExam, setShowNewExam] = useState(false);
+    const [showAddSubject, setShowAddSubject] = useState(false);
     const [showUpdateSubjects, setShowUpdateSubjects] = useState(false);
-    const [editSubject,        setEditSubject]        = useState(null);
-    const [deleteTarget,       setDeleteTarget]       = useState(null);
-    const [deletingSubject,    setDeletingSubject]    = useState(false);
-    const [deleteError,        setDeleteError]        = useState(null);
-    const [declareTarget,      setDeclareTarget]      = useState(null);
-    const [declaringExam,      setDeclaringExam]      = useState(false);
-    const [declareError,       setDeclareError]       = useState(null);
+    const [editSubject, setEditSubject] = useState(null);
+    const [deleteTarget, setDeleteTarget] = useState(null);
+    const [deletingSubject, setDeletingSubject] = useState(false);
+    const [deleteError, setDeleteError] = useState(null);
+    const [declareTarget, setDeclareTarget] = useState(null);
+    const [declaringExam, setDeclaringExam] = useState(false);
+    const [declareError, setDeclareError] = useState(null);
+    const { currentAcademicYear } = useDecodedUser();
 
     // ── meta ──────────────────────────────────────────────────────
     useEffect(() => {
@@ -317,26 +319,21 @@ export default function Exams() {
                     getActiveClasses(),
                     getExamTypes(),
                 ]);
-                
+
                 // Fetch academic years
                 const yearsResponse = await getAcademicYears();
                 const yearsList = yearsResponse.years || [];
-                
-                // Fetch current academic year and set it as default
-                const currentYear = await getCurrentAcademicYear();
-                const currentYearId = currentYear?.id || null;
-                
+
+                if (currentAcademicYear?.id) {
+                    setYearId(currentAcademicYear.id);
+                }
+
                 setClasses(Array.isArray(cls) ? cls : []);
                 setAcademicYears(Array.isArray(yearsList) ? yearsList : []);
                 setExamTypes(Array.isArray(types) ? types : []);
-                setCurrentYearId(currentYearId);
-                
-                // Set current year as default filter
-                if (currentYearId) {
-                    setYearId(currentYearId);
-                }
+
             } catch { setErrorMeta("Failed to load filters. Please refresh."); }
-            finally  { setLoadingMeta(false); }
+            finally { setLoadingMeta(false); }
         })();
     }, []);
 
@@ -345,9 +342,9 @@ export default function Exams() {
         setLoadingExams(true); setErrorExams(null);
         try {
             const f = {};
-            if (classId) f.classId       = classId;
-            if (yearId)  f.academicYearId = yearId;
-            if (typeId)  f.examTypeId    = typeId;
+            if (classId) f.classId = classId;
+            if (yearId) f.academicYearId = yearId;
+            if (typeId) f.examTypeId = typeId;
 
             const response = await getExams(f);
             const list = Array.isArray(response) ? response : [];
@@ -362,7 +359,7 @@ export default function Exams() {
                 if (r) setSelExam(r);
             }
         } catch { setErrorExams("Failed to load exams."); setExams([]); }
-        finally  { setLoadingExams(false); }
+        finally { setLoadingExams(false); }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [classId, yearId, typeId]);
 
@@ -376,7 +373,7 @@ export default function Exams() {
             const d = await getExamSubjects(selExam.id);
             setSubjects(Array.isArray(d) ? d : []);
         } catch { setErrorSubjects("Failed to load subjects."); setSubjects([]); }
-        finally  { setLoadingSubjects(false); }
+        finally { setLoadingSubjects(false); }
     }, [selExam?.id]);
 
     useEffect(() => { fetchSubjects(); }, [fetchSubjects]);
@@ -401,7 +398,7 @@ export default function Exams() {
         try {
             const res = await declareExamResult(declareTarget.id);
             const upd = res?.data ?? res ?? {};
-            setExams(p  => p.map(e  => e.id === declareTarget.id ? { ...e, resultDeclared: true, ...upd } : e));
+            setExams(p => p.map(e => e.id === declareTarget.id ? { ...e, resultDeclared: true, ...upd } : e));
             setSelExam(p => p?.id === declareTarget.id ? { ...p, resultDeclared: true, ...upd } : p);
             setDeclareTarget(null);
         } catch (err) {
@@ -422,15 +419,15 @@ export default function Exams() {
     };
 
     const handleSubjectSuccess = () => { setShowAddSubject(false); setEditSubject(null); fetchSubjects(); fetchExams(); };
-    const handleNewExamSuccess  = () => { setShowNewExam(false);  autoSelected.current = false; fetchExams(); };
+    const handleNewExamSuccess = () => { setShowNewExam(false); autoSelected.current = false; fetchExams(); };
 
     const examClassId = selExam
         ? (selExam.schoolClassId || selExam.classId || selExam.class_id || classId || null)
         : classId || null;
 
-    const stats          = buildStats(exams);
-    const selClassName   = classes.find(c => String(c.id) === String(classId))?.name ?? "";
-    const selYearLabel   = academicYears.find(y => String(y.id) === String(yearId))?.label ?? "";
+    const stats = buildStats(exams);
+    const selClassName = classes.find(c => String(c.id) === String(classId))?.name ?? "";
+    const selYearLabel = academicYears.find(y => String(y.id) === String(yearId))?.label ?? "";
 
     // ══════════════════════════════════════════════════════════════
     return (
@@ -485,9 +482,23 @@ export default function Exams() {
                             {loadingMeta ? <option disabled>Loading…</option> : classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                         </FilterSelect>
 
-                        <FilterSelect value={yearId} onChange={e => { setYearId(e.target.value); resetFilters(); }} disabled={loadingMeta}>
+                        <FilterSelect
+                            value={yearId}
+                            onChange={e => { setYearId(e.target.value); resetFilters(); }}
+                            disabled={loadingMeta}
+                        >
                             <option value="">All Years</option>
-                            {loadingMeta ? <option disabled>Loading…</option> : academicYears.map(y => <option key={y.id} value={y.id}>{y.label ?? y.name ?? y.value}</option>)}
+
+                            {academicYears.map(y => {
+                                const isCurrent = currentAcademicYear?.id === y.id;
+
+                                return (
+                                    <option key={y.id} value={y.id}>
+                                        {isCurrent ? "🟢 " : ""}{y.label ?? y.name ?? y.value}
+                                        {isCurrent ? " (Current Year)" : ""}
+                                    </option>
+                                );
+                            })}
                         </FilterSelect>
 
                         <FilterSelect value={typeId} onChange={e => setTypeId(e.target.value)} disabled={loadingExams}>
@@ -667,7 +678,7 @@ export default function Exams() {
                             : subjects.length === 0
                                 ? <p className="text-sm text-gray-400 text-center py-12">
                                     {selExam ? "No subjects configured for this exam." : "Select an exam to view subjects."}
-                                  </p>
+                                </p>
                                 : subjects.map(sub => (
                                     <SubjectCard
                                         key={sub.id} sub={sub}
@@ -698,7 +709,7 @@ export default function Exams() {
                                     : subjects.length === 0
                                         ? <tr><td colSpan={7} className="text-center text-sm text-gray-400 py-12">
                                             {selExam ? "No subjects configured for this exam." : "Select an exam row above to view subjects."}
-                                          </td></tr>
+                                        </td></tr>
                                         : subjects.map(sub => (
                                             <tr key={sub.id} className="border-b border-gray-50 hover:bg-blue-50/20 transition-colors">
                                                 <td className="px-1.5 md:px-2 py-1.5 md:py-2">
