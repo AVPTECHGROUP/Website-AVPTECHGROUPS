@@ -214,17 +214,7 @@ export default function Dashboard() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
           <div className="flex items-center gap-3">
 
-            {/* Back to school selector — only for super/global admins */}
-            {showBackToSchools && (
-              <button
-                onClick={() => navigate("/superAdmin")}
-                title="Back to school selection"
-                className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-600 text-sm font-semibold transition-colors cursor-pointer shrink-0 shadow-sm"
-              >
-                <ChevronLeft className="w-4 h-4" />
-                <span className="hidden sm:inline">Schools</span>
-              </button>
-            )}
+           
 
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
