@@ -338,48 +338,40 @@ export default function LeavesReqInfoComponent({
                     </div>
 
                     {/* Remarks */}
-                    {remarks === "" || remarks === null ? '' : (
-                        <div>
+                    <div>
+                        <label className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-2 block">
+                            Remarks
+                        </label>
 
-                            <label className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-2 block">
-                                Remarks
-                            </label>
+                        <div className="bg-white border border-slate-200 rounded-2xl p-3 shadow-sm">
 
-                            <div className="bg-white border border-slate-200 rounded-2xl p-3 shadow-sm">
+                            <div className="flex items-start gap-3">
 
-                                <div className="flex items-start gap-3">
+                                {/* Icon */}
+                                <div className="w-11 h-11 rounded-2xl bg-blue-100 flex items-center justify-center shrink-0">
+                                    <Info
+                                        size={20}
+                                        className="text-blue-500"
+                                    />
+                                </div>
 
-                                    {/* Icon */}
-                                    <div className="w-11 h-11 rounded-2xl bg-blue-100 flex items-center justify-center shrink-0">
-                                        <Info
-                                            size={20}
-                                            className="text-blue-500"
-                                        />
-                                    </div>
-
-                                    {/* Textarea */}
-                                    <div className="flex-1">
-                                        <textarea
-                                            disabled={isLocked}
-                                            value={remarks}
-                                            onChange={(e) =>
-                                                setRemarks(e.target.value)
-                                            }
-                                            placeholder={
-                                                userData.reviewRemarks === ""
-                                                    ? userData.currEmpstatus ===
-                                                        "PENDING"
-                                                        ? "Add your remarks here..."
-                                                        : "No review remark mentioned!"
-                                                    : userData.reviewRemarks
-                                            }
-                                            rows={3}
-                                            className="w-full bg-transparent text-sm text-slate-700 resize-none focus:outline-none disabled:bg-transparent disabled:cursor-not-allowed placeholder:text-slate-400"
-                                        />
-                                    </div>
+                                {/* Textarea */}
+                                <div className="flex-1">
+                                    <textarea
+                                        disabled={isLocked}
+                                        value={UserData.currentEmpStatus !== 'PENDING' && remarks.trim() === '' ? "No review remark mentioned." : remarks}
+                                        onChange={(e) => setRemarks(e.target.value)}
+                                        placeholder={
+                                            userData.reviewRemarks ||
+                                            "Add your remarks here..."
+                                        }
+                                        rows={3}
+                                        className="w-full bg-transparent text-sm text-slate-700 resize-none focus:outline-none disabled:bg-transparent disabled:cursor-not-allowed placeholder:text-slate-400"
+                                    />
                                 </div>
                             </div>
-                        </div>)}
+                        </div>
+                    </div>
 
                     {/* Actions */}
                     <div className="grid grid-cols-2 gap-3 pt-1">
