@@ -220,7 +220,7 @@ const Leaves = () => {
   const [remarkVal, setRemarksVal] = useState('As per the policy');
 
   const handleViewClick = (user) => {
-    setRemarksVal(user.reviewRemarks || 'As per the policy');
+    setRemarksVal(user.reviewRemarks || '');
     setSelectedUser(user);
     setIsPopupOpen(true);
   };
@@ -228,7 +228,7 @@ const Leaves = () => {
   const handleClosePopup = () => {
     setIsPopupOpen(false);
     setTimeout(() => setSelectedUser(null), 300);
-    setRemarksVal('As per the policy');
+    setRemarksVal('');
   };
 
   const handleLeaveApproveReq = async () => {
