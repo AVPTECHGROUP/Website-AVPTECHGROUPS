@@ -11,6 +11,7 @@ import {
   updateFeePeriod,
   deleteFeePeriod,
 } from '../../Api/FeePeriods';
+import { getAcademicYearsLov } from '../../Api/AcademicYear';
 import { UserContext } from '../../ContextAPI/UserContext';
 
 // ─── Toast (self-contained, matches FeeStructures) ────────────────────────────
@@ -174,13 +175,70 @@ const TypeBadge = ({ type }) => {
   );
 };
 
+// ─── Helper: unwrap various API response shapes into an array ────────────────
+const unwrapList = (r) =>
+  Array.isArray(r)                 ? r :
+  Array.isArray(r?.years)          ? r.years :
+  Array.isArray(r?.data)           ? r.data :
+  Array.isArray(r?.content)        ? r.content :
+  Array.isArray(r?.data?.years)    ? r.data.years :
+  Array.isArray(r?.data?.data)     ? r.data.data :
+  Array.isArray(r?.data?.content)  ? r.data.content : [];
+
 // ─── Period Modal ─────────────────────────────────────────────────────────────
 function PeriodModal({ isOpen, onClose, period, academicYear, onSuccess }) {
   const isEdit = !!period;
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
-    name: '', type: 'QUARTERLY', academicYearLabel: '', dueDate: '', notes: '',
+    name: '', type: 'QUARTERLY', academicYearId: '', academicYearLabel: '', dueDate: '', notes: '',
   });
+
+  // Academic years dropdown data
+  const [academicYears,        setAcademicYears]        = useState([]);
+  const [academicYearsLoading, setAcademicYearsLoading] = useState(false);
+  const [currentAcademicYearId, setCurrentAcademicYearId] = useState(null);
+
+  // Fetch academic years (with isCurrent flags) whenever the modal opens
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const fetchAcademicYears = async () => {
+      setAcademicYearsLoading(true);
+      try {
+        const response = await getAcademicYearsLov();
+        const list = unwrapList(response);
+
+        // Sort: current first, then newest to oldest
+        const sorted = [...list].sort((a, b) => {
+          if (a.isCurrent) return -1;
+          if (b.isCurrent) return 1;
+          return (b.id ?? 0) - (a.id ?? 0);
+        });
+
+        setAcademicYears(sorted);
+
+        const current = sorted.find((y) => y.isCurrent);
+        if (current?.id != null) {
+          setCurrentAcademicYearId(current.id);
+        } else if (academicYear?.id != null) {
+          setCurrentAcademicYearId(academicYear.id);
+        }
+      } catch (error) {
+        console.error('Failed to fetch academic years', error);
+        // Fallback: at least show the context's current academic year
+        if (academicYear?.id != null) {
+          setAcademicYears([{ id: academicYear.id, label: academicYear.label, isCurrent: true }]);
+          setCurrentAcademicYearId(academicYear.id);
+        } else {
+          setAcademicYears([]);
+        }
+      } finally {
+        setAcademicYearsLoading(false);
+      }
+    };
+
+    fetchAcademicYears();
+  }, [isOpen, academicYear]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -188,29 +246,67 @@ function PeriodModal({ isOpen, onClose, period, academicYear, onSuccess }) {
       setForm({
         name:              period.name || '',
         type:              period.type || 'QUARTERLY',
+        academicYearId:    period.academicYearId != null ? String(period.academicYearId) : (academicYear?.id != null ? String(academicYear.id) : ''),
         academicYearLabel: academicYear?.label || period.academicYearLabel || '',
         dueDate:           period.dueDate ? period.dueDate.split('T')[0] : '',
         notes:             period.notes || '',
       });
     } else {
-      setForm({ name: '', type: 'QUARTERLY', academicYearLabel: academicYear?.label || '', dueDate: '', notes: '' });
+      setForm({
+        name: '',
+        type: 'QUARTERLY',
+        academicYearId: academicYear?.id != null ? String(academicYear.id) : '',
+        academicYearLabel: academicYear?.label || '',
+        dueDate: '',
+        notes: '',
+      });
     }
   }, [isOpen, period, academicYear]);
 
+  // Auto-select current academic year once the list arrives, if nothing chosen yet
+  useEffect(() => {
+    if (!isOpen) return;
+    if (currentAcademicYearId == null) return;
+    if (form.academicYearId) return;
+
+    const cur = academicYears.find((y) => Number(y.id) === Number(currentAcademicYearId));
+    setForm((p) => ({
+      ...p,
+      academicYearId: String(currentAcademicYearId),
+      academicYearLabel: cur?.label || p.academicYearLabel,
+    }));
+  }, [isOpen, currentAcademicYearId, academicYears]);
+
   const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
 
+  const handleAcademicYearChange = (value) => {
+    const selected = academicYears.find((y) => String(y.id) === String(value));
+    setForm((p) => ({
+      ...p,
+      academicYearId: value,
+      academicYearLabel: selected?.label || p.academicYearLabel,
+    }));
+  };
+
+  const selectedAcademicYearObj = academicYears.find((y) => String(y.id) === String(form.academicYearId));
+  const isSelectedCurrent =
+    !!selectedAcademicYearObj &&
+    (selectedAcademicYearObj.isCurrent ||
+      (currentAcademicYearId != null && Number(selectedAcademicYearObj.id) === Number(currentAcademicYearId)));
+
   const handleSubmit = async () => {
-    if (!form.name.trim()) { toast.error('Validation', 'Period name is required');   return; }
-    if (!form.type)        { toast.error('Validation', 'Period type is required');   return; }
-    if (!form.dueDate)     { toast.error('Validation', 'Due date is required');      return; }
+    if (!form.name.trim())     { toast.error('Validation', 'Period name is required');        return; }
+    if (!form.type)            { toast.error('Validation', 'Period type is required');        return; }
+    if (!form.dueDate)         { toast.error('Validation', 'Due date is required');           return; }
+    if (!form.academicYearId)  { toast.error('Validation', 'Academic year is required');      return; }
 
     setLoading(true);
     try {
       const payload = {
         name:              form.name.trim(),
         type:              form.type,
-        academicYearId:    academicYear.id,
-        academicYearLabel: academicYear.label,
+        academicYearId:    Number(form.academicYearId),
+        academicYearLabel: form.academicYearLabel,
         dueDate:           form.dueDate,
         notes:             form.notes.trim(),
       };
@@ -240,7 +336,7 @@ function PeriodModal({ isOpen, onClose, period, academicYear, onSuccess }) {
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <div>
             <h2 className="text-[15px] font-bold text-gray-900">{isEdit ? 'Edit Fee Period' : 'New Fee Period'}</h2>
-            <p className="text-xs text-gray-400 mt-0.5">AY {academicYear?.label}</p>
+            <p className="text-xs text-gray-400 mt-0.5">AY {form.academicYearLabel || academicYear?.label}</p>
           </div>
           <button onClick={onClose} className="w-7 h-7 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-colors">
             <X size={14} />
@@ -285,10 +381,34 @@ function PeriodModal({ isOpen, onClose, period, academicYear, onSuccess }) {
               required
             />
             <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1.5">Academic Year</label>
-              <div className="px-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 text-gray-700 font-semibold">
-                {form.academicYearLabel || '—'}
-              </div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                Academic Year <span className="text-red-500">*</span>
+              </label>
+              <Select
+                value={form.academicYearId}
+                onChange={handleAcademicYearChange}
+                disabled={academicYearsLoading}
+                options={[
+                  { value: '', label: academicYearsLoading ? 'Loading...' : 'Select Academic Year' },
+                  ...academicYears.map((year) => {
+                    const isCur =
+                      year.isCurrent ||
+                      (currentAcademicYearId != null && Number(year.id) === Number(currentAcademicYearId));
+                    return {
+                      value: String(year.id),
+                      label: `${isCur ? '● ' : ''}${year.label}${isCur ? ' (Current)' : ''}`,
+                    };
+                  }),
+                ]}
+              />
+              {!academicYearsLoading && isSelectedCurrent && (
+                <div className="mt-1.5">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-green-50 border border-green-200">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block flex-shrink-0" />
+                    <span className="text-xs font-semibold text-green-600">Current Academic Year</span>
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
