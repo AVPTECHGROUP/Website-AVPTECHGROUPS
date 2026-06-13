@@ -32,7 +32,7 @@ const EMPTY_FORM = {
   attachType:     "NONE",
   linkUrl:        "",
   status:         "PUBLISHED",
-  academicYearId: "",   // ← ID sent to backend
+  academicYearId: "",
   teacherId:      "",
 };
 
@@ -275,17 +275,40 @@ export default function AssignModal({
   // ── Academic years from API ───────────────────────────────────────────────
   const [academicYears,        setAcademicYears]        = useState([]);
   const [academicYearsLoading, setAcademicYearsLoading] = useState(false);
+  const [currentYearId,        setCurrentYearId]        = useState(null);
 
   useEffect(() => {
     const load = async () => {
       setAcademicYearsLoading(true);
       try {
         const res = await getAcademicYears();
-        // API returns { years: [...] }  where each item has { id, label, ... }
-        const list = Array.isArray(res?.years) ? res.years : [];
-        setAcademicYears(list);
+        // Handle all known API shapes:
+        // { years: [...] }  { data: [...] }  { content: [...] }  raw array
+        const unwrap = (r) =>
+          Array.isArray(r)          ? r :
+          Array.isArray(r?.years)   ? r.years :
+          Array.isArray(r?.data)    ? r.data :
+          Array.isArray(r?.content) ? r.content : [];
+
+        const list  = unwrap(res);
+        const curId = list.find(y => y.isCurrent)?.id ?? null;
+
+        // Sort: current year first, then newest to oldest by id
+        const sorted = [...list].sort((a, b) => {
+          if (a.id === curId) return -1;
+          if (b.id === curId) return 1;
+          return b.id - a.id;
+        });
+
+        setAcademicYears(sorted);
+        setCurrentYearId(curId);
+
+        // Auto-select current year for new assignments
+        if (!isEdit && curId) {
+          setForm(f => ({ ...f, academicYearId: String(curId) }));
+        }
       } catch {
-        // silently fallback — form still works, just no dropdown options
+        // silently fallback — form still works
       } finally {
         setAcademicYearsLoading(false);
       }
@@ -305,7 +328,7 @@ export default function AssignModal({
           attachType:     (hw.attachmentType ?? hw.attachType ?? hw.attach ?? "NONE").toUpperCase(),
           linkUrl:        hw.linkUrl      ?? "",
           status:         hw.status       ?? "PUBLISHED",
-          academicYearId: String(hw.academicYearId ?? ""),  // ← use ID
+          academicYearId: String(hw.academicYearId ?? ""),
           teacherId:      String(hw.teacherId ?? ""),
         }
       : {
@@ -334,10 +357,12 @@ export default function AssignModal({
 
   const effectiveTeacherId = isTeacher ? teacherId : form.teacherId;
 
-  // ── The label for the currently selected year (for display) ──────────────
   const selectedYearLabel = academicYears.find(
     (y) => String(y.id) === String(form.academicYearId)
   )?.label ?? (hw?.academicYearLabel || "");
+
+  const isSelectedYearCurrent = form.academicYearId
+    && Number(form.academicYearId) === currentYearId;
 
   const handleSubmit = async () => {
     if (form.assignedDate && form.dueDate) {
@@ -359,7 +384,7 @@ export default function AssignModal({
       subjectId:      form.subjectId,
       title:          form.title.trim(),
       status:         form.status,
-      academicYearId: Number(form.academicYearId),   // ← send ID, not label
+      academicYearId: Number(form.academicYearId),
       attachmentType: form.attachType || "NONE",
       teacherId:      effectiveTeacherId,
       ...(form.description.trim()  && { description:  form.description.trim()  }),
@@ -470,10 +495,10 @@ export default function AssignModal({
               )}
 
               <div className="grid grid-cols-2 gap-3">
-                {/* Academic Year — driven by API */}
+                {/* Academic Year */}
                 <Field label="Academic Year" required>
                   <div className="relative">
-                    <CalendarDays size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                    <CalendarDays size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none z-10" />
                     {academicYearsLoading ? (
                       <div className="w-full border-[1.5px] border-gray-300 rounded-lg pl-8 pr-3 py-2 text-sm bg-white text-gray-400 flex items-center gap-2">
                         <Loader2 size={12} className="animate-spin" /> Loading…
@@ -486,15 +511,29 @@ export default function AssignModal({
                         className="w-full appearance-none border-[1.5px] border-gray-300 rounded-lg pl-8 pr-7 py-2 text-sm outline-none bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:opacity-60"
                       >
                         <option value="">Select year</option>
-                        {academicYears.map((y) => (
-                          <option key={y.id} value={String(y.id)}>{y.label}</option>
-                        ))}
+                        {academicYears.map((y) => {
+                          const isCur = y.id === currentYearId || y.isCurrent;
+                          return (
+                            <option key={y.id} value={String(y.id)}>
+                              {isCur ? "● " : ""}{y.label}{isCur ? " (Current)" : ""}
+                            </option>
+                          );
+                        })}
                       </select>
                     )}
                     {!academicYearsLoading && (
                       <ChevronDown size={13} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                     )}
                   </div>
+                  {/* Current year green badge */}
+                  {!academicYearsLoading && isSelectedYearCurrent && (
+                    <div className="mt-1.5">
+                      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-green-50 border border-green-200">
+                        <span className="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0" />
+                        <span className="text-[10px] font-semibold text-green-600">Current Academic Year</span>
+                      </span>
+                    </div>
+                  )}
                 </Field>
 
                 <Field label="Status" required>
