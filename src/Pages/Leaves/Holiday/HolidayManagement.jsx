@@ -61,7 +61,11 @@ export default function HolidayManagement() {
   const [editHolidayData, setEditHolidayData] = useState(null);
 
   const [submitLoader, setSubmitLoader] = useState(false);
-  //const [lovAcademicYears, setLovAcademicYears] = useState([]);
+
+  // List of academic years for the New/Edit Holiday dropdown (each item has { id, label, isCurrent })
+  const [lovAcademicYears, setLovAcademicYears] = useState([]);
+  const [academicYearsLoading, setAcademicYearsLoading] = useState(false);
+  const [currentAcademicYearId, setCurrentAcademicYearId] = useState(null);
 
   const HOLIDAY_TYPE_COLORS = {
     NATIONAL: 'bg-blue-50 text-blue-500',
@@ -75,56 +79,16 @@ export default function HolidayManagement() {
     OTHER: 'bg-slate-50 text-slate-500',
   };
 
-  // useEffect(() => {
-  //     const currentDate = new Date();
-  //     const currentYear = currentDate.getFullYear();
-  //     const currentMonth = currentDate.getMonth();
-  //     let academicYearStr;
-  //     if (currentMonth >= 7) {
-  //         academicYearStr = `${currentYear} - ${currentYear + 1}`;
-  //     } else {
-  //         academicYearStr = `${currentYear - 1} - ${currentYear}`;
-  //     }
-  //     setAcademicYear(academicYearStr);
-  // }, []);
-
-  //list of academic years for filter dropdown
-  // useEffect(() => {
-  //   const fetchAcademicYears = async () => {
-  //     try {
-  //       const response = await getAcademicYearsLov();
-
-  //       console.log('Fetched academic years for LOV:', response.data);
-
-  //       // directly set array
-  //       setLovAcademicYears(response.data || []);
-
-  //       // set current academic year by default
-  //       const currentYear = response.data.find(
-  //         (item) => item.isCurrent === true
-  //       );
-
-  //       if (currentYear) {
-  //         setAcademicYear(currentYear.label);
-  //       }
-
-  //     } catch (error) {
-  //       console.error('Failed to fetch academic years', error);
-  //       setLovAcademicYears([]);
-  //     }
-  //   };
-
-  //   fetchAcademicYears();
-  // }, []);
-
+  // Header badge: current academic year label (e.g. "2025-26")
   useEffect(() => {
     const fetchCurrentAcademicYear = async () => {
       try {
         const response = await getCurrentAcademicYear();
-
-        setAcademicYear(response.data.label);
-        console.log('Fetched academic year:', response.data.label);
-        console.log('Fetched academic year:', response);
+        const data = response?.data?.data ?? response?.data ?? response;
+        setAcademicYear(data?.label || '');
+        if (data?.id != null) {
+          setCurrentAcademicYearId(data.id);
+        }
       } catch (error) {
         console.error('Failed to fetch academic year', error);
 
@@ -146,6 +110,48 @@ export default function HolidayManagement() {
     };
 
     fetchCurrentAcademicYear();
+  }, []);
+
+  // Academic years LOV for the New/Edit Holiday modal dropdown
+  useEffect(() => {
+    const fetchAcademicYearsLov = async () => {
+      setAcademicYearsLoading(true);
+      try {
+        const response = await getAcademicYearsLov();
+
+        const unwrap = (r) =>
+          Array.isArray(r)                 ? r :
+          Array.isArray(r?.years)          ? r.years :
+          Array.isArray(r?.data)           ? r.data :
+          Array.isArray(r?.content)        ? r.content :
+          Array.isArray(r?.data?.years)    ? r.data.years :
+          Array.isArray(r?.data?.data)     ? r.data.data :
+          Array.isArray(r?.data?.content)  ? r.data.content : [];
+
+        const list = unwrap(response);
+
+        // Sort: current academic year first, then newest to oldest
+        const sorted = [...list].sort((a, b) => {
+          if (a.isCurrent) return -1;
+          if (b.isCurrent) return 1;
+          return (b.id ?? 0) - (a.id ?? 0);
+        });
+
+        setLovAcademicYears(sorted);
+
+        const current = sorted.find((y) => y.isCurrent);
+        if (current?.id != null) {
+          setCurrentAcademicYearId(current.id);
+        }
+      } catch (error) {
+        console.error('Failed to fetch academic years', error);
+        setLovAcademicYears([]);
+      } finally {
+        setAcademicYearsLoading(false);
+      }
+    };
+
+    fetchAcademicYearsLov();
   }, []);
 
   useEffect(() => {
@@ -406,6 +412,9 @@ export default function HolidayManagement() {
           subtitle="Configure academic calendar breaks"
           mode="create"
           loaderIsTrue={submitLoader}
+          academicYears={lovAcademicYears}
+          academicYearsLoading={academicYearsLoading}
+          currentAcademicYearId={currentAcademicYearId}
         />
 
         {/* Edit Modal */}
@@ -419,6 +428,9 @@ export default function HolidayManagement() {
           subtitle="Update holiday details"
           mode="edit"
           loaderIsTrue={submitLoader}
+          academicYears={lovAcademicYears}
+          academicYearsLoading={academicYearsLoading}
+          currentAcademicYearId={currentAcademicYearId}
         />
 
         {/* Year Selection */}
@@ -433,11 +445,7 @@ export default function HolidayManagement() {
             <p className="text-[14px] font-medium text-gray-500 uppercase tracking-wide mb-0.5">
               Academic Year
             </p>
-            {/* <p className="text-xs text-gray-500 mb-2 leading-snug">
-      Current year for holiday calendar
-    </p> */}
             <div className="inline-flex items-center  bg-green-50 border border-green-200 rounded-lg px-3 py-0.5">
-              {/* <Calendar className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" /> */}
               <span className="text-base font-medium text-green-900 tracking-wide">
                 {academicYear}
               </span>
@@ -446,7 +454,6 @@ export default function HolidayManagement() {
         </div>
 
         {/* Statistics Cards */}
-        {/* cards */}
         <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-3 text-sm mt-5 mb-6">
           {loading
             ? cardsArray.map((_, i) => <CardLoader key={i} />)
@@ -561,30 +568,6 @@ export default function HolidayManagement() {
                   />
                 </div>
               </div>
-              {/* <div>
-                <label
-                  htmlFor="academic-year"
-                  className="block text-xs md:text-sm font-medium text-gray-700 mb-2"
-                >
-                  Academic Year
-                </label>
-                <div className="relative">
-                  <select
-                    id="academic-year"
-                    value={academicYear}
-                    onChange={(e) => setAcademicYear(e.target.value)}
-                    className="w-full px-3 md:px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm md:text-base text-gray-900 outline-none focus:border-blue-300 appearance-none cursor-pointer pr-10"
-                  >
-                    {lovAcademicYears.map((year) => (
-                      <option key={year.id} value={year.label}>
-                        {year.label}
-                      </option>
-                    ))}
-                  </select>
-
-                  <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-gray-400 pointer-events-none" />
-                </div>
-              </div> */}
             </div>
 
             {/* Row 2: Holiday Type + From Date + To Date + Clear */}
@@ -687,23 +670,10 @@ export default function HolidayManagement() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {/* ✅ Loading state inside tbody */}
                 {loading && (
-                  // <tr>
-                  //     <td colSpan={11}>
-                  //         <div className="text-center py-8">
-                  //             <div className="flex flex-col items-center">
-                  //                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-2"></div>
-                  //                 <span className="text-gray-600">Loading holidays...</span>
-                  //             </div>
-                  //         </div>
-                  //     </td>
-                  // </tr>
-
                   <ListLoader avatar={false} />
                 )}
 
-                {/* ✅ Empty state inside tbody */}
                 {!loading && holidays.length === 0 && (
                   <tr>
                     <td colSpan="5" className="py-16 text-center">
@@ -719,7 +689,6 @@ export default function HolidayManagement() {
                   </tr>
                 )}
 
-                {/* ✅ Data rows */}
                 {!loading &&
                   holidays.length > 0 &&
                   holidays.map((holiday) => (
@@ -773,7 +742,6 @@ export default function HolidayManagement() {
 
           {/* ===== MOBILE CARDS ===== */}
           <div className="md:hidden">
-            {/* ✅ Loading state in mobile */}
             {loading && (
               <div className="text-center py-8">
                 <div className="flex flex-col items-center">
@@ -783,7 +751,6 @@ export default function HolidayManagement() {
               </div>
             )}
 
-            {/* ✅ Empty state in mobile */}
             {!loading && holidays.length === 0 && (
               <div className="py-16 text-center">
                 <div className="flex flex-col items-center gap-2">
@@ -797,7 +764,6 @@ export default function HolidayManagement() {
               </div>
             )}
 
-            {/* ✅ Data cards in mobile */}
             {!loading && holidays.length > 0 && (
               <div className="divide-y divide-gray-200">
                 {holidays.map((holiday) => (

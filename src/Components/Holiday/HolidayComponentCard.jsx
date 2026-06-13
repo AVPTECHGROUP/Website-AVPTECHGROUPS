@@ -10,7 +10,10 @@ export default function HolidayComponentCard({
   title = "Add New Holiday",
   subtitle = "Configure academic calendar breaks",
   mode = "create", // 'create' or 'edit'
-  loaderIsTrue
+  loaderIsTrue,
+  academicYears = [],
+  academicYearsLoading = false,
+  currentAcademicYearId = null
 }) {
   const [formData, setFormData] = useState({
     academicYear: '',
@@ -39,6 +42,21 @@ export default function HolidayComponentCard({
     }
   }, [defaultValues, isOpen]);
 
+  // Auto-select current academic year in create mode when the modal opens
+  useEffect(() => {
+    if (
+      mode === 'create' &&
+      isOpen &&
+      currentAcademicYearId != null &&
+      !formData.academicYear
+    ) {
+      setFormData(prev => ({
+        ...prev,
+        academicYear: String(currentAcademicYearId)
+      }));
+    }
+  }, [mode, isOpen, currentAcademicYearId]);
+
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData(prev => ({
@@ -57,7 +75,7 @@ export default function HolidayComponentCard({
   const validateForm = () => {
     const newErrors = {};
 
-    if (!formData.academicYear.trim()) {
+    if (!formData.academicYear || !String(formData.academicYear).trim()) {
       newErrors.academicYear = 'Academic year is required';
     }
 
@@ -122,6 +140,16 @@ export default function HolidayComponentCard({
 
   if (!isOpen) return null;
 
+  // Whether the currently selected academic year is the current one
+  const selectedAcademicYearObj = academicYears.find(
+    (y) => String(y.id) === String(formData.academicYear)
+  );
+  const isSelectedCurrent =
+    !!selectedAcademicYearObj &&
+    (selectedAcademicYearObj.isCurrent ||
+      (currentAcademicYearId != null &&
+        Number(selectedAcademicYearObj.id) === Number(currentAcademicYearId)));
+
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4 md:p-6">
       <div className="bg-white rounded-lg sm:rounded-xl shadow-2xl w-full max-w-xs sm:max-w-md md:max-w-lg lg:max-w-xl mx-auto max-h-[95vh] sm:max-h-[90vh] flex flex-col">
@@ -158,17 +186,45 @@ export default function HolidayComponentCard({
             <label htmlFor="academicYear" className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
               Academic Year <span className="text-red-500">*</span>
             </label>
-            <input
+            <select
               id="academicYear"
-              type="text"
               name="academicYear"
-              placeholder="e.g., 2024-2025"
               value={formData.academicYear}
               onChange={handleInputChange}
-              className={`w-full px-3 sm:px-4 py-2 sm:py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm sm:text-base placeholder:text-gray-400 ${
+              disabled={academicYearsLoading}
+              className={`w-full px-3 sm:px-4 py-2 sm:py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all appearance-none bg-white text-gray-700 text-sm sm:text-base disabled:opacity-60 disabled:cursor-not-allowed ${
                 errors.academicYear ? 'border-red-500' : 'border-gray-300'
               }`}
-            />
+              style={{
+                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E")`,
+                backgroundRepeat: 'no-repeat',
+                backgroundPosition: 'right 0.75rem center',
+                backgroundSize: '1.25rem'
+              }}
+            >
+              <option value="">
+                {academicYearsLoading ? 'Loading...' : 'Select Academic Year'}
+              </option>
+              {academicYears.map((year) => {
+                const isCur =
+                  year.isCurrent ||
+                  (currentAcademicYearId != null &&
+                    Number(year.id) === Number(currentAcademicYearId));
+                return (
+                  <option key={year.id} value={String(year.id)}>
+                    {isCur ? '● ' : ''}{year.label}{isCur ? ' (Current)' : ''}
+                  </option>
+                );
+              })}
+            </select>
+            {!academicYearsLoading && isSelectedCurrent && (
+              <div className="mt-1.5">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-green-50 border border-green-200">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block flex-shrink-0" />
+                  <span className="text-xs font-semibold text-green-600">Current Academic Year</span>
+                </span>
+              </div>
+            )}
             {errors.academicYear && (
               <p className="text-red-500 text-xs mt-1">{errors.academicYear}</p>
             )}

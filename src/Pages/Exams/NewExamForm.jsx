@@ -2,47 +2,84 @@ import { useState, useEffect } from "react";
 import { X, ClipboardList, Loader2 } from "lucide-react";
 import { createExam, getExamTypes } from "../../Api/Exams";
 import { getClasses } from "../../Api/TeachersAPI";
-import { getListOfValues } from "../../Api/ListOfValues";
+import { getAcademicYears, getCurrentAcademicYear } from "../../Api/AcademicYear";
 
-const ACADEMIC_YEAR_LOV = "ACADEMIC_YEAR";
-
-export default function NewExamForm({ onClose, onSuccess }) {
+export default function NewExamForm({ onClose, onSuccess, defaultClassId = null }) {
   const [formData, setFormData] = useState({
-    examTypeId: "",
-    schoolClassId: "",
+    examTypeId:    "",
+    schoolClassId: defaultClassId ?? "",
     academicYearId: "",
-    name: "",
-    startDate: "",
-    endDate: "",
-    description: "",
+    name:          "",
+    startDate:     "",
+    endDate:       "",
+    description:   "",
   });
 
-  const [examTypes, setExamTypes] = useState([]);
-  const [classes, setClasses] = useState([]);
+  const [examTypes,     setExamTypes]     = useState([]);
+  const [classes,       setClasses]       = useState([]);
   const [academicYears, setAcademicYears] = useState([]);
-  const [loadingMeta, setLoadingMeta] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState(null);
+  const [currentYearId, setCurrentYearId] = useState(null);
+  const [loadingMeta,   setLoadingMeta]   = useState(true);
+  const [submitting,    setSubmitting]    = useState(false);
+  const [error,         setError]         = useState(null);
 
-  // ── Fetch all dropdown data on mount ──────────────────────────────────────
+  // ── Fetch dropdown data ──────────────────────────────────────────────────
   useEffect(() => {
     const loadMeta = async () => {
       setLoadingMeta(true);
       try {
-        const [types, cls, years] = await Promise.all([
+        const [types, cls, yearsRes, currentRes] = await Promise.all([
           getExamTypes(),
           getClasses(),
-          getListOfValues(ACADEMIC_YEAR_LOV),
+          getAcademicYears(),
+          getCurrentAcademicYear(),
         ]);
-        setExamTypes(types);
-        setClasses(cls);
-        setAcademicYears(years);
-        // Pre-select first option of each
-        setFormData((prev) => ({
+
+        // Unwrap helper — handles ALL known shapes:
+        //   raw array            → [...] 
+        //   { data: [...] }      → standard envelope
+        //   { years: [...] }     → AcademicYear API shape
+        //   { content: [...] }   → paginated
+        const unwrap = (res) =>
+          Array.isArray(res)            ? res :
+          Array.isArray(res?.data)      ? res.data :
+          Array.isArray(res?.years)     ? res.years :
+          Array.isArray(res?.content)   ? res.content : [];
+
+        const typesList   = unwrap(types);
+        const classesList = unwrap(cls);
+        const yearsList   = unwrap(yearsRes);
+
+        // Current year — { success, data: { id, isCurrent, label, ... } }
+        // OR { id, isCurrent, ... } directly
+        const currentYear = currentRes?.data ?? currentRes ?? null;
+        const curId = currentYear?.id
+          ?? yearsList.find(y => y.isCurrent)?.id
+          ?? null;
+
+        // Sort: current first, then by id desc
+        const sorted = [...yearsList].sort((a, b) => {
+          if (a.id === curId) return -1;
+          if (b.id === curId) return 1;
+          return b.id - a.id;
+        });
+
+        // Debug — remove after confirming dropdowns work
+        console.log("[NewExamForm] types:", typesList);
+        console.log("[NewExamForm] classes:", classesList);
+        console.log("[NewExamForm] years:", yearsList);
+        console.log("[NewExamForm] currentYearId:", curId);
+
+        setExamTypes(typesList);
+        setClasses(classesList);
+        setAcademicYears(sorted);
+        setCurrentYearId(curId);
+
+        setFormData(prev => ({
           ...prev,
-          examTypeId: types[0]?.id ?? "",
-          schoolClassId: cls[0]?.id ?? "",
-          academicYearId: 1,
+          examTypeId:     typesList[0]?.id  ?? "",
+          schoolClassId:  defaultClassId    ?? classesList[0]?.id ?? "",
+          academicYearId: curId             ?? sorted[0]?.id ?? "",
         }));
       } catch (err) {
         setError("Failed to load form data. Please close and try again.");
@@ -53,38 +90,37 @@ export default function NewExamForm({ onClose, onSuccess }) {
     loadMeta();
   }, []);
 
-  const handleChange = (e) => {
+  const handleChange = e => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const validate = () => {
-    if (!formData.examTypeId) return "Please select an exam type.";
-    if (!formData.schoolClassId) return "Please select a class.";
+    if (!formData.examTypeId)     return "Please select an exam type.";
+    if (!formData.schoolClassId)  return "Please select a class.";
     if (!formData.academicYearId) return "Please select an academic year.";
-    if (!formData.startDate) return "Start date is required.";
-    if (!formData.endDate) return "End date is required.";
+    if (!formData.startDate)      return "Start date is required.";
+    if (!formData.endDate)        return "End date is required.";
     if (formData.startDate > formData.endDate) return "Start date cannot be after end date.";
     return null;
   };
 
   const handleSubmit = async () => {
     setError(null);
-    const validationError = validate();
-    if (validationError) { setError(validationError); return; }
+    const ve = validate();
+    if (ve) { setError(ve); return; }
 
     setSubmitting(true);
     try {
-      const payload = {
-        examTypeId: Number(formData.examTypeId),
+      await createExam({
+        examTypeId:    Number(formData.examTypeId),
         schoolClassId: Number(formData.schoolClassId),
         academicYearId: Number(formData.academicYearId),
-        name: formData.name.trim() || undefined,
-        startDate: formData.startDate,
-        endDate: formData.endDate,
-        description: formData.description.trim() || undefined,
-      };
-      await createExam(payload);
+        name:          formData.name.trim()        || undefined,
+        startDate:     formData.startDate,
+        endDate:       formData.endDate,
+        description:   formData.description.trim() || undefined,
+      });
       onSuccess?.();
     } catch (err) {
       setError(err.message ?? "Failed to create exam. Please try again.");
@@ -93,7 +129,7 @@ export default function NewExamForm({ onClose, onSuccess }) {
     }
   };
 
-  const Skeleton = () => <div className="h-9 bg-gray-100 rounded-lg animate-pulse" />;
+  const Skeleton  = () => <div className="h-9 bg-gray-100 rounded-lg animate-pulse" />;
   const selectCls = "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all";
 
   return (
@@ -134,7 +170,7 @@ export default function NewExamForm({ onClose, onSuccess }) {
               {loadingMeta ? <Skeleton /> : (
                 <select name="examTypeId" value={formData.examTypeId} onChange={handleChange} className={selectCls}>
                   <option value="" disabled>Select type</option>
-                  {examTypes.map((t) => (
+                  {examTypes.map(t => (
                     <option key={t.id} value={t.id}>{t.name}</option>
                   ))}
                 </select>
@@ -147,7 +183,7 @@ export default function NewExamForm({ onClose, onSuccess }) {
               {loadingMeta ? <Skeleton /> : (
                 <select name="schoolClassId" value={formData.schoolClassId} onChange={handleChange} className={selectCls}>
                   <option value="" disabled>Select class</option>
-                  {classes.map((c) => (
+                  {classes.map(c => (
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
                 </select>
@@ -155,23 +191,42 @@ export default function NewExamForm({ onClose, onSuccess }) {
             </div>
           </div>
 
-          {/* Academic Year — full width */}
+          {/* Academic Year */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Academic Year <span className="text-red-500">*</span>
             </label>
             {loadingMeta ? <Skeleton /> : (
-              <select
-                name="academicYearId"
-                value={formData.academicYearId}
-                onChange={handleChange}
-                className={selectCls}
-              >
-                <option value={1}>2023-24</option>
-                <option value={2}>2024-25</option>
-                <option value={3}>2025-26</option>
-                <option value={4}>2026-27</option>
-              </select>
+              <div className="relative">
+                <select
+                  name="academicYearId"
+                  value={formData.academicYearId}
+                  onChange={handleChange}
+                  className={selectCls}
+                >
+                  <option value="" disabled>Select year</option>
+                  {academicYears.map(y => {
+                    const isCur = y.id === currentYearId || y.isCurrent;
+                    return (
+                      <option key={y.id} value={y.id}>
+                        {isCur ? "● " : ""}{y.label ?? y.name}{isCur ? " (Current)" : ""}
+                      </option>
+                    );
+                  })}
+                </select>
+
+                {/* Current year badge — shown below select, matches mockup green pill */}
+                <div className="mt-1.5 h-6">
+                  {formData.academicYearId && Number(formData.academicYearId) === currentYearId && (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-50 border border-green-200">
+                      <span className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />
+                      <span className="text-xs font-semibold text-green-600">
+                        Current Academic Year
+                      </span>
+                    </span>
+                  )}
+                </div>
+              </div>
             )}
           </div>
 

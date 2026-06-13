@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getListOfValues } from "../../Api/ListOfValues";
+import { getAcademicYears, getCurrentAcademicYear } from "../../Api/AcademicYear";
 
 const AddStudentPersonalDetails = ({ formData, setFormData, handleInputChange, sections = [], sectionsLoading = false }) => {
 
@@ -11,15 +11,71 @@ const AddStudentPersonalDetails = ({ formData, setFormData, handleInputChange, s
         return acc;
     }, {});
 
-    const [academicYears, setAcademicYears] = useState([]);
+    const [academicYears,        setAcademicYears]        = useState([]);
     const [academicYearsLoading, setAcademicYearsLoading] = useState(false);
+    const [currentYearId,        setCurrentYearId]        = useState(null);
 
     useEffect(() => {
         const fetchAcademicYears = async () => {
+            setAcademicYearsLoading(true);
             try {
-                setAcademicYearsLoading(true);
-                const data = await getListOfValues("ACADEMIC_YEAR");
-                setAcademicYears(data);
+                // Handle all known API shapes
+                const unwrap = (r) =>
+                    Array.isArray(r)                 ? r :
+                    Array.isArray(r?.years)          ? r.years :
+                    Array.isArray(r?.data)           ? r.data :
+                    Array.isArray(r?.content)        ? r.content :
+                    Array.isArray(r?.data?.years)    ? r.data.years :
+                    Array.isArray(r?.data?.data)     ? r.data.data :
+                    Array.isArray(r?.data?.content)  ? r.data.content : [];
+
+                const [yearsRes, currentRes] = await Promise.allSettled([
+                    getAcademicYears(),
+                    getCurrentAcademicYear(),
+                ]);
+
+                const list = yearsRes.status === "fulfilled" ? unwrap(yearsRes.value) : [];
+
+                if (yearsRes.status === "rejected") {
+                    console.error("getAcademicYears failed:", yearsRes.reason);
+                }
+                if (currentRes.status === "rejected") {
+                    console.error("getCurrentAcademicYear failed:", currentRes.reason);
+                }
+
+                // current year from dedicated endpoint or isCurrent flag in list
+                const currentPayload = currentRes.status === "fulfilled" ? currentRes.value : null;
+                const currentYear = currentPayload?.id
+                    ? currentPayload
+                    : currentPayload?.data?.id
+                        ? currentPayload.data
+                        : currentPayload?.data?.data?.id
+                            ? currentPayload.data.data
+                            : null;
+                const curId = currentYear?.id
+                    ?? list.find(y => y.isCurrent)?.id
+                    ?? null;
+
+                console.log("[AcademicYear debug]", { list, currentPayload, currentYear, curId });
+
+                // Sort: current first, then newest to oldest
+                const sorted = [...list].sort((a, b) => {
+                    if (a.id === curId) return -1;
+                    if (b.id === curId) return 1;
+                    return b.id - a.id;
+                });
+
+                setAcademicYears(sorted);
+                setCurrentYearId(curId);
+
+                // Auto-select current year by default (unless already set)
+                if (curId != null) {
+                    setFormData(prev => {
+                        const existing = prev.academicYearId || prev.academicYear;
+                        if (existing) return prev;
+                        return { ...prev, academicYearId: String(curId) };
+                    });
+                }
             } catch (err) {
                 console.error("Error fetching academic years:", err);
             } finally {
@@ -29,6 +85,10 @@ const AddStudentPersonalDetails = ({ formData, setFormData, handleInputChange, s
 
         fetchAcademicYears();
     }, []);
+
+    // Which year id is currently selected (support both academicYearId and academicYear field names)
+    const selectedId = formData.academicYearId || formData.academicYear || "";
+    const isSelectedCurrent = selectedId !== "" && currentYearId != null && Number(selectedId) === Number(currentYearId);
 
     return (
         <div className="space-y-8">
@@ -157,14 +217,14 @@ const AddStudentPersonalDetails = ({ formData, setFormData, handleInputChange, s
                             className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500' />
                     </div>
 
+                    {/* ─── Academic Year Dropdown ─── */}
                     <div>
                         <label className='block font-semibold text-gray-600 text-sm mb-2'>
                             Academic Year<span className="text-red-600 ml-1">*</span>
                         </label>
-
                         <select
-                            name="academicYear"
-                            value={formData.academicYear}
+                            name="academicYearId"
+                            value={selectedId}
                             onChange={handleInputChange}
                             required
                             disabled={academicYearsLoading}
@@ -173,13 +233,25 @@ const AddStudentPersonalDetails = ({ formData, setFormData, handleInputChange, s
                             <option value="">
                                 {academicYearsLoading ? "Loading..." : "Select Academic Year"}
                             </option>
-
-                            {academicYears.map((year) => (
-                                <option key={year.id} value={year.value}>
-                                    {year.label}
-                                </option>
-                            ))}
+                            {academicYears.map((year) => {
+                                const isCur = Number(year.id) === Number(currentYearId) || year.isCurrent;
+                                return (
+                                    <option key={year.id} value={String(year.id)}>
+                                        {isCur ? "● " : ""}{year.label}{isCur ? " (Current)" : ""}
+                                    </option>
+                                );
+                            })}
                         </select>
+
+                        {/* Current year green badge */}
+                        {!academicYearsLoading && isSelectedCurrent && (
+                            <div className="mt-1.5">
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-green-50 border border-green-200">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block flex-shrink-0" />
+                                    <span className="text-xs font-semibold text-green-600">Current Academic Year</span>
+                                </span>
+                            </div>
+                        )}
                     </div>
 
                     <div>
