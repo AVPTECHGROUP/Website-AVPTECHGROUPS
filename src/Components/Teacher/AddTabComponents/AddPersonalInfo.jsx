@@ -239,7 +239,7 @@ const AddPersonalInfo = ({ formData, setFormData, handleInputChange, errors, set
                     {/* Login Email */}
                     <div>
                         <label className="block font-semibold text-gray-600 text-sm mb-2">
-                            Login Email / Username <span className="text-red-600">*</span>
+                            Login Email  <span className="text-red-600">*</span>
                         </label>
                         <input
                             type="email"
@@ -247,7 +247,7 @@ const AddPersonalInfo = ({ formData, setFormData, handleInputChange, errors, set
                             value={formData.loginEmail}
                             onChange={handleInputChange}
                             onBlur={handleEmailBlur('loginEmail')}
-                            placeholder="Login email or username"
+                            placeholder="Login email "
                             className={inputCls(errors?.loginEmail)}
                         />
                         <ErrorText msg={errors?.loginEmail} />
