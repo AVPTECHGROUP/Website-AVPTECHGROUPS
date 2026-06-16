@@ -503,50 +503,71 @@ export default function ClassSectionConfig() {
     }
   };
 
-  // ── Section CRUD ──
-  const handleSectionSubmit = async (payload) => {
-    try {
-      setSubmitLoading(true);
-      if (sectionModal.mode === 'add') {
-        await createSection(payload);
-        toast.success(`Section ${payload.name} created successfully`);
-      } else {
-        await updateSection(sectionModal.data.id, payload);
-        toast.success(`Section ${payload.name} updated successfully`);
-      }
-      setSectionModal(null);
-      await fetchSections(selectedClass?.id);
-    } catch (err) {
-      toast.error(err.message || 'Failed to save section');
-    } finally {
-      setSubmitLoading(false);
-    }
-  };
+ // ── Section CRUD ──
+const handleSectionSubmit = async (payload) => {
+  try {
+    setSubmitLoading(true);
+    if (sectionModal.mode === 'add') {
+      await createSection(payload);
+      toast.success(`Section ${payload.name} created successfully`);
 
-  // ── Delete ──
-  const handleDeleteConfirm = async () => {
-    if (!deleteTarget) return;
-    const { type, item } = deleteTarget;
-    try {
-      setDeleteLoading(true);
-      if (type === 'class') {
-        await deleteClass(item.id);
-        toast.success(`${item.name} deleted successfully`);
-        setDeleteTarget(null);
-        await fetchClasses();
-      } else {
-        await deleteSection(item.id);
-        toast.success(`Section ${item.name} deleted successfully`);
-        setDeleteTarget(null);
-        await fetchSections(selectedClass?.id);
-      }
-    } catch (err) {
-      toast.error(err.message || 'Failed to delete');
-      setDeleteTarget(null);
-    } finally {
-      setDeleteLoading(false);
+      // ✅ Optimistically increment totalSections on the parent class
+      const updatedClass = {
+        ...selectedClass,
+        totalSections: (selectedClass?.totalSections ?? 0) + 1,
+      };
+      setSelectedClass(updatedClass);
+      setClasses(prev =>
+        prev.map(c => (c.id === updatedClass.id ? updatedClass : c))
+      );
+    } else {
+      await updateSection(sectionModal.data.id, payload);
+      toast.success(`Section ${payload.name} updated successfully`);
     }
-  };
+    setSectionModal(null);
+    await fetchSections(selectedClass?.id);
+  } catch (err) {
+    toast.error(err.message || 'Failed to save section');
+  } finally {
+    setSubmitLoading(false);
+  }
+};
+
+// ── Delete ──
+const handleDeleteConfirm = async () => {
+  if (!deleteTarget) return;
+  const { type, item } = deleteTarget;
+  try {
+    setDeleteLoading(true);
+    if (type === 'class') {
+      await deleteClass(item.id);
+      toast.success(`${item.name} deleted successfully`);
+      setDeleteTarget(null);
+      await fetchClasses();
+    } else {
+      await deleteSection(item.id);
+      toast.success(`Section ${item.name} deleted successfully`);
+
+      // ✅ Optimistically decrement totalSections on the parent class
+      const updatedClass = {
+        ...selectedClass,
+        totalSections: Math.max((selectedClass?.totalSections ?? 1) - 1, 0),
+      };
+      setSelectedClass(updatedClass);
+      setClasses(prev =>
+        prev.map(c => (c.id === updatedClass.id ? updatedClass : c))
+      );
+
+      setDeleteTarget(null);
+      await fetchSections(selectedClass?.id);
+    }
+  } catch (err) {
+    toast.error(err.message || 'Failed to delete');
+    setDeleteTarget(null);
+  } finally {
+    setDeleteLoading(false);
+  }
+};
 
   // ── Class stats (derived) ──
   const totalClasses   = classes.length;

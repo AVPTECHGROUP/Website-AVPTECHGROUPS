@@ -6,23 +6,9 @@ import UserPersonalDetailsTab from '../../Components/SuperAdmin/EditTabComponent
 import ParentPersonalDetailsTab from '../../Components/SuperAdmin/EditTabComponents/ParentPersonalDetailsTab';
 import { getUserById, updateUserById } from '../../Api/userManagementAPI';
 
-// ─── Constants ────────────────────────────────────────────────────────────────
 const VALID_GENDERS = ['MALE', 'FEMALE', 'OTHER'];
-
-const VALID_ROLES = [
-    'SUPER_ADMIN',
-    'ADMIN',
-    'PRINCIPAL',
-    'TEACHER',
-    'ACCOUNTANT',
-    'PARENT',
-    'RECEPTIONIST',
-    'STORE_ACCOUNTANT',
-    'STORE_SELLER',
-];
-
+const VALID_ROLES = ['SUPER_ADMIN','ADMIN','PRINCIPAL','TEACHER','ACCOUNTANT','PARENT','RECEPTIONIST','STORE_ACCOUNTANT','STORE_SELLER'];
 const PARENT_LIKE_ROLES = ['PARENT'];
-
 const MOBILE_REGEX = /^[6-9]\d{9}$/;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const EMP_CODE_REGEX = /^[A-Za-z0-9\-_]{2,20}$/;
@@ -30,7 +16,6 @@ const MAX_NAME_LENGTH = 100;
 const MAX_ADDRESS_LENGTH = 300;
 const MAX_EXPERIENCE = 60;
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 const generateEmployeeCode = () => 'EMP' + Math.floor(100 + Math.random() * 900);
 
 const formatToInputDate = (dateStr) => {
@@ -56,27 +41,21 @@ const validateFormData = (formData, activeRole) => {
     const errors = [];
     const fieldMap = {};
     const isParentLike = PARENT_LIKE_ROLES.includes(activeRole);
-
     const addError = (field, msg) => { errors.push(msg); fieldMap[field] = msg; };
-
     const trimmedName = (formData.name || '').trim();
     if (!trimmedName) addError('name', 'Full name is required.');
     else if (trimmedName.length < 2) addError('name', 'Full name must be at least 2 characters.');
     else if (trimmedName.length > MAX_NAME_LENGTH) addError('name', `Full name cannot exceed ${MAX_NAME_LENGTH} characters.`);
     else if (!/^[a-zA-Z\s'.,-]+$/.test(trimmedName)) addError('name', 'Full name contains invalid characters.');
-
     if (!formData.gender || !VALID_GENDERS.includes(formData.gender.toUpperCase())) {
         addError('gender', 'Please select a valid gender.');
     }
-
     if (!formData.email || !EMAIL_REGEX.test(formData.email.trim())) {
         addError('email', 'Please enter a valid email address.');
     }
-
     const mobileTrimmed = (formData.mobile || '').replace(/\s/g, '');
     if (!mobileTrimmed) addError('mobile', 'Mobile number is required.');
     else if (!MOBILE_REGEX.test(mobileTrimmed)) addError('mobile', 'Mobile must be a valid 10-digit Indian number.');
-
     if (formData.dob) {
         if (!isValidPastDate(formData.dob)) {
             addError('dob', 'Date of birth must be a valid past date.');
@@ -86,11 +65,9 @@ const validateFormData = (formData, activeRole) => {
             if (age > 100) addError('dob', 'Date of birth seems invalid (age > 100).');
         }
     }
-
     if (formData.address && formData.address.trim().length > MAX_ADDRESS_LENGTH) {
         addError('address', `Address cannot exceed ${MAX_ADDRESS_LENGTH} characters.`);
     }
-
     if (!isParentLike) {
         if (formData.empId && !EMP_CODE_REGEX.test(formData.empId.trim())) {
             addError('empId', 'Employee code must be 2–20 alphanumeric characters.');
@@ -104,11 +81,9 @@ const validateFormData = (formData, activeRole) => {
             else if (exp > MAX_EXPERIENCE) addError('experience', `Experience cannot exceed ${MAX_EXPERIENCE} years.`);
         }
     }
-
     return { valid: errors.length === 0, errors, fieldMap };
 };
 
-// ─── Component ────────────────────────────────────────────────────────────────
 function EditSysUser() {
     const { id } = useParams();
     const navigate = useNavigate();
@@ -118,8 +93,6 @@ function EditSysUser() {
     const [isLoading, setIsLoading] = useState(false);
     const [activeRole, setActiveRole] = useState('');
     const [fieldErrors, setFieldErrors] = useState({});
-
-    // ── Image upload state ──────────────────────────────────────────────────
     const [profileImage, setProfileImage] = useState(null);
     const [imagePreview, setImagePreview] = useState(null);
     const [existingImageUrl, setExistingImageUrl] = useState(null);
@@ -135,19 +108,12 @@ function EditSysUser() {
         professionalTax: '', incomeTax: '', otherDeductions: '',
     });
 
-    // ── Image handlers ──────────────────────────────────────────────────────
     const handleImageChange = (e) => {
         const file = e.target.files[0];
         if (!file) return;
         const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
-        if (!validTypes.includes(file.type)) {
-            toast.error("Only JPEG or PNG images are allowed!");
-            return;
-        }
-        if (file.size > 10 * 1024 * 1024) {
-            toast.error("Image must be smaller than 10 MB!");
-            return;
-        }
+        if (!validTypes.includes(file.type)) { toast.error("Only JPEG or PNG images are allowed!"); return; }
+        if (file.size > 10 * 1024 * 1024) { toast.error("Image must be smaller than 10 MB!"); return; }
         setProfileImage(file);
         const reader = new FileReader();
         reader.onloadend = () => setImagePreview(reader.result);
@@ -161,18 +127,16 @@ function EditSysUser() {
         if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
-    // displayedImage: new preview takes priority, else existing URL from API
     const displayedImage = imagePreview || existingImageUrl;
 
-    // Validate id param
+    // ✅ FIXED: was '/dashboard/manageUsers'
     useEffect(() => {
         if (!id || isNaN(Number(id)) || Number(id) <= 0) {
             toast.error('Invalid user ID in URL.');
-            navigate('/dashboard/manageUsers');
+            navigate('/manageUsers');
         }
     }, [id, navigate]);
 
-    // Fetch user
     useEffect(() => {
         if (!id || isNaN(Number(id))) return;
         const fetchsysUser = async () => {
@@ -199,7 +163,6 @@ function EditSysUser() {
         fetchsysUser();
     }, [id]);
 
-    // Populate form + set existing profile image
     useEffect(() => {
         if (!sysUser) return;
         setFormData((prev) => ({
@@ -220,7 +183,6 @@ function EditSysUser() {
             dessignation: sysUser.designation || '',
             accountStatus: sysUser.status === 'ACTIVE',
         }));
-        // Set existing profile photo if present
         if (sysUser.profileImageUrl) {
             setExistingImageUrl(sysUser.profileImageUrl);
         }
@@ -250,12 +212,7 @@ function EditSysUser() {
             address: data.address?.trim() || 'NA',
         };
         if (isParentLike) {
-            return {
-                email: data.email.trim(),
-                roleNames: [data.userRole],
-                personalDetails,
-                accountStatus: 'ACTIVE',
-            };
+            return { email: data.email.trim(), roleNames: [data.userRole], personalDetails, accountStatus: 'ACTIVE' };
         }
         return {
             email: data.email.trim(),
@@ -290,14 +247,13 @@ function EditSysUser() {
         try {
             const sysUserPayload = buildPayload(formData, activeRole);
             await updateUserById(id, sysUserPayload, profileImage);
-            console.log(sysUserPayload);
-
-            toast.dismiss(loadingToast);   
+            toast.dismiss(loadingToast);
             toast.success(`${formData.name.trim()}'s details updated successfully! ✅`);
             if (profileImage) {
-                toast.info("Profile photo may take a few seconds to reflect.", { autoClose: 4000 });  // ← ADD THIS
+                toast.info("Profile photo may take a few seconds to reflect.", { autoClose: 4000 });
             }
-            navigate('/dashboard/manageUsers');
+            // ✅ FIXED: was '/dashboard/manageUsers'
+            navigate('/manageUsers');
         } catch (err) {
             toast.dismiss(loadingToast);
             console.error('EditSysUser update error:', err);
@@ -318,7 +274,8 @@ function EditSysUser() {
                         <User className="w-6 h-6 text-red-600" />
                     </div>
                     <p className="text-gray-700 font-medium mb-4">{fetchError}</p>
-                    <button onClick={() => navigate('/dashboard/manageUsers')} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                    {/* ✅ FIXED: was '/dashboard/manageUsers' */}
+                    <button onClick={() => navigate('/manageUsers')} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
                         Back to Users
                     </button>
                 </div>
@@ -367,7 +324,6 @@ function EditSysUser() {
                             </nav>
                         </div>
 
-                        {/* ── Profile Photo (shown for all roles) ── */}
                         <div className="px-4 sm:px-6 lg:px-8 pt-6">
                             <label className="block font-semibold text-gray-600 text-sm mb-3">
                                 Profile Photo <span className="text-gray-400 text-xs font-normal ml-1">(optional)</span>
@@ -376,32 +332,20 @@ function EditSysUser() {
                                 <div className="relative shrink-0">
                                     <div className="w-20 h-20 rounded-full overflow-hidden bg-blue-100 border-2 border-blue-200 flex items-center justify-center">
                                         {displayedImage ? (
-                                            <img
-                                                src={displayedImage}
-                                                alt="Profile"
-                                                className="w-full h-full object-cover"
-                                                onError={() => setExistingImageUrl(null)}
-                                            />
+                                            <img src={displayedImage} alt="Profile" className="w-full h-full object-cover" onError={() => setExistingImageUrl(null)} />
                                         ) : (
                                             <User className="w-8 h-8 text-blue-400" />
                                         )}
                                     </div>
-                                    <button
-                                        type="button"
-                                        onClick={() => fileInputRef.current?.click()}
-                                        className="absolute bottom-0 right-0 w-6 h-6 bg-blue-500 hover:bg-blue-600 rounded-full flex items-center justify-center shadow transition-colors"
-                                    >
+                                    <button type="button" onClick={() => fileInputRef.current?.click()}
+                                        className="absolute bottom-0 right-0 w-6 h-6 bg-blue-500 hover:bg-blue-600 rounded-full flex items-center justify-center shadow transition-colors">
                                         <Camera className="w-3.5 h-3.5 text-white" />
                                     </button>
                                 </div>
-
                                 <div className="flex-1">
                                     {!displayedImage ? (
-                                        <button
-                                            type="button"
-                                            onClick={() => fileInputRef.current?.click()}
-                                            className="w-full border-2 border-dashed border-blue-300 hover:border-blue-500 bg-blue-50 hover:bg-blue-100 rounded-lg p-4 text-center transition-colors cursor-pointer"
-                                        >
+                                        <button type="button" onClick={() => fileInputRef.current?.click()}
+                                            className="w-full border-2 border-dashed border-blue-300 hover:border-blue-500 bg-blue-50 hover:bg-blue-100 rounded-lg p-4 text-center transition-colors cursor-pointer">
                                             <Camera className="w-5 h-5 text-blue-400 mx-auto mb-1" />
                                             <p className="text-sm font-medium text-blue-600">Click to upload photo</p>
                                             <p className="text-xs text-gray-400 mt-0.5">JPEG or PNG, max 10 MB</p>
@@ -422,18 +366,12 @@ function EditSysUser() {
                                                 )}
                                             </div>
                                             <div className="flex gap-2 shrink-0">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => fileInputRef.current?.click()}
-                                                    className="text-xs px-2.5 py-1 bg-white border border-green-300 text-green-700 rounded-md hover:bg-green-50 transition-colors"
-                                                >
+                                                <button type="button" onClick={() => fileInputRef.current?.click()}
+                                                    className="text-xs px-2.5 py-1 bg-white border border-green-300 text-green-700 rounded-md hover:bg-green-50 transition-colors">
                                                     Change
                                                 </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={handleRemoveImage}
-                                                    className="w-7 h-7 flex items-center justify-center bg-white border border-red-200 text-red-500 rounded-md hover:bg-red-50 transition-colors"
-                                                >
+                                                <button type="button" onClick={handleRemoveImage}
+                                                    className="w-7 h-7 flex items-center justify-center bg-white border border-red-200 text-red-500 rounded-md hover:bg-red-50 transition-colors">
                                                     <X className="w-3.5 h-3.5" />
                                                 </button>
                                             </div>
@@ -441,42 +379,25 @@ function EditSysUser() {
                                     )}
                                 </div>
                             </div>
-                            <input
-                                ref={fileInputRef}
-                                type="file"
-                                accept="image/jpeg,image/jpg,image/png"
-                                onChange={handleImageChange}
-                                className="hidden"
-                            />
+                            <input ref={fileInputRef} type="file" accept="image/jpeg,image/jpg,image/png" onChange={handleImageChange} className="hidden" />
                         </div>
 
-                        {/* Non-PARENT content */}
                         <div className={`px-4 sm:px-6 lg:px-8 pb-6 ${activeTab === 'personal' && isParentRole ? 'hidden' : ''}`}>
                             {activeTab === 'personal' && (
-                                <UserPersonalDetailsTab
-                                    formData={formData}
-                                    setFormData={setFormData}
-                                    handleInputChange={handleInputChange}
-                                    fieldErrors={fieldErrors}
-                                />
+                                <UserPersonalDetailsTab formData={formData} setFormData={setFormData} handleInputChange={handleInputChange} fieldErrors={fieldErrors} />
                             )}
                         </div>
 
-                        {/* PARENT content */}
                         <div className={`px-4 sm:px-6 lg:px-8 pb-6 ${activeTab === 'personal' && !isParentRole ? 'hidden' : ''}`}>
                             {activeTab === 'personal' && (
-                                <ParentPersonalDetailsTab
-                                    formData={formData}
-                                    setFormData={setFormData}
-                                    handleInputChange={handleInputChange}
-                                    fieldErrors={fieldErrors}
-                                />
+                                <ParentPersonalDetailsTab formData={formData} setFormData={setFormData} handleInputChange={handleInputChange} fieldErrors={fieldErrors} />
                             )}
                         </div>
 
                         <div className="border-t border-gray-200 px-4 sm:px-6 lg:px-8 py-4 bg-gray-50 rounded-b-lg">
                             <div className="flex flex-col sm:flex-row justify-end gap-3">
-                                <button type="button" onClick={() => navigate('/dashboard/manageUsers')}
+                                {/* ✅ FIXED: was '/dashboard/manageUsers' */}
+                                <button type="button" onClick={() => navigate('/manageUsers')}
                                     className="px-6 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
                                     Discard Changes
                                 </button>
