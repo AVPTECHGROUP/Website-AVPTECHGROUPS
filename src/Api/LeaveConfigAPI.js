@@ -1,4 +1,4 @@
-import { authFetch } from "../Authfetch/Authfetch";
+import { authFetch } from '../Authfetch/Authfetch';
 
 const BASE_URL = `${import.meta.env.VITE_API_BASE}/leave/config`;
 
@@ -6,20 +6,22 @@ const BASE_URL = `${import.meta.env.VITE_API_BASE}/leave/config`;
 
 // 1. Get all leave configurations
 // isActive: undefined = all | true = active only | false = inactive only
-export const getAllLeaveConfigs = async (isActive) => {
+export const getAllLeaveConfigs = async (isActive = true) => {
   try {
     const params = new URLSearchParams();
     if (isActive !== undefined) params.append('isActive', isActive);
-    const url = params.toString() ? `${BASE_URL}?${params.toString()}` : BASE_URL;
-    const res = await authFetch(url, { method: "GET" });
+    const url = params.toString()
+      ? `${BASE_URL}?${params.toString()}`
+      : BASE_URL;
+    const res = await authFetch(url, { method: 'GET' });
     if (!res.ok) {
       const errorText = await res.text();
-      throw new Error(errorText || "Failed to fetch leave configurations");
+      throw new Error(errorText || 'Failed to fetch leave configurations');
     }
     const data = await res.json();
     return data;
   } catch (error) {
-    console.error("getAllLeaveConfigs error:", error.message);
+    console.error('getAllLeaveConfigs error:', error.message);
     throw error;
   }
 };
@@ -27,15 +29,15 @@ export const getAllLeaveConfigs = async (isActive) => {
 // 2. Get single leave configuration by ID
 export const getLeaveConfigById = async (id) => {
   try {
-    const res = await authFetch(`${BASE_URL}/${id}`, { method: "GET" });
+    const res = await authFetch(`${BASE_URL}/${id}`, { method: 'GET' });
     if (!res.ok) {
       const errorText = await res.text();
-      throw new Error(errorText || "Failed to fetch leave configuration");
+      throw new Error(errorText || 'Failed to fetch leave configuration');
     }
     const data = await res.json();
     return data;
   } catch (error) {
-    console.error("getLeaveConfigById error:", error.message);
+    console.error('getLeaveConfigById error:', error.message);
     throw error;
   }
 };
@@ -44,17 +46,19 @@ export const getLeaveConfigById = async (id) => {
 export const createLeaveConfig = async (payload) => {
   try {
     const res = await authFetch(BASE_URL, {
-      method: "POST",
+      method: 'POST',
       body: JSON.stringify(payload),
     });
     if (!res.ok) {
       const errorData = await res.json().catch(() => ({}));
-      throw new Error(errorData.message || "Failed to create leave configuration");
+      throw new Error(
+        errorData.message || 'Failed to create leave configuration'
+      );
     }
     const data = await res.json();
     return data;
   } catch (error) {
-    console.error("createLeaveConfig error:", error.message);
+    console.error('createLeaveConfig error:', error.message);
     throw error;
   }
 };
@@ -63,17 +67,19 @@ export const createLeaveConfig = async (payload) => {
 export const updateLeaveConfig = async (id, payload) => {
   try {
     const res = await authFetch(`${BASE_URL}/${id}`, {
-      method: "PUT",
+      method: 'PUT',
       body: JSON.stringify(payload),
     });
     if (!res.ok) {
       const errorData = await res.json().catch(() => ({}));
-      throw new Error(errorData.message || "Failed to update leave configuration");
+      throw new Error(
+        errorData.message || 'Failed to update leave configuration'
+      );
     }
     const data = await res.json();
     return data;
   } catch (error) {
-    console.error("updateLeaveConfig error:", error.message);
+    console.error('updateLeaveConfig error:', error.message);
     throw error;
   }
 };
@@ -81,15 +87,17 @@ export const updateLeaveConfig = async (id, payload) => {
 // 5. Disable (soft delete) a leave configuration
 export const deleteLeaveConfig = async (id) => {
   try {
-    const res = await authFetch(`${BASE_URL}/${id}`, { method: "DELETE" });
+    const res = await authFetch(`${BASE_URL}/${id}`, { method: 'DELETE' });
     if (!res.ok) {
       const errorData = await res.json().catch(() => ({}));
-      throw new Error(errorData.message || "Failed to disable leave configuration");
+      throw new Error(
+        errorData.message || 'Failed to disable leave configuration'
+      );
     }
     const data = await res.json();
     return data;
   } catch (error) {
-    console.error("deleteLeaveConfig error:", error.message);
+    console.error('deleteLeaveConfig error:', error.message);
     throw error;
   }
 };
@@ -97,15 +105,17 @@ export const deleteLeaveConfig = async (id) => {
 // 6. Seed default leave configurations
 export const seedLeaveConfigs = async () => {
   try {
-    const res = await authFetch(`${BASE_URL}/seed`, { method: "POST" });
+    const res = await authFetch(`${BASE_URL}/seed`, { method: 'POST' });
     if (!res.ok) {
       const errorData = await res.json().catch(() => ({}));
-      throw new Error(errorData.message || "Failed to seed leave configurations");
+      throw new Error(
+        errorData.message || 'Failed to seed leave configurations'
+      );
     }
     const data = await res.json();
     return data;
   } catch (error) {
-    console.error("seedLeaveConfigs error:", error.message);
+    console.error('seedLeaveConfigs error:', error.message);
     throw error;
   }
 };

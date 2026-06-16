@@ -4,6 +4,7 @@ import { createLeaveRequest } from '../../Api/LeavesManagementAPI';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
 import { getListOfValues } from '../../Api/ListOfValues';
+import { getAllLeaveConfigs } from '../../Api/LeaveConfigAPI';
 
 function ApplyLeaves() {
   const [loading, setLoading] = useState(false);
@@ -31,32 +32,77 @@ function ApplyLeaves() {
 
   const [listOfLeaveType, setListofLeavetype] = useState([]);
   const [isHalfDay, setIsHalfDay] = useState(false);
+  // useEffect(() => {
+  //   const currUser = JSON.parse(localStorage.getItem('user'));
+  //   setCurrentUser(currUser);
+  //   // FIX: Use prev state to maintain all fields
+  //   setFormData(prev => ({
+  //     ...prev,
+  //     mobile: currUser.phone || ''
+  //   }));
+  //   //FOR LIST OF VALUES
+  //   let fetchListOfValues = async () => {
+  //     try {
+  //       //const leaveTypeRes = await getListOfValues('LEAVE_TYPE');
+  //       const leaveTypeRes = await getAllLeaveConfigs(true);
+
+  //       leaveTypeRes = leaveTypeRes.data;
+  //       console.log(leaveTypeRes + "=============================================")
+  //       const formattedLeaveType = leaveTypeRes
+  //         .filter(item => item.isActive === true)
+  //         .map(item => ({
+  //           id: item.id,
+  //           value: item.leaveType,
+  //           label: item.leaveName,
+  //         }));
+  //       console.log(formattedLeaveType);
+  //       setListofLeavetype(formattedLeaveType);
+  //     }
+  //     catch (e) {
+  //       console.error("get list of values error error:", e.message);
+  //       throw error;
+  //     }
+  //   }
+  //   fetchListOfValues();
+  // }, []);
+
   useEffect(() => {
     const currUser = JSON.parse(localStorage.getItem('user'));
+
     setCurrentUser(currUser);
-    // FIX: Use prev state to maintain all fields
+
     setFormData(prev => ({
       ...prev,
-      mobile: currUser.phone || ''
+      mobile: currUser?.phone || ''
     }));
-    //FOR LIST OF VALUES
-    let fetchListOfValues = async () => {
+
+    const fetchListOfValues = async () => {
       try {
-        const leaveTypeRes = await getListOfValues('LEAVE_TYPE');
-        const formattedLeaveType = leaveTypeRes.map(item => ({
-          id: item.id,
-          value: item.value,
-          label: item.label
-        }));
+        // Same API pattern as fetchConfigs
+        const res = await getAllLeaveConfigs(true);
+
+        console.log('Leave Config Response:', res);
+
+        const formattedLeaveType = (res.data || [])
+          .filter(item => item.isActive)
+          .map(item => ({
+            id: item.id,
+            value: item.leaveType,
+            label: item.leaveName
+          }));
+
         console.log(formattedLeaveType);
+
         setListofLeavetype(formattedLeaveType);
+
+      } catch (e) {
+        console.error('Get leave configurations error:', e);
+        toast.error('Failed to load leave types');
       }
-      catch (e) {
-        console.error("get list of values error error:", e.message);
-        throw error;
-      }
-    }
+    };
+
     fetchListOfValues();
+
   }, []);
 
   const isSingleDayLeave =
@@ -264,8 +310,8 @@ function ApplyLeaves() {
                   value={formData.leaveType}
                   onChange={handleInputChange}
                   className={`px-4 py-2 border rounded-lg focus:outline-none focus:shadow-sm focus:shadow-blue-200 text-sm w-full ${errors.leaveType
-                      ? 'border-red-500 bg-red-50'
-                      : 'border-gray-200 bg-gray-100'
+                    ? 'border-red-500 bg-red-50'
+                    : 'border-gray-200 bg-gray-100'
                     }`}>
                   <option disabled value='' >Select Leave Type</option>
                   {listOfLeaveType.map((val) => (<option key={val.id} value={val.value}>{val.label}</option>))}
@@ -287,8 +333,8 @@ function ApplyLeaves() {
                     name="fromDate"
                     onChange={handleInputChange}
                     className={`font-normal text-gray-800 border p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.fromDate
-                        ? 'border-red-500 bg-red-50'
-                        : 'border-gray-300 bg-gray-100'
+                      ? 'border-red-500 bg-red-50'
+                      : 'border-gray-300 bg-gray-100'
                       }`}
                   />
                   {errors.fromDate && (
@@ -306,8 +352,8 @@ function ApplyLeaves() {
                     name="toDate"
                     onChange={handleInputChange}
                     className={`font-normal text-gray-800 border p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.toDate
-                        ? 'border-red-500 bg-red-50'
-                        : 'border-gray-300 bg-gray-100'
+                      ? 'border-red-500 bg-red-50'
+                      : 'border-gray-300 bg-gray-100'
                       }`}
                   />
                   {errors.toDate && (
@@ -336,8 +382,8 @@ function ApplyLeaves() {
 
                 <div
                   className={`flex items-center justify-between p-3 rounded-lg border ${isSingleDayLeave
-                      ? 'bg-gray-100 border-gray-300'
-                      : 'bg-gray-50 border-gray-200 opacity-60'
+                    ? 'bg-gray-100 border-gray-300'
+                    : 'bg-gray-50 border-gray-200 opacity-60'
                     }`}
                 >
                   <div>
@@ -379,8 +425,8 @@ function ApplyLeaves() {
                   onChange={handleInputChange}
                   placeholder='Please describe the reason for your absence...'
                   className={`font-normal text-gray-800 border p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.reason
-                      ? 'border-red-500 bg-red-50'
-                      : 'border-gray-300 bg-gray-100'
+                    ? 'border-red-500 bg-red-50'
+                    : 'border-gray-300 bg-gray-100'
                     }`} />
                 {errors.reason && (
                   <p className="mt-1 text-xs text-red-600">{errors.reason}</p>
@@ -401,8 +447,8 @@ function ApplyLeaves() {
                   type="submit"
                   disabled={loading}
                   className={`flex gap-2 justify-center px-6 py-2.5 text-sm font-medium rounded-lg transition-all ${loading
-                      ? 'bg-blue-400 cursor-not-allowed'
-                      : 'bg-blue-600 hover:bg-blue-700'
+                    ? 'bg-blue-400 cursor-not-allowed'
+                    : 'bg-blue-600 hover:bg-blue-700'
                     } text-white`}>
                   <p>{loading ? 'Submitting ...' : 'Submit Request'}</p> <SendHorizonal className='p-1' />
                 </button>
