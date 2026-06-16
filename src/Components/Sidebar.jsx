@@ -81,13 +81,13 @@ const menuItems = [
         roles: ['ADMIN', 'PRINCIPAL', 'TEACHER', 'GLOBAL_ADMIN','SUPER_ADMIN'],
         badge: 7,
       },
-      {
-        // id: 'deviceToken',
-        // icon: Smartphone,
-        label: 'Device Tokens',
-        route: '/communication/device-token',
-        roles: ['ADMIN', 'PRINCIPAL', 'GLOBAL_ADMIN','SUPER_ADMIN'],
-      },
+      // {
+      //   // id: 'deviceToken',
+      //   // icon: Smartphone,
+      //   label: 'Device Tokens',
+      //   route: '/communication/device-token',
+      //   roles: ['ADMIN', 'PRINCIPAL', 'GLOBAL_ADMIN','SUPER_ADMIN'],
+      // },
     ],
   },
 
