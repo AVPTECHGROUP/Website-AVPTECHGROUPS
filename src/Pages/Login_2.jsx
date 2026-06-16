@@ -1,3 +1,4 @@
+// Login_2.jsx
 import { Eye, EyeOff, LockKeyhole, Mail, ShieldCheck } from 'lucide-react'
 import React, { useContext, useState } from 'react'
 import Worker_3 from '../assets/Images/Worker_3.jpeg'
@@ -8,7 +9,8 @@ import SS_logo from "../assets/Images/ss_logo.png"
 import cstech from "../assets/Images/cstech.png"
 import { motion } from 'framer-motion'
 import SS_logo_3 from "../assets/Images/loginimageschool.png"
-import { getSchoolById } from '../Api/SchoolConfig'   // ← ADD THIS
+import { getSchoolById } from '../Api/SchoolConfig'
+import { getCurrentAcademicYear } from '../Api/AcademicYear' 
 
 // ─── School Floating SVGs ─────────────────────────────────────────────────────
 const SchoolSVGs = {
@@ -161,7 +163,9 @@ const Login_2 = ({ onLoginSuccess }) => {
   const [isLoading,    setIsLoading]    = useState(false)
   const [loginError,   setLoginError]   = useState('')
   const navigate = useNavigate()
-  const { setUser, saveProfile, saveSchool } = useContext(UserContext)  // ← ADD saveSchool
+
+  // ── Pull saveToken + saveCurrentAcademicYear in addition to existing context values ──
+  const { setUser, saveProfile, saveSchool, saveToken, saveCurrentAcademicYear } = useContext(UserContext)
 
   const validateForm = () => {
     const allErrors = {}
@@ -193,9 +197,14 @@ const Login_2 = ({ onLoginSuccess }) => {
 
       if (!token) throw new Error('Invalid response from server. Please try again.')
 
-      // ── 1. Save token & user ──────────────────────────────────────────────
-      localStorage.setItem('token', token)
+      // ── 1. Save token via saveToken (not localStorage directly) ──────────
+      //    saveToken does localStorage.setItem + setToken(token) which
+      //    triggers useEffect([token]) in UserContext → re-decodes JWT →
+      //    user.schoolId / userType are correct for FCM + academic year fetch
+      saveToken(token)
+
       localStorage.setItem('requireSchoolSelection', requiresSchoolSelection)
+
       if (user) {
         localStorage.setItem('user', JSON.stringify(user))
         setUser({
@@ -203,6 +212,7 @@ const Login_2 = ({ onLoginSuccess }) => {
           userType:    user.roles?.[0],
           email:       user.email,
           permissions: user.permissions,
+          schoolId:    user.schoolId ?? null,
         })
         if (user.profile) saveProfile(user.profile)
       }
@@ -214,8 +224,9 @@ const Login_2 = ({ onLoginSuccess }) => {
         // SUPER_ADMIN / GLOBAL_ADMIN — let them pick a school
         navigate('/superAdmin')
       } else {
-        // ADMIN / PRINCIPAL / TEACHER etc. — fetch their assigned school
-        // and save it so the sidebar shows the correct school immediately
+        // ADMIN / PRINCIPAL / TEACHER etc.
+        // Use schoolId from login response to fetch & save school details
+        // so sidebar shows correct school info immediately on dashboard
         const schoolId = user?.schoolId
         if (schoolId) {
           try {
@@ -225,17 +236,27 @@ const Login_2 = ({ onLoginSuccess }) => {
               saveSchool({
                 id:         s.id,
                 schoolId:   s.id,
-                schoolName: s.name  || '',
-                schoolCode: s.code  || '',
+                schoolName: s.name    || '',
+                schoolCode: s.code    || '',
                 logoUrl:    s.logoUrl || null,
-                board:      s.board  || '',
-                city:       s.city   || '',
-                status:     s.status || '',
+                board:      s.board   || '',
+                city:       s.city    || '',
+                status:     s.status  || '',
               })
             }
           } catch (schoolErr) {
-            // Non-fatal — sidebar will just show a fallback name
+            // Non-fatal — sidebar will show a fallback name
             console.warn('Could not fetch school details after login:', schoolErr)
+          }
+
+          // ── Fetch & save current academic year (mirrors school fetch above) ──
+          try {
+            const ayRes = await getCurrentAcademicYear(schoolId)
+            const ay = ayRes?.data
+            if (ay) saveCurrentAcademicYear(ay)
+          } catch (ayErr) {
+            // Non-fatal — academic year can be refreshed later if missing
+            console.warn('Could not fetch current academic year after login:', ayErr)
           }
         }
         navigate('/dashboard')
@@ -458,4 +479,4 @@ const Login_2 = ({ onLoginSuccess }) => {
   )
 }
 
-export default Login_2
+export default Login_2;

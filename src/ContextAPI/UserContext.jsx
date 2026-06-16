@@ -1,11 +1,10 @@
 // context/UserContext.jsx
-import { createContext, useContext, useEffect, useState, useCallback } from "react";
+import { createContext, useContext, useEffect, useState, useCallback, useMemo } from "react";
 import { getCurrUserDetails } from "../utils/getCurrUserDetails";
 import { useFcmToken } from "../hooks/useFcmtoken";
 
 export const UserContext = createContext();
 
-// ✅ Defined outside component — stable reference, never recreated
 function showForegroundNotification(payload) {
   const title = payload?.notification?.title ?? "New Notification";
   const body  = payload?.notification?.body  ?? "";
@@ -15,9 +14,29 @@ function showForegroundNotification(payload) {
   });
 }
 
+// ── Decode JWT synchronously — called at render time, not in useEffect ────────
+function decodeToken(rawToken) {
+  if (!rawToken) return null;
+  try {
+    const decoded = getCurrUserDetails();
+    if (!decoded) return null;
+    return {
+      id:          decoded.userId,
+      userType:    decoded.roles?.[0] ?? null,
+      email:       decoded.sub,
+      permissions: decoded.permissions ?? [],
+      schoolId:    decoded.schoolId ?? null,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export const UserProvider = ({ children }) => {
-  const [user, setUser]   = useState(null);
-  const [token, setToken] = useState(localStorage.getItem("token"));
+  const [token, setToken] = useState(() => localStorage.getItem("token"));
+
+  // ✅ Derive user synchronously from token — never null on first render
+  const [user, setUser] = useState(() => decodeToken(localStorage.getItem("token")));
 
   const [schoolInfo, setSchoolInfo] = useState(() => {
     try { return JSON.parse(localStorage.getItem("school")) || null; }
@@ -33,76 +52,57 @@ export const UserProvider = ({ children }) => {
     try {
       const saved = localStorage.getItem("currentAcademicYear");
       return saved ? JSON.parse(saved) : null;
-    } catch {
-      return null;
-    }
+    } catch { return null; }
   });
 
-  // ── Decode JWT on every token change ─────────────────────────────────────
+  // ✅ Re-decode whenever token changes (login / logout / school switch)
   useEffect(() => {
-    try {
-      const decodedToken = getCurrUserDetails();
-      if (decodedToken) {
-        setUser({
-          id:          decodedToken.userId,
-          userType:    decodedToken.roles?.[0],
-          email:       decodedToken.sub,
-          permissions: decodedToken.permissions,
-          schoolId:    decodedToken.schoolId,
-        });
-      }
-    } catch {
-      setUser(null);
-    }
+    const decoded = decodeToken(token);
+    setUser(decoded);
   }, [token]);
 
-  // ── FCM hook ──────────────────────────────────────────────────────────────
-  // showForegroundNotification is module-level so its reference never changes —
-  // no useCallback needed, no re-subscription risk
+  // ── FCM — now fires correctly because user is never null on mount ─────────
   const { deleteCurrentToken } = useFcmToken({
     role: user?.userType ?? null,
     onForegroundMessage: showForegroundNotification,
   });
 
   // ── Helpers ───────────────────────────────────────────────────────────────
-  const saveToken = (newToken) => {
+  const saveToken = useCallback((newToken) => {
     localStorage.setItem("token", newToken);
     setToken(newToken);
-  };
+  }, []);
 
-  const saveProfile = (profileData) => {
+  const saveProfile = useCallback((profileData) => {
     if (profileData) {
       localStorage.setItem("profile", JSON.stringify(profileData));
     } else {
       localStorage.removeItem("profile");
     }
     setProfile(profileData);
-  };
+  }, []);
 
-  const saveSchool = (school) => {
+  const saveSchool = useCallback((school) => {
     if (school) {
       localStorage.setItem("school", JSON.stringify(school));
     } else {
       localStorage.removeItem("school");
     }
     setSchoolInfo(school);
-  };
+  }, []);
 
-  const saveCurrentAcademicYear = (yearData) => {
+  const saveCurrentAcademicYear = useCallback((yearData) => {
     if (yearData) {
       localStorage.setItem("currentAcademicYear", JSON.stringify(yearData));
     } else {
       localStorage.removeItem("currentAcademicYear");
     }
     setCurrentAcademicYear(yearData);
-  };
+  }, []);
 
   // ── Logout ────────────────────────────────────────────────────────────────
   const logout = useCallback(async () => {
-    // ① Unregister FCM token BEFORE clearing auth state
     await deleteCurrentToken();
-
-    // ② Clear auth
     localStorage.removeItem("token");
     localStorage.removeItem("school");
     localStorage.removeItem("profile");
@@ -114,17 +114,20 @@ export const UserProvider = ({ children }) => {
     setCurrentAcademicYear(null);
   }, [deleteCurrentToken]);
 
+  const value = useMemo(() => ({
+    user, setUser,
+    token, saveToken,
+    logout,
+    schoolInfo, saveSchool,
+    profile, saveProfile,
+    currentAcademicYear, saveCurrentAcademicYear,
+  }), [
+    user, token, schoolInfo, profile, currentAcademicYear,
+    saveToken, logout, saveSchool, saveProfile, saveCurrentAcademicYear,
+  ]);
+
   return (
-    <UserContext.Provider
-      value={{
-        user, setUser,
-        token, saveToken,
-        logout,
-        schoolInfo, saveSchool,
-        profile, saveProfile,
-        currentAcademicYear, saveCurrentAcademicYear,
-      }}
-    >
+    <UserContext.Provider value={value}>
       {children}
     </UserContext.Provider>
   );
