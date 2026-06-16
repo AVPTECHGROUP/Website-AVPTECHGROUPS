@@ -200,10 +200,34 @@ const Leaves = () => {
 
   // ── Cards config ────────────────────────────────────────────────────────────
   const cardsArray = [
-    { IconName: ClockIcon, keyName: 'Pending Requests', val: statistics.pendingRequests, iconTxColor: 'text-orange-600', iconBgColor: 'bg-orange-50' },
-    { IconName: ThumbsUpIcon, keyName: 'Approved This Month', val: statistics.approvedThisMonth, iconTxColor: 'text-green-600', iconBgColor: 'bg-green-50' },
-    { IconName: CalendarX2, keyName: 'Rejected This Month', val: statistics.rejectedThisMonth, iconTxColor: 'text-red-600', iconBgColor: 'bg-red-50' },
-    { IconName: CalendarRange, keyName: 'Leaves This Month', val: statistics.totalThisMonth, iconTxColor: 'text-blue-600', iconBgColor: 'bg-blue-50' },
+    {
+      IconName: ClockIcon,
+      keyName: 'Pending Requests',
+      val: statistics.pendingApproval, 
+      iconTxColor: 'text-orange-600',
+      iconBgColor: 'bg-orange-50',
+    },
+    {
+      IconName: ThumbsUpIcon,
+      keyName: 'Approved This Month',
+      val: statistics.approvedThisMonth,
+      iconTxColor: 'text-green-600',
+      iconBgColor: 'bg-green-50',
+    },
+    {
+      IconName: CalendarX2,
+      keyName: 'Rejected This Month',
+      val: statistics.rejectedThisMonth,
+      iconTxColor: 'text-red-600',
+      iconBgColor: 'bg-red-50',
+    },
+    {
+      IconName: CalendarRange,
+      keyName: 'Applied This Month',
+      val: statistics.appliedThisMonth, 
+      iconTxColor: 'text-blue-600',
+      iconBgColor: 'bg-blue-50',
+    },
   ];
 
   const statusStyles = {

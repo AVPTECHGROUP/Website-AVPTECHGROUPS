@@ -4,10 +4,9 @@ import {
   LayoutDashboard, Calendar, FileText, Users, LogOut,
   ChevronDown, UserCog, Package, Bus, Phone, Mail,
   Shield, ChevronUp, ArrowLeftRight, BookOpenText,
-  GraduationCap,
-  SchoolIcon, NotebookPen, IndianRupee, MessageSquare, ScrollText, CalendarDays, ClipboardCheck, Bell, Smartphone
+  GraduationCap, SchoolIcon, MessageSquare
 } from 'lucide-react'
-import { useState, useEffect, useContext, useRef } from 'react'
+import { useState, useEffect, useContext, useRef, useMemo } from 'react'
 import { UserContext } from '../ContextAPI/UserContext'
 
 const SCHOOL_SWITCHER_ROLES = ['SUPER_ADMIN', 'GLOBAL_ADMIN'];
@@ -26,76 +25,50 @@ const menuItems = [
     id: 'teachers', icon: Users, label: 'Teachers', route: '/teachers',
     roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'PRINCIPAL'],
   },
-  // ── Academics (Exams + Subjects merged) ──────────────────────────────────
+  // ── Academics (With Nested Exams Dropdown) ──────────────────────────────────
   {
     id: 'academics', icon: GraduationCap, label: 'Academics', route: '/subjectsmaster',
     roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'TEACHER'],
     subItems: [
       { label: 'Subjects', route: '/subjectsmaster', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'] },
-      { label: 'Exams', route: '/exams', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'PRINCIPAL', 'TEACHER'] },
-      { label: 'Marks Entry', route: '/exams/marksEntry', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN'] },
-      { label: 'Report Cards', route: '/exams/reportCard', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN'] },
-      { label: 'Analytics', route: '/exams/analytics', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN'] },
-      { label: 'Time Table', route: '/schedule', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN'] },
-      { label: 'Exam Configuration', route: '/exams/examConfig', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN'] },
       { label: 'Class & Sections', route: '/academics/classSections', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'] },
-      { label: 'HomeWork', route: '/homework', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'PRINCIPAL', 'TEACHER'] }
+      { label: 'HomeWork', route: '/homework', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'PRINCIPAL', 'TEACHER'] },
+      { label: 'Time Table', route: '/schedule', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN'] },
+      { 
+        id: 'exams', 
+        label: 'Exams', 
+        route: '/exams', 
+        roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'PRINCIPAL', 'TEACHER'],
+        childItems: [
+          { label: 'Exam Overview', route: '/exams', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'PRINCIPAL', 'TEACHER'] },
+          { label: 'Marks Entry', route: '/exams/marksEntry', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN'] },
+          { label: 'Report Cards', route: '/exams/reportCard', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN'] },
+          { label: 'Analytics', route: '/exams/analytics', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN'] },
+          { label: 'Exam Configuration', route: '/exams/examConfig', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN'] },
+        ]
+      },
     ]
   },
-
-  // ── Communication (Circulars + Events merged) ───────────────────────────────
+  // ── Communication ───────────────────────────────────────────────────────────
   {
     id: 'communication',
-    icon: MessageSquare,       // from lucide-react
+    icon: MessageSquare,
     label: 'Communication',
     route: '/communication/circulars',
     roles: ['ADMIN', 'PRINCIPAL', 'TEACHER', 'GLOBAL_ADMIN','SUPER_ADMIN'],
     subItems: [
-      {
-        // id: 'circulars',
-        // icon: ScrollText,
-        label: 'Circulars',
-        route: '/communication/circulars',
-        roles: ['ADMIN', 'PRINCIPAL', 'TEACHER', 'GLOBAL_ADMIN','SUPER_ADMIN'],
-      },
-      {
-        // id: 'events',
-        // icon: CalendarDays,     // or CalendarDays
-        label: 'School Events',
-        route: '/communication/events',
-        roles: ['ADMIN', 'PRINCIPAL', 'TEACHER', 'GLOBAL_ADMIN','SUPER_ADMIN'],
-      },
-      {
-        // id: 'approvalQueue',
-        // icon: ClipboardCheck,
-        label: 'Approval Queue',
-        route: '/communication/approval',
-        roles: ['ADMIN', 'PRINCIPAL', 'GLOBAL_ADMIN','SUPER_ADMIN'],  // teachers don't see this
-        badge: 3,               // optional — you can make this dynamic
-      },
-      {
-        // id: 'notifications',
-        // icon: Bell,
-        label: 'Notifications',
-        route: '/communication/notifications',
-        roles: ['ADMIN', 'PRINCIPAL', 'TEACHER', 'GLOBAL_ADMIN','SUPER_ADMIN'],
-        badge: 7,
-      },
-      {
-        // id: 'deviceToken',
-        // icon: Smartphone,
-        label: 'Device Tokens',
-        route: '/communication/device-token',
-        roles: ['ADMIN', 'PRINCIPAL', 'GLOBAL_ADMIN','SUPER_ADMIN'],
-      },
+      { label: 'Circulars', route: '/communication/circulars', roles: ['ADMIN', 'PRINCIPAL', 'TEACHER', 'GLOBAL_ADMIN','SUPER_ADMIN'] },
+      { label: 'School Events', route: '/communication/events', roles: ['ADMIN', 'PRINCIPAL', 'TEACHER', 'GLOBAL_ADMIN','SUPER_ADMIN'] },
+      { label: 'Approval Queue', route: '/communication/approval', roles: ['ADMIN', 'PRINCIPAL', 'GLOBAL_ADMIN','SUPER_ADMIN'], badge: 3 },
+      { label: 'Notifications', route: '/communication/notifications', roles: ['ADMIN', 'PRINCIPAL', 'TEACHER', 'GLOBAL_ADMIN','SUPER_ADMIN'], badge: 7 },
+      { label: 'Device Tokens', route: '/communication/device-token', roles: ['ADMIN', 'PRINCIPAL', 'GLOBAL_ADMIN','SUPER_ADMIN'] },
     ],
   },
-
   {
     id: 'attendance', icon: Calendar, label: 'Attendance', route: '/attendance',
     roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'TEACHER', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST'],
     subItems: [
-      { label: 'Attendance Overview', route: '/attendance', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'TEACHER', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST'] }, // ✅ ye add karo
+      { label: 'Attendance Overview', route: '/attendance', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'TEACHER', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST'] },
       { label: 'Staff Enrollment', route: '/attendance/staffImgReg', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN'] },
       { label: 'Staff Attendance', route: '/attendance/markUserAttendance', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'TEACHER', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST'] },
       { label: 'Student Enrollment', route: '/attendance/studentImgReg', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'TEACHER'] },
@@ -145,35 +118,21 @@ const menuItems = [
     ]
   },
   {
-    id: 'academicYear',
-    icon: BookOpenText,
-    label: 'Academic Years',
-    route: '/academicYear',
-    roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN'],
+    id: 'academicYear', icon: BookOpenText, label: 'Academic Years', route: '/academicYear', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN']
   },
-  // {
-  //   id: 'Homework', icon: NotebookPen, label: 'Homework', route: '/homework',
-  //   roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN','ADMIN','PRINCIPAL','TEACHER'],
-  // },
   {
-    id: 'FeeManagement', icon: IndianRupee, label: 'Fee Management', route: '/feemanagement',
+    id: 'FeeManagement', icon: Shield, label: 'Fee Management', route: '/feemanagement',
     roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'],
     subItems: [
       { label: 'Fee Config', route: '/feemanagement/config', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'] },
       { label: 'Collection and History', route: '/feemanagement/collections', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'] },
-
     ]
   },
   {
-    id: 'Permission',
-    icon: Shield,
-    label: 'Permissions',
-    route: '/rolesPermissions',
-    roles: ['GLOBAL_ADMIN'],
+    id: 'Permission', icon: Shield, label: 'Permissions', route: '/rolesPermissions', roles: ['GLOBAL_ADMIN']
   },
   {
-    id: 'schoolConfig', icon: SchoolIcon, label: 'School Config', route: '/schoolConfig',
-    roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN'],
+    id: 'schoolConfig', icon: SchoolIcon, label: 'School Config', route: '/schoolConfig', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN']
   },
 ]
 
@@ -194,9 +153,9 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
   const navigate = useNavigate()
   const location = useLocation()
   const [openDropdowns, setOpenDropdowns] = useState({})
+  const [openSubDropdowns, setOpenSubDropdowns] = useState({}) // New hook to manage level-3 options
   const [profileOpen, setProfileOpen] = useState(false)
   const profileRef = useRef(null)
-
 
   const { user: ctxUser, schoolInfo: ctxSchoolInfo } = useContext(UserContext)
 
@@ -212,7 +171,6 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
         setSchoolInfo(latest)
       } catch { setSchoolInfo(null) }
     }
-
     window.addEventListener('storage', syncSchool)
     return () => window.removeEventListener('storage', syncSchool)
   }, [])
@@ -241,17 +199,25 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
     navigate('/superAdmin')
   }
 
-  const filteredMenuItems = menuItems
-    .filter(item => item.roles.includes(userRole))
-    .map(item => ({
-      ...item,
-      route: item.id === 'leaves' && !ADMIN_ROLES.includes(userRole)
-        ? '/leaves/myLeaves'
-        : item.route,
-      subItems: item.subItems
-        ? item.subItems.filter(sub => !sub.roles || sub.roles.includes(userRole))
-        : undefined
-    }))
+  // Optimized via useMemo to handle role processing accurately across 3 tiers
+  const filteredMenuItems = useMemo(() => {
+    return menuItems
+      .filter(item => item.roles.includes(userRole))
+      .map(item => ({
+        ...item,
+        route: item.id === 'leaves' && !ADMIN_ROLES.includes(userRole) ? '/leaves/myLeaves' : item.route,
+        subItems: item.subItems
+          ? item.subItems
+              .filter(sub => !sub.roles || sub.roles.includes(userRole))
+              .map(sub => ({
+                ...sub,
+                childItems: sub.childItems
+                  ? sub.childItems.filter(child => !child.roles || child.roles.includes(userRole))
+                  : undefined
+              }))
+          : undefined
+      }));
+  }, [userRole]);
 
   const onLogout = () => {
     localStorage.removeItem('token')
@@ -269,60 +235,69 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
     return () => document.removeEventListener('mousedown', handleOutsideClick)
   }, [])
 
+  // Keeps nested dropdown layouts accurately opened on routing matches
   useEffect(() => {
     if (location.pathname === '/login') return
     const newDropdowns = {}
+    const newSubDropdowns = {}
+
     filteredMenuItems.forEach(item => {
       if (item.subItems) {
-        const isSubActive = item.subItems.some(s => location.pathname.startsWith(s.route))
+        const isSubActive = item.subItems.some(s => {
+          const isDirectSubActive = location.pathname === s.route || location.pathname.startsWith(s.route + '/')
+          let isChildActive = false
+
+          if (s.childItems) {
+            isChildActive = s.childItems.some(c => location.pathname === c.route || location.pathname.startsWith(c.route + '/'))
+            if (isChildActive) newSubDropdowns[s.id] = true
+          }
+          return isDirectSubActive || isChildActive
+        })
         const isMainActive = location.pathname === item.route
         if (isSubActive || isMainActive) newDropdowns[item.id] = true
       }
     })
-    setOpenDropdowns(prev => {
-      const merged = { ...prev, ...newDropdowns }
-      const same = Object.keys(merged).length === Object.keys(prev).length &&
-        Object.keys(merged).every(k => prev[k] === merged[k])
-      return same ? prev : merged
-    })
-  }, [location.pathname])
+
+    setOpenDropdowns(prev => ({ ...prev, ...newDropdowns }))
+    setOpenSubDropdowns(prev => ({ ...prev, ...newSubDropdowns }))
+  }, [location.pathname, filteredMenuItems])
 
   const toggleDropdown = (id) => setOpenDropdowns(prev => ({ ...prev, [id]: !prev[id] }))
+  const toggleSubDropdown = (id) => setOpenSubDropdowns(prev => ({ ...prev, [id]: !prev[id] }))
+
   const handleLogoClick = () => {
     if (window.innerWidth >= 1024) setSidebarOpen(!sidebarOpen)
     else setMobileSidebarOpen(false)
   }
+
   const handleMenuClick = (item) => {
     navigate(item.route)
     if (item.subItems?.length > 0 && sidebarOpen) toggleDropdown(item.id)
     if (window.innerWidth < 1024) setMobileSidebarOpen(false)
   }
-  const handleSubItemClick = (route) => {
-    navigate(route)
-    if (window.innerWidth < 1024) setMobileSidebarOpen(false)
+
+  const handleSubItemClick = (subItem) => {
+    navigate(subItem.route)
+    if (subItem.childItems?.length > 0) {
+      toggleSubDropdown(subItem.id)
+    }
+    if (window.innerWidth < 1024 && !subItem.childItems?.length) setMobileSidebarOpen(false)
   }
+
   const isRouteActive = (item) => {
-    // exact match
-    if (location.pathname === item.route) return true;
-
-    // nested routes match
-    if (
-      item.route !== '/' &&
-      location.pathname.startsWith(item.route + '/')
-    ) {
-      return true;
-    }
-
-    // sub items match
+    if (location.pathname === item.route) return true
+    if (item.route !== '/' && location.pathname.startsWith(item.route + '/')) return true
     if (item.subItems) {
-      return item.subItems.some(sub =>
-        location.pathname === sub.route ||
-        location.pathname.startsWith(sub.route + '/')
-      );
+      return item.subItems.some(sub => {
+        if (location.pathname === sub.route || location.pathname.startsWith(sub.route + '/')) return true
+        if (sub.childItems) {
+          return sub.childItems.some(child => location.pathname === child.route || location.pathname.startsWith(child.route + '/'))
+        }
+        return false
+      })
     }
-
-    return false;
-  };
+    return false
+  }
 
   const displayName =
     user?.fullName ||
@@ -330,14 +305,10 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
     user?.name || user?.username || 'User'
 
   const userPhone = user?.phone || user?.phoneNumber || null
-  const userStatus = user?.status
-    ? user.status.charAt(0) + user.status.slice(1).toLowerCase()
-    : 'Active'
+  const userStatus = user?.status ? user.status.charAt(0) + user.status.slice(1).toLowerCase() : 'Active'
   const initials = displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
   const badgeClass = roleBadgeStyles[userRole] || 'bg-gray-100 text-gray-600'
-  const formatRoleLabel = (role) => role
-    ? role.split('_').map(w => w.charAt(0) + w.slice(1).toLowerCase()).join(' ')
-    : ''
+  const formatRoleLabel = (role) => role ? role.split('_').map(w => w.charAt(0) + w.slice(1).toLowerCase()).join(' ') : ''
 
   const canSwitchSchool = SCHOOL_SWITCHER_ROLES.includes(userRole)
 
@@ -345,7 +316,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
     <div className={`bg-[#F8FAFC] border-r border-gray-200 flex flex-col transition-all duration-300 h-full
       ${sidebarOpen ? 'w-64' : 'w-20'}`}
     >
-      {/* ── Logo + School Name + Switch School ── */}
+      {/* ── Logo Heading Section ── */}
       <div className="p-5 border-b border-gray-200 shrink-0">
         <div className="flex items-center gap-3">
           <button onClick={handleLogoClick} className="shrink-0">
@@ -394,13 +365,23 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
         </div>
       </div>
 
-      {/* ── Navigation ── */}
+      {/* ── Navigation Items Menu ── */}
       <nav className="flex-1 p-2 overflow-y-auto sidebar-scroll">
         {filteredMenuItems.map((item) => {
           const Icon = item.icon
           const isActive = isRouteActive(item)
           const hasSubItems = item.subItems && item.subItems.length > 0
           const isOpen = openDropdowns[item.id]
+
+          // Compute exact dynamic maximum height to let animations stay flawless when tier 3 opens up
+          let calculatedHeight = item.subItems ? item.subItems.length * 45 : 0
+          if (hasSubItems && isOpen) {
+            item.subItems.forEach(sub => {
+              if (sub.childItems && openSubDropdowns[sub.id]) {
+                calculatedHeight += sub.childItems.length * 38
+              }
+            })
+          }
 
           return (
             <div key={item.id} className="mb-0.5">
@@ -409,9 +390,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
                 title={!sidebarOpen ? item.label : ''}
                 className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg
                   transition-all duration-200 select-none
-                  ${isActive
-                    ? 'bg-blue-600 text-white'
-                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'}
+                  ${isActive ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'}
                   ${!sidebarOpen ? 'justify-center' : 'justify-between'}`}
               >
                 <div className="flex items-center gap-3 min-w-0">
@@ -426,36 +405,67 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
                 )}
               </button>
 
+              {/* ── Tier 2 (Sub Items Level Dropdown) ── */}
               {sidebarOpen && hasSubItems && (
                 <div
-                  style={{ maxHeight: isOpen ? `${item.subItems.length * 48}px` : '0px' }}
+                  style={{ maxHeight: isOpen ? `${calculatedHeight}px` : '0px' }}
                   className="overflow-hidden transition-[max-height] duration-300 ease-in-out"
                 >
                   <div className="mt-1 ml-4 pl-3 border-l-2 border-gray-200 space-y-0.5 pb-1">
                     {item.subItems.map((subItem, index) => {
-                      const isSubActive =
-                        location.pathname === subItem.route ||
-                        (
-                          subItem.route !== '/exams' &&
-                          subItem.route !== '/attendance' &&
-                          subItem.route !== '/leaves' &&
-                          location.pathname.startsWith(subItem.route + '/')
-                        )
+                      const hasChildItems = subItem.childItems && subItem.childItems.length > 0
+                      const isSubOpen = openSubDropdowns[subItem.id]
+                      const isSubActive = location.pathname === subItem.route || 
+                        (!['/exams', '/attendance', '/leaves'].includes(subItem.route) && location.pathname.startsWith(subItem.route + '/')) ||
+                        (subItem.childItems && subItem.childItems.some(child => location.pathname === child.route || location.pathname.startsWith(child.route + '/')))
+
                       return (
-                        <button
-                          key={index}
-                          onClick={() => handleSubItemClick(subItem.route)}
-                          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg
-                            text-sm transition-all duration-150 text-left
-                            ${isSubActive
-                              ? 'bg-blue-50 text-blue-600 font-semibold'
-                              : 'text-gray-500 hover:bg-gray-100 hover:text-gray-800'}`}
-                        >
-                          <span className={`w-1.5 h-1.5 rounded-full shrink-0 transition-all duration-200
-                            ${isSubActive ? 'bg-blue-500' : 'bg-gray-300'}`}
-                          />
-                          <span className="truncate">{subItem.label}</span>
-                        </button>
+                        <div key={index} className="w-full">
+                          <button
+                            onClick={() => handleSubItemClick(subItem)}
+                            className={`w-full flex items-center justify-between px-3 py-2 rounded-lg
+                              text-sm transition-all duration-150 text-left select-none
+                              ${isSubActive ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-800'}`}
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <span className={`w-1.5 h-1.5 rounded-full shrink-0 transition-all duration-200
+                                ${isSubActive ? 'bg-blue-500' : 'bg-gray-300'}`}
+                              />
+                              <span className="truncate">{subItem.label}</span>
+                            </div>
+                            {hasChildItems && (
+                              <ChevronDown className={`w-3.5 h-3.5 shrink-0 transition-transform duration-200 text-gray-400
+                                ${isSubOpen ? 'rotate-180' : 'rotate-0'}`}
+                              />
+                            )}
+                          </button>
+
+                          {/* ── Tier 3 (Exams Deep Nested Level Dropdown) ── */}
+                          {hasChildItems && (
+                            <div
+                              style={{ maxHeight: isSubOpen ? `${subItem.childItems.length * 38}px` : '0px' }}
+                              className="overflow-hidden transition-[max-height] duration-200 ease-in-out ml-3 pl-2.5 border-l border-gray-200 space-y-0.5 mt-0.5"
+                            >
+                              {subItem.childItems.map((childItem, childIndex) => {
+                                const isChildActive = location.pathname === childItem.route || location.pathname.startsWith(childItem.route + '/')
+                                return (
+                                  <button
+                                    key={childIndex}
+                                    onClick={() => {
+                                      navigate(childItem.route)
+                                      if (window.innerWidth < 1024) setMobileSidebarOpen(false)
+                                    }}
+                                    className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs transition-all duration-150 text-left truncate
+                                      ${isChildActive ? 'text-blue-600 font-medium bg-blue-50/50' : 'text-gray-400 hover:text-gray-700 hover:bg-gray-50'}`}
+                                  >
+                                    <span className="opacity-60">•</span>
+                                    <span className="truncate">{childItem.label}</span>
+                                  </button>
+                                )
+                              })}
+                            </div>
+                          )}
+                        </div>
                       )
                     })}
                   </div>
@@ -466,7 +476,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
         })}
       </nav>
 
-      {/* ── Profile Section ── */}
+      {/* ── Bottom Profile Section ── */}
       <div className="p-3 border-t border-gray-200 shrink-0" ref={profileRef}>
         <div className="relative">
           <button
@@ -499,8 +509,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
           {profileOpen && (
             <div
               className={`absolute bottom-full mb-2 bg-white rounded-2xl shadow-xl border border-gray-100
-                overflow-hidden z-50
-                ${sidebarOpen ? 'left-0 right-0' : 'left-0 w-64'}`}
+                overflow-hidden z-50 ${sidebarOpen ? 'left-0 right-0' : 'left-0 w-64'}`}
               style={{ animation: 'slideUp 0.18s ease-out' }}
             >
               <div className="h-12 bg-linear-to-r from-blue-600 to-blue-500 relative">
@@ -583,4 +592,4 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
   )
 }
 
-export default Sidebar
+export default Sidebar;

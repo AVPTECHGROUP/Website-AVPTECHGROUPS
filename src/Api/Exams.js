@@ -225,7 +225,7 @@ export const addExamSubject = async (examId, subjectData) => {
 // ─── Update Subject Config ────────────────────────────────────────────────────
 export const updateExamSubject = async (examId, configId, subjectData) => {
   try {
-    if (!examId)   throw new Error("examId is required");
+    if (!examId) throw new Error("examId is required");
     if (!configId) throw new Error("configId is required");
     if (!subjectData) throw new Error("subjectData is required");
 
@@ -249,7 +249,7 @@ export const updateExamSubject = async (examId, configId, subjectData) => {
 // ─── Delete Subject Config ────────────────────────────────────────────────────
 export const deleteExamSubject = async (examId, configId) => {
   try {
-    if (!examId)   throw new Error("examId is required");
+    if (!examId) throw new Error("examId is required");
     if (!configId) throw new Error("configId is required");
 
     const res = await authFetch(`${BASE_URL}/exams/${examId}/subjects/${configId}`, {
@@ -734,6 +734,52 @@ export const bulkUpdateExamSubjects = async (
     return data?.data || [];
   } catch (error) {
     console.error(`bulkUpdateExamSubjects error: ${error.message}`);
+    throw error;
+  }
+};
+/* =========================
+   GRADE DISTRIBUTION
+========================= */
+
+export const getGradeDistribution = async (examId, sectionId = null) => {
+  try {
+    if (!examId) {
+      throw new Error("examId is required");
+    }
+
+    const query = sectionId
+      ? `?sectionId=${sectionId}`
+      : "";
+
+    const res = await authFetch(
+      `${BASE_URL}/exams/${examId}/reports/grade-distribution${query}`,
+      {
+        method: "GET",
+      }
+    );
+
+    if (!res.ok) {
+      const msg = await extractError(
+        res,
+        `Failed to fetch grade distribution for examId: ${examId}`
+      );
+      throw new Error(msg);
+    }
+
+    const data = await res.json();
+
+    return (
+      data?.data || {
+        examId,
+        examName: "",
+        sectionId: null,
+        sectionName: "",
+        totalStudents: 0,
+        bands: [],
+      }
+    );
+  } catch (error) {
+    console.error(`getGradeDistribution error: ${error.message}`);
     throw error;
   }
 };
