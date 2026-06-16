@@ -33,6 +33,20 @@ const typeColors = {
 };
 const typeLabel = { BUS: "BUS", MINI_BUS: "MINI BUS", VAN: "VAN" };
 
+// Desktop table column definitions — keeps header + body cells in sync
+// and makes it easy to hide/show columns at specific breakpoints.
+const TABLE_COLUMNS = [
+  { label: "#",            extra: "px-4 sm:px-6 w-8" },
+  { label: "Vehicle",       extra: "px-3 sm:px-4" },
+  { label: "Type",          extra: "px-3 sm:px-4" },
+  { label: "Capacity",      extra: "px-3 sm:px-4" },
+  { label: "GPS",           extra: "px-3 sm:px-4" },
+  { label: "Make / Model",  extra: "px-3 sm:px-4 hidden 2xl:table-cell" },
+  { label: "Compliance",    extra: "px-3 sm:px-4" },
+  { label: "Status",        extra: "px-3 sm:px-4" },
+  { label: "Actions",       extra: "px-3 sm:px-4 text-center" },
+];
+
 // ─── Helpers ──────────────────────────────────────────────────────
 function fmtDate(dateStr) {
   if (!dateStr) return "—";
@@ -46,7 +60,7 @@ function isExpiringSoon(dateStr, days = 30) {
   return diff >= 0 && diff <= days;
 }
 
-// ─── Mobile Vehicle Card ──────────────────────────────────────────
+// ─── Mobile / Tablet Vehicle Card ──────────────────────────────────
 function VehicleCard({ v, capacityMap, onAction }) {
   const cap     = capacityMap[v.id] || {};
   const insDate = v.insuranceExpiryDate   || cap.insuranceExpiryDate;
@@ -264,7 +278,7 @@ export default function Vehicles() {
       <div className="min-h-screen bg-[#f0f2f8] font-sans">
 
         {/* ── Page Header ── */}
-        <div className="px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8 pb-2">
+        <div className="px-4 sm:px-6 lg:px-6 2xl:px-8 pt-6 sm:pt-8 pb-2">
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 flex items-center gap-2">
             <Bus className="w-6 h-6 sm:w-7 sm:h-7 text-blue-600 shrink-0" />
             Vehicle Management
@@ -275,7 +289,7 @@ export default function Vehicles() {
           </p>
         </div>
 
-        <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+        <div className="px-4 sm:px-6 lg:px-6 2xl:px-8 py-4 sm:py-6">
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
 
             {/* ── Table Header ── */}
@@ -315,7 +329,7 @@ export default function Vehicles() {
                   <select
                     value={typeFilter}
                     onChange={(e) => setTypeFilter(e.target.value)}
-                    className="appearance-none w-full pl-3 sm:pl-4 pr-8 py-2.5 text-sm border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-200 cursor-pointer sm:min-w-32.5"
+                    className="appearance-none w-full pl-3 sm:pl-4 pr-8 py-2.5 text-sm border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-200 cursor-pointer sm:min-w-[130px]"
                   >
                     {typeOptions.map((opt) => (
                       <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -328,7 +342,7 @@ export default function Vehicles() {
                   <select
                     value={statusFilter}
                     onChange={(e) => { setStatusFilter(e.target.value); setPage(0); }}
-                    className="appearance-none w-full pl-3 sm:pl-4 pr-8 py-2.5 text-sm border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-200 cursor-pointer sm:min-w-32.5"
+                    className="appearance-none w-full pl-3 sm:pl-4 pr-8 py-2.5 text-sm border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-200 cursor-pointer sm:min-w-[130px]"
                   >
                     {STATUS_OPTIONS.map((opt) => (
                       <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -339,8 +353,8 @@ export default function Vehicles() {
               </div>
             </div>
 
-            {/* ── Mobile Cards ── */}
-            <div className="block lg:hidden px-4 py-4 space-y-3">
+            {/* ── Mobile / Tablet / Small-Laptop Cards (below 1280px) ── */}
+            <div className="block xl:hidden px-4 py-4 space-y-3">
               {loading ? (
                 <table className="w-full"><tbody><ListLoader rows={4} avatar={false} /></tbody></table>
               ) : paginated.length === 0 ? (
@@ -354,17 +368,17 @@ export default function Vehicles() {
               ))}
             </div>
 
-            {/* ── Desktop Table ── */}
-            <div className="hidden lg:block overflow-x-auto">
+            {/* ── Desktop Table (1280px and above) ── */}
+            <div className="hidden xl:block overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-100">
-                    {["#", "Vehicle", "Type", "Capacity", "GPS", "Make / Model", "Insurance Expiry", "Fitness Expiry", "Status", "Actions"].map((h, i) => (
+                    {TABLE_COLUMNS.map((col, i) => (
                       <th
                         key={i}
-                        className={`${i === 0 ? "px-6 w-8" : i === 9 ? "px-4 text-center" : "px-4"} py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wider text-nowrap`}
+                        className={`${col.extra} py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider text-nowrap`}
                       >
-                        {h}
+                        {col.label}
                       </th>
                     ))}
                   </tr>
@@ -374,7 +388,7 @@ export default function Vehicles() {
                     <ListLoader rows={ITEMS_PER_PAGE} avatar={false} />
                   ) : paginated.length === 0 ? (
                     <tr>
-                      <td colSpan={10} className="text-center py-16 text-gray-400">
+                      <td colSpan={TABLE_COLUMNS.length} className="text-center py-16 text-gray-400">
                         <Bus className="w-10 h-10 mx-auto text-gray-200 mb-3" />
                         <p className="font-medium">No vehicles found</p>
                         <p className="text-xs mt-1">Try adjusting your search or filters</p>
@@ -390,39 +404,39 @@ export default function Vehicles() {
 
                     return (
                       <tr key={v.id} className="hover:bg-blue-50/30 transition-colors text-center">
-                        <td className="px-6 py-4 text-gray-400 text-xs font-medium">
+                        <td className="px-4 sm:px-6 py-3 text-gray-400 text-xs font-medium">
                           {currentPage * ITEMS_PER_PAGE + idx + 1}
                         </td>
-                        <td className="px-4 py-4">
+                        <td className="px-3 sm:px-4 py-3">
                           <p className="font-bold text-gray-900">{v.vehicleNumber}</p>
                           <p className="text-xs text-gray-400 mt-0.5">{v.makeModel} · {v.yearOfManufacture}</p>
                         </td>
-                        <td className="px-4 py-4">
+                        <td className="px-3 sm:px-4 py-3">
                           <span className={`text-xs font-semibold text-nowrap px-2.5 py-1 rounded-full ${typeColors[v.vehicleType] || "bg-gray-100 text-gray-600"}`}>
                             {typeLabel[v.vehicleType] || v.vehicleType}
                           </span>
                         </td>
-                        <td className="px-4 py-4 text-gray-700 font-semibold">{v.capacity}</td>
-                        <td className="px-4 py-4">
+                        <td className="px-3 sm:px-4 py-3 text-gray-700 font-semibold">{v.capacity}</td>
+                        <td className="px-3 sm:px-4 py-3">
                           {v.gpsEnabled
                             ? <span className="inline-flex items-center gap-1 text-green-600 text-xs font-semibold bg-green-50 px-2.5 py-1 rounded-full border border-green-100"><CheckCircle2 className="w-3.5 h-3.5" /> Yes</span>
                             : <span className="inline-flex items-center gap-1 text-red-500 text-xs font-semibold bg-red-50 px-2.5 py-1 rounded-full border border-red-100"><XCircle className="w-3.5 h-3.5" /> No</span>
                           }
                         </td>
-                        <td className="px-4 py-4 text-nowrap text-gray-600">{v.makeModel}</td>
-                        <td className="px-4 py-4">
-                          <span className={`inline-flex items-center gap-1 text-xs font-semibold ${insWarn ? "text-orange-600" : "text-gray-600"}`}>
-                            {insWarn && <AlertTriangle className="w-3.5 h-3.5 shrink-0" />}
-                            {fmtDate(insDate)}
-                          </span>
+                        <td className="px-3 sm:px-4 py-3 hidden 2xl:table-cell text-nowrap text-gray-600">{v.makeModel}</td>
+                        <td className="px-3 sm:px-4 py-3 text-left">
+                          <div className="flex flex-col gap-1 text-xs">
+                            <span className={`inline-flex items-center gap-1 font-semibold ${insWarn ? "text-orange-600" : "text-gray-600"}`}>
+                              {insWarn && <AlertTriangle className="w-3 h-3 shrink-0" />}
+                              <span className="text-gray-400 font-normal">Ins:</span> {fmtDate(insDate)}
+                            </span>
+                            <span className={`inline-flex items-center gap-1 font-semibold ${fitWarn ? "text-orange-600" : "text-gray-600"}`}>
+                              {fitWarn && <AlertTriangle className="w-3 h-3 shrink-0" />}
+                              <span className="text-gray-400 font-normal">Fit:</span> {fmtDate(fitDate)}
+                            </span>
+                          </div>
                         </td>
-                        <td className="px-4 py-4">
-                          <span className={`inline-flex items-center gap-1 text-xs font-semibold ${fitWarn ? "text-orange-600" : "text-gray-600"}`}>
-                            {fitWarn && <AlertTriangle className="w-3.5 h-3.5 shrink-0" />}
-                            {fmtDate(fitDate)}
-                          </span>
-                        </td>
-                        <td className="px-4 py-4">
+                        <td className="px-3 sm:px-4 py-3">
                           {isBusy ? (
                             <span className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full bg-gray-100 text-gray-400 border border-gray-200 animate-pulse">Wait…</span>
                           ) : v.status === "ACTIVE" ? (
@@ -435,7 +449,7 @@ export default function Vehicles() {
                             </span>
                           )}
                         </td>
-                        <td className="px-4 py-4 text-center">
+                        <td className="px-3 sm:px-4 py-3 text-center">
                           <ActionDropDownComp
                             onAction={(val) => handleAction(v, val)}
                             actionOptions={[

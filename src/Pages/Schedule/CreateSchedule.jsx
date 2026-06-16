@@ -1011,10 +1011,6 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
 
                     {/* Footer */}
                     <div className="bg-white border-t border-gray-200 px-3 sm:px-4 py-2 flex items-center gap-2 sm:gap-3 text-xs text-gray-400 flex-wrap">
-                        <span className="truncate">📋 {timetableInfo?.class} — {timetableInfo?.section}</span>
-                        <span className="hidden sm:inline">•</span>
-                        <span className="hidden sm:inline">📅 {timetableInfo?.year || timetableInfo?.academicYear}</span>
-                        <span className="hidden md:inline">•</span>
                         <span className="hidden md:inline">{workingDays.length} days · {timetableConfig?.periodsPerDay || periods.filter(p => !p.isBreak).length || 8} periods/day</span>
                         <span>•</span>
                         <span className={status === 'Draft' ? 'text-amber-600 font-medium' : 'text-blue-600 font-medium'}>{status}</span>

@@ -359,7 +359,7 @@ export default function LeavesReqInfoComponent({
                                 <div className="flex-1">
                                     <textarea
                                         disabled={isLocked}
-                                        value={UserData.currentEmpStatus !== 'PENDING' && remarks.trim() === '' ? "No review remark mentioned." : remarks}
+                                        value={userData.currEmpstatus !== 'PENDING' && remarks.trim() === '' ? "No review remark mentioned." : remarks}
                                         onChange={(e) => setRemarks(e.target.value)}
                                         placeholder={
                                             userData.reviewRemarks ||
