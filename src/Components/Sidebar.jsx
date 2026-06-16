@@ -20,7 +20,7 @@ const menuItems = [
   },
   {
     id: 'manageUsers', icon: UserCog, label: 'Manage Users', route: '/manageUsers',
-    roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'],
+    roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN','PRINCIPAL'],
   },
   {
     id: 'teachers', icon: Users, label: 'Teachers', route: '/teachers',
@@ -29,7 +29,7 @@ const menuItems = [
   // ── Academics (Exams + Subjects merged) ──────────────────────────────────
   {
     id: 'academics', icon: GraduationCap, label: 'Academics', route: '/subjectsmaster',
-    roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'TEACHER'],
+    roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN','PRINCIPAL' ,'TEACHER'],
     subItems: [
       { label: 'Subjects', route: '/subjectsmaster', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'] },
       { label: 'Exams', route: '/exams', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'PRINCIPAL', 'TEACHER'] },
@@ -104,7 +104,7 @@ const menuItems = [
   },
   {
     id: 'students', icon: Users, label: 'Students', route: '/students',
-    roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'],
+    roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN','PRINCIPAL'],
   },
   {
     id: 'leaves', icon: FileText, label: 'Leaves', route: '/leaves/applyLeaves',
@@ -157,7 +157,7 @@ const menuItems = [
   // },
   {
     id: 'FeeManagement', icon: IndianRupee, label: 'Fee Management', route: '/feemanagement',
-    roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'],
+    roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN','PRINCIPAL'],
     subItems: [
       { label: 'Fee Config', route: '/feemanagement/config', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'] },
       { label: 'Collection and History', route: '/feemanagement/collections', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'] },
