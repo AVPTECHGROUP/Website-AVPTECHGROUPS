@@ -1,3 +1,4 @@
+// Login_2.jsx
 import { Eye, EyeOff, LockKeyhole, Mail, ShieldCheck } from 'lucide-react'
 import React, { useContext, useState } from 'react'
 import Worker_3 from '../assets/Images/Worker_3.jpeg'
@@ -8,6 +9,8 @@ import SS_logo from "../assets/Images/ss_logo.png"
 import cstech from "../assets/Images/cstech.png"
 import { motion } from 'framer-motion'
 import SS_logo_3 from "../assets/Images/loginimageschool.png"
+import { getSchoolById } from '../Api/SchoolConfig'
+import { getCurrentAcademicYear } from '../Api/AcademicYear' 
 
 // ─── School Floating SVGs ─────────────────────────────────────────────────────
 const SchoolSVGs = {
@@ -73,7 +76,6 @@ const SchoolSVGs = {
   ),
 }
 
-// Only render floating icons on md+ (hidden on mobile to prevent clutter)
 const floatingItems = [
   { key: 'book',   top: '10%', left: '87%', size: 54, delay: 1.2, duration: 8   },
   { key: 'pencil', top: '70%', left: '4%',  size: 50, delay: 0.6, duration: 9   },
@@ -86,7 +88,6 @@ const floatingItems = [
 function FloatingSchoolBg() {
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {/* School logo — hidden on mobile to avoid overlapping the card */}
       <div className="absolute hidden md:block top-3 left-4 lg:top-3 lg:left-6 z-10">
         <img
           src={SS_logo_3}
@@ -94,8 +95,6 @@ function FloatingSchoolBg() {
           className="w-[130px] h-[130px] lg:w-[170px] lg:h-[170px] xl:w-[210px] xl:h-[210px] object-contain"
         />
       </div>
-
-      {/* Floating icons — only on md+ */}
       {floatingItems.map(({ key, top, left, size, delay, duration }) => (
         <motion.div
           key={key}
@@ -111,7 +110,6 @@ function FloatingSchoolBg() {
   )
 }
 
-// ─── Shiny Button ─────────────────────────────────────────────────────────────
 function ShinyButton({ children, disabled, isLoading }) {
   return (
     <>
@@ -165,7 +163,9 @@ const Login_2 = ({ onLoginSuccess }) => {
   const [isLoading,    setIsLoading]    = useState(false)
   const [loginError,   setLoginError]   = useState('')
   const navigate = useNavigate()
-  const { setUser, saveProfile } = useContext(UserContext)
+
+  // ── Pull saveToken + saveCurrentAcademicYear in addition to existing context values ──
+  const { setUser, saveProfile, saveSchool, saveToken, saveCurrentAcademicYear } = useContext(UserContext)
 
   const validateForm = () => {
     const allErrors = {}
@@ -192,19 +192,76 @@ const Login_2 = ({ onLoginSuccess }) => {
       const res = await loginAPI({ email, password })
       const token = res.data?.token || res.token
       const user  = res.data?.user  || res.user
-      const requireSchoolSelection =
+      const requiresSchoolSelection =
         res.data?.requiresSchoolSelection ?? res.requiresSchoolSelection ?? false
+
       if (!token) throw new Error('Invalid response from server. Please try again.')
-      localStorage.setItem('token', token)
-      localStorage.setItem('requireSchoolSelection', requireSchoolSelection)
+
+      // ── 1. Save token via saveToken (not localStorage directly) ──────────
+      //    saveToken does localStorage.setItem + setToken(token) which
+      //    triggers useEffect([token]) in UserContext → re-decodes JWT →
+      //    user.schoolId / userType are correct for FCM + academic year fetch
+      saveToken(token)
+
+      localStorage.setItem('requireSchoolSelection', requiresSchoolSelection)
+
       if (user) {
         localStorage.setItem('user', JSON.stringify(user))
-        setUser({ id: user.id, userType: user.roles?.[0], email: user.email, permissions: user.permissions })
+        setUser({
+          id:          user.id,
+          userType:    user.roles?.[0],
+          email:       user.email,
+          permissions: user.permissions,
+          schoolId:    user.schoolId ?? null,
+        })
         if (user.profile) saveProfile(user.profile)
       }
+
       if (onLoginSuccess) onLoginSuccess(token)
-      if (requireSchoolSelection) navigate('/superAdmin')
-      else navigate('/dashboard')
+
+      // ── 2. Route based on school selection requirement ────────────────────
+      if (requiresSchoolSelection) {
+        // SUPER_ADMIN / GLOBAL_ADMIN — let them pick a school
+        navigate('/superAdmin')
+      } else {
+        // ADMIN / PRINCIPAL / TEACHER etc.
+        // Use schoolId from login response to fetch & save school details
+        // so sidebar shows correct school info immediately on dashboard
+        const schoolId = user?.schoolId
+        if (schoolId) {
+          try {
+            const schoolRes = await getSchoolById(schoolId)
+            const s = schoolRes?.data
+            if (s) {
+              saveSchool({
+                id:         s.id,
+                schoolId:   s.id,
+                schoolName: s.name    || '',
+                schoolCode: s.code    || '',
+                logoUrl:    s.logoUrl || null,
+                board:      s.board   || '',
+                city:       s.city    || '',
+                status:     s.status  || '',
+              })
+            }
+          } catch (schoolErr) {
+            // Non-fatal — sidebar will show a fallback name
+            console.warn('Could not fetch school details after login:', schoolErr)
+          }
+
+          // ── Fetch & save current academic year (mirrors school fetch above) ──
+          try {
+            const ayRes = await getCurrentAcademicYear(schoolId)
+            const ay = ayRes?.data
+            if (ay) saveCurrentAcademicYear(ay)
+          } catch (ayErr) {
+            // Non-fatal — academic year can be refreshed later if missing
+            console.warn('Could not fetch current academic year after login:', ayErr)
+          }
+        }
+        navigate('/dashboard')
+      }
+
     } catch (err) {
       setLoginError(err.message || 'Invalid email or password. Please try again.')
     } finally {
@@ -212,7 +269,7 @@ const Login_2 = ({ onLoginSuccess }) => {
     }
   }
 
-  const inputBase  = 'w-full pl-10 pr-4 py-2.5 sm:py-3 rounded-xl text-sm text-black placeholder-[#8A9BB0] outline-none transition-all duration-200 focus:ring-2'
+  const inputBase   = 'w-full pl-10 pr-4 py-2.5 sm:py-3 rounded-xl text-sm text-black placeholder-[#8A9BB0] outline-none transition-all duration-200 focus:ring-2'
   const inputNormal = 'bg-blue-50 border border-blue-200 focus:ring-blue-400/40 focus:border-blue-400'
   const inputError  = 'bg-red-500/5 border-2 border-red-400/60 focus:ring-red-400/30'
 
@@ -225,7 +282,6 @@ const Login_2 = ({ onLoginSuccess }) => {
         input::-webkit-password-toggle-button { display: none !important; }
       `}</style>
 
-      {/* Dot grid */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
@@ -234,16 +290,13 @@ const Login_2 = ({ onLoginSuccess }) => {
         }}
       />
 
-      {/* Floating SVGs + school logo */}
       <FloatingSchoolBg />
 
-      {/* Ambient glows */}
       <div className="absolute top-1/4 left-1/4 w-72 h-72 rounded-full pointer-events-none"
         style={{ background: 'radial-gradient(circle, rgba(0,201,177,0.07) 0%, transparent 70%)' }} />
       <div className="absolute bottom-1/4 right-1/4 w-64 h-64 rounded-full pointer-events-none"
         style={{ background: 'radial-gradient(circle, rgba(245,166,35,0.06) 0%, transparent 70%)' }} />
 
-      {/* ── Page title — hidden on mobile (shown inside form instead) ── */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -255,7 +308,6 @@ const Login_2 = ({ onLoginSuccess }) => {
         </h1>
       </motion.div>
 
-      {/* ── Card ── */}
       <motion.div
         initial={{ opacity: 0, y: 30, scale: 0.97 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -269,7 +321,6 @@ const Login_2 = ({ onLoginSuccess }) => {
           boxShadow: '0 0 60px rgba(0,201,177,0.08), 0 4px 40px rgba(0,0,0,0.25)',
         }}
       >
-        {/* ── Left: image — hidden on mobile, shown on sm+ ── */}
         <div className="hidden sm:block sm:w-5/12 relative overflow-hidden">
           <img
             src={Worker_3}
@@ -277,15 +328,12 @@ const Login_2 = ({ onLoginSuccess }) => {
             className="w-full h-full object-cover object-center"
             style={{ minHeight: '100%' }}
           />
-          {/* Accent */}
           <div className="absolute top-0 left-0 w-16 h-1"
             style={{ background: 'linear-gradient(to right, #3b82f6, transparent)' }} />
         </div>
 
-        {/* ── Right: form panel ── */}
         <div className="flex-1 flex flex-col justify-center px-5 sm:px-7 md:px-8 py-7 sm:py-8 md:py-10 bg-white">
 
-          {/* Mobile: compact logo + portal name */}
           <div className="flex sm:hidden items-center gap-2.5 mb-5 pb-4 border-b border-gray-100">
             <img src={SS_logo} alt="Logo" className="w-9 h-9 object-contain shrink-0" />
             <div>
@@ -294,7 +342,6 @@ const Login_2 = ({ onLoginSuccess }) => {
             </div>
           </div>
 
-          {/* Form header */}
           <div className="mb-5 sm:mb-6">
             <h2 className="font-bold text-gray-800 text-xl sm:text-2xl mb-1"
               style={{ fontFamily: '"Syne", sans-serif' }}>
@@ -307,7 +354,6 @@ const Login_2 = ({ onLoginSuccess }) => {
             <div className="mt-2.5 h-0.5 w-10 rounded-full bg-blue-400" />
           </div>
 
-          {/* Error banner */}
           {loginError && (
             <motion.div
               initial={{ opacity: 0, y: -8 }}
@@ -326,7 +372,6 @@ const Login_2 = ({ onLoginSuccess }) => {
 
           <form onSubmit={onSubmitHandler} className="space-y-3.5 sm:space-y-4">
 
-            {/* Email */}
             <div>
               <label
                 className="block text-[10.5px] sm:text-xs font-semibold mb-1.5 tracking-widest uppercase text-gray-500"
@@ -353,7 +398,6 @@ const Login_2 = ({ onLoginSuccess }) => {
               )}
             </div>
 
-            {/* Password */}
             <div>
               <label
                 className="block text-[10.5px] sm:text-xs font-semibold mb-1.5 tracking-widest uppercase text-gray-500"
@@ -387,21 +431,18 @@ const Login_2 = ({ onLoginSuccess }) => {
               )}
             </div>
 
-            {/* Login Button */}
             <div className="pt-1">
               <ShinyButton disabled={isLoading} isLoading={isLoading}>
                 Login →
               </ShinyButton>
             </div>
 
-            {/* Divider */}
             <div className="flex items-center gap-3 py-0.5">
               <div className="flex-1 h-px" style={{ background: 'rgba(0,201,177,0.15)' }} />
               <ShieldCheck size={13} style={{ color: 'rgba(0,201,177,0.45)', flexShrink: 0 }} />
               <div className="flex-1 h-px" style={{ background: 'rgba(0,201,177,0.15)' }} />
             </div>
 
-            {/* Footer notes */}
             <div className="text-center space-y-1">
               <p className="text-[11px] sm:text-xs font-medium text-gray-500"
                 style={{ fontFamily: '"DM Sans", sans-serif' }}>
@@ -417,7 +458,6 @@ const Login_2 = ({ onLoginSuccess }) => {
         </div>
       </motion.div>
 
-      {/* ── Developed By ── */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -439,4 +479,4 @@ const Login_2 = ({ onLoginSuccess }) => {
   )
 }
 
-export default Login_2
+export default Login_2;

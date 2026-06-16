@@ -4,7 +4,8 @@ import {
   LayoutDashboard, Calendar, FileText, Users, LogOut,
   ChevronDown, UserCog, Package, Bus, Phone, Mail,
   Shield, ChevronUp, ArrowLeftRight, BookOpenText,
-  GraduationCap, SchoolIcon, MessageSquare
+  GraduationCap, SchoolIcon, MessageSquare,
+  IndianRupee
 } from 'lucide-react'
 import { useState, useEffect, useContext, useRef, useMemo } from 'react'
 import { UserContext } from '../ContextAPI/UserContext'
@@ -19,7 +20,7 @@ const menuItems = [
   },
   {
     id: 'manageUsers', icon: UserCog, label: 'Manage Users', route: '/manageUsers',
-    roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'],
+    roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN','PRINCIPAL'],
   },
   {
     id: 'teachers', icon: Users, label: 'Teachers', route: '/teachers',
@@ -28,12 +29,12 @@ const menuItems = [
   // ── Academics (With Nested Exams Dropdown) ──────────────────────────────────
   {
     id: 'academics', icon: GraduationCap, label: 'Academics', route: '/subjectsmaster',
-    roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'TEACHER'],
+    roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN','PRINCIPAL' ,'TEACHER'],
     subItems: [
-      { label: 'Subjects', route: '/subjectsmaster', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'] },
-      { label: 'Class & Sections', route: '/academics/classSections', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'] },
+      { label: 'Subjects', route: '/subjectsmaster', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN','PRINCIPAL'] },
+      { label: 'Class & Sections', route: '/academics/classSections', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN','PRINCIPAL'] },
       { label: 'HomeWork', route: '/homework', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'PRINCIPAL', 'TEACHER'] },
-      { label: 'Time Table', route: '/schedule', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN'] },
+      { label: 'Time Table', route: '/schedule', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN','PRINCIPAL'] },
       { 
         id: 'exams', 
         label: 'Exams', 
@@ -41,10 +42,10 @@ const menuItems = [
         roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'PRINCIPAL', 'TEACHER'],
         childItems: [
           { label: 'Exam Overview', route: '/exams', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'PRINCIPAL', 'TEACHER'] },
-          { label: 'Marks Entry', route: '/exams/marksEntry', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN'] },
-          { label: 'Report Cards', route: '/exams/reportCard', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN'] },
-          { label: 'Analytics', route: '/exams/analytics', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN'] },
-          { label: 'Exam Configuration', route: '/exams/examConfig', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN'] },
+          { label: 'Marks Entry', route: '/exams/marksEntry', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN','PRINCIPAL'] },
+          { label: 'Report Cards', route: '/exams/reportCard', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN','PRINCIPAL'] },
+          { label: 'Analytics', route: '/exams/analytics', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN','PRINCIPAL'] },
+          { label: 'Exam Configuration', route: '/exams/examConfig', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN','PRINCIPAL'] },
         ]
       },
     ]
@@ -57,36 +58,53 @@ const menuItems = [
     route: '/communication/circulars',
     roles: ['ADMIN', 'PRINCIPAL', 'TEACHER', 'GLOBAL_ADMIN','SUPER_ADMIN'],
     subItems: [
-      { label: 'Circulars', route: '/communication/circulars', roles: ['ADMIN', 'PRINCIPAL', 'TEACHER', 'GLOBAL_ADMIN','SUPER_ADMIN'] },
-      { label: 'School Events', route: '/communication/events', roles: ['ADMIN', 'PRINCIPAL', 'TEACHER', 'GLOBAL_ADMIN','SUPER_ADMIN'] },
-      { label: 'Approval Queue', route: '/communication/approval', roles: ['ADMIN', 'PRINCIPAL', 'GLOBAL_ADMIN','SUPER_ADMIN'], badge: 3 },
-      { label: 'Notifications', route: '/communication/notifications', roles: ['ADMIN', 'PRINCIPAL', 'TEACHER', 'GLOBAL_ADMIN','SUPER_ADMIN'], badge: 7 },
-      { label: 'Device Tokens', route: '/communication/device-token', roles: ['ADMIN', 'PRINCIPAL', 'GLOBAL_ADMIN','SUPER_ADMIN'] },
+      {
+        label: 'Circulars',
+        route: '/communication/circulars',
+        roles: ['ADMIN', 'PRINCIPAL', 'TEACHER', 'GLOBAL_ADMIN','SUPER_ADMIN'],
+      },
+      {
+        label: 'School Events',
+        route: '/communication/events',
+        roles: ['ADMIN', 'PRINCIPAL', 'TEACHER', 'GLOBAL_ADMIN','SUPER_ADMIN'],
+      },
+      {
+        label: 'Approval Queue',
+        route: '/communication/approval',
+        roles: ['ADMIN', 'PRINCIPAL', 'GLOBAL_ADMIN','SUPER_ADMIN'],
+        badge: 3,
+      },
+      {
+        label: 'Notifications',
+        route: '/communication/notifications',
+        roles: ['ADMIN', 'PRINCIPAL', 'TEACHER', 'GLOBAL_ADMIN','SUPER_ADMIN'],
+        badge: 7,
+      },
     ],
   },
   {
     id: 'attendance', icon: Calendar, label: 'Attendance', route: '/attendance',
     roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'TEACHER', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST'],
     subItems: [
-      { label: 'Attendance Overview', route: '/attendance', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'TEACHER', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST'] },
-      { label: 'Staff Enrollment', route: '/attendance/staffImgReg', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN'] },
+      { label: 'Attendance Overview', route: '/attendance', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'TEACHER', 'PRINCIPAL'] },
+      { label: 'Staff Enrollment', route: '/attendance/staffImgReg', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN','PRINCIPAL'] },
       { label: 'Staff Attendance', route: '/attendance/markUserAttendance', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'TEACHER', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST'] },
-      { label: 'Student Enrollment', route: '/attendance/studentImgReg', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'TEACHER'] },
-      { label: 'Student Attendance', route: '/attendance/studentAttendance', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'TEACHER'] },
+      { label: 'Student Enrollment', route: '/attendance/studentImgReg', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'TEACHER','PRINCIPAL'] },
+      { label: 'Student Attendance', route: '/attendance/studentAttendance', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'TEACHER','PRINCIPAL'] },
     ]
   },
   {
     id: 'students', icon: Users, label: 'Students', route: '/students',
-    roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'],
+    roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN','PRINCIPAL'],
   },
   {
     id: 'leaves', icon: FileText, label: 'Leaves', route: '/leaves/applyLeaves',
     roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'TEACHER', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST'],
     subItems: [
-      { label: 'Manage Leave', route: '/leaves', roles: ['ADMIN', 'TEACHER', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST'] },
+      { label: 'Manage Leave', route: '/leaves', roles: ['ADMIN', 'TEACHER', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'PRINCIPAL'] },
       { label: 'My Leaves', route: '/leaves/myLeaves', roles: ['ADMIN', 'TEACHER', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST'] },
-      { label: 'Holiday Management', route: '/leaves/manageHolidays', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'] },
-      { label: 'Leave Config', route: '/leaves/leaveConfig', roles: ['GLOBAL_ADMIN', 'SUPER_ADMIN', 'PRINCIPAL'] },
+      { label: 'Holiday Management', route: '/leaves/manageHolidays', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN','PRINCIPAL'] },
+      { label: 'Leave Config', route: '/leaves/leaveConfig', roles: ['GLOBAL_ADMIN', 'SUPER_ADMIN', 'PRINCIPAL','ADMIN'] },
     ]
   },
   {
@@ -109,23 +127,23 @@ const menuItems = [
     id: 'transport', icon: Bus, label: 'Transport', route: '/route',
     roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'PRINCIPAL'],
     subItems: [
-      { label: 'Vehicles', route: '/route/vehicles', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'] },
-      { label: 'Driver & Attendants', route: '/route/Driver&Attendants', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'] },
-      { label: 'Routes', route: '/route/routes_management', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'] },
-      { label: 'Student Allocations', route: '/route/studentAllocations', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'] },
-      { label: 'Fee Plans', route: '/route/feePlans', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'] },
-      { label: 'Reports', route: '/route/reports', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'] },
+      { label: 'Vehicles', route: '/route/vehicles', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN','PRINCIPAL'] },
+      { label: 'Driver & Attendants', route: '/route/Driver&Attendants', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN','PRINCIPAL'] },
+      { label: 'Routes', route: '/route/routes_management', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN','PRINCIPAL'] },
+      { label: 'Student Allocations', route: '/route/studentAllocations', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN','PRINCIPAL'] },
+      { label: 'Fee Plans', route: '/route/feePlans', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN','PRINCIPAL'] },
+      { label: 'Reports', route: '/route/reports', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN','PRINCIPAL'] },
     ]
   },
   {
     id: 'academicYear', icon: BookOpenText, label: 'Academic Years', route: '/academicYear', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN']
   },
   {
-    id: 'FeeManagement', icon: Shield, label: 'Fee Management', route: '/feemanagement',
-    roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'],
+    id: 'FeeManagement', icon: IndianRupee, label: 'Fee Management', route: '/feemanagement',
+    roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN','PRINCIPAL','ACCOUNTANT'],
     subItems: [
-      { label: 'Fee Config', route: '/feemanagement/config', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'] },
-      { label: 'Collection and History', route: '/feemanagement/collections', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'] },
+      { label: 'Fee Config', route: '/feemanagement/config', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN','PRINCIPAL','ACCOUNTANT'] },
+      { label: 'Collection and History', route: '/feemanagement/collections', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN','PRINCIPAL','ACCOUNTANT'] },
     ]
   },
   {
@@ -153,7 +171,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
   const navigate = useNavigate()
   const location = useLocation()
   const [openDropdowns, setOpenDropdowns] = useState({})
-  const [openSubDropdowns, setOpenSubDropdowns] = useState({}) // New hook to manage level-3 options
+  const [openSubDropdowns, setOpenSubDropdowns] = useState({}) 
   const [profileOpen, setProfileOpen] = useState(false)
   const profileRef = useRef(null)
 
@@ -199,7 +217,6 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
     navigate('/superAdmin')
   }
 
-  // Optimized via useMemo to handle role processing accurately across 3 tiers
   const filteredMenuItems = useMemo(() => {
     return menuItems
       .filter(item => item.roles.includes(userRole))
@@ -235,7 +252,6 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
     return () => document.removeEventListener('mousedown', handleOutsideClick)
   }, [])
 
-  // Keeps nested dropdown layouts accurately opened on routing matches
   useEffect(() => {
     if (location.pathname === '/login') return
     const newDropdowns = {}
@@ -373,7 +389,6 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
           const hasSubItems = item.subItems && item.subItems.length > 0
           const isOpen = openDropdowns[item.id]
 
-          // Compute exact dynamic maximum height to let animations stay flawless when tier 3 opens up
           let calculatedHeight = item.subItems ? item.subItems.length * 45 : 0
           if (hasSubItems && isOpen) {
             item.subItems.forEach(sub => {
