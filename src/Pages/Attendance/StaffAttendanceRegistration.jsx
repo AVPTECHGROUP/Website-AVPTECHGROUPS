@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import Webcam from "react-webcam"; // npm install react-webcam
+import Webcam from "react-webcam";
 import {
     Users,
     UserCheck,
@@ -27,7 +27,6 @@ import {
     enrollUserFaces,
     removeEnrollment,
 } from "../../Api/AttendanceApi";
-import { getAllUsers } from "../../Api/userManagementAPI";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const AVATAR_COLORS = [
@@ -116,7 +115,7 @@ function ReEnrollModal({ staff, onConfirm, onCancel, loading }) {
                     </div>
                 </div>
                 <div className="bg-gray-50 rounded-xl p-3 mb-5 border border-gray-100">
-                    <p className="text-sm font-semibold text-gray-700">{staff?.name || staff?.fullName}</p>
+                    <p className="text-sm font-semibold text-gray-700">{staff?.name}</p>
                     <p className="text-xs text-gray-400">{staff?.code} · {staff?.roles?.[0]}</p>
                 </div>
                 <p className="text-sm text-gray-600 mb-5 leading-relaxed">
@@ -137,7 +136,7 @@ function ReEnrollModal({ staff, onConfirm, onCancel, loading }) {
 
 // ─── PhotoCaptureModal ────────────────────────────────────────────────────────
 function PhotoCaptureModal({ slotIndex, onCapture, onClose }) {
-    const [mode, setMode] = useState(null); // null | "camera" | "upload"
+    const [mode, setMode] = useState(null);
     const [cameraFacing, setCameraFacing] = useState("user");
     const [cameraReady, setCameraReady] = useState(false);
     const [capturedPreview, setCapturedPreview] = useState(null);
@@ -177,8 +176,6 @@ function PhotoCaptureModal({ slotIndex, onCapture, onClose }) {
             onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
         >
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden border border-gray-200">
-
-                {/* Header */}
                 <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
                     <div>
                         <h3 className="text-sm font-bold text-gray-900">
@@ -188,18 +185,13 @@ function PhotoCaptureModal({ slotIndex, onCapture, onClose }) {
                             {mode === "camera" ? "Position face within the oval guide" : "Choose how to add this photo"}
                         </p>
                     </div>
-                    <button
-                        onClick={onClose}
-                        className="cursor-pointer w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
-                    >
+                    <button onClick={onClose} className="cursor-pointer w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors">
                         <X className="w-3.5 h-3.5 text-gray-600" />
                     </button>
                 </div>
 
-                {/* ── Option Selection (default view) ── */}
                 {!mode && (
                     <div className="p-5 space-y-3">
-                        {/* Live Camera option */}
                         <button
                             onClick={() => setMode("camera")}
                             className="cursor-pointer w-full flex items-center gap-4 p-4 rounded-xl border-2 border-blue-100 bg-blue-50 hover:border-blue-400 hover:bg-blue-100 transition-all group text-left"
@@ -212,13 +204,8 @@ function PhotoCaptureModal({ slotIndex, onCapture, onClose }) {
                                 <p className="text-xs text-blue-500 mt-0.5">Click photo in real-time using webcam</p>
                             </div>
                         </button>
-
-                        {/* Upload from device option */}
                         <button
-                            onClick={() => {
-                                setMode("upload");
-                                setTimeout(() => fileInputRef.current?.click(), 80);
-                            }}
+                            onClick={() => { setMode("upload"); setTimeout(() => fileInputRef.current?.click(), 80); }}
                             className="cursor-pointer w-full flex items-center gap-4 p-4 rounded-xl border-2 border-gray-100 bg-gray-50 hover:border-gray-300 hover:bg-gray-100 transition-all group text-left"
                         >
                             <div className="w-11 h-11 rounded-full bg-gray-700 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
@@ -229,99 +216,62 @@ function PhotoCaptureModal({ slotIndex, onCapture, onClose }) {
                                 <p className="text-xs text-gray-400 mt-0.5">Select an existing photo from your gallery</p>
                             </div>
                         </button>
-
                         <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
                     </div>
                 )}
 
-                {/* ── Live Camera Mode ── */}
                 {mode === "camera" && (
                     <div className="p-4">
                         {capturedPreview ? (
-                            // Preview of captured photo — confirm or retake
                             <div>
                                 <div className="rounded-xl overflow-hidden mb-3 bg-black" style={{ aspectRatio: "4/3" }}>
-                                    <img
-                                        src={capturedPreview.src}
-                                        alt="Captured"
-                                        className="w-full h-full object-cover"
-                                        style={{ transform: cameraFacing === "user" ? "scaleX(-1)" : "none" }}
-                                    />
+                                    <img src={capturedPreview.src} alt="Captured" className="w-full h-full object-cover"
+                                        style={{ transform: cameraFacing === "user" ? "scaleX(-1)" : "none" }} />
                                 </div>
                                 <p className="text-xs text-center text-gray-500 mb-3">Photo looks good? Confirm to use it.</p>
                                 <div className="flex gap-2">
-                                    <button
-                                        onClick={() => setCapturedPreview(null)}
-                                        className="cursor-pointer flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 text-xs font-semibold transition-colors"
-                                    >
+                                    <button onClick={() => setCapturedPreview(null)} className="cursor-pointer flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 text-xs font-semibold transition-colors">
                                         <RefreshCw className="w-3.5 h-3.5" /> Retake
                                     </button>
-                                    <button
-                                        onClick={handleConfirmCapture}
-                                        className="cursor-pointer flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition-colors"
-                                    >
+                                    <button onClick={handleConfirmCapture} className="cursor-pointer flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition-colors">
                                         <CheckCircle className="w-3.5 h-3.5" /> Use This Photo
                                     </button>
                                 </div>
                             </div>
                         ) : (
-                            // Live webcam view
                             <div>
                                 <div className="rounded-xl overflow-hidden mb-3 bg-gray-900 relative" style={{ aspectRatio: "4/3" }}>
-                                    <Webcam
-                                        ref={webcamRef}
-                                        audio={false}
-                                        screenshotFormat="image/jpeg"
-                                        screenshotQuality={0.92}
+                                    <Webcam ref={webcamRef} audio={false} screenshotFormat="image/jpeg" screenshotQuality={0.92}
                                         videoConstraints={{ facingMode: cameraFacing, width: 640, height: 480 }}
-                                        onUserMedia={() => setCameraReady(true)}
-                                        onUserMediaError={() => setCameraReady(false)}
-                                        className="w-full h-full object-cover"
-                                        style={{ transform: cameraFacing === "user" ? "scaleX(-1)" : "none" }}
-                                    />
-                                    {/* Loading overlay */}
+                                        onUserMedia={() => setCameraReady(true)} onUserMediaError={() => setCameraReady(false)}
+                                        className="w-full h-full object-cover" style={{ transform: cameraFacing === "user" ? "scaleX(-1)" : "none" }} />
                                     {!cameraReady && (
                                         <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-900">
                                             <RefreshCw className="w-6 h-6 text-gray-400 animate-spin mb-2" />
                                             <p className="text-xs text-gray-400">Starting camera...</p>
                                         </div>
                                     )}
-                                    {/* Face guide oval */}
                                     {cameraReady && (
                                         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                            <div className="border-2 border-white/70 border-dashed rounded-full"
-                                                style={{ width: "42%", height: "68%" }} />
+                                            <div className="border-2 border-white/70 border-dashed rounded-full" style={{ width: "42%", height: "68%" }} />
                                         </div>
                                     )}
-                                    {/* Slot label badge */}
                                     <div className="absolute top-2 left-2 bg-black/50 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
                                         F{slotIndex + 1}
                                     </div>
                                 </div>
-
-                                {/* Flip camera */}
-                                <button
-                                    onClick={() => { setCameraFacing((f) => f === "user" ? "environment" : "user"); }}
-                                    className="cursor-pointer flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-600 text-xs font-medium transition-colors mb-3"
-                                >
+                                <button onClick={() => { setCameraFacing((f) => f === "user" ? "environment" : "user"); }}
+                                    className="cursor-pointer flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-600 text-xs font-medium transition-colors mb-3">
                                     <RefreshCw className="w-3 h-3" />
                                     {cameraFacing === "user" ? "Switch to Back Camera" : "Switch to Front Camera"}
                                 </button>
-
-                                {/* Click photo button */}
-                                <button
-                                    onClick={handleCapture}
-                                    disabled={!cameraReady}
+                                <button onClick={handleCapture} disabled={!cameraReady}
                                     className={`cursor-pointer w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all
-                                        ${cameraReady ? "bg-blue-600 hover:bg-blue-700 text-white shadow-sm" : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}
-                                >
+                                        ${cameraReady ? "bg-blue-600 hover:bg-blue-700 text-white shadow-sm" : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}>
                                     <Camera className="w-4 h-4" /> Click Photo
                                 </button>
-
-                                <button
-                                    onClick={() => { setMode(null); setCameraReady(false); }}
-                                    className="cursor-pointer w-full mt-2 py-1.5 text-xs text-gray-400 hover:text-gray-600 transition-colors"
-                                >
+                                <button onClick={() => { setMode(null); setCameraReady(false); }}
+                                    className="cursor-pointer w-full mt-2 py-1.5 text-xs text-gray-400 hover:text-gray-600 transition-colors">
                                     ← Back to options
                                 </button>
                             </div>
@@ -329,7 +279,6 @@ function PhotoCaptureModal({ slotIndex, onCapture, onClose }) {
                     </div>
                 )}
 
-                {/* ── Upload Mode (shows file picker prompt) ── */}
                 {mode === "upload" && (
                     <div className="p-5">
                         <div className="flex flex-col items-center justify-center py-6 gap-3">
@@ -340,16 +289,12 @@ function PhotoCaptureModal({ slotIndex, onCapture, onClose }) {
                             <p className="text-xs text-gray-400 text-center">If it didn't open, tap Browse Files below</p>
                         </div>
                         <div className="flex gap-2">
-                            <button
-                                onClick={() => fileInputRef.current?.click()}
-                                className="cursor-pointer flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold transition-colors"
-                            >
+                            <button onClick={() => fileInputRef.current?.click()}
+                                className="cursor-pointer flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold transition-colors">
                                 Browse Files
                             </button>
-                            <button
-                                onClick={() => setMode(null)}
-                                className="cursor-pointer flex-1 py-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-600 text-xs font-semibold transition-colors"
-                            >
+                            <button onClick={() => setMode(null)}
+                                className="cursor-pointer flex-1 py-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-600 text-xs font-semibold transition-colors">
                                 Back
                             </button>
                         </div>
@@ -361,7 +306,6 @@ function PhotoCaptureModal({ slotIndex, onCapture, onClose }) {
     );
 }
 
-// ─── PhotoSlot — updated to open PhotoCaptureModal ───────────────────────────
 function PhotoSlot({ index, file, onAdd, onRemove }) {
     const [showModal, setShowModal] = useState(false);
     const preview = file ? URL.createObjectURL(file) : null;
@@ -369,19 +313,13 @@ function PhotoSlot({ index, file, onAdd, onRemove }) {
     return (
         <>
             {showModal && (
-                <PhotoCaptureModal
-                    slotIndex={index}
-                    onCapture={onAdd}
-                    onClose={() => setShowModal(false)}
-                />
+                <PhotoCaptureModal slotIndex={index} onCapture={onAdd} onClose={() => setShowModal(false)} />
             )}
             <div className="relative">
                 <div
                     onClick={() => !file && setShowModal(true)}
                     className={`w-full aspect-square rounded-xl border-2 flex flex-col items-center justify-center transition-all overflow-hidden
-                        ${file
-                            ? "border-emerald-400 bg-emerald-50"
-                            : "border-dashed border-gray-300 bg-gray-50 hover:border-blue-400 hover:bg-blue-50 cursor-pointer"}`}
+                        ${file ? "border-emerald-400 bg-emerald-50" : "border-dashed border-gray-300 bg-gray-50 hover:border-blue-400 hover:bg-blue-50 cursor-pointer"}`}
                 >
                     {file
                         ? <img src={preview} alt={`F${index + 1}`} className="w-full h-full object-cover" />
@@ -407,7 +345,7 @@ function Toast({ message, type, onClose }) {
     useEffect(() => { const t = setTimeout(onClose, 3500); return () => clearTimeout(t); }, [onClose]);
     return (
         <div className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg text-sm font-semibold
-      ${type === "success" ? "bg-emerald-600 text-white" : "bg-red-600 text-white"}`}>
+            ${type === "success" ? "bg-emerald-600 text-white" : "bg-red-600 text-white"}`}>
             {type === "success" ? <CheckCircle className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
             {message}
             <button onClick={onClose} className="cursor-pointer ml-2 opacity-70 hover:opacity-100"><X className="w-3.5 h-3.5" /></button>
@@ -421,19 +359,19 @@ export default function StaffAttendanceRegistration() {
     const [stats, setStats] = useState(null);
     const [statsLoading, setStatsLoading] = useState(true);
 
-    const [allUsers, setAllUsers] = useState([]);
-    const [usersLoading, setUsersLoading] = useState(true);
+    // ── Single source of truth: all staff from enrollment API (size=500, no filter) ──
+    // Used for the left panel list
+    const [allStaff, setAllStaff] = useState([]);
+    const [allStaffLoading, setAllStaffLoading] = useState(true);
     const [userSearch, setUserSearch] = useState("");
 
+    // enrollmentMap: userId → enrollment record (built from allStaff)
     const [enrollmentMap, setEnrollmentMap] = useState({});
 
-    const [staffList, setStaffList] = useState([]);
-    const [staffLoading, setStaffLoading] = useState(true);
     const [tablePage, setTablePage] = useState(0);
-    const [tablePageSize] = useState(10);
-    const [tableTotalPages, setTableTotalPages] = useState(1);
     const [filterStatus, setFilterStatus] = useState("");
 
+    // ── Upload / Enroll state ──
     const [selectedStaff, setSelectedStaff] = useState(null);
     const [photos, setPhotos] = useState(Array(5).fill(null));
     const [activeStep, setActiveStep] = useState(1);
@@ -445,20 +383,27 @@ export default function StaffAttendanceRegistration() {
 
     const uploadPanelRef = useRef(null);
 
-    const buildEnrollmentMap = useCallback(async () => {
+    // ── Fetch all staff (left panel) — size=500, no status filter ──
+    // This is the ONLY call that fetches the full list; enrollmentMap is built from this.
+    const fetchAllStaff = useCallback(async () => {
         try {
+            setAllStaffLoading(true);
             const res = await getStaffEnrollment(0, 500, "id", undefined);
             const records = res.data || [];
+            setAllStaff(records);
+
+            // Build enrollmentMap from same response — no extra API call needed
             const map = {};
             records.forEach((r) => { map[r.userId] = r; });
             setEnrollmentMap(map);
-            return map;
         } catch (e) {
-            console.error("buildEnrollmentMap failed:", e);
-            return {};
+            console.error("fetchAllStaff error:", e);
+        } finally {
+            setAllStaffLoading(false);
         }
     }, []);
 
+    // ── Fetch stats ──
     const fetchStats = useCallback(async () => {
         try {
             setStatsLoading(true);
@@ -468,38 +413,15 @@ export default function StaffAttendanceRegistration() {
         finally { setStatsLoading(false); }
     }, []);
 
-    const fetchAllUsers = useCallback(async () => {
-        try {
-            setUsersLoading(true);
-            const res = await getAllUsers(0, 100, "id");
-            const users = (res.data || []).filter(
-                (u) => !u.roles?.includes("STUDENT") && !u.roles?.includes("PARENT")
-            );
-            setAllUsers(users);
-        } catch (e) { console.error(e); }
-        finally { setUsersLoading(false); }
-    }, []);
-
-    const fetchStaffTable = useCallback(async (page = 0, status = "") => {
-        try {
-            setStaffLoading(true);
-            const res = await getStaffEnrollment(page, tablePageSize, "id", status || undefined);
-            setStaffList(res.data || []);
-            setTableTotalPages(res.pagination?.totalPages || 1);
-        } catch (e) { console.error(e); }
-        finally { setStaffLoading(false); }
-    }, [tablePageSize]);
-
+    // ── On mount: fetch stats + all staff (left panel + map) ──
+    // fetchStaffTable is triggered separately by its own useEffect below.
     useEffect(() => {
         fetchStats();
-        fetchAllUsers();
-        buildEnrollmentMap();
-    }, [fetchStats, fetchAllUsers, buildEnrollmentMap]);
+        fetchAllStaff();
+    }, [fetchStats, fetchAllStaff]);
 
-    useEffect(() => {
-        fetchStaffTable(tablePage, filterStatus);
-    }, [fetchStaffTable, tablePage, filterStatus]);
 
+    // ── Keep selectedStaff in sync when enrollmentMap updates ──
     useEffect(() => {
         if (!selectedStaff?.userId) return;
         const live = enrollmentMap[selectedStaff.userId];
@@ -518,12 +440,20 @@ export default function StaffAttendanceRegistration() {
         });
     }, [enrollmentMap]); // eslint-disable-line react-hooks/exhaustive-deps
 
+    // ── Refresh everything after enroll / re-enroll ──
     const refreshAll = useCallback(async (targetUserId) => {
-        const [freshMap] = await Promise.all([
-            buildEnrollmentMap(),
-            fetchStats(),
-            fetchStaffTable(tablePage, filterStatus),
+        // Run stats + full-list refresh in parallel; table refreshes from its own effect
+        const [freshAllStaffRes] = await Promise.all([
+            getStaffEnrollment(0, 500, "id"),
+            fetchStats()
         ]);
+
+        const freshRecords = freshAllStaffRes.data || [];
+        const freshMap = {};
+        freshRecords.forEach((r) => { freshMap[r.userId] = r; });
+        setAllStaff(freshRecords);
+        setEnrollmentMap(freshMap);
+
         if (targetUserId && freshMap[targetUserId]) {
             const live = freshMap[targetUserId];
             setSelectedStaff((prev) =>
@@ -532,40 +462,36 @@ export default function StaffAttendanceRegistration() {
                     : prev
             );
         }
-    }, [buildEnrollmentMap, fetchStats, fetchStaffTable, tablePage, filterStatus]);
+    }, [fetchStats]);
 
     const showToast = (message, type = "success") => setToast({ message, type });
 
     const scrollToUpload = () =>
         setTimeout(() => uploadPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
 
-    const handleSelectStaff = (user) => {
-        const name = user.fullName || `${user.firstName || ""} ${user.lastName || ""}`.trim() || "Unknown";
-        const role = user.roles?.[0] || "TEACHER";
-        const code = user.employeeCode || "—";
-        const live = enrollmentMap[user.id];
-
+    // ── Select from left panel (uses allStaff records directly) ──
+    const handleSelectStaff = (record) => {
         setSelectedStaff({
-            userId: user.id,
-            name,
-            code,
-            roles: user.roles,
-            userType: role,
-            enrollmentStatus: live?.enrollmentStatus ?? "NOT_ENROLLED",
-            photosCount: live?.photosCount ?? 0,
-            fullyEnrolled: live?.fullyEnrolled ?? false,
+            userId: record.userId,
+            name: record.name,
+            code: record.code || "—",
+            roles: record.roles,
+            userType: record.userType || record.roles?.[0] || "TEACHER",
+            enrollmentStatus: record.enrollmentStatus,
+            photosCount: record.photosCount || 0,
+            fullyEnrolled: record.fullyEnrolled,
         });
-
         setPhotos(Array(5).fill(null));
         setActiveStep(2);
         scrollToUpload();
     };
 
+    // ── Select from table row ──
     const handleTableEnroll = (staff) => {
         setSelectedStaff({
             userId: staff.userId,
             name: staff.name,
-            code: staff.code,
+            code: staff.code || "—",
             roles: staff.roles,
             userType: staff.userType || staff.roles?.[0] || "TEACHER",
             enrollmentStatus: staff.enrollmentStatus,
@@ -630,6 +556,7 @@ export default function StaffAttendanceRegistration() {
             setActiveStep(4);
             setPhotos(Array(5).fill(null));
 
+            // Optimistically update selectedStaff
             setSelectedStaff((prev) => ({
                 ...prev,
                 enrollmentStatus: "ENROLLED",
@@ -647,13 +574,30 @@ export default function StaffAttendanceRegistration() {
 
     const uploadedCount = photos.filter(Boolean).length;
 
-    const filteredUsers = allUsers.filter((u) => {
-        const name = u.fullName || `${u.firstName || ""} ${u.lastName || ""}`.trim();
-        const code = u.employeeCode || "";
+    // ── Filter left panel list client-side (no extra API call) ──
+    const filteredStaff = allStaff.filter((r) => {
         const q = userSearch.toLowerCase();
-        return name.toLowerCase().includes(q) || code.toLowerCase().includes(q);
+        return (
+            (r.name || "").toLowerCase().includes(q) ||
+            (r.code || "").toLowerCase().includes(q)
+        );
     });
 
+    const tableFilteredData = allStaff.filter((staff) => {
+        if (!filterStatus) return true;
+        return staff.enrollmentStatus === filterStatus;
+    });
+    const tablePageSize = 10;
+
+    const paginatedStaff = tableFilteredData.slice(
+        tablePage * tablePageSize,
+        (tablePage + 1) * tablePageSize
+    );
+
+    const tableTotalPages = Math.max(
+        1,
+        Math.ceil(tableFilteredData.length / tablePageSize)
+    );
     return (
         <div className="min-h-screen bg-[#EBF0F5] font-sans">
             {reEnrollTarget && (
@@ -678,10 +622,10 @@ export default function StaffAttendanceRegistration() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     {statsLoading ? Array(4).fill(0).map((_, i) => <CardLoader key={i} />) : (
                         <>
-                            <CardComponent IconName={Shield} keyName="Total Staff Registered" val={`${stats?.totalStaff ?? 0} `} iconTxColor="text-blue-600" iconBgColor="bg-blue-100" />
+                            <CardComponent IconName={Shield} keyName="Total Staff Registered" val={`${stats?.totalStaff ?? 0}`} iconTxColor="text-blue-600" iconBgColor="bg-blue-100" />
                             <CardComponent IconName={UserCheck} keyName="Staff Enrolled" val={`${stats?.staffEnrolled ?? 0} / ${stats?.totalStaff ?? 0}`} iconTxColor="text-emerald-600" iconBgColor="bg-emerald-100" />
-                            <CardComponent IconName={UserX} keyName="Not Enrolled" val={`${(stats?.totalStaff ?? 0) - (stats?.staffEnrolled ?? 0)} `} iconTxColor="text-red-500" iconBgColor="bg-red-100" />
-                            <CardComponent IconName={Users} keyName="Enrollment completed" val={`${stats?.enrollmentPercentage ?? 0}% `} iconTxColor="text-purple-600" iconBgColor="bg-purple-100" />
+                            <CardComponent IconName={UserX} keyName="Not Enrolled" val={`${(stats?.totalStaff ?? 0) - (stats?.staffEnrolled ?? 0)}`} iconTxColor="text-red-500" iconBgColor="bg-red-100" />
+                            <CardComponent IconName={Users} keyName="Enrollment Completed" val={`${stats?.enrollmentPercentage ?? 0}%`} iconTxColor="text-purple-600" iconBgColor="bg-purple-100" />
                         </>
                     )}
                 </div>
@@ -689,11 +633,14 @@ export default function StaffAttendanceRegistration() {
                 {/* ── Staff List + Table ── */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-                    {/* Left: getAllUsers list */}
+                    {/* Left: full staff list from enrollment API */}
                     <div className="lg:col-span-1">
                         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 h-full">
                             <h2 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
                                 <Users className="w-4 h-4 text-blue-500" /> Select Staff Member
+                                {!allStaffLoading && (
+                                    <span className="ml-auto text-xs font-normal text-gray-400">{allStaff.length} staff</span>
+                                )}
                             </h2>
                             <div className="relative mb-3">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -702,34 +649,34 @@ export default function StaffAttendanceRegistration() {
                                     className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-200 bg-gray-50 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400" />
                             </div>
                             <div className="space-y-2 max-h-[420px] overflow-y-auto pr-1">
-                                {usersLoading ? (
+                                {allStaffLoading ? (
                                     <div className="flex items-center justify-center py-10">
                                         <RefreshCw className="w-5 h-5 animate-spin text-blue-400" />
                                     </div>
-                                ) : filteredUsers.length === 0 ? (
+                                ) : filteredStaff.length === 0 ? (
                                     <p className="text-xs text-gray-400 text-center py-8">No staff found</p>
-                                ) : filteredUsers.map((user, idx) => {
-                                    const name = user.fullName || `${user.firstName || ""} ${user.lastName || ""}`.trim() || "Unknown";
-                                    const role = user.roles?.[0] || "—";
-                                    const code = user.employeeCode || "—";
-                                    const isSelected = selectedStaff?.userId === user.id;
-                                    const live = enrollmentMap[user.id];
-                                    const liveStatus = live?.enrollmentStatus ?? "NOT_ENROLLED";
+                                ) : filteredStaff.map((record, idx) => {
+                                    const role = record.roles?.[0] || "—";
+                                    const isSelected = selectedStaff?.userId === record.userId;
 
                                     return (
-                                        <button key={user.id} onClick={() => handleSelectStaff(user)}
-                                            className={`cursor-pointer w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${isSelected ? "border-blue-400 bg-blue-50 shadow-sm" : "border-gray-100 bg-white hover:border-gray-300 hover:bg-gray-50"}`}>
+                                        <button
+                                            key={record.userId}
+                                            onClick={() => handleSelectStaff(record)}
+                                            className={`cursor-pointer w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all
+                                                ${isSelected ? "border-blue-400 bg-blue-50 shadow-sm" : "border-gray-100 bg-white hover:border-gray-300 hover:bg-gray-50"}`}
+                                        >
                                             <div className={`w-9 h-9 rounded-full ${AVATAR_COLORS[idx % AVATAR_COLORS.length]} text-white text-xs font-bold flex items-center justify-center shrink-0`}>
-                                                {getInitials(name) || "?"}
+                                                {getInitials(record.name) || "?"}
                                             </div>
                                             <div className="flex-1 min-w-0">
-                                                <p className="text-sm font-semibold text-gray-800 truncate">{name}</p>
-                                                <p className="text-xs text-gray-500">{code} · {role}</p>
+                                                <p className="text-sm font-semibold text-gray-800 truncate">{record.name}</p>
+                                                <p className="text-xs text-gray-500">{record.code || "—"} · {role}</p>
                                             </div>
-                                            {liveStatus === "ENROLLED"
+                                            {record.enrollmentStatus === "ENROLLED"
                                                 ? <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0" />
-                                                : liveStatus === "PARTIAL"
-                                                    ? <span className="text-[10px] font-bold text-amber-500 shrink-0">{live?.photosCount}/5</span>
+                                                : record.enrollmentStatus === "PARTIAL"
+                                                    ? <span className="text-[10px] font-bold text-amber-500 shrink-0">{record.photosCount}/5</span>
                                                     : <AlertTriangle className="w-3.5 h-3.5 text-gray-300 shrink-0" />}
                                         </button>
                                     );
@@ -738,15 +685,18 @@ export default function StaffAttendanceRegistration() {
                         </div>
                     </div>
 
-                    {/* Right: enrollment table */}
+                    {/* Right: paginated enrollment table */}
                     <div className="lg:col-span-2">
                         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden h-full flex flex-col">
                             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-5 py-4 border-b border-gray-100">
                                 <h2 className="text-sm font-bold text-gray-700 flex items-center gap-2">
                                     <FileText className="w-4 h-4 text-blue-500" /> Staff Enrollment Status
                                 </h2>
-                                <select value={filterStatus} onChange={(e) => { setFilterStatus(e.target.value); setTablePage(0); }}
-                                    className="cursor-pointer text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-400 self-start sm:self-auto">
+                                <select
+                                    value={filterStatus}
+                                    onChange={(e) => { setFilterStatus(e.target.value); setTablePage(0); }}
+                                    className="cursor-pointer text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-400 self-start sm:self-auto"
+                                >
                                     <option value="">All Status</option>
                                     <option value="ENROLLED">Enrolled</option>
                                     <option value="NOT_ENROLLED">Not Enrolled</option>
@@ -755,7 +705,7 @@ export default function StaffAttendanceRegistration() {
                             </div>
 
                             <div className="overflow-x-auto flex-1">
-                                {staffLoading ? (
+                                {allStaffLoading ? (
                                     <div className="flex items-center justify-center py-16">
                                         <RefreshCw className="w-6 h-6 animate-spin text-blue-400" />
                                     </div>
@@ -769,12 +719,13 @@ export default function StaffAttendanceRegistration() {
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-gray-50">
-                                            {staffList.length === 0 ? (
+                                            {paginatedStaff.length === 0 ? (
                                                 <tr><td colSpan={5} className="text-center py-12 text-sm text-gray-400">No staff members found</td></tr>
-                                            ) : staffList.map((staff, idx) => {
+                                            ) : paginatedStaff.map((staff, idx) => {
                                                 const role = staff.roles?.[0] || staff.userType || "—";
                                                 return (
-                                                    <tr key={staff.userId} className={`hover:bg-blue-50/40 transition-colors ${selectedStaff?.userId === staff.userId ? "bg-blue-50/60" : ""}`}>
+                                                    <tr key={staff.userId}
+                                                        className={`hover:bg-blue-50/40 transition-colors ${selectedStaff?.userId === staff.userId ? "bg-blue-50/60" : ""}`}>
                                                         <td className="px-4 py-3">
                                                             <div className="flex items-center gap-2.5">
                                                                 <div className={`w-8 h-8 rounded-full ${AVATAR_COLORS[idx % AVATAR_COLORS.length]} text-white text-xs font-bold flex items-center justify-center shrink-0`}>
@@ -782,7 +733,7 @@ export default function StaffAttendanceRegistration() {
                                                                 </div>
                                                                 <div>
                                                                     <p className="font-semibold text-gray-800 text-xs leading-tight">{staff.name}</p>
-                                                                    <p className="text-gray-400 text-[11px]">{staff.code}</p>
+                                                                    <p className="text-gray-400 text-[11px]">{staff.code || "—"}</p>
                                                                 </div>
                                                             </div>
                                                         </td>
@@ -792,9 +743,11 @@ export default function StaffAttendanceRegistration() {
                                                         <td className="px-4 py-3"><PhotoDots count={staff.photosCount || 0} /></td>
                                                         <td className="px-4 py-3"><StatusBadge status={staff.enrollmentStatus} photos={staff.photosCount} /></td>
                                                         <td className="px-4 py-3">
-                                                            <ActionButton status={staff.enrollmentStatus}
+                                                            <ActionButton
+                                                                status={staff.enrollmentStatus}
                                                                 onEnroll={() => handleTableEnroll(staff)}
-                                                                onReEnroll={() => handleTableReEnroll(staff)} />
+                                                                onReEnroll={() => handleTableReEnroll(staff)}
+                                                            />
                                                         </td>
                                                     </tr>
                                                 );
@@ -814,7 +767,8 @@ export default function StaffAttendanceRegistration() {
                                     </button>
                                     {Array.from({ length: Math.min(tableTotalPages, 5) }).map((_, i) => (
                                         <button key={i} onClick={() => setTablePage(i)}
-                                            className={`cursor-pointer w-7 h-7 rounded-lg text-xs font-semibold border transition-colors ${tablePage === i ? "bg-blue-600 text-white border-blue-600" : "bg-white text-gray-600 border-gray-200 hover:bg-gray-100"}`}>
+                                            className={`cursor-pointer w-7 h-7 rounded-lg text-xs font-semibold border transition-colors
+                                                ${tablePage === i ? "bg-blue-600 text-white border-blue-600" : "bg-white text-gray-600 border-gray-200 hover:bg-gray-100"}`}>
                                             {i + 1}
                                         </button>
                                     ))}
@@ -914,7 +868,8 @@ export default function StaffAttendanceRegistration() {
                                     <Trash2 className="w-4 h-4" /> Clear All
                                 </button>
                                 <button onClick={handleEnroll} disabled={uploadedCount < 5 || enrolling}
-                                    className={`cursor-pointer w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-white text-sm font-semibold transition-all ${uploadedCount === 5 && !enrolling ? "bg-blue-600 hover:bg-blue-700 shadow-sm" : "bg-gray-300 cursor-not-allowed"}`}>
+                                    className={`cursor-pointer w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-white text-sm font-semibold transition-all
+                                        ${uploadedCount === 5 && !enrolling ? "bg-blue-600 hover:bg-blue-700 shadow-sm" : "bg-gray-300 cursor-not-allowed"}`}>
                                     {enrolling ? <><RefreshCw className="w-4 h-4 animate-spin" /> Enrolling...</> : <><Zap className="w-4 h-4" /> Enroll Staff</>}
                                 </button>
                                 {uploadedCount < 5 && (
