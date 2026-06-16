@@ -170,10 +170,23 @@ const MainRoutes = () => {
           {/* ONLY GLOBAL_ADMIN */}
           <Route element={<RoleProtectedRoute allowedRoles={['GLOBAL_ADMIN']} />}>
             <Route path="/rolesPermissions" element={<RolesPermissionsManagement />} />
+             
+          </Route>
+
+          
+          {/* ── Fees  ──
+                */}
+          <Route element={<RoleProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'PRINCIPAL', 'TEACHER', 'ACCOUNTANT']} />}>
+            
+             <Route path='/feemanagement' element={<OverviewPage />} />
+            <Route path='/feemanagement/config' element={<FeeSynthesisPage />} />
+            <Route path='/feemanagement/period' element={<FeePeriods />} />
+            <Route path='/feemanagement/structures' element={<FeeStructures />} />
+            <Route path='/feemanagement/collections' element={<CollectionsPage />} />
           </Route>
 
           {/* ADMIN, SUPER_ADMIN & GLOBAL_ADMIN */}
-          <Route element={<RoleProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN']} />}>
+          <Route element={<RoleProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN','PRINCIPAL']} />}>
             <Route path="/manageUsers/addUser" element={<AddnewSystemUser />} />
             <Route path="/manageUsers/editUser/:id" element={<EditSysUser />} />
             <Route path="/manageUsers" element={<ManageAllUsers />} />
@@ -212,18 +225,14 @@ const MainRoutes = () => {
             <Route path="/leaves" element={<Leaves />} />
             <Route path="/leaves/manageHolidays" element={<HolidayManagment />} />
 
-            <Route path='/feemanagement' element={<OverviewPage />} />
-            <Route path='/feemanagement/config' element={<FeeSynthesisPage />} />
-            <Route path='/feemanagement/period' element={<FeePeriods />} />
-            <Route path='/feemanagement/structures' element={<FeeStructures />} />
-            <Route path='/feemanagement/collections' element={<CollectionsPage />} />
+           
 
             {/* Subject Section Assignment */}
             <Route path="/sectionSubjectAssignment" element={<SectionSubjectAssignment />} />
           </Route>
 
           {/* Leave Config — GLOBAL_ADMIN, SUPER_ADMIN, PRINCIPAL */}
-          <Route element={<RoleProtectedRoute allowedRoles={['GLOBAL_ADMIN', 'SUPER_ADMIN', 'PRINCIPAL']} />}>
+          <Route element={<RoleProtectedRoute allowedRoles={['GLOBAL_ADMIN', 'SUPER_ADMIN', 'PRINCIPAL','ADMIN']} />}>
             <Route path="/leaves/leaveConfig" element={<LeaveConfig />} />
             <Route path='/subjectsmaster' element={<SubjectsMaster />} />
           </Route>
@@ -250,7 +259,7 @@ const MainRoutes = () => {
           </Route>
 
           {/* Transport */}
-          <Route element={<RoleProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN']} />}>
+          <Route element={<RoleProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN','PRINCIPAL']} />}>
             <Route path="/route" element={<Transport_Management />} />
             <Route path="/route/vehicles" element={<Vehicles />} />
             <Route path="/route/Driver&Attendants" element={<Driver_Attendants />} />
@@ -323,12 +332,7 @@ const MainRoutes = () => {
             </RoleProtectedRoute>
           } />
 
-          {/* Device Token — admin only */}
-          <Route path="/communication/device-token" element={
-            <RoleProtectedRoute allowedRoles={['ADMIN', 'PRINCIPAL', 'GLOBAL_ADMIN','SUPER_ADMIN']}>
-              <DeviceTokenPage />
-            </RoleProtectedRoute>
-          } />
+          
 
           {/* Fallback */}
           <Route path="*" element={<RootRedirect />} />
