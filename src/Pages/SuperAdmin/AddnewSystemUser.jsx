@@ -44,17 +44,14 @@ const isValidJoiningDate = (dateStr) => {
     return !isNaN(d.getTime()) && d <= new Date();
 };
 
-// ─── Validation — returns field-keyed errors object ──────────────────────────
 const validateFormData = (formData) => {
     const fieldErrors = {};
     const isParentLike = PARENT_LIKE_ROLES.includes(formData.userRole);
 
-    // Role
     if (!formData.userRole || !VALID_ROLES.includes(formData.userRole)) {
         fieldErrors.userRole = 'Please select a valid user role.';
     }
 
-    // Full Name
     const trimmedName = (formData.name || '').trim();
     if (!trimmedName) {
         fieldErrors.name = 'Full name is required.';
@@ -66,17 +63,14 @@ const validateFormData = (formData) => {
         fieldErrors.name = 'Full name contains invalid characters.';
     }
 
-    // Gender
     if (!formData.gender || !VALID_GENDERS.includes(formData.gender.toUpperCase())) {
         fieldErrors.gender = 'Please select a valid gender.';
     }
 
-    // Email
     if (!formData.email || !EMAIL_REGEX.test(formData.email.trim())) {
         fieldErrors.email = 'Please enter a valid email address.';
     }
 
-    // Mobile
     const mobileTrimmed = (formData.mobile || '').replace(/\s/g, '');
     if (!mobileTrimmed) {
         fieldErrors.mobile = 'Mobile number is required.';
@@ -84,7 +78,6 @@ const validateFormData = (formData) => {
         fieldErrors.mobile = 'Enter a valid 10-digit Indian mobile number (starts with 6–9).';
     }
 
-    // Date of Birth
     if (formData.dob) {
         if (!isValidPastDate(formData.dob)) {
             fieldErrors.dob = 'Date of birth must be a valid past date.';
@@ -95,12 +88,10 @@ const validateFormData = (formData) => {
         }
     }
 
-    // Address
     if (formData.address && formData.address.trim().length > MAX_ADDRESS_LENGTH) {
         fieldErrors.address = `Address cannot exceed ${MAX_ADDRESS_LENGTH} characters.`;
     }
 
-    // Professional fields (non-parent roles)
     if (!isParentLike) {
         if (formData.employeeCode && !EMP_CODE_REGEX.test(formData.employeeCode.trim())) {
             fieldErrors.employeeCode = 'Employee code must be 2–20 alphanumeric characters.';
@@ -118,7 +109,6 @@ const validateFormData = (formData) => {
         }
     }
 
-    // Account Status
     if (!formData.accountStatus) {
         fieldErrors.accountStatus = 'Account status must be enabled to save.';
     }
@@ -129,7 +119,6 @@ const validateFormData = (formData) => {
     };
 };
 
-// ─── Component ────────────────────────────────────────────────────────────────
 function AddnewSystemUser() {
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('personal');
@@ -175,7 +164,6 @@ function AddnewSystemUser() {
         isClassTeacher: false,
     });
 
-    // ── Image handlers ──────────────────────────────────────────────────────
     const handleImageChange = (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -194,25 +182,19 @@ function AddnewSystemUser() {
         if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
-    // ── Input change — sanitises and clears per-field error ────────────────
     const handleInputChange = (e) => {
         const { name, value } = e.target;
-
-        // Clear error for this field immediately
         if (fieldErrors[name]) {
             setFieldErrors((prev) => { const next = { ...prev }; delete next[name]; return next; });
         }
-
         let sanitized = value;
         if (name === 'mobile') sanitized = value.replace(/\D/g, '').slice(0, 10);
         if (name === 'experience') sanitized = value === '' ? '' : Math.max(0, Math.min(MAX_EXPERIENCE, Number(value)));
         if (name === 'name') sanitized = value.slice(0, MAX_NAME_LENGTH);
         if (name === 'address') sanitized = value.slice(0, MAX_ADDRESS_LENGTH);
-
         setFormData((prev) => ({ ...prev, [name]: sanitized }));
     };
 
-    // ── Build API payload ────────────────────────────────────────────────────
     const buildPayload = (data) => {
         const isParentLike = PARENT_LIKE_ROLES.includes(data.userRole);
         const personalDetails = {
@@ -240,22 +222,17 @@ function AddnewSystemUser() {
         };
     };
 
-    // ── Submit ────────────────────────────────────────────────────────────────
     const handleSubmit = async (e) => {
         e.preventDefault();
-
         const { valid, fieldErrors: errs } = validateFormData(formData);
         if (!valid) {
             setFieldErrors(errs);
-            // Show first error as toast
             toast.error("Please fill all required details correctly.");
             return;
         }
-
         setFieldErrors({});
         setIsSubmitting(true);
         const loadingToast = toast.loading('Adding user...');
-
         try {
             const apiPayload = buildPayload(formData);
             let response;
@@ -271,7 +248,8 @@ function AddnewSystemUser() {
             if (profileImage) {
                 toast.info("Profile photo may take a few seconds to reflect.", { autoClose: 4000 });
             }
-            navigate('/dashboard/manageUsers');
+            // ✅ FIXED: was '/dashboard/manageUsers' — correct route is '/manageUsers'
+            navigate('/manageUsers');
         } catch (err) {
             toast.dismiss(loadingToast);
             toast.error(err?.message || 'Failed to add user. Please try again.');
@@ -301,7 +279,6 @@ function AddnewSystemUser() {
 
                 <form onSubmit={handleSubmit} noValidate>
                     <div className="bg-white rounded-lg shadow">
-                        {/* Tab header */}
                         <div className="border-b border-gray-200">
                             <nav className="flex flex-wrap -mb-px">
                                 <button
@@ -322,7 +299,6 @@ function AddnewSystemUser() {
                         <div className="p-4 sm:p-6 lg:p-8">
                             {activeTab === 'personal' && (
                                 <>
-                                    {/* Profile Photo */}
                                     <div className="mb-6">
                                         <label className="block font-semibold text-gray-600 text-sm mb-3">
                                             Profile Photo{' '}
@@ -345,7 +321,6 @@ function AddnewSystemUser() {
                                                     <Camera className="w-3.5 h-3.5 text-white" />
                                                 </button>
                                             </div>
-
                                             <div className="flex-1">
                                                 {!imagePreview ? (
                                                     <button
@@ -405,12 +380,12 @@ function AddnewSystemUser() {
                             )}
                         </div>
 
-                        {/* Footer */}
                         <div className="border-t border-gray-200 px-4 sm:px-6 lg:px-8 py-4 bg-gray-50 rounded-b-lg">
                             <div className="flex flex-col sm:flex-row justify-end gap-3">
                                 <button
                                     type="button"
-                                    onClick={() => navigate('/dashboard/manageUsers')}
+                                    // ✅ FIXED: was '/dashboard/manageUsers'
+                                    onClick={() => navigate('/manageUsers')}
                                     className="px-6 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                                 >
                                     Discard
