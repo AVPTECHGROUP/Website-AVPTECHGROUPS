@@ -9,30 +9,32 @@ const Navbar = () => {
     const navLinks = ['Home', 'Features', 'Highlights', 'In The News', 'Clients', 'Blog'];
 
     return (
-        <div className="relative bg-[linear-gradient(to_right,#102130,#132939,#152F3F,#173343)]">
+        <div className="relative bg-[#05111D]">
+            {/* Gradient border line at the bottom of Navbar */}
+            <div className="absolute bottom-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-[#00C9B1]/35 via-[#F5A623]/20 to-transparent z-30" />
 
             {/* ── Top Announcement Bar ── */}
             <div className="hidden md:flex px-4 lg:px-10 xl:px-16 py-2 items-center justify-between">
-                <p className='flex gap-1 items-center text-white font-medium text-sm'>
-                    <CircleStar size={18} color='gold' />
+                <p className='flex gap-1 items-center text-slate-300 font-medium text-sm'>
+                    <CircleStar size={18} color='gold' className="animate-spin-slow" />
                     Recognized by Startup India
                 </p>
                 <div className='flex gap-3 md:gap-5 pr-0 md:pr-20'>
-                    <p className='flex items-center gap-1 text-white font-body text-[13px] md:text-[15px] cursor-pointer'>
+                    <p className='flex items-center gap-1 text-slate-300 hover:text-white font-body text-[13px] md:text-[15px] cursor-pointer transition-colors duration-200'>
                         <Phone size={13} color='white' />
                         Call Us
                     </p>
                         <p
                             onClick={() => navigate('/login')}
-                            className='text-white font-body text-[13px] md:text-[15px] cursor-pointer'
+                            className='text-slate-300 hover:text-white font-body text-[13px] md:text-[15px] cursor-pointer transition-colors duration-200'
                         >
                             Login
                         </p>
-                    <p className='text-white font-body text-[13px] md:text-[15px] cursor-pointer'>Support</p>
+                    <p className='text-slate-300 hover:text-white font-body text-[13px] md:text-[15px] cursor-pointer transition-colors duration-200'>Support</p>
                 </div>
             </div>
 
-            <div className='hidden md:block h-[0.2px] mx-16 bg-teal-dark opacity-40'></div>
+            <div className='hidden md:block h-[1px] mx-16 bg-white/[0.08]'></div>
 
             {/* ── Main Navbar ── */}
             <div className='flex items-center justify-between px-10 sm:px-15 lg:px-20 xl:px-30 py-3 relative'>
@@ -57,7 +59,7 @@ const Navbar = () => {
                     {/* Logo */}
 
                     {/* Nav Links */}
-                    <div className='hidden lg:flex gap-4 xl:gap-7 px-10 sm:px-15 lg:px-20 xl:px-30 font-body tracking-wide text-[15px] text-white xl:text-[16px]'>
+                    <div className='hidden lg:flex gap-4 xl:gap-7 px-10 sm:px-15 lg:px-20 xl:px-30 font-body tracking-wide text-[15px] text-slate-300 xl:text-[16px]'>
                         {navLinks.map(link => (
                             <p
                                 key={link}
@@ -66,10 +68,10 @@ const Navbar = () => {
                                         navigate("/");
                                     }
                                 }}
-                                className='text-white hover:text-teal-dark cursor-pointer transition duration-200 relative group py-5'
+                                className='text-slate-300 hover:text-[#00C9B1] cursor-pointer transition duration-200 relative group py-5'
                             >
                                 {link}
-                                <span className='absolute bottom-3 left-0 w-0 h-0.5 bg-teal group-hover:w-full transition-all duration-300'></span>
+                                <span className='absolute bottom-3 left-0 w-0 h-0.5 bg-[#00C9B1] group-hover:w-full transition-all duration-300'></span>
                             </p>
                         ))}
                     </div>

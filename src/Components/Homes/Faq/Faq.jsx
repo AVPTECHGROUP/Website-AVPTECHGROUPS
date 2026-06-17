@@ -42,51 +42,72 @@ const FAQ = () => {
     }
 
     return (
-        <section className="w-full min-h-screen bg-white px-4 sm:px-6 flex items-center">
-            <div className="w-full max-w-3xl mx-auto py-16 lg:py-20">
+        <section className="w-full relative py-20 px-4 sm:px-6 overflow-hidden bg-[#05111D]">
+            {/* Top Gradient Divider */}
+            <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-[#00C9B1]/30 via-[#F5A623]/20 to-transparent z-10" />
+            {/* Bottom Gradient Divider */}
+            <div className="absolute bottom-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-[#00C9B1]/30 via-[#F5A623]/20 to-transparent z-10" />
+
+            {/* Grid overlay */}
+            <div className="absolute inset-0 pointer-events-none opacity-[0.5]" style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
+
+            {/* Glowing background blob */}
+            <div className="pointer-events-none absolute -bottom-40 -left-40 w-96 h-96 rounded-full opacity-[0.15] blur-3xl"
+                style={{ background: 'radial-gradient(circle, #00C9B1, transparent 70%)' }} />
+
+            <div className="relative z-10 w-full max-w-3xl mx-auto py-8">
 
                 {/* Header */}
-                <div className="text-center mb-12">
-                    <h1 className="font-heading text-4xl sm:text-5xl font-bold text-text-primary leading-tight mb-3">
-                        Frequently asked questions
-                    </h1>
-                    <p className="text-text-secondary text-base sm:text-lg">
+                <div className="text-center mb-16">
+                    <h2 className="font-heading text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white leading-tight mb-4">
+                        Frequently Asked <span className="bg-gradient-to-r from-teal-dark to-teal bg-clip-text text-transparent">Questions</span>
+                    </h2>
+                    <p className="text-slate-300 text-base sm:text-lg max-w-lg mx-auto">
                         Everything you need to know about SchoolSpine.
                     </p>
                 </div>
 
                 {/* Accordion List */}
-                <div className="divide-y divide-gray-200 border-t border-gray-200">
+                <div className="space-y-4">
                     {faqs.map((faq, idx) => {
                         const isOpen = openIndex === idx
                         return (
-                            <div key={idx}>
+                            <div
+                                key={idx}
+                                className="rounded-2xl backdrop-blur-md transition-all duration-300 shadow-[0_8px_30px_rgba(0,0,0,0.2)] hover:shadow-[0_12px_30px_rgba(0,201,177,0.12)] overflow-hidden"
+                                style={{
+                                    border: '1px solid transparent',
+                                    background: 'linear-gradient(rgba(10, 24, 40, 0.4), rgba(10, 24, 40, 0.4)) padding-box, linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02)) border-box',
+                                }}
+                                onMouseEnter={e => {
+                                    e.currentTarget.style.background = 'linear-gradient(rgba(10, 24, 40, 0.5), rgba(10, 24, 40, 0.5)) padding-box, linear-gradient(135deg, rgba(0, 201, 177, 0.45), rgba(245, 166, 35, 0.25)) border-box'
+                                }}
+                                onMouseLeave={e => {
+                                    e.currentTarget.style.background = 'linear-gradient(rgba(10, 24, 40, 0.4), rgba(10, 24, 40, 0.4)) padding-box, linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02)) border-box'
+                                }}
+                            >
                                 {/* Question Row */}
                                 <button
                                     onClick={() => toggle(idx)}
-                                    className="w-full flex items-center justify-between py-5 text-left gap-4 group cursor-pointer"
+                                    className="w-full flex items-center justify-between p-6 text-left gap-4 group cursor-pointer"
                                     aria-expanded={isOpen}
                                 >
-                                    <span className="text-text-primary font-body font-medium text-base sm:text-lg group-hover:text-teal-dark transition-colors duration-200">
+                                    <span className="text-white font-body font-bold text-base sm:text-lg group-hover:text-[#00C9B1] transition-colors duration-200">
                                         {faq.question}
                                     </span>
-                                    <span className="flex-shrink-0 text-text-muted group-hover:text-teal-dark transition-colors duration-200">
-                                        {isOpen ? (
-                                            <ChevronUp size={20} />
-                                        ) : (
-                                            <ChevronDown size={20} />
-                                        )}
+                                    <span className={`flex-shrink-0 text-slate-400 group-hover:text-[#00C9B1] transition-all duration-300 ${isOpen ? 'rotate-180 text-[#00C9B1]' : ''}`}>
+                                        <ChevronDown size={20} />
                                     </span>
                                 </button>
 
                                 {/* Answer — animated open/close */}
                                 <div
-                                    className={`overflow-hidden transition-all duration-300 ease-in-out ${isOpen ? 'max-h-[500px] opacity-100 pb-5' : 'max-h-0 opacity-0'
+                                    className={`overflow-hidden transition-all duration-300 ease-in-out ${isOpen ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'
                                         }`}
                                 >
-                                    <p className="text-text-secondary font-body text-sm sm:text-base leading-relaxed pr-8">
+                                    <div className="p-6 pt-0 text-slate-300 font-body text-sm sm:text-base leading-relaxed pr-8 border-t border-white/[0.06] mt-1">
                                         {faq.answer}
-                                    </p>
+                                    </div>
                                 </div>
                             </div>
                         )
