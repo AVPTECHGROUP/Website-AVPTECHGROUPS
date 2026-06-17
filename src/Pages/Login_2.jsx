@@ -135,41 +135,64 @@ function ShinyButton({ children, disabled, isLoading }) {
   return (
     <>
       <style>{`
-        @keyframes shine {
-          0%   { transform: translateX(-120%) skewX(-20deg); }
-          100% { transform: translateX(300%) skewX(-20deg); }
+        @keyframes shine-sweep {
+          0%   { transform: translateX(-130%) skewX(-18deg); }
+          100% { transform: translateX(320%) skewX(-18deg); }
         }
-        .shine-btn::after {
+        @keyframes brand-glow-pulse {
+          0%, 100% { box-shadow: 0 4px 20px rgba(0,201,177,0.35), 0 2px 8px rgba(245,166,35,0.2); }
+          50%       { box-shadow: 0 6px 28px rgba(0,201,177,0.55), 0 4px 14px rgba(245,166,35,0.35); }
+        }
+        .brand-btn::after {
           content: '';
           position: absolute;
-          inset: 0;
-          width: 40%;
-          background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
-          animation: shine 3s infinite ease-in-out;
+          top: 0; bottom: 0; left: 0;
+          width: 45%;
+          background: linear-gradient(
+            90deg,
+            transparent 0%,
+            rgba(255,255,255,0.28) 45%,
+            rgba(255,255,255,0.45) 55%,
+            transparent 100%
+          );
+          animation: shine-sweep 2.8s infinite ease-in-out;
           pointer-events: none;
         }
-        .shine-btn:disabled::after { animation: none; }
+        .brand-btn:disabled::after { animation: none; }
+        .brand-btn:not(:disabled) { animation: brand-glow-pulse 3s ease-in-out infinite; }
+        .brand-btn:not(:disabled):hover { animation: none; }
       `}</style>
       <button
         type="submit"
         disabled={disabled}
         className={`
-          shine-btn relative overflow-hidden
-          w-full py-3 rounded-xl
-          font-semibold text-white text-sm tracking-wider uppercase
+          brand-btn relative overflow-hidden
+          w-full py-3.5 rounded-xl
+          font-bold text-white text-sm tracking-widest uppercase
           transition-all duration-300 ease-out
           ${disabled
-            ? 'bg-indigo-300/80 cursor-not-allowed shadow-none'
-            : 'bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:opacity-95 shadow-[0_4px_18px_rgba(59,130,246,0.3)] hover:shadow-[0_8px_24px_rgba(59,130,246,0.45)] hover:scale-[1.01] active:scale-[0.98] cursor-pointer'
+            ? 'opacity-60 cursor-not-allowed'
+            : `bg-gradient-to-r from-[#00C9B1] via-[#00DEC5] to-[#F5A623]
+               hover:from-[#00B89F] hover:via-[#00C9B1] hover:to-[#E8961A]
+               hover:shadow-[0_8px_28px_rgba(0,201,177,0.5),0_4px_12px_rgba(245,166,35,0.3)]
+               hover:scale-[1.015] active:scale-[0.975] cursor-pointer`
           }
         `}
+        style={disabled ? {} : {
+          background: 'linear-gradient(135deg, #00C9B1 0%, #00DEC5 40%, #F5A623 100%)',
+          boxShadow: '0 4px 20px rgba(0,201,177,0.35), 0 2px 8px rgba(245,166,35,0.2)'
+        }}
       >
         {isLoading ? (
           <span className="flex items-center justify-center gap-2">
-            <span className="w-4.5 h-4.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
             Verifying Credentials...
           </span>
-        ) : children}
+        ) : (
+          <span className="flex items-center justify-center gap-1.5">
+            {children}
+          </span>
+        )}
       </button>
     </>
   )
