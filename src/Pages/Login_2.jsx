@@ -88,22 +88,43 @@ const floatingItems = [
 function FloatingSchoolBg() {
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      <div className="absolute hidden md:block top-3 left-4 lg:top-3 lg:left-6 z-10">
+      <motion.div
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.8, delay: 0.2 }}
+        className="absolute hidden md:block top-3 left-4 lg:top-3 lg:left-6 z-10"
+      >
         <img
           src={SS_logo_3}
           alt="School Logo"
-          className="w-[130px] h-[130px] lg:w-[170px] lg:h-[170px] xl:w-[210px] xl:h-[210px] object-contain"
+          className="w-[130px] h-[130px] lg:w-[170px] lg:h-[170px] xl:w-[210px] xl:h-[210px] object-contain filter drop-shadow-md hover:scale-102 transition-transform duration-300"
         />
-      </div>
+      </motion.div>
       {floatingItems.map(({ key, top, left, size, delay, duration }) => (
         <motion.div
           key={key}
-          className="hidden md:block"
-          style={{ position: 'absolute', top, left, width: size, height: size, opacity: 0.18 }}
-          animate={{ y: [0, -16, 0], rotate: [0, 5, -4, 0] }}
-          transition={{ duration, delay, repeat: Infinity, ease: 'easeInOut' }}
+          className="hidden md:block p-3.5 bg-white/45 backdrop-blur-[6px] rounded-2xl border border-white/50 shadow-[0_8px_32px_rgba(59,130,246,0.06)] hover:scale-110 transition-transform duration-300"
+          style={{
+            position: 'absolute',
+            top,
+            left,
+            width: size + 24,
+            height: size + 24,
+          }}
+          animate={{
+            y: [0, -16, 0],
+            rotate: [0, 5, -5, 0],
+          }}
+          transition={{
+            duration,
+            delay,
+            repeat: Infinity,
+            ease: 'easeInOut',
+          }}
         >
-          {SchoolSVGs[key]}
+          <div className="w-full h-full flex items-center justify-center opacity-85">
+            {SchoolSVGs[key]}
+          </div>
         </motion.div>
       ))}
     </div>
@@ -122,9 +143,9 @@ function ShinyButton({ children, disabled, isLoading }) {
           content: '';
           position: absolute;
           inset: 0;
-          width: 35%;
-          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.45), transparent);
-          animation: shine 2.5s infinite;
+          width: 40%;
+          background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+          animation: shine 3s infinite ease-in-out;
           pointer-events: none;
         }
         .shine-btn:disabled::after { animation: none; }
@@ -135,18 +156,18 @@ function ShinyButton({ children, disabled, isLoading }) {
         className={`
           shine-btn relative overflow-hidden
           w-full py-3 rounded-xl
-          font-semibold text-white text-sm tracking-wide
-          transition-all duration-300
+          font-semibold text-white text-sm tracking-wider uppercase
+          transition-all duration-300 ease-out
           ${disabled
-            ? 'bg-blue-300 cursor-not-allowed shadow-none'
-            : 'bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 hover:shadow-blue-300 hover:shadow-lg active:scale-95 cursor-pointer'
+            ? 'bg-indigo-300/80 cursor-not-allowed shadow-none'
+            : 'bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:opacity-95 shadow-[0_4px_18px_rgba(59,130,246,0.3)] hover:shadow-[0_8px_24px_rgba(59,130,246,0.45)] hover:scale-[1.01] active:scale-[0.98] cursor-pointer'
           }
         `}
       >
         {isLoading ? (
           <span className="flex items-center justify-center gap-2">
-            <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            Verifying...
+            <span className="w-4.5 h-4.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            Verifying Credentials...
           </span>
         ) : children}
       </button>
@@ -269,33 +290,55 @@ const Login_2 = ({ onLoginSuccess }) => {
     }
   }
 
-  const inputBase   = 'w-full pl-10 pr-4 py-2.5 sm:py-3 rounded-xl text-sm text-black placeholder-[#8A9BB0] outline-none transition-all duration-200 focus:ring-2'
-  const inputNormal = 'bg-blue-50 border border-blue-200 focus:ring-blue-400/40 focus:border-blue-400'
-  const inputError  = 'bg-red-500/5 border-2 border-red-400/60 focus:ring-red-400/30'
+  const inputBase   = 'w-full pl-10 pr-4 py-2.5 sm:py-3 rounded-xl text-sm text-slate-850 placeholder-slate-400 outline-none transition-all duration-300 focus:ring-4'
+  const inputNormal = 'bg-slate-50/60 border border-slate-200/80 focus:bg-white focus:border-indigo-500 focus:ring-indigo-500/10'
+  const inputError  = 'bg-red-500/5 border border-red-300 focus:bg-white focus:border-red-500 focus:ring-red-500/15'
 
   return (
-    <div className="relative min-h-screen flex flex-col items-center justify-center p-3 sm:p-5 md:p-6 overflow-hidden bg-gradient-to-br from-blue-100 to-blue-200">
+    <div className="relative min-h-screen flex flex-col items-center justify-center p-3 sm:p-5 md:p-6 overflow-hidden bg-gradient-to-tr from-[#f3f4f6] via-[#eff6ff] to-[#f5f3ff]">
 
       <style>{`
         input::-ms-reveal, input::-ms-clear { display: none; }
         input::-webkit-credentials-auto-fill-button,
         input::-webkit-password-toggle-button { display: none !important; }
+
+        @keyframes floatSlow {
+          0%, 100% { transform: translate(0px, 0px) scale(1); }
+          50% { transform: translate(35px, -50px) scale(1.08); }
+        }
+        @keyframes floatReverse {
+          0%, 100% { transform: translate(0px, 0px) scale(1.05); }
+          50% { transform: translate(-45px, 35px) scale(0.95); }
+        }
+        @keyframes floatMedium {
+          0%, 100% { transform: translate(0px, 0px) scale(1); }
+          50% { transform: translate(-25px, -25px) scale(1.03); }
+        }
+        .animate-float-slow {
+          animation: floatSlow 20s infinite ease-in-out;
+        }
+        .animate-float-reverse {
+          animation: floatReverse 24s infinite ease-in-out;
+        }
+        .animate-float-medium {
+          animation: floatMedium 16s infinite ease-in-out;
+        }
       `}</style>
+
+      {/* Dynamic Background Mesh Blobs */}
+      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-gradient-to-br from-indigo-300/20 to-purple-300/20 blur-[130px] pointer-events-none animate-float-slow" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[55%] h-[55%] rounded-full bg-gradient-to-br from-teal-200/15 to-blue-300/20 blur-[140px] pointer-events-none animate-float-reverse" />
+      <div className="absolute top-[35%] right-[15%] w-[35%] h-[35%] rounded-full bg-gradient-to-br from-pink-200/10 to-indigo-300/15 blur-[110px] pointer-events-none animate-float-medium" />
 
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
-          backgroundImage: 'radial-gradient(circle, rgba(0,201,177,0.08) 1px, transparent 1px)',
-          backgroundSize: '28px 28px',
+          backgroundImage: 'radial-gradient(circle, rgba(99, 102, 241, 0.05) 1.5px, transparent 1.5px)',
+          backgroundSize: '24px 24px',
         }}
       />
 
       <FloatingSchoolBg />
-
-      <div className="absolute top-1/4 left-1/4 w-72 h-72 rounded-full pointer-events-none"
-        style={{ background: 'radial-gradient(circle, rgba(0,201,177,0.07) 0%, transparent 70%)' }} />
-      <div className="absolute bottom-1/4 right-1/4 w-64 h-64 rounded-full pointer-events-none"
-        style={{ background: 'radial-gradient(circle, rgba(245,166,35,0.06) 0%, transparent 70%)' }} />
 
       <motion.div
         initial={{ opacity: 0, y: -20 }}
@@ -303,7 +346,8 @@ const Login_2 = ({ onLoginSuccess }) => {
         transition={{ duration: 0.6 }}
         className="relative z-10 hidden sm:flex flex-col items-center mb-5 md:mb-6 gap-2"
       >
-        <h1 className="text-center font-bold text-gray-800 text-lg md:text-xl lg:text-3xl tracking-wide">
+        <h1 className="text-center font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-indigo-600 to-teal-500 text-lg md:text-xl lg:text-3xl tracking-wider uppercase"
+          style={{ fontFamily: '"Syne", sans-serif' }}>
           SCHOOL MANAGEMENT PORTAL
         </h1>
       </motion.div>
@@ -312,46 +356,48 @@ const Login_2 = ({ onLoginSuccess }) => {
         initial={{ opacity: 0, y: 30, scale: 0.97 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.65, delay: 0.1 }}
-        className="relative z-10 flex flex-col sm:flex-row w-full max-w-xs sm:max-w-xl md:max-w-2xl lg:max-w-3xl overflow-hidden rounded-2xl"
+        className="relative z-10 flex flex-col sm:flex-row w-full max-w-xs sm:max-w-xl md:max-w-2xl lg:max-w-3xl overflow-hidden rounded-3xl"
         style={{
-          background: 'rgba(255,255,255,0.05)',
-          backdropFilter: 'blur(24px)',
-          WebkitBackdropFilter: 'blur(24px)',
-          border: '1.5px solid rgba(0,201,177,0.18)',
-          boxShadow: '0 0 60px rgba(0,201,177,0.08), 0 4px 40px rgba(0,0,0,0.25)',
+          background: 'rgba(255, 255, 255, 0.45)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          border: '1px solid rgba(255, 255, 255, 0.6)',
+          boxShadow: '0 25px 50px -12px rgba(59, 130, 246, 0.12), 0 0 40px rgba(255, 255, 255, 0.2) inset, 0 4px 30px rgba(0, 0, 0, 0.05)',
         }}
       >
         <div className="hidden sm:block sm:w-5/12 relative overflow-hidden">
           <img
             src={Worker_3}
             alt="Portal Visual"
-            className="w-full h-full object-cover object-center"
+            className="w-full h-full object-cover object-center transition-transform duration-700 hover:scale-105"
             style={{ minHeight: '100%' }}
           />
-          <div className="absolute top-0 left-0 w-16 h-1"
-            style={{ background: 'linear-gradient(to right, #3b82f6, transparent)' }} />
+          {/* Brand-themed gradient overlay */}
+          <div className="absolute inset-0 bg-gradient-to-tr from-blue-600/20 via-indigo-600/10 to-transparent mix-blend-multiply pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-900/40 via-transparent to-transparent pointer-events-none" />
+          <div className="absolute top-0 left-0 w-24 h-1 bg-gradient-to-r from-blue-500 to-indigo-500" />
         </div>
 
-        <div className="flex-1 flex flex-col justify-center px-5 sm:px-7 md:px-8 py-7 sm:py-8 md:py-10 bg-white">
+        <div className="flex-1 flex flex-col justify-center px-5 sm:px-7 md:px-8 py-7 sm:py-8 md:py-10 bg-white/85 backdrop-blur-md">
 
-          <div className="flex sm:hidden items-center gap-2.5 mb-5 pb-4 border-b border-gray-100">
+          <div className="flex sm:hidden items-center gap-2.5 mb-5 pb-4 border-b border-slate-100">
             <img src={SS_logo} alt="Logo" className="w-9 h-9 object-contain shrink-0" />
             <div>
-              <p className="text-xs font-bold text-gray-700 leading-tight tracking-wide">SCHOOL MANAGEMENT</p>
-              <p className="text-[10px] text-gray-400 tracking-widest uppercase">Portal</p>
+              <p className="text-xs font-bold text-slate-700 leading-tight tracking-wide">SCHOOL MANAGEMENT</p>
+              <p className="text-[10px] text-slate-400 tracking-widest uppercase">Portal</p>
             </div>
           </div>
 
           <div className="mb-5 sm:mb-6">
-            <h2 className="font-bold text-gray-800 text-xl sm:text-2xl mb-1"
+            <h2 className="font-bold text-slate-800 text-xl sm:text-2xl mb-1"
               style={{ fontFamily: '"Syne", sans-serif' }}>
               System Login
             </h2>
-            <p className="text-xs sm:text-sm text-gray-500"
+            <p className="text-xs sm:text-sm text-slate-500"
               style={{ fontFamily: '"DM Sans", sans-serif' }}>
               Sign in to access your portal
             </p>
-            <div className="mt-2.5 h-0.5 w-10 rounded-full bg-blue-400" />
+            <div className="mt-2 h-[3px] w-12 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600" />
           </div>
 
           {loginError && (
@@ -360,8 +406,8 @@ const Login_2 = ({ onLoginSuccess }) => {
               animate={{ opacity: 1, y: 0 }}
               className="mb-4 p-3 rounded-xl text-xs sm:text-sm text-center"
               style={{
-                background: 'rgba(239,68,68,0.1)',
-                border: '1px solid rgba(239,68,68,0.3)',
+                background: 'rgba(239,68,68,0.08)',
+                border: '1px solid rgba(239,68,68,0.2)',
                 color: '#ef4444',
                 fontFamily: '"DM Sans", sans-serif',
               }}
@@ -374,13 +420,13 @@ const Login_2 = ({ onLoginSuccess }) => {
 
             <div>
               <label
-                className="block text-[10.5px] sm:text-xs font-semibold mb-1.5 tracking-widest uppercase text-gray-500"
+                className="block text-[10.5px] sm:text-xs font-semibold mb-1.5 tracking-wider uppercase text-slate-500"
                 style={{ fontFamily: '"DM Sans", sans-serif' }}
               >
                 Email Address
               </label>
               <div className="relative">
-                <Mail size={15} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-blue-400" />
+                <Mail size={15} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-indigo-500" />
                 <input
                   autoComplete="email"
                   value={email}
@@ -392,7 +438,7 @@ const Login_2 = ({ onLoginSuccess }) => {
                 />
               </div>
               {errors.email && (
-                <p className="text-[11px] mt-1.5 text-red-400" style={{ fontFamily: '"DM Sans", sans-serif' }}>
+                <p className="text-[11px] mt-1.5 text-red-500" style={{ fontFamily: '"DM Sans", sans-serif' }}>
                   {errors.email}
                 </p>
               )}
@@ -400,13 +446,13 @@ const Login_2 = ({ onLoginSuccess }) => {
 
             <div>
               <label
-                className="block text-[10.5px] sm:text-xs font-semibold mb-1.5 tracking-widest uppercase text-gray-500"
+                className="block text-[10.5px] sm:text-xs font-semibold mb-1.5 tracking-wider uppercase text-slate-500"
                 style={{ fontFamily: '"DM Sans", sans-serif' }}
               >
                 Password
               </label>
               <div className="relative">
-                <LockKeyhole size={15} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-blue-400" />
+                <LockKeyhole size={15} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-indigo-500" />
                 <input
                   autoComplete="current-password"
                   value={password}
@@ -419,13 +465,13 @@ const Login_2 = ({ onLoginSuccess }) => {
                 <button
                   type="button"
                   onClick={() => setshowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-500 transition-colors duration-150 cursor-pointer"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-600 transition-colors duration-150 cursor-pointer"
                 >
                   {showPassword ? <Eye size={16} /> : <EyeOff size={16} />}
                 </button>
               </div>
               {errors.password && (
-                <p className="text-[11px] mt-1.5 text-red-400" style={{ fontFamily: '"DM Sans", sans-serif' }}>
+                <p className="text-[11px] mt-1.5 text-red-500" style={{ fontFamily: '"DM Sans", sans-serif' }}>
                   {errors.password}
                 </p>
               )}
@@ -438,17 +484,17 @@ const Login_2 = ({ onLoginSuccess }) => {
             </div>
 
             <div className="flex items-center gap-3 py-0.5">
-              <div className="flex-1 h-px" style={{ background: 'rgba(0,201,177,0.15)' }} />
-              <ShieldCheck size={13} style={{ color: 'rgba(0,201,177,0.45)', flexShrink: 0 }} />
-              <div className="flex-1 h-px" style={{ background: 'rgba(0,201,177,0.15)' }} />
+              <div className="flex-1 h-px" style={{ background: 'rgba(99,102,241,0.15)' }} />
+              <ShieldCheck size={13} style={{ color: 'rgba(99,102,241,0.45)', flexShrink: 0 }} />
+              <div className="flex-1 h-px" style={{ background: 'rgba(99,102,241,0.15)' }} />
             </div>
 
             <div className="text-center space-y-1">
-              <p className="text-[11px] sm:text-xs font-medium text-gray-500"
+              <p className="text-[11px] sm:text-xs font-medium text-slate-500"
                 style={{ fontFamily: '"DM Sans", sans-serif' }}>
                 Authorized access only
               </p>
-              <p className="text-[10px] sm:text-[11px] text-gray-400"
+              <p className="text-[10px] sm:text-[11px] text-slate-400"
                 style={{ fontFamily: '"DM Sans", sans-serif' }}>
                 Contact your system administrator for access credentials.
               </p>
@@ -462,16 +508,15 @@ const Login_2 = ({ onLoginSuccess }) => {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.5, duration: 0.5 }}
-        className="relative z-10 mt-4 sm:mt-6 px-4 py-1.5 sm:px-5 sm:py-2 rounded-full flex items-center gap-2 text-xs sm:text-sm bg-white"
+        className="relative z-10 mt-4 sm:mt-6 px-4 py-1.5 sm:px-5 sm:py-2 rounded-full flex items-center gap-2.5 text-xs sm:text-sm bg-white/70 backdrop-blur-md shadow-sm hover:shadow-md hover:bg-white/95 transition-all duration-300"
         style={{
-          border: '1px solid rgba(59,130,246,0.25)',
-          backdropFilter: 'blur(12px)',
+          border: '1px solid rgba(59, 130, 246, 0.15)',
           fontFamily: '"DM Sans", sans-serif',
         }}
       >
-        <span className="text-gray-500">Developed by</span>
-        <Link to="https://computesofttech.com/" target="_blank" rel="noopener noreferrer">
-          <img className="h-5 sm:h-7 w-auto" src={cstech} alt="CSTech" />
+        <span className="text-slate-500 font-medium">Developed by</span>
+        <Link to="https://computesofttech.com/" target="_blank" rel="noopener noreferrer" className="hover:opacity-85 transition-opacity">
+          <img className="h-5 sm:h-7 w-auto object-contain" src={cstech} alt="CSTech" />
         </Link>
       </motion.div>
 
