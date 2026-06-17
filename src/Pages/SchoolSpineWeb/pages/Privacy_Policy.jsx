@@ -131,7 +131,7 @@ const Privacy_Policy = () => {
                 <div className="absolute top-16 right-24 w-56 h-56 rounded-full bg-teal/[0.04] blur-3xl pointer-events-none" />
                 <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-teal/20 to-transparent" />
 
-                <div className="relative max-w-7xl mx-auto px-6 pt-20 pb-16 md:pt-28 md:pb-20">
+                <div className="relative max-w-7xl mx-auto px-6 pt-5 pb-16  md:pb-20">
 
                     {/* Breadcrumb */}
                     <div
