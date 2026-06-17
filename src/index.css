@@ -3,7 +3,38 @@ h1{
     font-family: sans-serif;
 }
 
+:root {
+  --theme-bg: #05111D;
+  --theme-text: #FFFFFF;
+  --theme-card: rgba(255, 255, 255, 0.03);
+  --theme-border: rgba(255, 255, 255, 0.08);
+  --theme-nav: #05111D;
+  --theme-subtext: #CBD5E1;
+  --theme-card-grad-start: #0D2137;
+  --theme-card-grad-end: #05111D;
+  --theme-card-border-light: rgba(255, 255, 255, 0.08);
+}
+
+html.light {
+  --theme-bg: #F4F9F9;
+  --theme-text: #0D1B2A;
+  --theme-card: #FFFFFF;
+  --theme-border: rgba(0, 0, 0, 0.08);
+  --theme-nav: #F4F9F9;
+  --theme-subtext: #4A5568;
+  --theme-card-grad-start: #FFFFFF;
+  --theme-card-grad-end: #F4F9F9;
+  --theme-card-border-light: rgba(0, 0, 0, 0.08);
+}
+
 @theme {
+  --color-theme-bg: var(--theme-bg);
+  --color-theme-text: var(--theme-text);
+  --color-theme-card: var(--theme-card);
+  --color-theme-border: var(--theme-border);
+  --color-theme-nav: var(--theme-nav);
+  --color-theme-subtext: var(--theme-subtext);
+
   /* Backgrounds */
   --color-bg-white: #FFFFFF;
   --color-bg-alt: #F4F9F9;

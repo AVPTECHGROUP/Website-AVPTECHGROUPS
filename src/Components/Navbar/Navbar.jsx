@@ -1,40 +1,42 @@
-import React, { useState } from 'react'
-import { CircleStar, Phone, Menu, X } from 'lucide-react';
+import React, { useState, useContext } from 'react'
+import { CircleStar, Phone, Menu, X, Sun, Moon } from 'lucide-react';
 import ss_logo_2 from '../../assets/Images/SS_logo_3.png'
 import { useNavigate } from 'react-router-dom'
+import { UserContext } from '../../ContextAPI/UserContext'
 
 const Navbar = () => {
     const [menuOpen, setMenuOpen] = useState(false);
     const navigate = useNavigate();
+    const { theme, toggleTheme } = useContext(UserContext);
     const navLinks = ['Home', 'Features', 'Highlights', 'In The News', 'Clients', 'Blog'];
 
     return (
-        <div className="relative bg-[#05111D]">
+        <div className="relative bg-theme-nav text-theme-text transition-colors duration-300">
             {/* Gradient border line at the bottom of Navbar */}
             <div className="absolute bottom-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-[#00C9B1]/35 via-[#F5A623]/20 to-transparent z-30" />
 
             {/* ── Top Announcement Bar ── */}
             <div className="hidden md:flex px-4 lg:px-10 xl:px-16 py-2 items-center justify-between">
-                <p className='flex gap-1 items-center text-slate-300 font-medium text-sm'>
+                <p className='flex gap-1 items-center text-theme-subtext font-medium text-sm'>
                     <CircleStar size={18} color='gold' className="animate-spin-slow" />
                     Recognized by Startup India
                 </p>
                 <div className='flex gap-3 md:gap-5 pr-0 md:pr-20'>
-                    <p className='flex items-center gap-1 text-slate-300 hover:text-white font-body text-[13px] md:text-[15px] cursor-pointer transition-colors duration-200'>
-                        <Phone size={13} color='white' />
+                    <p className='flex items-center gap-1 text-theme-subtext hover:text-theme-text font-body text-[13px] md:text-[15px] cursor-pointer transition-colors duration-200'>
+                        <Phone size={13} className="text-theme-text" />
                         Call Us
                     </p>
-                        <p
-                            onClick={() => navigate('/login')}
-                            className='text-slate-300 hover:text-white font-body text-[13px] md:text-[15px] cursor-pointer transition-colors duration-200'
-                        >
-                            Login
-                        </p>
-                    <p className='text-slate-300 hover:text-white font-body text-[13px] md:text-[15px] cursor-pointer transition-colors duration-200'>Support</p>
+                    <p
+                        onClick={() => navigate('/login')}
+                        className='text-theme-subtext hover:text-theme-text font-body text-[13px] md:text-[15px] cursor-pointer transition-colors duration-200'
+                    >
+                        Login
+                    </p>
+                    <p className='text-theme-subtext hover:text-theme-text font-body text-[13px] md:text-[15px] cursor-pointer transition-colors duration-200'>Support</p>
                 </div>
             </div>
 
-            <div className='hidden md:block h-[1px] mx-16 bg-white/[0.08]'></div>
+            <div className='hidden md:block h-[1px] mx-16 bg-theme-border'></div>
 
             {/* ── Main Navbar ── */}
             <div className='flex items-center justify-between px-10 sm:px-15 lg:px-20 xl:px-30 py-3 relative'>
@@ -59,7 +61,7 @@ const Navbar = () => {
                     {/* Logo */}
 
                     {/* Nav Links */}
-                    <div className='hidden lg:flex gap-4 xl:gap-7 px-10 sm:px-15 lg:px-20 xl:px-30 font-body tracking-wide text-[15px] text-slate-300 xl:text-[16px]'>
+                    <div className='hidden lg:flex gap-4 xl:gap-7 px-10 sm:px-15 lg:px-20 xl:px-30 font-body tracking-wide text-[15px] text-theme-subtext xl:text-[16px]'>
                         {navLinks.map(link => (
                             <p
                                 key={link}
@@ -68,7 +70,7 @@ const Navbar = () => {
                                         navigate("/");
                                     }
                                 }}
-                                className='text-slate-300 hover:text-[#00C9B1] cursor-pointer transition duration-200 relative group py-5'
+                                className='text-theme-subtext hover:text-[#00C9B1] cursor-pointer transition duration-200 relative group py-5'
                             >
                                 {link}
                                 <span className='absolute bottom-3 left-0 w-0 h-0.5 bg-[#00C9B1] group-hover:w-full transition-all duration-300'></span>
@@ -79,6 +81,14 @@ const Navbar = () => {
                     {/* Desktop Buttons */}
                     <div className='hidden lg:flex gap-3 items-center'>
                         <div className="flex items-center gap-4">
+                            {/* Theme Toggle Button */}
+                            <button
+                                onClick={toggleTheme}
+                                className="p-3 rounded-2xl border border-theme-border bg-theme-card text-theme-text hover:bg-theme-border/20 transition-all duration-300 cursor-pointer flex items-center justify-center"
+                                aria-label="Toggle theme"
+                            >
+                                {theme === 'dark' ? <Sun size={18} className="text-[#F5A623]" /> : <Moon size={18} className="text-[#00C9B1]" />}
+                            </button>
                             {/* Login Button */}
                             <button
                                 onClick={() => navigate("/login")}
@@ -87,9 +97,9 @@ const Navbar = () => {
       px-7 xl:px-8 py-3
       rounded-2xl
       border border-[#00CAFB]/60
-      bg-white/[0.03]
+      bg-theme-card
       backdrop-blur-xl
-      text-white
+      text-theme-text
       font-semibold
       tracking-wide
       cursor-pointer
@@ -152,18 +162,26 @@ const Navbar = () => {
                     </div>
                 </div>
 
-                {/* Mobile: top-bar links (small, inline) */}
-                <div className='flex md:hidden gap-3 items-center text-white text-xs'>
-                    <p className='flex items-center gap-1 text-nowrap cursor-pointer'>
-                        <Phone size={11} color='white' /> Call Us
-                    </p>
+                {/* Mobile Theme Toggle & links */}
+                <div className='flex lg:hidden gap-3 items-center text-theme-text text-xs'>
+                    <button
+                        onClick={toggleTheme}
+                        className="p-2 rounded-xl border border-theme-border bg-theme-card text-theme-text hover:bg-white/[0.08] transition-all duration-300 cursor-pointer flex items-center justify-center"
+                        aria-label="Toggle theme"
+                    >
+                        {theme === 'dark' ? <Sun size={15} className="text-[#F5A623]" /> : <Moon size={15} className="text-[#00C9B1]" />}
+                    </button>
+                    <div className='flex md:hidden gap-3 items-center text-theme-text text-xs'>
+                        <p className='flex items-center gap-1 text-nowrap cursor-pointer'>
+                            <Phone size={11} className="text-theme-text" /> Call
+                        </p>
                         <p onClick={() => navigate('/login')} className='cursor-pointer'>Login</p>
-                    <p className='cursor-pointer'>Support</p>
+                    </div>
                 </div>
 
                 {/* Mobile Hamburger */}
                 <button
-                    className='lg:hidden p-1 text-teal-dark ml-2'
+                    className='lg:hidden p-1 text-[#00C9B1] ml-2 cursor-pointer'
                     onClick={() => setMenuOpen(true)}
                     aria-label="Open menu"
                 >
@@ -175,26 +193,26 @@ const Navbar = () => {
 
             {/* ── Mobile Drawer ── */}
             {menuOpen && (
-                <div className='lg:hidden fixed inset-0 z-50 bg-white flex flex-col'>
+                <div className='lg:hidden fixed inset-0 z-50 bg-theme-bg text-theme-text flex flex-col transition-colors duration-300'>
 
                     {/* Drawer Header */}
-                    <div className='flex items-center justify-between px-15 py-3 border-b border-gray-100'>
+                    <div className='flex items-center justify-between px-15 py-3 border-b border-theme-border'>
                         <img
                             onClick={() => navigate('/')}
-                            className="h-16 w-auto object-contain"
+                            className="h-16 w-auto object-contain cursor-pointer"
                             src={ss_logo_2}
                             alt="SchoolSpine Logo"
                         />
 
                         <div className='flex gap-4 items-center'>
-                            <p className='flex items-center gap-1 text-teal-dark text-xs cursor-pointer'>
-                                <Phone size={12} color='#1A8A8A' /> Call Us
+                            <p className='flex items-center gap-1 text-theme-subtext text-xs cursor-pointer'>
+                                <Phone size={12} className="text-[#00C9B1]" /> Call Us
                             </p>
-                                <p onClick={() => { navigate('/login'); setMenuOpen(false); }} className='text-teal-dark text-xs cursor-pointer'>Login</p>
-                            <p className='text-teal-dark text-xs cursor-pointer'>Support</p>
+                            <p onClick={() => { navigate('/login'); setMenuOpen(false); }} className='text-theme-subtext text-xs cursor-pointer hover:text-theme-text'>Login</p>
+                            <p className='text-theme-subtext text-xs cursor-pointer hover:text-theme-text'>Support</p>
                         </div>
 
-                        <button onClick={() => setMenuOpen(false)} className='text-teal-dark p-1' aria-label="Close menu">
+                        <button onClick={() => setMenuOpen(false)} className='text-theme-text p-1 cursor-pointer' aria-label="Close menu">
                             <X size={24} />
                         </button>
                     </div>
@@ -204,13 +222,13 @@ const Navbar = () => {
                         {navLinks.map((link, i) => (
                             <React.Fragment key={link}>
                                 <p
-                                    className='text-text-primary font-body text-[17px] font-medium py-4 cursor-pointer hover:text-teal-dark transition duration-200'
+                                    className='text-theme-text font-body text-[17px] font-medium py-4 cursor-pointer hover:text-[#00C9B1] transition duration-200'
                                     onClick={() => setMenuOpen(false)}
                                 >
                                     {link}
                                 </p>
                                 {i < navLinks.length - 1 && (
-                                    <div className='h-px w-full bg-gray-100'></div>
+                                    <div className='h-px w-full bg-theme-border'></div>
                                 )}
                             </React.Fragment>
                         ))}
@@ -219,11 +237,11 @@ const Navbar = () => {
                     {/* Bottom Buttons */}
                     <div className='px-4 mt-auto pb-8 flex flex-col gap-3'>
                         <button
-                            onClick={() => navigate("/login")}
-                            className='w-full py-3 text-base border-teal border-2 rounded-2xl text-teal-dark font-body font-semibold cursor-pointer hover:bg-linear-to-r from-teal-dark to-teal hover:text-white transition duration-300'>
+                            onClick={() => { navigate("/login"); setMenuOpen(false); }}
+                            className='w-full py-3 text-base border-theme-border border-2 rounded-2xl text-theme-text font-body font-semibold cursor-pointer hover:bg-gradient-to-r hover:from-[#00C9B1] hover:to-[#F5A623] hover:text-[#05111D] transition duration-300'>
                             Login
                         </button>
-                        <button className='w-full py-3 text-base text-white bg-linear-to-r from-teal-dark to-teal rounded-2xl font-body font-semibold cursor-pointer drop-shadow-md'>
+                        <button className='w-full py-3 text-base text-white bg-gradient-to-r from-[#00C9B1] to-[#F5A623] rounded-2xl font-body font-semibold cursor-pointer drop-shadow-md'>
                             Get Free Demo
                         </button>
                     </div>

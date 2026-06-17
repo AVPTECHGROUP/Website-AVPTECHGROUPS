@@ -5,7 +5,7 @@ const Pricing = () => {
     const [activeTab, setActiveTab] = useState('Monthly')
 
     return (
-        <div className="w-full bg-[#05111D] relative py-16 sm:py-24 overflow-hidden">
+        <div className="w-full bg-theme-bg text-theme-text relative py-16 sm:py-24 overflow-hidden transition-colors duration-300">
             {/* Top Gradient Divider */}
             <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-[#00C9B1]/30 via-[#F5A623]/20 to-transparent z-10" />
             {/* Bottom Gradient Divider */}
@@ -22,20 +22,20 @@ const Pricing = () => {
 
             {/* Heading */}
             <div className="relative z-10 flex flex-col items-center justify-center gap-4 px-4 mb-14">
-                <h1 className="text-3xl sm:text-4xl lg:text-5xl font-heading font-extrabold tracking-tight text-white text-center">
+                <h1 className="text-3xl sm:text-4xl lg:text-5xl font-heading font-extrabold tracking-tight text-theme-text text-center">
                     Affordable Pricing. <span className="bg-gradient-to-r from-teal-dark to-teal bg-clip-text text-transparent">Powerful Features.</span>
                 </h1>
-                <p className="text-base sm:text-lg font-body font-normal text-slate-300 text-center max-w-xl">
+                <p className="text-base sm:text-lg font-body font-normal text-theme-subtext text-center max-w-xl">
                     Choose the plan that fits your school. No hidden fees, ever.
                 </p>
 
                 {/* Toggle */}
-                <div className="w-fit p-1 bg-white/[0.04] border border-white/[0.08] backdrop-blur-md rounded-full flex gap-1 items-center shadow-[0_12px_40px_rgba(0,0,0,0.3)] mt-4">
+                <div className="w-fit p-1 bg-theme-card border border-theme-border backdrop-blur-md rounded-full flex gap-1 items-center shadow-[0_12px_40px_rgba(0,0,0,0.1)] mt-4">
                     <button
                         onClick={() => setActiveTab('Monthly')}
                         className={`px-6 sm:px-8 py-2 rounded-full cursor-pointer text-sm sm:text-base font-body font-semibold transition-all duration-300 ${activeTab === 'Monthly'
                                 ? 'bg-gradient-to-r from-[#00C9B1] to-[#00E5D4] text-[#05111D] shadow-[0_4px_20px_rgba(0,201,177,0.3)]'
-                                : 'text-slate-400 hover:text-slate-200'
+                                : 'text-theme-subtext hover:text-theme-text'
                             }`}
                     >
                         Monthly
@@ -45,12 +45,12 @@ const Pricing = () => {
                         onClick={() => setActiveTab('Yearly')}
                         className={`flex items-center gap-2 px-6 sm:px-8 py-2 rounded-full cursor-pointer text-sm sm:text-base font-body font-semibold transition-all duration-300 ${activeTab === 'Yearly'
                                 ? 'bg-gradient-to-r from-[#00C9B1] to-[#00E5D4] text-[#05111D] shadow-[0_4px_20px_rgba(0,201,177,0.3)]'
-                                : 'text-slate-400 hover:text-slate-200'
+                                : 'text-theme-subtext hover:text-theme-text'
                             }`}
                     >
                         Yearly
                         <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full whitespace-nowrap transition-all duration-300 ${activeTab === 'Yearly'
-                                ? 'bg-[#05111D] text-[#00C9B1]'
+                                ? 'bg-theme-bg text-[#00C9B1]'
                                 : 'bg-[#F5A623] text-[#05111D]'
                             }`}>
                             Save 20%

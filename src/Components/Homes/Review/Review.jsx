@@ -118,14 +118,14 @@ const Review = () => {
   const cardWidthPct = 100 / perPage;
 
   return (
-    <div className="w-full bg-bg-alt relative py-12 overflow-hidden">
+    <div className="w-full bg-theme-bg text-theme-text relative py-12 overflow-hidden transition-colors duration-300">
 
       {/* Heading */}
       <div className="flex flex-col items-center justify-center gap-5 px-4 mb-10">
-        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-heading font-medium tracking-wider text-text-primary text-center">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-heading font-medium tracking-wider text-theme-text text-center">
           Built for educators, loved by schools
         </h1>
-        <p className="text-base sm:text-lg font-accent font-light text-text-secondary text-center">
+        <p className="text-base sm:text-lg font-accent font-light text-theme-subtext text-center">
           See what school administrators and teachers are saying about SchoolSpine.
         </p>
       </div>
@@ -162,7 +162,7 @@ const Review = () => {
         <button
           onClick={goPrev}
           aria-label="Previous"
-          className="absolute left-0 top-1/2 -translate-y-1/2 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white border border-teal/30 text-teal flex items-center justify-center shadow-sm hover:shadow-[0_4px_16px_rgba(0,201,177,0.2)] hover:scale-110 hover:border-teal transition-all duration-200 cursor-pointer z-10"
+          className="absolute left-0 top-1/2 -translate-y-1/2 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-theme-card border border-theme-border text-teal flex items-center justify-center shadow-sm hover:shadow-[0_4px_16px_rgba(0,201,177,0.2)] hover:scale-110 hover:border-teal transition-all duration-200 cursor-pointer z-10"
         >
           <ChevronLeft size={18} strokeWidth={2.5} />
         </button>
@@ -171,7 +171,7 @@ const Review = () => {
         <button
           onClick={goNext}
           aria-label="Next"
-          className="absolute right-0 top-1/2 -translate-y-1/2 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white border border-teal/30 text-teal flex items-center justify-center shadow-sm hover:shadow-[0_4px_16px_rgba(0,201,177,0.2)] hover:scale-110 hover:border-teal transition-all duration-200 cursor-pointer z-10"
+          className="absolute right-0 top-1/2 -translate-y-1/2 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-theme-card border border-theme-border text-teal flex items-center justify-center shadow-sm hover:shadow-[0_4px_16px_rgba(0,201,177,0.2)] hover:scale-110 hover:border-teal transition-all duration-200 cursor-pointer z-10"
         >
           <ChevronRight size={18} strokeWidth={2.5} />
         </button>

@@ -55,7 +55,7 @@ const DetailsStrip = () => {
     return (
         <div
             ref={stripRef}
-            className="w-full bg-[linear-gradient(to_right,#101D2C,#0E323D,#1E282C)] px-4 relative top-15 sm:px-8 lg:px-20 py-12 sm:py-20"
+            className="w-full bg-[linear-gradient(to_right,#101D2C,#0E323D,#1E282C)] px-4 sm:px-8 lg:px-20 py-12 sm:py-20"
         >
             {/* ── Single row, left-aligned items separated by vertical dividers ── */}
             <div className="flex flex-row flex-wrap justify-center items-stretch max-w-5xl mx-auto">

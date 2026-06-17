@@ -124,9 +124,9 @@ const DarkCard = ({ plan }) => {
     const { name, tagline, price, period, features } = plan
     return (
         <div
-            className="relative flex flex-col rounded-2xl p-8 w-full h-full text-white animate-pulse-border"
+            className="relative flex flex-col rounded-2xl p-8 w-full h-full text-theme-text animate-pulse-border"
             style={{
-                background: 'linear-gradient(#0D2137, #05111D) padding-box, linear-gradient(135deg, #00C9B1, #F5A623) border-box',
+                background: 'linear-gradient(var(--theme-card-grad-start), var(--theme-card-grad-end)) padding-box, linear-gradient(135deg, #00C9B1, #F5A623) border-box',
                 border: '2px solid transparent',
                 boxShadow: '0 12px 45px rgba(0, 201, 177, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
                 transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
@@ -134,12 +134,12 @@ const DarkCard = ({ plan }) => {
             onMouseEnter={e => {
                 e.currentTarget.style.transform = 'translateY(-8px)'
                 e.currentTarget.style.boxShadow = '0 24px 60px rgba(0, 201, 177, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.15)'
-                e.currentTarget.style.background = 'linear-gradient(#0D2137, #05111D) padding-box, linear-gradient(135deg, #00E5D4, #FFD166) border-box'
+                e.currentTarget.style.background = 'linear-gradient(var(--theme-card-grad-start), var(--theme-card-grad-end)) padding-box, linear-gradient(135deg, #00E5D4, #FFD166) border-box'
             }}
             onMouseLeave={e => {
                 e.currentTarget.style.transform = 'translateY(0)'
                 e.currentTarget.style.boxShadow = '0 12px 45px rgba(0, 201, 177, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1)'
-                e.currentTarget.style.background = 'linear-gradient(#0D2137, #05111D) padding-box, linear-gradient(135deg, #00C9B1, #F5A623) border-box'
+                e.currentTarget.style.background = 'linear-gradient(var(--theme-card-grad-start), var(--theme-card-grad-end)) padding-box, linear-gradient(135deg, #00C9B1, #F5A623) border-box'
             }}
         >
             {/* Most Popular Badge */}
@@ -153,37 +153,36 @@ const DarkCard = ({ plan }) => {
 
             {/* Header */}
             <div className="mb-6 mt-2">
-                <h3 className="text-2xl font-heading font-extrabold text-white mb-1.5">{name}</h3>
-                <p className="text-sm font-body text-slate-400">{tagline}</p>
+                <h3 className="text-2xl font-heading font-extrabold text-theme-text mb-1.5">{name}</h3>
+                <p className="text-sm font-body text-theme-subtext">{tagline}</p>
             </div>
 
             {/* Price — inline, no wrapping */}
             <div className="flex items-baseline gap-2 mb-6">
-                <span className="text-4xl font-heading font-extrabold text-white flex items-center justify-center leading-none whitespace-nowrap">
+                <span className="text-4xl font-heading font-extrabold text-theme-text flex items-center justify-center leading-none whitespace-nowrap">
                     <IndianRupee size={22} className="text-[#00C9B1] mr-0.5 animate-pulse" />{price}
                 </span>
-                <span className="text-xs font-body leading-snug whitespace-nowrap text-slate-400">
+                <span className="text-xs font-body leading-snug whitespace-nowrap text-theme-subtext">
                     / {period.includes('month') ? 'month' : 'year'}
                 </span>
             </div>
 
             {/* Divider */}
-            <div className="w-full h-px bg-white/[0.08] mb-6" />
+            <div className="w-full h-px bg-theme-border mb-6" />
 
             {/* Features */}
             <ul className="flex flex-col gap-3.5 mb-8 flex-1">
                 {features.map((feature, i) => (
                     <li key={i} className="flex items-center gap-3">
                         <CheckIcon />
-                        <span className="text-sm font-body text-slate-200 font-medium">{feature}</span>
+                        <span className="text-sm font-body text-theme-subtext font-medium">{feature}</span>
                     </li>
                 ))}
             </ul>
 
             {/* CTA */}
             <button
-                className="w-full py-4 rounded-xl font-body font-bold text-sm text-[#05111D] cursor-pointer transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] shadow-[0_4px_20px_rgba(0,201,177,0.3)] hover:shadow-[0_8px_30px_rgba(0,201,177,0.5)] animate-heartbeat"
-                style={{ background: 'linear-gradient(90deg, #00C9B1 0%, #F5A623 100%)' }}
+                className="w-full py-4 rounded-xl font-body font-bold text-sm text-[#05111D] cursor-pointer transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] shadow-[0_4px_20px_rgba(0,201,177,0.3)] hover:shadow-[0_8px_30px_rgba(0,201,177,0.5)] animate-heartbeat bg-gradient-to-r from-[#00C9B1] to-[#F5A623]"
             >
                 Get Started
             </button>
@@ -195,56 +194,56 @@ const LightCard = ({ plan }) => {
     const { name, tagline, price, period, features } = plan
     return (
         <div
-            className="relative flex flex-col rounded-2xl p-8 w-full h-full text-white"
+            className="relative flex flex-col rounded-2xl p-8 w-full h-full text-theme-text transition-all duration-300"
             style={{
-                background: 'linear-gradient(#0D2137, #05111D) padding-box, linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02)) border-box',
+                background: 'linear-gradient(var(--theme-card-grad-start), var(--theme-card-grad-end)) padding-box, linear-gradient(135deg, var(--theme-card-border-light), var(--theme-card-border-light)) border-box',
                 border: '1px solid transparent',
                 boxShadow: '0 12px 40px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.05)',
                 transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
             }}
             onMouseEnter={e => {
                 e.currentTarget.style.boxShadow = '0 20px 45px rgba(0, 201, 177, 0.18)'
-                e.currentTarget.style.background = 'linear-gradient(#0D2137, #05111D) padding-box, linear-gradient(135deg, rgba(0, 201, 177, 0.5), rgba(245, 166, 35, 0.3)) border-box'
+                e.currentTarget.style.background = 'linear-gradient(var(--theme-card-grad-start), var(--theme-card-grad-end)) padding-box, linear-gradient(135deg, rgba(0, 201, 177, 0.5), rgba(245, 166, 35, 0.3)) border-box'
                 e.currentTarget.style.transform = 'translateY(-6px)'
             }}
             onMouseLeave={e => {
                 e.currentTarget.style.boxShadow = '0 12px 40px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.05)'
-                e.currentTarget.style.background = 'linear-gradient(#0D2137, #05111D) padding-box, linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02)) border-box'
+                e.currentTarget.style.background = 'linear-gradient(var(--theme-card-grad-start), var(--theme-card-grad-end)) padding-box, linear-gradient(135deg, var(--theme-card-border-light), var(--theme-card-border-light)) border-box'
                 e.currentTarget.style.transform = 'translateY(0)'
             }}
         >
             {/* Header */}
             <div className="mb-6">
-                <h3 className="text-2xl font-heading font-extrabold text-white mb-1.5">{name}</h3>
-                <p className="text-sm font-body text-slate-400">{tagline}</p>
+                <h3 className="text-2xl font-heading font-extrabold text-theme-text mb-1.5">{name}</h3>
+                <p className="text-sm font-body text-theme-subtext">{tagline}</p>
             </div>
 
             {/* Price — inline, no wrapping */}
             <div className="flex items-baseline gap-2 mb-6">
-                <span className="text-4xl font-heading font-extrabold text-white flex items-center justify-center leading-none whitespace-nowrap">
+                <span className="text-4xl font-heading font-extrabold text-theme-text flex items-center justify-center leading-none whitespace-nowrap">
                     <IndianRupee size={22} className="text-[#00C9B1] mr-0.5" />{price}
                 </span>
-                <span className="text-xs font-body text-slate-400 leading-snug whitespace-nowrap">
+                <span className="text-xs font-body text-theme-subtext leading-snug whitespace-nowrap">
                     / {period.includes('month') ? 'month' : 'year'}
                 </span>
             </div>
 
             {/* Divider */}
-            <div className="w-full h-px bg-white/[0.08] mb-6" />
+            <div className="w-full h-px bg-theme-border mb-6" />
 
             {/* Features */}
             <ul className="flex flex-col gap-3.5 mb-8 flex-1">
                 {features.map((feature, i) => (
                     <li key={i} className="flex items-center gap-3">
                         <CheckIcon />
-                        <span className="text-sm font-body text-slate-300">{feature}</span>
+                        <span className="text-sm font-body text-theme-subtext">{feature}</span>
                     </li>
                 ))}
             </ul>
 
             {/* CTA */}
             <button
-                className="w-full py-4 rounded-xl font-body font-bold text-sm text-white cursor-pointer transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] shadow-md hover:shadow-lg bg-white/[0.06] border border-white/[0.1] hover:bg-white/[0.12] hover:border-white/[0.2]"
+                className="w-full py-4 rounded-xl font-body font-bold text-sm text-theme-text cursor-pointer transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] shadow-sm hover:shadow-lg bg-theme-card border border-theme-border hover:bg-theme-border/20"
             >
                 Get Started
             </button>

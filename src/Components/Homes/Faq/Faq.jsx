@@ -42,7 +42,7 @@ const FAQ = () => {
     }
 
     return (
-        <section className="w-full relative py-20 px-4 sm:px-6 overflow-hidden bg-[#05111D]">
+        <section className="w-full relative py-20 px-4 sm:px-6 overflow-hidden bg-theme-bg text-theme-text transition-colors duration-300">
             {/* Top Gradient Divider */}
             <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-[#00C9B1]/30 via-[#F5A623]/20 to-transparent z-10" />
             {/* Bottom Gradient Divider */}
@@ -59,10 +59,10 @@ const FAQ = () => {
 
                 {/* Header */}
                 <div className="text-center mb-16">
-                    <h2 className="font-heading text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white leading-tight mb-4">
+                    <h2 className="font-heading text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-theme-text leading-tight mb-4">
                         Frequently Asked <span className="bg-gradient-to-r from-teal-dark to-teal bg-clip-text text-transparent">Questions</span>
                     </h2>
-                    <p className="text-slate-300 text-base sm:text-lg max-w-lg mx-auto">
+                    <p className="text-theme-subtext text-base sm:text-lg max-w-lg mx-auto">
                         Everything you need to know about SchoolSpine.
                     </p>
                 </div>
@@ -74,17 +74,7 @@ const FAQ = () => {
                         return (
                             <div
                                 key={idx}
-                                className="rounded-2xl backdrop-blur-md transition-all duration-300 shadow-[0_8px_30px_rgba(0,0,0,0.2)] hover:shadow-[0_12px_30px_rgba(0,201,177,0.12)] overflow-hidden"
-                                style={{
-                                    border: '1px solid transparent',
-                                    background: 'linear-gradient(rgba(10, 24, 40, 0.4), rgba(10, 24, 40, 0.4)) padding-box, linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02)) border-box',
-                                }}
-                                onMouseEnter={e => {
-                                    e.currentTarget.style.background = 'linear-gradient(rgba(10, 24, 40, 0.5), rgba(10, 24, 40, 0.5)) padding-box, linear-gradient(135deg, rgba(0, 201, 177, 0.45), rgba(245, 166, 35, 0.25)) border-box'
-                                }}
-                                onMouseLeave={e => {
-                                    e.currentTarget.style.background = 'linear-gradient(rgba(10, 24, 40, 0.4), rgba(10, 24, 40, 0.4)) padding-box, linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02)) border-box'
-                                }}
+                                className="rounded-2xl backdrop-blur-md transition-all duration-300 shadow-[0_8px_30px_rgba(0,0,0,0.02)] hover:shadow-[0_12px_30px_rgba(0,201,177,0.08)] border border-theme-border hover:border-teal/50 bg-theme-card overflow-hidden"
                             >
                                 {/* Question Row */}
                                 <button
@@ -92,10 +82,10 @@ const FAQ = () => {
                                     className="w-full flex items-center justify-between p-6 text-left gap-4 group cursor-pointer"
                                     aria-expanded={isOpen}
                                 >
-                                    <span className="text-white font-body font-bold text-base sm:text-lg group-hover:text-[#00C9B1] transition-colors duration-200">
+                                    <span className="text-theme-text font-body font-bold text-base sm:text-lg group-hover:text-[#00C9B1] transition-colors duration-200">
                                         {faq.question}
                                     </span>
-                                    <span className={`flex-shrink-0 text-slate-400 group-hover:text-[#00C9B1] transition-all duration-300 ${isOpen ? 'rotate-180 text-[#00C9B1]' : ''}`}>
+                                    <span className={`flex-shrink-0 text-theme-subtext group-hover:text-[#00C9B1] transition-all duration-300 ${isOpen ? 'rotate-180 text-[#00C9B1]' : ''}`}>
                                         <ChevronDown size={20} />
                                     </span>
                                 </button>
@@ -105,7 +95,7 @@ const FAQ = () => {
                                     className={`overflow-hidden transition-all duration-300 ease-in-out ${isOpen ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'
                                         }`}
                                 >
-                                    <div className="p-6 pt-0 text-slate-300 font-body text-sm sm:text-base leading-relaxed pr-8 border-t border-white/[0.06] mt-1">
+                                    <div className="p-6 pt-0 text-theme-subtext font-body text-sm sm:text-base leading-relaxed pr-8 border-t border-theme-border mt-1">
                                         {faq.answer}
                                     </div>
                                 </div>

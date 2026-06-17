@@ -73,20 +73,20 @@ function TreeCard({ card, animDelay = 0 }) {
             className="flex flex-col items-center w-full"
             style={{ animation: `floatUpDown 5s ${animDelay}s ease-in-out infinite` }}
         >
-            <div className={`flex items-center gap-2 px-3 py-2.5 w-full bg-white border ${c.border} rounded-2xl shadow-[0_2px_16px_rgba(0,0,0,0.07)]`}>
+            <div className="flex items-center gap-2 px-3 py-2.5 w-full bg-theme-card border border-theme-border rounded-2xl shadow-[0_2px_16px_rgba(0,0,0,0.07)]">
                 <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${c.bg} border ${c.border}`}>
                     <Icon size={14} className={c.icon} />
                 </div>
-                <span className="text-[12px] font-semibold text-gray-700 font-heading leading-tight">{card.label}</span>
+                <span className="text-[12px] font-semibold text-theme-text font-heading leading-tight">{card.label}</span>
             </div>
-            <div className="w-px h-5 bg-gray-300" />
+            <div className="w-px h-5 bg-theme-border" />
             <div className="relative w-full flex flex-col items-center">
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[80%] h-px bg-gray-300" />
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[80%] h-px bg-theme-border" />
                 <div className="flex justify-center gap-6 w-full mt-0.5">
                     {card.children.map(child => (
                         <div key={child} className="flex flex-col items-center">
-                            <div className="w-px h-4 bg-gray-300" />
-                            <div className={`px-3 py-1.5 text-center text-[10px] font-medium text-gray-600 bg-white border ${c.childBorder} rounded-xl shadow-[0_1px_6px_rgba(0,0,0,0.05)] whitespace-nowrap`}>
+                            <div className="w-px h-4 bg-theme-border" />
+                            <div className="px-3 py-1.5 text-center text-[10px] font-medium text-theme-subtext bg-theme-card border border-theme-border rounded-xl shadow-[0_1px_6px_rgba(0,0,0,0.05)] whitespace-nowrap">
                                 {child}
                             </div>
                         </div>
@@ -99,7 +99,7 @@ function TreeCard({ card, animDelay = 0 }) {
 
 export default function Mockups() {
     return (
-        <div className="bg-bg-alt text-gray-900">
+        <div className="bg-theme-bg text-theme-text transition-colors duration-300">
             <div className="relative z-10 px-4 sm:px-6 pb-8 pt-8 w-full max-w-7xl mx-auto">
 
                 {/* Background glow */}

@@ -23,7 +23,7 @@ export default function Header() {
     useEffect(() => { setMounted(true) }, [])
 
     return (
-        <div className="relative overflow-hidden font-body flex flex-col bg-[#05111D] text-white">
+        <div className="relative overflow-hidden font-body flex flex-col bg-theme-bg text-theme-text transition-colors duration-300">
             
             {/* Ambient Animated Blobs */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
@@ -69,14 +69,14 @@ export default function Header() {
                 <div className="flex flex-col items-center lg:items-start text-center lg:text-left shrink-0 w-full lg:w-[46%] xl:w-[44%]">
 
                     <div className="animate-[fadeUp_0.9s_0.1s_ease_both]">
-                        <span className="inline-flex items-center gap-2 bg-white/[0.04] border border-white/[0.08] backdrop-blur-md rounded-full px-4 py-1.5 text-gold text-[11px] font-semibold tracking-widest uppercase">
+                        <span className="inline-flex items-center gap-2 bg-theme-card border border-theme-border backdrop-blur-md rounded-full px-4 py-1.5 text-gold text-[11px] font-semibold tracking-widest uppercase">
                             <Star size={12} fill="currentColor" className="text-gold" /> Recognized by Startup India
                         </span>
                     </div>
 
                     <div className="mt-4 animate-[fadeUp_0.9s_0.2s_ease_both]">
                         <h1 className="font-heading font-bold text-4xl text-nowrap sm:text-5xl lg:text-5xl xl:text-6xl leading-tight">
-                            <span className="block text-white">Run Your School.</span>
+                            <span className="block text-theme-text">Run Your School.</span>
                             <span className="block text-grad-teal-gold animate-text-glow">Not Spreadsheets.</span>
                         </h1>
                         <div className="flex items-center justify-center lg:justify-start mt-1">
@@ -84,7 +84,7 @@ export default function Header() {
                         </div>
                     </div>
 
-                    <p className="mt-3 text-[14px] sm:text-[15px] md:text-[16px] font-light leading-relaxed text-slate-300 max-w-sm lg:max-w-none animate-[fadeUp_0.9s_0.28s_ease_both]">
+                    <p className="mt-3 text-[14px] sm:text-[15px] md:text-[16px] font-light leading-relaxed text-theme-subtext max-w-sm lg:max-w-none animate-[fadeUp_0.9s_0.28s_ease_both]">
                         The all-in-one platform that automates admissions, attendance, fees &amp; exams — so your staff focuses on students, not paperwork.
                     </p>
 
@@ -93,7 +93,7 @@ export default function Header() {
                             <span className="relative z-10 flex items-center gap-2">Start Free Trial <span>→</span></span>
                             <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover:translate-x-full transition-transform duration-1000" />
                         </button>
-                        <button className="flex items-center gap-2 px-4 sm:px-5 py-3 sm:py-3.5 bg-white/[0.04] border border-white/[0.08] text-slate-200 font-medium text-[14px] sm:text-[15px] rounded-2xl hover:bg-white/[0.08] hover:border-white/[0.18] hover:-translate-y-0.5 transition-all duration-300 cursor-pointer">
+                        <button className="flex items-center gap-2 px-4 sm:px-5 py-3 sm:py-3.5 bg-theme-card border border-theme-border text-theme-text font-medium text-[14px] sm:text-[15px] rounded-2xl hover:bg-theme-border/20 hover:-translate-y-0.5 transition-all duration-300 cursor-pointer">
                             <Download size={14} className="text-gold" /> Brochure
                         </button>
                     </div>
@@ -105,7 +105,7 @@ export default function Header() {
                             { dot: 'gold', label: 'Free Mobile Apps' },
                             { dot: 'gold', label: '4.9 ★ Rating' },
                         ].map((s, i) => (
-                            <span key={i} className="flex items-center gap-2 bg-white/[0.04] border border-white/[0.08] backdrop-blur-md rounded-full px-3.5 py-1.5 text-[11px] sm:text-[12px] font-medium text-slate-300 hover:bg-white/[0.08] hover:border-white/[0.15] transition-all duration-300 shadow-[0_4px_12px_rgba(0,0,0,0.15)]">
+                            <span key={i} className="flex items-center gap-2 bg-theme-card border border-theme-border backdrop-blur-md rounded-full px-3.5 py-1.5 text-[11px] sm:text-[12px] font-medium text-theme-subtext hover:bg-theme-border/20 transition-all duration-300 shadow-[0_4px_12px_rgba(0,0,0,0.15)]">
                                 <span className={`w-1.5 h-1.5 rounded-full ${s.dot === 'teal' ? 'bg-teal shadow-[0_0_8px_#00C9B1]' : 'bg-gold shadow-[0_0_8px_#F5A623]'} animate-pulse`} />
                                 {s.label}
                             </span>
@@ -129,10 +129,10 @@ export default function Header() {
 
             {/* Scroll indicator */}
             <div className="flex flex-col items-center mt-9 mb-6 animate-[fadeUp_1s_0.65s_ease_both] relative z-10">
-                <span className="text-[11px] tracking-widest uppercase font-semibold text-slate-300">
+                <span className="text-[11px] tracking-widest uppercase font-semibold text-theme-subtext">
                     Explore More
                 </span>
-                <div className="relative mt-3 w-7 h-11 rounded-full border border-white/20 bg-white/5 backdrop-blur-md flex items-start justify-center p-1 shadow-[inset_0_0_8px_rgba(255,255,255,0.05),0_4px_20px_rgba(0,0,0,0.4)]">
+                <div className="relative mt-3 w-7 h-11 rounded-full border border-theme-border bg-theme-card backdrop-blur-md flex items-start justify-center p-1 shadow-[inset_0_0_8px_rgba(255,255,255,0.05),0_4px_20px_rgba(0,0,0,0.4)]">
                     <div className="w-1.5 h-2.5 rounded-full bg-linear-to-b from-teal-light to-teal-dark animate-[scrollDot_1.4s_ease-in-out_infinite] shadow-[0_0_8px_rgba(0,201,177,0.6)]" />
                 </div>
             </div>
