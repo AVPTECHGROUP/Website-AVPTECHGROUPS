@@ -9,11 +9,13 @@ import { getSectionSubjectsByClass } from "../../Api/TeachersAPI";
 // ─── Per-subject row state factory ────────────────────────────────────────────
 function makeRowState(subject, editData = null, alreadyAdded = false) {
     const e = editData;
+
     return {
         sectionSubjectId: subject.id,
+        className: subject.className || "",
+        sectionName: subject.sectionName || "",
         subjectName: subject.subjectName || subject.subject?.name || `Subject #${subject.id}`,
         subjectCode: subject.subjectCode || "",
-        sectionName: subject.sectionName || "",
         included: e ? true : false,
         // Already added to this exam — cannot be selected again
         alreadyAdded,
@@ -284,7 +286,17 @@ export default function AddSubjectForm({
     const includedCount = rows.filter((r) => r.included && !r.alreadyAdded).length;
     const alreadyAddedCount = rows.filter((r) => r.alreadyAdded).length;
 
-    // Submit
+    const groupedRows = rows.reduce((acc, row) => {
+        const groupKey = `${row.className}__${row.sectionName}`;
+
+        if (!acc[groupKey]) {
+            acc[groupKey] = [];
+        }
+
+        acc[groupKey].push(row);
+
+        return acc;
+    }, {});
     // Submit
     const handleSubmit = async () => {
         setSubmitError(null);
@@ -521,35 +533,90 @@ export default function AddSubjectForm({
                                             <th className="px-3 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider w-36">Theory + Practical</th>
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-gray-50">
-                                        {rows.map((row, idx) => (
-                                            <DesktopRow
-                                                key={row.sectionSubjectId}
-                                                row={row}
-                                                rowIdx={idx}
-                                                onChange={handleFieldChange}
-                                                onToggleInclude={handleToggleInclude}
-                                                onToggleTP={handleToggleTP}
-                                                disabled={submitting}
-                                            />
-                                        ))}
+                                    <tbody>
+                                        {Object.entries(groupedRows).map(([groupKey, subjects]) => {
+                                            const firstSubject = subjects[0];
+
+                                            return (
+                                                <>
+                                                    {/* Section Badge Row */}
+                                                    <tr key={`header-${groupKey}`}>
+                                                        <td
+                                                            colSpan={5}
+                                                            className="bg-slate-50 px-4 py-3 border-y border-slate-200"
+                                                        >
+                                                            <div className="flex items-center">
+                                                                <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-100 text-blue-700 text-sm font-semibold">
+                                                                    📚 {firstSubject.className}
+                                                                    <span className="text-blue-400">•</span>
+                                                                    Section {firstSubject.sectionName}
+                                                                </span>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+
+                                                    {subjects.map((row) => {
+                                                        const actualIndex = rows.findIndex(
+                                                            (r) => r.sectionSubjectId === row.sectionSubjectId
+                                                        );
+
+                                                        return (
+                                                            <DesktopRow
+                                                                key={row.sectionSubjectId}
+                                                                row={row}
+                                                                rowIdx={actualIndex}
+                                                                onChange={handleFieldChange}
+                                                                onToggleInclude={handleToggleInclude}
+                                                                onToggleTP={handleToggleTP}
+                                                                disabled={submitting}
+                                                            />
+                                                        );
+                                                    })}
+                                                </>
+                                            );
+                                        })}
                                     </tbody>
                                 </table>
                             </div>
 
                             {/* ── MOBILE / TABLET CARDS (< md) ── */}
-                            <div className="md:hidden space-y-2">
-                                {rows.map((row, idx) => (
-                                    <MobileCard
-                                        key={row.sectionSubjectId}
-                                        row={row}
-                                        rowIdx={idx}
-                                        onChange={handleFieldChange}
-                                        onToggleInclude={handleToggleInclude}
-                                        onToggleTP={handleToggleTP}
-                                        disabled={submitting}
-                                    />
-                                ))}
+                            <div className="md:hidden space-y-4">
+                                {Object.entries(groupedRows).map(([groupKey, subjects]) => {
+                                    const firstSubject = subjects[0];
+
+                                    return (
+                                        <div key={groupKey}>
+                                            {/* Section Header */}
+                                            <div className="sticky top-0 z-10 mb-2">
+                                                <div className="inline-flex items-center gap-2 px-3 py-2 rounded-full bg-blue-100 text-blue-700 text-sm font-semibold">
+                                                    📚 {firstSubject.className}
+                                                    <span className="text-blue-400">•</span>
+                                                    Section {firstSubject.sectionName}
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                {subjects.map((row) => {
+                                                    const actualIndex = rows.findIndex(
+                                                        (r) => r.sectionSubjectId === row.sectionSubjectId
+                                                    );
+
+                                                    return (
+                                                        <MobileCard
+                                                            key={row.sectionSubjectId}
+                                                            row={row}
+                                                            rowIdx={actualIndex}
+                                                            onChange={handleFieldChange}
+                                                            onToggleInclude={handleToggleInclude}
+                                                            onToggleTP={handleToggleTP}
+                                                            disabled={submitting}
+                                                        />
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </div>
                     )}
