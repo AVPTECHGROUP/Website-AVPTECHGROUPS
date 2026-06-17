@@ -1,24 +1,13 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, User, Camera, X } from 'lucide-react';
 import { toast } from 'react-toastify';
 import AddPersonalDetails from '../../Components/SuperAdmin/AddTabComponents/AddPersionslDetails';
-import { createUser, updateUserById } from '../../Api/userManagementAPI';
-
+import { createUser, updateUserById, getAllUserRoles } from '../../Api/userManagementAPI';
 // ─── Constants ────────────────────────────────────────────────────────────────
 const VALID_GENDERS = ['MALE', 'FEMALE', 'OTHER'];
 
-const VALID_ROLES = [
-    'SUPER_ADMIN',
-    'ADMIN',
-    'PRINCIPAL',
-    'TEACHER',
-    'ACCOUNTANT',
-    'PARENT',
-    'RECEPTIONIST',
-    'STORE_ACCOUNTANT',
-    'STORE_SELLER',
-];
+//  REMOVED hardcoded VALID_ROLES — roles are now fetched dynamically via getAllUserRoles()
 
 const PARENT_LIKE_ROLES = ['PARENT'];
 
@@ -44,11 +33,13 @@ const isValidJoiningDate = (dateStr) => {
     return !isNaN(d.getTime()) && d <= new Date();
 };
 
-const validateFormData = (formData) => {
+// ✅ CHANGED: validateFormData now accepts `validRoles` (the dynamically fetched role names)
+// instead of relying on a hardcoded VALID_ROLES constant.
+const validateFormData = (formData, validRoles = []) => {
     const fieldErrors = {};
     const isParentLike = PARENT_LIKE_ROLES.includes(formData.userRole);
 
-    if (!formData.userRole || !VALID_ROLES.includes(formData.userRole)) {
+    if (!formData.userRole || !validRoles.includes(formData.userRole)) {
         fieldErrors.userRole = 'Please select a valid user role.';
     }
 
@@ -130,6 +121,10 @@ function AddnewSystemUser() {
     const [imagePreview, setImagePreview] = useState(null);
     const fileInputRef = useRef(null);
 
+    // ✅ NEW: dynamic role state
+    const [roleOptions, setRoleOptions] = useState([]); // [{ roleKey, roleVal, roleDisplay }]
+    const [rolesLoading, setRolesLoading] = useState(true);
+
     const [formData, setFormData] = useState({
         name: '',
         gender: '',
@@ -163,6 +158,36 @@ function AddnewSystemUser() {
         additionalSubjects: '',
         isClassTeacher: false,
     });
+
+    // ✅ NEW: fetch assignable roles dynamically on mount
+    useEffect(() => {
+        const fetchUserRoles = async () => {
+            try {
+                setRolesLoading(true);
+                const rolesRes = await getAllUserRoles();
+                const fetchedRoles = rolesRes.data || [];
+                const roleOpt = fetchedRoles
+                    .filter(
+                        (val) =>
+                            val.name !== 'SUPER_ADMIN' &&
+                            val.name !== 'TEACHER' &&
+                            val.name !== 'GLOBAL_ADMIN' &&
+                            val.name !== 'PARENT'
+                    )
+                    .map((val) => ({ roleKey: val.id, roleVal: val.name, roleDisplay: val.displayName }));
+                setRoleOptions(roleOpt);
+            } catch (e) {
+                console.error('Fetch roles error:', e.message);
+                toast.error('Failed to load user roles. Please refresh the page.');
+            } finally {
+                setRolesLoading(false);
+            }
+        };
+        fetchUserRoles();
+    }, []);
+
+    // ✅ NEW: derived list of valid role names for validation, sourced from the API
+    const validRoleNames = roleOptions.map((r) => r.roleVal);
 
     const handleImageChange = (e) => {
         const file = e.target.files[0];
@@ -224,7 +249,8 @@ function AddnewSystemUser() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        const { valid, fieldErrors: errs } = validateFormData(formData);
+        // ✅ CHANGED: pass the dynamic role list into validateFormData
+        const { valid, fieldErrors: errs } = validateFormData(formData, validRoleNames);
         if (!valid) {
             setFieldErrors(errs);
             toast.error("Please fill all required details correctly.");
@@ -248,7 +274,6 @@ function AddnewSystemUser() {
             if (profileImage) {
                 toast.info("Profile photo may take a few seconds to reflect.", { autoClose: 4000 });
             }
-            // ✅ FIXED: was '/dashboard/manageUsers' — correct route is '/manageUsers'
             navigate('/manageUsers');
         } catch (err) {
             toast.dismiss(loadingToast);
@@ -375,6 +400,8 @@ function AddnewSystemUser() {
                                         handleInputChange={handleInputChange}
                                         fieldErrors={fieldErrors}
                                         setFieldErrors={setFieldErrors}
+                                        roleOptions={roleOptions}
+                                        rolesLoading={rolesLoading}
                                     />
                                 </>
                             )}
@@ -384,7 +411,6 @@ function AddnewSystemUser() {
                             <div className="flex flex-col sm:flex-row justify-end gap-3">
                                 <button
                                     type="button"
-                                    // ✅ FIXED: was '/dashboard/manageUsers'
                                     onClick={() => navigate('/manageUsers')}
                                     className="px-6 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                                 >
