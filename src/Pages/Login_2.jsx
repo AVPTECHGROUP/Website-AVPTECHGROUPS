@@ -189,7 +189,8 @@ const Login_2 = ({ onLoginSuccess }) => {
     setIsLoading(true)
     setLoginError('')
     try {
-      const res = await loginAPI({ email, password })
+      const final_email = email.trim() , final_password = password.trim();
+      const res = await loginAPI({ final_email, final_password })
       const token = res.data?.token || res.token
       const user  = res.data?.user  || res.user
       const requireSchoolSelection =
