@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Search, Edit2, Plus, Trash2, ChevronLeft, ChevronRight, X, BookOpen, User } from 'lucide-react';
+import { Search, Edit2, Plus, Trash2, ChevronLeft, ChevronRight, X, BookOpen } from 'lucide-react';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
   createTeacherAssignment,
   updateTeacherAssignment,
@@ -10,10 +11,11 @@ import {
   getTeachersActiveAssignments,
   getTeacherById
 } from "../../Api/TeachersAPI";
-import { useParams, useNavigate } from 'react-router-dom';
+import { useDecodedUser } from "../../ContextAPI/UserContext";
 
 function ClassAssignment() {
   const navigate = useNavigate();
+  const { currentAcademicYear } = useDecodedUser(); // ── EXTRACT CURRENT ACADEMIC YEAR FROM CONTEXT ──
 
   const [createdAssignments, setCreatedAssignments] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -44,14 +46,11 @@ function ClassAssignment() {
     empCode: '',
     currStatus: '',
     dessignation: '',
-    image:null
+    image: null
   });
 
-  // ── CHANGED: multi-select set instead of single string ──
   const [selectedClassIds, setSelectedClassIds] = useState(new Set());
   const [addingClass, setAddingClass] = useState(false);
-
-  // ── Sections cache per classId ──
   const [sectionsByClassId, setSectionsByClassId] = useState({});
 
   const { teacherId } = useParams();
@@ -169,7 +168,7 @@ function ClassAssignment() {
     });
   }, [formData.classAssignments]);
 
-  useEffect(() => { setCurrentPage(1); }, [searchTerm]);
+  useEffect(() => { setSearchTerm(""); setCurrentPage(1); }, [searchTerm]);
 
   useEffect(() => {
     return () => {
@@ -192,7 +191,6 @@ function ClassAssignment() {
   };
 
   const fetchSections = async (classId) => {
-    // Return cached sections if already fetched
     if (sectionsByClassId[classId]) return sectionsByClassId[classId];
     try {
       setDropdownLoading(prev => ({ ...prev, sections: true }));
@@ -231,7 +229,6 @@ function ClassAssignment() {
 
   // ==================== FORM HANDLERS ====================
 
-  // ── CHANGED: toggle class in/out of multi-selection set ──
   const toggleClassSelection = (classId) => {
     const strId = String(classId);
     const isAlreadyAdded = formData.classAssignments.some(ca => String(ca.gradeId) === strId);
@@ -243,14 +240,11 @@ function ClassAssignment() {
     });
   };
 
-  // ── CHANGED: add ALL selected classes at once, fetching their sections in parallel ──
   const handleAddClasses = async () => {
     if (selectedClassIds.size === 0) return;
     try {
       setAddingClass(true);
       const classIdsArray = Array.from(selectedClassIds);
-
-      // Fetch sections for all selected classes in parallel
       await Promise.all(classIdsArray.map(cid => fetchSections(cid)));
 
       const newAssignments = classIdsArray.map(cid => {
@@ -347,6 +341,8 @@ function ClassAssignment() {
   const handleAddMapping = async (e) => {
     e.preventDefault();
     if (!formData.teacherId) { setError("Teacher missing"); return; }
+    if (!currentAcademicYear?.id) { setError("Academic Year context missing. Please reload."); return; }
+    
     const assignmentsArray = [];
     formData.classAssignments.forEach(ca => {
       ca.sections.forEach(sectionId => {
@@ -359,12 +355,13 @@ function ClassAssignment() {
             subjectId: Number(subject.subjectId),
             isClassTeacher: formData.isClassTeacher,
             weeklyPeriods: 5,
-            academicYear: "2025-2026",
+            academicYear: Number(currentAcademicYear.id), // ── CHANGED: Dynamic Context ID instead of String ──
             status: "ACTIVE"
           });
         }
       });
     });
+    
     if (assignmentsArray.length === 0) { setError("Please select subjects"); return; }
     try {
       setLoading(true);
@@ -404,6 +401,8 @@ function ClassAssignment() {
   const handleUpdateAssignment = async (e) => {
     e.preventDefault();
     if (!editingAssignment || formData.classAssignments.length === 0) return;
+    if (!currentAcademicYear?.id) { setError("Academic Year context missing."); return; }
+    
     const ca = formData.classAssignments[0];
     if (!ca.sections?.length) {
       setError("Please select at least one section");
@@ -422,9 +421,13 @@ function ClassAssignment() {
       setLoading(true);
       setError(null);
       const payload = {
-        classId: ca.gradeId, sectionId, subjectId: sel.subjectId,
-        isClassTeacher: formData.isClassTeacher, weeklyPeriods: 5,
-        academicYear: "2025-2026", status: "ACTIVE"
+        classId: Number(ca.gradeId), 
+        sectionId: Number(sectionId), 
+        subjectId: Number(sel.subjectId),
+        isClassTeacher: formData.isClassTeacher, 
+        weeklyPeriods: 5,
+        academicYear: Number(currentAcademicYear.id), // ── CHANGED: Dynamic Context ID instead of String ──
+        status: "ACTIVE"
       };
       if (!validatePayload(payload)) throw new Error("Invalid payload: " + JSON.stringify(payload));
       await updateTeacherAssignment(editingAssignment.id, payload);
@@ -475,7 +478,7 @@ function ClassAssignment() {
     setSections([]);
     setSectionSubjectsMap({});
     setSectionSubjectSelections({});
-    setSelectedClassIds(new Set());   // ← clear multi-selection on reset
+    setSelectedClassIds(new Set());
   };
 
   const handleCancelEdit = () => { setEditingAssignment(null); resetForm(); };
@@ -544,7 +547,6 @@ function ClassAssignment() {
   const getInitials = (name) =>
     (name || 'N').trim().split(' ').filter(Boolean).map(n => n[0]).join('').toUpperCase().slice(0, 2);
 
-  // ==================== RENDER ====================
   return (
     <div className="min-h-screen bg-linear-to-br from-blue-50 to-indigo-50 p-4 md:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto bg-white rounded-xl shadow-xl overflow-hidden">
@@ -568,25 +570,25 @@ function ClassAssignment() {
             {formData.teacherName && (
               <div className="flex items-center justify-between w-full gap-2.5 bg-white border rounded-xl p-4 shadow-sm border-gray-200">
                 <div className="min-w-50 flex items-center gap-2">
-                   {formData?.image ? (
-  <img
-    src={formData.image}
-    alt={formData.teacherName}
-    className="w-14 h-14 rounded-full object-cover shadow-sm border border-slate-200"
-    onError={(e) => {
-      e.target.style.display = "none";
-      e.target.nextSibling.style.display = "flex";
-    }}
-  />
-) : null}
+                  {formData?.image ? (
+                    <img
+                      src={formData.image}
+                      alt={formData.teacherName}
+                      className="w-14 h-14 rounded-full object-cover shadow-sm border border-slate-200"
+                      onError={(e) => {
+                        e.target.style.display = "none";
+                        e.target.nextSibling.style.display = "flex";
+                      }}
+                    />
+                  ) : null}
 
-<span
-  className={`w-14 h-14 rounded-full bg-linear-to-br from-blue-800 to-indigo-600 items-center justify-center text-white text-xl font-bold shadow-sm ${
-    formData?.image ? "hidden" : "flex"
-  }`}
->
-  {getInitials(formData.teacherName)}
-</span>
+                  <span
+                    className={`w-14 h-14 rounded-full bg-linear-to-br from-blue-800 to-indigo-600 items-center justify-center text-white text-xl font-bold shadow-sm ${
+                      formData?.image ? "hidden" : "flex"
+                    }`}
+                  >
+                    {getInitials(formData.teacherName)}
+                  </span>
                   <div className="flex flex-col leading-tight">
                     <span className="text-lg font-medium text-gray-800">{formData.teacherName}</span>
                     <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-500">
@@ -612,13 +614,12 @@ function ClassAssignment() {
           <form onSubmit={editingAssignment ? handleUpdateAssignment : handleAddMapping}>
             <div className="space-y-4 mb-4">
 
-              {/* ── CHANGED: Multi-select class picker ── */}
+              {/* Class picker */}
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide">
                     Select Classes <span className="text-red-500">*</span>
                   </label>
-                  {/* Selection counter */}
                   {selectedClassIds.size > 0 && (
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-semibold text-blue-700 bg-blue-100 px-2.5 py-1 rounded-full">
@@ -669,7 +670,7 @@ function ClassAssignment() {
                 </p>
               </div>
 
-              {/* ── CHANGED: "Add Classes" button (label reflects count) + Is Class Teacher ── */}
+              {/* Action buttons */}
               <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
@@ -691,10 +692,10 @@ function ClassAssignment() {
                   <button
                     type="button"
                     onClick={() => setFormData(prev => ({ ...prev, isClassTeacher: !prev.isClassTeacher }))}
-                    className={`relative w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg h-10 flex items-center rounded-lg transition-colors duration-300 ${formData.isClassTeacher ? "bg-blue-500" : "bg-gray-300"}`}
+                    className={`relative w-full max-w-xs h-10 flex items-center rounded-lg transition-colors duration-300 ${formData.isClassTeacher ? "bg-blue-500" : "bg-gray-300"}`}
                   >
-                    <span className="text-xs sm:text-sm md:text-base lg:text-lg text-center w-full font-medium text-white px-4">
-                    Is Class Teacher
+                    <span className="text-xs sm:text-sm text-center w-full font-medium text-white px-4">
+                      Is Class Teacher
                     </span>
                     <span className="absolute top-1 left-1 w-8 h-8 bg-white rounded-lg shadow-md flex items-center justify-center text-xs font-bold">
                       {formData.isClassTeacher && <span className="text-blue-600 text-sm">✓</span>}
@@ -703,7 +704,7 @@ function ClassAssignment() {
                 </div>
               </div>
 
-              {/* Per-class section rows + per-section subject dropdowns */}
+              {/* Subject Mapping block */}
               {formData.classAssignments.length > 0 && (
                 <div className="border-t pt-4 space-y-3">
                   <div className="flex items-center justify-between">
@@ -852,7 +853,7 @@ function ClassAssignment() {
               )}
             </div>
 
-            {/* Banners */}
+            {/* Notification Layouts */}
             {successMessage && (
               <div className="mx-4 mt-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-800 text-sm flex items-center gap-2">
                 <span className="font-bold text-green-600">✓</span>{successMessage}
@@ -864,7 +865,7 @@ function ClassAssignment() {
               </div>
             )}
 
-            {/* Submit */}
+            {/* Submission Block */}
             <div className="flex items-center justify-between pt-4 border-t border-gray-200">
               <p className="text-xs text-gray-500">
                 {sectionSubjectMappings.length > 0
@@ -885,7 +886,7 @@ function ClassAssignment() {
           </form>
         </div>
 
-        {/* Current Mappings Table */}
+        {/* Existing Mapping Grid Table */}
         <div className="p-4 md:p-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
             <h2 className="font-bold text-gray-900">
@@ -909,159 +910,157 @@ function ClassAssignment() {
             </div>
           ) : formData.teacherId !== '' ? (
             <>
-              {/* ── MOBILE: Card layout (hidden on lg+) ── */}
-<div className="block lg:hidden space-y-3">
-  {currentAssignments.map((a, idx) => {
-    const secList = a.sections || (a.sectionId ? [{ id: a.sectionId, name: null }] : []);
-    return (
-      <div
-        key={a.id || `a-${idx}`}
-        className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm space-y-3"
-      >
-        {/* Grade + actions row */}
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 mb-0.5">Grade</p>
-            <p className="text-sm font-bold text-gray-800">{a.className || 'N/A'}</p>
-          </div>
-          <div className="flex gap-1">
-            <button
-              onClick={() => handleEditAssignment(a)}
-              className="p-2 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-              title="Edit"
-            >
-              <Edit2 className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => handleDeleteAssignment(a.id)}
-              className="p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-              title="Delete"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-
-        <div className="h-px bg-gray-100" />
-
-        {/* Section + Subject */}
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 mb-1">Section</p>
-            <div className="flex flex-wrap gap-1">
-              {secList.map(s => {
-                const sId = typeof s === 'object' ? s.id : s;
-                const sName = typeof s === 'object' ? s.name : null;
-                return (
-                  <span
-                    key={sId}
-                    className="min-w-7 w-auto px-1.5 h-7 rounded-md bg-blue-600 text-white flex items-center justify-center text-xs font-bold"
-                  >
-                    {sName || sId}
-                  </span>
-                );
-              })}
-            </div>
-          </div>
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 mb-1">Subject</p>
-            <p className="text-sm text-gray-700 font-medium">{a.subjectName || 'N/A'}</p>
-          </div>
-        </div>
-
-        {/* Class Teacher badge */}
-        <div className="flex items-center gap-2">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Class Teacher:</p>
-          <span
-            className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-              a.isClassTeacher ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
-            }`}
-          >
-            {a.isClassTeacher ? 'Yes' : 'No'}
-          </span>
-        </div>
-      </div>
-    );
-  })}
-</div>
-
-{/* ── DESKTOP: Table layout (hidden below lg) ── */}
-<div className="hidden lg:block overflow-x-auto rounded-xl shadow shadow-gray-200">
-  <table className="w-full text-sm">
-    <thead>
-      <tr className="bg-gray-50 border-b border-gray-200 text-left">
-        {['Grade', 'Section', 'Subject', 'Class Teacher', 'Actions'].map(h => (
-          <th
-            key={h}
-            className="px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap"
-          >
-            {h}
-          </th>
-        ))}
-      </tr>
-    </thead>
-    <tbody className="divide-y divide-gray-100">
-      {currentAssignments.map((a, idx) => {
-        const secList = a.sections || (a.sectionId ? [{ id: a.sectionId, name: null }] : []);
-        return (
-          <tr
-            key={a.id || `a-${idx}`}
-            className="hover:bg-gray-50 transition-colors"
-          >
-            <td className="px-5 py-4 text-gray-700 font-medium whitespace-nowrap">
-              {a.className || 'N/A'}
-            </td>
-            <td className="px-5 py-4">
-              <div className="flex flex-wrap gap-1.5">
-                {secList.map(s => {
-                  const sId = typeof s === 'object' ? s.id : s;
-                  const sName = typeof s === 'object' ? s.name : null;
+              {/* Responsive Cards (< lg) */}
+              <div className="block lg:hidden space-y-3">
+                {currentAssignments.map((a, idx) => {
+                  const secList = a.sections || (a.sectionId ? [{ id: a.sectionId, name: null }] : []);
                   return (
-                    <span
-                      key={sId}
-                      className="min-w-8 w-auto max-w-max px-1 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center text-xs font-bold"
+                    <div
+                      key={a.id || `a-${idx}`}
+                      className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm space-y-3"
                     >
-                      {sName || sId}
-                    </span>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 mb-0.5">Grade</p>
+                          <p className="text-sm font-bold text-gray-800">{a.className || 'N/A'}</p>
+                        </div>
+                        <div className="flex gap-1">
+                          <button
+                            onClick={() => handleEditAssignment(a)}
+                            className="p-2 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                            title="Edit"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteAssignment(a.id)}
+                            className="p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="h-px bg-gray-100" />
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 mb-1">Section</p>
+                          <div className="flex flex-wrap gap-1">
+                            {secList.map(s => {
+                              const sId = typeof s === 'object' ? s.id : s;
+                              const sName = typeof s === 'object' ? s.name : null;
+                              return (
+                                <span
+                                  key={sId}
+                                  className="min-w-7 w-auto px-1.5 h-7 rounded-md bg-blue-600 text-white flex items-center justify-center text-xs font-bold"
+                                >
+                                  {sName || sId}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 mb-1">Subject</p>
+                          <p className="text-sm text-gray-700 font-medium">{a.subjectName || 'N/A'}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Class Teacher:</p>
+                        <span
+                          className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                            a.isClassTeacher ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+                          }`}
+                        >
+                          {a.isClassTeacher ? 'Yes' : 'No'}
+                        </span>
+                      </div>
+                    </div>
                   );
                 })}
               </div>
-            </td>
-            <td className="px-5 py-4 text-gray-700 whitespace-nowrap">{a.subjectName || 'N/A'}</td>
-            <td className="px-5 py-4">
-              <span
-                className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
-                  a.isClassTeacher ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
-                }`}
-              >
-                {a.isClassTeacher ? 'Yes' : 'No'}
-              </span>
-            </td>
-            <td className="px-5 py-4">
-              <div className="flex gap-1">
-                <button
-                  onClick={() => handleEditAssignment(a)}
-                  className="p-2 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-                  title="Edit"
-                >
-                  <Edit2 className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => handleDeleteAssignment(a.id)}
-                  className="p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                  title="Delete"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            </td>
-          </tr>
-        );
-      })}
-    </tbody>
-  </table>
-</div>
 
+              {/* Layout Table (>= lg) */}
+              <div className="hidden lg:block overflow-x-auto rounded-xl shadow shadow-gray-200">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-gray-50 border-b border-gray-200 text-left">
+                      {['Grade', 'Section', 'Subject', 'Class Teacher', 'Actions'].map(h => (
+                        <th
+                          key={h}
+                          className="px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap"
+                        >
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {currentAssignments.map((a, idx) => {
+                      const secList = a.sections || (a.sectionId ? [{ id: a.sectionId, name: null }] : []);
+                      return (
+                        <tr
+                          key={a.id || `a-${idx}`}
+                          className="hover:bg-gray-50 transition-colors"
+                        >
+                          <td className="px-5 py-4 text-gray-700 font-medium whitespace-nowrap">
+                            {a.className || 'N/A'}
+                          </td>
+                          <td className="px-5 py-4">
+                            <div className="flex flex-wrap gap-1.5">
+                              {secList.map(s => {
+                                const sId = typeof s === 'object' ? s.id : s;
+                                const sName = typeof s === 'object' ? s.name : null;
+                                return (
+                                  <span
+                                    key={sId}
+                                    className="min-w-8 w-auto max-w-max px-1 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center text-xs font-bold"
+                                  >
+                                    {sName || sId}
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          </td>
+                          <td className="px-5 py-4 text-gray-700 whitespace-nowrap">{a.subjectName || 'N/A'}</td>
+                          <td className="px-5 py-4">
+                            <span
+                              className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+                                a.isClassTeacher ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+                              }`}
+                            >
+                              {a.isClassTeacher ? 'Yes' : 'No'}
+                            </span>
+                          </td>
+                          <td className="px-5 py-4">
+                            <div className="flex gap-1">
+                              <button
+                                onClick={() => handleEditAssignment(a)}
+                                className="p-2 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                                title="Edit"
+                              >
+                                <Edit2 className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteAssignment(a.id)}
+                                className="p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                                title="Delete"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Table Pagination */}
               {filteredAssignments.length > itemsPerPage && (
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mt-6 pt-4 border-t border-gray-200">
                   <p className="text-sm text-gray-500">
@@ -1087,4 +1086,5 @@ function ClassAssignment() {
     </div>
   );
 }
+
 export default ClassAssignment;

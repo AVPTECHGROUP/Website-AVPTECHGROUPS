@@ -70,11 +70,48 @@ export default function AddStaffCard({ isOpen, onClose, onSaved, editData }) {
 
   const set = (field) => (e) => setForm((prev) => ({ ...prev, [field]: e.target.value }));
 
+  // Sanitize numeric keystrokes on entry level
+  const setNumeric = (field) => (e) => {
+    const cleanDigits = e.target.value.replace(/\D/g, "");
+    setForm((prev) => ({ ...prev, [field]: cleanDigits }));
+  };
+
   const handleSubmit = async () => {
-    // Basic validation
-    if (!form.fullName.trim())      { setApiError("Full name is required."); return; }
-    if (!form.contactNumber.trim()) { setApiError("Contact number is required."); return; }
-    if (!form.staffRole)            { setApiError("Staff role is required."); return; }
+    const contactClean = form.contactNumber.trim();
+    const altContactClean = form.alternateContact.trim();
+    const aadharClean = form.aadharNumber.trim();
+
+    // ─── Core Form Validation ───
+    if (!form.fullName.trim()) { 
+      setApiError("Full name is required."); 
+      return; 
+    }
+    if (!form.staffRole) { 
+      setApiError("Staff role is required."); 
+      return; 
+    }
+    
+    // Primary Phone Rule Validation
+    if (!contactClean) { 
+      setApiError("Contact number is required."); 
+      return; 
+    }
+    if (!/^\d{10}$/.test(contactClean)) { 
+      setApiError("Contact number must be exactly 10 digits."); 
+      return; 
+    }
+
+    // Optional Alternate Phone Validation
+    if (altContactClean && !/^\d{10}$/.test(altContactClean)) {
+      setApiError("Alternate contact number must be exactly 10 digits.");
+      return;
+    }
+
+    // Optional Secondary Identification Field Integrity
+    if (aadharClean && !/^\d{12}$/.test(aadharClean)) {
+      setApiError("Aadhar number must be exactly 12 digits.");
+      return;
+    }
 
     setApiError("");
     setSaving(true);
@@ -82,12 +119,12 @@ export default function AddStaffCard({ isOpen, onClose, onSaved, editData }) {
     const payload = {
       fullName:          form.fullName.trim(),
       staffRole:         form.staffRole,
-      contactNumber:     form.contactNumber.trim(),
-      alternateContact:  form.alternateContact.trim() || undefined,
+      contactNumber:     contactClean,
+      alternateContact:  altContactClean || undefined,
       licenseNumber:     form.licenseNumber.trim()    || undefined,
       licenseExpiryDate: form.licenseExpiryDate       || undefined,
       address:           form.address.trim()          || undefined,
-      aadharNumber:      form.aadharNumber.trim()     || undefined,
+      aadharNumber:      aadharClean                  || undefined,
       joiningDate:       form.joiningDate             || undefined,
       remarks:           form.remarks.trim()          || undefined,
     };
@@ -118,7 +155,7 @@ export default function AddStaffCard({ isOpen, onClose, onSaved, editData }) {
       {/* Panel */}
       <div className="relative w-full sm:max-w-2xl bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col max-h-[92dvh] sm:max-h-[88vh]">
 
-        {/* ── Sticky Header ── */}
+        {/* Sticky Header */}
         <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-gray-100 shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 bg-teal-100 rounded-lg flex items-center justify-center">
@@ -141,7 +178,7 @@ export default function AddStaffCard({ isOpen, onClose, onSaved, editData }) {
           </button>
         </div>
 
-        {/* ── Scrollable Body ── */}
+        {/* Scrollable Body */}
         <div className="overflow-y-auto flex-1 px-5 sm:px-6 py-5">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
@@ -170,7 +207,7 @@ export default function AddStaffCard({ isOpen, onClose, onSaved, editData }) {
             <Field label="Contact Number" required>
               <input
                 type="tel" placeholder="10-digit mobile number"
-                maxLength={10} value={form.contactNumber} onChange={set("contactNumber")}
+                maxLength={10} value={form.contactNumber} onChange={setNumeric("contactNumber")}
                 className={inputCls}
               />
             </Field>
@@ -179,7 +216,7 @@ export default function AddStaffCard({ isOpen, onClose, onSaved, editData }) {
             <Field label="Alternate Contact">
               <input
                 type="tel" placeholder="Optional"
-                maxLength={10} value={form.alternateContact} onChange={set("alternateContact")}
+                maxLength={10} value={form.alternateContact} onChange={setNumeric("alternateContact")}
                 className={inputCls}
               />
             </Field>
@@ -219,7 +256,7 @@ export default function AddStaffCard({ isOpen, onClose, onSaved, editData }) {
             <Field label="Aadhar Number">
               <input
                 type="text" placeholder="12-digit Aadhar"
-                maxLength={12} value={form.aadharNumber} onChange={set("aadharNumber")}
+                maxLength={12} value={form.aadharNumber} onChange={setNumeric("aadharNumber")}
                 className={inputCls}
               />
             </Field>
@@ -248,7 +285,7 @@ export default function AddStaffCard({ isOpen, onClose, onSaved, editData }) {
 
           </div>
 
-          {/* API Error */}
+          {/* API Error Box */}
           {apiError && (
             <div className="mt-4 flex items-center gap-2.5 bg-red-50 border border-red-200 text-red-700 text-sm font-medium px-4 py-3 rounded-xl">
               <AlertCircle className="w-4 h-4 shrink-0" />
@@ -257,7 +294,7 @@ export default function AddStaffCard({ isOpen, onClose, onSaved, editData }) {
           )}
         </div>
 
-        {/* ── Sticky Footer ── */}
+        {/* Sticky Footer */}
         <div className="px-5 sm:px-6 py-4 border-t border-gray-100 flex justify-end gap-3 shrink-0">
           <button
             onClick={() => { if (!saving) onClose(); }}
