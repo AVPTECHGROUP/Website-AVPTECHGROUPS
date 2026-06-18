@@ -35,19 +35,22 @@ const toast = {
   success: (msg) => _setToasts?.((p) => [...p, { id: Date.now(), type: "success", msg }]),
   error: (msg) => _setToasts?.((p) => [...p, { id: Date.now(), type: "error", msg }]),
 };
+
 function ToastContainer() {
   const [toasts, setToasts] = useState([]);
-  _setToasts = setToasts;
+  _setToasts = toasts;
   const remove = (id) => setToasts((p) => p.filter((t) => t.id !== id));
+  
   useEffect(() => {
     if (!toasts.length) return;
     const t = setTimeout(() => remove(toasts[toasts.length - 1].id), 3500);
     return () => clearTimeout(t);
   }, [toasts]);
+
   return (
-    <div className="fixed bottom-5 right-5 z-9999 flex flex-col gap-2 items-end pointer-events-none">
+    <div className="fixed bottom-5 right-5 z-[9999] flex flex-col gap-2 items-end pointer-events-none">
       {toasts.map((t) => (
-        <div key={t.id} className={`flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lg text-sm font-medium pointer-events-auto min-w-55 max-w-xs
+        <div key={t.id} className={`flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lg text-sm font-medium pointer-events-auto min-w-[220px] max-w-xs
           ${t.type === "success" ? "bg-white border border-green-200 text-green-800" : "bg-white border border-red-200 text-red-700"}`}>
           {t.type === "success"
             ? <CheckCircle className="w-4 h-4 text-green-500 shrink-0" />
@@ -75,7 +78,7 @@ function isExpired(dateStr) {
   return new Date(dateStr) < new Date();
 }
 
-// ─── Mobile Staff Card ────────────────────────────────────────────
+// ─── Mobile / Tablet Staff Card ────────────────────────────────────
 function StaffCard({ s, onAction }) {
   const licExpired = isExpired(s.licenseExpiryDate);
   const licWarn = !licExpired && isExpiringSoon(s.licenseExpiryDate);
@@ -87,6 +90,11 @@ function StaffCard({ s, onAction }) {
           <span className="flex items-center gap-1 text-xs text-gray-500 mt-0.5">
             <Phone className="w-3 h-3" /> {s.contactNumber}
           </span>
+          {s.alternateContact && (
+            <span className="block text-[11px] text-gray-400 mt-0.5 pl-4 font-medium">
+              Alt: {s.alternateContact}
+            </span>
+          )}
         </div>
         <div className="flex flex-col items-end gap-1.5 shrink-0">
           <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${roleColors[s.staffRole] || "bg-gray-100 text-gray-600"}`}>{s.staffRole}</span>
@@ -110,34 +118,32 @@ function StaffCard({ s, onAction }) {
               : <p className="font-semibold text-gray-700">{fmtDate(s.licenseExpiryDate)}</p>
           }
         </div>
-        <div className="bg-gray-50 rounded-lg px-3 py-2">
+        <div className="bg-gray-50 rounded-lg px-3 py-2 col-span-2">
           <p className="text-gray-400 font-medium mb-0.5">Joining Date</p>
           <p className="font-semibold text-gray-700">{fmtDate(s.joiningDate)}</p>
         </div>
-        <div className="bg-gray-50 rounded-lg px-3 py-2">
-          <p className="text-gray-400 font-medium mb-0.5">Alt. Contact</p>
-          <p className="font-semibold text-gray-700">{s.alternateContact || "—"}</p>
-        </div>
       </div>
-      <ActionDropDownComp
-        onAction={(val) => onAction(s, val)}
-        actionOptions={[
-          { label: "Edit", value: "edit", icon: Pencil, bg: "bg-white", text: "text-blue-600", hover: "hover:bg-blue-50" },
-          {
-            label: s.status === "ACTIVE" ? "Deactivate" : "Activate",
-            value: "toggle",
-            icon: s.status === "ACTIVE" ? ToggleLeft : ToggleRight,
-            bg: "bg-white",
-            text: s.status === "ACTIVE" ? "text-orange-600" : "text-green-600",
-            hover: s.status === "ACTIVE" ? "hover:bg-orange-50" : "hover:bg-green-50",
-          },
-        ]}
-      />
+      <div className="mt-1 flex justify-end">
+        <ActionDropDownComp
+          onAction={(val) => onAction(s, val)}
+          actionOptions={[
+            { label: "Edit", value: "edit", icon: Pencil, bg: "bg-white", text: "text-blue-600", hover: "hover:bg-blue-50" },
+            {
+              label: s.status === "ACTIVE" ? "Deactivate" : "Activate",
+              value: "toggle",
+              icon: s.status === "ACTIVE" ? ToggleLeft : ToggleRight,
+              bg: "bg-white",
+              text: s.status === "ACTIVE" ? "text-orange-600" : "text-green-600",
+              hover: s.status === "ACTIVE" ? "hover:bg-orange-50" : "hover:bg-green-50",
+            },
+          ]}
+        />
+      </div>
     </div>
   );
 }
 
-// ─── Main ─────────────────────────────────────────────────────────
+// ─── Main Component ─────────────────────────────────────────────────
 export default function Driver_Attendants() {
   const [allStaff, setAllStaff] = useState([]);
   const [pagination, setPagination] = useState(null);
@@ -153,13 +159,11 @@ export default function Driver_Attendants() {
   const [showModal, setShowModal] = useState(false);
   const [editStaff, setEditStaff] = useState(null);
 
-  // Debounce search
   useEffect(() => {
     const t = setTimeout(() => { setSearch(searchInput); setPage(0); }, 400);
     return () => clearTimeout(t);
   }, [searchInput]);
 
-  // Fetch
   const fetchStaff = useCallback(async () => {
     setLoading(true);
     try {
@@ -188,7 +192,6 @@ export default function Driver_Attendants() {
     return pages;
   };
 
-  // Toggle
   const handleAction = async (staff, value) => {
     if (value === "edit") { setEditStaff(staff); setShowModal(true); return; }
     if (value === "toggle") {
@@ -216,10 +219,10 @@ export default function Driver_Attendants() {
   return (
     <>
       <ToastContainer />
-      <div className="min-h-screen bg-[#f0f2f8] font-sans">
+      <div className="min-h-screen bg-[#f0f2f8] font-sans w-full max-w-full overflow-x-hidden min-w-0 flex flex-col">
 
-        {/* Header */}
-        <div className="px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8 pb-2">
+        {/* Top Header Section */}
+        <div className="px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8 pb-2 w-full max-w-full">
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 flex items-center gap-2">
             <Users className="w-6 h-6 sm:w-7 sm:h-7 text-teal-600 shrink-0" />
             Drivers &amp; Attendants
@@ -229,11 +232,12 @@ export default function Driver_Attendants() {
           </p>
         </div>
 
-        <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        {/* Main Card Container View */}
+        <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6 w-full max-w-full min-w-0 flex-1">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden w-full max-w-full min-w-0 flex flex-col">
 
-            {/* Table Header */}
-            <div className="px-4 sm:px-6 py-4 sm:py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100">
+            {/* Table Action Controls Header */}
+            <div className="px-4 sm:px-6 py-4 sm:py-5 flex flex-row items-center justify-between gap-4 border-b border-gray-100 w-full min-w-0">
               <div>
                 <h2 className="text-base sm:text-lg font-bold text-gray-900 flex items-center gap-2">
                   <SlidersHorizontal className="w-4 h-4 text-teal-500" />
@@ -243,15 +247,15 @@ export default function Driver_Attendants() {
               </div>
               <button
                 onClick={() => { setEditStaff(null); setShowModal(true); }}
-                className="inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors shadow-sm w-full sm:w-auto"
+                className="inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors shadow-sm shrink-0"
               >
                 <Plus className="w-4 h-4" /> Add Staff
               </button>
             </div>
 
-            {/* Filters */}
-            <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-50 flex flex-col sm:flex-row gap-2 sm:gap-3">
-              <div className="relative flex-1">
+            {/* Filters Row Component */}
+            <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-50 flex flex-col md:flex-row gap-3 w-full max-w-full min-w-0 items-center">
+              <div className="relative flex-1 w-full">
                 <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                   type="text" placeholder="Search by name or contact…"
@@ -259,14 +263,15 @@ export default function Driver_Attendants() {
                   className="w-full pl-10 pr-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-200 bg-gray-50 placeholder-gray-400"
                 />
               </div>
-              <div className="flex gap-2 sm:gap-3">
+              
+              <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-3 w-full md:w-auto shrink-0 min-w-0">
                 {[
                   { val: roleFilter, set: setRoleFilter, opts: ROLE_OPTIONS },
                   { val: statusFilter, set: setStatusFilter, opts: STATUS_OPTIONS },
                 ].map(({ val, set, opts }, fi) => (
                   <div key={fi} className="relative flex-1 sm:flex-none">
                     <select value={val} onChange={(e) => set(e.target.value)}
-                      className="appearance-none w-full pl-3 sm:pl-4 pr-8 py-2.5 text-sm border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-200 cursor-pointer sm:min-w-32.5">
+                      className="appearance-none w-full pl-3 pr-8 py-2.5 text-sm border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-200 cursor-pointer sm:min-w-[140px]">
                       {opts.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                     </select>
                     <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
@@ -275,12 +280,12 @@ export default function Driver_Attendants() {
               </div>
             </div>
 
-            {/* Mobile Cards */}
-            <div className="block lg:hidden px-4 py-4 space-y-3">
+            {/* Mobile Stack Cards view */}
+            <div className="block xl:hidden px-4 py-4 space-y-3 bg-gray-50/50">
               {loading ? (
-                <table className="w-full"><tbody><ListLoader rows={4} avatar={false} /></tbody></table>
+                <div className="bg-white rounded-xl p-4"><ListLoader rows={4} avatar={false} /></div>
               ) : allStaff.length === 0 ? (
-                <div className="text-center py-12 text-gray-400">
+                <div className="text-center py-12 text-gray-400 bg-white rounded-xl border border-gray-100">
                   <Users className="w-10 h-10 mx-auto text-gray-200 mb-3" />
                   <p className="font-medium text-sm">No staff found</p>
                   <p className="text-xs mt-1">Try adjusting your search or filters</p>
@@ -288,103 +293,119 @@ export default function Driver_Attendants() {
               ) : allStaff.map((s) => <StaffCard key={s.id} s={s} onAction={handleAction} />)}
             </div>
 
-            {/* Desktop Table */}
-            <div className="hidden lg:block overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="bg-gray-50 border-b border-gray-100">
-                    {["Name", "Role", "Contact", "Alt. Contact", "License No.", "License Expiry", "Joining Date", "Status", "Actions"].map((h, i) => (
-                      <th key={i} className={`${i === 0 ? "px-6 w-8" : i === 9 ? "px-4 text-center" : "px-4"} py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wider text-left whitespace-nowrap`}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {loading ? (
-                    <ListLoader rows={ITEMS_PER_PAGE} avatar={false} />
-                  ) : allStaff.length === 0 ? (
-                    <tr>
-                      <td colSpan={10} className="text-center py-16 text-gray-400">
-                        <Users className="w-10 h-10 mx-auto text-gray-200 mb-3" />
-                        <p className="font-medium">No staff found</p>
-                        <p className="text-xs mt-1">Try adjusting your search or filters</p>
-                      </td>
+            {/* Laptop & Desktop Table View Container Box */}
+            <div className="hidden xl:block w-full max-w-full min-w-0 overflow-x-auto">
+              <div className="inline-block min-w-full align-middle">
+                {/* Changed min-w configuration to 1000px since 1 full column is reduced */}
+                <table className="w-full text-xs xl:text-sm text-left border-collapse table-auto min-w-[1000px]">
+                  <thead>
+                    <tr className="bg-gray-50 border-b border-gray-100">
+                      <th className="px-4 xl:px-5 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wider text-left whitespace-nowrap">Name</th>
+                      <th className="px-3 xl:px-4 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wider text-left whitespace-nowrap">Role</th>
+                      <th className="px-3 xl:px-4 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wider text-left whitespace-nowrap">Contact</th>
+                      <th className="px-3 xl:px-4 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wider text-left whitespace-nowrap">License No.</th>
+                      <th className="px-3 xl:px-4 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wider text-left whitespace-nowrap">License Expiry</th>
+                      <th className="px-3 xl:px-4 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wider text-left whitespace-nowrap">Joining Date</th>
+                      <th className="px-3 xl:px-4 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wider text-left whitespace-nowrap">Status</th>
+                      <th className="px-3 xl:px-4 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wider text-center whitespace-nowrap">Actions</th>
                     </tr>
-                  ) : allStaff.map((s, idx) => {
-                    const licExpired = isExpired(s.licenseExpiryDate);
-                    const licWarn = !licExpired && isExpiringSoon(s.licenseExpiryDate);
-                    const isBusy = togglingId === s.id;
-                    return (
-                      <tr key={s.id} className="hover:bg-teal-50/20 transition-colors">
-                        <td className="px-4 py-4">
-                          <p className="font-bold text-gray-900 whitespace-nowrap">{s.fullName}</p>
-                          {s.address && <p className="text-xs text-gray-400 mt-0.5 truncate max-w-40">{s.address}</p>}
-                        </td>
-                        <td className="px-4 py-4">
-                          <span className={`text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap ${roleColors[s.staffRole] || "bg-gray-100 text-gray-600"}`}>{s.staffRole}</span>
-                        </td>
-                        <td className="px-4 py-4 text-gray-600 font-medium whitespace-nowrap">
-                          <span className="flex items-center gap-1"><Phone className="w-3 h-3 text-gray-400 shrink-0" />{s.contactNumber}</span>
-                        </td>
-                        <td className="px-4 py-4 text-gray-500 text-sm">{s.alternateContact || <span className="text-gray-300">—</span>}</td>
-                        <td className="px-4 py-4 text-gray-600 font-mono text-xs">{s.licenseNumber || <span className="text-gray-300">—</span>}</td>
-                        <td className="px-4 py-4 whitespace-nowrap">
-                          {!s.licenseExpiryDate ? (
-                            <span className="text-gray-300">—</span>
-                          ) : licExpired ? (
-                            <div className="flex flex-col text-xs font-bold text-red-600">
-                              <span>{fmtDate(s.licenseExpiryDate)}</span>
-                              <span className="inline-flex items-center gap-1 bg-red-100 text-red-600 px-1.5 py-0.5 rounded w-fit mt-0.5">
-                                <XCircle className="w-3 h-3" />
-                                EXPIRED
-                              </span>
-                            </div>
-                          ) : licWarn ? (
-                            <span className="inline-flex items-center gap-1 text-orange-600 text-xs font-semibold">
-                              <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-                              {fmtDate(s.licenseExpiryDate)}
-                            </span>
-                          ) : (
-                            <span className="text-gray-600 text-sm">
-                              {fmtDate(s.licenseExpiryDate)}
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-4 py-4 text-gray-600 text-sm whitespace-nowrap">{fmtDate(s.joiningDate)}</td>
-                        <td className="px-4 py-4">
-                          {isBusy
-                            ? <span className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full bg-gray-100 text-gray-400 border border-gray-200 animate-pulse">Wait…</span>
-                            : s.status === "ACTIVE"
-                              ? <span className="inline-flex items-center gap-1.5 bg-green-50 text-green-700 text-xs font-bold px-3 py-1.5 rounded-full border border-green-200 whitespace-nowrap"><span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse inline-block" />Active</span>
-                              : <span className="inline-flex items-center gap-1.5 bg-gray-100 text-gray-500 text-xs font-bold px-3 py-1.5 rounded-full border border-gray-200 whitespace-nowrap"><span className="w-1.5 h-1.5 rounded-full bg-gray-400 inline-block" />Inactive</span>
-                          }
-                        </td>
-                        <td className="px-4 py-4 text-center">
-                          <ActionDropDownComp
-                            onAction={(val) => handleAction(s, val)}
-                            actionOptions={[
-                              { label: "Edit", value: "edit", icon: Pencil, bg: "bg-white", text: "text-blue-600", hover: "hover:bg-blue-50" },
-                              {
-                                label: s.status === "ACTIVE" ? "Deactivate" : "Activate",
-                                value: "toggle",
-                                icon: s.status === "ACTIVE" ? ToggleLeft : ToggleRight,
-                                bg: "bg-white",
-                                text: s.status === "ACTIVE" ? "text-orange-600" : "text-green-600",
-                                hover: s.status === "ACTIVE" ? "hover:bg-orange-50" : "hover:bg-green-50",
-                                disabled: isBusy,
-                              },
-                            ]}
-                          />
+                  </thead>
+                  <tbody className="divide-y divide-gray-50 bg-white">
+                    {loading ? (
+                      <ListLoader rows={ITEMS_PER_PAGE} avatar={false} colSpanSet={8} />
+                    ) : allStaff.length === 0 ? (
+                      <tr>
+                        <td colSpan={8} className="text-center py-16 text-gray-400">
+                          <Users className="w-10 h-10 mx-auto text-gray-200 mb-3" />
+                          <p className="font-medium">No staff found</p>
+                          <p className="text-xs mt-1">Try adjusting your search or filters</p>
                         </td>
                       </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                    ) : allStaff.map((s) => {
+                      const licExpired = isExpired(s.licenseExpiryDate);
+                      const licWarn = !licExpired && isExpiringSoon(s.licenseExpiryDate);
+                      const isBusy = togglingId === s.id;
+                      return (
+                        <tr key={s.id} className="hover:bg-teal-50/20 transition-colors">
+                          <td className="px-4 xl:px-5 py-4">
+                            <p className="font-bold text-gray-900 whitespace-nowrap">{s.fullName}</p>
+                            {s.address && <p className="text-xs text-gray-400 mt-0.5 max-w-[160px] truncate" title={s.address}>{s.address}</p>}
+                          </td>
+                          <td className="px-3 xl:px-4 py-4 whitespace-nowrap">
+                            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap ${roleColors[s.staffRole] || "bg-gray-100 text-gray-600"}`}>{s.staffRole}</span>
+                          </td>
+                          
+                          {/* Merged Contact Column: Displays Main phone number + small sub-text layout for Alt Contact */}
+                          <td className="px-3 xl:px-4 py-4 text-gray-600 font-medium whitespace-nowrap">
+                            <span className="flex items-center gap-1.5">
+                              <Phone className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                              {s.contactNumber}
+                            </span>
+                            {s.alternateContact && (
+                              <p className="text-[12px] text-gray-400 font-normal mt-0.5 pl-2">
+                                Alt: {s.alternateContact}
+                              </p>
+                            )}
+                          </td>
+
+                          <td className="px-3 xl:px-4 py-4 text-gray-600 font-mono text-xs whitespace-nowrap">{s.licenseNumber || <span className="text-gray-300">—</span>}</td>
+                          <td className="px-3 xl:px-4 py-4 whitespace-nowrap">
+                            {!s.licenseExpiryDate ? (
+                              <span className="text-gray-300">—</span>
+                            ) : licExpired ? (
+                              <div className="flex flex-col text-xs font-bold text-red-600">
+                                <span>{fmtDate(s.licenseExpiryDate)}</span>
+                                <span className="inline-flex items-center gap-1 bg-red-100 text-red-600 px-1.5 py-0.5 rounded w-fit mt-0.5">
+                                  <XCircle className="w-3 h-3" /> EXPIRED
+                                </span>
+                              </div>
+                            ) : licWarn ? (
+                              <span className="inline-flex items-center gap-1 text-orange-600 text-xs font-semibold">
+                                <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                                {fmtDate(s.licenseExpiryDate)}
+                              </span>
+                            ) : (
+                              <span className="text-gray-600">{fmtDate(s.licenseExpiryDate)}</span>
+                            )}
+                          </td>
+                          <td className="px-3 xl:px-4 py-4 text-gray-600 whitespace-nowrap">{fmtDate(s.joiningDate)}</td>
+                          <td className="px-3 xl:px-4 py-4 whitespace-nowrap">
+                            {isBusy ? (
+                              <span className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full bg-gray-100 text-gray-400 border border-gray-200 animate-pulse">Wait…</span>
+                            ) : s.status === "ACTIVE" ? (
+                              <span className="inline-flex items-center gap-1.5 bg-green-50 text-green-700 text-xs font-bold px-3 py-1.5 rounded-full border border-green-200 whitespace-nowrap"><span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse inline-block" />Active</span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1.5 bg-gray-100 text-gray-500 text-xs font-bold px-3 py-1.5 rounded-full border border-gray-200 whitespace-nowrap"><span className="w-1.5 h-1.5 rounded-full bg-gray-400 inline-block" />Inactive</span>
+                            )}
+                          </td>
+                          <td className="px-3 xl:px-4 py-4 text-center whitespace-nowrap">
+                            <ActionDropDownComp
+                              onAction={(val) => handleAction(s, val)}
+                              actionOptions={[
+                                { label: "Edit", value: "edit", icon: Pencil, bg: "bg-white", text: "text-blue-600", hover: "hover:bg-blue-50" },
+                                {
+                                  label: s.status === "ACTIVE" ? "Deactivate" : "Activate",
+                                  value: "toggle",
+                                  icon: s.status === "ACTIVE" ? ToggleLeft : ToggleRight,
+                                  bg: "bg-white",
+                                  text: s.status === "ACTIVE" ? "text-orange-600" : "text-green-600",
+                                  hover: s.status === "ACTIVE" ? "hover:bg-orange-50" : "hover:bg-green-50",
+                                  disabled: isBusy,
+                                },
+                              ]}
+                            />
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
 
-            {/* Pagination */}
+            {/* Pagination Controls */}
             {!loading && totalPages > 1 && (
-              <div className="px-4 sm:px-6 py-4 border-t border-gray-100 flex items-center justify-between gap-4 flex-wrap">
+              <div className="px-4 sm:px-6 py-4 border-t border-gray-100 flex items-center justify-between gap-4 flex-wrap bg-white mt-auto">
                 <p className="text-xs text-gray-400 font-medium">
                   Showing {totalItems === 0 ? 0 : page * ITEMS_PER_PAGE + 1}–{Math.min((page + 1) * ITEMS_PER_PAGE, totalItems)} of {totalItems}
                 </p>

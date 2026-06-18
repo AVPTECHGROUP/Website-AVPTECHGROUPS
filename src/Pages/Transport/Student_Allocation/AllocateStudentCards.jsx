@@ -127,9 +127,9 @@ function SelectInput({ value, onChange, options = [], placeholder = "— Select 
         }
       </button>
 
-      {/* Dropdown panel — rendered in a portal-like absolute, z-[9999] ensures it floats above modal body */}
+      {/* Dropdown panel */}
       {open && !isDisabled && (
-        <div className="absolute left-0 right-0 z-9999 mt-1.5 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden"
+        <div className="absolute left-0 right-0 z-[9999] mt-1.5 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden"
           style={{ animation: "dropIn 0.14s ease-out forwards", transformOrigin: "top" }}>
           <style>{`
             @keyframes dropIn {
@@ -163,7 +163,6 @@ function SelectInput({ value, onChange, options = [], placeholder = "— Select 
 
           {/* List */}
           <ul ref={listRef} className="overflow-y-auto overscroll-contain" style={{ maxHeight: "220px" }} role="listbox">
-            {/* Placeholder option */}
             {!query && (
               <li onClick={() => select("")}
                 className={`px-3 py-2.5 text-sm cursor-pointer transition-colors ${!value ? "bg-blue-50 text-blue-600 font-medium" : "text-gray-400 hover:bg-gray-50"}`}>
@@ -294,6 +293,16 @@ export default function AllocateStudentCard({ isOpen, onClose, onSave }) {
     if (!form.pickupDropType) e.pickupDropType = "Please select pickup/drop type";
     if (!form.effectiveFrom) e.effectiveFrom = "Effective from date is required";
     if (!form.feePlanId) e.feePlanId = "Please select a fee plan";
+    
+    // 🆔 FIX: Compare date timestamps if both exist
+    if (form.effectiveFrom && form.effectiveTo) {
+      const fromDate = new Date(form.effectiveFrom).setHours(0,0,0,0);
+      const toDate = new Date(form.effectiveTo).setHours(0,0,0,0);
+      if (toDate < fromDate) {
+        e.effectiveTo = "Effective to date must be equal to or greater than effective from date";
+      }
+    }
+
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -354,7 +363,7 @@ export default function AllocateStudentCard({ isOpen, onClose, onSave }) {
           </button>
         </div>
 
-        {/* Scrollable body — overflow visible so dropdowns can escape */}
+        {/* Scrollable body */}
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5" style={{ overflowX: "visible" }}>
 
           {/* Info banner */}
@@ -412,10 +421,14 @@ export default function AllocateStudentCard({ isOpen, onClose, onSave }) {
                 className={`${inputBase} ${errors.effectiveFrom ? errCls : ""}`} />
               {errors.effectiveFrom && <p className="text-xs text-red-500 mt-0.5">{errors.effectiveFrom}</p>}
             </Field>
+            
+            {/* 🆔 FIX: Added calendar bounds min attribute and error mapping parameters */}
             <Field label="Effective To">
               <input type="date" value={form.effectiveTo}
+                min={form.effectiveFrom}
                 onChange={(e) => set("effectiveTo", e.target.value)}
-                className={inputBase} />
+                className={`${inputBase} ${errors.effectiveTo ? errCls : ""}`} />
+              {errors.effectiveTo && <p className="text-xs text-red-500 mt-0.5">{errors.effectiveTo}</p>}
             </Field>
           </div>
 
@@ -433,7 +446,6 @@ export default function AllocateStudentCard({ isOpen, onClose, onSave }) {
             </Field>
           </div>
 
-          {/* Bottom padding so last dropdown isn't clipped */}
           <div className="h-2" />
         </div>
 

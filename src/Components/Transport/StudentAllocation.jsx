@@ -1,4 +1,8 @@
-import { GraduationCap, Pencil, ToggleLeft, ToggleRight, Hash, Bus, CreditCard, Calendar } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { 
+    GraduationCap, Pencil, ToggleLeft, ToggleRight, Hash, Bus, 
+    CreditCard, Calendar, CheckCircle, XCircle, XCircle as XCircleIcon 
+} from "lucide-react";
 import ListLoader from "../CommonComp/ListLoader";
 
 // ─── Type badge colours ───────────────────────────────────────────────────────
@@ -35,10 +39,11 @@ function StatusBadge({ isActive, isBusy }) {
 
 function ActionButtons({ a, isBusy, onAction, compact = false }) {
     return (
-        <div className={`flex items-center ${compact ? "gap-1" : "gap-1.5"} flex-wrap`}>
+        /* 🔗 FIX: Changed flex-wrap to flex-nowrap to keep buttons strictly side-by-side */
+        <div className={`flex items-center ${compact ? "gap-1" : "gap-1.5"} flex-nowrap`}>
             <button
                 onClick={() => onAction(a, "edit")}
-                className={`inline-flex items-center gap-1 font-semibold text-blue-600 bg-white border border-blue-200 rounded-lg hover:bg-blue-50 active:scale-95 transition-all
+                className={`inline-flex items-center gap-1 font-semibold text-blue-600 bg-white border border-blue-200 rounded-lg hover:bg-blue-50 active:scale-95 transition-all whitespace-nowrap
                     ${compact ? "px-2 py-1 text-xs" : "px-2.5 py-1.5 text-xs"}`}
             >
                 <Pencil className="w-3 h-3 shrink-0" />
@@ -47,7 +52,7 @@ function ActionButtons({ a, isBusy, onAction, compact = false }) {
             <button
                 onClick={() => onAction(a, "toggle")}
                 disabled={isBusy}
-                className={`inline-flex items-center gap-1 font-semibold bg-white border rounded-lg transition-all active:scale-95
+                className={`inline-flex items-center gap-1 font-semibold bg-white border rounded-lg transition-all active:scale-95 whitespace-nowrap
                     disabled:opacity-50 disabled:cursor-not-allowed
                     ${compact ? "px-2 py-1 text-xs" : "px-2.5 py-1.5 text-xs"}
                     ${a.isActive
@@ -74,7 +79,6 @@ function MobileCard({ a, isBusy, onAction }) {
 
     return (
         <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-            {/* Card header */}
             <div className="flex items-start justify-between px-4 pt-4 pb-3 border-b border-gray-100">
                 <div className="min-w-0 flex-1 pr-3">
                     <p className="font-bold text-gray-900 text-sm truncate">{a.studentName}</p>
@@ -92,7 +96,6 @@ function MobileCard({ a, isBusy, onAction }) {
                 <StatusBadge isActive={a.isActive} isBusy={isBusy} />
             </div>
 
-            {/* Detail grid — 2 cols */}
             <div className="grid grid-cols-2 gap-x-4 gap-y-3 px-4 py-3">
                 <div>
                     <p className="text-xs text-gray-400 mb-1 flex items-center gap-1">
@@ -117,7 +120,7 @@ function MobileCard({ a, isBusy, onAction }) {
                     <p className="text-xs text-gray-400 mb-1 flex items-center gap-1">
                         <CreditCard className="w-3 h-3" /> Fee Plan
                     </p>
-                    <p className="text-xs text-gray-700 font-medium">{a.feePlanName || "—"}</p>
+                    <p className="text-xs text-gray-700 font-medium truncate" title={a.feePlanName}>{a.feePlanName || "—"}</p>
                 </div>
 
                 <div>
@@ -136,7 +139,6 @@ function MobileCard({ a, isBusy, onAction }) {
                 </div>
             </div>
 
-            {/* Footer actions */}
             <div className="flex items-center justify-end px-4 py-3 bg-gray-50 border-t border-gray-100">
                 <ActionButtons a={a} isBusy={isBusy} onAction={onAction} compact />
             </div>
@@ -144,7 +146,7 @@ function MobileCard({ a, isBusy, onAction }) {
     );
 }
 
-// ─── TABLET row  (520px – 839px): condensed 6-column table ───────────────────
+// ─── TABLET row  (520px – 839px) ─────────────────────────────────────────────
 function TabletRow({ a, isBusy, onAction }) {
     const typeCls = typeColors[a.pickupDropType] ?? "bg-gray-100 text-gray-600 border-gray-200";
     const formattedDate = a.effectiveFrom
@@ -153,9 +155,8 @@ function TabletRow({ a, isBusy, onAction }) {
 
     return (
         <tr className="border-b border-gray-100 hover:bg-blue-50/20 transition-colors">
-            {/* Name + Class stacked */}
             <td className="px-3 py-3 align-middle">
-                <p className="font-bold text-gray-900 text-sm">{a.studentName}</p>
+                <p className="font-bold text-gray-900 text-sm whitespace-nowrap">{a.studentName}</p>
                 <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-0.5">
                     <Hash className="w-3 h-3 shrink-0" />{a.admissionNumber || "—"}
                 </p>
@@ -164,7 +165,6 @@ function TabletRow({ a, isBusy, onAction }) {
                 </p>
             </td>
 
-            {/* Route + Stop stacked */}
             <td className="px-3 py-3 align-middle">
                 <span className="inline-flex items-center bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold px-2 py-0.5 rounded-full mb-1">
                     {a.routeCode || a.routeName}
@@ -172,37 +172,40 @@ function TabletRow({ a, isBusy, onAction }) {
                 <p className="text-xs text-gray-600">{a.stopName || "—"}</p>
             </td>
 
-            {/* Type */}
             <td className="px-3 py-3 align-middle">
                 <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${typeCls}`}>
                     {a.pickupDropType?.replace(/_/g, " ")}
                 </span>
             </td>
 
-            {/* Fee Plan + Amount stacked */}
             <td className="px-3 py-3 align-middle">
                 <p className="font-bold text-gray-800 text-sm">
                     {a.feeAmount != null ? `₹${a.feeAmount.toLocaleString()}` : "—"}
                 </p>
                 {a.feeFrequency && <p className="text-xs text-gray-400">{a.feeFrequency}</p>}
-                <p className="text-xs text-gray-500 mt-0.5">{a.feePlanName || "—"}</p>
+                {/* 🆔 FIX: Removed cursor-help */}
+                <p 
+                    className="text-xs text-gray-500 mt-0.5 max-w-[140px] truncate"
+                    title={a.feePlanName}
+                >
+                    {a.feePlanName || "—"}
+                </p>
                 <p className="text-xs text-gray-400 mt-0.5">{formattedDate}</p>
             </td>
 
-            {/* Status */}
             <td className="px-3 py-3 align-middle">
                 <StatusBadge isActive={a.isActive} isBusy={isBusy} />
             </td>
 
-            {/* Actions */}
-            <td className="px-3 py-3 align-middle">
+            {/* 🔗 FIX: Added min-width to ensure buttons stay side-by-side on tablets */}
+            <td className="px-3 py-3 align-middle min-w-[160px]">
                 <ActionButtons a={a} isBusy={isBusy} onAction={onAction} compact />
             </td>
         </tr>
     );
 }
 
-// ─── DESKTOP row  (container ≥ 840px): full 10-column table ──────────────────
+// ─── DESKTOP row  (container ≥ 840px) ────────────────────────────────────────
 function DesktopRow({ a, isBusy, onAction }) {
     const typeCls = typeColors[a.pickupDropType] ?? "bg-gray-100 text-gray-600 border-gray-200";
     const formattedDate = a.effectiveFrom
@@ -233,7 +236,17 @@ function DesktopRow({ a, isBusy, onAction }) {
                     {a.pickupDropType?.replace(/_/g, " ")}
                 </span>
             </td>
-            <td className="px-4 py-4 text-gray-600 text-sm whitespace-nowrap">{a.feePlanName || "—"}</td>
+            
+            {/* 🆔 FIX: Removed cursor-help from layout template triggers */}
+            <td className="px-4 py-4 text-gray-600 text-sm whitespace-nowrap">
+                <div 
+                    className="max-w-[150px] truncate font-medium" 
+                    title={a.feePlanName}
+                >
+                    {a.feePlanName || "—"}
+                </div>
+            </td>
+
             <td className="px-4 py-4 whitespace-nowrap">
                 <p className="font-semibold text-gray-800">
                     {a.feeAmount != null ? `₹${a.feeAmount.toLocaleString()}` : "—"}
@@ -244,7 +257,8 @@ function DesktopRow({ a, isBusy, onAction }) {
             <td className="px-4 py-4 whitespace-nowrap">
                 <StatusBadge isActive={a.isActive} isBusy={isBusy} />
             </td>
-            <td className="px-4 py-4 whitespace-nowrap">
+            {/* 🔗 FIX: Added precise min-width bounds to desktop row cell to stop wrapping completely */}
+            <td className="px-4 py-4 whitespace-nowrap min-w-[170px]">
                 <ActionButtons a={a} isBusy={isBusy} onAction={onAction} />
             </td>
         </tr>
@@ -284,30 +298,11 @@ function MobileSkeletons({ count }) {
     ));
 }
 
-// ─── Main export ──────────────────────────────────────────────────────────────
-//
-// Layout tiers (based on CONTAINER width, not viewport):
-//   < 520px  → mobile card stack
-//   520–839px → 6-col condensed table  (covers: mobile, tablet, sidebar-open laptop)
-//   ≥ 840px  → full 10-col table       (covers: sidebar-closed laptop, full desktop)
-//
-// @container is supported in all modern browsers (Chrome 105+, Firefox 110+, Safari 16+).
-// The wrapper div gets `containerType: "inline-size"` via inline style — no Tailwind plugin needed.
-//
 export default function AllocationTable({ data, loading, pageSize, onAction, togglingId }) {
     return (
-        // 🔑 Establish a container context — children can now use @container queries
         <div className="w-full min-w-0" style={{ containerType: "inline-size" }}>
 
-            {/*
-                ════════════════════════════════════════
-                MOBILE  — card stack  (container < 520px)
-                ════════════════════════════════════════
-                Tailwind doesn't support @container out-of-the-box without the plugin,
-                so we use a classic CSS trick: all three layout divs are rendered but
-                only one is visible at a time via `display` driven by the container query
-                declared in the <style> tag below.
-            */}
+            {/* MOBILE VIEW (< 520px) */}
             <div className="allocation-cards w-full flex flex-col gap-3 px-4 py-4">
                 {loading ? (
                     <MobileSkeletons count={pageSize} />
@@ -329,19 +324,14 @@ export default function AllocationTable({ data, loading, pageSize, onAction, tog
                 )}
             </div>
 
-            {/*
-                ════════════════════════════════════════
-                TABLET  — 6-col condensed (520px–839px)
-                Handles: portrait tablets, sidebar-open laptops
-                ════════════════════════════════════════
-            */}
+            {/* TABLET VIEW (520px–839px) */}
             <div className="allocation-tablet w-full overflow-x-auto">
-                <table className="w-full text-sm border-collapse min-w-[500px]">
+                <table className="w-full text-sm border-collapse min-w-[650px]">
                     <thead>
                         <tr className="bg-gray-50 border-b border-gray-100">
                             {["Student", "Route & Stop", "Type", "Amount / Plan", "Status", "Actions"].map((h) => (
                                 <th key={h}
-                                    className="px-3 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider text-left whitespace-nowrap">
+                                    className={`px-3 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider text-left whitespace-nowrap ${h === "Actions" ? "min-w-[160px]" : ""}`}>
                                     {h}
                                 </th>
                             ))}
@@ -366,14 +356,9 @@ export default function AllocationTable({ data, loading, pageSize, onAction, tog
                 </table>
             </div>
 
-            {/*
-                ════════════════════════════════════════
-                DESKTOP — full 10-col (container ≥ 840px)
-                Handles: sidebar-closed laptop, wide desktop
-                ════════════════════════════════════════
-            */}
+            {/* DESKTOP VIEW (≥ 840px) */}
             <div className="allocation-desktop w-full overflow-x-auto">
-                <table className="w-full text-sm border-collapse min-w-[840px]">
+                <table className="w-full text-sm border-collapse min-w-[1100px]">
                     <thead>
                         <tr className="bg-gray-50 border-b border-gray-100">
                             {[
@@ -381,7 +366,7 @@ export default function AllocationTable({ data, loading, pageSize, onAction, tog
                                 "Type", "Fee Plan", "Amount", "Effective From", "Status", "Actions"
                             ].map((h) => (
                                 <th key={h}
-                                    className="px-4 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wider text-left whitespace-nowrap">
+                                    className={`px-4 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wider text-left whitespace-nowrap ${h === "Actions" ? "min-w-[170px]" : ""}`}>
                                     {h}
                                 </th>
                             ))}
@@ -406,27 +391,17 @@ export default function AllocationTable({ data, loading, pageSize, onAction, tog
                 </table>
             </div>
 
-            {/* ── Container-query visibility rules ───────────────────────────
-                These @container rules switch which layout block is visible based
-                on the actual rendered width of THIS component — not the viewport.
-                This is the key fix: a laptop with a sidebar might have only 600px
-                of content width even at 1280px viewport, so it correctly gets the
-                tablet layout instead of the overflowing desktop table.
-            ─────────────────────────────────────────────────────────────────── */}
             <style>{`
-                /* Default: show cards only */
                 .allocation-cards   { display: flex; }
                 .allocation-tablet  { display: none; }
                 .allocation-desktop { display: none; }
 
-                /* 520px+ container → show tablet table */
                 @container (min-width: 520px) {
                     .allocation-cards   { display: none; }
                     .allocation-tablet  { display: block; }
                     .allocation-desktop { display: none; }
                 }
 
-                /* 840px+ container → show full desktop table */
                 @container (min-width: 840px) {
                     .allocation-cards   { display: none; }
                     .allocation-tablet  { display: none; }
