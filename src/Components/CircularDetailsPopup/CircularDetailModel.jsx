@@ -406,35 +406,36 @@ export default function CircularDetailModal({ circularId, onClose }) {
                                 <Skeleton h={52} r={12} />
                             ) : (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                                    {c.attachments.map((att) => (
-                                        <a
-                                            key={att.id}
-                                            href={att.fileUrl}
-                                            target="_blank"
-                                            rel="noreferrer"
-                                            style={{
-                                                display: 'flex', alignItems: 'center', gap: 12,
-                                                padding: '10px 14px', borderRadius: 12, textDecoration: 'none',
-                                                background: '#f8fbff', border: '1px solid #dbeafe',
-                                                transition: 'all .15s',
-                                            }}
-                                            onMouseEnter={(e) => { e.currentTarget.style.background = '#eff6ff'; e.currentTarget.style.borderColor = '#93c5fd'; }}
-                                            onMouseLeave={(e) => { e.currentTarget.style.background = '#f8fbff'; e.currentTarget.style.borderColor = '#dbeafe'; }}
-                                        >
-                                            const FileIcon = getFileIcon(att.fileType);
-
-                                            <FileIcon
-                                                size={22}
-                                                color="#2563eb"
-                                                style={{ flexShrink: 0 }}
-                                            />
-                                            <div style={{ flex: 1, minWidth: 0 }}>
-                                                <p style={{ fontSize: 13, fontWeight: 600, color: '#1e40af', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{att.fileName}</p>
-                                                <p style={{ fontSize: 11, color: '#94a3b8', marginTop: 1 }}>{att.fileType} {att.fileSize ? `· ${formatBytes(att.fileSize)}` : ''}</p>
-                                            </div>
-                                            <Download size={14} color="#3b82f6" style={{ flexShrink: 0 }} />
-                                        </a>
-                                    ))}
+                                    {c.attachments.map((att) => {
+                                        const FileIcon = getFileIcon(att.fileType);
+                                        return (
+                                            <a
+                                                key={att.id}
+                                                href={att.fileUrl}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                style={{
+                                                    display: 'flex', alignItems: 'center', gap: 12,
+                                                    padding: '10px 14px', borderRadius: 12, textDecoration: 'none',
+                                                    background: '#f8fbff', border: '1px solid #dbeafe',
+                                                    transition: 'all .15s',
+                                                }}
+                                                onMouseEnter={(e) => { e.currentTarget.style.background = '#eff6ff'; e.currentTarget.style.borderColor = '#93c5fd'; }}
+                                                onMouseLeave={(e) => { e.currentTarget.style.background = '#f8fbff'; e.currentTarget.style.borderColor = '#dbeafe'; }}
+                                            >
+                                                <FileIcon
+                                                    size={22}
+                                                    color="#2563eb"
+                                                    style={{ flexShrink: 0 }}
+                                                />
+                                                <div style={{ flex: 1, minWidth: 0 }}>
+                                                    <p style={{ fontSize: 13, fontWeight: 600, color: '#1e40af', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{att.fileName}</p>
+                                                    <p style={{ fontSize: 11, color: '#94a3b8', marginTop: 1 }}>{att.fileType} {att.fileSize ? `· ${formatBytes(att.fileSize)}` : ''}</p>
+                                                </div>
+                                                <Download size={14} color="#3b82f6" style={{ flexShrink: 0 }} />
+                                            </a>
+                                        );
+                                    })}
                                 </div>
                             )}
                         </div>

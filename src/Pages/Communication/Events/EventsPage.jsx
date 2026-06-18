@@ -20,7 +20,7 @@ import { useDecodedUser } from '../../../ContextAPI/UserContext';
 // ── Role guard ─────────────────────────────────────────────────────────────────
 // Only these roles may approve or reject events.
 // TEACHER (and any other unlisted role) cannot.
-const APPROVER_ROLES = ['PRINCIPAL', 'ADMIN', 'SUPER_ADMIN', 'VICE_PRINCIPAL', 'HOD'];
+const APPROVER_ROLES = ['PRINCIPAL', 'ADMIN', 'SUPER_ADMIN','GLOBAL_ADMIN', 'VICE_PRINCIPAL', 'HOD'];
 
 function useCanApprove() {
   const { user } = useDecodedUser();
