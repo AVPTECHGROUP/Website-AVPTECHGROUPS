@@ -85,6 +85,71 @@ function fmtDate(dateStr) {
   return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
 }
 
+// ─── Vehicle Card (used for phone / tablet / laptop grid views) ────
+function VehicleCard({ v }) {
+  return (
+    <div className="rounded-xl border border-gray-100 p-4 space-y-2.5 bg-white hover:bg-gray-50/60 transition-colors">
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          <span className="font-bold text-gray-900 block truncate">{v.vehicleNumber}</span>
+          {v.gpsEnabled && (
+            <span className="text-xs text-green-600 font-medium flex items-center gap-1 mt-0.5">
+              <LocateFixedIcon className="w-3.5 h-3.5" /> GPS
+            </span>
+          )}
+        </div>
+        <span className={`text-xs font-semibold px-2.5 py-1 rounded-full shrink-0 ${typeColors[v.vehicleType] ?? "bg-gray-100 text-gray-600"}`}>
+          {typeLabel[v.vehicleType] || v.vehicleType}
+        </span>
+      </div>
+
+      <p className="text-xs text-gray-400 truncate">{v.makeModel}</p>
+
+      <UtilBar alloc={v.totalStudentsAllocated} cap={v.totalCapacity} />
+
+      <div className="grid grid-cols-3 gap-2 bg-gray-50/70 p-2.5 rounded-xl text-xs border border-gray-100">
+        <div>
+          <span className="text-gray-400 block mb-0.5">Capacity</span>
+          <span className="font-bold text-gray-700">{v.totalCapacity}</span>
+        </div>
+        <div>
+          <span className="text-gray-400 block mb-0.5">Allocated</span>
+          <span className="font-bold text-gray-700">{v.totalStudentsAllocated}</span>
+        </div>
+        <div>
+          <span className="text-gray-400 block mb-0.5">Available</span>
+          <span className={`font-bold flex items-center gap-1 ${v.availableSeats === 0 ? "text-orange-500" : v.availableSeats < 0 ? "text-red-500" : "text-green-600"}`}>
+            {v.availableSeats}
+            {v.availableSeats === 0 && <AlertTriangle className="w-3.5 h-3.5 shrink-0" />}
+          </span>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap gap-3 text-xs">
+        <span className={v.insuranceExpiringSoon ? "text-orange-500 font-semibold flex items-center gap-1" : "text-gray-500 flex items-center gap-1"}>
+          {v.insuranceExpiringSoon && <AlertTriangle className="w-3.5 h-3.5 shrink-0" />}
+          Ins: {fmtDate(v.insuranceExpiryDate)}
+        </span>
+        <span className={v.fitnessExpiringSoon ? "text-orange-500 font-semibold flex items-center gap-1" : "text-gray-500 flex items-center gap-1"}>
+          {v.fitnessExpiringSoon && <AlertTriangle className="w-3.5 h-3.5 shrink-0" />}
+          Fit: {fmtDate(v.fitnessCertExpiryDate)}
+        </span>
+      </div>
+
+      <div className="flex flex-wrap gap-1 pt-0.5">
+        {v.routeBreakdown?.length > 0
+          ? v.routeBreakdown.map((r) => (
+              <span key={r.routeId} className="bg-blue-50 border border-blue-200 text-blue-700 font-bold text-xs px-2 py-0.5 rounded-full whitespace-nowrap">
+                {r.routeCode}
+              </span>
+            ))
+          : <span className="italic text-gray-400 text-xs">Unassigned</span>
+        }
+      </div>
+    </div>
+  );
+}
+
 export default function VehicleCapacityTab() {
   const [data, setData]             = useState([]);
   const [loading, setLoading]       = useState(true);
@@ -112,10 +177,10 @@ export default function VehicleCapacityTab() {
   }, []);
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden w-full min-w-0 max-w-full">
 
       {/* Header */}
-      <div className="px-6 py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100">
+      <div className="px-4 sm:px-6 py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100">
         <h2 className="font-bold text-gray-900 flex items-center gap-2 text-base">
           🚌 Vehicle Capacity Utilisation Report
         </h2>
@@ -125,14 +190,14 @@ export default function VehicleCapacityTab() {
             exportToCSV(data);
             toast.success("CSV exported successfully!");
           }}
-          className="inline-flex items-center gap-1.5 border cursor-pointer border-gray-200 text-gray-600 text-xs font-semibold px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors w-fit"
+          className="inline-flex items-center justify-center gap-1.5 border cursor-pointer border-gray-200 text-gray-600 text-xs font-semibold px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors w-full sm:w-fit"
         >
           <Download className="w-3.5 h-3.5" /> Export CSV
         </button>
       </div>
 
       {/* Controls */}
-      <div className="px-6 py-4 border-b border-gray-50 flex flex-wrap items-center gap-4">
+      <div className="px-4 sm:px-6 py-4 border-b border-gray-50 flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-4">
         <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
           <input
             type="checkbox"
@@ -140,10 +205,10 @@ export default function VehicleCapacityTab() {
             onChange={(e) => setOnlyOver(e.target.checked)}
             className="w-4 h-4 rounded border-gray-300 accent-blue-600"
           />
-          Show only over-capacity vehicles
+          <span className="whitespace-nowrap">Show only over-capacity vehicles</span>
         </label>
         <div className="flex items-center gap-2 text-sm text-gray-600">
-          Expiry alert within
+          <span className="whitespace-nowrap">Expiry alert within</span>
           <input
             type="number"
             value={expiryDays}
@@ -156,15 +221,16 @@ export default function VehicleCapacityTab() {
         <button
           onClick={fetchReport}
           disabled={loading}
-          className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed text-white text-xs font-semibold px-4 py-2 rounded-lg transition-colors"
+          className="inline-flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed text-white text-xs font-semibold px-4 py-2 rounded-lg transition-colors w-full sm:w-auto sm:ml-auto"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
           {loading ? "Loading…" : "Refresh"}
         </button>
       </div>
 
-      {/* Desktop Table */}
-      <div className="overflow-x-auto hidden sm:block">
+      {/* ── Full data table — only on very wide screens (2xl: 1536px+) ── */}
+      {/* Tablet, 1024px and 1440px laptops all get the card-grid below instead, so nothing gets cut off */}
+      <div className="hidden 2xl:block overflow-x-auto w-full max-w-full">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-100">
@@ -259,11 +325,11 @@ export default function VehicleCapacityTab() {
         </table>
       </div>
 
-      {/* Mobile Cards */}
-      <div className="sm:hidden divide-y divide-gray-100">
-        {/* Mobile loading */}
+      {/* ── Card grid — phone (1 col), tablet (2 col), laptop / laptop L (3 col) ── */}
+      {/* Covers everything below 1536px, including the 768px tablet, 1024px and 1440px laptop cases */}
+      <div className="2xl:hidden w-full">
         {loading && (
-          <div className="py-4">
+          <div className="py-4 px-4">
             <table className="w-full">
               <tbody>
                 <ListLoader rows={4} avatar={false} colSpanSet={1} />
@@ -272,7 +338,6 @@ export default function VehicleCapacityTab() {
           </div>
         )}
 
-        {/* Mobile empty */}
         {!loading && data.length === 0 && (
           <div className="py-16 text-center text-gray-400">
             <span className="text-4xl block mb-3">🚌</span>
@@ -280,47 +345,11 @@ export default function VehicleCapacityTab() {
           </div>
         )}
 
-        {/* Mobile data */}
-        {!loading && data.map((v) => (
-          <div key={v.vehicleId} className="px-4 py-4 space-y-2">
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="font-bold text-gray-900">{v.vehicleNumber}</span>
-                {v.gpsEnabled && <span className="text-xs text-green-600 ml-2">📡 GPS</span>}
-              </div>
-              <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${typeColors[v.vehicleType] ?? "bg-gray-100 text-gray-600"}`}>
-                {typeLabel[v.vehicleType] || v.vehicleType}
-              </span>
-            </div>
-            <p className="text-xs text-gray-400">{v.makeModel}</p>
-            <UtilBar alloc={v.totalStudentsAllocated} cap={v.totalCapacity} />
-            <div className="flex flex-wrap gap-3 text-xs text-gray-500">
-              <span>Cap: <b>{v.totalCapacity}</b></span>
-              <span>Alloc: <b>{v.totalStudentsAllocated}</b></span>
-              <span className={v.availableSeats === 0 ? "text-orange-500 font-bold" : "text-green-600 font-bold"}>
-                Avail: {v.availableSeats}
-              </span>
-            </div>
-            <div className="flex flex-wrap gap-2 text-xs text-gray-500">
-              <span className={v.insuranceExpiringSoon ? "text-orange-500 font-semibold" : ""}>
-                {v.insuranceExpiringSoon && "⚠️ "}Ins: {fmtDate(v.insuranceExpiryDate)}
-              </span>
-              <span className={v.fitnessExpiringSoon ? "text-orange-500 font-semibold" : ""}>
-                {v.fitnessExpiringSoon && "⚠️ "}Fit: {fmtDate(v.fitnessCertExpiryDate)}
-              </span>
-            </div>
-            <div className="flex flex-wrap gap-1">
-              {v.routeBreakdown?.length > 0
-                ? v.routeBreakdown.map((r) => (
-                    <span key={r.routeId} className="bg-blue-50 border border-blue-200 text-blue-700 font-bold text-xs px-2 py-0.5 rounded-full">
-                      {r.routeCode}
-                    </span>
-                  ))
-                : <span className="italic text-gray-400">Unassigned</span>
-              }
-            </div>
+        {!loading && data.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 p-4 sm:p-5">
+            {data.map((v) => <VehicleCard key={v.vehicleId} v={v} />)}
           </div>
-        ))}
+        )}
       </div>
 
     </div>
