@@ -4,9 +4,9 @@ import {
     ClipboardList, CheckSquare, Clock, School,
     Plus, BookOpen, ChevronDown, Edit2, FileText,
     LogIn, CheckCircle, Trash2, AlertCircle, RefreshCw,
+    ChevronLeft, ChevronRight
 } from "lucide-react";
 
-import ActionDropDownComp from "../../Components/CommonComp/ActionDropDownComp";
 import ListLoader from "../../Components/CommonComp/ListLoader";
 import NewExamForm from "./NewExamForm";
 import AddSubjectForm from "./AddSubjectForm";
@@ -38,19 +38,6 @@ function fmtRange(s, e) {
     return `${f(s)} – ${f(e)}`;
 }
 
-function examActions(exam) {
-    if (!exam) return [];
-    return exam.resultDeclared
-        ? [
-            { label: "Marks", value: "marks", icon: Edit2, bg: "bg-white", text: "text-gray-700", hover: "hover:bg-gray-50" },
-            { label: "Reports", value: "reports", icon: FileText, bg: "bg-blue-600", text: "text-white", hover: "hover:bg-blue-700" },
-        ]
-        : [
-            { label: "Enter Marks", value: "enter_marks", icon: LogIn, bg: "bg-white", text: "text-gray-700", hover: "hover:bg-gray-50" },
-            { label: "Declare", value: "declare", icon: CheckCircle, bg: "bg-orange-500", text: "text-white", hover: "hover:bg-orange-600" },
-        ];
-}
-
 // ─── stat data builder ────────────────────────────────────────────────────────
 function buildStats(exams) {
     const list = Array.isArray(exams) ? exams : [];
@@ -65,6 +52,61 @@ function buildStats(exams) {
         { label: "Pending Result", count: pending, sub: pending ? "Awaiting" : "All clear", Icon: Clock, bg: "bg-amber-50", ic: "text-amber-500", num: "text-amber-600" },
         { label: "Classes Covered", count: classes.size, sub: classes.size ? [...classes].join(", ") : "None yet", Icon: School, bg: "bg-indigo-50", ic: "text-indigo-500", num: "text-indigo-700" },
     ];
+}
+function ActionIconButton({ Icon, label, compactLabel, tone = "neutral", compact, onClick }) {
+    const toneClasses = {
+        neutral: "bg-white text-gray-600 border border-gray-200 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600",
+        primary: "bg-gradient-to-br from-blue-600 to-blue-500 text-white border border-blue-600/20 shadow-sm shadow-blue-500/30 hover:from-blue-700 hover:to-blue-600 hover:shadow-md hover:shadow-blue-500/40",
+        warning: "bg-gradient-to-br from-orange-500 to-amber-500 text-white border border-orange-500/20 shadow-sm shadow-orange-500/30 hover:from-orange-600 hover:to-amber-600 hover:shadow-md hover:shadow-orange-500/40",
+        danger: "bg-white text-red-500 border border-red-200 hover:bg-red-50 hover:border-red-300",
+    };
+
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            className={`flex items-center justify-center gap-1 rounded-lg font-semibold whitespace-nowrap transition-all duration-200 hover:-translate-y-0.5 active:scale-90 active:translate-y-0 ${compact ? "px-1.5 py-1 text-[10px]" : "px-3 py-2 text-xs"
+                } ${toneClasses[tone]}`}
+        >
+            <Icon className={compact ? "w-3 h-3" : "w-3.5 h-3.5"} />
+            <span>{compact ? (compactLabel ?? label) : label}</span>
+        </button>
+    );
+}
+
+function ExamActionButtons({ exam, onAction, compact }) {
+    if (!exam) return null;
+    const stop = (e) => e?.stopPropagation?.();
+
+    if (exam.resultDeclared) {
+        return (
+            <div className="inline-flex items-center cursor-pointer gap-1.5">
+                <ActionIconButton Icon={Edit2} label="Edit Marks" compactLabel="Marks" tone="neutral" compact={compact}
+                    onClick={(e) => { stop(e); onAction(exam.id, "marks"); }} />
+                <ActionIconButton Icon={FileText} label="View Reports" compactLabel="Report" tone="primary" compact={compact}
+                    onClick={(e) => { stop(e); onAction(exam.id, "reports"); }} />
+            </div>
+        );
+    }
+    return (
+        <div className="inline-flex items-center gap-1.5">
+            <ActionIconButton Icon={LogIn} label="Enter Marks" compactLabel="Enter" tone="neutral" compact={compact}
+                onClick={(e) => { stop(e); onAction(exam.id, "enter_marks"); }} />
+            <ActionIconButton Icon={CheckCircle} label="Declare Result" compactLabel="Declare" tone="warning" compact={compact}
+                onClick={(e) => { stop(e); onAction(exam.id, "declare"); }} />
+        </div>
+    );
+}
+
+function SubjectActionButtons({ sub, onEdit, onDelete, compact }) {
+    return (
+        <div className="inline-flex items-cente gap-1.5">
+            <ActionIconButton Icon={Edit2} label="Edit Subject" compactLabel="Edit" tone="neutral" compact={compact}
+    onClick={() => onEdit(sub)} />
+<ActionIconButton Icon={Trash2} label="Remove Subject" compactLabel="Remove" tone="danger" compact={compact}
+    onClick={() => onDelete(sub)} />
+        </div>
+    );
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -98,7 +140,7 @@ function StatSkeleton() {
 }
 
 // ══════════════════════════════════════════════════════════════════
-// EXAM CARD  (shown on < lg)
+// EXAM CARD  (shown below xl)
 // ══════════════════════════════════════════════════════════════════
 function ExamCard({ exam, onAction, selected, onClick }) {
     const rb = exam.resultDeclared ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700";
@@ -112,7 +154,7 @@ function ExamCard({ exam, onAction, selected, onClick }) {
             <div className="flex items-start gap-2 mb-2">
                 <p className="flex-1 min-w-0 text-sm font-semibold text-gray-800 leading-snug break-words">{exam.name}</p>
                 <div className="shrink-0" onClick={e => e.stopPropagation()}>
-                    <ActionDropDownComp actionOptions={examActions(exam)} onAction={a => onAction(exam.id, a)} />
+                    <ExamActionButtons exam={exam} onAction={onAction} />
                 </div>
             </div>
 
@@ -134,7 +176,7 @@ function ExamCard({ exam, onAction, selected, onClick }) {
 }
 
 // ══════════════════════════════════════════════════════════════════
-// SUBJECT CARD  (shown on < lg)
+// SUBJECT CARD  (shown below xl)
 // ══════════════════════════════════════════════════════════════════
 function SubjectCard({ sub, onEdit, onDelete }) {
     return (
@@ -168,15 +210,8 @@ function SubjectCard({ sub, onEdit, onDelete }) {
                 </div>
 
                 {/* actions */}
-                <div className="shrink-0 flex items-center gap-1.5">
-                    <button onClick={() => onEdit(sub)}
-                        className="px-2.5 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-all">
-                        Edit
-                    </button>
-                    <button onClick={() => onDelete(sub)}
-                        className="p-1.5 text-red-500 bg-white border border-red-200 rounded-lg hover:bg-red-50 transition-all">
-                        <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                <div className="shrink-0" onClick={e => e.stopPropagation()}>
+                    <SubjectActionButtons sub={sub} onEdit={onEdit} onDelete={onDelete} />
                 </div>
             </div>
         </div>
@@ -208,6 +243,9 @@ function DeleteSubjectModal({ name, onConfirm, onCancel, loading }) {
     );
 }
 
+// ══════════════════════════════════════════════════════════════════
+// MAIN
+// ══════════════════════════════════════════════════════════════════
 function DeclareModal({ examName, onConfirm, onCancel, loading }) {
     useEffect(() => { document.body.style.overflow = "hidden"; return () => { document.body.style.overflow = ""; }; }, []);
     return (
@@ -265,7 +303,7 @@ function FilterSelect({ value, onChange, disabled, children }) {
 }
 
 // ══════════════════════════════════════════════════════════════════
-// MAIN
+// MAIN MAIN COMPONENT
 // ══════════════════════════════════════════════════════════════════
 export default function Exams() {
     const navigate = useNavigate();
@@ -282,11 +320,14 @@ export default function Exams() {
     const [yearId, setYearId] = useState("");
     const [typeId, setTypeId] = useState("");
 
-
     // exams
     const [exams, setExams] = useState([]);
     const [loadingExams, setLoadingExams] = useState(false);
     const [errorExams, setErrorExams] = useState(null);
+
+    // Frontend Pagination State
+    const [currentPage, setCurrentPage] = useState(1);
+    const [rowsPerPage, setRowsPerPage] = useState(10);
 
     // selected exam
     const [selExam, setSelExam] = useState(null);
@@ -349,6 +390,7 @@ export default function Exams() {
             const response = await getExams(f);
             const list = Array.isArray(response) ? response : [];
             setExams(list);
+            setCurrentPage(1); // Reset pagination on data payload update
 
             if (list.length > 0 && !autoSelected.current) {
                 setSelExam(list[0]); autoSelected.current = true;
@@ -379,7 +421,13 @@ export default function Exams() {
     useEffect(() => { fetchSubjects(); }, [fetchSubjects]);
 
     // ── handlers ──────────────────────────────────────────────────
-    const resetFilters = () => { setSelExam(null); setSubjects([]); setExams([]); autoSelected.current = false; };
+    const resetFilters = () => {
+        setSelExam(null);
+        setSubjects([]);
+        setExams([]);
+        autoSelected.current = false;
+        setCurrentPage(1);
+    };
 
     const handleAction = (examId, action) => {
         if (action === "declare") {
@@ -429,6 +477,16 @@ export default function Exams() {
     const selClassName = classes.find(c => String(c.id) === String(classId))?.name ?? "";
     const selYearLabel = academicYears.find(y => String(y.id) === String(yearId))?.label ?? "";
 
+    // ── Client Side Pagination Slice Logic ──────────────────────
+    const totalExams = exams.length;
+    const indexOfLastExam = currentPage * rowsPerPage;
+    const indexOfFirstExam = indexOfLastExam - rowsPerPage;
+    const currentExams = exams.slice(indexOfFirstExam, indexOfLastExam);
+    const totalPages = Math.ceil(totalExams / rowsPerPage);
+
+    const showingStart = totalExams === 0 ? 0 : indexOfFirstExam + 1;
+    const showingEnd = Math.min(indexOfLastExam, totalExams);
+
     // ══════════════════════════════════════════════════════════════
     return (
         <div className="min-h-screen bg-[#f3f6fb]">
@@ -458,11 +516,7 @@ export default function Exams() {
                     </div>
                 )}
 
-                {/* ── STAT CARDS
-                    xs  : 2 cols
-                    md  : 2-4 cols
-                    lg  : 4 cols
-                ──────────────────────────────────────────────────── */}
+                {/* ── STAT CARDS ──────────────────────────────────── */}
                 <div className="grid grid-cols-2 md:grid-cols-2 xl:grid-cols-4 gap-2 sm:gap-3">
                     {(loadingExams || loadingMeta)
                         ? Array(4).fill(0).map((_, i) => <StatSkeleton key={i} />)
@@ -470,11 +524,7 @@ export default function Exams() {
                     }
                 </div>
 
-                {/* ── FILTERS + NEW EXAM
-                    xs  : stack vertically
-                    md  : 3 selects stacked, button below
-                    lg  : 3 selects + button in one row
-                ──────────────────────────────────────────────────── */}
+                {/* ── FILTERS + NEW EXAM ──────────────────────────── */}
                 <div className="bg-white rounded-2xl border border-gray-200 shadow-sm px-2 md:px-3 lg:px-4 py-2 md:py-3 lg:py-4">
                     <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-[1fr_1fr_1fr_auto] gap-1.5 md:gap-2 lg:gap-3">
                         <FilterSelect value={classId} onChange={e => { setClassId(e.target.value); resetFilters(); }} disabled={loadingMeta || !!errorMeta}>
@@ -488,10 +538,8 @@ export default function Exams() {
                             disabled={loadingMeta}
                         >
                             <option value="">All Years</option>
-
                             {academicYears.map(y => {
                                 const isCurrent = currentAcademicYear?.id === y.id;
-
                                 return (
                                     <option key={y.id} value={y.id}>
                                         {isCurrent ? "🟢 " : ""}{y.label ?? y.name ?? y.value}
@@ -501,7 +549,7 @@ export default function Exams() {
                             })}
                         </FilterSelect>
 
-                        <FilterSelect value={typeId} onChange={e => setTypeId(e.target.value)} disabled={loadingExams}>
+                        <FilterSelect value={typeId} onChange={e => { setTypeId(e.target.value); setCurrentPage(1); }} disabled={loadingExams}>
                             <option value="">All Types</option>
                             {examTypes.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                         </FilterSelect>
@@ -523,7 +571,7 @@ export default function Exams() {
                         <h2 className="text-xs md:text-sm lg:text-base font-semibold text-gray-800 min-w-0 flex-1">
                             Exam Schedule
                             {(selClassName || selYearLabel) && (
-                                <span className="text-blue-600 font-medium hidden md:inline"> — {selClassName || "All Classes"}{selYearLabel ? ` (${selYearLabel})` : ""}</span>
+                                <span className="text-blue-600 font-medium hidden sm:inline"> — {selClassName || "All Classes"}{selYearLabel ? ` (${selYearLabel})` : ""}</span>
                             )}
                         </h2>
                         <span className="text-xs font-medium text-gray-500 bg-gray-100 px-1.5 md:px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap">
@@ -539,8 +587,8 @@ export default function Exams() {
                         </div>
                     )}
 
-                    {/* MOBILE / TABLET  (<md) — card list */}
-                    <div className="md:hidden">
+                    {/* MOBILE / TABLET / LAPTOP  (< xl) — card list */}
+                    <div className="xl:hidden">
                         {loadingExams
                             ? Array(3).fill(0).map((_, i) => (
                                 <div key={i} className="p-4 border-b border-gray-100 last:border-0 space-y-2 animate-pulse">
@@ -549,9 +597,9 @@ export default function Exams() {
                                     <div className="h-3 bg-gray-100 rounded w-1/3" />
                                 </div>
                             ))
-                            : exams.length === 0
-                                ? <p className="text-sm text-gray-400 text-center py-12">No exams found. Create your first exam!</p>
-                                : exams.map(exam => (
+                            : currentExams.length === 0
+                                ? <p className="text-sm text-gray-400 text-center py-12">No exams found.</p>
+                                : currentExams.map(exam => (
                                     <ExamCard
                                         key={exam.id} exam={exam}
                                         onAction={handleAction}
@@ -562,8 +610,8 @@ export default function Exams() {
                         }
                     </div>
 
-                    {/* TABLET+ (md+) — table */}
-                    <div className="hidden md:block overflow-x-auto">
+                    {/* DESKTOP (xl+) — table */}
+                    <div className="hidden xl:block overflow-x-auto">
                         <table className="w-full text-xs md:text-sm border-collapse">
                             <thead>
                                 <tr className="bg-gray-50 border-b border-gray-100">
@@ -581,16 +629,16 @@ export default function Exams() {
                             <tbody>
                                 {loadingExams
                                     ? <ListLoader rows={3} avatar={false} colSpanSet={9} />
-                                    : exams.length === 0
-                                        ? <tr><td colSpan={9} className="text-center text-sm text-gray-400 py-12">No exams found. Create your first exam!</td></tr>
-                                        : exams.map((exam, idx) => {
+                                    : currentExams.length === 0
+                                        ? <tr><td colSpan={9} className="text-center text-sm text-gray-400 py-12">No exams found.</td></tr>
+                                        : currentExams.map((exam, idx) => {
                                             const isSelected = selExam?.id === exam.id;
                                             const rb = exam.resultDeclared ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700";
                                             return (
                                                 <tr key={exam.id} onClick={() => { setSelExam(exam); setSubjects([]); }}
                                                     className={`border-b border-gray-50 hover:bg-blue-50/30 cursor-pointer transition-colors
                                                         ${isSelected ? "bg-blue-50/40 border-l-[2px] border-l-blue-500" : ""}`}>
-                                                    <td className="px-1.5 md:px-2 py-1.5 md:py-2 text-xs text-gray-400 font-medium">{idx + 1}</td>
+                                                    <td className="px-1.5 md:px-2 py-1.5 md:py-2 text-xs text-gray-400 font-medium">{indexOfFirstExam + idx + 1}</td>
                                                     <td className="px-1.5 md:px-2 py-1.5 md:py-2 font-semibold text-gray-800 max-w-[75px] md:max-w-[110px] truncate text-xs">{exam.name}</td>
                                                     <td className="px-1.5 md:px-2 py-1.5 md:py-2 whitespace-nowrap">
                                                         <span className={`px-1 py-0.5 rounded text-xs font-semibold ${examTypeBg(exam.examTypeName)}`}>{exam.examTypeName ?? "—"}</span>
@@ -609,7 +657,7 @@ export default function Exams() {
                                                         </span>
                                                     </td>
                                                     <td className="px-1.5 md:px-2 py-1.5 md:py-2 text-center" onClick={e => e.stopPropagation()}>
-                                                        <ActionDropDownComp actionOptions={examActions(exam)} onAction={a => handleAction(exam.id, a)} />
+                                                        <ExamActionButtons exam={exam} onAction={handleAction} compact />
                                                     </td>
                                                 </tr>
                                             );
@@ -618,6 +666,70 @@ export default function Exams() {
                             </tbody>
                         </table>
                     </div>
+
+                    {/* ── PAGINATION FOOTER ────────────────────────────────── */}
+                    {!loadingExams && totalExams > 0 && (
+                        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-4 py-3.5 border-t border-gray-200 bg-white text-xs sm:text-sm text-gray-600 select-none">
+                            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-6 gap-y-2 text-center sm:text-left">
+                                <div>
+                                    Showing <span className="font-medium">{showingStart}</span> to{" "}
+                                    <span className="font-medium">{showingEnd}</span> of{" "}
+                                    <span className="font-medium">{totalExams}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span>Rows per page:</span>
+                                    <div className="relative">
+                                        <select
+                                            value={rowsPerPage}
+                                            onChange={(e) => {
+                                                setRowsPerPage(Number(e.target.value));
+                                                setCurrentPage(1);
+                                            }}
+                                            className="appearance-none bg-white border border-gray-200 rounded-lg pl-2.5 pr-7 py-1 text-xs sm:text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer font-medium"
+                                        >
+                                            {[5, 10, 20, 50].map((size) => (
+                                                <option key={size} value={size}>
+                                                    {size}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center justify-center gap-1">
+                                <button
+                                    onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+                                    disabled={currentPage === 1}
+                                    className="p-1 text-gray-400 hover:text-gray-700 hover:bg-gray-50 rounded-lg disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+                                >
+                                    <ChevronLeft className="w-5 h-5" />
+                                </button>
+
+                                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                                    <button
+                                        key={page}
+                                        onClick={() => setCurrentPage(page)}
+                                        className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${currentPage === page
+                                            ? "bg-blue-600 text-white shadow-sm"
+                                            : "text-gray-600 hover:bg-gray-100"
+                                            }`}
+                                    >
+                                        {page}
+                                    </button>
+                                ))}
+
+                                <button
+                                    onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+                                    disabled={currentPage === totalPages}
+                                    className="p-1 text-gray-400 hover:text-gray-700 hover:bg-gray-50 rounded-lg disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+                                >
+                                    <ChevronRight className="w-5 h-5" />
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* ── SUBJECT CONFIGURATION ────────────────────────── */}
@@ -628,12 +740,11 @@ export default function Exams() {
                             <div className="min-w-0 flex-1">
                                 <h2 className="text-xs md:text-sm lg:text-base font-semibold text-gray-800 truncate">
                                     Subject Config
-                                    {selExam && <span className="text-blue-600 font-medium hidden md:inline"> — {selExam.name}</span>}
+                                    {selExam && <span className="text-blue-600 font-medium hidden sm:inline"> — {selExam.name}</span>}
                                 </h2>
                                 {!selExam && <p className="text-xs text-gray-400 mt-0.5">Select exam to configure subjects.</p>}
                             </div>
 
-                            {/* button group: 2-col grid on xs, auto on md+ */}
                             <div className="grid grid-cols-2 md:flex gap-1 md:gap-1.5 lg:gap-2 shrink-0">
                                 <button
                                     onClick={() => { setEditSubject(null); setShowAddSubject(true); }}
@@ -663,8 +774,8 @@ export default function Exams() {
                         </div>
                     )}
 
-                    {/* MOBILE / TABLET (<md) — subject cards */}
-                    <div className="md:hidden">
+                    {/* MOBILE / TABLET / LAPTOP (< xl) — subject cards */}
+                    <div className="xl:hidden">
                         {loadingSubjects
                             ? Array(3).fill(0).map((_, i) => (
                                 <div key={i} className="p-4 border-b border-gray-100 flex gap-3 animate-pulse">
@@ -689,8 +800,8 @@ export default function Exams() {
                         }
                     </div>
 
-                    {/* TABLET+ (md+) — subject table */}
-                    <div className="hidden md:block overflow-x-auto">
+                    {/* DESKTOP (xl+) — subject table */}
+                    <div className="hidden xl:block overflow-x-auto">
                         <table className="w-full text-xs md:text-sm border-collapse">
                             <thead>
                                 <tr className="bg-gray-50 border-b border-gray-100">
@@ -728,16 +839,12 @@ export default function Exams() {
                                                     }
                                                 </td>
                                                 <td className="px-1.5 md:px-2 py-1.5 md:py-2 text-center">
-                                                    <div className="flex items-center justify-center gap-0.5">
-                                                        <button onClick={() => { setEditSubject(sub); setShowAddSubject(true); }}
-                                                            className="px-1.5 py-0.5 text-xs font-medium text-gray-700 bg-white border border-gray-200 rounded hover:bg-gray-50 transition-all">
-                                                            Edit
-                                                        </button>
-                                                        <button onClick={() => setDeleteTarget({ configId: sub.id, subjectName: sub.subjectName })}
-                                                            className="p-0.5 text-red-500 bg-white border border-red-200 rounded hover:bg-red-50 transition-all">
-                                                            <Trash2 className="w-2.5 h-2.5" />
-                                                        </button>
-                                                    </div>
+                                                    <SubjectActionButtons
+                                                        sub={sub}
+                                                        onEdit={s => { setEditSubject(s); setShowAddSubject(true); }}
+                                                        onDelete={s => setDeleteTarget({ configId: s.id, subjectName: s.subjectName })}
+                                                        compact
+                                                    />
                                                 </td>
                                             </tr>
                                         ))
@@ -747,7 +854,7 @@ export default function Exams() {
                     </div>
                 </div>
 
-            </div>{/* /inner container */}
+            </div>
 
             {/* ── MODALS ──────────────────────────────────────────── */}
             {showNewExam && (
