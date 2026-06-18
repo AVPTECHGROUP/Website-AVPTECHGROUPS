@@ -187,6 +187,11 @@ const MainRoutes = () => {
             <Route path='/feemanagement/structures' element={<FeeStructures />} />
             <Route path='/feemanagement/collections' element={<CollectionsPage />} />
           </Route>
+          <Route element={<RoleProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'PRINCIPAL', 'TEACHER']} />}>
+               <Route path="/exams" element={<Exams />} />
+            <Route path="/exams/marksEntry/:examId?" element={<MarksEntry />} />
+            <Route path="/exams/reportCard/:examId?" element={<ReportCards />} />
+          </Route>
 
           {/* ADMIN, SUPER_ADMIN & GLOBAL_ADMIN */}
           <Route element={<RoleProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'PRINCIPAL']} />}>
@@ -202,9 +207,8 @@ const MainRoutes = () => {
             <Route path="/attendance/usersAttendance/warning" element={<WarningVerificationFailed />} />
             <Route path="/attendance/usersAttendance/manual" element={<ManualAttendance />} />
 
-            <Route path="/exams" element={<Exams />} />
-            <Route path="/exams/marksEntry/:examId?" element={<MarksEntry />} />
-            <Route path="/exams/reportCard/:examId?" element={<ReportCards />} />
+            
+            
             <Route path="/exams/analytics" element={<Analytics />} />
             <Route path="/exams/examConfig" element={<ExamConfiguration />} />
             <Route path="/academics/classSections" element={<ClassSectionConfig />} />
