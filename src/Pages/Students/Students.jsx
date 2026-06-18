@@ -271,7 +271,7 @@ const Student = () => {
                 </div>
 
                 {/* ── Stat Card ── */}
-                <div className="flex flex-wrap gap-3">
+                <div className="flex flex-wrap gap-3 w-fit">
                     {loading
                         ? cardsArray.map((_, i) => (
                             <div key={i} className="flex items-center gap-4 bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4 w-48 animate-pulse">
