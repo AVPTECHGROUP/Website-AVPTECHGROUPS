@@ -94,7 +94,7 @@ import EventsPage from '../Pages/Communication/Events/EventsPage';
 import CreateEventPage from '../Pages/Communication/Events/CreateEventPage';
 import ApprovalQueuePage from '../Pages/Communication/ApprovalQueue/ApprovalQueuePage';
 import NotificationsPage from '../Pages/Communication/Notifications/NotificationsPage';
-import DeviceTokenPage from '../Pages/Communication/DeviceToken/DeviceTokenPage';
+
 
 
 // ─── Role Groups ───────────────────────────────────────────────────────────────
@@ -187,6 +187,12 @@ const MainRoutes = () => {
             <Route path='/feemanagement/structures' element={<FeeStructures />} />
             <Route path='/feemanagement/collections' element={<CollectionsPage />} />
           </Route>
+          <Route element={<RoleProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'PRINCIPAL', 'TEACHER']} />}>
+               <Route path="/exams" element={<Exams />} />
+            <Route path="/exams/marksEntry/:examId?" element={<MarksEntry />} />
+            <Route path="/exams/reportCard/:examId?" element={<ReportCards />} />
+            <Route path="/attendance/studentAttendance" element={<StudentAttendance />} />
+          </Route>
 
           {/* ADMIN, SUPER_ADMIN & GLOBAL_ADMIN */}
           <Route element={<RoleProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'PRINCIPAL']} />}>
@@ -198,13 +204,12 @@ const MainRoutes = () => {
             <Route path="/attendance/staffImgReg" element={<StaffAttendanceRegistration />} />
             <Route path="/attendance/studentImgReg" element={<StudentAttendanceRegistration />} />
             <Route path="/attendance/usersAttendance" element={<UsersAttendance />} />
-            <Route path="/attendance/studentAttendance" element={<StudentAttendance />} />
+            
             <Route path="/attendance/usersAttendance/warning" element={<WarningVerificationFailed />} />
             <Route path="/attendance/usersAttendance/manual" element={<ManualAttendance />} />
 
-            <Route path="/exams" element={<Exams />} />
-            <Route path="/exams/marksEntry/:examId?" element={<MarksEntry />} />
-            <Route path="/exams/reportCard/:examId?" element={<ReportCards />} />
+            
+            
             <Route path="/exams/analytics" element={<Analytics />} />
             <Route path="/exams/examConfig" element={<ExamConfiguration />} />
             <Route path="/academics/classSections" element={<ClassSectionConfig />} />

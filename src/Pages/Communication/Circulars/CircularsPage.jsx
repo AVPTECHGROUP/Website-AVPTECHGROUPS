@@ -10,26 +10,38 @@ import CardComponent from '../../../Components/CommonComp/CardComponent';
 import ListLoader from '../../../Components/CommonComp/ListLoader';
 import { fetchCirculars, approveCircular, rejectCircular, deleteCircular } from '../../../Api/CircularApi.js';
 import CircularDetailModal from '../../../Components/CircularDetailsPopup/CircularDetailModel.jsx';
+import { useDecodedUser } from '../../../ContextAPI/UserContext';
+
+// ── Role guard ─────────────────────────────────────────────────────────────────
+// Only these roles may approve or reject circulars.
+// TEACHER (and any other unlisted role) cannot.
+const APPROVER_ROLES = ['PRINCIPAL', 'ADMIN', 'SUPER_ADMIN', 'VICE_PRINCIPAL', 'HOD'];
+
+function useCanApprove() {
+  const { user } = useDecodedUser();
+  const role = (user?.userType ?? '').toUpperCase();
+  return APPROVER_ROLES.includes(role);
+}
 
 // ── Static helpers ─────────────────────────────────────────────────────────────
 
 const STATUS_STYLE = {
-  PUBLISHED: { label: 'Published', bg: '#f0fdf4', color: '#16a34a', border: '#bbf7d0', dot: '#16a34a' },
+  PUBLISHED:        { label: 'Published',        bg: '#f0fdf4', color: '#16a34a', border: '#bbf7d0', dot: '#16a34a' },
   PENDING_APPROVAL: { label: 'Pending Approval', bg: '#fffbeb', color: '#d97706', border: '#fde68a', dot: '#d97706' },
-  DRAFT: { label: 'Draft', bg: '#f9fafb', color: '#6b7280', border: '#e5e7eb', dot: '#9ca3af' },
-  REJECTED: { label: 'Rejected', bg: '#fef2f2', color: '#dc2626', border: '#fecaca', dot: '#dc2626' },
+  DRAFT:            { label: 'Draft',            bg: '#f9fafb', color: '#6b7280', border: '#e5e7eb', dot: '#9ca3af' },
+  REJECTED:         { label: 'Rejected',         bg: '#fef2f2', color: '#dc2626', border: '#fecaca', dot: '#dc2626' },
 };
 
 const TARGET_STYLE = {
-  ALL_PARENTS: { bg: '#eff6ff', color: '#2563eb', border: '#dbeafe' },
-  ALL_STAFF: { bg: '#f5f3ff', color: '#7c3aed', border: '#ddd6fe' },
+  ALL_PARENTS:  { bg: '#eff6ff', color: '#2563eb', border: '#dbeafe' },
+  ALL_STAFF:    { bg: '#f5f3ff', color: '#7c3aed', border: '#ddd6fe' },
   ALL_TEACHERS: { bg: '#fff7ed', color: '#c2410c', border: '#fed7aa' },
-  DEFAULT: { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0' },
+  DEFAULT:      { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0' },
 };
 
 const TARGET_LABEL = {
-  ALL_PARENTS: 'All Parents',
-  ALL_STAFF: 'All Staff',
+  ALL_PARENTS:  'All Parents',
+  ALL_STAFF:    'All Staff',
   ALL_TEACHERS: 'All Teachers',
 };
 
@@ -67,18 +79,12 @@ function IconBtn({ icon: Icon, title, color = '#6b7280', hoverBg = '#f3f4f6', on
       onMouseEnter={() => setH(true)}
       onMouseLeave={() => setH(false)}
       style={{
-        width: 34,
-        height: 34,
-        borderRadius: 8,
+        width: 34, height: 34, borderRadius: 8,
         border: '1px solid #e5e7eb',
         background: h ? hoverBg : '#fff',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        cursor: 'pointer',
-        transition: 'all .15s',
-        color: h ? color : '#9ca3af',
-        flexShrink: 0,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        cursor: 'pointer', transition: 'all .15s',
+        color: h ? color : '#9ca3af', flexShrink: 0,
       }}
     >
       <Icon size={14} />
@@ -86,9 +92,9 @@ function IconBtn({ icon: Icon, title, color = '#6b7280', hoverBg = '#f3f4f6', on
   );
 }
 
-// ── Mobile Card Row (used below md breakpoint) ──────────────────────────────
+// ── Mobile Card Row ────────────────────────────────────────────────────────────
 
-function MobileCircularCard({ c, actionId, onApprove, onReject, onDelete, onView }) {
+function MobileCircularCard({ c, actionId, canApprove, onApprove, onReject, onDelete, onView }) {
   return (
     <div
       style={{
@@ -145,10 +151,11 @@ function MobileCircularCard({ c, actionId, onApprove, onReject, onDelete, onView
 
       {/* Actions */}
       <div style={{ display: 'flex', gap: 8 }}>
-        {c.status?.toUpperCase() === 'PENDING_APPROVAL' && (
+        {/* ── ROLE GUARD: approve/reject only for non-teachers ── */}
+        {canApprove && c.status?.toUpperCase() === 'PENDING_APPROVAL' && (
           <>
             <IconBtn icon={Check} title="Approve" color="#16a34a" hoverBg="#f0fdf4" onClick={() => onApprove(c.id)} />
-            <IconBtn icon={X} title="Reject" color="#dc2626" hoverBg="#fef2f2" onClick={() => onReject(c.id)} />
+            <IconBtn icon={X}     title="Reject"  color="#dc2626" hoverBg="#fef2f2" onClick={() => onReject(c.id)} />
           </>
         )}
         <IconBtn icon={Eye} title="View" color="#2563eb" hoverBg="#eff6ff" onClick={() => onView(c.id)} />
@@ -164,6 +171,9 @@ function MobileCircularCard({ c, actionId, onApprove, onReject, onDelete, onView
 
 export default function CircularsPage() {
   const navigate = useNavigate();
+
+  // ── Role check ──────────────────────────────────────────────────────────────
+  const canApprove = useCanApprove();
 
   // ── State ──
   const [circulars, setCirculars] = useState([]);
@@ -220,9 +230,9 @@ export default function CircularsPage() {
       setTotalPages(pagination.totalPages ?? 1);
 
       setStats({
-        total: pagination.totalElements ?? list.length,
-        published: list.filter((c) => c.status?.toUpperCase() === 'PUBLISHED').length,
-        pending: list.filter((c) => c.status?.toUpperCase() === 'PENDING_APPROVAL').length,
+        total:        pagination.totalElements ?? list.length,
+        published:    list.filter((c) => c.status?.toUpperCase() === 'PUBLISHED').length,
+        pending:      list.filter((c) => c.status?.toUpperCase() === 'PENDING_APPROVAL').length,
         draftRejected: list.filter((c) => ['DRAFT', 'REJECTED'].includes(c.status?.toUpperCase())).length,
       });
     }
@@ -263,10 +273,10 @@ export default function CircularsPage() {
 
   // ── Cards config ─────────────────────────────────────────────────────────────
   const cardsArray = [
-    { keyName: 'Total Circulars', val: stats.total, IconName: ScrollText, iconTxColor: 'text-blue-600', iconBgColor: 'bg-blue-50' },
-    { keyName: 'Published', val: stats.published, IconName: CheckCircle2, iconTxColor: 'text-green-600', iconBgColor: 'bg-green-50' },
-    { keyName: 'Pending Approval', val: stats.pending, IconName: Clock, iconTxColor: 'text-amber-600', iconBgColor: 'bg-amber-50' },
-    { keyName: 'Draft / Rejected', val: stats.draftRejected, IconName: XCircle, iconTxColor: 'text-red-500', iconBgColor: 'bg-red-50' },
+    { keyName: 'Total Circulars',  val: stats.total,        IconName: ScrollText,   iconTxColor: 'text-blue-600',  iconBgColor: 'bg-blue-50'  },
+    { keyName: 'Published',        val: stats.published,    IconName: CheckCircle2, iconTxColor: 'text-green-600', iconBgColor: 'bg-green-50' },
+    { keyName: 'Pending Approval', val: stats.pending,      IconName: Clock,        iconTxColor: 'text-amber-600', iconBgColor: 'bg-amber-50' },
+    { keyName: 'Draft / Rejected', val: stats.draftRejected, IconName: XCircle,     iconTxColor: 'text-red-500',   iconBgColor: 'bg-red-50'   },
   ];
 
   // ── Render ───────────────────────────────────────────────────────────────────
@@ -289,7 +299,7 @@ export default function CircularsPage() {
         </button>
       </div>
 
-      {/* Stat cards — 2-col on mobile, 4-col on md+ */}
+      {/* Stat cards */}
       <div className="grid sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 text-sm mt-4 mb-4">
         {cardsArray.map((card) => (
           <CardComponent
@@ -306,7 +316,7 @@ export default function CircularsPage() {
       {/* Filters + tabs card */}
       <div className="bg-white border border-gray-200 rounded-xl shadow-sm mb-4">
 
-        {/* Tabs — horizontal scroll on mobile */}
+        {/* Tabs */}
         <div className="flex border-b border-gray-100 px-3 sm:px-5 pt-1 overflow-x-auto scrollbar-none">
           {TABS.map((t) => (
             <button
@@ -324,7 +334,8 @@ export default function CircularsPage() {
 
         {/* Filter row */}
         <div className="p-3 sm:p-4">
-          {/* Mobile: search + filter toggle button */}
+
+          {/* Mobile: search + filter toggle */}
           <div className="flex gap-2 sm:hidden mb-2">
             <div className="relative flex-1">
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -418,7 +429,7 @@ export default function CircularsPage() {
         </div>
       </div>
 
-      {/* Table — hidden on mobile, shown on md+ */}
+      {/* Table */}
       <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
 
         {/* Error state */}
@@ -431,7 +442,6 @@ export default function CircularsPage() {
 
         {/* ── Desktop Table (md+) ── */}
         <div className="hidden md:block">
-          {/* Col headers */}
           <div
             className="grid text-[11px] font-bold text-gray-400 uppercase tracking-wider px-5 py-2.5 bg-gray-50 border-b border-gray-100"
             style={{ gridTemplateColumns: '2.5fr 1fr 1fr 1fr 130px 90px' }}
@@ -439,12 +449,9 @@ export default function CircularsPage() {
             {['Circular', 'Type', 'Date', 'Author', 'Status', 'Action'].map((h) => <div key={h}>{h}</div>)}
           </div>
 
-          {/* Rows */}
           {loading ? (
             <table className="w-full">
-              <tbody>
-                <ListLoader colSpanSet={6} />
-              </tbody>
+              <tbody><ListLoader colSpanSet={6} /></tbody>
             </table>
           ) : circulars.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-gray-400">
@@ -510,10 +517,11 @@ export default function CircularsPage() {
 
                 {/* Actions */}
                 <div className="flex items-center gap-1.5">
-                  {c.status?.toUpperCase() === 'PENDING_APPROVAL' && (
+                  {/* ── ROLE GUARD: approve/reject only for non-teachers ── */}
+                  {canApprove && c.status?.toUpperCase() === 'PENDING_APPROVAL' && (
                     <>
                       <IconBtn icon={Check} title="Approve" color="#16a34a" hoverBg="#f0fdf4" onClick={() => handleApprove(c.id)} />
-                      <IconBtn icon={X} title="Reject" color="#dc2626" hoverBg="#fef2f2" onClick={() => handleReject(c.id)} />
+                      <IconBtn icon={X}     title="Reject"  color="#dc2626" hoverBg="#fef2f2" onClick={() => handleReject(c.id)} />
                     </>
                   )}
                   <IconBtn icon={Eye} title="View" color="#2563eb" hoverBg="#eff6ff" onClick={() => setSelectedCircularId(c.id)} />
@@ -529,17 +537,9 @@ export default function CircularsPage() {
         {/* ── Mobile Card List (below md) ── */}
         <div className="md:hidden">
           {loading ? (
-            <div
-              className="px-5 py-4"
-              style={{
-                display: 'grid',
-                gridColumn: '1 / -1',
-              }}
-            >
+            <div className="px-5 py-4" style={{ display: 'grid', gridColumn: '1 / -1' }}>
               <table className="w-full">
-                <tbody>
-                  <ListLoader colSpanSet={6} />
-                </tbody>
+                <tbody><ListLoader colSpanSet={6} /></tbody>
               </table>
             </div>
           ) : circulars.length === 0 ? (
@@ -554,6 +554,7 @@ export default function CircularsPage() {
                 key={c.id}
                 c={c}
                 actionId={actionId}
+                canApprove={canApprove}
                 onApprove={handleApprove}
                 onReject={handleReject}
                 onDelete={handleDelete}

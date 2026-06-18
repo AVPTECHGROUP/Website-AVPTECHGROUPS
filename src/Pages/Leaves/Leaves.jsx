@@ -23,9 +23,50 @@ import {
 import { toast } from 'react-toastify';
 import { getListOfValues } from '../../Api/ListOfValues';
 import ListLoader from '../../Components/CommonComp/ListLoader';
+import { useDecodedUser } from '../../ContextAPI/UserContext';
 
+// ── Hierarchy ──────────────────────────────────────────────────────────────────
+// Lower index  = higher authority.
+// Any role NOT in this list gets rank Infinity (can approve nobody).
+const ROLE_HIERARCHY = [
+  'GLOBAL_ADMIN',
+  'SUPER_ADMIN',
+  'ADMIN',
+  'PRINCIPAL',
+  'VICE_PRINCIPAL',
+  'HOD',
+  'TEACHER',
+  'ACCOUNTANT',
+  'RECEPTIONIST',
+  'STAFF',
+  'STUDENT',
+];
+
+function getRoleRank(role) {
+  const idx = ROLE_HIERARCHY.indexOf((role ?? '').toUpperCase());
+  return idx === -1 ? Infinity : idx;
+}
+
+/**
+ * Returns true only when:
+ *  1. The viewer is NOT the leave applicant (no self-approval)
+ *  2. The viewer's role is strictly higher in the hierarchy than the applicant's role
+ */
+function canViewerApprove({ viewerUserId, viewerRole, applicantUserId, applicantRole }) {
+  if (!viewerUserId || !applicantUserId) return false;
+  // Rule 1 — no self-approval
+  if (String(viewerUserId) === String(applicantUserId)) return false;
+  // Rule 2 — viewer must be strictly higher (lower rank index)
+  return getRoleRank(viewerRole) < getRoleRank(applicantRole);
+}
+
+// ── Component ──────────────────────────────────────────────────────────────────
 const Leaves = () => {
   const date = new Date().toLocaleDateString();
+
+  // ── Auth context ─────────────────────────────────────────────────────────────
+  const { user: currentUser } = useDecodedUser();
+  // currentUser shape: { id, userType, email, permissions, schoolId }
 
   const [error, setError] = useState(null);
   const [totalElements, setTotalElements] = useState(0);
@@ -65,11 +106,10 @@ const Leaves = () => {
       fetchLeaveRequests();
       return;
     }
-    // Reset to page 1 when a filter changes (not pagination itself)
     setPage(1);
   }, [debouncedSearch, leaveStatusFilter, leaveType, fromDateFilter, toDateFilter]);
 
-  // ── List of values ──────────────────────────────────────────────────────────
+  // ── List of values ────────────────────────────────────────────────────────────
   useEffect(() => {
     const fetchListOfValues = async () => {
       try {
@@ -93,7 +133,7 @@ const Leaves = () => {
     fetchListOfValues();
   }, []);
 
-  // ── Statistics ──────────────────────────────────────────────────────────────
+  // ── Statistics ────────────────────────────────────────────────────────────────
   useEffect(() => {
     const fetchStatistics = async () => {
       setStatLoading(true);
@@ -109,13 +149,13 @@ const Leaves = () => {
     fetchStatistics();
   }, [refreshStat]);
 
-  // ── Debounce search ─────────────────────────────────────────────────────────
+  // ── Debounce search ───────────────────────────────────────────────────────────
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search), 500);
     return () => clearTimeout(t);
   }, [search]);
 
-  // ── Fetch leave requests whenever any filter / page changes ─────────────────
+  // ── Fetch leave requests ──────────────────────────────────────────────────────
   const fetchLeaveRequests = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -138,25 +178,29 @@ const Leaves = () => {
 
       setLeaveReq(
         leaveRequests.map((employee) => ({
-          leaveId: employee.id,
-          id: employee.userId,
-          name: employee.userName || 'Unknown',
-          leaveType: employee.leaveType,
-          fromDate: employee.fromDate,
-          toDate: employee.toDate,
-          totalDays: employee.totalDays,
-          reason: employee.reason,
-          reviewRemarks: employee.reviewRemarks,
-          status: employee.status,
-          empCode: employee.employeeCode,
-          avatar: (employee.userName || 'U')[0].toUpperCase(),
-          isHalfDay: employee.isHalfDay === true || employee.isHalfDay === 'true' || employee.isHalfDay === 'TRUE',
+          leaveId:        employee.id,
+          id:             employee.userId,           // applicant's user ID
+          applicantRole:  employee.userType || '',   // applicant's role — used for hierarchy check
+          name:           employee.userName || 'Unknown',
+          leaveType:      employee.leaveType,
+          fromDate:       employee.fromDate,
+          toDate:         employee.toDate,
+          totalDays:      employee.totalDays,
+          reason:         employee.reason,
+          reviewRemarks:  employee.reviewRemarks,
+          status:         employee.status,
+          empCode:        employee.employeeCode,
+          avatar:         (employee.userName || 'U')[0].toUpperCase(),
+          isHalfDay:
+            employee.isHalfDay === true ||
+            employee.isHalfDay === 'true' ||
+            employee.isHalfDay === 'TRUE',
           image:
             employee.imageUrl ||
             employee.profileImage ||
             `https://ui-avatars.com/api/?name=${encodeURIComponent(employee.userName)}&background=random`,
-          role: employee.userType || 'N/A',
-          currEmpstatus: employee.status,
+          role:           employee.userType || 'N/A',
+          currEmpstatus:  employee.status,
         }))
       );
 
@@ -171,13 +215,11 @@ const Leaves = () => {
     }
   }, [page, rowsPerPage, debouncedSearch, leaveStatusFilter, leaveType, fromDateFilter, toDateFilter]);
 
-
-
   useEffect(() => {
     fetchLeaveRequests();
   }, [page, rowsPerPage, fetchLeaveRequests]);
 
-  // ── Helpers ─────────────────────────────────────────────────────────────────
+  // ── Helpers ───────────────────────────────────────────────────────────────────
   const getAvatarColor = (name) => {
     const colors = ['bg-blue-500', 'bg-emerald-500', 'bg-violet-500', 'bg-pink-500', 'bg-indigo-500', 'bg-amber-500'];
     return colors[(name?.charCodeAt(0) || 0) % colors.length];
@@ -198,12 +240,24 @@ const Leaves = () => {
     setToDateFilter('');
   };
 
-  // ── Cards config ────────────────────────────────────────────────────────────
+  // ── Per-row approve gate ──────────────────────────────────────────────────────
+  // emp.currEmpstatus must still be PENDING; additionally the hierarchy check must pass.
+  function showApproveReject(emp) {
+    if (emp.currEmpstatus !== 'PENDING') return false;
+    return canViewerApprove({
+      viewerUserId:   currentUser?.id,
+      viewerRole:     currentUser?.userType,
+      applicantUserId: emp.id,
+      applicantRole:  emp.applicantRole,
+    });
+  }
+
+  // ── Cards config ──────────────────────────────────────────────────────────────
   const cardsArray = [
     {
       IconName: ClockIcon,
       keyName: 'Pending Requests',
-      val: statistics.pendingApproval, 
+      val: statistics.pendingApproval,
       iconTxColor: 'text-orange-600',
       iconBgColor: 'bg-orange-50',
     },
@@ -224,21 +278,21 @@ const Leaves = () => {
     {
       IconName: CalendarRange,
       keyName: 'Applied This Month',
-      val: statistics.appliedThisMonth, 
+      val: statistics.appliedThisMonth,
       iconTxColor: 'text-blue-600',
       iconBgColor: 'bg-blue-50',
     },
   ];
 
   const statusStyles = {
-    PENDING: 'bg-amber-50   text-amber-800  border border-amber-200',
-    APPROVED: 'bg-emerald-50 text-emerald-800 border border-emerald-200',
-    REJECTED: 'bg-red-50     text-red-800    border border-red-200',
+    PENDING:   'bg-amber-50   text-amber-800  border border-amber-200',
+    APPROVED:  'bg-emerald-50 text-emerald-800 border border-emerald-200',
+    REJECTED:  'bg-red-50     text-red-800    border border-red-200',
     CANCELLED: 'bg-orange-50  text-orange-800 border border-orange-200',
     WITHDRAWN: 'bg-gray-50    text-gray-700   border border-gray-200',
   };
 
-  // ── Popup state ─────────────────────────────────────────────────────────────
+  // ── Popup state ───────────────────────────────────────────────────────────────
   const [selectedUser, setSelectedUser] = useState(null);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [remarkVal, setRemarksVal] = useState('As per the policy');
@@ -280,55 +334,34 @@ const Leaves = () => {
   };
 
   const getLeaveDurationText = (emp) => {
-    // console.log('Calculating leave duration for emp:', emp);
-    // console.log('totalDays:', emp.totalDays, 'isHalfDay:', emp.isHalfDay);
-
     const days = Number(emp.totalDays || 0);
-    console.log('Parsed isHalfday emp:', emp.isHalfDay, 'Parsed days:', days);
+    const isHalfDay =
+      emp.isHalfDay === true || emp.isHalfDay === 'true' || emp.isHalfDay === 'TRUE';
 
-    const isHalfDay = emp.isHalfDay === true || emp.isHalfDay === 'true' || emp.isHalfDay === 'TRUE';
-    console.log('Parsed isHalfDay:', isHalfDay);
+    if (days === 0 && isHalfDay) return 'Half Day';
+    if (days === 0 && !isHalfDay) return 'Weekend / Holiday';
 
-    if (days === 0 && isHalfDay === true) {
-      return 'Half Day';
-      console.log('Half day detected for emp:', emp);
-    }
-
-    if (days === 0 && isHalfDay !== true) {
-      return 'Weekend /Holiday';
-    }
-
-    const totalDuration = isHalfDay === true
-      ? days + 0.5
-      : days;
-
+    const totalDuration = isHalfDay ? days + 0.5 : days;
     return `${totalDuration} ${totalDuration === 1 ? 'Day' : 'Days'}`;
   };
 
-  // ── Pagination helpers ──────────────────────────────────────────────────────
+  // ── Pagination helpers ────────────────────────────────────────────────────────
   const safeTotalElements = Number(totalElements) || 0;
-  const safeRowsPerPage = Number(rowsPerPage) || 10;
-  const safePage = Number(page) || 1;
-  const showingFrom = (safePage - 1) * safeRowsPerPage + 1;
-  const showingTo = Math.min(safePage * safeRowsPerPage, safeTotalElements);
+  const safeRowsPerPage   = Number(rowsPerPage) || 10;
+  const safePage          = Number(page) || 1;
+  const showingFrom       = (safePage - 1) * safeRowsPerPage + 1;
+  const showingTo         = Math.min(safePage * safeRowsPerPage, safeTotalElements);
 
   const pageNumbers = () => {
-    const tp = Number(totalPages) || 0;
+    const tp  = Number(totalPages) || 0;
     const cur = Math.min(Math.max(1, Number(page) || 1), tp);
-
-    // If small number of pages, show them all
     if (tp <= 5) return [...Array(tp)].map((_, i) => i + 1);
-
-    // Build pagination: always show first and last, and a sliding window of 3 pages around current
     let start = Math.max(2, cur - 1);
-    let end = Math.min(tp - 1, start + 2); // window size 3 (start..end)
+    let end   = Math.min(tp - 1, start + 2);
     if (end - start < 2) start = Math.max(2, end - 2);
-
     const pages = [1];
     for (let p = start; p <= end; p++) pages.push(p);
     pages.push(tp);
-
-    // ensure unique and sorted
     return [...new Set(pages)].sort((a, b) => a - b);
   };
 
@@ -422,7 +455,7 @@ const Leaves = () => {
                   <XIcon className="w-3.5 h-3.5" /> Clear filters
                 </button>
               ) : (
-                <div /> /* placeholder to preserve grid */
+                <div />
               )}
 
               {/* Date range */}
@@ -482,6 +515,7 @@ const Leaves = () => {
 
           {/* ── Table ── */}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+
             {/* DESKTOP TABLE */}
             <div className="hidden lg:block overflow-hidden rounded-t-xl">
               <div className="overflow-y-auto overflow-x-auto max-h-[calc(100vh-380px)]">
@@ -515,7 +549,7 @@ const Leaves = () => {
                           </div>
                           <p className="text-sm font-semibold text-gray-800 mb-1">Error Loading Requests</p>
                           <p className="text-xs text-gray-500 mb-3">{error}</p>
-                          <button onClick={() => fetchLeaveRequests()} className="px-4 py-1.5 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
+                          <button onClick={fetchLeaveRequests} className="px-4 py-1.5 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
                             Retry
                           </button>
                         </td>
@@ -557,9 +591,6 @@ const Leaves = () => {
                           <td className="px-3 py-2 text-xs text-gray-600 tabular-nums">{emp.fromDate}</td>
                           <td className="px-3 py-2 text-xs text-gray-600 tabular-nums">{emp.toDate}</td>
                           {/* Days */}
-                          {/* <td className="px-3 py-2 text-xs font-semibold text-gray-800 tabular-nums">
-                            {emp.totalDays === 0 ? 'Weekend/Holiday'  :  emp.totalDays === 1 ? '1 day' : `${emp.totalDays} days`}
-                          </td> */}
                           <td className="px-2 py-1 text-[11px] font-semibold text-gray-800 tabular-nums">
                             {getLeaveDurationText(emp)}
                           </td>
@@ -569,9 +600,9 @@ const Leaves = () => {
                               {emp.currEmpstatus}
                             </span>
                           </td>
-                          {/* Action */}
+                          {/* Action — hierarchy + self-approval guard applied here */}
                           <td className="px-3 py-2">
-                            {emp.currEmpstatus === 'PENDING' ? (
+                            {showApproveReject(emp) ? (
                               <div className="flex gap-1.5">
                                 <button
                                   onClick={() => handleViewClick(emp)}
@@ -617,7 +648,7 @@ const Leaves = () => {
                   </div>
                   <p className="text-sm font-semibold text-gray-800 mb-1">Error Loading Requests</p>
                   <p className="text-xs text-gray-500 mb-3">{error}</p>
-                  <button onClick={() => fetchLeaveRequests()} className="px-4 py-1.5 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
+                  <button onClick={fetchLeaveRequests} className="px-4 py-1.5 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
                     Retry
                   </button>
                 </div>
@@ -650,7 +681,7 @@ const Leaves = () => {
                       </div>
                       <div>
                         <p className="text-gray-400 mb-0.5">Duration</p>
-                        <p className="font-medium text-gray-800">{emp.totalDays} {emp.totalDays === 1 ? 'day' : 'days'}</p>
+                        <p className="font-medium text-gray-800">{getLeaveDurationText(emp)}</p>
                       </div>
                       <div>
                         <p className="text-gray-400 mb-0.5">From</p>
@@ -664,14 +695,9 @@ const Leaves = () => {
                     {emp.reason && (
                       <p className="text-xs text-gray-500 mb-3 line-clamp-2">{emp.reason}</p>
                     )}
-                    {/* <button
-                      onClick={() => handleViewClick(emp)}
-                      className="w-full px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-xs font-medium hover:bg-blue-100 transition-colors border border-blue-200"
-                    >
-                      View Details
-                    </button> */}
+                    {/* Action — hierarchy + self-approval guard applied here */}
                     <div className="w-full">
-                      {emp.currEmpstatus === "PENDING" ? (
+                      {showApproveReject(emp) ? (
                         <div className="flex gap-2 w-full">
                           <button
                             onClick={() => handleViewClick(emp)}
@@ -679,7 +705,6 @@ const Leaves = () => {
                           >
                             Approve
                           </button>
-
                           <button
                             onClick={() => handleViewClick(emp)}
                             className="flex-1 px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-xs font-medium hover:bg-red-100 transition-colors border border-red-200"
@@ -739,10 +764,9 @@ const Leaves = () => {
                     )}
                     <button
                       onClick={() => setPage(pNum)}
-                      className={`w-7 h-7 text-xs rounded font-medium transition-all ${page === pNum
-                        ? 'bg-blue-500 text-white shadow-sm'
-                        : 'text-gray-600 hover:bg-gray-100'
-                        }`}
+                      className={`w-7 h-7 text-xs rounded font-medium transition-all ${
+                        page === pNum ? 'bg-blue-500 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-100'
+                      }`}
                     >
                       {pNum}
                     </button>
