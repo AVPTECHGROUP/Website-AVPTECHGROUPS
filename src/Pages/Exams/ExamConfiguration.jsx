@@ -432,6 +432,7 @@ const ExamTypeTab = () => {
               <Field
                 label="Exam Type Name"
                 value={form.name}
+                placeholder={"Enter Exam Name..."}
                 onChange={(e) => setForm(p => ({ ...p, name: e.target.value }))}
                 error={errors.name}
               />
@@ -440,6 +441,7 @@ const ExamTypeTab = () => {
                 label="Description"
                 multiline
                 value={form.description}
+                placeholder={"Enter Exam Description..."}
                 onChange={(e) => setForm(p => ({ ...p, description: e.target.value }))}
                 error={errors.description}
               />

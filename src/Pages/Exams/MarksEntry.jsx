@@ -486,7 +486,7 @@ export default function MarksEntry() {
 
             {/* ── Filter Bar ── */}
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm px-4 sm:px-5 py-4">
-                <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-[1fr_1.2fr_1.4fr_1fr_auto] gap-3">
 
                     <Select
                         value={selectedClassId}
@@ -494,7 +494,7 @@ export default function MarksEntry() {
                         options={classes.map((c) => ({ value: String(c.id), label: c.name }))}
                         placeholder={loadingMeta ? "Loading..." : "Select Class"}
                         disabled={loadingMeta}
-                        className="w-full sm:w-40"
+                        className="w-full"
                     />
 
                     <Select
@@ -503,7 +503,7 @@ export default function MarksEntry() {
                         options={sections.map((s) => ({ value: String(s.id), label: sectionLabel(s) }))}
                         placeholder={loadingMeta ? "Loading..." : "Select Section"}
                         disabled={loadingMeta}
-                        className="w-full sm:w-52"
+                        className="w-full "
                     />
 
                     <Select
@@ -512,7 +512,7 @@ export default function MarksEntry() {
                         options={exams.map((e) => ({ value: String(e.id), label: e.name }))}
                         placeholder={loadingExams ? "Loading exams..." : "Select Exam"}
                         disabled={loadingExams || !selectedClassId}
-                        className="w-full sm:w-64"
+                        className="w-full"
                     />
 
                     <Select
@@ -524,13 +524,13 @@ export default function MarksEntry() {
                         }))}
                         placeholder={loadingSubjects ? "Loading subjects..." : "Select Subject"}
                         disabled={loadingSubjects || !selectedExamId}
-                        className="w-full sm:w-44"
+                        className="w-full"
                     />
 
                     <button
                         onClick={loadSheet}
                         disabled={!selectedExamId || !selectedSectionSubjectId || loadingSheet}
-                        className="flex items-center justify-center gap-2 w-full sm:w-auto px-5 py-2 text-sm font-semibold text-gray-800 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                        className="flex items-center justify-center gap-2 w-full xl:w-auto px-5 py-2 text-sm font-semibold text-gray-800 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                     >
                         {loadingSheet && <Loader2 className="w-4 h-4 animate-spin" />}
                         {loadingSheet ? "Loading..." : "Load Sheet"}
@@ -655,7 +655,7 @@ function MarksSheet({
             )}
 
             {/* Mobile cards */}
-            <div className="block md:hidden divide-y divide-gray-100">
+            <div className="block xl:hidden divide-y divide-gray-100">
                 {rows.map((row) => {
                     const displayMarks = hasTheoryPractical ? row.theoryMarks + row.practicalMarks : row.totalMarks;
                     const grade = getGrade(displayMarks, maxMarks, row.isAbsent);
@@ -700,7 +700,7 @@ function MarksSheet({
             </div>
 
             {/* Desktop table */}
-            <div className="hidden md:block overflow-x-auto">
+            <div className="hidden xl:block overflow-x-auto">
                 <table className="w-full text-sm">
                     <thead>
                         <tr className="bg-gray-50 border-b border-gray-100">
