@@ -113,8 +113,12 @@ export default function EventDetailModal({ ev, onClose, onDeleted, onDeleteEvent
     }
   };
 
-  const timeStr = ev.startDate
-    ? `${fmtTime(ev.startDate)}${ev.endDate ? ` – ${fmtTime(ev.endDate)}` : ""}`
+  // ── Fix: use startDatetime/endDatetime with fallbacks ──
+  const startDt = ev.startDatetime ?? ev.startDate ?? ev.date ?? null;
+  const endDt   = ev.endDatetime   ?? ev.endDate   ?? null;
+
+  const timeStr = startDt
+    ? `${fmtTime(startDt)}${endDt ? ` – ${fmtTime(endDt)}` : ""}`
     : "—";
 
   return (
@@ -149,6 +153,7 @@ export default function EventDetailModal({ ev, onClose, onDeleted, onDeleteEvent
 
         {/* Body */}
         <div className="p-5 flex flex-col gap-4 flex-1">
+
           {/* Description */}
           {ev.description && (
             <p className="text-sm text-slate-500 leading-relaxed bg-blue-50 px-4 py-3 rounded-xl border border-blue-100">
@@ -158,10 +163,10 @@ export default function EventDetailModal({ ev, onClose, onDeleted, onDeleteEvent
 
           {/* Info grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-            <InfoRow icon={<Calendar size={14} />} label="Date" value={fmtDate(ev.startDate || ev.date)} />
-            <InfoRow icon={<Clock size={14} />} label="Time" value={timeStr} />
-            <InfoRow icon={<MapPin size={14} />} label="Location" value={ev.location} />
-            <InfoRow icon={<TrendingUp size={14} />} label="Type" value={typeLabel(ev.type)} />
+            <InfoRow icon={<Calendar size={14} />} label="Date"     value={fmtDate(startDt)} />
+            <InfoRow icon={<Clock size={14} />}    label="Time"     value={timeStr} />
+            <InfoRow icon={<MapPin size={14} />}   label="Location" value={ev.location} />
+            <InfoRow icon={<TrendingUp size={14} />} label="Type"   value={typeLabel(ev.type)} />
           </div>
 
           {/* Target groups */}
