@@ -23,36 +23,36 @@ import { getActiveStores, getStockOverview } from "../../Api/StockApi";
 import { getListOfValues } from "../../Api/ListOfValues";
 
 const SEARCH_DEBOUNCE_MS = 400;
-const ALL_STORES_ID      = "";
+const ALL_STORES_ID = "";
 
 const STATUS_OPTIONS = [
     { label: "All Status", val: "" },
-    { label: "OK",          val: "OK" },
-    { label: "Low",        val: "LOW" },
-    { label: "Critical",   val: "CRITICAL" },
+    { label: "OK", val: "OK" },
+    { label: "Low", val: "LOW" },
+    { label: "Critical", val: "CRITICAL" },
 ];
 
 const categoryColors = {
-    STATIONERY:  "bg-gray-100 text-gray-700",
-    LAB:         "bg-purple-100 text-purple-700",
-    SPORTS:      "bg-blue-100 text-blue-700",
-    UNIFORM:     "bg-orange-100 text-orange-700",
-    BOOKS:       "bg-yellow-100 text-yellow-700",
-    FURNITURE:   "bg-amber-100 text-amber-700",
+    STATIONERY: "bg-gray-100 text-gray-700",
+    LAB: "bg-purple-100 text-purple-700",
+    SPORTS: "bg-blue-100 text-blue-700",
+    UNIFORM: "bg-orange-100 text-orange-700",
+    BOOKS: "bg-yellow-100 text-yellow-700",
+    FURNITURE: "bg-amber-100 text-amber-700",
     ELECTRONICS: "bg-cyan-100 text-cyan-700",
-    CLEANING:    "bg-teal-100 text-teal-700",
-    OTHER:       "bg-gray-100 text-gray-500",
+    CLEANING: "bg-teal-100 text-teal-700",
+    OTHER: "bg-gray-100 text-gray-500",
 };
 
 const stockStatusStyle = {
-    OK:       "text-green-700 font-semibold",
-    LOW:      "text-orange-500 font-semibold",
+    OK: "text-green-700 font-semibold",
+    LOW: "text-orange-500 font-semibold",
     CRITICAL: "text-red-600 font-semibold",
 };
 
 const stockBarColor = (status) => {
     if (status === "CRITICAL") return "bg-red-500";
-    if (status === "LOW")      return "bg-orange-400";
+    if (status === "LOW") return "bg-orange-400";
     return "bg-blue-500";
 };
 
@@ -120,7 +120,7 @@ const StockedInCell = ({ storeNames }) => {
         return <span className="text-xs text-gray-400">—</span>;
 
     const first = storeNames[0];
-    const rest  = storeNames.slice(1);
+    const rest = storeNames.slice(1);
 
     return (
         <div className="flex items-center gap-1.5 flex-wrap" ref={ref}>
@@ -154,35 +154,35 @@ const StockedInCell = ({ storeNames }) => {
 export default function Transactions() {
 
     // ── Stores dropdown ────────────────────────────────────────
-    const [stores,        setStores]        = useState([]);
+    const [stores, setStores] = useState([]);
     const [storesLoading, setStoresLoading] = useState(false);
 
     // ── Categories from LOV API ────────────────────────────────
-    const [categoryOptions,   setCategoryOptions]   = useState([{ label: "All Categories", val: "" }]);
+    const [categoryOptions, setCategoryOptions] = useState([{ label: "All Categories", val: "" }]);
     const [categoriesLoading, setCategoriesLoading] = useState(false);
 
     // ── Filter state ───────────────────────────────────────────
-    const [search,          setSearch]          = useState("");
+    const [search, setSearch] = useState("");
     const [debouncedSearch, setDebouncedSearch] = useState("");
     const [selectedStoreId, setSelectedStoreId] = useState(ALL_STORES_ID);
-    const [categoryFilter,  setCategoryFilter]  = useState("");
-    const [statusFilter,    setStatusFilter]    = useState("");
-    const [page,            setPage]            = useState(1);
-    const [rowsPerPage,     setRowsPerPage]     = useState(10);
+    const [categoryFilter, setCategoryFilter] = useState("");
+    const [statusFilter, setStatusFilter] = useState("");
+    const [page, setPage] = useState(1);
+    const [rowsPerPage, setRowsPerPage] = useState(10);
     const debounceRef = useRef(null);
 
     // ── Table data ─────────────────────────────────────────────
-    const [items,        setItems]        = useState([]);
-    const [totalItems,   setTotalItems]   = useState(0);
-    const [totalPages,   setTotalPages]   = useState(0);
+    const [items, setItems] = useState([]);
+    const [totalItems, setTotalItems] = useState(0);
+    const [totalPages, setTotalPages] = useState(0);
     const [itemsLoading, setItemsLoading] = useState(false);
-    const [itemsError,   setItemsError]   = useState("");
-    const [noItemFound,  setNoItemFound]  = useState(false);
+    const [itemsError, setItemsError] = useState("");
+    const [noItemFound, setNoItemFound] = useState(false);
 
     // ── Modals ─────────────────────────────────────────────────
-    const [isModalOpen,     setIsModalOpen]     = useState(false);
-    const [modalType,       setModalType]       = useState("in");
-    const [isTransferOpen,  setIsTransferOpen]  = useState(false);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [modalType, setModalType] = useState("in");
+    const [isTransferOpen, setIsTransferOpen] = useState(false);
     const [preselectedItem, setPreselectedItem] = useState(null);
 
     // ── Load stores once ───────────────────────────────────────
@@ -206,16 +206,16 @@ export default function Transactions() {
             })
             .catch(() => {
                 setCategoryOptions([
-                    { label: "All Categories", val: ""           },
-                    { label: "Books",          val: "BOOKS"      },
-                    { label: "Uniform",        val: "UNIFORM"    },
-                    { label: "Lab",            val: "LAB"        },
-                    { label: "Stationery",     val: "STATIONERY" },
-                    { label: "Sports",         val: "SPORTS"     },
-                    { label: "Furniture",      val: "FURNITURE"  },
-                    { label: "Electronics",    val: "ELECTRONICS"},
-                    { label: "Cleaning",       val: "CLEANING"   },
-                    { label: "Other",          val: "OTHER"      },
+                    { label: "All Categories", val: "" },
+                    { label: "Books", val: "BOOKS" },
+                    { label: "Uniform", val: "UNIFORM" },
+                    { label: "Lab", val: "LAB" },
+                    { label: "Stationery", val: "STATIONERY" },
+                    { label: "Sports", val: "SPORTS" },
+                    { label: "Furniture", val: "FURNITURE" },
+                    { label: "Electronics", val: "ELECTRONICS" },
+                    { label: "Cleaning", val: "CLEANING" },
+                    { label: "Other", val: "OTHER" },
                 ]);
             })
             .finally(() => setCategoriesLoading(false));
@@ -238,33 +238,33 @@ export default function Transactions() {
         setNoItemFound(false);
         try {
             const filters = {};
-            if (debouncedSearch) filters.searchTerm  = debouncedSearch;
-            if (categoryFilter)  filters.category    = categoryFilter;
-            if (selectedStoreId) filters.storeId     = Number(selectedStoreId);
-            if (statusFilter)    filters.stockStatus = statusFilter;
+            if (debouncedSearch) filters.searchTerm = debouncedSearch;
+            if (categoryFilter) filters.category = categoryFilter;
+            if (selectedStoreId) filters.storeId = Number(selectedStoreId);
+            if (statusFilter) filters.stockStatus = statusFilter;
 
             const { items: raw, pagination: pg } = await getStockOverview(
                 filters, page - 1, rowsPerPage, "id,desc"
             );
 
             const mapped = (raw ?? []).map((item) => ({
-                id:          item.itemId,
-                itemCode:    item.itemCode,
-                itemName:    item.itemName,
-                category:    item.category,
-                unit:        item.unit,
-                minLevel:    item.minimumStockLevel ?? 0,
-                totalQty:    item.totalQuantity     ?? 0,
-                storeCount:  item.storeCount        ?? 0,
-                storeNames:  parseStoreNames(item.stockedInStores),
-                isBelowMin:  item.isBelowMinimum,
-                stockStatus: item.stockStatus       ?? "OK",
-                stores:      item.stores            ?? [],
+                id: item.itemId,
+                itemCode: item.itemCode,
+                itemName: item.itemName,
+                category: item.category,
+                unit: item.unit,
+                minLevel: item.minimumStockLevel ?? 0,
+                totalQty: item.totalQuantity ?? 0,
+                storeCount: item.storeCount ?? 0,
+                storeNames: parseStoreNames(item.stockedInStores),
+                isBelowMin: item.isBelowMinimum,
+                stockStatus: item.stockStatus ?? "OK",
+                stores: item.stores ?? [],
             }));
 
             setItems(mapped);
             setTotalItems(pg?.totalElements ?? 0);
-            setTotalPages(pg?.totalPages    ?? 0);
+            setTotalPages(pg?.totalPages ?? 0);
             setNoItemFound(mapped.length === 0);
         } catch {
             setItemsError("Failed to load stock data.");
@@ -290,10 +290,10 @@ export default function Transactions() {
     const activeFilterCount = [
         search.trim() !== "",
         categoryFilter !== "",
-        statusFilter    !== "",
+        statusFilter !== "",
     ].filter(Boolean).length;
 
-    const isAllStores   = selectedStoreId === ALL_STORES_ID;
+    const isAllStores = selectedStoreId === ALL_STORES_ID;
     const selectedStore = stores.find((s) => String(s.id) === selectedStoreId) ?? null;
 
     const openModal = (type, item = null) => {
@@ -303,13 +303,13 @@ export default function Transactions() {
         setIsModalOpen(true);
     };
 
-    const closeStockModal    = () => { setIsModalOpen(false);    setPreselectedItem(null); };
+    const closeStockModal = () => { setIsModalOpen(false); setPreselectedItem(null); };
     const closeTransferModal = () => { setIsTransferOpen(false); setPreselectedItem(null); };
 
     const transactionCards = [
-        { icon: <ArrowDownToLine className="w-6 h-6 sm:w-7 sm:h-7 xl:w-8 xl:h-8 text-green-600" />, bg: "bg-green-50", border: "border-green-200", title: "Stock IN",  titleColor: "text-green-600", sub: "Add stock to a store",      type: "in"       },
-        { icon: <ArrowUpFromLine  className="w-6 h-6 sm:w-7 sm:h-7 xl:w-8 xl:h-8 text-red-500"   />, bg: "bg-red-50",   border: "border-red-200",   title: "Stock OUT", titleColor: "text-red-500",   sub: "Remove stock from a store", type: "out"      },
-        { icon: <ArrowLeftRight   className="w-6 h-6 sm:w-7 sm:h-7 xl:w-8 xl:h-8 text-blue-600"  />, bg: "bg-blue-50",  border: "border-blue-200",  title: "Transfer",  titleColor: "text-blue-600",   sub: "Move between stores",       type: "transfer" },
+        { icon: <ArrowDownToLine className="w-6 h-6 sm:w-7 sm:h-7 xl:w-8 xl:h-8 text-green-600" />, bg: "bg-green-50", border: "border-green-200", title: "Stock IN", titleColor: "text-green-600", sub: "Add stock to a store", type: "in" },
+        { icon: <ArrowUpFromLine className="w-6 h-6 sm:w-7 sm:h-7 xl:w-8 xl:h-8 text-red-500" />, bg: "bg-red-50", border: "border-red-200", title: "Stock OUT", titleColor: "text-red-500", sub: "Remove stock from a store", type: "out" },
+        { icon: <ArrowLeftRight className="w-6 h-6 sm:w-7 sm:h-7 xl:w-8 xl:h-8 text-blue-600" />, bg: "bg-blue-50", border: "border-blue-200", title: "Transfer", titleColor: "text-blue-600", sub: "Move between stores", type: "transfer" },
     ];
 
     const colSpan = isAllStores ? 9 : 8;
@@ -352,7 +352,7 @@ export default function Transactions() {
             ) : (
                 <>
                     <button onClick={() => setPage(1)} className={`w-8 h-8 rounded text-sm font-semibold cursor-pointer transition-all ${page === 1 ? "bg-blue-500 text-white" : "text-gray-600 hover:bg-gray-100"}`}>1</button>
-                    {page > 3  && <span className="px-1 text-gray-400 text-sm">…</span>}
+                    {page > 3 && <span className="px-1 text-gray-400 text-sm">…</span>}
                     {[page - 1, page, page + 1].filter(p => p > 1 && p < totalPages).map(p => (
                         <button key={p} onClick={() => setPage(p)} className={`w-8 h-8 rounded text-sm font-semibold cursor-pointer transition-all ${page === p ? "bg-blue-500 text-white" : "text-gray-600 hover:bg-gray-100"}`}>{p}</button>
                     ))}
@@ -572,7 +572,7 @@ export default function Transactions() {
                             </div>
                         ) : (
                             items.map((item, idx) => {
-                                const qty    = isAllStores ? item.totalQty : (item.stores.find((s) => String(s.storeId) === selectedStoreId)?.quantity ?? item.totalQty);
+                                const qty = isAllStores ? item.totalQty : (item.stores.find((s) => String(s.storeId) === selectedStoreId)?.quantity ?? item.totalQty);
                                 const status = item.stockStatus;
                                 return (
                                     <div key={item.id} className="bg-white border border-gray-200 rounded-xl p-3 sm:p-4 shadow-sm hover:shadow-md transition-shadow">
@@ -691,8 +691,8 @@ export default function Transactions() {
                                     </tr>
                                 ) : (
                                     items.map((item, idx) => {
-                                        const qty    = isAllStores ? item.totalQty : (item.stores.find((s) => String(s.storeId) === selectedStoreId)?.quantity ?? item.totalQty);
-                                        const min    = item.minLevel;
+                                        const qty = isAllStores ? item.totalQty : (item.stores.find((s) => String(s.storeId) === selectedStoreId)?.quantity ?? item.totalQty);
+                                        const min = item.minLevel;
                                         const status = item.stockStatus;
 
                                         return (

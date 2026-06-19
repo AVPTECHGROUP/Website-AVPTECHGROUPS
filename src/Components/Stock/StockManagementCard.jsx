@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { X, CheckSquare, Store, Package, Hash, FileText, AlignLeft, ShoppingCart, Loader2 } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { X, CheckSquare, Store, Package, FileText, AlignLeft, ShoppingCart, Loader2 } from "lucide-react";
 import { getActiveStores, getItemsList, addStockInward, removeStockOutward } from "../../Api/StockApi";
 import { getStoreStock } from "../../Api/StoreApi";
 
@@ -8,21 +8,18 @@ export default function StockManagementCard({
     onClose,
     mode = "in",
     onConfirm,
-    preselectedItem = null,  
+    preselectedItem = null,
 }) {
     const isStockIn = mode === "in";
 
     const heading = isStockIn ? "Add Stock (Inward)" : "Remove Stock (Outward)";
     const headingIconColor = isStockIn ? "text-green-600" : "text-red-600";
-    const previewBgColor = isStockIn ? "bg-green-50" : "bg-red-50";
-    const previewBorderColor = isStockIn ? "border-green-200" : "border-red-200";
-    const previewTextColor = isStockIn ? "text-green-700" : "text-red-700";
     const confirmBtnText = isStockIn ? "Confirm Stock IN" : "Confirm Stock OUT";
     const confirmBtnBg = isStockIn ? "bg-green-600" : "bg-red-600";
     const confirmBtnHover = isStockIn ? "hover:bg-green-700" : "hover:bg-red-700";
 
     const [store, setStore] = useState("");
-    const [selectedItems, setSelectedItems] = useState({})
+    const [selectedItems, setSelectedItems] = useState({});
     const [reference, setReference] = useState("");
     const [removalReason, setRemovalReason] = useState("");
     const [remarks, setRemarks] = useState("");
@@ -52,18 +49,14 @@ export default function StockManagementCard({
     }, [isOpen]);
 
     // ── Pre-fill store from preselectedItem ────────────────────
-    // Runs after stores load so the select value is recognised
     useEffect(() => {
         if (!isOpen || !preselectedItem) return;
 
         if (!isStockIn) {
-            // Stock OUT: pre-select the first store that holds this item
             if (preselectedItem.stores?.length > 0) {
                 setStore(String(preselectedItem.stores[0].storeId));
             }
         }
-        // Stock IN: leave store blank — user should choose where to receive
-        // but we still want to pre-select the item once item options load (handled below)
     }, [isOpen, preselectedItem, isStockIn]);
 
     // ── For Stock IN: fetch all active items ──────────────────
@@ -77,6 +70,7 @@ export default function StockManagementCard({
                     label: `${i.itemName} (${i.itemCode})`,
                     unit: i.unit,
                     currentStock: i.totalQuantity ?? 0,
+                    category: i.category,
                 })));
             })
             .catch(() => setApiError("Failed to load items."))
@@ -148,6 +142,35 @@ export default function StockManagementCard({
                 [id]: { quantity: newQty }
             };
         });
+    };
+
+    const handleInputChange = (id, val) => {
+        const parsed = parseInt(val, 10);
+
+        if (isNaN(parsed) || parsed <= 0) {
+            setSelectedItems((prev) => {
+                const copy = { ...prev };
+                delete copy[id];
+                return copy;
+            });
+            return;
+        }
+
+        if (!isStockIn) {
+            const available = storeStockMap[id] ?? 0;
+            if (parsed > available) {
+                setSelectedItems((prev) => ({
+                    ...prev,
+                    [id]: { quantity: available }
+                }));
+                return;
+            }
+        }
+
+        setSelectedItems((prev) => ({
+            ...prev,
+            [id]: { quantity: parsed }
+        }));
     };
 
     const handleReset = () => {
@@ -237,8 +260,7 @@ export default function StockManagementCard({
     ];
 
     const inputCls = (err) =>
-        `w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 transition ${err ? "border-red-400" : "border-gray-200"
-        }`;
+        `w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 transition ${err ? "border-red-400" : "border-gray-200"}`;
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -258,7 +280,6 @@ export default function StockManagementCard({
                     <div className="flex items-center gap-2">
                         <ShoppingCart className={`w-5 h-5 ${headingIconColor}`} />
                         <h2 className="text-lg font-bold text-gray-800">{heading}</h2>
-                        {/* Show prefilled badge if item was opened from table row */}
                         {preselectedItem && (
                             <span className="ml-1 text-[11px] font-semibold bg-blue-50 text-blue-600 border border-blue-200 px-2 py-0.5 rounded-full">
                                 {preselectedItem.itemName}
@@ -271,14 +292,13 @@ export default function StockManagementCard({
                 </div>
 
                 <div className="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto">
-
                     {apiError && (
                         <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">
                             {apiError}
                         </div>
                     )}
 
-                    {/* Store */}
+                    {/* Store Selection */}
                     <div className="space-y-1.5">
                         <label className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
                             <Store className="w-4 h-4 text-gray-400" />
@@ -294,77 +314,68 @@ export default function StockManagementCard({
                                 <option value="">{loadingStores ? "Loading stores…" : "Select a store…"}</option>
                                 {storeOptions.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
                             </select>
-                            {loadingStores
-                                ? <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 animate-spin pointer-events-none" />
-                                : <svg className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-                            }
+                            {loadingStores ? (
+                                <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 animate-spin pointer-events-none" />
+                            ) : (
+                                <svg className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                            )}
                         </div>
                         {errors.store && <p className="text-red-500 text-xs mt-0.5">{errors.store}</p>}
                     </div>
 
-                    {/* Item */}
+                    {/* Item Management Section */}
                     <div className="space-y-1.5">
                         <label className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
                             <Package className="w-4 h-4 text-gray-400" />
                             Item <span className="text-red-500">*</span>
                             {store && (
                                 <span className="ml-auto text-xs font-normal text-gray-400">
-                                    {loadingItems
-                                        ? "Loading items..."
-                                        : `${itemOptions.length} item(s)`}
+                                    {loadingItems ? "Loading items..." : `${itemOptions.length} item(s)`}
                                 </span>
                             )}
                         </label>
                         <div className="relative">
                             <div className="space-y-2 max-h-64 overflow-y-auto">
                                 {itemOptions.map((itm) => {
-                                    const qty = selectedItems[itm.value]?.quantity || 0;
+                                    const qty = selectedItems[itm.value]?.quantity ?? "";
                                     const stock = storeStockMap[itm.value] ?? itm.currentStock;
 
                                     return (
-                                        <div
-                                            key={itm.value}
-                                            className="flex items-center justify-between px-3 py-3 rounded-xl border border-gray-200 bg-gray-50 hover:bg-gray-100 transition"
-                                        >
-                                            {/* LEFT */}
+                                        <div key={itm.value} className="flex items-center justify-between px-3 py-3 rounded-xl border border-gray-200 bg-gray-50 hover:bg-gray-100 transition">
                                             <div className="flex flex-col gap-1">
                                                 <div className="flex items-center gap-2">
-                                                    <p className="text-sm font-semibold text-gray-800">
-                                                        {itm.label}
-                                                    </p>
-
-                                                    {/* Example Tag (optional if you have category) */}
+                                                    <p className="text-sm font-semibold text-gray-800">{itm.label}</p>
                                                     {itm.category && (
-                                                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-blue-100 text-blue-600">
-                                                            {itm.category}
-                                                        </span>
+                                                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-blue-100 text-blue-600">{itm.category}</span>
                                                     )}
                                                 </div>
-
-                                                <p className="text-xs text-gray-400">
-                                                    Stock:{" "}
-                                                    <span className="text-orange-500 font-semibold">
-                                                        {stock}
-                                                    </span>
-                                                </p>
+                                                <p className="text-xs text-gray-400">Stock: <span className="text-orange-500 font-semibold">{stock}</span></p>
                                             </div>
 
-                                            {/* RIGHT */}
+                                            {/* Quantity Control Panel featuring direct TextInput configuration */}
                                             <div className="flex items-center gap-2">
                                                 <button
+                                                    type="button"
                                                     onClick={() => handleQtyChange(itm.value, -1)}
-                                                    className="w-8 h-8 rounded-lg border bg-white hover:bg-gray-100 flex items-center justify-center text-gray-600 shadow-sm"
+                                                    className="w-8 h-8 rounded-lg border bg-white hover:bg-gray-100 flex items-center justify-center text-gray-600 shadow-sm transition-all"
                                                 >
                                                     −
                                                 </button>
 
-                                                <span className="w-6 text-center font-semibold text-gray-700">
-                                                    {qty}
-                                                </span>
+                                                <input
+                                                    type="number"
+                                                    min="0"
+                                                    max={!isStockIn ? stock : undefined}
+                                                    value={qty}
+                                                    onChange={(e) => handleInputChange(itm.value, e.target.value)}
+                                                    className="w-12 text-center font-semibold text-gray-700 bg-white border border-gray-200 rounded-lg p-1 text-sm focus:ring-2 focus:ring-blue-200 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                />
 
                                                 <button
+                                                    type="button"
+                                                    disabled={!isStockIn && Number(qty) >= stock}
                                                     onClick={() => handleQtyChange(itm.value, 1)}
-                                                    className="w-8 h-8 rounded-lg border bg-white hover:bg-gray-100 flex items-center justify-center text-gray-600 shadow-sm"
+                                                    className="w-8 h-8 rounded-lg border bg-white hover:bg-gray-100 flex items-center justify-center text-gray-600 shadow-sm transition-all disabled:opacity-40"
                                                 >
                                                     +
                                                 </button>
@@ -376,6 +387,7 @@ export default function StockManagementCard({
                         </div>
                         {errors.items && <p className="text-red-500 text-xs mt-0.5">{errors.items}</p>}
                     </div>
+
                     {isStockIn ? (
                         <div className="space-y-1.5">
                             <label className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
@@ -412,7 +424,7 @@ export default function StockManagementCard({
                         </div>
                     )}
 
-                    {/* Remarks */}
+                    {/* Remarks Input */}
                     <div className="space-y-1.5">
                         <label className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
                             <AlignLeft className="w-4 h-4 text-gray-400" />
@@ -429,7 +441,7 @@ export default function StockManagementCard({
                     </div>
                 </div>
 
-                {/* Footer */}
+                {/* Footer Actions */}
                 <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100 bg-gray-50">
                     <button
                         onClick={handleClose}
@@ -451,6 +463,6 @@ export default function StockManagementCard({
                     </button>
                 </div>
             </div>
-        </div >
+        </div>
     );
 }

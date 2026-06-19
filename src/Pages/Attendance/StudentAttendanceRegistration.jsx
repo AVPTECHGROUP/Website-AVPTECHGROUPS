@@ -7,9 +7,9 @@ import {
 } from "lucide-react";
 import CardComponent from "../../Components/CommonComp/CardComponent";
 import CardLoader from "../../Components/CommonComp/CardLoader";
-import {getEnrollmentStats,getStudentEnrollment,getSectionEnrollmentStats,enrollUserFaces,removeEnrollment,} from "../../Api/AttendanceApi";
-import {getClasses,getSectionsByClass} from "../../Api/TeachersAPI";
-import {getStudentsBySection} from "../../Api/StudentsApi";
+import { getEnrollmentStats, getStudentEnrollment, getSectionEnrollmentStats, enrollUserFaces, removeEnrollment, } from "../../Api/AttendanceApi";
+import { getClasses, getSectionsByClass } from "../../Api/TeachersAPI";
+import { getStudentsBySection } from "../../Api/StudentsApi";
 
 const AVATAR_BG = [
     "bg-blue-500", "bg-rose-500", "bg-emerald-500",
@@ -49,6 +49,7 @@ function StatusBadge({ status, photos }) {
     );
 }
 
+// ─── PhotoDots ────────────────────────────────────────────────────────────────
 function PhotoDots({ count, max = 5 }) {
     return (
         <div className="flex gap-1">
@@ -59,6 +60,7 @@ function PhotoDots({ count, max = 5 }) {
     );
 }
 
+// ─── PhotoSlot ────────────────────────────────────────────────────────────────
 function PhotoSlot({ index, file, angleLabel, onAdd, onRemove }) {
     const ref = useRef();
     const preview = file ? URL.createObjectURL(file) : null;
@@ -234,7 +236,9 @@ export default function StudentAttendanceRegistration() {
             setStatsLoading(true);
             const res = await getEnrollmentStats();
             setStats(res.data);
-        } catch (e) { console.error(e); } finally { setStatsLoading(false); }
+        } catch (e) { console.error(e); } 
+        finally
+         { setStatsLoading(false); }
     }, []);
 
     const fetchClasses = useCallback(async () => {
@@ -323,9 +327,7 @@ export default function StudentAttendanceRegistration() {
         setTimeout(() => uploadPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
     };
 
-    // Select from enrollment table (merge enrollment data with student data)
     const selectFromEnrollment = (enrollItem) => {
-        // Try to find matching student from students list for full details
         const student = students.find((s) => s.id === enrollItem.userId) || {
             id: enrollItem.userId,
             fullName: enrollItem.name,
@@ -364,11 +366,9 @@ export default function StudentAttendanceRegistration() {
             showToast(`${selectedStudent.fullName || selectedStudent.name} enrolled successfully!`, "success");
             setActiveStep(4);
             setPhotos(Array(5).fill(null));
-            // Refresh
             await fetchEnrollment(selectedSection?.id);
             await fetchSectionStats(selectedSection?.id);
             await fetchStats();
-            // Update selected student status
             setSelectedStudent((prev) => ({ ...prev, enrollmentStatus: "ENROLLED", photosCount: 5 }));
         } catch (e) {
             showToast(e.message || "Enrollment failed", "error");
@@ -436,8 +436,8 @@ export default function StudentAttendanceRegistration() {
 
             <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-5">
 
-                {/* ── Stat Cards (Students only) ── */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* ── Stat Cards (Modified for 1024px Laptop Layout) ── */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     {statsLoading ? (
                         Array(4).fill(0).map((_, i) => <CardLoader key={i} />)
                     ) : (
@@ -549,7 +549,6 @@ export default function StudentAttendanceRegistration() {
                                 ) : (
                                     filteredStudents.map((s, idx) => {
                                         const name = s.fullName || `${s.firstName || ""} ${s.lastName || ""}`.trim();
-                                        // Check enrollment status from enrollmentList
                                         const enrollData = enrollmentList.find((e) => e.userId === s.id);
                                         const status = enrollData?.enrollmentStatus || "NOT_ENROLLED";
                                         const photosCount = enrollData?.photosCount || 0;
@@ -584,7 +583,6 @@ export default function StudentAttendanceRegistration() {
 
                     {/* ════ RIGHT CONTENT ════ */}
                     <div className="lg:col-span-9 space-y-4">
-
                         {selectedStudent ? (
                             <>
                                 {/* Steps */}
@@ -648,7 +646,7 @@ export default function StudentAttendanceRegistration() {
                                             {/* Progress bar */}
                                             <div className="mt-3">
                                                 <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                                                    <div className={`h-full rounded-full transition-all duration-500 ${uploadedCount === 5 ? "bg-emerald-500" : "bg-blue-500"}`}
+                                                    <div className="h-full rounded-full transition-all duration-500 bg-blue-500"
                                                         style={{ width: `${(uploadedCount / 5) * 100}%` }} />
                                                 </div>
                                                 <p className="text-[11px] text-right mt-1 text-gray-400">
@@ -728,7 +726,7 @@ export default function StudentAttendanceRegistration() {
                                         </div>
                                     </div>
 
-                                    {/* ── Right column — Section Enrollment Table ── */}
+                                    {/* Right column — Section Enrollment Table */}
                                     <div className="xl:col-span-5 space-y-4">
                                         <SectionEnrollmentTable
                                             enrollmentList={enrollmentList}

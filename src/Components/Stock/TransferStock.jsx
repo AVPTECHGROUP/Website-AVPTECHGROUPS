@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { X, ArrowRight, Package, Hash, AlignLeft, ArrowLeftRight, Info, Loader2 } from "lucide-react";
+import { X, ArrowRight, Package, AlignLeft, ArrowLeftRight, Info, Loader2 } from "lucide-react";
 import { getActiveStores, transferStock } from "../../Api/StockApi";
 import { getStoreStock } from "../../Api/StoreApi";
 
@@ -34,7 +34,7 @@ export default function TransferStock({
                 const stores = (res?.data || []).map((s) => ({
                     value: String(s.id),
                     label: s.storeName.trim(),
-                }));
+                } ));
                 setStoreOptions(stores);
                 if (stores.length >= 2) {
                     setFromStore(stores[0].value);
@@ -46,7 +46,6 @@ export default function TransferStock({
     }, [isOpen]);
 
     // ── Pre-fill fromStore from preselectedItem ────────────────
-    // Overrides the default first-store selection when opened from table row
     useEffect(() => {
         if (!isOpen || !preselectedItem) return;
 
@@ -54,11 +53,9 @@ export default function TransferStock({
             const sourceId = String(preselectedItem.stores[0].storeId);
             setFromStore(sourceId);
 
-            // Set toStore to a different store (second in list, or first available that isn't sourceId)
             if (preselectedItem.stores.length > 1) {
                 setToStore(String(preselectedItem.stores[1].storeId));
             } else {
-                // fall back: pick any store from storeOptions that isn't the source
                 setStoreOptions((opts) => {
                     const other = opts.find((o) => o.value !== sourceId);
                     if (other) setToStore(other.value);
@@ -101,7 +98,7 @@ export default function TransferStock({
             .finally(() => setLoadingItems(false));
     }, [isOpen, fromStore]);
 
-    // ── Once itemOptions are loaded, auto-select preselected item ──
+    // ── Auto-select preselected item ──
     useEffect(() => {
         if (!preselectedItem || itemOptions.length === 0) return;
 
@@ -140,6 +137,44 @@ export default function TransferStock({
         }
     };
 
+    const handleQtyChange = (id, delta) => {
+        setSelectedItems((prev) => {
+            const current = prev[id] || 0;
+            const nextQty = current + delta;
+            const stock = storeStockMap[id] ?? 0;
+
+            if (nextQty <= 0) {
+                const updated = { ...prev };
+                delete updated[id];
+                return updated;
+            }
+            if (nextQty > stock) return prev;
+
+            return { ...prev, [id]: nextQty };
+        });
+    };
+
+    const handleInputChange = (id, val) => {
+        const parsed = parseInt(val, 10);
+        const stock = storeStockMap[id] ?? 0;
+
+        if (isNaN(parsed) || parsed <= 0) {
+            setSelectedItems((prev) => {
+                const updated = { ...prev };
+                delete updated[id];
+                return updated;
+            });
+            return;
+        }
+
+        if (parsed > stock) {
+            setSelectedItems((prev) => ({ ...prev, [id]: stock }));
+            return;
+        }
+
+        setSelectedItems((prev) => ({ ...prev, [id]: parsed }));
+    };
+
     const handleReset = () => {
         setSelectedItems({}); setRemarks(""); setErrors({}); setApiError("");
         setSubmitting(false); setItemOptions([]); setStoreStockMap({});
@@ -155,13 +190,9 @@ export default function TransferStock({
 
     const validate = () => {
         const e = {};
-
         if (!fromStore) e.fromStore = "Source store is required";
         if (!toStore) e.toStore = "Destination store is required";
-
-        if (Object.keys(selectedItems).length === 0) {
-            e.item = "Select at least one item";
-        }
+        if (Object.keys(selectedItems).length === 0) e.item = "Select at least one item";
         if (!remarks) e.remarks = "Remarks are required";
         setErrors(e);
         return Object.keys(e).length === 0;
@@ -192,8 +223,7 @@ export default function TransferStock({
     if (!isOpen) return null;
 
     const inputCls = (err) =>
-        `w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 transition ${err ? "border-red-400" : "border-gray-200"
-        }`;
+        `w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 transition ${err ? "border-red-400" : "border-gray-200"}`;
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -215,7 +245,6 @@ export default function TransferStock({
                             <ArrowLeftRight className="w-4 h-4 text-blue-600" />
                         </div>
                         <h2 className="text-lg font-bold text-gray-800">Transfer Stock Between Stores</h2>
-                        {/* Show prefilled badge if item was opened from table row */}
                         {preselectedItem && (
                             <span className="ml-1 text-[11px] font-semibold bg-blue-50 text-blue-600 border border-blue-200 px-2 py-0.5 rounded-full">
                                 {preselectedItem.itemName}
@@ -229,16 +258,14 @@ export default function TransferStock({
 
                 {/* Body */}
                 <div className="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto">
-
                     {apiError && (
                         <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">
                             {apiError}
                         </div>
                     )}
 
-                    {/* Store selectors */}
+                    {/* Store configuration cards view */}
                     <div className="flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-xl p-3">
-                        {/* From */}
                         <div className="flex-1 space-y-1">
                             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">From Store</p>
                             <div className="relative">
@@ -251,22 +278,21 @@ export default function TransferStock({
                                     <option value="">{loadingStores ? "Loading…" : "Select store…"}</option>
                                     {storeOptions.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
                                 </select>
-                                {loadingStores
-                                    ? <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 animate-spin pointer-events-none" />
-                                    : <svg className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-                                }
+                                {loadingStores ? (
+                                    <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 animate-spin pointer-events-none" />
+                                ) : (
+                                    <svg className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                                )}
                             </div>
                             {errors.fromStore && <p className="text-red-500 text-xs mt-1">{errors.fromStore}</p>}
                         </div>
 
-                        {/* Arrow */}
                         <div className="flex items-end pb-1 shrink-0">
                             <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
                                 <ArrowRight className="w-4 h-4 text-blue-600" />
                             </div>
                         </div>
 
-                        {/* To */}
                         <div className="flex-1 space-y-1">
                             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">To Store</p>
                             <div className="relative">
@@ -279,107 +305,75 @@ export default function TransferStock({
                                     <option value="">{loadingStores ? "Loading…" : "Select store…"}</option>
                                     {storeOptions.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
                                 </select>
-                                {loadingStores
-                                    ? <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 animate-spin pointer-events-none" />
-                                    : <svg className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-                                }
+                                {loadingStores ? (
+                                    <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 animate-spin pointer-events-none" />
+                                ) : (
+                                    <svg className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                                )}
                             </div>
                             {errors.toStore && <p className="text-red-500 text-xs mt-1">{errors.toStore}</p>}
                         </div>
                     </div>
-                    {/* Item — from source store stock */}
+
+                    {/* Item list loop */}
                     <div className="space-y-1.5">
-                        <div className="relative">
-                            {/* Item List with Quantity */}
-                            <div className="space-y-1.5">
-                                <label className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
-                                    <Package className="w-4 h-4 text-gray-400" />
-                                    Items <span className="text-red-500">*</span>
+                        <label className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+                            <Package className="w-4 h-4 text-gray-400" />
+                            Items <span className="text-red-500">*</span>
+                            {fromStore && (
+                                <span className="ml-auto text-xs font-normal text-gray-400">
+                                    {loadingItems ? "Loading..." : `${itemOptions.length} item(s)`}
+                                </span>
+                            )}
+                        </label>
+                        <div className="border border-gray-200 rounded-2xl bg-white shadow-sm overflow-hidden">
+                            {itemOptions.map((itm) => {
+                                const qty = selectedItems[itm.value] ?? "";
+                                const stock = storeStockMap[itm.value] ?? itm.currentStock;
 
-                                    {fromStore && (
-                                        <span className="ml-auto text-xs font-normal text-gray-400">
-                                            {loadingItems ? "Loading..." : `${itemOptions.length} item(s)`}
-                                        </span>
-                                    )}
-                                </label>
-                                <div className="border border-gray-200 rounded-2xl bg-white shadow-sm overflow-hidden">
-                                    {itemOptions.map((itm) => {
-                                        const qty = selectedItems[itm.value] || 0;
-                                        const stock = storeStockMap[itm.value] ?? itm.currentStock;
+                                return (
+                                    <div key={itm.value} className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition">
+                                        <div>
+                                            <p className="text-sm font-semibold text-gray-800">{itm.label}</p>
+                                            <p className="text-xs text-gray-400">Stock: <span className="text-orange-500 font-semibold">{stock}</span></p>
+                                        </div>
 
-                                        return (
-                                            <div key={itm.value} className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition">
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                type="button"
+                                                disabled={!qty}
+                                                onClick={() => handleQtyChange(itm.value, -1)}
+                                                className="w-8 h-8 border border-gray-200 rounded-lg flex items-center justify-center text-gray-600 hover:bg-gray-100 active:scale-95 transition shadow-sm"
+                                            >
+                                                −
+                                            </button>
 
-                                                {/* LEFT */}
-                                                <div>
-                                                    <p className="text-sm font-semibold text-gray-800">
-                                                        {itm.label}
-                                                    </p>
-                                                    <p className="text-xs text-gray-400">
-                                                        Stock: <span className="text-orange-500 font-semibold">{stock}</span>
-                                                    </p>
-                                                </div>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                max={stock}
+                                                value={qty}
+                                                onChange={(e) => handleInputChange(itm.value, e.target.value)}
+                                                className="w-12 text-center font-semibold text-gray-700 bg-white border border-gray-200 rounded-lg p-1 text-sm focus:ring-2 focus:ring-blue-200 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                            />
 
-                                                {/* RIGHT +/- */}
-                                                <div className="flex items-center gap-2">
-                                                    <button
-                                                        disabled={qty === 0}
-                                                        onClick={() => {
-                                                            setSelectedItems((prev) => {
-                                                                const current = prev[itm.value] || 0;
-
-                                                                if (current <= 1) {
-                                                                    const updated = { ...prev };
-                                                                    delete updated[itm.value];
-                                                                    return updated;
-                                                                }
-                                                                return {
-                                                                    ...prev,
-                                                                    [itm.value]: current - 1,
-                                                                };
-                                                            });
-                                                        }}
-                                                        className="w-8 h-8 border border-gray-200 rounded-lg flex items-center justify-center text-gray-600 hover:bg-gray-100 active:scale-95 transition"
-                                                    >
-                                                        −
-                                                    </button>
-
-                                                    <span className="w-8 text-center font-bold text-gray-800">
-                                                        {qty}
-                                                    </span>
-
-                                                    <button
-                                                        disabled={qty >= stock}
-                                                        onClick={() => {
-                                                            setSelectedItems((prev) => {
-                                                                const current = prev[itm.value] || 0;
-                                                                const stock = storeStockMap[itm.value] ?? itm.currentStock;
-
-                                                                if (current < stock) {
-                                                                    return {
-                                                                        ...prev,
-                                                                        [itm.value]: current + 1,
-                                                                    };
-                                                                }
-                                                                return prev;
-                                                            });
-                                                        }}
-                                                        className="w-8 h-8 border border-gray-200 rounded-lg flex items-center justify-center text-gray-600 hover:bg-gray-100 active:scale-95 transition"
-                                                    >
-                                                        +
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                                {errors.item && <p className="text-red-500 text-xs">{errors.item}</p>}
-                            </div>
+                                            <button
+                                                type="button"
+                                                disabled={Number(qty) >= stock}
+                                                onClick={() => handleQtyChange(itm.value, 1)}
+                                                className="w-8 h-8 border border-gray-200 rounded-lg flex items-center justify-center text-gray-600 hover:bg-gray-100 active:scale-95 transition shadow-sm disabled:opacity-40"
+                                            >
+                                                +
+                                            </button>
+                                        </div>
+                                    </div>
+                                );
+                            })}
                         </div>
-                        {errors.item && <p className="text-red-500 text-xs mt-0.5">{errors.item}</p>}
+                        {errors.item && <p className="text-red-500 text-xs">{errors.item}</p>}
                     </div>
 
-                    {/* Remarks */}
+                    {/* Remarks Area */}
                     <div className="space-y-1.5">
                         <label className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
                             <AlignLeft className="w-4 h-4 text-gray-400" />
@@ -399,10 +393,7 @@ export default function TransferStock({
                     <div className="flex items-start gap-2.5 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3">
                         <Info className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
                         <div className="text-sm text-blue-700 space-y-1">
-                            <p>
-                                <span className="font-semibold">{fromStoreObj?.label ?? "Source"} → {toStoreObj?.label ?? "Destination"}</span>
-                            </p>
-
+                            <p><span className="font-semibold">{fromStoreObj?.label ?? "Source"} → {toStoreObj?.label ?? "Destination"}</span></p>
                             <p className="opacity-80">
                                 {Object.entries(selectedItems).length === 0
                                     ? "No items selected"
@@ -416,7 +407,7 @@ export default function TransferStock({
                     </div>
                 </div>
 
-                {/* Footer */}
+                {/* Footer Controls */}
                 <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100 bg-gray-50">
                     <button
                         onClick={handleClose}
@@ -430,10 +421,11 @@ export default function TransferStock({
                         disabled={submitting}
                         className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-5 py-2 rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                     >
-                        {submitting
-                            ? <><Loader2 className="w-4 h-4 animate-spin" /> Transferring…</>
-                            : <><ArrowLeftRight className="w-4 h-4" /> Confirm Transfer</>
-                        }
+                        {submitting ? (
+                            <><Loader2 className="w-4 h-4 animate-spin" /> Transferring…</>
+                        ) : (
+                            <><ArrowLeftRight className="w-4 h-4" /> Confirm Transfer</>
+                        )}
                     </button>
                 </div>
             </div>

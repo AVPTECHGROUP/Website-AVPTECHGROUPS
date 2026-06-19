@@ -305,7 +305,7 @@ function RosterView({
                                             {s.confidence ? (
                                                 <div className="flex items-center gap-2">
                                                     <div className="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                                                        <div className={`h-full rounded-full ${confidenceColor(s.confidence)}`} style={{ width: `${s.confidence}%` }} />
+                                                        <div className="h-full rounded-full ${confidenceColor(s.confidence)}" style={{ width: `${s.confidence}%` }} />
                                                     </div>
                                                     <span className="text-xs text-gray-600 font-mono">{s.confidence}%</span>
                                                 </div>
@@ -596,10 +596,6 @@ export default function StudentAttendance() {
     const [actionLoadingId, setActionLoadingId] = useState(null);
     const [exportingCSV, setExportingCSV] = useState(false);
 
-    // ✅ FIX: Snapshot of class+section at the moment teacher opens a sub-view.
-    // This ensures GroupPhotoView / IndividualFaceScanView always get the
-    // exact IDs that were selected when the button was clicked — even if the
-    // parent state changes later (e.g. section dropdown re-renders).
     const [subViewClass, setSubViewClass] = useState(null);
     const [subViewSection, setSubViewSection] = useState(null);
 
@@ -722,15 +718,11 @@ export default function StudentAttendance() {
 
     const isSubView = view === "faceScan" || view === "groupPhoto";
 
-    // ✅ FIX: Capture a snapshot of selectedClass + selectedSection RIGHT NOW
-    // before switching to the sub-view. This is the core fix — we freeze the
-    // IDs at click-time so async state updates can't corrupt them later.
     const openSubView = (viewName) => {
         if (!selectedClass?.id || !selectedSection?.id) {
             alert("Please wait for class and section to load before proceeding.");
             return;
         }
-        // Deep-copy so later state mutations don't affect the snapshot
         setSubViewClass({ ...selectedClass });
         setSubViewSection({ ...selectedSection });
         setView(viewName);
@@ -744,7 +736,6 @@ export default function StudentAttendance() {
         refreshRoster();
     };
 
-    // ✅ True when section is fully ready (not null, not mid-load)
     const sectionReady = !!selectedClass?.id && !!selectedSection?.id && !loadingSections;
 
     return (
@@ -759,11 +750,13 @@ export default function StudentAttendance() {
                 </div>
 
                 {showStatSkeletons ? (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                    /* ── Stat Cards Skeleton (Modified for Laptop View) ── */
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                         {Array(5).fill(0).map((_, i) => <StatCardSkeleton key={i} />)}
                     </div>
                 ) : (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                    /* ── Stat Cards Actual Data (Modified for Laptop View) ── */
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-5 gap-3">
                         <CardComponent IconName={Users} keyName="Total Students" val={stats.total} iconBgColor="bg-blue-100" iconTxColor="text-blue-600" />
                         <CardComponent IconName={CheckCircle2} keyName="Present"
                             val={stats.total > 0 ? `${stats.present} · ${((stats.present / stats.total) * 100).toFixed(1)}%` : "0"}
@@ -779,7 +772,6 @@ export default function StudentAttendance() {
                 {/* ── Action Buttons ── */}
                 <div className="flex flex-col sm:flex-row justify-between gap-3">
                     <div className="flex flex-wrap gap-2">
-                        {/* ✅ FIX: disabled when section not ready + uses openSubView snapshot */}
                         <button
                             onClick={() => openSubView("groupPhoto")}
                             disabled={!sectionReady}
@@ -787,7 +779,6 @@ export default function StudentAttendance() {
                             className="flex items-center gap-2 bg-blue-700 hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer transition-colors shadow-sm">
                             <Camera className="w-4 h-4" />
                             Group Photo Attendance
-                            {/* ✅ Show current section name on button so teacher can verify */}
                             {sectionReady && (
                                 <span className="text-blue-200 text-xs font-normal hidden sm:inline">
                                     · {selectedSection?.name}
@@ -795,7 +786,6 @@ export default function StudentAttendance() {
                             )}
                         </button>
 
-                        {/* ✅ FIX: Same fix for Individual Face Scan */}
                         <button
                             onClick={() => openSubView("faceScan")}
                             disabled={!sectionReady}
@@ -863,7 +853,6 @@ export default function StudentAttendance() {
                 {view === "faceScan" && (
                     <IndividualFaceScanView
                         onBack={handleSubViewBack}
-                        // ✅ FIX: Pass the snapshot, not live state
                         selectedClass={subViewClass}
                         selectedSection={subViewSection}
                     />
@@ -871,7 +860,6 @@ export default function StudentAttendance() {
                 {view === "groupPhoto" && (
                     <GroupPhotoView
                         onBack={handleSubViewBack}
-                        // ✅ FIX: Pass the snapshot, not live state
                         selectedClass={subViewClass}
                         selectedSection={subViewSection}
                     />
