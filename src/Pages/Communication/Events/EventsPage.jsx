@@ -15,6 +15,18 @@ import {
 } from '../../../Api/CircularApi.js';
 import EventDetailModal from '../../../Components/CircularDetailsPopup/EventDetailsModel.jsx';
 import { useNavigate } from "react-router-dom";
+import { useDecodedUser } from '../../../ContextAPI/UserContext';
+
+// ── Role guard ─────────────────────────────────────────────────────────────────
+// Only these roles may approve or reject events.
+// TEACHER (and any other unlisted role) cannot.
+const APPROVER_ROLES = ['PRINCIPAL', 'ADMIN', 'SUPER_ADMIN','GLOBAL_ADMIN', 'VICE_PRINCIPAL', 'HOD'];
+
+function useCanApprove() {
+  const { user } = useDecodedUser();
+  const role = (user?.userType ?? '').toUpperCase();
+  return APPROVER_ROLES.includes(role);
+}
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 function typeLabel(t) {
@@ -47,7 +59,6 @@ function fmtTime(str) {
   } catch { return ""; }
 }
 
-// Only show end time if it differs from start
 function fmtTimeRange(startStr, endStr) {
   const s = fmtTime(startStr);
   if (!s) return null;
@@ -176,8 +187,6 @@ function CalendarStrip({ events, selectedDate, onDateSelect }) {
   }
 
   const dayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
-  // Events for the selected date popover
   const selectedDayEvents = selectedDate
     ? (eventMap[new Date(selectedDate).toDateString()]?.events || [])
     : [];
@@ -198,7 +207,6 @@ function CalendarStrip({ events, selectedDate, onDateSelect }) {
           </div>
         </div>
         <div className="flex items-center gap-3 sm:gap-4">
-          {/* Legend */}
           <div className="hidden sm:flex items-center gap-3">
             {[["bg-green-400","Published"],["bg-amber-400","Pending"],["bg-red-400","Rejected"]].map(([c,l]) => (
               <div key={l} className="flex items-center gap-1.5">
@@ -207,7 +215,6 @@ function CalendarStrip({ events, selectedDate, onDateSelect }) {
               </div>
             ))}
           </div>
-          {/* Nav */}
           <div className="flex items-center gap-1.5">
             <button onClick={() => setOffset((p) => p - 1)}
               className="w-8 h-8 rounded-lg bg-white/20 hover:bg-white/30 flex items-center justify-center text-white cursor-pointer transition-colors">
@@ -227,7 +234,6 @@ function CalendarStrip({ events, selectedDate, onDateSelect }) {
 
       {/* Grid */}
       <div className="bg-gradient-to-b from-blue-50 to-white p-3 sm:p-5">
-        {/* Day headers */}
         <div className="grid grid-cols-7 gap-1 mb-2">
           {dayLabels.map((d, i) => (
             <div key={i} className={`text-center py-1.5 text-xs font-bold uppercase tracking-wide rounded-md
@@ -237,19 +243,13 @@ function CalendarStrip({ events, selectedDate, onDateSelect }) {
           ))}
         </div>
 
-        {/* Date cells */}
         <div className="grid grid-cols-7 gap-1 sm:gap-1.5">
           {cells.map((c, i) => {
             if (!c) return <div key={i} />;
-
             const hasEvents = !!c.eventInfo;
-            const isClickable = hasEvents;
-
             return (
               <div key={i}
-                onClick={() => isClickable && onDateSelect && onDateSelect(
-                  c.isSelected ? null : c.date.toISOString()
-                )}
+                onClick={() => hasEvents && onDateSelect && onDateSelect(c.isSelected ? null : c.date.toISOString())}
                 className={`relative rounded-lg sm:rounded-xl py-2 sm:py-3 px-1 text-center transition-all
                   ${c.isSelected
                     ? "bg-blue-700 shadow-lg ring-2 ring-blue-400 ring-offset-1 scale-105"
@@ -266,16 +266,12 @@ function CalendarStrip({ events, selectedDate, onDateSelect }) {
                   ${c.isSelected || c.isToday ? "text-white" : c.isSunday ? "text-red-500" : "text-slate-700"}`}>
                   {c.d}
                 </div>
-
-                {/* Event dot */}
                 {c.eventInfo && !c.isToday && !c.isSelected && (
                   <div className={`w-1.5 h-1.5 rounded-full mx-auto mt-1 ${c.eventInfo.color}`} />
                 )}
                 {c.eventInfo && (c.isToday || c.isSelected) && (
                   <div className="w-1.5 h-1.5 rounded-full bg-white/80 mx-auto mt-1" />
                 )}
-
-                {/* Event count badge */}
                 {c.eventInfo?.count > 1 && !c.isToday && !c.isSelected && (
                   <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-blue-600 text-white text-[9px] font-bold flex items-center justify-center">
                     {c.eventInfo.count}
@@ -286,7 +282,6 @@ function CalendarStrip({ events, selectedDate, onDateSelect }) {
           })}
         </div>
 
-        {/* Mobile legend */}
         <div className="flex sm:hidden items-center justify-center gap-4 mt-3 pt-3 border-t border-blue-100">
           {[["bg-green-500","Published"],["bg-amber-400","Pending"],["bg-red-400","Rejected"]].map(([c,l]) => (
             <div key={l} className="flex items-center gap-1.5">
@@ -296,7 +291,6 @@ function CalendarStrip({ events, selectedDate, onDateSelect }) {
           ))}
         </div>
 
-        {/* Selected day events panel */}
         {selectedDate && selectedDayEvents.length > 0 && (
           <div className="mt-4 pt-4 border-t border-blue-100">
             <div className="flex items-center justify-between mb-2.5">
@@ -346,7 +340,7 @@ function CalendarStrip({ events, selectedDate, onDateSelect }) {
   );
 }
 
-// ── Column header for alignment ────────────────────────────────────────────────
+// ── Column header ──────────────────────────────────────────────────────────────
 function EventListHeader() {
   return (
     <div className="hidden sm:grid px-5 py-2.5 border-b border-gray-100 bg-gray-50/80"
@@ -360,18 +354,22 @@ function EventListHeader() {
 }
 
 // ── Event Row ──────────────────────────────────────────────────────────────────
-function EventRow({ ev, onApprove, onCancel, onView, approving, cancelling }) {
+// canApprove prop controls whether approve/reject buttons render.
+function EventRow({ ev, onApprove, onCancel, onView, approving, cancelling, canApprove }) {
   const startDate = getEventDate(ev);
   const endDate   = getEventEnd(ev);
   const timeStr   = fmtTimeRange(startDate, endDate);
   const isPending = ev.status === "PENDING_APPROVAL" || ev.status === "pending";
 
+  // ── ROLE GUARD: show approve/reject only when user has access AND event is pending ──
+  const showApproveActions = canApprove && isPending;
+
   return (
     <div className="border-b border-gray-100 hover:bg-slate-50/60 transition-colors last:border-b-0">
 
-      {/* Desktop row — 4-column grid */}
+      {/* Desktop row */}
       <div className="hidden sm:grid px-5 py-4 items-center gap-4"
-  style={{ gridTemplateColumns: "2fr 1.3fr 0.9fr 1fr" }}>
+        style={{ gridTemplateColumns: "2fr 1.3fr 0.9fr 1fr" }}>
 
         {/* Col 1: Icon + Title + Tags */}
         <div className="flex items-start gap-3 min-w-0">
@@ -426,7 +424,7 @@ function EventRow({ ev, onApprove, onCancel, onView, approving, cancelling }) {
 
         {/* Col 4: Actions */}
         <div className="flex items-center justify-end gap-1.5">
-          {isPending && (
+          {showApproveActions && (
             <>
               <button onClick={() => onApprove(ev.id)} disabled={approving} title="Approve"
                 className="w-8 h-8 rounded-lg border border-green-200 bg-white hover:bg-green-50 flex items-center justify-center cursor-pointer transition-all shadow-sm">
@@ -449,7 +447,7 @@ function EventRow({ ev, onApprove, onCancel, onView, approving, cancelling }) {
         </div>
       </div>
 
-      {/* Mobile row — stacked */}
+      {/* Mobile row */}
       <div className="sm:hidden px-4 py-3.5">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-2.5 flex-1 min-w-0">
@@ -464,7 +462,6 @@ function EventRow({ ev, onApprove, onCancel, onView, approving, cancelling }) {
           <StatusBadge status={ev.status} />
         </div>
 
-        {/* Date + location row */}
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 pl-9">
           <span className="flex items-center gap-1 text-xs text-slate-500">
             <Calendar size={11} className="text-blue-400" />
@@ -482,7 +479,6 @@ function EventRow({ ev, onApprove, onCancel, onView, approving, cancelling }) {
           )}
         </div>
 
-        {/* Tags + actions */}
         <div className="flex items-center justify-between mt-2 pl-9">
           <div className="flex flex-wrap gap-1">
             <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
@@ -490,7 +486,7 @@ function EventRow({ ev, onApprove, onCancel, onView, approving, cancelling }) {
             </span>
           </div>
           <div className="flex items-center gap-1.5">
-            {isPending && (
+            {showApproveActions && (
               <>
                 <button onClick={() => onApprove(ev.id)} disabled={approving}
                   className="w-7 h-7 rounded-lg border border-green-200 bg-white hover:bg-green-50 flex items-center justify-center cursor-pointer">
@@ -515,6 +511,9 @@ function EventRow({ ev, onApprove, onCancel, onView, approving, cancelling }) {
 
 // ── Main Events Page ───────────────────────────────────────────────────────────
 export default function EventsPage() {
+  // ── Role check ──────────────────────────────────────────────────────────────
+  const canApprove = useCanApprove();
+
   const [view,            setView]            = useState("events");
   const [events,          setEvents]          = useState([]);
   const [pendingCount,    setPendingCount]    = useState(0);
@@ -531,7 +530,7 @@ export default function EventsPage() {
   const [page,            setPage]            = useState(0);
   const [showFilters,     setShowFilters]     = useState(false);
   const [showCalendar,    setShowCalendar]    = useState(true);
-  const [selectedDate,    setSelectedDate]    = useState(null); // ISO string | null
+  const [selectedDate,    setSelectedDate]    = useState(null);
 
   const navigate = useNavigate();
   const debounceTimer = useRef(null);
@@ -618,7 +617,6 @@ export default function EventsPage() {
     { keyName: "Upcoming (30 Days)", val: upcoming,      IconName: TrendingUp,  iconTxColor: "text-violet-600", iconBgColor: "bg-violet-50" },
   ];
 
-  // Filter events list by selected date
   const displayedEvents = selectedDate
     ? events.filter((ev) => {
         const d = getEventDate(ev);
@@ -683,7 +681,6 @@ export default function EventsPage() {
 
         {/* Filter bar */}
         <div className="px-4 py-3.5 border-b border-gray-100">
-          {/* Active date filter chip */}
           {selectedDate && (
             <div className="flex items-center gap-2 mb-2.5">
               <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 text-xs font-semibold">
@@ -759,10 +756,8 @@ export default function EventsPage() {
           </div>
         </div>
 
-        {/* Column headers */}
         <EventListHeader />
 
-        {/* Rows */}
         {loading ? (
           <table className="w-full"><tbody><ListLoader colSpanSet={6} /></tbody></table>
         ) : displayedEvents.length === 0 ? (
@@ -781,11 +776,12 @@ export default function EventsPage() {
               onView={setSelectedEvent}
               approving={!!actionLoading[`approve_${ev.id}`]}
               cancelling={!!actionLoading[`cancel_${ev.id}`]}
+              canApprove={canApprove}
             />
           ))
         )}
 
-        {/* Pagination — hide when date filter is active */}
+        {/* Pagination */}
         {!loading && !selectedDate && totalPages > 0 && (
           <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-between flex-wrap gap-2 bg-gray-50/50">
             <span className="text-xs text-gray-400">

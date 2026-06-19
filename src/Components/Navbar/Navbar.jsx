@@ -2,11 +2,43 @@ import React, { useState } from 'react';
 import { CircleStar, Phone, Menu, X } from 'lucide-react';
 import ss_logo_2 from '../../assets/Images/SS_logo_3.png';
 import { useNavigate } from 'react-router-dom';
+// ─── Framer Motion Imports ───
+import { motion, AnimatePresence } from 'framer-motion';
 
 const Navbar = () => {
     const [menuOpen, setMenuOpen] = useState(false);
     const navigate = useNavigate();
     const navLinks = ['Home', 'Features', 'Highlights', 'In The News', 'Clients', 'Blog'];
+
+    // ─── Framer Motion Variants ───
+    const sidebarVariants = {
+        hidden: { x: '100%', opacity: 0.9 },
+        visible: {
+            x: 0,
+            opacity: 1,
+            transition: {
+                type: 'tween',
+                duration: 0.35,
+                ease: 'easeOut',
+                staggerChildren: 0.05, // लिंक्स को एक-एक करके एनिमेट करेगा
+                delayChildren: 0.1,
+            },
+        },
+        exit: {
+            x: '100%',
+            opacity: 0.9,
+            transition: {
+                type: 'tween',
+                duration: 0.25,
+                ease: 'easeIn',
+            },
+        },
+    };
+
+    const linkVariants = {
+        hidden: { opacity: 0, x: 20 },
+        visible: { opacity: 1, x: 0, transition: { type: 'spring', stiffness: 100 } },
+    };
 
     return (
         <div className="relative bg-[linear-gradient(to_right,#102130,#132939,#152F3F,#173343)] w-full overflow-hidden">
@@ -47,7 +79,7 @@ const Navbar = () => {
                     />
                 </div>
 
-                {/* Navigation Links (Desktop - Visible from lg onwards) */}
+                {/* Navigation Links (Desktop) */}
                 <div className='hidden lg:flex items-center justify-center flex-1 mx-4 xl:mx-8 font-body tracking-wide text-sm xl:text-base'>
                     <div className='flex gap-4 xl:gap-6 text-white text-nowrap'>
                         {navLinks.map(link => (
@@ -65,9 +97,8 @@ const Navbar = () => {
                     </div>
                 </div>
 
-                {/* Action Buttons (Desktop - lg onwards) */}
+                {/* Action Buttons (Desktop) */}
                 <div className='hidden lg:flex items-center gap-3 xl:gap-4 flex-shrink-0'>
-                    {/* Login Button */}
                     <button
                         onClick={() => navigate("/login")}
                         className="group relative overflow-hidden px-5 xl:px-6 py-2.5 rounded-xl border border-[#00CAFB]/60 bg-white/[0.03] backdrop-blur-xl text-white font-semibold tracking-wide cursor-pointer shadow-[0_8px_30px_rgba(0,202,251,0.08)] hover:border-[#00CAFB] hover:bg-[#00CAFB]/10 hover:-translate-y-0.5 hover:shadow-[0_12px_35px_rgba(0,202,251,0.25)] transition-all duration-300 text-sm"
@@ -76,7 +107,6 @@ const Navbar = () => {
                         <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/10 to-transparent group-hover:translate-x-full transition-transform duration-1000" />
                     </button>
 
-                    {/* CTA Button */}
                     <button
                         className="group relative overflow-hidden px-6 xl:px-7 py-2.5 rounded-xl font-semibold tracking-wide text-white cursor-pointer bg-gradient-to-r from-[#00C9B1] to-[#F5A623] shadow-[0_10px_35px_rgba(0,202,251,0.35)] hover:-translate-y-0.5 hover:scale-[1.02] transition-all duration-300 text-sm text-nowrap"
                     >
@@ -86,9 +116,8 @@ const Navbar = () => {
                     </button>
                 </div>
 
-                {/* Mobile Right Controls (Hamburger & Small Utilities) */}
+                {/* Mobile Right Controls */}
                 <div className='flex lg:hidden items-center gap-4'>
-                    {/* Mobile inline links - hidden on md up because they live in top bar */}
                     <div className='flex md:hidden gap-3 items-center text-white text-xs'>
                         <p className='flex items-center gap-1 text-nowrap cursor-pointer hover:opacity-80'>
                             <Phone size={11} color='white' /> Call Us
@@ -96,7 +125,6 @@ const Navbar = () => {
                         <p onClick={() => navigate('/login')} className='cursor-pointer hover:opacity-80'>Login</p>
                     </div>
 
-                    {/* Hamburger Button */}
                     <button
                         className='p-1.5 text-white/90 hover:text-[#00CAFB] transition'
                         onClick={() => setMenuOpen(true)}
@@ -108,75 +136,89 @@ const Navbar = () => {
 
             </div>
 
-            {/* ── Mobile Sidebar Drawer ── */}
-            {menuOpen && (
-                <div className='lg:hidden fixed inset-0 z-50 bg-white flex flex-col animate-fade-in'>
+            {/* ── Mobile Sidebar Drawer with Framer Motion ── */}
+            <AnimatePresence>
+                {menuOpen && (
+                    <motion.div
+                        variants={sidebarVariants}
+                        initial="hidden"
+                        animate="visible"
+                        exit="exit"
+                        className='lg:hidden fixed inset-0 z-50 bg-white flex flex-col'
+                    >
+                        {/* Drawer Header */}
+                        <div className='flex items-center justify-between px-5 py-4 border-b border-gray-100'>
+                            <img
+                                onClick={() => { navigate('/'); setMenuOpen(false); }}
+                                className="h-12 w-auto object-contain"
+                                src={ss_logo_2}
+                                alt="SchoolSpine Logo"
+                            />
 
-                    {/* Drawer Header */}
-                    <div className='flex items-center justify-between px-5 py-4 border-b border-gray-100'>
-                        <img
-                            onClick={() => { navigate('/'); setMenuOpen(false); }}
-                            className="h-12 w-auto object-contain"
-                            src={ss_logo_2}
-                            alt="SchoolSpine Logo"
-                        />
-
-                        <button 
-                            onClick={() => setMenuOpen(false)} 
-                            className='text-gray-700 p-1.5 hover:bg-gray-100 rounded-full transition' 
-                            aria-label="Close menu"
-                        >
-                            <X size={26} />
-                        </button>
-                    </div>
-
-                    {/* Secondary Utilities Container inside Drawer */}
-                    <div className='flex gap-5 justify-around items-center bg-gray-50 py-3 px-5 border-b border-gray-100 text-sm font-medium text-gray-700'>
-                        <p className='flex items-center gap-1.5 cursor-pointer hover:text-[#00CAFB]'>
-                            <Phone size={14} color='#1A8A8A' /> Call Us
-                        </p>
-                        <p onClick={() => { navigate('/login'); setMenuOpen(false); }} className='cursor-pointer hover:text-[#00CAFB]'>
-                            Login
-                        </p>
-                        <p className='cursor-pointer hover:text-[#00CAFB]'>
-                            Support
-                        </p>
-                    </div>
-
-                    {/* Nav Links */}
-                    <div className='flex flex-col px-6 py-4 overflow-y-auto divide-y divide-gray-100'>
-                        {navLinks.map((link) => (
-                            <p
-                                key={link}
-                                className='text-gray-800 font-body text-lg font-medium py-4 cursor-pointer hover:text-[#00CAFB] transition-colors'
-                                onClick={() => {
-                                    if (link === "Home") navigate("/");
-                                    setMenuOpen(false);
-                                }}
+                            <button 
+                                onClick={() => setMenuOpen(false)} 
+                                className='text-gray-700 p-1.5 hover:bg-gray-100 rounded-full transition' 
+                                aria-label="Close menu"
                             >
-                                {link}
+                                <X size={26} />
+                            </button>
+                        </div>
+
+                        {/* Secondary Utilities Container inside Drawer */}
+                        <motion.div 
+                            variants={linkVariants}
+                            className='flex gap-5 justify-around items-center bg-gray-50 py-3 px-5 border-b border-gray-100 text-sm font-medium text-gray-700'
+                        >
+                            <p className='flex items-center gap-1.5 cursor-pointer hover:text-[#00CAFB]'>
+                                <Phone size={14} color='#1A8A8A' /> Call Us
                             </p>
-                        ))}
-                    </div>
+                            <p onClick={() => { navigate('/login'); setMenuOpen(false); }} className='cursor-pointer hover:text-[#00CAFB]'>
+                                Login
+                            </p>
+                            <p className='cursor-pointer hover:text-[#00CAFB]'>
+                                Support
+                            </p>
+                        </motion.div>
 
-                    {/* Drawer Action Buttons */}
-                    <div className='px-6 mt-auto pb-8 flex flex-col gap-3.5'>
-                        <button
-                            onClick={() => { navigate("/login"); setMenuOpen(false); }}
-                            className='w-full py-3 text-base border-2 border-[#00C9B1] rounded-xl text-[#1A8A8A] font-body font-semibold cursor-pointer hover:bg-gradient-to-r hover:from-[#1A8A8A] hover:to-[#00C9B1] hover:text-white transition duration-300'
-                        >
-                            Login
-                        </button>
-                        <button 
-                            onClick={() => setMenuOpen(false)}
-                            className='w-full py-3 text-base text-white bg-gradient-to-r from-[#1A8A8A] to-[#00C9B1] rounded-xl font-body font-semibold cursor-pointer drop-shadow-md'
-                        >
-                            Get Free Demo
-                        </button>
-                    </div>
+                        {/* Nav Links with Stagger Animation */}
+                        <div className='flex flex-col px-6 py-4 overflow-y-auto divide-y divide-gray-100'>
+                            {navLinks.map((link) => (
+                                <motion.p
+                                    variants={linkVariants}
+                                    key={link}
+                                    className='text-gray-800 font-body text-lg font-medium py-4 cursor-pointer hover:text-[#00CAFB] transition-colors'
+                                    onClick={() => {
+                                        if (link === "Home") navigate("/");
+                                        setMenuOpen(false);
+                                    }}
+                                >
+                                    {link}
+                                </motion.p>
+                            ))}
+                        </div>
 
-                </div>
-            )}
+                        {/* Drawer Action Buttons */}
+                        <motion.div 
+                            variants={linkVariants}
+                            className='px-6 mt-auto pb-8 flex flex-col gap-3.5'
+                        >
+                            <button
+                                onClick={() => { navigate("/login"); setMenuOpen(false); }}
+                                className='w-full py-3 text-base border-2 border-[#00C9B1] rounded-xl text-[#1A8A8A] font-body font-semibold cursor-pointer hover:bg-gradient-to-r hover:from-[#1A8A8A] hover:to-[#00C9B1] hover:text-white transition duration-300'
+                            >
+                                Login
+                            </button>
+                            <button 
+                                onClick={() => setMenuOpen(false)}
+                                className='w-full py-3 text-base text-white bg-gradient-to-r from-[#1A8A8A] to-[#00C9B1] rounded-xl font-body font-semibold cursor-pointer drop-shadow-md'
+                            >
+                                Get Free Demo
+                            </button>
+                        </motion.div>
+
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
         </div>
     );

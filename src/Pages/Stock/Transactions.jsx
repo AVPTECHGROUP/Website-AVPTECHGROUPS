@@ -23,87 +23,41 @@ import { getActiveStores, getStockOverview } from "../../Api/StockApi";
 import { getListOfValues } from "../../Api/ListOfValues";
 
 const SEARCH_DEBOUNCE_MS = 400;
-const ALL_STORES_ID      = "";
+const ALL_STORES_ID = "";
 
 const STATUS_OPTIONS = [
     { label: "All Status", val: "" },
-    { label: "OK",         val: "OK" },
-    { label: "Low",        val: "LOW" },
-    { label: "Critical",   val: "CRITICAL" },
+    { label: "OK", val: "OK" },
+    { label: "Low", val: "LOW" },
+    { label: "Critical", val: "CRITICAL" },
 ];
 
 const categoryColors = {
-    STATIONERY:  "bg-gray-100 text-gray-700",
-    LAB:         "bg-purple-100 text-purple-700",
-    SPORTS:      "bg-blue-100 text-blue-700",
-    UNIFORM:     "bg-orange-100 text-orange-700",
-    BOOKS:       "bg-yellow-100 text-yellow-700",
-    FURNITURE:   "bg-amber-100 text-amber-700",
+    STATIONERY: "bg-gray-100 text-gray-700",
+    LAB: "bg-purple-100 text-purple-700",
+    SPORTS: "bg-blue-100 text-blue-700",
+    UNIFORM: "bg-orange-100 text-orange-700",
+    BOOKS: "bg-yellow-100 text-yellow-700",
+    FURNITURE: "bg-amber-100 text-amber-700",
     ELECTRONICS: "bg-cyan-100 text-cyan-700",
-    CLEANING:    "bg-teal-100 text-teal-700",
-    OTHER:       "bg-gray-100 text-gray-500",
+    CLEANING: "bg-teal-100 text-teal-700",
+    OTHER: "bg-gray-100 text-gray-500",
 };
 
 const stockStatusStyle = {
-    OK:       "text-green-700 font-semibold",
-    LOW:      "text-orange-500 font-semibold",
+    OK: "text-green-700 font-semibold",
+    LOW: "text-orange-500 font-semibold",
     CRITICAL: "text-red-600 font-semibold",
 };
 
 const stockBarColor = (status) => {
     if (status === "CRITICAL") return "bg-red-500";
-    if (status === "LOW")      return "bg-orange-400";
+    if (status === "LOW") return "bg-orange-400";
     return "bg-blue-500";
 };
 
 const parseStoreNames = (str) =>
     str ? str.split(",").map((s) => s.trim()).filter(Boolean) : [];
-
-// ── Stocked In Cell ───────────────────────────────────────────────────────────
-const StockedInCell = ({ storeNames }) => {
-    const [open, setOpen] = useState(false);
-    const ref = useRef(null);
-
-    useEffect(() => {
-        if (!open) return;
-        const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
-        document.addEventListener("mousedown", handler);
-        return () => document.removeEventListener("mousedown", handler);
-    }, [open]);
-
-    if (!storeNames || storeNames.length === 0)
-        return <span className="text-xs text-gray-400">—</span>;
-
-    const first = storeNames[0];
-    const rest  = storeNames.slice(1);
-
-    return (
-        <div className="flex items-center gap-1.5 flex-wrap" ref={ref}>
-            <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-medium bg-white text-gray-700 border border-gray-300 whitespace-nowrap max-w-25 truncate">
-                {first}
-            </span>
-            {rest.length > 0 && (
-                <div className="relative">
-                    <button
-                        onClick={() => setOpen((o) => !o)}
-                        className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 transition cursor-pointer whitespace-nowrap"
-                    >
-                        +{rest.length}
-                    </button>
-                    {open && (
-                        <div className="absolute left-0 top-6 z-50 bg-white border border-gray-200 rounded-xl shadow-lg p-2 min-w-max flex flex-col gap-1">
-                            {storeNames.map((name) => (
-                                <span key={name} className="px-3 py-1 rounded-lg text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100 whitespace-nowrap">
-                                    {name}
-                                </span>
-                            ))}
-                        </div>
-                    )}
-                </div>
-            )}
-        </div>
-    );
-};
 
 // ── Inline Action Buttons (desktop table) ─────────────────────────────────────
 const InlineActions = ({ onAction }) => (
@@ -150,39 +104,85 @@ const MobileActions = ({ onAction }) => (
     </div>
 );
 
+// ── Stocked In Cell ───────────────────────────────────────────────────────────
+const StockedInCell = ({ storeNames }) => {
+    const [open, setOpen] = useState(false);
+    const ref = useRef(null);
+
+    useEffect(() => {
+        if (!open) return;
+        const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+        document.addEventListener("mousedown", handler);
+        return () => document.removeEventListener("mousedown", handler);
+    }, [open]);
+
+    if (!storeNames || storeNames.length === 0)
+        return <span className="text-xs text-gray-400">—</span>;
+
+    const first = storeNames[0];
+    const rest = storeNames.slice(1);
+
+    return (
+        <div className="flex items-center gap-1.5 flex-wrap" ref={ref}>
+            <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-medium bg-white text-gray-700 border border-gray-300 whitespace-nowrap max-w-25 truncate">
+                {first}
+            </span>
+            {rest.length > 0 && (
+                <div className="relative">
+                    <button
+                        onClick={() => setOpen((o) => !o)}
+                        className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 transition cursor-pointer whitespace-nowrap"
+                    >
+                        +{rest.length}
+                    </button>
+                    {open && (
+                        <div className="absolute left-0 top-6 z-50 bg-white border border-gray-200 rounded-xl shadow-lg p-2 min-w-max flex flex-col gap-1">
+                            {storeNames.map((name) => (
+                                <span key={name} className="px-3 py-1 rounded-lg text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100 whitespace-nowrap">
+                                    {name}
+                                </span>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+};
+
 // ── Main Component ────────────────────────────────────────────────────────────
 export default function Transactions() {
 
     // ── Stores dropdown ────────────────────────────────────────
-    const [stores,        setStores]        = useState([]);
+    const [stores, setStores] = useState([]);
     const [storesLoading, setStoresLoading] = useState(false);
 
     // ── Categories from LOV API ────────────────────────────────
-    const [categoryOptions,   setCategoryOptions]   = useState([{ label: "All Categories", val: "" }]);
+    const [categoryOptions, setCategoryOptions] = useState([{ label: "All Categories", val: "" }]);
     const [categoriesLoading, setCategoriesLoading] = useState(false);
 
     // ── Filter state ───────────────────────────────────────────
-    const [search,          setSearch]          = useState("");
+    const [search, setSearch] = useState("");
     const [debouncedSearch, setDebouncedSearch] = useState("");
     const [selectedStoreId, setSelectedStoreId] = useState(ALL_STORES_ID);
-    const [categoryFilter,  setCategoryFilter]  = useState("");
-    const [statusFilter,    setStatusFilter]    = useState("");
-    const [page,            setPage]            = useState(1);
-    const [rowsPerPage,     setRowsPerPage]     = useState(10);
+    const [categoryFilter, setCategoryFilter] = useState("");
+    const [statusFilter, setStatusFilter] = useState("");
+    const [page, setPage] = useState(1);
+    const [rowsPerPage, setRowsPerPage] = useState(10);
     const debounceRef = useRef(null);
 
     // ── Table data ─────────────────────────────────────────────
-    const [items,        setItems]        = useState([]);
-    const [totalItems,   setTotalItems]   = useState(0);
-    const [totalPages,   setTotalPages]   = useState(0);
+    const [items, setItems] = useState([]);
+    const [totalItems, setTotalItems] = useState(0);
+    const [totalPages, setTotalPages] = useState(0);
     const [itemsLoading, setItemsLoading] = useState(false);
-    const [itemsError,   setItemsError]   = useState("");
-    const [noItemFound,  setNoItemFound]  = useState(false);
+    const [itemsError, setItemsError] = useState("");
+    const [noItemFound, setNoItemFound] = useState(false);
 
     // ── Modals ─────────────────────────────────────────────────
-    const [isModalOpen,     setIsModalOpen]     = useState(false);
-    const [modalType,       setModalType]       = useState("in");
-    const [isTransferOpen,  setIsTransferOpen]  = useState(false);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [modalType, setModalType] = useState("in");
+    const [isTransferOpen, setIsTransferOpen] = useState(false);
     const [preselectedItem, setPreselectedItem] = useState(null);
 
     // ── Load stores once ───────────────────────────────────────
@@ -206,16 +206,16 @@ export default function Transactions() {
             })
             .catch(() => {
                 setCategoryOptions([
-                    { label: "All Categories", val: ""           },
-                    { label: "Books",          val: "BOOKS"      },
-                    { label: "Uniform",        val: "UNIFORM"    },
-                    { label: "Lab",            val: "LAB"        },
-                    { label: "Stationery",     val: "STATIONERY" },
-                    { label: "Sports",         val: "SPORTS"     },
-                    { label: "Furniture",      val: "FURNITURE"  },
-                    { label: "Electronics",    val: "ELECTRONICS"},
-                    { label: "Cleaning",       val: "CLEANING"   },
-                    { label: "Other",          val: "OTHER"      },
+                    { label: "All Categories", val: "" },
+                    { label: "Books", val: "BOOKS" },
+                    { label: "Uniform", val: "UNIFORM" },
+                    { label: "Lab", val: "LAB" },
+                    { label: "Stationery", val: "STATIONERY" },
+                    { label: "Sports", val: "SPORTS" },
+                    { label: "Furniture", val: "FURNITURE" },
+                    { label: "Electronics", val: "ELECTRONICS" },
+                    { label: "Cleaning", val: "CLEANING" },
+                    { label: "Other", val: "OTHER" },
                 ]);
             })
             .finally(() => setCategoriesLoading(false));
@@ -238,33 +238,33 @@ export default function Transactions() {
         setNoItemFound(false);
         try {
             const filters = {};
-            if (debouncedSearch) filters.searchTerm  = debouncedSearch;
-            if (categoryFilter)  filters.category    = categoryFilter;
-            if (selectedStoreId) filters.storeId     = Number(selectedStoreId);
-            if (statusFilter)    filters.stockStatus = statusFilter;
+            if (debouncedSearch) filters.searchTerm = debouncedSearch;
+            if (categoryFilter) filters.category = categoryFilter;
+            if (selectedStoreId) filters.storeId = Number(selectedStoreId);
+            if (statusFilter) filters.stockStatus = statusFilter;
 
             const { items: raw, pagination: pg } = await getStockOverview(
                 filters, page - 1, rowsPerPage, "id,desc"
             );
 
             const mapped = (raw ?? []).map((item) => ({
-                id:          item.itemId,
-                itemCode:    item.itemCode,
-                itemName:    item.itemName,
-                category:    item.category,
-                unit:        item.unit,
-                minLevel:    item.minimumStockLevel ?? 0,
-                totalQty:    item.totalQuantity     ?? 0,
-                storeCount:  item.storeCount        ?? 0,
-                storeNames:  parseStoreNames(item.stockedInStores),
-                isBelowMin:  item.isBelowMinimum,
-                stockStatus: item.stockStatus       ?? "OK",
-                stores:      item.stores            ?? [],
+                id: item.itemId,
+                itemCode: item.itemCode,
+                itemName: item.itemName,
+                category: item.category,
+                unit: item.unit,
+                minLevel: item.minimumStockLevel ?? 0,
+                totalQty: item.totalQuantity ?? 0,
+                storeCount: item.storeCount ?? 0,
+                storeNames: parseStoreNames(item.stockedInStores),
+                isBelowMin: item.isBelowMinimum,
+                stockStatus: item.stockStatus ?? "OK",
+                stores: item.stores ?? [],
             }));
 
             setItems(mapped);
             setTotalItems(pg?.totalElements ?? 0);
-            setTotalPages(pg?.totalPages    ?? 0);
+            setTotalPages(pg?.totalPages ?? 0);
             setNoItemFound(mapped.length === 0);
         } catch {
             setItemsError("Failed to load stock data.");
@@ -290,10 +290,10 @@ export default function Transactions() {
     const activeFilterCount = [
         search.trim() !== "",
         categoryFilter !== "",
-        statusFilter   !== "",
+        statusFilter !== "",
     ].filter(Boolean).length;
 
-    const isAllStores   = selectedStoreId === ALL_STORES_ID;
+    const isAllStores = selectedStoreId === ALL_STORES_ID;
     const selectedStore = stores.find((s) => String(s.id) === selectedStoreId) ?? null;
 
     const openModal = (type, item = null) => {
@@ -303,16 +303,15 @@ export default function Transactions() {
         setIsModalOpen(true);
     };
 
-    const closeStockModal    = () => { setIsModalOpen(false);    setPreselectedItem(null); };
+    const closeStockModal = () => { setIsModalOpen(false); setPreselectedItem(null); };
     const closeTransferModal = () => { setIsTransferOpen(false); setPreselectedItem(null); };
 
     const transactionCards = [
-        { icon: <ArrowDownToLine className="w-6 h-6 sm:w-7 sm:h-7 xl:w-8 xl:h-8 text-green-600" />, bg: "bg-green-50", border: "border-green-200", title: "Stock IN",  titleColor: "text-green-600", sub: "Add stock to a store",      type: "in"       },
-        { icon: <ArrowUpFromLine  className="w-6 h-6 sm:w-7 sm:h-7 xl:w-8 xl:h-8 text-red-500"   />, bg: "bg-red-50",   border: "border-red-200",   title: "Stock OUT", titleColor: "text-red-500",   sub: "Remove stock from a store", type: "out"      },
-        { icon: <ArrowLeftRight   className="w-6 h-6 sm:w-7 sm:h-7 xl:w-8 xl:h-8 text-blue-600"  />, bg: "bg-blue-50",  border: "border-blue-200",  title: "Transfer",  titleColor: "text-blue-600",  sub: "Move between stores",       type: "transfer" },
+        { icon: <ArrowDownToLine className="w-6 h-6 sm:w-7 sm:h-7 xl:w-8 xl:h-8 text-green-600" />, bg: "bg-green-50", border: "border-green-200", title: "Stock IN", titleColor: "text-green-600", sub: "Add stock to a store", type: "in" },
+        { icon: <ArrowUpFromLine className="w-6 h-6 sm:w-7 sm:h-7 xl:w-8 xl:h-8 text-red-500" />, bg: "bg-red-50", border: "border-red-200", title: "Stock OUT", titleColor: "text-red-500", sub: "Remove stock from a store", type: "out" },
+        { icon: <ArrowLeftRight className="w-6 h-6 sm:w-7 sm:h-7 xl:w-8 xl:h-8 text-blue-600" />, bg: "bg-blue-50", border: "border-blue-200", title: "Transfer", titleColor: "text-blue-600", sub: "Move between stores", type: "transfer" },
     ];
 
-    // colSpan depends on allStores + columns shown
     const colSpan = isAllStores ? 9 : 8;
 
     const handleStockConfirm = (data) => {
@@ -353,7 +352,7 @@ export default function Transactions() {
             ) : (
                 <>
                     <button onClick={() => setPage(1)} className={`w-8 h-8 rounded text-sm font-semibold cursor-pointer transition-all ${page === 1 ? "bg-blue-500 text-white" : "text-gray-600 hover:bg-gray-100"}`}>1</button>
-                    {page > 3  && <span className="px-1 text-gray-400 text-sm">…</span>}
+                    {page > 3 && <span className="px-1 text-gray-400 text-sm">…</span>}
                     {[page - 1, page, page + 1].filter(p => p > 1 && p < totalPages).map(p => (
                         <button key={p} onClick={() => setPage(p)} className={`w-8 h-8 rounded text-sm font-semibold cursor-pointer transition-all ${page === p ? "bg-blue-500 text-white" : "text-gray-600 hover:bg-gray-100"}`}>{p}</button>
                     ))}
@@ -372,17 +371,8 @@ export default function Transactions() {
         </div>
     );
 
-    // ── Render ─────────────────────────────────────────────────────────────────
     return (
         <div className="min-h-screen bg-linear-to-b from-sky-50 to-sky-100">
-            {/* Outer padding:
-                Mobile(0-639):     p-2
-                sm(640-767):       p-3
-                md(768-1023):      p-4
-                lg(1024-1279):     p-5
-                xl(1280-1535):     p-6
-                2xl(1536+):        p-8
-            */}
             <div className="p-2 sm:p-3 md:p-4 lg:p-5 xl:p-6 2xl:p-8">
 
                 {/* ── Modals ── */}
@@ -413,11 +403,7 @@ export default function Transactions() {
                     </div>
                 </div>
 
-                {/* ── Transaction Action Cards ──
-                    Mobile(0-639):  1 col, compact
-                    sm(640-767):    3 col
-                    md+(768+):      3 col, progressively larger
-                */}
+                {/* ── Transaction Action Cards ── */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 md:gap-4 xl:gap-5 mb-4 sm:mb-5">
                     {transactionCards.map((card) => (
                         <button
@@ -442,13 +428,11 @@ export default function Transactions() {
                     {/* Panel Header */}
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3 px-3 sm:px-4 md:px-5 xl:px-6 py-3 md:py-4 border-b border-gray-100">
                         <div className="flex items-center gap-2 flex-wrap">
-                            {/* Title badge */}
                             <div className="flex items-center gap-1.5 sm:gap-2 bg-blue-600 text-white px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg sm:rounded-xl shadow-sm shrink-0">
                                 <Store className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                 <span className="text-xs sm:text-sm md:text-base font-semibold whitespace-nowrap">Store Stock View</span>
                             </div>
 
-                            {/* Store selector */}
                             <div className="relative">
                                 {storesLoading ? (
                                     <div className="border-2 border-blue-200 flex items-center bg-blue-50 text-blue-400 text-xs sm:text-sm font-semibold px-3 py-1.5 sm:py-2 rounded-lg sm:rounded-xl min-w-32 gap-2">
@@ -472,7 +456,6 @@ export default function Transactions() {
                             </div>
                         </div>
 
-                        {/* Refresh */}
                         <button
                             onClick={handleRefresh}
                             disabled={itemsLoading}
@@ -502,13 +485,8 @@ export default function Transactions() {
                         </div>
                     )}
 
-                    {/* ── Filters ──
-                        Mobile(0-639):  stacked — search full width, then selects in a row
-                        sm(640-767):    search + selects in one row (wrap ok)
-                        md+(768+):      all in one row
-                    */}
+                    {/* ── Filters ── */}
                     <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2 px-3 sm:px-4 md:px-5 xl:px-6 py-2.5 sm:py-3 border-b border-gray-100">
-                        {/* Search — always full row on mobile, flex-1 on sm+ */}
                         <div className="flex items-center gap-2 border rounded-lg border-gray-200 bg-gray-50 px-3 py-2 focus-within:ring-2 focus-within:ring-blue-200 focus-within:border-blue-400 transition w-full sm:flex-1 sm:min-w-40 md:min-w-48">
                             <SearchIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 shrink-0" />
                             <input
@@ -525,7 +503,6 @@ export default function Transactions() {
                             )}
                         </div>
 
-                        {/* Category + Status in a sub-row on mobile, inline on sm+ */}
                         <div className="flex items-center gap-2 flex-wrap">
                             <div className="relative flex-1 sm:flex-none">
                                 <select
@@ -568,10 +545,10 @@ export default function Transactions() {
                     </div>
 
                     {/* ================================================================
-                        CARDS VIEW — Mobile (0–639px) & Small Tablet (640–767px)
-                        1 column on mobile, 2 columns on sm
+                        CARDS VIEW — Mobile, Tablet & Laptop screens (<1280px)
+                        Switches to grid format to fit 1024px monitors easily.
                         ================================================================ */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:hidden px-3 sm:px-4 py-3 sm:py-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 xl:hidden px-3 sm:px-4 py-3 sm:py-4">
                         {itemsLoading ? (
                             <div className="text-center py-10 col-span-2">
                                 <div className="flex flex-col items-center gap-2">
@@ -595,11 +572,10 @@ export default function Transactions() {
                             </div>
                         ) : (
                             items.map((item, idx) => {
-                                const qty    = isAllStores ? item.totalQty : (item.stores.find((s) => String(s.storeId) === selectedStoreId)?.quantity ?? item.totalQty);
+                                const qty = isAllStores ? item.totalQty : (item.stores.find((s) => String(s.storeId) === selectedStoreId)?.quantity ?? item.totalQty);
                                 const status = item.stockStatus;
                                 return (
                                     <div key={item.id} className="bg-white border border-gray-200 rounded-xl p-3 sm:p-4 shadow-sm hover:shadow-md transition-shadow">
-                                        {/* Card top row */}
                                         <div className="flex items-start justify-between gap-2 mb-2.5">
                                             <div className="flex items-start gap-2 min-w-0">
                                                 <span className="text-[11px] text-gray-400 mt-0.5 shrink-0 font-medium">{(page - 1) * rowsPerPage + idx + 1}.</span>
@@ -614,13 +590,11 @@ export default function Transactions() {
                                         </div>
 
                                         <div className="space-y-2">
-                                            {/* Category + Unit */}
                                             <div className="flex items-center gap-1.5 flex-wrap">
                                                 <span className={`px-2 py-0.5 rounded text-[11px] font-semibold ${categoryColors[item.category] ?? "bg-gray-100 text-gray-600"}`}>{item.category}</span>
                                                 <span className="text-[11px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded">{item.unit}</span>
                                             </div>
 
-                                            {/* Qty bar */}
                                             <div>
                                                 <div className="flex justify-between text-[11px] text-gray-500 mb-1">
                                                     <span>Qty: <span className={`font-bold ${item.isBelowMin ? "text-red-500" : "text-gray-700"}`}>{qty}</span></span>
@@ -634,7 +608,6 @@ export default function Transactions() {
                                                 </div>
                                             </div>
 
-                                            {/* Stocked In on mobile (all stores view) */}
                                             {isAllStores && item.storeNames.length > 0 && (
                                                 <div className="flex flex-wrap gap-1">
                                                     {item.storeNames.slice(0, 2).map((name) => (
@@ -648,7 +621,6 @@ export default function Transactions() {
                                                 </div>
                                             )}
 
-                                            {/* Actions */}
                                             <MobileActions onAction={(type) => openModal(type, item)} />
                                         </div>
                                     </div>
@@ -658,51 +630,38 @@ export default function Transactions() {
                     </div>
 
                     {/* ================================================================
-                        TABLE VIEW — Tablet (768px+) through 4K
-                        Tablet (768–1023):   compact columns, actions icon-only
-                        Laptop (1024–1279):  normal columns, actions icon+short text
-                        Desktop (1280–1535): full columns
-                        Large (1536+):       spacious
+                        TABLE VIEW — Wide Desktop screens (>=1280px)
                         ================================================================ */}
-                    <div className="hidden md:block overflow-x-auto">
+                    <div className="hidden xl:block overflow-x-auto">
                         <table className="w-full border-collapse">
                             <thead className="border-b border-gray-200 bg-gray-50">
                                 <tr>
-                                    {/* # */}
                                     <th className="px-2 md:px-3 xl:px-4 py-2.5 md:py-3 text-left text-[10px] md:text-xs font-semibold text-gray-500 uppercase tracking-wider w-8 md:w-10">
                                         #
                                     </th>
-                                    {/* Item */}
                                     <th className="px-2 md:px-3 xl:px-4 py-2.5 md:py-3 text-left text-[10px] md:text-xs font-semibold text-gray-500 uppercase tracking-wider min-w-30 md:min-w-37.5 xl:min-w-45">
                                         Item
                                     </th>
-                                    {/* Category — hidden on tablet, visible md+ */}
-                                    <th className="hidden lg:table-cell px-2 md:px-3 xl:px-4 py-2.5 md:py-3 text-left text-[10px] md:text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                    <th className="px-2 md:px-3 xl:px-4 py-2.5 md:py-3 text-left text-[10px] md:text-xs font-semibold text-gray-500 uppercase tracking-wider">
                                         Category
                                     </th>
-                                    {/* Unit — hidden on tablet */}
-                                    <th className="hidden lg:table-cell px-2 md:px-3 xl:px-4 py-2.5 md:py-3 text-left text-[10px] md:text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                    <th className="px-2 md:px-3 xl:px-4 py-2.5 md:py-3 text-left text-[10px] md:text-xs font-semibold text-gray-500 uppercase tracking-wider">
                                         Unit
                                     </th>
-                                    {/* Qty */}
                                     <th className="px-2 md:px-3 xl:px-4 py-2.5 md:py-3 text-left text-[10px] md:text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap min-w-20">
                                         {isAllStores ? "Total Qty" : "Qty"}
                                     </th>
-                                    {/* Stocked In — only all stores, hidden on tablet */}
                                     {isAllStores && (
-                                        <th className="hidden lg:table-cell px-2 md:px-3 xl:px-4 py-2.5 md:py-3 text-left text-[10px] md:text-xs font-semibold text-gray-500 uppercase tracking-wider min-w-30">
+                                        <th className="px-2 md:px-3 xl:px-4 py-2.5 md:py-3 text-left text-[10px] md:text-xs font-semibold text-gray-500 uppercase tracking-wider min-w-30">
                                             Stocked In
                                         </th>
                                     )}
-                                    {/* Min Level */}
                                     <th className="px-2 md:px-3 xl:px-4 py-2.5 md:py-3 text-center text-[10px] md:text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
                                         Min
                                     </th>
-                                    {/* Status */}
                                     <th className="px-2 md:px-3 xl:px-4 py-2.5 md:py-3 text-left text-[10px] md:text-xs font-semibold text-gray-500 uppercase tracking-wider">
                                         Status
                                     </th>
-                                    {/* Actions */}
                                     <th className="px-2 md:px-3 xl:px-4 py-2.5 md:py-3 text-center text-[10px] md:text-xs font-semibold text-gray-500 uppercase tracking-wider">
                                         Actions
                                     </th>
@@ -732,42 +691,31 @@ export default function Transactions() {
                                     </tr>
                                 ) : (
                                     items.map((item, idx) => {
-                                        const qty    = isAllStores ? item.totalQty : (item.stores.find((s) => String(s.storeId) === selectedStoreId)?.quantity ?? item.totalQty);
-                                        const min    = item.minLevel;
+                                        const qty = isAllStores ? item.totalQty : (item.stores.find((s) => String(s.storeId) === selectedStoreId)?.quantity ?? item.totalQty);
+                                        const min = item.minLevel;
                                         const status = item.stockStatus;
 
                                         return (
                                             <tr key={item.id} className="hover:bg-blue-50/40 transition-colors group">
-
-                                                {/* # */}
                                                 <td className="px-2 md:px-3 xl:px-4 py-2 md:py-3 text-xs text-gray-500 font-medium">
                                                     {(page - 1) * rowsPerPage + idx + 1}
                                                 </td>
 
-                                                {/* Item name + code */}
                                                 <td className="px-2 md:px-3 xl:px-4 py-2 md:py-3">
                                                     <p className="font-semibold text-gray-800 text-xs md:text-sm truncate max-w-27.5 md:max-w-35 xl:max-w-50 2xl:max-w-65">{item.itemName}</p>
                                                     <p className="text-[10px] md:text-xs text-gray-400 truncate max-w-27.5 md:max-w-35 xl:max-w-50">{item.itemCode}</p>
-                                                    {/* Category + Unit inline on tablet (hidden lg) */}
-                                                    <div className="flex items-center gap-1 mt-1 lg:hidden">
-                                                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${categoryColors[item.category] ?? "bg-gray-100 text-gray-600"}`}>{item.category}</span>
-                                                        <span className="text-[10px] text-gray-400">{item.unit}</span>
-                                                    </div>
                                                 </td>
 
-                                                {/* Category — lg+ */}
-                                                <td className="hidden lg:table-cell px-2 md:px-3 xl:px-4 py-2 md:py-3">
+                                                <td className="px-2 md:px-3 xl:px-4 py-2 md:py-3">
                                                     <span className={`px-2 py-0.5 rounded text-xs font-semibold whitespace-nowrap ${categoryColors[item.category] ?? "bg-gray-100 text-gray-600"}`}>
                                                         {item.category}
                                                     </span>
                                                 </td>
 
-                                                {/* Unit — lg+ */}
-                                                <td className="hidden lg:table-cell px-2 md:px-3 xl:px-4 py-2 md:py-3 text-xs md:text-sm text-gray-600 whitespace-nowrap">
+                                                <td className="px-2 md:px-3 xl:px-4 py-2 md:py-3 text-xs md:text-sm text-gray-600 whitespace-nowrap">
                                                     {item.unit}
                                                 </td>
 
-                                                {/* Qty + mini progress bar */}
                                                 <td className="px-2 md:px-3 xl:px-4 py-2 md:py-3">
                                                     <div className="flex items-center gap-1.5 md:gap-2">
                                                         <span className={`text-xs md:text-sm font-bold w-6 md:w-8 shrink-0 ${item.isBelowMin ? "text-red-500" : "text-gray-800"}`}>{qty}</span>
@@ -780,30 +728,25 @@ export default function Transactions() {
                                                     </div>
                                                 </td>
 
-                                                {/* Stocked In — lg+, all stores only */}
                                                 {isAllStores && (
-                                                    <td className="hidden lg:table-cell px-2 md:px-3 xl:px-4 py-2 md:py-3">
+                                                    <td className="px-2 md:px-3 xl:px-4 py-2 md:py-3">
                                                         <StockedInCell storeNames={item.storeNames} />
                                                     </td>
                                                 )}
 
-                                                {/* Min Level */}
                                                 <td className="px-2 md:px-3 xl:px-4 py-2 md:py-3 text-center text-xs md:text-sm text-gray-600">
                                                     {min}
                                                 </td>
 
-                                                {/* Status */}
                                                 <td className="px-2 md:px-3 xl:px-4 py-2 md:py-3">
                                                     <span className={`text-[11px] md:text-xs ${stockStatusStyle[status] ?? stockStatusStyle.OK}`}>
                                                         {status}
                                                     </span>
                                                 </td>
 
-                                                {/* Actions */}
                                                 <td className="px-2 md:px-3 xl:px-4 py-2 md:py-3">
                                                     <InlineActions onAction={(type) => openModal(type, item)} />
                                                 </td>
-
                                             </tr>
                                         );
                                     })
@@ -812,11 +755,12 @@ export default function Transactions() {
                         </table>
                     </div>
 
+                    {/* ── Footer Pagination Control Panel ── */}
                     <div className="border-t border-gray-200 px-3 sm:px-4 md:px-5 xl:px-6 py-3 md:py-4">
-                        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                        <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3">
 
-                            {/* Left: count + rows selector */}
-                            <div className="flex flex-col xs:flex-row items-center justify-center md:justify-start gap-3 text-center md:text-left">
+                            {/* Left side: Item display configuration stats */}
+                            <div className="flex flex-col xs:flex-row items-center justify-center xl:justify-start gap-3 text-center xl:text-left">
                                 <span className="text-xs sm:text-sm text-gray-700">
                                     {totalItems === 0
                                         ? "No items"
@@ -836,7 +780,7 @@ export default function Transactions() {
                                 </div>
                             </div>
 
-                            {/* Right: page buttons */}
+                            {/* Right side: Action item pagination controls */}
                             <div className="flex flex-col items-center gap-1">
                                 <PaginationButtons />
                                 <span className="text-[11px] text-gray-400">Page {page} of {totalPages || 1}</span>

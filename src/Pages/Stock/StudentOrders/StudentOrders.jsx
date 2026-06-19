@@ -45,7 +45,6 @@ function CancelConfirmModal({ order, onConfirm, onClose, loading }) {
   if (!order) return null;
 
   const isConfirmed = order.status === "CONFIRMED";
-
   const isMatch = confirmInput === String(order.id);
 
   return (
@@ -60,7 +59,6 @@ function CancelConfirmModal({ order, onConfirm, onClose, loading }) {
 
           <div>
             <h3 className="text-base font-bold text-gray-800">Cancel Order?</h3>
-
             <p className="text-sm text-gray-500 mt-1">
               Are you sure you want to cancel{" "}
               <span className="font-semibold text-gray-700">
@@ -124,7 +122,6 @@ function fmtAmount(val) {
 }
 
 // ── Smart Pagination Helper ───────────────────────────────────────
-// Returns array like: [1, 2, 3, "...", 10]  or  [1, "...", 4, 5, 6, "...", 20]
 function getPageNumbers(currentPage, totalPages) {
   if (totalPages <= 7) {
     return Array.from({ length: totalPages }, (_, i) => i + 1);
@@ -139,6 +136,7 @@ function getPageNumbers(currentPage, totalPages) {
   pages.push(totalPages);
   return pages;
 }
+
 function buildActionOptions(status, userRole) {
   const s = (status || "").toUpperCase();
   const normalize = (v) => (v || "").toLowerCase().replace(/[\s_]/g, "");
@@ -148,65 +146,21 @@ function buildActionOptions(status, userRole) {
 
   if (s === "DRAFT") {
     return [
-      {
-        value: "edit",
-        label: "Edit",
-        icon: Pencil,
-        text: "text-blue-600",
-        bg: "bg-blue-50",
-        hover: "hover:bg-blue-100"
-      },
-      {
-        value: "view",
-        label: "View",
-        icon: Eye,
-        text: "text-gray-600",
-        bg: "bg-gray-50",
-        hover: "hover:bg-gray-100",
-      },
-      {
-        value: "cancel",
-        label: "Cancel",
-        icon: Ban,
-        text: "text-red-500",
-        bg: "bg-red-50",
-        hover: "hover:bg-red-100",
-      },
+      { value: "edit", label: "Edit", icon: Pencil, text: "text-blue-600", bg: "bg-blue-50", hover: "hover:bg-blue-100" },
+      { value: "view", label: "View", icon: Eye, text: "text-gray-600", bg: "bg-gray-50", hover: "hover:bg-gray-100" },
+      { value: "cancel", label: "Cancel", icon: Ban, text: "text-red-500", bg: "bg-red-50", hover: "hover:bg-red-100" },
     ];
   }
 
   if (s === "CONFIRMED") {
     return [
-      {
-        value: "view",
-        label: "View",
-        icon: Eye,
-        text: "text-gray-600",
-        bg: "bg-gray-50",
-        hover: "hover:bg-gray-100"
-      },
-      // Sirf privileged roles ko cancel dikhega
-      ...(canCancelConfirmed ? [{
-        value: "cancel",
-        label: "Cancel",
-        icon: Ban,
-        text: "text-red-500",
-        bg: "bg-red-50",
-        hover: "hover:bg-red-100"
-      }] : []),
+      { value: "view", label: "View", icon: Eye, text: "text-gray-600", bg: "bg-gray-50", hover: "hover:bg-gray-100" },
+      ...(canCancelConfirmed ? [{ value: "cancel", label: "Cancel", icon: Ban, text: "text-red-500", bg: "bg-red-50", hover: "hover:bg-red-100" }] : []),
     ];
   }
 
-  // CANCELLED, DELIVERED, etc. — sirf view
   return [
-    {
-      value: "view",
-      label: "View",
-      icon: Eye,
-      text: "text-blue-600",
-      bg: "bg-blue-50",
-      hover: "hover:bg-blue-100",
-    },
+    { value: "view", label: "View", icon: Eye, text: "text-blue-600", bg: "bg-blue-50", hover: "hover:bg-blue-100" },
   ];
 }
 
@@ -216,20 +170,12 @@ function PageButtons({ page, totalPages, onPageChange }) {
     <>
       {getPageNumbers(page, totalPages).map((p, i) =>
         p === "..." ? (
-          <span
-            key={`ellipsis-${i}`}
-            className="px-2 py-1 text-gray-400 select-none"
-          >
-            …
-          </span>
+          <span key={`ellipsis-${i}`} className="px-2 py-1 text-gray-400 select-none">…</span>
         ) : (
           <button
             key={p}
             onClick={() => onPageChange(p)}
-            className={`px-3 py-1 rounded transition-all ${page === p
-              ? "bg-blue-500 text-white"
-              : "text-gray-600 hover:bg-gray-100"
-              }`}
+            className={`px-3 py-1 rounded transition-all ${page === p ? "bg-blue-500 text-white" : "text-gray-600 hover:bg-gray-100"}`}
           >
             {p}
           </button>
@@ -244,7 +190,6 @@ export default function StudentOrders() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useDecodedUser();
-  console.log("userType:", user?.userType);
 
   const [orders, setOrders] = useState([]);
   const [pagination, setPagination] = useState(null);
@@ -253,15 +198,15 @@ export default function StudentOrders() {
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
- const [stats, setStats] = useState({ draftOrders: 0, confirmedOrders: 0, cancelledOrders: 0 });
+  const [stats, setStats] = useState({ draftOrders: 0, confirmedOrders: 0, cancelledOrders: 0 });
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [classes, setClasses] = useState([]);
   const [classesFilter, setClassesFilter] = useState("");
   const [classesLoading, setClassesLoading] = useState(false);
-  const [fromDate, setFromDate] = useState("")
-  const [toDate, setToDate] = useState("")
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
   const [noOrderFound, setNoOrderFound] = useState(false);
 
   const [viewOrder, setViewOrder] = useState(null);
@@ -270,23 +215,16 @@ export default function StudentOrders() {
 
   const resetPage = () => setPage(1);
 
-
-  // ── Handle return from Create/Edit page ──────────────────────
   useEffect(() => {
     if (location.state?.saved) {
       const status = location.state.saved;
-      toast.success(
-        status === "DRAFT"
-          ? "Order saved as draft."
-          : "Order confirmed & stock issued."
-      );
+      toast.success(status === "DRAFT" ? "Order saved as draft." : "Order confirmed & stock issued.");
       window.history.replaceState({}, document.title);
       fetchOrders();
       fetchStats();
     }
   }, []); // eslint-disable-line
 
-  // Debounce search
   useEffect(() => {
     const t = setTimeout(() => { setSearch(searchInput); resetPage(); }, 400);
     return () => clearTimeout(t);
@@ -299,8 +237,6 @@ export default function StudentOrders() {
       try {
         setClassesLoading(true);
         const res = await getClasses();
-
-        console.log("API response:", res);
         setClasses(res || []);
       } catch (err) {
         console.error("Failed to fetch classes", err);
@@ -308,11 +244,9 @@ export default function StudentOrders() {
         setClassesLoading(false);
       }
     };
-
     fetchClasses();
   }, []);
 
-  // ── Fetch stats ───────────────────────────────────────────────
   const fetchStats = useCallback(() => {
     setStatsLoading(true);
     getOrderStats()
@@ -329,8 +263,6 @@ export default function StudentOrders() {
   }, []);
   useEffect(() => { fetchStats(); }, [fetchStats]);
 
-  // ── Fetch orders ──────────────────────────────────────────────
-  // FIX 2: sort by createdAt desc so newest confirmed orders appear at top
   const fetchOrders = useCallback(async () => {
     setLoading(true);
     setNoOrderFound(false);
@@ -358,21 +290,16 @@ export default function StudentOrders() {
   }, [page, rowsPerPage, search, statusFilter, classesFilter, fromDate, toDate]);
 
   useEffect(() => { fetchOrders(); }, [fetchOrders]);
+  
   const totalItems = pagination?.totalElements ?? orders.length;
   const totalPages = pagination?.totalPages ?? Math.max(1, Math.ceil(totalItems / rowsPerPage));
+  
   const handleCancelOrder = async () => {
     if (!cancelTarget) return;
-
     setCancelling(true);
-
     try {
-      await cancelStudentOrder(
-        cancelTarget.id,
-        "Cancelled by admin - restore stock"
-      );
-
+      await cancelStudentOrder(cancelTarget.id, "Cancelled by admin - restore stock");
       toast.success(`Order #${cancelTarget.id} cancelled.`);
-
       setCancelTarget(null);
       fetchOrders();
       fetchStats();
@@ -397,7 +324,6 @@ export default function StudentOrders() {
 
   const tdStyle = "px-2 py-2 text-left text-gray-700 text-sm";
 
-
   return (
     <>
       <CancelConfirmModal
@@ -421,7 +347,7 @@ export default function StudentOrders() {
           </div>
 
           {/* Stat Cards */}
-          <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 text-sm mt-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-sm mt-5">
             {statsLoading
               ? statCards.map((_, i) => <CardLoader key={i} />)
               : statCards.map((card) => (
@@ -489,7 +415,7 @@ export default function StudentOrders() {
                   </option>
                 ))}
               </select>
-              <div className="flex items-center gap-3 mb-5">
+              <div className="flex items-center gap-3">
                 <div className="flex flex-col">
                   <label className="text-xs text-gray-500 mb-1">From</label>
                   <input
@@ -497,11 +423,10 @@ export default function StudentOrders() {
                     value={fromDate}
                     max={toDate || undefined}
                     onChange={(e) => {
-                      const value = e.target.value;
-                      setFromDate(value);
+                      setFromDate(e.target.value);
                       setPage(1);
                     }}
-                    className="px-3 py-2 border border-gray-200 bg-gray-50 rounded-lg text-sm"
+                    className="px-3 py-2 border border-gray-200 bg-gray-50 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
                   />
                 </div>
 
@@ -512,18 +437,17 @@ export default function StudentOrders() {
                     value={toDate}
                     min={fromDate || undefined}
                     onChange={(e) => {
-                      const value = e.target.value;
-                      setToDate(value);
+                      setToDate(e.target.value);
                       setPage(1);
                     }}
-                    className="px-3 py-2 border border-gray-200 bg-gray-50 rounded-lg text-sm"
+                    className="px-3 py-2 border border-gray-200 bg-gray-50 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
                   />
                 </div>
               </div>
             </div>
 
-            {/* ── MOBILE / TABLET CARDS ── */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:hidden px-4 py-4">
+            {/* ── MOBILE / TABLET / LAPTOP CARDS (below 1280px) ── */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 xl:hidden px-4 py-4">
               {loading ? (
                 <div className="text-center py-8 col-span-2">
                   <div className="flex flex-col items-center">
@@ -543,7 +467,7 @@ export default function StudentOrders() {
                   const studentName = order.studentName || order.student?.name || "—";
                   const orderClass = order.className || order.student?.className || "—";
                   const storeName = order.storeName || order.store?.storeName || "—";
-                  const items = order.items || order.orderItems || [];
+                  const itemsList = order.items || order.orderItems || [];
                   const totalAmt = order.totalAmount;
                   return (
                     <div key={order.id} className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
@@ -565,7 +489,7 @@ export default function StudentOrders() {
                         <p><span className="font-medium text-gray-500">Class:</span><span className="ml-2 text-gray-700">{orderClass}</span></p>
                         <p><span className="font-medium text-gray-500">Store:</span><span className="ml-2 text-gray-700">{storeName}</span></p>
                         <p><span className="font-medium text-gray-500">Date:</span><span className="ml-2 text-gray-700">{fmtDate(order.orderDate || order.createdAt)}</span></p>
-                        <p><span className="font-medium text-gray-500">Items:</span><span className="ml-2 text-gray-700">{items.length}</span></p>
+                        <p><span className="font-medium text-gray-500">Items:</span><span className="ml-2 text-gray-700">{itemsList.length}</span></p>
                         <div className="flex items-center gap-1">
                           <IndianRupee className="w-3.5 h-3.5 text-green-600 shrink-0" />
                           <span className="font-bold text-green-700 text-sm">{fmtAmount(totalAmt)}</span>
@@ -583,8 +507,8 @@ export default function StudentOrders() {
               )}
             </div>
 
-            {/* ── DESKTOP TABLE ── */}
-            <div className="hidden lg:block bg-white rounded-xl border border-gray-200">
+            {/* ── WIDESCREEN DESKTOP TABLE (1280px and above) ── */}
+            <div className="hidden xl:block bg-white rounded-xl border border-gray-200">
               <div className="overflow-x-auto">
                 <table className="w-full min-w-225">
                   <thead className="border-b border-gray-200">
@@ -623,38 +547,33 @@ export default function StudentOrders() {
                         const admNumber = order.admissionNumber || order.student?.admissionNumber || "—";
                         const orderClass = order.className || order.class || order.student?.className || "—";
                         const storeName = order.storeName || order.store?.storeName || order.store?.name || "—";
-                        const items = order.items || order.orderItems || [];
+                        const itemsList = order.items || order.orderItems || [];
                         const orderDate = order.orderDate || order.createdAt || order.date;
                         const totalAmt = order.totalAmount;
                         return (
                           <tr key={order.id} className="hover:bg-blue-50/40 transition-colors">
-
                             <td className={tdStyle}>{(page - 1) * rowsPerPage + idx + 1}</td>
-
                             <td className={tdStyle}>
                               <p className="font-medium text-black whitespace-nowrap">{studentName}</p>
                               <p className="text-xs text-gray-400">{admNumber}</p>
                             </td>
-
                             <td className={tdStyle}>
                               <span className="text-gray-600 whitespace-nowrap">{orderClass}</span>
                             </td>
-
                             <td className={tdStyle}>
                               <span className="text-gray-600 whitespace-nowrap">{storeName}</span>
                             </td>
-
                             <td className={tdStyle}>
-                              {items.length > 0 ? (
+                              {itemsList.length > 0 ? (
                                 <div className="flex flex-wrap flex-col items-center gap-1">
-                                  {items.slice(0, 2).map((it, i) => (
+                                  {itemsList.slice(0, 2).map((it, i) => (
                                     <span key={i} className="text-xs bg-blue-50 text-blue-700 border border-blue-100 px-2 py-0.5 rounded-full font-medium whitespace-nowrap">
                                       {it.itemName || it.name} ×{it.quantity || it.qty}
                                     </span>
                                   ))}
-                                  {items.length > 2 && (
+                                  {itemsList.length > 2 && (
                                     <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-medium">
-                                      +{items.length - 2} more
+                                      +{itemsList.length - 2} more
                                     </span>
                                   )}
                                 </div>
@@ -662,35 +581,28 @@ export default function StudentOrders() {
                                 <span className="text-gray-400 text-xs">—</span>
                               )}
                             </td>
-
                             <td className={tdStyle}>
                               <span className="text-gray-600 whitespace-nowrap">{fmtDate(orderDate)}</span>
                             </td>
-
                             <td className={tdStyle}>
                               <div className="flex items-center gap-1">
                                 <IndianRupee className="w-3.5 h-3.5 text-green-600 shrink-0" />
                                 <span className="font-semibold text-green-700 whitespace-nowrap">
-                                  {totalAmt !== null && totalAmt !== undefined
-                                    ? Number(totalAmt).toFixed(2)
-                                    : "—"}
+                                  {totalAmt !== null && totalAmt !== undefined ? Number(totalAmt).toFixed(2) : "—"}
                                 </span>
                               </div>
                             </td>
-
                             <td className={tdStyle}>
                               <span className={`inline-flex items-center px-3 py-1 rounded-sm text-xs font-medium ${sc}`}>
                                 {order.status || "—"}
                               </span>
                             </td>
-
                             <td className={tdStyle}>
                               <ActionDropDownComp
                                 actionOptions={buildActionOptions(order.status, user?.userType)}
                                 onAction={(val) => handleAction(val, order)}
                               />
                             </td>
-
                           </tr>
                         );
                       })
@@ -699,7 +611,7 @@ export default function StudentOrders() {
                 </table>
               </div>
 
-              {/* ── Desktop Pagination (FIX 1) ── */}
+              {/* Desktop Pagination */}
               <div className="px-6 py-4 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div className="flex flex-col sm:flex-row items-center gap-4">
                   <span className="text-sm text-gray-700">
@@ -728,10 +640,7 @@ export default function StudentOrders() {
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </button>
-
-                  {/* Smart page buttons */}
                   <PageButtons page={page} totalPages={totalPages} onPageChange={setPage} />
-
                   <button
                     onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                     disabled={page === totalPages || totalPages === 0 || loading}
@@ -743,8 +652,8 @@ export default function StudentOrders() {
               </div>
             </div>
 
-            {/* ── Mobile Pagination (FIX 1) ── */}
-            <div className="lg:hidden border-t border-gray-200 px-4 py-4">
+            {/* ── Mobile / Tablet / Laptop Pagination ── */}
+            <div className="xl:hidden border-t border-gray-200 px-4 py-4">
               <div className="flex flex-col gap-4">
                 <div className="text-center text-sm text-gray-700">
                   {totalItems === 0
@@ -771,10 +680,7 @@ export default function StudentOrders() {
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </button>
-
-                  {/* Smart page buttons — same helper */}
                   <PageButtons page={page} totalPages={totalPages} onPageChange={setPage} />
-
                   <button
                     onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                     disabled={page === totalPages || totalPages === 0 || loading}

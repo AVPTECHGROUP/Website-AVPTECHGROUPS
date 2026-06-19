@@ -360,12 +360,10 @@ export default function StaffAttendanceRegistration() {
     const [statsLoading, setStatsLoading] = useState(true);
 
     // ── Single source of truth: all staff from enrollment API (size=500, no filter) ──
-    // Used for the left panel list
     const [allStaff, setAllStaff] = useState([]);
     const [allStaffLoading, setAllStaffLoading] = useState(true);
     const [userSearch, setUserSearch] = useState("");
 
-    // enrollmentMap: userId → enrollment record (built from allStaff)
     const [enrollmentMap, setEnrollmentMap] = useState({});
 
     const [tablePage, setTablePage] = useState(0);
@@ -383,8 +381,6 @@ export default function StaffAttendanceRegistration() {
 
     const uploadPanelRef = useRef(null);
 
-    // ── Fetch all staff (left panel) — size=500, no status filter ──
-    // This is the ONLY call that fetches the full list; enrollmentMap is built from this.
     const fetchAllStaff = useCallback(async () => {
         try {
             setAllStaffLoading(true);
@@ -392,7 +388,6 @@ export default function StaffAttendanceRegistration() {
             const records = res.data || [];
             setAllStaff(records);
 
-            // Build enrollmentMap from same response — no extra API call needed
             const map = {};
             records.forEach((r) => { map[r.userId] = r; });
             setEnrollmentMap(map);
@@ -403,7 +398,6 @@ export default function StaffAttendanceRegistration() {
         }
     }, []);
 
-    // ── Fetch stats ──
     const fetchStats = useCallback(async () => {
         try {
             setStatsLoading(true);
@@ -413,15 +407,12 @@ export default function StaffAttendanceRegistration() {
         finally { setStatsLoading(false); }
     }, []);
 
-    // ── On mount: fetch stats + all staff (left panel + map) ──
-    // fetchStaffTable is triggered separately by its own useEffect below.
     useEffect(() => {
         fetchStats();
         fetchAllStaff();
     }, [fetchStats, fetchAllStaff]);
 
 
-    // ── Keep selectedStaff in sync when enrollmentMap updates ──
     useEffect(() => {
         if (!selectedStaff?.userId) return;
         const live = enrollmentMap[selectedStaff.userId];
@@ -438,11 +429,9 @@ export default function StaffAttendanceRegistration() {
                 fullyEnrolled: live.fullyEnrolled,
             };
         });
-    }, [enrollmentMap]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [enrollmentMap]);
 
-    // ── Refresh everything after enroll / re-enroll ──
     const refreshAll = useCallback(async (targetUserId) => {
-        // Run stats + full-list refresh in parallel; table refreshes from its own effect
         const [freshAllStaffRes] = await Promise.all([
             getStaffEnrollment(0, 500, "id"),
             fetchStats()
@@ -469,7 +458,6 @@ export default function StaffAttendanceRegistration() {
     const scrollToUpload = () =>
         setTimeout(() => uploadPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
 
-    // ── Select from left panel (uses allStaff records directly) ──
     const handleSelectStaff = (record) => {
         setSelectedStaff({
             userId: record.userId,
@@ -486,7 +474,6 @@ export default function StaffAttendanceRegistration() {
         scrollToUpload();
     };
 
-    // ── Select from table row ──
     const handleTableEnroll = (staff) => {
         setSelectedStaff({
             userId: staff.userId,
@@ -556,7 +543,6 @@ export default function StaffAttendanceRegistration() {
             setActiveStep(4);
             setPhotos(Array(5).fill(null));
 
-            // Optimistically update selectedStaff
             setSelectedStaff((prev) => ({
                 ...prev,
                 enrollmentStatus: "ENROLLED",
@@ -574,7 +560,6 @@ export default function StaffAttendanceRegistration() {
 
     const uploadedCount = photos.filter(Boolean).length;
 
-    // ── Filter left panel list client-side (no extra API call) ──
     const filteredStaff = allStaff.filter((r) => {
         const q = userSearch.toLowerCase();
         return (
@@ -618,8 +603,8 @@ export default function StaffAttendanceRegistration() {
 
             <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
 
-                {/* ── Stat Cards ── */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* ── Stat Cards (Modified for 1024px Laptop layout) ── */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     {statsLoading ? Array(4).fill(0).map((_, i) => <CardLoader key={i} />) : (
                         <>
                             <CardComponent IconName={Shield} keyName="Total Staff Registered" val={`${stats?.totalStaff ?? 0}`} iconTxColor="text-blue-600" iconBgColor="bg-blue-100" />
@@ -633,7 +618,7 @@ export default function StaffAttendanceRegistration() {
                 {/* ── Staff List + Table ── */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-                    {/* Left: full staff list from enrollment API */}
+                    {/* Left Panel */}
                     <div className="lg:col-span-1">
                         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 h-full">
                             <h2 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
@@ -685,7 +670,7 @@ export default function StaffAttendanceRegistration() {
                         </div>
                     </div>
 
-                    {/* Right: paginated enrollment table */}
+                    {/* Right Table */}
                     <div className="lg:col-span-2">
                         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden h-full flex flex-col">
                             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-5 py-4 border-b border-gray-100">
@@ -799,7 +784,6 @@ export default function StaffAttendanceRegistration() {
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-start">
-
                             {/* Staff Info */}
                             <div className="md:col-span-3">
                                 <div className="flex items-start gap-3 p-4 rounded-xl bg-blue-50 border border-blue-100 h-full">
@@ -838,7 +822,7 @@ export default function StaffAttendanceRegistration() {
                                         <span>Photos uploaded</span><span>{uploadedCount} / 5</span>
                                     </div>
                                     <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                                        <div className={`h-full rounded-full transition-all duration-500 ${uploadedCount === 5 ? "bg-emerald-500" : "bg-blue-500"}`}
+                                        <div className="h-full rounded-full transition-all duration-500 bg-blue-500"
                                             style={{ width: `${(uploadedCount / 5) * 100}%` }} />
                                     </div>
                                     <p className="text-[11px] text-right mt-1 text-gray-400">

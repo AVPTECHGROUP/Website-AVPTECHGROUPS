@@ -254,7 +254,7 @@ export default function Items() {
     // ── Render ──────────────────────────────────────────────────
     return (
         <div className="min-h-screen bg-linear-to-b from-sky-50 to-sky-100">
-            <div className="p-2 sm:p-5 lg:p-4">
+            <div className="p-2 sm:p-5 lg:p-4 min-w-0">
 
                 {/* Page Header */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -267,7 +267,7 @@ export default function Items() {
                 </div>
 
                 {/* Stat Cards */}
-                <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-3 text-sm mt-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 text-sm mt-5">
                     {statsLoading
                         ? stats.map((_, i) => <CardLoader key={i} />)
                         : stats.map((s) => (
@@ -277,7 +277,7 @@ export default function Items() {
                 </div>
 
                 {/* ── Main Panel ── */}
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mt-4">
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mt-4 min-w-0">
 
                     {/* Panel Header */}
                     <div className="flex items-center justify-between gap-3 px-4 md:px-5 py-3 md:py-4 border-b border-gray-100">
@@ -342,7 +342,7 @@ export default function Items() {
                     </div>
 
                     {/* ── MOBILE / TABLET CARDS (below lg) ── */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:hidden px-4 py-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 xl:hidden px-4 py-4">
                         {loading ? (
                             <div className="text-center py-8 col-span-2">
                                 <div className="flex flex-col items-center">
@@ -415,7 +415,7 @@ export default function Items() {
                     </div>
 
                     {/* ── DESKTOP TABLE (lg+) ── */}
-                    <div className="hidden lg:block bg-white rounded-xl border border-gray-200">
+                    <div className="hidden xl:block bg-white rounded-xl border border-gray-200">
                         <div className="overflow-x-auto">
                             <table className="w-full">
                                 <thead className="border-b border-gray-200">
@@ -585,7 +585,7 @@ export default function Items() {
                     </div>
 
                     {/* Mobile Pagination */}
-                    <div className="lg:hidden border-t border-gray-200 px-4 py-4">
+                    <div className="xl:hidden border-t border-gray-200 px-4 py-4">
                         <div className="flex flex-col gap-4">
                             <div className="text-center text-sm text-gray-700">
                                 {totalItems === 0

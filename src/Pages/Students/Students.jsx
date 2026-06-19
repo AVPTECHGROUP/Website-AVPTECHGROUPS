@@ -34,24 +34,17 @@ const Student = () => {
     const [debouncedSearch, setDebouncedSearch] = useState('');
     const debounceTimer = useRef(null);
 
-    // ── Sections grouped by class ────────────────────────────────────────────
-    const [groupedSections, setGroupedSections] = useState([]); // [{ className, classId, sections: [{id, name}] }]
+    const [groupedSections, setGroupedSections] = useState([]);
     const [sectionsLoading, setSectionsLoading] = useState(false);
-
-    // ── Combined class+section filter — stores sectionId (or '') ────────────
     const [selectedSectionId, setSelectedSectionId] = useState('');
-
-    // ── Status dropdown ──────────────────────────────────────────────────────
     const [statusFilter, setStatusFilter] = useState('');
 
-    // ── Fetch & group sections on mount ─────────────────────────────────────
     useEffect(() => {
         const fetchSections = async () => {
             setSectionsLoading(true);
             try {
                 const res = await getAllSections();
                 if (res?.success && Array.isArray(res.data)) {
-                    // Group sections by className / classId
                     const map = new Map();
                     res.data.forEach((sec) => {
                         const key = sec.classId;
@@ -108,7 +101,6 @@ const Student = () => {
         };
     }, []);
 
-    // ── Fetch students ────────────────────────────────────────────────────────
     useEffect(() => {
         const fetchStudents = async () => {
             setLoading(true);
@@ -123,7 +115,6 @@ const Student = () => {
                 if (hasFilters) {
                     const filters = {
                         ...(debouncedSearch.trim() && { searchTerm: debouncedSearch.trim() }),
-                        // Pass sectionId — backend will also resolve classId from it
                         ...(selectedSectionId && { sectionId: Number(selectedSectionId) }),
                         ...(statusFilter && { status: statusFilter }),
                     };
@@ -176,14 +167,13 @@ const Student = () => {
         return colors[name?.charCodeAt(0) % colors.length || 0];
     };
 
-    // ── Pagination ────────────────────────────────────────────────────────────
     const renderPageButtons = () => {
         if (totalPages <= 1) return null;
-        const base = 'min-w-[32px] h-8 px-2 rounded text-sm transition-all font-medium';
+        const base = 'min-w-[28px] h-7 px-1.5 rounded text-xs transition-all font-medium';
         const active = 'bg-blue-500 text-white';
         const inactive = 'text-gray-600 hover:bg-gray-100';
         const dots = (key) => (
-            <span key={key} className="min-w-8 h-8 flex items-center justify-center text-gray-400 text-sm select-none">…</span>
+            <span key={key} className="min-w-[28px] h-7 flex items-center justify-center text-gray-400 text-xs select-none">…</span>
         );
         const btn = (num) => (
             <button key={num} onClick={() => setPage(num)} className={`${base} ${page === num ? active : inactive}`}>
@@ -204,23 +194,21 @@ const Student = () => {
         return items;
     };
 
-    const PrevBtn = ({ mobile = false }) => (
+    const PrevBtn = () => (
         <button
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page === 1 || loading || !!error}
-            className={`flex items-center justify-center rounded transition-all disabled:opacity-40 disabled:cursor-not-allowed
-                ${mobile ? 'w-8 h-8 bg-gray-100 hover:bg-gray-200' : 'px-2 py-1 hover:bg-gray-100 text-gray-600'}`}
+            className="flex items-center justify-center w-7 h-7 rounded hover:bg-gray-100 text-gray-600 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
         >
             <ChevronLeft className="w-4 h-4" />
         </button>
     );
 
-    const NextBtn = ({ mobile = false }) => (
+    const NextBtn = () => (
         <button
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             disabled={page === totalPages || loading || !!error}
-            className={`flex items-center justify-center rounded transition-all disabled:opacity-40 disabled:cursor-not-allowed
-                ${mobile ? 'w-8 h-8 bg-gray-100 hover:bg-gray-200' : 'px-2 py-1 hover:bg-gray-100 text-gray-600'}`}
+            className="flex items-center justify-center w-7 h-7 rounded hover:bg-gray-100 text-gray-600 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
         >
             <ChevronRight className="w-4 h-4" />
         </button>
@@ -236,414 +224,427 @@ const Student = () => {
         },
     ];
 
-    const tableHeadItems = ['Student Name', 'Mobile Number', 'Email', 'Class', 'Section', 'Status'];
-    const tdStyle = 'px-4 py-3 text-center text-gray-700 text-sm';
-
     const dropdownClass = `
         appearance-none cursor-pointer
-        pl-3 pr-8 py-2.5
+        pl-3 pr-7 py-2
         rounded-lg border border-gray-200 bg-gray-100
-        text-sm text-gray-600 font-normal
+        text-xs text-gray-600 font-normal
         focus:outline-none focus:ring-2 focus:ring-blue-300
         hover:border-gray-300 transition-all
         disabled:opacity-50 disabled:cursor-not-allowed
         w-full
     `;
 
+    /* ── Avatar helper (handles image error fallback) ── */
+    const AvatarCell = ({ student, size = 'md' }) => {
+        const [imgError, setImgError] = useState(false);
+        const dim = size === 'sm' ? 'w-7 h-7 text-xs' : 'w-9 h-9 text-sm';
+        return imgError || !student.image ? (
+            <div className={`${dim} rounded-full ${getAvatarColor(student.name)} flex items-center justify-center text-white font-semibold shrink-0`}>
+                {student.avatar}
+            </div>
+        ) : (
+            <img
+                src={student.image}
+                alt={student.name}
+                className={`${dim} rounded-full object-cover shrink-0`}
+                onError={() => setImgError(true)}
+            />
+        );
+    };
+
     return (
-        <div className="flex flex-col min-h-screen lg:h-screen lg:overflow-hidden bg-linear-to-b from-sky-50 to-sky-100">
-            <div className="flex flex-col flex-1 lg:overflow-hidden">
-                <div className="flex flex-col flex-1 lg:overflow-hidden p-3 sm:p-4 lg:p-4 gap-3 sm:gap-4">
+        <div className="flex flex-col min-h-screen lg:h-screen lg:overflow-hidden bg-gradient-to-b from-sky-50 to-sky-100">
+            <div className="flex flex-col flex-1 lg:overflow-hidden p-3 sm:p-4 gap-3">
 
-                    {/* Page Title */}
-                    <div>
-                        <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">
-                            <TooltipComponent message="Efficiently manage all student records, class assignments and account status." direction='right' color='nocolor'>
-                                Manage All Students
-                            </TooltipComponent>
-                        </h2>
-                    </div>
-
-                    {/* Cards */}
-                    <div className="flex flex-wrap gap-3 sm:gap-4 w-50">
-                        {loading
-                            ? cardsArray.map((_, i) => (
-                                <div
-                                    key={i}
-                                    className="flex items-center gap-4 bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4 w-48 sm:w-56 animate-pulse"
-                                >
-                                    <div className="w-11 h-11 rounded-xl bg-blue-50 shrink-0" />
-                                    <div className="flex flex-col gap-2 flex-1">
-                                        <div className="h-3 w-20 bg-gray-200 rounded-full" />
-                                        <div className="h-5 w-10 bg-gray-300 rounded-full" />
-                                    </div>
-                                </div>
-                            ))
-                            : cardsArray.map((card) => (
-                                <CardComponent
-                                    key={card.keyName}
-                                    IconName={card.IconName}
-                                    keyName={card.keyName.toUpperCase()}
-                                    val={card.val}
-                                    iconTxColor={card.iconTxColor}
-                                    iconBgColor={card.iconBgColor}
-                                />
-                            ))}
-                    </div>
-
-                    {/* ── Search + Filter + Add Bar ── */}
-                    <div className="bg-white flex flex-wrap items-center gap-2 sm:gap-3 px-3 sm:px-4 py-3 rounded-xl border border-gray-200 shrink-0">
-
-                        {/* Add Student Button */}
-                        <button
-                            onClick={() => navigate('/students/addStudents')}
-                            className="shrink-0 flex items-center justify-center gap-2 cursor-pointer
-                                       px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg font-medium text-xs sm:text-sm
-                                       bg-blue-600 hover:bg-blue-700 active:scale-[0.97]
-                                       text-white transition-all duration-150 whitespace-nowrap"
+                {/* ── Page Title ── */}
+                <div>
+                    <h2 className="text-xl sm:text-2xl font-bold text-gray-900">
+                        <TooltipComponent
+                            message="Efficiently manage all student records, class assignments and account status."
+                            direction="right"
+                            color="nocolor"
                         >
-                            <UserPlus className="w-4 h-4 sm:w-5 sm:h-5" />
-                            <span>Add New Student</span>
-                        </button>
+                            Manage All Students
+                        </TooltipComponent>
+                    </h2>
+                </div>
 
-                        {/* ── Search Input ── */}
-                        <div className="flex-1 min-w-35 flex items-center gap-2 border border-gray-200 rounded-lg bg-gray-100 px-2 py-2 sm:py-2.5 focus-within:shadow-sm focus-within:shadow-blue-200 transition-all">
-                            <SearchIcon className="w-4 h-4 text-gray-500 shrink-0" />
-                            <input
-                                value={searchInput}
-                                onChange={handleSearchChange}
-                                placeholder="Search by name, email or admission no..."
-                                className="text-xs sm:text-sm font-normal focus:outline-none text-gray-600 w-full bg-transparent placeholder:text-gray-400"
+                {/* ── Stat Card ── */}
+                <div className="flex flex-wrap gap-3 w-fit">
+                    {loading
+                        ? cardsArray.map((_, i) => (
+                            <div key={i} className="flex items-center gap-4 bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4 w-48 animate-pulse">
+                                <div className="w-10 h-10 rounded-xl bg-blue-50 shrink-0" />
+                                <div className="flex flex-col gap-2 flex-1">
+                                    <div className="h-3 w-20 bg-gray-200 rounded-full" />
+                                    <div className="h-5 w-10 bg-gray-300 rounded-full" />
+                                </div>
+                            </div>
+                        ))
+                        : cardsArray.map((card) => (
+                            <CardComponent
+                                key={card.keyName}
+                                IconName={card.IconName}
+                                keyName={card.keyName.toUpperCase()}
+                                val={card.val}
+                                iconTxColor={card.iconTxColor}
+                                iconBgColor={card.iconBgColor}
                             />
-                            {searchInput && searchInput !== debouncedSearch && (
-                                <div className="w-3.5 h-3.5 border-2 border-blue-400 border-t-transparent rounded-full animate-spin shrink-0" />
-                            )}
-                            {searchInput && (
-                                <button
-                                    onClick={handleClearSearch}
-                                    className="w-4 h-4 rounded-full bg-gray-300 hover:bg-gray-400 flex items-center justify-center shrink-0 text-gray-600 text-xs font-bold transition-colors"
-                                    aria-label="Clear search"
-                                >
-                                    ×
-                                </button>
-                            )}
-                        </div>
+                        ))}
+                </div>
 
-                        {/* ── Class → Section Dropdown (combined) ── */}
-                        <div className="relative shrink-0 w-full sm:w-auto">
-                            <select
-                                value={selectedSectionId}
-                                onChange={handleSectionChange}
-                                disabled={sectionsLoading}
-                                className={dropdownClass}
+                {/* ── Toolbar: Add + Search + Filters ── */}
+                <div className="bg-white flex flex-wrap items-center gap-2 px-3 py-2.5 rounded-xl border border-gray-200 shrink-0">
+
+                    {/* Add button */}
+                    <button
+                        onClick={() => navigate('/students/addStudents')}
+                        className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-lg font-medium text-xs
+                                   bg-blue-600 hover:bg-blue-700 active:scale-[0.97] text-white transition-all whitespace-nowrap"
+                    >
+                        <UserPlus className="w-4 h-4" />
+                        Add New Student
+                    </button>
+
+                    {/* Search — grows */}
+                    <div className="flex-1 min-w-[140px] flex items-center gap-2 border border-gray-200 rounded-lg bg-gray-100 px-2 py-2
+                                    focus-within:ring-2 focus-within:ring-blue-200 transition-all">
+                        <SearchIcon className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                        <input
+                            value={searchInput}
+                            onChange={handleSearchChange}
+                            placeholder="Search name, email or admission no…"
+                            className="text-xs focus:outline-none text-gray-600 w-full bg-transparent placeholder:text-gray-400"
+                        />
+                        {searchInput && searchInput !== debouncedSearch && (
+                            <div className="w-3 h-3 border-2 border-blue-400 border-t-transparent rounded-full animate-spin shrink-0" />
+                        )}
+                        {searchInput && (
+                            <button
+                                onClick={handleClearSearch}
+                                className="w-4 h-4 rounded-full bg-gray-300 hover:bg-gray-400 flex items-center justify-center shrink-0 text-gray-600 text-xs font-bold"
                             >
-                                <option value="">All Classes</option>
-                                {groupedSections.map((grp) => (
-                                    <optgroup key={grp.classId} label={grp.className}>
-                                        {grp.sections.map((sec) => (
-                                            <option key={sec.id} value={sec.id}>
-                                                {grp.className} - Section {sec.name}
-                                            </option>
-                                        ))}
-                                    </optgroup>
-                                ))}
-                            </select>
-                            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-                        </div>
-
-                        {/* ── Status Dropdown ── */}
-                        <div className="relative shrink-0 w-full sm:w-auto">
-                            <select
-                                value={statusFilter}
-                                onChange={handleStatusChange}
-                                className={dropdownClass}
-                            >
-                                <option value="">All Status</option>
-                                <option value="ACTIVE">Active</option>
-                                <option value="INACTIVE">Inactive</option>
-                            </select>
-                            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-                        </div>
-                    </div>
-
-                    {/* ── MOBILE / TABLET CARDS ── */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 lg:hidden overflow-y-auto pb-2">
-                        {loading ? (
-                            <div className="flex items-center justify-center py-8 col-span-full">
-                                <div className="text-center">
-                                    <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-                                    <p className="text-gray-600 font-medium text-sm">Loading students...</p>
-                                </div>
-                            </div>
-                        ) : error ? (
-                            <div className="text-center py-8 col-span-full">
-                                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <UserRoundXIcon className="w-6 h-6 text-red-600" />
-                                </div>
-                                <h3 className="text-lg font-bold text-gray-900 mb-2">Error Loading Students</h3>
-                                <p className="text-gray-600 mb-4 text-sm">{error}</p>
-                                <button onClick={() => window.location.reload()} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">
-                                    Retry
-                                </button>
-                            </div>
-                        ) : noUserFound ? (
-                            <div className="text-center py-8 col-span-full">
-                                <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <UserSearch className="w-6 h-6 text-blue-600" />
-                                </div>
-                                <h3 className="text-lg font-bold text-gray-900 mb-2">No Students Found</h3>
-                                <p className="text-gray-600 mb-4 text-sm">There are no students to display.</p>
-                            </div>
-                        ) : (
-                            students.map((student) => (
-                                <div key={student.id} className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
-                                    <div className="flex items-center gap-3 mb-3">
-                                        {student.image ? (
-                                            <img 
-                                                src={student.image} 
-                                                alt={student.name}
-                                                className="w-9 h-9 rounded-full object-cover shrink-0"
-                                                onError={(e) => {
-                                                    e.target.style.display = 'none';
-                                                    e.target.nextElementSibling.style.display = 'flex';
-                                                }}
-                                            />
-                                        ) : null}
-                                        <div className={`w-9 h-9 rounded-full ${getAvatarColor(student.name)} flex items-center justify-center text-white text-sm font-semibold shrink-0 ${student.image ? 'hidden' : ''}`}
-                                             style={student.image ? { display: 'none' } : {}}>
-                                            {student.avatar}
-                                        </div>
-                                        <div className="flex flex-col min-w-0">
-                                            <span className="font-medium text-gray-900 text-sm truncate">{student.name}</span>
-                                            <span className="text-xs text-gray-500 truncate">{student.admissionNumber}</span>
-                                        </div>
-                                    </div>
-                                    <div className="space-y-2 text-sm">
-                                        <p className="flex items-center gap-2">
-                                            <span className="font-medium text-gray-500 w-16 shrink-0 text-xs">Contact</span>
-                                            <span className="text-gray-800 text-xs">{student.mobile}</span>
-                                        </p>
-                                        <p className="flex items-center gap-2">
-                                            <span className="font-medium text-gray-500 w-16 shrink-0 text-xs">Class</span>
-                                            {student.className
-                                                ? <span className="inline-flex items-center px-2 py-0.5 rounded bg-blue-50 text-blue-700 text-xs font-medium">{student.className}</span>
-                                                : <span className="text-gray-400 text-xs">N/A</span>
-                                            }
-                                        </p>
-                                        <p className="flex items-center gap-2">
-                                            <span className="font-medium text-gray-500 w-16 shrink-0 text-xs">Section</span>
-                                            {student.sectionName
-                                                ? <span className="inline-flex items-center px-2 py-0.5 rounded bg-purple-50 text-purple-700 text-xs font-medium">{student.sectionName}</span>
-                                                : <span className="text-gray-400 text-xs">N/A</span>
-                                            }
-                                        </p>
-                                        <p className="flex items-center gap-2">
-                                            <span className="font-medium text-gray-500 w-16 shrink-0 text-xs">Status</span>
-                                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${student.status === 'ACTIVE' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
-                                                <span className={`w-1.5 h-1.5 rounded-full ${student.status === 'ACTIVE' ? 'bg-green-500' : 'bg-red-500'}`} />
-                                                {student.status}
-                                            </span>
-                                        </p>
-                                        <div className="flex items-center gap-2 pt-1">
-                                            <button
-                                                onClick={() => navigate(`/students/editStudent/${student.id}`)}
-                                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
-                                            >
-                                                <UserPenIcon className="w-3.5 h-3.5" />
-                                                Edit
-                                            </button>
-                                            <button
-                                                onClick={() => navigate(`/students/${student.id}`)}
-                                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-orange-50 text-orange-600 hover:bg-orange-100 transition-colors"
-                                            >
-                                                <Info className="w-3.5 h-3.5" />
-                                                View
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))
+                                ×
+                            </button>
                         )}
                     </div>
 
-                    {/* ── DESKTOP TABLE ── */}
-                    <div className="hidden lg:flex lg:flex-col flex-1 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden min-h-0">
-                        <div className="flex-1 overflow-auto">
-                            <table className="w-full min-w-175">
-                                <thead className="border-b border-gray-100 sticky top-0 z-10">
-                                    <tr>
-                                        {tableHeadItems.map((h) => (
-                                            <th key={h} className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider bg-gray-50">
-                                                {h}
-                                            </th>
-                                        ))}
-                                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider bg-gray-50">
-                                            Actions
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody className="bg-white divide-y divide-gray-100">
-                                    {loading ? (
-                                        <ListLoader />
-                                    ) : error ? (
-                                        <tr>
-                                            <td colSpan="7" className="px-6 py-8 text-center">
-                                                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                                    <UserRoundXIcon className="w-6 h-6 text-red-600" />
-                                                </div>
-                                                <h3 className="text-lg font-bold text-gray-900 mb-2">Error Loading Students</h3>
-                                                <p className="text-gray-600 mb-4">{error}</p>
-                                                <button onClick={() => window.location.reload()} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                                                    Retry
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ) : noUserFound ? (
-                                        <tr>
-                                            <td colSpan="7" className="px-6 py-12 text-center">
-                                                <div className="w-14 h-14 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-3">
-                                                    <UserSearch className="w-7 h-7 text-blue-500" />
-                                                </div>
-                                                <h3 className="text-sm font-semibold text-gray-700 mb-1">No Students Found</h3>
-                                                <p className="text-xs text-gray-400">Try a different search or add a new student.</p>
-                                            </td>
-                                        </tr>
-                                    ) : (
-                                        students.map((student) => (
-                                            <tr key={student.id} className="hover:bg-gray-50 transition-colors">
-                                                <td className="px-4 py-3 text-gray-700 text-sm">
-                                                    <div className="flex items-center gap-3">
-                                                        {student.image ? (
-                                                            <img 
-                                                                src={student.image} 
-                                                                alt={student.name}
-                                                                className="w-9 h-9 rounded-full object-cover shrink-0"
-                                                                onError={(e) => {
-                                                                    e.target.style.display = 'none';
-                                                                    e.target.nextElementSibling.style.display = 'flex';
-                                                                }}
-                                                            />
-                                                        ) : null}
-                                                        <div className={`w-9 h-9 rounded-full ${getAvatarColor(student.name)} flex items-center justify-center text-white text-sm font-semibold shrink-0 ${student.image ? 'hidden' : ''}`}
-                                                             style={student.image ? { display: 'none' } : {}}>
-                                                            {student.avatar}
-                                                        </div>
-                                                        <div className="flex flex-col min-w-0">
-                                                            <span className="font-medium text-gray-900 truncate">{student.name}</span>
-                                                            <span className="text-xs text-gray-500 truncate">{student.admissionNumber}</span>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                <td className={`${tdStyle} text-center`}>{student.mobile}</td>
-                                                <td className={`${tdStyle} text-center max-w-45 truncate`}>{student.email}</td>
-                                                <td className={tdStyle}>
-                                                    {student.className
-                                                        ? <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-blue-50 text-blue-700 text-xs font-medium">{student.className}</span>
-                                                        : <span className="text-gray-400 text-xs">—</span>
-                                                    }
-                                                </td>
-                                                <td className={tdStyle}>
-                                                    {student.sectionName
-                                                        ? <span className="inline-flex items-center justify-center px-2.5 py-1 rounded-md bg-purple-50 text-purple-700 text-xs font-medium">{student.sectionName}</span>
-                                                        : <span className="text-gray-400 text-xs">—</span>
-                                                    }
-                                                </td>
-                                                <td className={tdStyle}>
-                                                    <span className={`inline-flex items-center justify-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${student.status === 'ACTIVE' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
-                                                        <span className={`w-1.5 h-1.5 rounded-full ${student.status === 'ACTIVE' ? 'bg-green-500' : 'bg-red-500'}`} />
-                                                        {student.status}
-                                                    </span>
-                                                </td>
-                                                <td className="px-4 py-3 text-center">
-                                                    <div className="flex items-center justify-center gap-2">
-                                                        <button
-                                                            onClick={() => navigate(`/students/editStudent/${student.id}`)}
-                                                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
-                                                        >
-                                                            <UserPenIcon className="w-3.5 h-3.5" />
-                                                            Edit
-                                                        </button>
-                                                        <button
-                                                            onClick={() => navigate(`/students/${student.id}`)}
-                                                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-orange-50 text-orange-600 hover:bg-orange-100 transition-colors"
-                                                        >
-                                                            <Info className="w-3.5 h-3.5" />
-                                                            View
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-
-                        {/* Desktop Pagination */}
-                        <div className="shrink-0 px-4 sm:px-6 py-4 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-3 bg-white">
-                            <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4">
-                                <span className="text-sm text-gray-500">
-                                    Showing{' '}
-                                    <span className="font-medium text-gray-700">{totalElements === 0 ? 0 : (page - 1) * rowsPerPage + 1}</span>
-                                    {' '}to{' '}
-                                    <span className="font-medium text-gray-700">{Math.min(page * rowsPerPage, totalElements)}</span>
-                                    {' '}of{' '}
-                                    <span className="font-medium text-gray-700">{totalElements}</span>
-                                </span>
-                                <div className="flex items-center gap-2">
-                                    <span className="text-sm text-gray-500">Rows per page:</span>
-                                    <select
-                                        value={rowsPerPage}
-                                        onChange={(e) => { setRowsPerPage(Number(e.target.value)); setPage(1); }}
-                                        className="px-2.5 py-1 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
-                                    >
-                                        <option value={10}>10</option>
-                                        <option value={25}>25</option>
-                                        <option value={50}>50</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-1">
-                                <PrevBtn />
-                                {renderPageButtons()}
-                                <NextBtn />
-                            </div>
-                        </div>
+                    {/* Class/Section dropdown */}
+                    <div className="relative shrink-0 w-[calc(50%-4px)] sm:w-36 lg:w-40">
+                        <select
+                            value={selectedSectionId}
+                            onChange={handleSectionChange}
+                            disabled={sectionsLoading}
+                            className={dropdownClass}
+                        >
+                            <option value="">All Classes</option>
+                            {groupedSections.map((grp) => (
+                                <optgroup key={grp.classId} label={grp.className}>
+                                    {grp.sections.map((sec) => (
+                                        <option key={sec.id} value={sec.id}>
+                                            {grp.className} – {sec.name}
+                                        </option>
+                                    ))}
+                                </optgroup>
+                            ))}
+                        </select>
+                        <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400" />
                     </div>
 
-                    {/* Mobile Pagination */}
-                    <div className="lg:hidden bg-white rounded-xl border border-gray-200 p-4 shrink-0">
-                        <div className="flex flex-col gap-3">
-                            <div className="text-center text-sm text-gray-500">
+                    {/* Status dropdown */}
+                    <div className="relative shrink-0 w-[calc(50%-4px)] sm:w-28 lg:w-32">
+                        <select
+                            value={statusFilter}
+                            onChange={handleStatusChange}
+                            className={dropdownClass}
+                        >
+                            <option value="">All Status</option>
+                            <option value="ACTIVE">Active</option>
+                            <option value="INACTIVE">Inactive</option>
+                        </select>
+                        <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400" />
+                    </div>
+                </div>
+
+                {/* ══════════════════════════════════════════
+                    MOBILE / TABLET CARDS  (hidden on lg+)
+                ══════════════════════════════════════════ */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:hidden overflow-y-auto pb-2">
+                    {loading ? (
+                        <div className="col-span-full flex flex-col items-center justify-center py-10 gap-3">
+                            <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                            <p className="text-gray-500 text-sm">Loading students…</p>
+                        </div>
+                    ) : error ? (
+                        <div className="col-span-full text-center py-10">
+                            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                                <UserRoundXIcon className="w-6 h-6 text-red-600" />
+                            </div>
+                            <p className="text-gray-900 font-semibold mb-1">Error loading students</p>
+                            <p className="text-gray-500 text-sm mb-4">{error}</p>
+                            <button onClick={() => window.location.reload()} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm">Retry</button>
+                        </div>
+                    ) : noUserFound ? (
+                        <div className="col-span-full text-center py-10">
+                            <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                                <UserSearch className="w-6 h-6 text-blue-500" />
+                            </div>
+                            <p className="text-gray-700 font-semibold">No Students Found</p>
+                            <p className="text-gray-400 text-sm mt-1">Try a different search or add a new student.</p>
+                        </div>
+                    ) : (
+                        students.map((student) => (
+                            <div key={student.id} className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+                                <div className="flex items-center gap-3 mb-3">
+                                    <AvatarCell student={student} />
+                                    <div className="min-w-0">
+                                        <p className="font-semibold text-gray-900 text-sm truncate">{student.name}</p>
+                                        <p className="text-xs text-gray-400 truncate">{student.admissionNumber}</p>
+                                    </div>
+                                </div>
+                                <div className="space-y-1.5">
+                                    {[
+                                        { label: 'Contact', value: student.mobile },
+                                        { label: 'Email', value: student.email },
+                                    ].map(({ label, value }) => (
+                                        <div key={label} className="flex items-center gap-2">
+                                            <span className="text-xs text-gray-400 w-14 shrink-0">{label}</span>
+                                            <span className="text-xs text-gray-700 truncate">{value}</span>
+                                        </div>
+                                    ))}
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs text-gray-400 w-14 shrink-0">Class</span>
+                                        {student.className
+                                            ? <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-700 text-xs font-medium">{student.className}</span>
+                                            : <span className="text-gray-400 text-xs">N/A</span>}
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs text-gray-400 w-14 shrink-0">Section</span>
+                                        {student.sectionName
+                                            ? <span className="px-2 py-0.5 rounded bg-purple-50 text-purple-700 text-xs font-medium">{student.sectionName}</span>
+                                            : <span className="text-gray-400 text-xs">N/A</span>}
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs text-gray-400 w-14 shrink-0">Status</span>
+                                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium
+                                            ${student.status === 'ACTIVE' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                                            <span className={`w-1.5 h-1.5 rounded-full ${student.status === 'ACTIVE' ? 'bg-green-500' : 'bg-red-500'}`} />
+                                            {student.status}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div className="flex gap-2 mt-3 pt-3 border-t border-gray-100">
+                                    <button
+                                        onClick={() => navigate(`/students/editStudent/${student.id}`)}
+                                        className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium bg-blue-50 text-blue-600 hover:bg-blue-100"
+                                    >
+                                        <UserPenIcon className="w-3.5 h-3.5" /> Edit
+                                    </button>
+                                    <button
+                                        onClick={() => navigate(`/students/${student.id}`)}
+                                        className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium bg-orange-50 text-orange-600 hover:bg-orange-100"
+                                    >
+                                        <Info className="w-3.5 h-3.5" /> View
+                                    </button>
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
+
+                {/* ══════════════════════════════════════════
+                    DESKTOP TABLE  (lg+)
+                ══════════════════════════════════════════ */}
+                <div className="hidden lg:flex lg:flex-col flex-1 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden min-h-0">
+
+                    {/* scrollable table area */}
+                    <div className="flex-1 overflow-auto">
+                        <table className="w-full table-fixed text-xs">
+                            {/*
+                                Columns: Name(24%) | Mobile(13%) | Email(20%) | Class(10%) | Section(9%) | Status(10%) | Actions(14%)
+                                Total = 100%. Adjust freely — just keep sum = 100.
+                            */}
+                            <colgroup>
+                                <col style={{ width: '24%' }} />
+                                <col style={{ width: '13%' }} />
+                                <col style={{ width: '20%' }} />
+                                <col style={{ width: '10%' }} />
+                                <col style={{ width: '9%' }} />
+                                <col style={{ width: '10%' }} />
+                                <col style={{ width: '14%' }} />
+                            </colgroup>
+
+                            <thead className="sticky top-0 z-10 bg-gray-50 border-b border-gray-100">
+                                <tr>
+                                    {['Student Name', 'Mobile Number', 'Email', 'Class', 'Section', 'Status', 'Actions'].map((h) => (
+                                        <th key={h} className="px-3 py-2.5 text-center text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
+                                            {h}
+                                        </th>
+                                    ))}
+                                </tr>
+                            </thead>
+
+                            <tbody className="bg-white divide-y divide-gray-100">
+                                {loading ? (
+                                    <ListLoader />
+                                ) : error ? (
+                                    <tr>
+                                        <td colSpan={7} className="py-12 text-center">
+                                            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                                                <UserRoundXIcon className="w-6 h-6 text-red-600" />
+                                            </div>
+                                            <p className="font-semibold text-gray-900 mb-1">Error loading students</p>
+                                            <p className="text-gray-500 text-sm mb-4">{error}</p>
+                                            <button onClick={() => window.location.reload()} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm">Retry</button>
+                                        </td>
+                                    </tr>
+                                ) : noUserFound ? (
+                                    <tr>
+                                        <td colSpan={7} className="py-12 text-center">
+                                            <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-3">
+                                                <UserSearch className="w-6 h-6 text-blue-500" />
+                                            </div>
+                                            <p className="font-semibold text-gray-700 text-sm">No Students Found</p>
+                                            <p className="text-gray-400 text-xs mt-1">Try a different search or add a new student.</p>
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    students.map((student) => (
+                                        <tr key={student.id} className="hover:bg-gray-50 transition-colors">
+
+                                            {/* Name + Avatar */}
+                                            <td className="px-3 py-2.5">
+                                                <div className="flex items-center gap-2 min-w-0">
+                                                    <AvatarCell student={student} size="sm" />
+                                                    <div className="min-w-0">
+                                                        <p className="font-medium text-gray-900 truncate">{student.name}</p>
+                                                        <p className="text-[10px] text-gray-400 truncate">{student.admissionNumber}</p>
+                                                    </div>
+                                                </div>
+                                            </td>
+
+                                            {/* Mobile */}
+                                            <td className="px-3 py-2.5 text-center text-gray-600">{student.mobile}</td>
+
+                                            {/* Email */}
+                                            <td className="px-3 py-2.5 text-center text-gray-600 max-w-0">
+                                                <span className="block truncate">{student.email}</span>
+                                            </td>
+
+                                            {/* Class */}
+                                            <td className="px-2 py-2.5 text-center">
+                                                {student.className
+                                                    ? <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 font-medium text-[10px] leading-tight text-center">{student.className}</span>
+                                                    : <span className="text-gray-300">—</span>}
+                                            </td>
+
+                                            {/* Section */}
+                                            <td className="px-2 py-2.5 text-center">
+                                                {student.sectionName
+                                                    ? <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 font-medium text-[10px]">{student.sectionName}</span>
+                                                    : <span className="text-gray-300">—</span>}
+                                            </td>
+
+                                            {/* Status */}
+                                            <td className="px-2 py-2.5 text-center">
+                                                <span className={`inline-flex items-center justify-center gap-1 px-2 py-0.5 rounded-full font-medium text-[10px]
+                                                    ${student.status === 'ACTIVE' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                                                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${student.status === 'ACTIVE' ? 'bg-green-500' : 'bg-red-500'}`} />
+                                                    {student.status}
+                                                </span>
+                                            </td>
+
+                                            {/* Actions */}
+                                            <td className="px-2 py-2.5 text-center">
+                                                <div className="flex items-center justify-center gap-1">
+                                                    <button
+                                                        onClick={() => navigate(`/students/editStudent/${student.id}`)}
+                                                        className="flex items-center gap-1 px-2 py-1.5 rounded-lg font-medium bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors whitespace-nowrap text-[10px]"
+                                                    >
+                                                        <UserPenIcon className="w-3 h-3" />
+                                                        Edit
+                                                    </button>
+                                                    <button
+                                                        onClick={() => navigate(`/students/${student.id}`)}
+                                                        className="flex items-center gap-1 px-2 py-1.5 rounded-lg font-medium bg-orange-50 text-orange-600 hover:bg-orange-100 transition-colors whitespace-nowrap text-[10px]"
+                                                    >
+                                                        <Info className="w-3 h-3" />
+                                                        View
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {/* ── Pagination footer ── */}
+                    <div className="shrink-0 px-4 py-2.5 border-t border-gray-100 bg-white flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-3">
+                            <span className="text-xs text-gray-500">
                                 Showing{' '}
                                 <span className="font-medium text-gray-700">{totalElements === 0 ? 0 : (page - 1) * rowsPerPage + 1}</span>
-                                {' '}–{' '}
+                                {' '}to{' '}
                                 <span className="font-medium text-gray-700">{Math.min(page * rowsPerPage, totalElements)}</span>
                                 {' '}of{' '}
                                 <span className="font-medium text-gray-700">{totalElements}</span>
-                            </div>
-                            <div className="flex items-center justify-center gap-2">
-                                <span className="text-sm text-gray-500">Rows:</span>
+                            </span>
+                            <div className="flex items-center gap-1.5">
+                                <span className="text-xs text-gray-500">Rows per page:</span>
                                 <select
                                     value={rowsPerPage}
                                     onChange={(e) => { setRowsPerPage(Number(e.target.value)); setPage(1); }}
-                                    className="px-2.5 py-1 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+                                    className="px-2 py-1 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
                                 >
                                     <option value={10}>10</option>
                                     <option value={25}>25</option>
                                     <option value={50}>50</option>
                                 </select>
                             </div>
-                            <div className="flex items-center justify-center gap-1 flex-wrap">
-                                <PrevBtn mobile />
-                                {renderPageButtons()}
-                                <NextBtn mobile />
-                            </div>
-                            <div className="text-center text-xs text-gray-400">Page {page} of {totalPages}</div>
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <PrevBtn />
+                            {renderPageButtons()}
+                            <NextBtn />
                         </div>
                     </div>
-
                 </div>
+
+                {/* ── Mobile pagination ── */}
+                <div className="lg:hidden bg-white rounded-xl border border-gray-200 p-3 shrink-0">
+                    <div className="flex flex-col gap-2">
+                        <div className="text-center text-xs text-gray-500">
+                            Showing{' '}
+                            <span className="font-medium text-gray-700">{totalElements === 0 ? 0 : (page - 1) * rowsPerPage + 1}</span>
+                            {' '}–{' '}
+                            <span className="font-medium text-gray-700">{Math.min(page * rowsPerPage, totalElements)}</span>
+                            {' '}of{' '}
+                            <span className="font-medium text-gray-700">{totalElements}</span>
+                        </div>
+                        <div className="flex items-center justify-center gap-2">
+                            <span className="text-xs text-gray-500">Rows:</span>
+                            <select
+                                value={rowsPerPage}
+                                onChange={(e) => { setRowsPerPage(Number(e.target.value)); setPage(1); }}
+                                className="px-2 py-1 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+                            >
+                                <option value={10}>10</option>
+                                <option value={25}>25</option>
+                                <option value={50}>50</option>
+                            </select>
+                        </div>
+                        <div className="flex items-center justify-center gap-1 flex-wrap">
+                            <PrevBtn />
+                            {renderPageButtons()}
+                            <NextBtn />
+                        </div>
+                        <div className="text-center text-xs text-gray-400">Page {page} of {totalPages}</div>
+                    </div>
+                </div>
+
             </div>
         </div>
     );
