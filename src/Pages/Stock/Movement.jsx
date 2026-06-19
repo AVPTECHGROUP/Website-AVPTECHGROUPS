@@ -8,14 +8,10 @@ import {
   Search,
   ChevronLeft,
   ChevronRight,
-  CalendarDays,
   Store,
-  User,
-  Tag,
-  ArrowRightLeft,
-  ShoppingCart,
   Inbox,
-  Loader2,
+  ArrowRight, // Changed from ArrowRightLeft to ArrowRight for clear unidirectionality
+  ShoppingCart,
 } from "lucide-react";
 import CardComponent from "../../Components/CommonComp/CardComponent";
 import CardLoader from "../../Components/CommonComp/CardLoader";
@@ -83,7 +79,7 @@ const exportToCSV = (movements) => {
 
 // ── Store Cell ────────────────────────────────────────────────────────────────
 const StoreCell = ({ storeName, destStore }) => {
-  if (!destStore) {
+  if (!destStore || storeName === destStore) {
     return (
       <span className="text-sm text-gray-700 font-medium block truncate" title={storeName}>
         {storeName}
@@ -91,15 +87,17 @@ const StoreCell = ({ storeName, destStore }) => {
     );
   }
   return (
-    <div className="flex flex-col gap-0.5 min-w-0">
-      <span className="text-xs font-semibold text-gray-700 truncate leading-tight" title={storeName}>
-        {storeName}
-      </span>
-      <div className="flex items-center gap-1 min-w-0">
-        <ArrowRightLeft className="w-3 h-3 text-blue-400 shrink-0" />
-        <span className="text-xs font-semibold text-blue-600 truncate leading-tight" title={destStore}>
-          {destStore}
-        </span>
+    <div className="flex flex-col gap-1 my-1 max-w-full">
+      <div className="flex items-center gap-1.5 text-xs">
+        <span className="px-1 py-0.5 rounded bg-gray-100 text-gray-500 font-bold text-[10px] uppercase tracking-wide shrink-0">From</span>
+        <span className="font-medium text-gray-700 truncate" title={storeName}>{storeName}</span>
+      </div>
+      <div className="flex items-center pl-3">
+        <ArrowRight className="w-3.5 h-3.5 text-blue-500 rotate-90 xl:rotate-0" />
+      </div>
+      <div className="flex items-center gap-1.5 text-xs">
+        <span className="px-1 py-0.5 rounded bg-blue-50 text-blue-600 font-bold text-[10px] uppercase tracking-wide shrink-0">To</span>
+        <span className="font-semibold text-blue-600 truncate" title={destStore}>{destStore}</span>
       </div>
     </div>
   );
@@ -130,16 +128,13 @@ const MobileCard = ({ m, idx, page, rowsPerPage }) => {
           <span className="ml-2 text-gray-700">{m.date}</span>
           <span className="ml-1 text-gray-400 text-xs">{m.time}</span>
         </p>
-        <p>
-          <span className="font-medium text-gray-500">Store:</span>
-          <span className="ml-2 text-gray-700">{m.storeName}</span>
-          {m.destStore && (
-            <span className="ml-1 text-blue-600 text-xs flex items-center gap-1">
-              <ArrowRightLeft className="w-3 h-3" />{m.destStore}
-            </span>
-          )}
-        </p>
-        <div className="flex items-center gap-4">
+        <div className="flex flex-col gap-0.5">
+          <span className="font-medium text-gray-500">Store Context:</span>
+          <div className="mt-1 pl-2 border-l-2 border-gray-200">
+            <StoreCell storeName={m.storeName} destStore={m.destStore} />
+          </div>
+        </div>
+        <div className="flex items-center gap-4 pt-1">
           <p>
             <span className="font-medium text-gray-500">Qty:</span>
             <span className={`ml-2 font-bold ${qtyColor[m.type] ?? "text-gray-700"}`}>
@@ -291,7 +286,7 @@ export default function Movement() {
   const tdStyle = "px-3 py-3 text-left text-gray-700 text-sm";
 
   return (
-    <div className="min-h-screen bg-linear-to-b from-sky-50 to-sky-100">
+    <div className="min-h-screen bg-gradient-to-b from-sky-50 to-sky-100">
       <div className="p-2 sm:p-5 lg:p-4">
 
         {/* Heading */}
@@ -487,9 +482,9 @@ export default function Movement() {
                 <thead className="border-b border-gray-200">
                   <tr>
                     <th className="px-3 py-3 text-left   text-xs font-semibold text-gray-500 uppercase tracking-wider sticky top-0 bg-gray-50 z-10">Date & Time</th>
-                    <th className="px-3 py-3 text-center   text-xs font-semibold text-gray-500 uppercase tracking-wider sticky top-0 bg-gray-50 z-10">Item</th>
+                    <th className="px-3 py-3 text-left   text-xs font-semibold text-gray-500 uppercase tracking-wider sticky top-0 bg-gray-50 z-10">Item</th>
                     <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider sticky top-0 bg-gray-50 z-10">Type</th>
-                    <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider sticky top-0 bg-gray-50 z-10">Store</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider sticky top-0 bg-gray-50 z-10">Store Log</th>
                     <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider sticky top-0 bg-gray-50 z-10">Qty</th>
                     <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider sticky top-0 bg-gray-50 z-10 whitespace-nowrap">Before → After</th>
                     <th className="px-3 py-3 text-left   text-xs font-semibold text-gray-500 uppercase tracking-wider sticky top-0 bg-gray-50 z-10">Reference</th>
@@ -522,15 +517,15 @@ export default function Movement() {
                               </span>
                             </div>
                           </td>
-                          <td className={`text-center max-w-45 overflow-hidden`}>
+                          <td className="px-4 py-3 text-left max-w-56 overflow-hidden">
                             <StoreCell storeName={m.storeName} destStore={m.destStore} />
                           </td>
-                          <td className={`text-center`}>
+                          <td className={`${tdStyle} text-center`}>
                             <span className={`text-sm font-bold whitespace-nowrap ${qtyColor[m.type] ?? "text-gray-700"}`}>
                               {qtyPrefix[m.type] ?? ""}{m.qty}
                             </span>
                           </td>
-                          <td className={`text-center`}>
+                          <td className={`${tdStyle} text-center`}>
                             <span className="text-sm text-gray-600 text-center whitespace-nowrap">
                               {m.before} → {m.after}
                             </span>
@@ -538,7 +533,7 @@ export default function Movement() {
                           <td className={`${tdStyle} max-w-30 overflow-hidden`}>
                             <span className="text-xs text-gray-500 truncate block" title={m.ref}>{m.ref}</span>
                           </td>
-                          <td className={`text-center max-w-30.5 overflow-hidden`}>
+                          <td className={`${tdStyle} text-center max-w-30.5 overflow-hidden`}>
                             <span className="text-xs text-gray-600 block" title={m.reason}>{m.reason}</span>
                           </td>
                         </tr>
