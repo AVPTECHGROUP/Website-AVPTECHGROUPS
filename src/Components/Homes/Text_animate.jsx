@@ -47,7 +47,7 @@ const Text_animate = () => {
     return (
         <div className="flex items-center gap-2 mt-3 h-8">
             <CurrentIcon size={20} className="text-white/80 shrink-0" />
-            <p className="font-mono text-xl font-semibold flex gap-1.5 flex-wrap text-white/90 drop-shadow-[0_2px_10px_rgba(255,255,255,0.25)]">
+            <p className="font-mono text-16px font-semibold flex gap-1.5 flex-wrap text-white/90 drop-shadow-[0_2px_10px_rgba(255,255,255,0.25)]">
                 {words.map((word, i) => (
                     <span
                         key={i}
