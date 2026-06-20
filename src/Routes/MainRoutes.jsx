@@ -105,6 +105,7 @@ const SCHEDULE_ROLES = ['GLOBAL_ADMIN', 'SUPER_ADMIN', 'ADMIN'];
 import LandingLayout from "../Pages/SchoolSpineWeb/pages/LandingLayout";
 import Terms_Of_Service from '../Pages/SchoolSpineWeb/pages/Terms';
 import Cookie_Policy from '../Pages/SchoolSpineWeb/pages/CookiePolicy';
+import FaqListing from '../Components/Homes/Faq/FaqLisitng';
 const SCHOOL_PICKER_ROLES = ['SUPER_ADMIN', 'GLOBAL_ADMIN'];
 
 // ─── Smart root redirect based on role ────────────────────────────────────────
@@ -132,6 +133,7 @@ const MainRoutes = () => {
       <Route path="/privacy-policy" element={isTokenExist ? <RootRedirect /> : <LandingLayout><PrivacyPolicy /></LandingLayout>} />
       <Route path="/terms" element={isTokenExist ? <RootRedirect /> : <LandingLayout><Terms_Of_Service /></LandingLayout>} />
       <Route path="/cookies" element={isTokenExist ? <RootRedirect /> : <LandingLayout><Cookie_Policy /></LandingLayout>} />
+      <Route path="/faqs" element={isTokenExist ? <RootRedirect /> : <LandingLayout><FaqListing /></LandingLayout>} />
       {/* PUBLIC */}
       {/* Redirect logged-in users away from login */}
       <Route path="/login" element={isTokenExist ? <RootRedirect /> : <Login />} />
