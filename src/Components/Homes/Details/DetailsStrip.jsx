@@ -55,36 +55,37 @@ const DetailsStrip = () => {
     return (
         <div
             ref={stripRef}
-            className="w-full bg-[linear-gradient(to_right,#101D2C,#0E323D,#1E282C)] px-4 relative top-15 sm:px-8 lg:px-20 py-12 sm:py-20"
+            className="w-full bg-[linear-gradient(to_right,#101D2C,#0E323D,#1E282C)] px-4 sm:px-8 lg:px-20 py-10 sm:py-16 md:py-20"
         >
-            {/* ── Single row, left-aligned items separated by vertical dividers ── */}
-            <div className="flex flex-row flex-wrap justify-center items-stretch max-w-5xl mx-auto">
+            {/* Responsive Grid Container */}
+            <div className="grid grid-cols-2 md:grid-cols-4 max-w-5xl mx-auto items-stretch">
                 {statsData.map((stat, i) => {
                     const { numericTarget, suffix, decimals } = parseStatValue(stat.value);
 
                     return (
-                        <React.Fragment key={i}>
-                            {i > 0 && (
-                                <div className="w-px bg-white/20 mx-3 sm:mx-5" />
-                            )}
+                        <div 
+                            key={i} 
+                            className={`flex flex-col justify-center items-center gap-2 px-2 sm:px-6 py-6 text-center
+                                ${i % 2 === 0 ? 'border-r' : ''} 
+                                ${i < 2 ? 'border-b md:border-b-0' : ''} 
+                                ${i === 1 || i === 2 ? 'md:border-r' : ''} 
+                                border-white/10`
+                            }
+                        >
+                            <span
+                                ref={(el) => (numRefs.current[i] = el)}
+                                className="font-mono font-bold leading-none bg-gradient-to-r from-[#00C9B1] to-[#F5A623] bg-clip-text text-transparent"
+                                style={{ fontSize: 'clamp(2rem, 4vw, 3.5rem)' }}
+                            >
+                                {numericTarget.toFixed(decimals) + suffix}
+                            </span>
 
-                            <div className="flex flex-col justify-center items-center gap-2 px-4 sm:px-8 lg:px-10 py-3">
-                                <span
-                                    ref={(el) => (numRefs.current[i] = el)}
-                                    className="font-mono font-bold leading-none text-grad-teal-gold bg-clip-text text-transparent"
-                                    style={{ fontSize: 'clamp(2rem, 4vw, 3.5rem)' }}
-                                >
-                                    {numericTarget.toFixed(decimals) + suffix}
-                                </span>
-
-                                <span
-                                    className="text-gray-400 font-medium whitespace-nowrap"
-                                    style={{ fontSize: 'clamp(0.9rem, 1.2vw, 0.875rem)' }}
-                                >
-                                    {stat.label}
-                                </span>
-                            </div>
-                        </React.Fragment>
+                            <span
+                                className="text-gray-400 font-medium text-xs sm:text-sm max-w-[160px] leading-snug"
+                            >
+                                {stat.label}
+                            </span>
+                        </div>
                     );
                 })}
             </div>
