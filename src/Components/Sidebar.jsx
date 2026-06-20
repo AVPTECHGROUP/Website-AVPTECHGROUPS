@@ -9,43 +9,53 @@ import {
 } from 'lucide-react'
 import { useState, useEffect, useContext, useRef, useMemo } from 'react'
 import { UserContext } from '../ContextAPI/UserContext'
+import { PERMISSIONS as P, SYSTEM_ROLES } from '../Constants/Permission'
 
-const SCHOOL_SWITCHER_ROLES = ['SUPER_ADMIN', 'GLOBAL_ADMIN'];
-const ADMIN_ROLES = ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN'];
+const SCHOOL_SWITCHER_ROLES = SYSTEM_ROLES.SCHOOL_SWITCHER;
 
+// ── Menu definition — gated by PERMISSION, not role ─────────────────────────
+// permission: single permission string required
+// permissions: array — user needs AT LEAST ONE (OR logic)
+// showIf: custom function(userPermissions) => boolean, for edge cases
+// systemRole: true — gated by ROLE instead (only for the 2 screens that must
+//             never be grantable via custom-role permissions; see permissions.js)
+// No gate at all on a parent with subItems = visible if ANY child is visible.
 const menuItems = [
   {
     id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', route: '/dashboard',
-    roles: ['ADMIN', 'TEACHER', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST', 'PARENT', 'STORE_ACCOUNTANT','GUEST_LECTURER'],
+    permission: P.DASHBOARD_VIEW,
   },
   {
     id: 'manageUsers', icon: UserCog, label: 'Manage Users', route: '/manageUsers',
-    roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN','PRINCIPAL'],
+    permission: P.USER_VIEW,
   },
   {
     id: 'teachers', icon: Users, label: 'Teachers', route: '/teachers',
-    roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'PRINCIPAL'],
+    permission: P.TEACHER_VIEW,
   },
   // ── Academics (With Nested Exams Dropdown) ──────────────────────────────────
   {
     id: 'academics', icon: GraduationCap, label: 'Academics', route: '/subjectsmaster',
-    roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN','PRINCIPAL' ,'TEACHER','GUEST_LECTURER','INVIGILATOR'],
     subItems: [
-      { label: 'Subjects', route: '/subjectsmaster', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN','PRINCIPAL'] },
-      { label: 'Class & Sections', route: '/academics/classSections', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN','PRINCIPAL'] },
-      { label: 'HomeWork', route: '/homework', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'PRINCIPAL', 'TEACHER','GUEST_LECTURER'] },
-      { label: 'Time Table', route: '/schedule', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN','PRINCIPAL','GUEST_LECTURER'] },
-      { 
-        id: 'exams', 
-        label: 'Exams', 
-        route: '/exams', 
-        roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'PRINCIPAL', 'TEACHER','GUEST_LECTURER','INVIGILATOR'],
+      { label: 'Subjects', route: '/subjectsmaster', permission: P.ACADEMIC_VIEW },
+      // No dedicated permission exists for Class & Sections config; ACADEMIC_YEAR_MANAGE
+      // is the closest accurate proxy (matches ADMIN/PRINCIPAL/SUPER_ADMIN/GLOBAL_ADMIN
+      // having it and TEACHER not having it, per confirmed JWTs).
+      { label: 'Class & Sections', route: '/academics/classSections', permission: P.ACADEMIC_YEAR_MANAGE },
+      { label: 'HomeWork', route: '/homework', permission: P.HOMEWORK_VIEW },
+      { label: 'Time Table', route: '/schedule', permission: P.TIMETABLE_VIEW },
+      {
+        id: 'exams',
+        label: 'Exams',
+        route: '/exams',
+        // TEACHER has no EXAM_VIEW — only the two below. Any-of covers all roles.
+        permissions: [P.EXAM_VIEW, P.EXAM_MARKS_VIEW_CLASS, P.EXAM_MARKS_ENTER],
         childItems: [
-          { label: 'Exam Overview', route: '/exams', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'PRINCIPAL', 'TEACHER','GUEST_LECTURER','INVIGILATOR'] },
-          { label: 'Marks Entry', route: '/exams/marksEntry', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN','PRINCIPAL','TEACHER'] },
-          { label: 'Report Cards', route: '/exams/reportCard', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN','PRINCIPAL','TEACHER'] },
-          { label: 'Analytics', route: '/exams/analytics', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN','PRINCIPAL'] },
-          { label: 'Exam Configuration', route: '/exams/examConfig', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN','PRINCIPAL'] },
+          { label: 'Exam Overview', route: '/exams', permissions: [P.EXAM_VIEW, P.EXAM_MARKS_VIEW_CLASS, P.EXAM_MARKS_ENTER] },
+          { label: 'Marks Entry', route: '/exams/marksEntry', permission: P.EXAM_MARKS_ENTER },
+          { label: 'Report Cards', route: '/exams/reportCard', permission: P.EXAM_MARKS_VIEW_CLASS },
+          { label: 'Analytics', route: '/exams/analytics', permission: P.EXAM_APPROVE },
+          { label: 'Exam Configuration', route: '/exams/examConfig', permission: P.EXAM_CREATE },
         ]
       },
     ]
@@ -56,101 +66,111 @@ const menuItems = [
     icon: MessageSquare,
     label: 'Communication',
     route: '/communication/circulars',
-    roles: ['ADMIN', 'PRINCIPAL', 'TEACHER', 'GLOBAL_ADMIN','SUPER_ADMIN','GUEST_LECTURER'],
     subItems: [
       {
         label: 'Circulars',
         route: '/communication/circulars',
-        roles: ['ADMIN', 'PRINCIPAL', 'TEACHER', 'GLOBAL_ADMIN','SUPER_ADMIN'],
+        // No dedicated CIRCULAR_VIEW exists — access implied by having any action permission.
+        permissions: [P.CIRCULAR_CREATE, P.CIRCULAR_APPROVE, P.CIRCULAR_DELETE],
       },
       {
         label: 'School Events',
         route: '/communication/events',
-        roles: ['ADMIN', 'PRINCIPAL', 'TEACHER', 'GLOBAL_ADMIN','SUPER_ADMIN'],
+        permissions: [P.EVENT_CREATE, P.EVENT_APPROVE, P.EVENT_DELETE],
       },
       {
         label: 'Approval Queue',
         route: '/communication/approval',
-        roles: ['ADMIN', 'PRINCIPAL', 'GLOBAL_ADMIN','SUPER_ADMIN'],
+        permissions: [P.CIRCULAR_APPROVE, P.EVENT_APPROVE],
         badge: 3,
       },
       {
         label: 'Notifications',
         route: '/communication/notifications',
-        roles: ['ADMIN', 'PRINCIPAL', 'TEACHER', 'GLOBAL_ADMIN','SUPER_ADMIN','GUEST_LECTURER','INVIGILATOR'],
+        permission: P.NOTICE_VIEW,
         badge: 7,
       },
     ],
   },
   {
     id: 'attendance', icon: Calendar, label: 'Attendance', route: '/attendance',
-    roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'TEACHER', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST'],
+    // TEACHER has CREATE/EDIT but not VIEW — any-of covers everyone correctly.
+    permissions: [P.ATTENDANCE_VIEW, P.ATTENDANCE_CREATE, P.ATTENDANCE_EDIT],
     subItems: [
-      { label: 'Attendance Overview', route: '/attendance', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN',  'PRINCIPAL'] },
-      { label: 'Staff Enrollment', route: '/attendance/staffImgReg', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN','PRINCIPAL'] },
-      { label: 'Staff Attendance', route: '/attendance/markUserAttendance', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'TEACHER', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST'] },
-      { label: 'Student Enrollment', route: '/attendance/studentImgReg', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'PRINCIPAL'] },
-      { label: 'Student Attendance', route: '/attendance/studentAttendance', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'TEACHER','PRINCIPAL'] },
+      { label: 'Attendance Overview', route: '/attendance', permission: P.ATTENDANCE_VIEW },
+      // Enrollment screens are admin-only in practice — gated on APPROVE which
+      // PRINCIPAL/ADMIN/SUPER_ADMIN/GLOBAL_ADMIN have and TEACHER does not.
+      { label: 'Staff Enrollment', route: '/attendance/staffImgReg', permission: P.ATTENDANCE_APPROVE },
+      { label: 'Staff Attendance', route: '/attendance/markUserAttendance', permission: P.ATTENDANCE_CREATE },
+      { label: 'Student Enrollment', route: '/attendance/studentImgReg', permission: P.ATTENDANCE_APPROVE },
+      { label: 'Student Attendance', route: '/attendance/studentAttendance', permission: P.ATTENDANCE_CREATE },
     ]
   },
   {
     id: 'students', icon: Users, label: 'Students', route: '/students',
-    roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN','PRINCIPAL'],
+    permission: P.STUDENT_VIEW,
   },
   {
     id: 'leaves', icon: FileText, label: 'Leaves', route: '/leaves/applyLeaves',
-    roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'TEACHER', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST','GUEST_LECTURER'],
+    permission: P.LEAVE_VIEW,
     subItems: [
-      { label: 'Manage Leave', route: '/leaves', roles: ['ADMIN',  'SUPER_ADMIN', 'GLOBAL_ADMIN', 'PRINCIPAL',] },
-      { label: 'My Leaves', route: '/leaves/myLeaves', roles: ['ADMIN', 'TEACHER', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST','GUEST_LECTURER'] },
-      { label: 'Holiday Management', route: '/leaves/manageHolidays', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN','PRINCIPAL'] },
-      { label: 'Leave Config', route: '/leaves/leaveConfig', roles: ['GLOBAL_ADMIN', 'SUPER_ADMIN', 'PRINCIPAL','ADMIN'] },
+      { label: 'Manage Leave', route: '/leaves', permission: P.LEAVE_APPROVE },
+      { label: 'My Leaves', route: '/leaves/myLeaves', permission: P.LEAVE_VIEW },
+      { label: 'Holiday Management', route: '/leaves/manageHolidays', permission: P.LEAVE_DELETE },
+      { label: 'Leave Config', route: '/leaves/leaveConfig', permission: P.LEAVE_DELETE },
     ]
   },
   {
     id: 'stock', icon: Package, label: 'Stock', route: '/stock',
-    roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'STORE_ACCOUNTANT'],
+    permission: P.STOCK_OVERVIEW,
     subItems: [
-      { label: 'Stores', route: '/stock/stores', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'STORE_ACCOUNTANT'] },
-      { label: 'Items', route: '/stock/items', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'STORE_ACCOUNTANT'] },
-      { label: 'Transactions', route: '/stock/transactions', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'STORE_ACCOUNTANT'] },
-      { label: 'Class Config', route: '/stock/classConfig', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'STORE_ACCOUNTANT'] },
-      { label: 'Student Orders', route: '/stock/studentOrders', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'STORE_ACCOUNTANT'] },
-      { label: 'Movement History', route: '/stock/movementHistory', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'STORE_ACCOUNTANT'] },
+      { label: 'Stores', route: '/stock/stores', permission: P.STORE_VIEW },
+      { label: 'Items', route: '/stock/items', permission: P.STOCK_ITEM_VIEW },
+      { label: 'Transactions', route: '/stock/transactions', permissions: [P.STOCK_INWARD, P.STOCK_OUTWARD, P.STOCK_TRANSFER] },
+      { label: 'Class Config', route: '/stock/classConfig', permission: P.CLASS_ITEM_CONFIG_VIEW },
+      { label: 'Student Orders', route: '/stock/studentOrders', permission: P.STUDENT_ORDER_VIEW },
+      { label: 'Movement History', route: '/stock/movementHistory', permission: P.STOCK_MOVEMENT_VIEW },
     ]
   },
   {
+    // Standalone entry point for users (e.g. STORE_SELLER) who can view orders
+    // but don't have full stock access — avoids duplicating "Student Orders"
+    // from the Stock module above for accountants who already see it there.
     id: 'studentOrders', icon: Package, label: 'Student Orders', route: '/stock/studentOrders',
-    roles: ['STORE_SELLER'],
+    showIf: (perms) => perms.includes(P.STUDENT_ORDER_VIEW) && !perms.includes(P.STOCK_OVERVIEW),
   },
   {
     id: 'transport', icon: Bus, label: 'Transport', route: '/route',
-    roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'PRINCIPAL'],
+    permission: P.TRANSPORT_VIEW,
     subItems: [
-      { label: 'Vehicles', route: '/route/vehicles', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN','PRINCIPAL'] },
-      { label: 'Driver & Attendants', route: '/route/Driver&Attendants', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN','PRINCIPAL'] },
-      { label: 'Routes', route: '/route/routes_management', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN','PRINCIPAL'] },
-      { label: 'Student Allocations', route: '/route/studentAllocations', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN','PRINCIPAL'] },
-      { label: 'Fee Plans', route: '/route/feePlans', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN','PRINCIPAL'] },
-      { label: 'Reports', route: '/route/reports', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN','PRINCIPAL'] },
+      { label: 'Vehicles', route: '/route/vehicles', permission: P.TRANSPORT_VIEW },
+      { label: 'Driver & Attendants', route: '/route/Driver&Attendants', permission: P.TRANSPORT_VIEW },
+      { label: 'Routes', route: '/route/routes_management', permission: P.TRANSPORT_VIEW },
+      { label: 'Student Allocations', route: '/route/studentAllocations', permission: P.TRANSPORT_EDIT },
+      { label: 'Fee Plans', route: '/route/feePlans', permission: P.TRANSPORT_EDIT },
+      { label: 'Reports', route: '/route/reports', permission: P.TRANSPORT_VIEW },
     ]
   },
   {
-    id: 'academicYear', icon: BookOpenText, label: 'Academic Years', route: '/academicYear', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN']
+    id: 'academicYear', icon: BookOpenText, label: 'Academic Years', route: '/academicYear',
+    permission: P.ACADEMIC_YEAR_MANAGE,
   },
   {
     id: 'FeeManagement', icon: IndianRupee, label: 'Fee Management', route: '/feemanagement',
-    roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN','PRINCIPAL','ACCOUNTANT'],
+    permission: P.FEE_VIEW,
     subItems: [
-      { label: 'Fee Config', route: '/feemanagement/config', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN','PRINCIPAL','ACCOUNTANT'] },
-      { label: 'Collection and History', route: '/feemanagement/collections', roles: ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN','PRINCIPAL','ACCOUNTANT'] },
+      { label: 'Fee Config', route: '/feemanagement/config', permission: P.FEE_STRUCTURE_MANAGE },
+      { label: 'Collection and History', route: '/feemanagement/collections', permission: P.FEE_COLLECT },
     ]
   },
+  // ── Stays role-locked by design — see SYSTEM_ROLES comment in permissions.js ──
   {
-    id: 'Permission', icon: Shield, label: 'Permissions', route: '/rolesPermissions', roles: ['GLOBAL_ADMIN']
+    id: 'Permission', icon: Shield, label: 'Permissions', route: '/rolesPermissions',
+    systemRole: true,
   },
   {
-    id: 'schoolConfig', icon: SchoolIcon, label: 'School Config', route: '/schoolConfig', roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN']
+    id: 'schoolConfig', icon: SchoolIcon, label: 'School Config', route: '/schoolConfig',
+    systemRole: true,
   },
 ]
 
@@ -165,6 +185,23 @@ const roleBadgeStyles = {
   PARENT: 'bg-orange-100 text-orange-700',
   STORE_ACCOUNTANT: 'bg-teal-100 text-teal-700',
   STORE_SELLER: 'bg-indigo-100 text-indigo-700',
+}
+
+// ── Permission/role access checker — used recursively at all 3 menu tiers ───
+const checkAccess = (item, userPermissions, userRole) => {
+  if (item.systemRole) {
+    const map = {
+      Permission: SYSTEM_ROLES.ROLE_MANAGE,
+      schoolConfig: SYSTEM_ROLES.SCHOOL_CONFIG_MANAGE,
+    }
+    return (map[item.id] || []).includes(userRole)
+  }
+  if (typeof item.showIf === 'function') return item.showIf(userPermissions)
+  if (item.permission) return userPermissions.includes(item.permission)
+  if (item.permissions) return item.permissions.some(p => userPermissions.includes(p))
+  if (item.subItems) return item.subItems.some(sub => checkAccess(sub, userPermissions, userRole))
+  if (item.childItems) return item.childItems.some(child => checkAccess(child, userPermissions, userRole))
+  return true
 }
 
 const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
@@ -208,6 +245,9 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
     || (Array.isArray(storedUser?.roles) ? storedUser.roles[0] : null)
     || null
 
+  // ── Permissions array from JWT (decoded by UserContext, or fallback to localStorage) ──
+  const userPermissions = ctxUser?.permissions || storedUser?.permissions || []
+
   const schoolDisplayName = schoolInfo?.schoolName || 'Delhi Public International School'
   const schoolDisplayCode = schoolInfo?.schoolCode || ''
   const schoolLogoUrl = schoolInfo?.logoUrl || dpis
@@ -219,22 +259,22 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
 
   const filteredMenuItems = useMemo(() => {
     return menuItems
-      .filter(item => item.roles.includes(userRole))
+      .filter(item => checkAccess(item, userPermissions, userRole))
       .map(item => ({
         ...item,
-        route: item.id === 'leaves' && !ADMIN_ROLES.includes(userRole) ? '/leaves/myLeaves' : item.route,
+        route: item.id === 'leaves' && !userPermissions.includes(P.LEAVE_APPROVE) ? '/leaves/myLeaves' : item.route,
         subItems: item.subItems
           ? item.subItems
-              .filter(sub => !sub.roles || sub.roles.includes(userRole))
+              .filter(sub => checkAccess(sub, userPermissions, userRole))
               .map(sub => ({
                 ...sub,
                 childItems: sub.childItems
-                  ? sub.childItems.filter(child => !child.roles || child.roles.includes(userRole))
+                  ? sub.childItems.filter(child => checkAccess(child, userPermissions, userRole))
                   : undefined
               }))
           : undefined
       }));
-  }, [userRole]);
+  }, [userPermissions, userRole]);
 
   const onLogout = () => {
     localStorage.removeItem('token')
