@@ -16,6 +16,8 @@ dist-ssr
 .env
 .env.*
 
+# dev fcm
+firebase-messaging-sw-dev.js
 
 # Editor directories and files
 .vscode/*

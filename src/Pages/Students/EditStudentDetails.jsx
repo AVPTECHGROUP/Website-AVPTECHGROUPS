@@ -96,6 +96,7 @@ function EditStudentDetails() {
           sectionId: student.sectionId || '',
           status: student.status,
           fatherName: student.fatherName || '',
+          fatherPhone: student.fatherPhone || '',       // ✅ NEW
           motherName: student.motherName || '',
           emergencyContact: student.personalDetails?.emergencyContact || '',
           hostelRequired: student.hostelRequired,
@@ -118,6 +119,8 @@ function EditStudentDetails() {
   };
 
   const validateForm = () => {
+    const mobileRegex = /^[0-9]{10}$/;
+
     if (!formData.name || !formData.mobile || !formData.gender) {
       toast.error("Please fill all required fields!");
       return false;
@@ -130,13 +133,17 @@ function EditStudentDetails() {
       toast.error("Please select a section!");
       return false;
     }
-    const mobileRegex = /^[0-9]{10}$/;
     if (!mobileRegex.test(formData.mobile)) {
       toast.error("Mobile number must be exactly 10 digits!");
       return false;
     }
     if (formData.emergencyContact && !mobileRegex.test(formData.emergencyContact)) {
       toast.error("Emergency contact must be exactly 10 digits!");
+      return false;
+    }
+    // ✅ Father phone validation
+    if (formData.fatherPhone && !mobileRegex.test(formData.fatherPhone)) {
+      toast.error("Father's phone number must be exactly 10 digits!");
       return false;
     }
     if (formData.email) {
@@ -168,6 +175,7 @@ function EditStudentDetails() {
       hostelRequired: formData.hostelRequired,
       transportRequired: formData.transportRequired,
       fatherName: formData.fatherName || null,
+      fatherPhone: formData.fatherPhone || null,       // ✅ NEW
       motherName: formData.motherName || null,
     };
   };
@@ -528,6 +536,21 @@ function EditStudentDetails() {
                         onChange={handleInputChange} placeholder="Enter father's name"
                         className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
                       />
+                    </div>
+
+                    {/* ✅ NEW: Father's Phone Number */}
+                    <div>
+                      <label className='block font-semibold text-gray-600 text-sm mb-2'>
+                        Father's Phone Number
+                        <span className="text-gray-400 text-xs font-normal ml-2">(optional)</span>
+                      </label>
+                      <input
+                        type="tel" name="fatherPhone" value={formData.fatherPhone}
+                        onChange={handleInputChange} placeholder="10 digit phone number"
+                        maxLength={10} pattern="[0-9]{10}"
+                        className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Must be exactly 10 digits if provided</p>
                     </div>
 
                     <div>

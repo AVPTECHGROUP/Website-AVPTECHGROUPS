@@ -6,9 +6,8 @@ export default function CardComponent({ IconName, keyName, val, iconTxColor, ico
             .map(word => word.charAt(0).toUpperCase() + word.slice(1))
             .join(" ");
     };
-    // return <div className={`rounded-xl overflow-hidden flex flex-col bg-white shadow-lg hover:shadow-${iconTxColor} w-full h-18`}>
     return <div
-        className={`rounded-xl overflow-hidden flex flex-col bg-white border-b-[4px] border-b-current ${iconTxColor} shadow-md hover:shadow-lg transition-all duration-300 w-full h-18`}
+        className={`rounded-xl overflow-hidden flex flex-col bg-white border-b-[4px] border-b-current ${iconTxColor} shadow-md hover:shadow-lg transition-all duration-300 w-full min-w-55 h-18`}
         style={{
             boxShadow: "0 2px 10px rgba(0,0,0,0.06)",
         }}>
