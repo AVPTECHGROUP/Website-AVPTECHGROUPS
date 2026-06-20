@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react'
 import { ChevronDown, ChevronUp, Search, ArrowLeft, X, HelpCircle, Users, BookOpen } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { faqs } from './FAQ' // Re-use the same data
+import { faqs } from './Faq' 
 
 /* ─── Category config ─── */
 const CATEGORIES = [
