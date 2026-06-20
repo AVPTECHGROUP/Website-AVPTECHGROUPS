@@ -783,3 +783,447 @@ export const getGradeDistribution = async (examId, sectionId = null) => {
     throw error;
   }
 };
+/* =========================
+   EXAM EVENTS
+========================= */
+
+// ─── Get All Exam Events ─────────────────────────────────────────────────────
+// FIX: now accepts a filters object instead of a single positional academicYearId
+// so the new Status filter dropdown (image 1) can be wired up too.
+// Backwards compatible: getExamEvents(3) still works (treated as academicYearId).
+export const getExamEvents = async (filters = {}) => {
+  try {
+    const f = typeof filters === "object" && filters !== null
+      ? filters
+      : { academicYearId: filters };
+
+    const params = new URLSearchParams();
+    if (f.academicYearId) params.append("academicYearId", f.academicYearId);
+    if (f.status) params.append("status", f.status);
+    if (f.examTypeId) params.append("examTypeId", f.examTypeId);
+    if (f.classId) params.append("classId", f.classId);
+
+    const query = params.toString() ? `?${params.toString()}` : "";
+
+    const res = await authFetch(`${BASE_URL}/exam-events${query}`, {
+      method: "GET",
+    });
+
+    if (!res.ok) {
+      const msg = await extractError(res, "Failed to fetch exam events");
+      throw new Error(msg);
+    }
+
+    const data = await res.json();
+    return data?.data || [];
+  } catch (error) {
+    console.error(`getExamEvents error: ${error.message}`);
+    throw error;
+  }
+};
+
+// ─── Get Exam Event By ID ────────────────────────────────────────────────────
+export const getExamEventById = async (eventId) => {
+  try {
+    if (!eventId) throw new Error("eventId is required");
+
+    const res = await authFetch(`${BASE_URL}/exam-events/${eventId}`, {
+      method: "GET",
+    });
+
+    if (!res.ok) {
+      const msg = await extractError(res, `Failed to fetch event ${eventId}`);
+      throw new Error(msg);
+    }
+
+    const data = await res.json();
+    return data?.data || {};
+  } catch (error) {
+    console.error(`getExamEventById error: ${error.message}`);
+    throw error;
+  }
+};
+
+// ─── Create Exam Event ──────────────────────────────────────────────────────
+// eventData shape (per the actual Step-4 request body):
+// {
+//   examTypeId, academicYearId, name?, startDate, endDate, description?,
+//   classIds: number[],
+//   subjectConfigs: [{ sectionSubjectId, maxMarks, passingMarks, hasTheoryPractical?,
+//                       maxTheoryMarks?, maxPracticalMarks?, passingTheoryMarks?, passingPracticalMarks? }]
+// }
+// Single call creates: 1 ExamEvent + 1 Exam per class + 1 ExamSubjectConfig per section-subject.
+export const createExamEvent = async (eventData) => {
+  try {
+    if (!eventData) throw new Error("eventData is required");
+
+    const res = await authFetch(`${BASE_URL}/exam-events`, {
+      method: "POST",
+      body: JSON.stringify(eventData),
+    });
+
+    if (!res.ok) {
+      const msg = await extractError(res, "Failed to create exam event");
+      throw new Error(msg);
+    }
+
+    return await res.json();
+  } catch (error) {
+    console.error(`createExamEvent error: ${error.message}`);
+    throw error;
+  }
+};
+
+// ─── Update Exam Event ──────────────────────────────────────────────────────
+// Only name / startDate / endDate / description are mutable post-creation.
+export const updateExamEvent = async (eventId, eventData) => {
+  try {
+    if (!eventId) throw new Error("eventId is required");
+
+    const res = await authFetch(`${BASE_URL}/exam-events/${eventId}`, {
+      method: "PUT",
+      body: JSON.stringify(eventData),
+    });
+
+    if (!res.ok) {
+      const msg = await extractError(res, `Failed to update event ${eventId}`);
+      throw new Error(msg);
+    }
+
+    return await res.json();
+  } catch (error) {
+    console.error(`updateExamEvent error: ${error.message}`);
+    throw error;
+  }
+};
+
+// ─── Copy Exam Event ─────────────────────────────────────────────────────────
+// NEW: was missing entirely. Copies classes + subject configs (max/pass/T+P)
+// into a fresh event. Marks/results are intentionally NOT copied.
+export const copyExamEvent = async (eventId, newEventMeta) => {
+  try {
+    if (!eventId) throw new Error("eventId is required");
+    if (!newEventMeta) throw new Error("newEventMeta is required");
+
+    const res = await authFetch(`${BASE_URL}/exam-events/${eventId}/copy`, {
+      method: "POST",
+      body: JSON.stringify(newEventMeta),
+    });
+
+    if (!res.ok) {
+      const msg = await extractError(res, "Failed to copy exam event");
+      throw new Error(msg);
+    }
+
+    const data = await res.json();
+    return data?.data || {};
+  } catch (error) {
+    console.error(`copyExamEvent error: ${error.message}`);
+    throw error;
+  }
+};
+
+// ─── Add Classes To Event ───────────────────────────────────────────────────
+export const addClassesToExamEvent = async (eventId, classIds) => {
+  try {
+    if (!eventId) throw new Error("eventId is required");
+
+    const res = await authFetch(`${BASE_URL}/exam-events/${eventId}/classes`, {
+      method: "POST",
+      body: JSON.stringify({ classIds }),
+    });
+
+    if (!res.ok) {
+      const msg = await extractError(res, "Failed to add classes");
+      throw new Error(msg);
+    }
+
+    return await res.json();
+  } catch (error) {
+    console.error(`addClassesToExamEvent error: ${error.message}`);
+    throw error;
+  }
+};
+
+// ─── Remove Class From Event ────────────────────────────────────────────────
+// Blocked server-side if marks have been entered or result already declared.
+export const removeClassFromExamEvent = async (eventId, classId) => {
+  try {
+    const res = await authFetch(
+      `${BASE_URL}/exam-events/${eventId}/classes/${classId}`,
+      { method: "DELETE" }
+    );
+
+    if (!res.ok) {
+      const msg = await extractError(res, "Failed to remove class");
+      throw new Error(msg);
+    }
+
+    return await res.json();
+  } catch (error) {
+    console.error(`removeClassFromExamEvent error: ${error.message}`);
+    throw error;
+  }
+};
+
+/* =========================
+   ANALYTICS
+========================= */
+
+export const getExamEventSummary = async (eventId) => {
+  try {
+    const res = await authFetch(
+      `${BASE_URL}/exam-events/${eventId}/analytics/summary`,
+      { method: "GET" }
+    );
+
+    if (!res.ok) {
+      const msg = await extractError(res, "Failed to fetch event summary");
+      throw new Error(msg);
+    }
+
+    const data = await res.json();
+    return data?.data || {};
+  } catch (error) {
+    console.error(`getExamEventSummary error: ${error.message}`);
+    throw error;
+  }
+};
+
+export const getExamEventClassAnalytics = async (eventId, classId) => {
+  try {
+    const res = await authFetch(
+      `${BASE_URL}/exam-events/${eventId}/analytics/classes/${classId}`,
+      { method: "GET" }
+    );
+
+    if (!res.ok) {
+      const msg = await extractError(res, "Failed to fetch class analytics");
+      throw new Error(msg);
+    }
+
+    const data = await res.json();
+    return data?.data || {};
+  } catch (error) {
+    console.error(`getExamEventClassAnalytics error: ${error.message}`);
+    throw error;
+  }
+};
+
+export const getExamEventToppers = async (eventId, limit = 10) => {
+  try {
+    const res = await authFetch(
+      `${BASE_URL}/exam-events/${eventId}/analytics/toppers?limit=${limit}`,
+      { method: "GET" }
+    );
+
+    if (!res.ok) {
+      const msg = await extractError(res, "Failed to fetch toppers");
+      throw new Error(msg);
+    }
+
+    const data = await res.json();
+    return data?.data || [];
+  } catch (error) {
+    console.error(`getExamEventToppers error: ${error.message}`);
+    throw error;
+  }
+};
+
+/* =========================
+   SUBJECT CONFIG
+========================= */
+
+export const getEventClassSubjects = async (eventId, classId, sectionId = null) => {
+  try {
+    const query = sectionId ? `?sectionId=${sectionId}` : "";
+
+    const res = await authFetch(
+      `${BASE_URL}/exam-events/${eventId}/classes/${classId}/subjects${query}`,
+      { method: "GET" }
+    );
+
+    if (!res.ok) {
+      const msg = await extractError(res, "Failed to fetch subjects");
+      throw new Error(msg);
+    }
+
+    const data = await res.json();
+    return data?.data || [];
+  } catch (error) {
+    console.error(`getEventClassSubjects error: ${error.message}`);
+    throw error;
+  }
+};
+
+export const addEventSubject = async (eventId, classId, subjectData) => {
+  const res = await authFetch(
+    `${BASE_URL}/exam-events/${eventId}/classes/${classId}/subjects`,
+    { method: "POST", body: JSON.stringify(subjectData) }
+  );
+
+  if (!res.ok) {
+    throw new Error(await extractError(res, "Failed to add subject"));
+  }
+
+  return await res.json();
+};
+
+export const updateEventSubject = async (eventId, classId, configId, subjectData) => {
+  // FIX: this endpoint existed in Swagger (PUT .../subjects/{configId}) but was
+  // missing from the original API file entirely.
+  const res = await authFetch(
+    `${BASE_URL}/exam-events/${eventId}/classes/${classId}/subjects/${configId}`,
+    { method: "PUT", body: JSON.stringify(subjectData) }
+  );
+
+  if (!res.ok) {
+    throw new Error(await extractError(res, "Failed to update subject"));
+  }
+
+  return await res.json();
+};
+
+export const deleteEventSubject = async (eventId, classId, configId) => {
+  const res = await authFetch(
+    `${BASE_URL}/exam-events/${eventId}/classes/${classId}/subjects/${configId}`,
+    { method: "DELETE" }
+  );
+
+  if (!res.ok) {
+    throw new Error(await extractError(res, "Failed to delete subject"));
+  }
+
+  return await res.json();
+};
+
+/* =========================
+   REPORT CARDS
+========================= */
+
+export const generateEventReportCards = async (eventId, classId, sectionId = null) => {
+  const query = sectionId ? `?sectionId=${sectionId}` : "";
+
+  const res = await authFetch(
+    `${BASE_URL}/exam-events/${eventId}/classes/${classId}/report-cards/generate${query}`,
+    { method: "POST" }
+  );
+
+  if (!res.ok) {
+    throw new Error(await extractError(res, "Failed generating report cards"));
+  }
+
+  const data = await res.json();
+  return data?.data || [];
+};
+
+export const getEventReportCards = async (eventId, classId, sectionId = null) => {
+  const query = sectionId ? `?sectionId=${sectionId}` : "";
+
+  const res = await authFetch(
+    `${BASE_URL}/exam-events/${eventId}/classes/${classId}/report-cards${query}`,
+    { method: "GET" }
+  );
+
+  if (!res.ok) {
+    throw new Error(await extractError(res, "Failed fetching report cards"));
+  }
+
+  const data = await res.json();
+  return data?.data || [];
+};
+
+export const updateEventStudentRemarks = async (eventId, classId, studentId, remarksData) => {
+  const res = await authFetch(
+    `${BASE_URL}/exam-events/${eventId}/classes/${classId}/report-cards/${studentId}/remarks`,
+    { method: "PATCH", body: JSON.stringify(remarksData) }
+  );
+
+  if (!res.ok) {
+    throw new Error(await extractError(res, "Failed updating remarks"));
+  }
+
+  return await res.json();
+};
+
+/* =========================
+   DECLARE RESULT
+========================= */
+
+// FIX: was missing. Exams.jsx previously called declareExamResult(examId) from
+// the old per-exam Api/Exams.js. The event model declares per-class-exam too —
+// reusing the same per-exam endpoint (examId comes from event.exams[i].id).
+export const declareEventExamResult = async (examId) => {
+  try {
+    if (!examId) throw new Error("examId is required");
+
+    const res = await authFetch(`${BASE_URL}/exams/${examId}/declare-result`, {
+      method: "POST",
+    });
+
+    if (!res.ok) {
+      const msg = await extractError(res, "Failed to declare result");
+      throw new Error(msg);
+    }
+
+    return await res.json();
+  } catch (error) {
+    console.error(`declareEventExamResult error: ${error.message}`);
+    throw error;
+  }
+};
+
+/* =========================
+   SCHEDULE
+========================= */
+
+export const getExamEventSchedule = async (eventId) => {
+  const res = await authFetch(`${BASE_URL}/exam-events/${eventId}/schedule`, {
+    method: "GET",
+  });
+
+  if (!res.ok) {
+    throw new Error(await extractError(res, "Failed fetching schedule"));
+  }
+
+  const data = await res.json();
+  return data?.data || {};
+};
+
+// ─── Get Class Performance Trend Across Exams ───────────────────────────────
+export const getClassPerformanceTrend = async (classId, academicYearId = null) => {
+  try {
+    if (!classId) {
+      throw new Error("classId is required");
+    }
+
+    const query = academicYearId ? `?academicYearId=${academicYearId}` : "";
+
+    const res = await authFetch(
+      `${BASE_URL}/classes/${classId}/analytics/trend${query}`,
+      {
+        method: "GET",
+      }
+    );
+
+    if (!res.ok) {
+      const msg = await extractError(
+        res,
+        `Failed to fetch performance trend for classId: ${classId}`
+      );
+      throw new Error(msg);
+    }
+
+    const data = await res.json();
+    return data?.data || {
+      classId,
+      className: "",
+      academicYearId: null,
+      academicYearLabel: "",
+      points: [],
+    };
+  } catch (error) {
+    console.error(`getClassPerformanceTrend error: ${error.message}`);
+    throw error;
+  }
+};
