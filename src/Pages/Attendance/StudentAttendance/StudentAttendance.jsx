@@ -686,12 +686,19 @@ export default function StudentAttendance() {
         setActionLoadingId(data.studentId);
         try {
             await manualMarkAttendance({
-                studentId: parseInt(data.studentId),
                 classId: selectedClass?.id,
                 sectionId: selectedSection?.id,
-                status: data.status?.toUpperCase() || "PRESENT",
+                attendanceDate: date, // already state me hai
                 checkInTime: data.time,
                 remarks: data.remarks || "",
+                students: [
+                    {
+                        studentId: parseInt(data.studentId),
+                        status: data.status?.toUpperCase() || "PRESENT",
+                        checkInTime: data.time,
+                        remarks: data.remarks || "",
+                    }
+                ]
             });
             setShowManualMark(false);
             setSelectedStudent(null);
