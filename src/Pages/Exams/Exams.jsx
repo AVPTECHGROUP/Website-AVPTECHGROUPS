@@ -68,9 +68,6 @@ const EVENT_STATUS_META = {
 };
 
 // Per-class-exam row status.
-// NOTE: true partial-marks-entry detection needs a marks-count endpoint that
-// isn't in the current API surface. We fall back to subjectConfigCount /
-// resultDeclared, and use exam.marksEnteredPercent if a future API adds it.
 function rowStatus(exam) {
     if (exam.resultDeclared) return "declared";
     if (typeof exam.marksEnteredPercent === "number") {
@@ -119,6 +116,7 @@ function StatCard({ d }) {
         </div>
     );
 }
+
 function StatSkeleton() {
     return (
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 flex items-center gap-3 animate-pulse">
@@ -134,12 +132,12 @@ function StatSkeleton() {
 
 function FilterSelect({ value, onChange, disabled, children }) {
     return (
-        <div className="relative w-full">
+        <div className="relative w-full min-w-0">
             <select
                 value={value}
                 onChange={onChange}
                 disabled={disabled}
-                className="appearance-none w-full bg-white border border-gray-200 rounded-lg pl-3 pr-8 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                className="appearance-none w-full bg-white border border-gray-200 rounded-lg pl-3 pr-8 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed truncate"
             >
                 {children}
             </select>
@@ -148,6 +146,7 @@ function FilterSelect({ value, onChange, disabled, children }) {
     );
 }
 
+// Custom Action Button Atom
 function ActionBtn({ Icon, label, compactLabel, tone = "neutral", compact, onClick, disabled }) {
     const toneClasses = {
         neutral: "bg-white text-gray-600 border border-gray-200 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600",
@@ -161,9 +160,9 @@ function ActionBtn({ Icon, label, compactLabel, tone = "neutral", compact, onCli
             type="button"
             onClick={(e) => { e.stopPropagation(); onClick?.(e); }}
             disabled={disabled}
-            className={`flex items-center justify-center gap-1 rounded-lg font-semibold whitespace-nowrap transition-all duration-200 hover:-translate-y-0.5 active:scale-90 active:translate-y-0 disabled:opacity-50 disabled:pointer-events-none ${compact ? "px-1.5 py-1 text-[10px]" : "px-2.5 py-1.5 text-xs"} ${toneClasses[tone]}`}
+            className={`flex items-center justify-center gap-1 rounded-lg font-semibold whitespace-nowrap transition-all duration-200 hover:-translate-y-0.5 active:scale-90 active:translate-y-0 disabled:opacity-50 disabled:pointer-events-none shrink-0 ${compact ? "px-1.5 py-1 text-[10px]" : "px-2.5 py-1.5 text-xs"} ${toneClasses[tone]}`}
         >
-            <Icon className={compact ? "w-3 h-3" : "w-3.5 h-3.5"} />
+            <Icon className={compact ? "w-3 h-3 shrink-0" : "w-3.5 h-3.5 shrink-0"} />
             <span>{compact ? (compactLabel ?? label) : label}</span>
         </button>
     );
@@ -179,24 +178,32 @@ function ErrorToast({ message, onClose }) {
         </div>
     );
 }
+
+const ROW_GRID_COLS = "xl:grid-cols-[200px_minmax(160px,1fr)_120px_minmax(260px,1fr)]";
+
 function ClassRow({ event, exam, sections, onAction, onRemove }) {
     const status = rowStatus(exam);
     const meta = ROW_META[status];
 
     return (
-        <div className={`px-4 py-3.5 border-b border-gray-100 last:border-0 ${meta.rowBg}`}>
-            {/* Mirroring exact grid tracking column configuration from the header row */}
-            <div className="flex flex-col gap-4 md:grid md:grid-cols-[220px_1fr_160px_320px] md:gap-4 md:items-center">
+        <div className={`px-3 sm:px-4 py-3.5 border-b border-gray-100 last:border-0 ${meta.rowBg}`}>
+            <div className={`flex flex-col gap-3 xl:grid ${ROW_GRID_COLS} xl:gap-3 xl:items-center`}>
 
                 {/* COLUMN 1: CLASS INFO */}
-                <div className="min-w-0">
-                    <p className="text-sm font-bold text-gray-800">{exam.schoolClassName}</p>
-                    <span className={`inline-block mt-1 px-2 py-0.5 rounded-md text-[10px] font-bold tracking-wide uppercase ${exam.isActive ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-gray-100 text-gray-500"}`}>
-                        {exam.isActive ? "Active" : "Inactive"}
+                <div className="min-w-0 flex items-center justify-between xl:block">
+                    <div>
+                        <p className="text-sm font-bold text-gray-800">{exam.schoolClassName}</p>
+                        <span className={`inline-block mt-1 px-2 py-0.5 rounded-md text-[10px] font-bold tracking-wide uppercase ${exam.isActive ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-gray-100 text-gray-500"}`}>
+                            {exam.isActive ? "Active" : "Inactive"}
+                        </span>
+                    </div>
+                    <span className={`xl:hidden inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold tracking-wide uppercase shrink-0 ${meta.chip}`}>
+                        <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                        {meta.label}
                     </span>
                 </div>
 
-                {/* COLUMN 2: SECTIONS (MARKS) */}
+                {/* COLUMN 2: SECTIONS */}
                 <div className="min-w-0 flex flex-wrap items-center gap-1.5">
                     {sections === undefined ? (
                         <span className="text-xs text-gray-400 animate-pulse">Loading sections…</span>
@@ -212,18 +219,18 @@ function ClassRow({ event, exam, sections, onAction, onRemove }) {
                 </div>
 
                 {/* COLUMN 3: STATUS CHIP */}
-                <div className="flex items-center">
+                <div className="hidden xl:flex items-center min-w-0">
                     <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold tracking-wide uppercase ${meta.chip}`}>
                         <span className="w-1.5 h-1.5 rounded-full bg-current" />
                         {meta.label}
                     </span>
                 </div>
 
-                {/* COLUMN 4: ACTION BUTTONS (Flushed right to match header) */}
-                <div className="flex flex-wrap items-center gap-2 md:justify-end">
+                {/* COLUMN 4: ACTION BUTTONS */}
+                <div className="flex flex-wrap items-center gap-2 min-w-0 xl:justify-end">
+                    {/* FIXED: Removed 'Marks' action button if status is declared */}
                     {status === "declared" && (
                         <>
-                            <ActionBtn Icon={Edit2} label="Marks" tone="neutral" onClick={() => onAction(exam, "marks")} />
                             <ActionBtn Icon={FileText} label="Reports" tone="primary" onClick={() => onAction(exam, "reports")} />
                             <ActionBtn Icon={BookOpen} label="Subjects" tone="neutral" onClick={() => onAction(exam, "subjects")} />
                         </>
@@ -248,7 +255,6 @@ function ClassRow({ event, exam, sections, onAction, onRemove }) {
                         </>
                     )}
 
-                    {/* Inline Remove Button inside the action cluster */}
                     <ActionBtn
                         Icon={Trash2}
                         label="Remove"
@@ -261,9 +267,8 @@ function ClassRow({ event, exam, sections, onAction, onRemove }) {
         </div>
     );
 }
-// ══════════════════════════════════════════════════════════════════
-// EVENT ACCORDION ITEM
-// ══════════════════════════════════════════════════════════════════
+
+// ─── EventItem Accordion Component ───────────────────────────────────────────
 function EventItem({ event, expanded, onToggle, sectionsCache, onLoadSections, onAction, onRemoveClass, onAddClass, onEdit, onCopy }) {
     const exams = event.exams || [];
     const total = exams.length;
@@ -274,29 +279,27 @@ function EventItem({ event, expanded, onToggle, sectionsCache, onLoadSections, o
 
     useEffect(() => {
         if (expanded) onLoadSections(event);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [expanded]);
+    }, [expanded, event, onLoadSections]);
 
     return (
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-            {/* header */}
-            <div onClick={onToggle} className="cursor-pointer px-3 md:px-4 py-3 flex flex-col lg:flex-row lg:items-center gap-2 lg:gap-4">
+            <div onClick={onToggle} className="cursor-pointer px-3 md:px-4 py-3 flex flex-col lg:flex-row lg:items-center gap-2 lg:gap-4 min-w-0">
                 <div className="flex items-start gap-2 flex-1 min-w-0">
                     {expanded ? <ChevronDown className="w-4 h-4 text-gray-400 mt-1 shrink-0" /> : <ChevronRight className="w-4 h-4 text-gray-400 mt-1 shrink-0" />}
                     <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                            <h3 className="text-sm md:text-base font-semibold text-gray-800">{event.name}</h3>
-                            <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${examTypeBg(event.examTypeName)}`}>{event.examTypeName}</span>
+                            <h3 className="text-sm md:text-base font-semibold text-gray-800 truncate">{event.name}</h3>
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-semibold shrink-0 ${examTypeBg(event.examTypeName)}`}>{event.examTypeName}</span>
                         </div>
-                        <p className="text-xs text-gray-400 mt-0.5">
+                        <p className="text-xs text-gray-400 mt-0.5 truncate">
                             {fmtRange(event.startDate, event.endDate)} · {total} class{total !== 1 ? "es" : ""} · {declared === total && total > 0 ? "All results declared" : `${declared} of ${total} declared`}
                         </p>
                     </div>
                 </div>
 
                 <div className="flex items-center gap-3 lg:gap-4 shrink-0 flex-wrap">
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${meta.badge}`}>{meta.label}</span>
-                    <div className="hidden sm:flex items-center gap-2 w-36">
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold shrink-0 ${meta.badge}`}>{meta.label}</span>
+                    <div className="hidden sm:flex items-center gap-2 w-36 shrink-0">
                         <span className="text-[11px] text-gray-400 whitespace-nowrap">Results: {pct}%</span>
                         <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
                             <div className={`h-full ${meta.bar}`} style={{ width: `${pct}%` }} />
@@ -307,16 +310,13 @@ function EventItem({ event, expanded, onToggle, sectionsCache, onLoadSections, o
                 </div>
             </div>
 
-            {/* expanded body */}
-            {/* expanded body */}
             {expanded && (
                 <div className="border-t border-gray-100">
-                    {/* Strict fixed-width grid columns matching data layout perfectly */}
-                    <div className="hidden md:grid grid-cols-[220px_1fr_160px_320px] gap-4 px-4 py-3 bg-gray-50 text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-gray-200/60">
+                    <div className={`hidden xl:grid ${ROW_GRID_COLS} xl:gap-3 px-4 py-3 bg-gray-50 text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-gray-200/60`}>
                         <span>Class</span>
-                        <span className="text-center md:text-left">Sections (marks)</span>
-                        <span className="text-center md:text-center pr-4">Status</span>
-                        <span className="text-center md:text-center pr-4">Actions</span>
+                        <span>Sections (marks)</span>
+                        <span>Status</span>
+                        <span className="text-right">Actions</span>
                     </div>
                     {exams.length === 0 ? (
                         <p className="text-sm text-gray-400 text-center py-8">No classes in this event yet.</p>
@@ -330,7 +330,7 @@ function EventItem({ event, expanded, onToggle, sectionsCache, onLoadSections, o
                             onRemove={onRemoveClass}
                         />
                     ))}
-                    <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-t border-gray-100">
+                    <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-t border-gray-100 gap-2">
                         <span className="text-xs font-medium text-gray-400">{total} class{total !== 1 ? "es" : ""} in this event</span>
                         <ActionBtn Icon={Plus} label="Add Class to Event" tone="neutral" onClick={() => onAddClass(event)} />
                     </div>
@@ -340,20 +340,18 @@ function EventItem({ event, expanded, onToggle, sectionsCache, onLoadSections, o
     );
 }
 
-// ══════════════════════════════════════════════════════════════════
-// MODALS
-// ══════════════════════════════════════════════════════════════════
+// ─── Modals Components ────────────────────────────────────────────────────────
 function ModalShell({ title, icon: Icon, onClose, children, maxW = "max-w-md" }) {
     useEffect(() => { document.body.style.overflow = "hidden"; return () => { document.body.style.overflow = ""; }; }, []);
     return (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-4">
             <div className={`bg-white rounded-2xl shadow-2xl w-full ${maxW} max-h-[90vh] overflow-y-auto`}>
                 <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-                    <div className="flex items-center gap-2">
-                        {Icon && <Icon className="w-5 h-5 text-blue-600" />}
-                        <h3 className="text-base font-semibold text-gray-800">{title}</h3>
+                    <div className="flex items-center gap-2 min-w-0">
+                        {Icon && <Icon className="w-5 h-5 text-blue-600 shrink-0" />}
+                        <h3 className="text-base font-semibold text-gray-800 truncate">{title}</h3>
                     </div>
-                    <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600">
+                    <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 shrink-0">
                         <X className="w-4 h-4" />
                     </button>
                 </div>
@@ -452,7 +450,7 @@ function CopyEventModal({ event, examTypes, academicYears, onSave, onCancel, loa
     });
     return (
         <ModalShell title="Copy Exam Event" icon={Copy} onClose={onCancel}>
-            <p className="text-xs text-gray-500 mb-4">Copies classes & subject configs from <strong>{event.name}</strong>. Marks and results are NOT copied.</p>
+            <p className="text-xs text-gray-500 mb-4">Copies classes & subject configs from <strong>{event.name}</strong>.</p>
             <div className="space-y-3">
                 <div className="grid grid-cols-2 gap-3">
                     <div>
@@ -517,7 +515,7 @@ function AddClassModal({ event, allClasses, onSave, onCancel, loading }) {
                         const sel = picked.includes(id);
                         return (
                             <button key={id} type="button" onClick={() => toggle(id)}
-                                className={`px-3 py-2 rounded-lg border text-sm font-medium transition-all ${sel ? "border-indigo-400 bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200" : "border-gray-200 text-gray-700 hover:border-gray-300"}`}>
+                                className={`px-3 py-2 rounded-lg border text-sm font-medium transition-all truncate ${sel ? "border-indigo-400 bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200" : "border-gray-200 text-gray-700 hover:border-gray-300"}`}>
                                 {c.name}
                             </button>
                         );
@@ -535,7 +533,6 @@ function AddClassModal({ event, allClasses, onSave, onCancel, loading }) {
     );
 }
 
-// Compact subject-configs manager for one class-exam within an event.
 function SubjectsModal({ event, exam, onClose, onChanged }) {
     const [subjects, setSubjects] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -592,34 +589,32 @@ function SubjectsModal({ event, exam, onClose, onChanged }) {
     );
 }
 
-// ══════════════════════════════════════════════════════════════════
-// MAIN PAGE
-// ══════════════════════════════════════════════════════════════════
+// ─── Main ExamEvents Component ───────────────────────────────────────────────
 export default function ExamEvents() {
     const navigate = useNavigate();
     const { currentAcademicYear } = useDecodedUser();
 
-    // meta
+    // meta states
     const [classes, setClasses] = useState([]);
     const [academicYears, setAcademicYears] = useState([]);
     const [examTypes, setExamTypes] = useState([]);
     const [loadingMeta, setLoadingMeta] = useState(true);
     const [errorMeta, setErrorMeta] = useState(null);
 
-    // filters
+    // filter states
     const [classId, setClassId] = useState("");
     const [yearId, setYearId] = useState("");
     const [typeId, setTypeId] = useState("");
     const [status, setStatus] = useState("");
 
-    // events
+    // events records states
     const [events, setEvents] = useState([]);
     const [loadingEvents, setLoadingEvents] = useState(false);
     const [errorEvents, setErrorEvents] = useState(null);
     const [expandedIds, setExpandedIds] = useState(() => new Set());
     const [sectionsCache, setSectionsCache] = useState({});
 
-    // modals
+    // modals control states
     const [showWizard, setShowWizard] = useState(false);
     const [editTarget, setEditTarget] = useState(null);
     const [editSaving, setEditSaving] = useState(false);
@@ -634,7 +629,7 @@ export default function ExamEvents() {
     const [subjectsTarget, setSubjectsTarget] = useState(null);
     const [toastError, setToastError] = useState(null);
 
-    // ── meta ──────────────────────────────────────────────────────
+    // Load filters meta data on mount
     useEffect(() => {
         (async () => {
             setLoadingMeta(true);
@@ -651,10 +646,9 @@ export default function ExamEvents() {
             } catch { setErrorMeta("Failed to load filters. Please refresh."); }
             finally { setLoadingMeta(false); }
         })();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [currentAcademicYear]);
 
-    // ── events ────────────────────────────────────────────────────
+    // Fetch Events list data matching filters
     const fetchEvents = useCallback(async () => {
         setLoadingEvents(true); setErrorEvents(null);
         try {
@@ -666,7 +660,6 @@ export default function ExamEvents() {
             let list = await getExamEvents(f);
             list = Array.isArray(list) ? list : [];
 
-            // class filter is client-side since the API filters at event level only
             if (classId) {
                 list = list
                     .map(ev => ({ ...ev, exams: (ev.exams || []).filter(e => String(e.schoolClassId) === String(classId)) }))
@@ -680,7 +673,6 @@ export default function ExamEvents() {
 
     useEffect(() => { if (!loadingMeta) fetchEvents(); }, [fetchEvents, loadingMeta]);
 
-    // ── section lazy-load on expand ──────────────────────────────
     const loadSectionsForEvent = useCallback(async (event) => {
         for (const exam of event.exams || []) {
             const key = `${event.eventId}-${exam.schoolClassId}`;
@@ -696,7 +688,6 @@ export default function ExamEvents() {
                 setSectionsCache(prev => ({ ...prev, [key]: [] }));
             }
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [sectionsCache]);
 
     const toggleExpand = (eventId) => {
@@ -707,7 +698,6 @@ export default function ExamEvents() {
         });
     };
 
-    // ── class-row actions ────────────────────────────────────────
     const handleAction = (exam, action) => {
         if (action === "declare") {
             setDeclareTarget({ examId: exam.id, name: `${exam.schoolClassName} — ${exam.name}` });
@@ -794,9 +784,6 @@ export default function ExamEvents() {
         } finally { setCopySaving(false); }
     };
 
-    // Lightweight client-side schedule export (no extra calls — uses already
-    // loaded event/class data). For richer exports, wire this to
-    // getExamEventSchedule(eventId) per event and merge.
     const handleExportSchedule = () => {
         if (events.length === 0) return;
         const rows = [["Event", "Exam Type", "Class", "Start", "End", "Subjects", "Status"]];
@@ -817,8 +804,9 @@ export default function ExamEvents() {
     const allClassesForAdd = classes;
 
     return (
-        <div className="min-h-screen bg-[#f3f6fb]">
+        <div className="min-h-screen bg-[#f3f6fb] overflow-x-hidden">
             <div className="p-2 md:p-3 lg:p-4 xl:p-6 space-y-2 md:space-y-3 lg:space-y-4 max-w-[1700px] mx-auto">
+                
                 {/* ── PAGE HEADER ─────────────────────────────────── */}
                 <div className="flex items-center justify-between">
                     <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">
@@ -846,7 +834,7 @@ export default function ExamEvents() {
 
                 {/* ── FILTERS ──────────────────────────────────────── */}
                 <div className="bg-white rounded-2xl border border-gray-200 shadow-sm px-2 md:px-3 lg:px-4 py-2 md:py-3 lg:py-4">
-                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-[1fr_1fr_1fr_1fr_auto_auto] gap-1.5 md:gap-2 lg:gap-3">
+                    <div className="grid grid-cols-2 md:grid-cols-4 2xl:grid-cols-[1fr_1fr_1fr_1fr_auto_auto] gap-1.5 md:gap-2 lg:gap-3">
                         <FilterSelect value={yearId} onChange={e => setYearId(e.target.value)} disabled={loadingMeta}>
                             <option value="">All Years</option>
                             {academicYears.map(y => {
@@ -877,7 +865,7 @@ export default function ExamEvents() {
                             disabled={loadingEvents || events.length === 0}
                             className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-white border border-gray-200 text-gray-700 text-xs sm:text-sm font-semibold rounded-lg transition-all hover:bg-gray-50 active:scale-95 disabled:opacity-50 whitespace-nowrap"
                         >
-                            <Download className="w-4 h-4" /> <span className="hidden sm:inline">Export Schedule</span><span className="sm:hidden">Export</span>
+                            <Download className="w-4 h-4 shrink-0" /> <span className="hidden sm:inline">Export Schedule</span><span className="sm:hidden">Export</span>
                         </button>
 
                         <button
@@ -885,7 +873,7 @@ export default function ExamEvents() {
                             disabled={loadingMeta}
                             className="flex items-center justify-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold rounded-lg transition-all shadow-sm active:scale-95 disabled:opacity-60 whitespace-nowrap"
                         >
-                            <Plus className="w-4 h-4" /> <span className="hidden sm:inline">New Exam Event</span><span className="sm:hidden">New</span>
+                            <Plus className="w-4 h-4 shrink-0" /> <span className="hidden sm:inline">New Exam Event</span><span className="sm:hidden">New</span>
                         </button>
                     </div>
                 </div>
@@ -933,7 +921,7 @@ export default function ExamEvents() {
                 </div>
             </div>
 
-            {/* ── MODALS / WIZARD ──────────────────────────────────── */}
+            {/* ── MODALS & WIZARD ──────────────────────────────────── */}
             {showWizard && (
                 <CreateExamEventWizard
                     examTypes={examTypes}

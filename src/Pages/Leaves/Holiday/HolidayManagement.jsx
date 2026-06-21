@@ -5,7 +5,6 @@ import {
   Search,
   ChevronDown,
   Edit2,
-  Trash2,
   FileSignature,
   Hourglass,
   X,
@@ -15,6 +14,7 @@ import {
   CalendarClock,
   SearchIcon,
   SearchX,
+  ToggleLeft,
 } from 'lucide-react';
 import CardComponent from '../../../Components/CommonComp/CardComponent';
 import {
@@ -24,7 +24,6 @@ import {
   createHoliday,
   getHolidayById,
   updateHoliday,
-  deleteHoliday,
   getCurrentAcademicYear,
   getAcademicYearsLov,
 } from '../../../Api/HolidayManagementAPI';
@@ -61,6 +60,8 @@ export default function HolidayManagement() {
   const [editHolidayData, setEditHolidayData] = useState(null);
 
   const [submitLoader, setSubmitLoader] = useState(false);
+  // Track which holiday is being toggled (to show per-row loader)
+  const [togglingId, setTogglingId] = useState(null);
 
   // List of academic years for the New/Edit Holiday dropdown (each item has { id, label, isCurrent })
   const [lovAcademicYears, setLovAcademicYears] = useState([]);
@@ -91,24 +92,18 @@ export default function HolidayManagement() {
         }
       } catch (error) {
         console.error('Failed to fetch academic year', error);
-
-        // fallback logic
         const currentDate = new Date();
         const currentYear = currentDate.getFullYear();
         const currentMonth = currentDate.getMonth();
-
         let academicYearStr;
-
         if (currentMonth >= 7) {
           academicYearStr = `${currentYear} - ${currentYear + 1}`;
         } else {
           academicYearStr = `${currentYear - 1} - ${currentYear}`;
         }
-
         setAcademicYear(academicYearStr);
       }
     };
-
     fetchCurrentAcademicYear();
   }, []);
 
@@ -118,7 +113,6 @@ export default function HolidayManagement() {
       setAcademicYearsLoading(true);
       try {
         const response = await getAcademicYearsLov();
-
         const unwrap = (r) =>
           Array.isArray(r)                 ? r :
           Array.isArray(r?.years)          ? r.years :
@@ -127,18 +121,13 @@ export default function HolidayManagement() {
           Array.isArray(r?.data?.years)    ? r.data.years :
           Array.isArray(r?.data?.data)     ? r.data.data :
           Array.isArray(r?.data?.content)  ? r.data.content : [];
-
         const list = unwrap(response);
-
-        // Sort: current academic year first, then newest to oldest
         const sorted = [...list].sort((a, b) => {
           if (a.isCurrent) return -1;
           if (b.isCurrent) return 1;
           return (b.id ?? 0) - (a.id ?? 0);
         });
-
         setLovAcademicYears(sorted);
-
         const current = sorted.find((y) => y.isCurrent);
         if (current?.id != null) {
           setCurrentAcademicYearId(current.id);
@@ -150,7 +139,6 @@ export default function HolidayManagement() {
         setAcademicYearsLoading(false);
       }
     };
-
     fetchAcademicYearsLov();
   }, []);
 
@@ -245,6 +233,18 @@ export default function HolidayManagement() {
     });
   };
 
+  // Extracts the backend message from authFetch-style errors (throw new Error(jsonString))
+  // or axios-style errors (err.response.data.message)
+  const parseApiError = (err, fallback) => {
+    try {
+      // authFetch throws new Error(text) — text is the raw JSON string
+      const parsed = JSON.parse(err?.message || '');
+      if (parsed?.message) return parsed.message;
+    } catch (_) { /* not a JSON string */ }
+    // axios / other patterns
+    return err?.response?.data?.message || err?.data?.message || err?.message || fallback;
+  };
+
   const handleCreateHoliday = async (data) => {
     try {
       setSubmitLoader(true);
@@ -258,12 +258,13 @@ export default function HolidayManagement() {
       };
       await createHoliday(payload);
       toast.success(`${data.holidayName} added successfully!`);
-      setSubmitLoader(false);
       setOpenCreateHoliday(false);
       await refreshHolidayList();
     } catch (error) {
       console.error('Failed to create holiday', error);
-      toast.error('Failed to create holiday');
+      toast.error(parseApiError(error, 'Failed to create holiday'));
+    } finally {
+      setSubmitLoader(false);
     }
   };
 
@@ -277,17 +278,8 @@ export default function HolidayManagement() {
     try {
       setSelectedHolidayId(id);
       const data = await getHolidayById(id);
-      const holidayDate = new Date(data.holidayDate);
-      const year = holidayDate.getFullYear();
-      const month = holidayDate.getMonth();
-      let academicYearStr;
-      if (month >= 7) {
-        academicYearStr = `${year} - ${year + 1}`;
-      } else {
-        academicYearStr = `${year - 1} - ${year}`;
-      }
       setEditHolidayData({
-        academicYear: academicYearStr,
+        academicYear: currentAcademicYearId,   // always pre-fill with current academic year ID
         holidayName: data.name,
         description: data.description || '',
         fromDate: data.holidayDate,
@@ -315,30 +307,49 @@ export default function HolidayManagement() {
       };
       await updateHoliday(selectedHolidayId, payload);
       toast.success('Holiday updated successfully');
-      setSubmitLoader(false);
       setOpenEditHoliday(false);
       setEditHolidayData(null);
       setSelectedHolidayId(null);
       await refreshHolidayList();
     } catch (err) {
       console.error('Failed to update holiday:', err);
-      toast.error('Failed to update holiday');
+      toast.error(parseApiError(err, 'Failed to update holiday'));
+    } finally {
+      setSubmitLoader(false);
     }
   };
 
-  const handleDeleteHoliday = async (holidayId) => {
-    const confirmDelete = window.confirm(
-      'Are you sure you want to delete this holiday?'
-    );
-    if (!confirmDelete) return;
+  // ── Deactivate holiday directly from the table (only active → inactive) ──
+  const handleDeactivate = async (holidayId) => {
     try {
-      await deleteHoliday(holidayId);
-      toast.success('Holiday deleted successfully!');
-      setHolidays((prev) => prev.filter((h) => h.id !== holidayId));
-      setTotalElements((prev) => prev - 1);
+      setTogglingId(holidayId);
+      const holiday = holidays.find((h) => h.id === holidayId);
+      if (!holiday) return;
+
+      const payload = {
+        name: holiday.name,
+        description: holiday.description,
+        holidayDate: holiday.holidayDate,
+        holidayType: holiday.holidayType,
+        isOptional: holiday.isOptional || false,
+        isActive: false,
+      };
+
+      await updateHoliday(holidayId, payload);
+
+      // Optimistic local update
+      setHolidays((prev) =>
+        prev.map((h) =>
+          h.id === holidayId ? { ...h, isActive: false } : h
+        )
+      );
+
+      toast.success('Holiday deactivated successfully!');
     } catch (error) {
-      console.error('Delete failed', error);
-      toast.error('Failed to delete holiday');
+      console.error('Failed to deactivate holiday', error);
+      toast.error('Failed to deactivate holiday');
+    } finally {
+      setTogglingId(null);
     }
   };
 
@@ -435,17 +446,14 @@ export default function HolidayManagement() {
 
         {/* Year Selection */}
         <div className="bg-white border border-gray-100 rounded-xl p-3.5 flex items-center gap-4 w-fit">
-          {/* Icon */}
           <div className="w-14 h-14 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
             <Calendar className="w-6 h-6 text-blue-600" />
           </div>
-
-          {/* Text + Year pill */}
           <div>
             <p className="text-[14px] font-medium text-gray-500 uppercase tracking-wide mb-0.5">
               Academic Year
             </p>
-            <div className="inline-flex items-center  bg-green-50 border border-green-200 rounded-lg px-3 py-0.5">
+            <div className="inline-flex items-center bg-green-50 border border-green-200 rounded-lg px-3 py-0.5">
               <span className="text-base font-medium text-green-900 tracking-wide">
                 {academicYear}
               </span>
@@ -471,18 +479,12 @@ export default function HolidayManagement() {
 
         {holidayLoader ? (
           <div className="flex justify-between flex-col lg:flex-row bg-linear-to-r from-blue-100 via-indigo-200 to-purple-200 rounded-xl border border-white shadow-md shadow-gray-50 p-4 md:p-5 mb-4 md:mb-6 animate-pulse">
-            {/* Left skeleton */}
             <div className="flex-1">
-              {/* Badge */}
               <div className="h-5 w-24 bg-blue-200 rounded-full mb-3" />
-              {/* Title */}
               <div className="h-7 w-48 bg-blue-200 rounded-lg mb-2" />
-              {/* Description line 1 */}
               <div className="h-4 w-72 bg-blue-200 rounded mb-2" />
-              {/* Description line 2 */}
               <div className="h-4 w-56 bg-blue-200 rounded mb-4" />
             </div>
-            {/* Right skeleton */}
             <div className="flex lg:items-center gap-6 px-2">
               <div>
                 <div className="h-3 w-8 bg-blue-200 rounded mb-2" />
@@ -532,7 +534,6 @@ export default function HolidayManagement() {
 
         {/* Filters Section */}
         <div className="bg-white/50 rounded-xl shadow-sm border border-gray-200 p-4 mb-4 md:mb-6">
-          {/* Mobile Filter Toggle */}
           <div className="flex justify-between items-center mb-3 lg:hidden">
             <h3 className="text-base font-semibold text-gray-900">Filters</h3>
             <button
@@ -547,7 +548,6 @@ export default function HolidayManagement() {
           <div
             className={`${showFilters ? 'grid' : 'hidden lg:grid'} grid-cols-1 sm:grid-cols-2 gap-3 lg:gap-4`}
           >
-            {/* Row 1: Search (2/3) + Academic Year (1/3) */}
             <div className="col-span-1 sm:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-3 lg:gap-4">
               <div className="sm:col-span-2">
                 <label
@@ -570,7 +570,6 @@ export default function HolidayManagement() {
               </div>
             </div>
 
-            {/* Row 2: Holiday Type + From Date + To Date + Clear */}
             <div className="col-span-1 sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
               <div>
                 <label
@@ -647,13 +646,17 @@ export default function HolidayManagement() {
 
         {/* Table / Cards */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+
           {/* ===== DESKTOP TABLE ===== */}
           <div className="hidden md:block overflow-y-auto max-h-130">
             <table className="w-full">
               <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
                 <tr className="text-sm">
                   <th className="px-4 lg:px-6 py-3 text-left font-semibold text-gray-600 uppercase tracking-wide">
-                    Holiday Name <span className="text-[11px] bg-blue-50 text-gray-800 px-2 py-1 rounded-full">Status</span>
+                    Holiday Name{' '}
+                    <span className="text-[11px] bg-blue-50 text-gray-800 px-2 py-1 rounded-full">
+                      Status
+                    </span>
                   </th>
                   <th className="px-4 lg:px-6 py-3 text-center font-semibold text-gray-600 uppercase tracking-wide">
                     Date
@@ -670,9 +673,7 @@ export default function HolidayManagement() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {loading && (
-                  <ListLoader avatar={false} />
-                )}
+                {loading && <ListLoader avatar={false} />}
 
                 {!loading && holidays.length === 0 && (
                   <tr>
@@ -696,42 +697,109 @@ export default function HolidayManagement() {
                       key={holiday.id}
                       className="hover:bg-gray-50 transition-colors"
                     >
+                      {/* Name + Status badge */}
                       <td className="px-4 lg:px-6 py-4">
                         <p className="font-semibold text-gray-900 text-xs lg:text-sm">
-                          {holiday.name} <span className={`text-[11px] ${holiday.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'} px-2 py-1 rounded-full`}>{holiday.isActive ? 'Active' : 'Inactive'}</span>
+                          {holiday.name}{' '}
+                          <span
+                            className={`text-[11px] ${
+                              holiday.isActive
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-gray-100 text-gray-800'
+                            } px-2 py-1 rounded-full`}
+                          >
+                            {holiday.isActive ? 'Active' : 'Inactive'}
+                          </span>
                         </p>
                       </td>
+
+                      {/* Date */}
                       <td className="px-4 lg:px-6 py-4 text-center">
                         <p className="text-gray-900 text-sm whitespace-nowrap">
                           {new Date(holiday.holidayDate).toDateString()}
                         </p>
                       </td>
+
+                      {/* Type */}
                       <td className="px-4 lg:px-6 py-4 text-center">
                         <span
-                          className={`inline-flex items-center px-2.5 py-1 rounded-full text-sm font-medium ${HOLIDAY_TYPE_COLORS[holiday.holidayType] || 'bg-gray-100 text-gray-700'}`}
+                          className={`inline-flex items-center px-2.5 py-1 rounded-full text-sm font-medium ${
+                            HOLIDAY_TYPE_COLORS[holiday.holidayType] ||
+                            'bg-gray-100 text-gray-700'
+                          }`}
                         >
                           {holiday.holidayType}
                         </span>
                       </td>
+
+                      {/* Description with hover tooltip */}
                       <td className="px-4 lg:px-6 py-4 text-start hidden lg:table-cell">
-                        <p className="text-gray-700 text-sm">
-                          {truncateText(holiday.description, 40)}
-                        </p>
+                        <div className="relative group inline-block max-w-[200px]">
+                          <p className="text-gray-700 text-sm cursor-default truncate">
+                            {truncateText(holiday.description, 40)}
+                          </p>
+                          {/* Tooltip — only shows when description is long enough to be truncated */}
+                          {holiday.description &&
+                            holiday.description.length > 40 && (
+                              <div className="absolute bottom-full left-0 mb-2 w-72 bg-gray-900 text-white text-xs rounded-lg px-3 py-2.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-30 shadow-xl leading-relaxed">
+                                {holiday.description}
+                                {/* Tooltip arrow */}
+                                <div className="absolute top-full left-5 w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-gray-900" />
+                              </div>
+                            )}
+                        </div>
                       </td>
+
+                      {/* Actions */}
                       <td className="px-4 lg:px-6 py-4">
-                        <div className="flex justify-center gap-2">
+                        <div className="flex justify-center items-center gap-1">
+                          {/* Edit — always visible */}
                           <button
                             onClick={() => handleEditClick(holiday.id)}
                             className="p-2 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Edit holiday"
                           >
                             <Edit className="w-4 lg:w-5 h-4 lg:h-5 text-blue-600" />
                           </button>
-                          <button
-                            onClick={() => handleDeleteHoliday(holiday.id)}
-                            className="p-2 hover:bg-red-50 rounded-lg transition-colors"
-                          >
-                            <Trash2 className="w-4 lg:w-5 h-4 lg:h-5 text-red-600" />
-                          </button>
+
+                          {/* "Mark Inactive" button — only for active holidays */}
+                          {holiday.isActive && (
+                            <button
+                              onClick={() => handleDeactivate(holiday.id)}
+                              disabled={togglingId === holiday.id}
+                              title="Mark as Inactive"
+                              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all border ${
+                                togglingId === holiday.id
+                                  ? 'opacity-50 cursor-not-allowed bg-orange-50 border-orange-200 text-orange-400'
+                                  : 'bg-orange-50 border-orange-200 text-orange-600 hover:bg-orange-100 hover:border-orange-300'
+                              }`}
+                            >
+                              {togglingId === holiday.id ? (
+                                <svg
+                                  className="w-3.5 h-3.5 animate-spin"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                >
+                                  <circle
+                                    className="opacity-25"
+                                    cx="12" cy="12" r="10"
+                                    stroke="currentColor"
+                                    strokeWidth="4"
+                                  />
+                                  <path
+                                    className="opacity-75"
+                                    fill="currentColor"
+                                    d="M4 12a8 8 0 018-8v8H4z"
+                                  />
+                                </svg>
+                              ) : (
+                                <ToggleLeft className="w-3.5 h-3.5" />
+                              )}
+                              <span>
+                                {togglingId === holiday.id ? 'Saving...' : 'Inactive'}
+                              </span>
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -774,32 +842,81 @@ export default function HolidayManagement() {
                     <div className="flex justify-between items-start mb-3">
                       <div className="flex-1 pr-3">
                         <h3 className="font-semibold text-gray-900 text-sm mb-1">
-                          {holiday.name} <span className={`text-[11px] ${holiday.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'} px-2 py-1 rounded-full`}>{holiday.isActive ? 'Active' : 'Inactive'}</span>
+                          {holiday.name}{' '}
+                          <span
+                            className={`text-[11px] ${
+                              holiday.isActive
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-gray-100 text-gray-800'
+                            } px-2 py-1 rounded-full`}
+                          >
+                            {holiday.isActive ? 'Active' : 'Inactive'}
+                          </span>
                         </h3>
                         <p className="text-sm text-gray-600 mb-2">
                           {new Date(holiday.holidayDate).toDateString()}
                         </p>
                         <span
-                          className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${HOLIDAY_TYPE_COLORS[holiday.holidayType] || 'bg-gray-100 text-gray-700'}`}
+                          className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
+                            HOLIDAY_TYPE_COLORS[holiday.holidayType] ||
+                            'bg-gray-100 text-gray-700'
+                          }`}
                         >
                           {holiday.holidayType}
                         </span>
                       </div>
-                      <div className="flex gap-2">
+
+                      {/* Mobile Actions */}
+                      <div className="flex flex-col gap-2 items-end">
+                        {/* Edit — always visible */}
                         <button
                           onClick={() => handleEditClick(holiday.id)}
                           className="p-2 hover:bg-blue-50 rounded-lg transition-colors"
+                          title="Edit holiday"
                         >
                           <Edit className="w-4 h-4 text-blue-600" />
                         </button>
-                        <button
-                          onClick={() => handleDeleteHoliday(holiday.id)}
-                          className="p-2 hover:bg-red-50 rounded-lg transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4 text-red-600" />
-                        </button>
+
+                        {/* Inactive button — only for active holidays */}
+                        {holiday.isActive && (
+                          <button
+                            onClick={() => handleDeactivate(holiday.id)}
+                            disabled={togglingId === holiday.id}
+                            className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium transition-all border ${
+                              togglingId === holiday.id
+                                ? 'opacity-50 cursor-not-allowed bg-orange-50 border-orange-200 text-orange-400'
+                                : 'bg-orange-50 border-orange-200 text-orange-600 hover:bg-orange-100 hover:border-orange-300'
+                            }`}
+                          >
+                            {togglingId === holiday.id ? (
+                              <svg
+                                className="w-3.5 h-3.5 animate-spin"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                              >
+                                <circle
+                                  className="opacity-25"
+                                  cx="12" cy="12" r="10"
+                                  stroke="currentColor"
+                                  strokeWidth="4"
+                                />
+                                <path
+                                  className="opacity-75"
+                                  fill="currentColor"
+                                  d="M4 12a8 8 0 018-8v8H4z"
+                                />
+                              </svg>
+                            ) : (
+                              <ToggleLeft className="w-3.5 h-3.5" />
+                            )}
+                            <span>
+                              {togglingId === holiday.id ? '...' : 'Inactive'}
+                            </span>
+                          </button>
+                        )}
                       </div>
                     </div>
+
                     {holiday.description && (
                       <p className="text-sm text-gray-700">
                         {holiday.description}

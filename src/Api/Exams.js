@@ -1149,16 +1149,12 @@ export const updateEventStudentRemarks = async (eventId, classId, studentId, rem
 /* =========================
    DECLARE RESULT
 ========================= */
-
-// FIX: was missing. Exams.jsx previously called declareExamResult(examId) from
-// the old per-exam Api/Exams.js. The event model declares per-class-exam too —
-// reusing the same per-exam endpoint (examId comes from event.exams[i].id).
 export const declareEventExamResult = async (examId) => {
   try {
     if (!examId) throw new Error("examId is required");
 
     const res = await authFetch(`${BASE_URL}/exams/${examId}/declare-result`, {
-      method: "POST",
+      method: "PATCH",   // ✅ was "POST" — Swagger confirms this endpoint is PATCH-only
     });
 
     if (!res.ok) {
