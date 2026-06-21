@@ -116,8 +116,8 @@ const menuItems = [
     subItems: [
       { label: 'Manage Leave', route: '/leaves', permission: P.LEAVE_APPROVE },
       { label: 'My Leaves', route: '/leaves/myLeaves', permission: P.LEAVE_VIEW },
-      { label: 'Holiday Management', route: '/leaves/manageHolidays', permission: P.LEAVE_DELETE },
-      { label: 'Leave Config', route: '/leaves/leaveConfig', permission: P.LEAVE_DELETE },
+      { label: 'Holiday Management', route: '/leaves/manageHolidays', permission: P.LEAVE_APPROVE },
+      { label: 'Leave Config', route: '/leaves/leaveConfig', permission: P.LEAVE_APPROVE },
     ]
   },
   {

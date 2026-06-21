@@ -1,6 +1,6 @@
 // context/UserContext.jsx
 import { createContext, useContext, useEffect, useState, useCallback, useMemo } from "react";
-import { getCurrUserDetails } from "../utils/getCurrUserDetails";
+import { jwtDecode } from "../utils/GetCurrUserDetails";
 import { useFcmToken } from "../hooks/useFcmtoken";
 
 export const UserContext = createContext();
@@ -14,22 +14,18 @@ function showForegroundNotification(payload) {
   });
 }
 
-// ── Decode JWT synchronously — called at render time, not in useEffect ────────
-function decodeToken(rawToken) {
-  if (!rawToken) return null;
-  try {
-    const decoded = getCurrUserDetails();
-    if (!decoded) return null;
-    return {
-      id:          decoded.userId,
-      userType:    decoded.roles?.[0] ?? null,
-      email:       decoded.sub,
-      permissions: decoded.permissions ?? [],
-      schoolId:    decoded.schoolId ?? null,
-    };
-  } catch {
-    return null;
-  }
+// ── Decode JWT synchronously — no side effects, safe to call during render ────
+function decodeToken(token) {
+  if (!token) return null;
+  const payload = jwtDecode(token);
+  if (!payload) return null;
+  return {
+    id:          payload.userId,
+    userType:    payload.roles?.[0] ?? null,
+    email:       payload.sub,
+    permissions: payload.permissions ?? [],
+    schoolId:    payload.schoolId ?? null,
+  };
 }
 
 export const UserProvider = ({ children }) => {
@@ -104,6 +100,7 @@ export const UserProvider = ({ children }) => {
   const logout = useCallback(async () => {
     await deleteCurrentToken();
     localStorage.removeItem("token");
+    localStorage.removeItem("user");
     localStorage.removeItem("school");
     localStorage.removeItem("profile");
     localStorage.removeItem("currentAcademicYear");
