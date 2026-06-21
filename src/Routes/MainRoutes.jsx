@@ -1,111 +1,135 @@
+import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 
-// Layout & Protection
+// Layout & Protection — kept eager since they're needed on every route
 import AppLayout from '../Layout/AppLayout';
 import ProtectedRoutes from '../utils/Protectedroutes';
-
-// Pages
-import Login from '../Pages/Login_2';
-import Dashboard from '../Pages/Dashboard';
-import Attendance from '../Pages/Attendance/Attendance';
-import Leaves from '../Pages/Leaves/Leaves';
-import Payroll from '../Pages/Payroll';
-import Teachers from '../Pages/Teachers/Teachers';
-import Settings from '../Pages/Settings';
-
-// Attendance
-import UsersAttendance from '../Pages/Attendance/UsersAttendance';
-import MarkUserAttendance from '../Pages/Attendance/MarkUserAttendance';
-import WarningVerificationFailed from '../Components/UserAttendance/WarningVerificationFailed';
-import ManualAttendance from '../Components/UserAttendance/ManualAttendanceRequest';
-import ExamConfiguration from '../Pages/Exams/ExamConfiguration';
-import ClassSectionConfig from '../Pages/Academics/ClassSectionConfig';
-import StudentAttendance from '../Pages/Attendance/StudentAttendance/StudentAttendance';
-import StaffAttendanceRegistration from '../Pages/Attendance/StaffAttendanceRegistration';
-import StudentAttendanceRegistration from '../Pages/Attendance/StudentAttendanceRegistration';
-
-// Teachers
-import DetailsView from '../Pages/Teachers/DetailsView';
-import AddNewTeacher from '../Pages/Teachers/AddNewTeacher';
-import EditTeachersDetails from '../Pages/Teachers/EditTeachersDetaills';
-import ClassAssignment from '../Pages/Teachers/ClassAssignment';
-
-// Super Admin / Global Admin
-import AddnewSystemUser from '../Pages/SuperAdmin/AddnewSystemUser';
-import EditSysUser from '../Pages/SuperAdmin/EditSysUser';
-import ManageAllUsers from '../Pages/SuperAdmin/ManageAllUsers';
-import ApplyLeaves from '../Pages/Leaves/ApplyLeaves';
-import MyLeaves from '../Pages/Leaves/MyLeaves';
-import SuperAdminSchools from '../Pages/SuperAdmin/SuperAdminSchools';
-
-// Students
-import Student from '../Pages/Students/Students';
-import AddNewStudent from '../Pages/Students/AddNewStudent';
-import EditStudentDetails from '../Pages/Students/EditStudentDetails';
-import StudentDetails from '../Pages/Students/StudentDetails';
-import HolidayManagment from '../Pages/Leaves/Holiday/HolidayManagement';
-import LeaveConfig from '../Pages/Leaves/LeaveConfig';
 import RoleProtectedRoute from '../utils/RoleProtectedRoute';
 
+// ─── Lazy-loaded Pages (code-split, fetched only when route is hit) ───────────
+const Login = lazy(() => import('../Pages/Login_2'));
+const Dashboard = lazy(() => import('../Pages/Dashboard'));
+const Attendance = lazy(() => import('../Pages/Attendance/Attendance'));
+const Leaves = lazy(() => import('../Pages/Leaves/Leaves'));
+const Payroll = lazy(() => import('../Pages/Payroll'));
+const Teachers = lazy(() => import('../Pages/Teachers/Teachers'));
+const Settings = lazy(() => import('../Pages/Settings'));
+
+// Attendance
+const UsersAttendance = lazy(() => import('../Pages/Attendance/UsersAttendance'));
+const MarkUserAttendance = lazy(() => import('../Pages/Attendance/MarkUserAttendance'));
+const WarningVerificationFailed = lazy(() => import('../Components/UserAttendance/WarningVerificationFailed'));
+const ManualAttendance = lazy(() => import('../Components/UserAttendance/ManualAttendanceRequest'));
+const ExamConfiguration = lazy(() => import('../Pages/Exams/ExamConfiguration'));
+const ClassSectionConfig = lazy(() => import('../Pages/Academics/ClassSectionConfig'));
+const StudentAttendance = lazy(() => import('../Pages/Attendance/StudentAttendance/StudentAttendance'));
+const StaffAttendanceRegistration = lazy(() => import('../Pages/Attendance/StaffAttendanceRegistration'));
+const StudentAttendanceRegistration = lazy(() => import('../Pages/Attendance/StudentAttendanceRegistration'));
+
+// Teachers
+const DetailsView = lazy(() => import('../Pages/Teachers/DetailsView'));
+const AddNewTeacher = lazy(() => import('../Pages/Teachers/AddNewTeacher'));
+const EditTeachersDetails = lazy(() => import('../Pages/Teachers/EditTeachersDetaills'));
+const ClassAssignment = lazy(() => import('../Pages/Teachers/ClassAssignment'));
+
+// Super Admin / Global Admin
+const AddnewSystemUser = lazy(() => import('../Pages/SuperAdmin/AddnewSystemUser'));
+const EditSysUser = lazy(() => import('../Pages/SuperAdmin/EditSysUser'));
+const ManageAllUsers = lazy(() => import('../Pages/SuperAdmin/ManageAllUsers'));
+const ApplyLeaves = lazy(() => import('../Pages/Leaves/ApplyLeaves'));
+const MyLeaves = lazy(() => import('../Pages/Leaves/MyLeaves'));
+const SuperAdminSchools = lazy(() => import('../Pages/SuperAdmin/SuperAdminSchools'));
+
+// Students
+const Student = lazy(() => import('../Pages/Students/Students'));
+const AddNewStudent = lazy(() => import('../Pages/Students/AddNewStudent'));
+const EditStudentDetails = lazy(() => import('../Pages/Students/EditStudentDetails'));
+const StudentDetails = lazy(() => import('../Pages/Students/StudentDetails'));
+const HolidayManagment = lazy(() => import('../Pages/Leaves/Holiday/HolidayManagement'));
+const LeaveConfig = lazy(() => import('../Pages/Leaves/LeaveConfig'));
+
 // Stock Routes
-import Stock from '../Pages/Stock/Stock';
-import Store from '../Pages/Stock/Stores';
-import Items from '../Pages/Stock/Items';
-import Transactions from '../Pages/Stock/Transactions';
-import Movement from '../Pages/Stock/Movement';
-import ClassConfig from '../Pages/Stock/ClassConfig/ClassConfig';
-import StudentOrders from '../Pages/Stock/StudentOrders/StudentOrders';
-import CreateStudentOrder from '../Pages/Stock/StudentOrders/CreateStudentOrder';
-import EditStudentOrder from '../Pages/Stock/StudentOrders/EditStudentOrder';
+const Stock = lazy(() => import('../Pages/Stock/Stock'));
+const Store = lazy(() => import('../Pages/Stock/Stores'));
+const Items = lazy(() => import('../Pages/Stock/Items'));
+const Transactions = lazy(() => import('../Pages/Stock/Transactions'));
+const Movement = lazy(() => import('../Pages/Stock/Movement'));
+const ClassConfig = lazy(() => import('../Pages/Stock/ClassConfig/ClassConfig'));
+const StudentOrders = lazy(() => import('../Pages/Stock/StudentOrders/StudentOrders'));
+const CreateStudentOrder = lazy(() => import('../Pages/Stock/StudentOrders/CreateStudentOrder'));
+const EditStudentOrder = lazy(() => import('../Pages/Stock/StudentOrders/EditStudentOrder'));
 
 // Transport Routes
-import Transport_Management from '../Pages/Transport/Transport_Management';
-import Vehicles from '../Pages/Transport/Vehicles';
-import Fee_Plans from '../Pages/Transport/Fee_Plans/Fee_Plans';
-import Driver_Attendants from '../Pages/Transport/Driver_Attendants';
-import Reports from '../Pages/Transport/Reports/Reports';
-import Student_Allocations from '../Pages/Transport/Student_Allocation/Student_Allocations';
-import Routes_Manage from '../Pages/Transport/Routes_Manage';
-import SubjectsMaster from '../Components/Subject/subject';
-import RolesPermissionsManagement from '../Pages/RoleBasedPermission/PermissionManagement';
-import SectionSubjectAssignment from '../Pages/SubjectManagement/SectionSubjectAssignment';
-import Exams from '../Pages/Exams/Exams';
-import MarksEntry from '../Pages/Exams/MarksEntry';
-import ReportCards from '../Pages/Exams/ReportCards';
-import Analytics from '../Pages/Exams/Analytics';
-import SchoolConfig from '../Pages/Schools/SchoolConfig';
-import HomeworkPage from '../Pages/Homework/Homeworkpage';
-import { OverviewPage, FeeSynthesisPage, CollectionsPage } from '../Pages/FeeManagement/FeeManagement';
+const Transport_Management = lazy(() => import('../Pages/Transport/Transport_Management'));
+const Vehicles = lazy(() => import('../Pages/Transport/Vehicles'));
+const Fee_Plans = lazy(() => import('../Pages/Transport/Fee_Plans/Fee_Plans'));
+const Driver_Attendants = lazy(() => import('../Pages/Transport/Driver_Attendants'));
+const Reports = lazy(() => import('../Pages/Transport/Reports/Reports'));
+const Student_Allocations = lazy(() => import('../Pages/Transport/Student_Allocation/Student_Allocations'));
+const Routes_Manage = lazy(() => import('../Pages/Transport/Routes_Manage'));
 
-import AcademicYear from '../Pages/Attendance/AcademicYear/AcademicYear';
-import TimeTable from '../Pages/Schedule/TimeTable';
-import CreateSchedule from '../Pages/Schedule/CreateSchedule';
-import FeePeriods from '../Pages/FeeManagement/FeePeriods';
-import FeeStructures from '../Pages/FeeManagement/Feestructures.';
+const SubjectsMaster = lazy(() => import('../Components/Subject/subject'));
+const RolesPermissionsManagement = lazy(() => import('../Pages/RoleBasedPermission/PermissionManagement'));
+const SectionSubjectAssignment = lazy(() => import('../Pages/SubjectManagement/SectionSubjectAssignment'));
+const Exams = lazy(() => import('../Pages/Exams/Exams'));
+const MarksEntry = lazy(() => import('../Pages/Exams/MarksEntry'));
+const ReportCards = lazy(() => import('../Pages/Exams/ReportCards'));
+const Analytics = lazy(() => import('../Pages/Exams/Analytics'));
+const SchoolConfig = lazy(() => import('../Pages/Schools/SchoolConfig'));
+const HomeworkPage = lazy(() => import('../Pages/Homework/Homeworkpage'));
 
-import LandingApp from "../Pages/SchoolSpineWeb/pages/Landing";
-import About from "../Pages/SchoolSpineWeb/pages/About";
-import Contact from "../Pages/SchoolSpineWeb/pages/Contact";
-import PrivacyPolicy from "../Pages/SchoolSpineWeb/pages/Privacy_Policy";
+// FeeManagement exports multiple named components from one module —
+// each lazy() call still only loads the chunk once (cached by webpack/vite)
+const OverviewPage = lazy(() =>
+  import('../Pages/FeeManagement/FeeManagement').then((m) => ({ default: m.OverviewPage }))
+);
+const FeeSynthesisPage = lazy(() =>
+  import('../Pages/FeeManagement/FeeManagement').then((m) => ({ default: m.FeeSynthesisPage }))
+);
+const CollectionsPage = lazy(() =>
+  import('../Pages/FeeManagement/FeeManagement').then((m) => ({ default: m.CollectionsPage }))
+);
+
+const AcademicYear = lazy(() => import('../Pages/Attendance/AcademicYear/AcademicYear'));
+const TimeTable = lazy(() => import('../Pages/Schedule/TimeTable'));
+const CreateSchedule = lazy(() => import('../Pages/Schedule/CreateSchedule'));
+const FeePeriods = lazy(() => import('../Pages/FeeManagement/FeePeriods'));
+const FeeStructures = lazy(() => import('../Pages/FeeManagement/Feestructures.'));
+
+// Public landing pages
+const LandingApp = lazy(() => import('../Pages/SchoolSpineWeb/pages/Landing'));
+const About = lazy(() => import('../Pages/SchoolSpineWeb/pages/About'));
+const Contact = lazy(() => import('../Pages/SchoolSpineWeb/pages/Contact'));
+const PrivacyPolicy = lazy(() => import('../Pages/SchoolSpineWeb/pages/Privacy_Policy'));
+const LandingLayout = lazy(() => import('../Pages/SchoolSpineWeb/pages/LandingLayout'));
+const Terms_Of_Service = lazy(() => import('../Pages/SchoolSpineWeb/pages/Terms'));
+const Cookie_Policy = lazy(() => import('../Pages/SchoolSpineWeb/pages/CookiePolicy'));
+const FaqListing = lazy(() => import('../Components/Homes/Faq/FaqLisitng'));
+
 // Circulars and Events
-import CircularsPage from '../Pages/Communication/Circulars/CircularsPage';
-import CreateCircularPage from '../Pages/Communication/Circulars/CreateCircularPage';
-import EventsPage from '../Pages/Communication/Events/EventsPage';
-import CreateEventPage from '../Pages/Communication/Events/CreateEventPage';
-import ApprovalQueuePage from '../Pages/Communication/ApprovalQueue/ApprovalQueuePage';
-import NotificationsPage from '../Pages/Communication/Notifications/NotificationsPage';
+const CircularsPage = lazy(() => import('../Pages/Communication/Circulars/CircularsPage'));
+const CreateCircularPage = lazy(() => import('../Pages/Communication/Circulars/CreateCircularPage'));
+const EventsPage = lazy(() => import('../Pages/Communication/Events/EventsPage'));
+const CreateEventPage = lazy(() => import('../Pages/Communication/Events/CreateEventPage'));
+const ApprovalQueuePage = lazy(() => import('../Pages/Communication/ApprovalQueue/ApprovalQueuePage'));
+const NotificationsPage = lazy(() => import('../Pages/Communication/Notifications/NotificationsPage'));
 
-
+// ─── Suspense fallback — premium blue circle loader ────────────────────────────
+const PageLoader = () => (
+  <div className="fixed inset-0 flex flex-col items-center justify-center gap-4 sm:gap-5 bg-white px-4">
+    <div className="relative h-12 w-12 sm:h-16 sm:w-16">
+      <div className="absolute inset-0 rounded-full border-4 border-blue-100" />
+      <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-blue-600 border-r-blue-600 animate-spin" />
+    </div>
+    <p className="text-base sm:text-lg font-semibold text-gray-700 text-center">Loading SchoolSpine...</p>
+  </div>
+);
 
 // ─── Role Groups ───────────────────────────────────────────────────────────────
 const STOCK_ACCOUNTANT_ROLES = ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'STORE_ACCOUNTANT'];
 const STOCK_SELLER_ROLES = ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'STORE_ACCOUNTANT', 'STORE_SELLER'];
 const SCHEDULE_ROLES = ['GLOBAL_ADMIN', 'SUPER_ADMIN', 'ADMIN'];
 // ✅ Roles that see the school picker (requiresSchoolSelection: true)
-import LandingLayout from "../Pages/SchoolSpineWeb/pages/LandingLayout";
-import Terms_Of_Service from '../Pages/SchoolSpineWeb/pages/Terms';
-import Cookie_Policy from '../Pages/SchoolSpineWeb/pages/CookiePolicy';
-import FaqListing from '../Components/Homes/Faq/FaqLisitng';
 const SCHOOL_PICKER_ROLES = ['SUPER_ADMIN', 'GLOBAL_ADMIN'];
 
 // ─── Smart root redirect based on role ────────────────────────────────────────
@@ -125,231 +149,222 @@ const MainRoutes = () => {
   const isTokenExist = localStorage.getItem('token');
 
   return (
-    <Routes>
-      {/* Public landing pages (redirect to app when logged-in) */}
-      <Route path="/" element={isTokenExist ? <RootRedirect /> : <LandingApp />} />
-      <Route path="/about" element={isTokenExist ? <RootRedirect /> : <LandingLayout><About /></LandingLayout>} />
-      <Route path="/contact" element={isTokenExist ? <RootRedirect /> : <LandingLayout><Contact /></LandingLayout>} />
-      <Route path="/privacy-policy" element={isTokenExist ? <RootRedirect /> : <LandingLayout><PrivacyPolicy /></LandingLayout>} />
-      <Route path="/terms" element={isTokenExist ? <RootRedirect /> : <LandingLayout><Terms_Of_Service /></LandingLayout>} />
-      <Route path="/cookies" element={isTokenExist ? <RootRedirect /> : <LandingLayout><Cookie_Policy /></LandingLayout>} />
-      <Route path="/faqs" element={isTokenExist ? <RootRedirect /> : <LandingLayout><FaqListing /></LandingLayout>} />
-      {/* PUBLIC */}
-      {/* Redirect logged-in users away from login */}
-      <Route path="/login" element={isTokenExist ? <RootRedirect /> : <Login />} />
+    <Suspense fallback={<PageLoader />}>
+      <Routes>
+        {/* Public landing pages (redirect to app when logged-in) */}
+        <Route path="/" element={isTokenExist ? <RootRedirect /> : <LandingApp />} />
+        <Route path="/about" element={isTokenExist ? <RootRedirect /> : <LandingLayout><About /></LandingLayout>} />
+        <Route path="/contact" element={isTokenExist ? <RootRedirect /> : <LandingLayout><Contact /></LandingLayout>} />
+        <Route path="/privacy-policy" element={isTokenExist ? <RootRedirect /> : <LandingLayout><PrivacyPolicy /></LandingLayout>} />
+        <Route path="/terms" element={isTokenExist ? <RootRedirect /> : <LandingLayout><Terms_Of_Service /></LandingLayout>} />
+        <Route path="/cookies" element={isTokenExist ? <RootRedirect /> : <LandingLayout><Cookie_Policy /></LandingLayout>} />
+        <Route path="/faqs" element={isTokenExist ? <RootRedirect /> : <LandingLayout><FaqListing /></LandingLayout>} />
+        {/* PUBLIC */}
+        {/* Redirect logged-in users away from login */}
+        <Route path="/login" element={isTokenExist ? <RootRedirect /> : <Login />} />
 
-      {/* PROTECTED */}
-      <Route element={<ProtectedRoutes />}>
+        {/* PROTECTED */}
+        <Route element={<ProtectedRoutes />}>
 
-        {/* School picker (no AppLayout) - SUPER_ADMIN or GLOBAL_ADMIN */}
-        <Route
-          path="/superAdmin"
-          element={
-            <RoleProtectedRoute allowedRoles={SCHOOL_PICKER_ROLES}>
-              <SuperAdminSchools />
-            </RoleProtectedRoute>
-          }
-        />
-
-        {/* All other routes — wrapped in AppLayout (has Sidebar) */}
-        <Route element={<AppLayout />}>
-
-          {/* Dashboard */}
+          {/* School picker (no AppLayout) - SUPER_ADMIN or GLOBAL_ADMIN */}
           <Route
-            path="/dashboard"
+            path="/superAdmin"
             element={
-              <RoleProtectedRoute
-                allowedRoles={['ADMIN', 'TEACHER', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST', 'PARENT', 'STORE_ACCOUNTANT']}
-                fallback={<Navigate to="/stock/studentOrders" replace />}
-              >
-                <Dashboard />
+              <RoleProtectedRoute allowedRoles={SCHOOL_PICKER_ROLES}>
+                <SuperAdminSchools />
               </RoleProtectedRoute>
             }
           />
 
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/leaves/applyLeaves" element={<ApplyLeaves />} />
-          <Route path="/leaves/myLeaves" element={<MyLeaves />} />
-          <Route path="/attendance/markUserAttendance" element={<MarkUserAttendance />} />
+          {/* All other routes — wrapped in AppLayout (has Sidebar) */}
+          <Route element={<AppLayout />}>
 
-          {/* ONLY GLOBAL_ADMIN */}
-          <Route element={<RoleProtectedRoute allowedRoles={['GLOBAL_ADMIN']} />}>
-            <Route path="/rolesPermissions" element={<RolesPermissionsManagement />} />
+            {/* Dashboard */}
+            <Route
+              path="/dashboard"
+              element={
+                <RoleProtectedRoute
+                  allowedRoles={['ADMIN', 'TEACHER', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'PRINCIPAL', 'ACCOUNTANT', 'RECEPTIONIST', 'PARENT', 'STORE_ACCOUNTANT']}
+                  fallback={<Navigate to="/stock/studentOrders" replace />}
+                >
+                  <Dashboard />
+                </RoleProtectedRoute>
+              }
+            />
 
-          </Route>
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/leaves/applyLeaves" element={<ApplyLeaves />} />
+            <Route path="/leaves/myLeaves" element={<MyLeaves />} />
+            <Route path="/attendance/markUserAttendance" element={<MarkUserAttendance />} />
 
-
-          {/* ── Fees  ──
-                */}
-          <Route element={<RoleProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'PRINCIPAL', 'TEACHER', 'ACCOUNTANT']} />}>
-
-            <Route path='/feemanagement' element={<OverviewPage />} />
-            <Route path='/feemanagement/config' element={<FeeSynthesisPage />} />
-            <Route path='/feemanagement/period' element={<FeePeriods />} />
-            <Route path='/feemanagement/structures' element={<FeeStructures />} />
-            <Route path='/feemanagement/collections' element={<CollectionsPage />} />
-          </Route>
-          <Route element={<RoleProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'PRINCIPAL', 'TEACHER']} />}>
-               <Route path="/exams" element={<Exams />} />
-            <Route path="/exams/marksEntry/:examId?" element={<MarksEntry />} />
-            <Route path="/exams/reportCard/:examId?" element={<ReportCards />} />
-            <Route path="/attendance/studentAttendance" element={<StudentAttendance />} />
-          </Route>
-
-          {/* ADMIN, SUPER_ADMIN & GLOBAL_ADMIN */}
-          <Route element={<RoleProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'PRINCIPAL']} />}>
-            <Route path="/manageUsers/addUser" element={<AddnewSystemUser />} />
-            <Route path="/manageUsers/editUser/:id" element={<EditSysUser />} />
-            <Route path="/manageUsers" element={<ManageAllUsers />} />
-
-            <Route path="/attendance" element={<Attendance />} />
-            <Route path="/attendance/staffImgReg" element={<StaffAttendanceRegistration />} />
-            <Route path="/attendance/studentImgReg" element={<StudentAttendanceRegistration />} />
-            <Route path="/attendance/usersAttendance" element={<UsersAttendance />} />
-            
-            <Route path="/attendance/usersAttendance/warning" element={<WarningVerificationFailed />} />
-            <Route path="/attendance/usersAttendance/manual" element={<ManualAttendance />} />
-
-            
-            
-            <Route path="/exams/analytics" element={<Analytics />} />
-            <Route path="/exams/examConfig" element={<ExamConfiguration />} />
-            <Route path="/academics/classSections" element={<ClassSectionConfig />} />
-
-            <Route element={<RoleProtectedRoute allowedRoles={SCHEDULE_ROLES} />}>
-              <Route path="/schedule" element={<TimeTable />} />
-              <Route path="/schedule/create" element={<CreateSchedule />} />
+            {/* ONLY GLOBAL_ADMIN */}
+            <Route element={<RoleProtectedRoute allowedRoles={['GLOBAL_ADMIN']} />}>
+              <Route path="/rolesPermissions" element={<RolesPermissionsManagement />} />
             </Route>
 
-            <Route path="/teachers" element={<Teachers />} />
-            <Route path="/teachers/addTeacher" element={<AddNewTeacher />} />
-            <Route path="/teachers/editTeacher/:id" element={<EditTeachersDetails />} />
-            <Route path="/teachers/classAssignment/:teacherId" element={<ClassAssignment />} />
-            <Route path="/teachers/:id" element={<DetailsView />} />
+            {/* ── Fees  ── */}
+            <Route element={<RoleProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'PRINCIPAL', 'TEACHER', 'ACCOUNTANT']} />}>
+              <Route path='/feemanagement' element={<OverviewPage />} />
+              <Route path='/feemanagement/config' element={<FeeSynthesisPage />} />
+              <Route path='/feemanagement/period' element={<FeePeriods />} />
+              <Route path='/feemanagement/structures' element={<FeeStructures />} />
+              <Route path='/feemanagement/collections' element={<CollectionsPage />} />
+            </Route>
+            <Route element={<RoleProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'PRINCIPAL', 'TEACHER']} />}>
+              <Route path="/exams" element={<Exams />} />
+              <Route path="/exams/marksEntry/:examId?" element={<MarksEntry />} />
+              <Route path="/exams/reportCard/:examId?" element={<ReportCards />} />
+              <Route path="/attendance/studentAttendance" element={<StudentAttendance />} />
+            </Route>
 
-            <Route path="/students" element={<Student />} />
-            <Route path="/students/addStudents" element={<AddNewStudent />} />
-            <Route path="/students/:id" element={<StudentDetails />} />
-            <Route path="/students/editStudent/:id" element={<EditStudentDetails />} />
+            {/* ADMIN, SUPER_ADMIN & GLOBAL_ADMIN */}
+            <Route element={<RoleProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'PRINCIPAL']} />}>
+              <Route path="/manageUsers/addUser" element={<AddnewSystemUser />} />
+              <Route path="/manageUsers/editUser/:id" element={<EditSysUser />} />
+              <Route path="/manageUsers" element={<ManageAllUsers />} />
 
-            <Route path="/leaves" element={<Leaves />} />
-            <Route path="/leaves/manageHolidays" element={<HolidayManagment />} />
+              <Route path="/attendance" element={<Attendance />} />
+              <Route path="/attendance/staffImgReg" element={<StaffAttendanceRegistration />} />
+              <Route path="/attendance/studentImgReg" element={<StudentAttendanceRegistration />} />
+              <Route path="/attendance/usersAttendance" element={<UsersAttendance />} />
 
+              <Route path="/attendance/usersAttendance/warning" element={<WarningVerificationFailed />} />
+              <Route path="/attendance/usersAttendance/manual" element={<ManualAttendance />} />
 
+              <Route path="/exams/analytics" element={<Analytics />} />
+              <Route path="/exams/examConfig" element={<ExamConfiguration />} />
+              <Route path="/academics/classSections" element={<ClassSectionConfig />} />
 
-            {/* Subject Section Assignment */}
-            <Route path="/sectionSubjectAssignment" element={<SectionSubjectAssignment />} />
+              <Route element={<RoleProtectedRoute allowedRoles={SCHEDULE_ROLES} />}>
+                <Route path="/schedule" element={<TimeTable />} />
+                <Route path="/schedule/create" element={<CreateSchedule />} />
+              </Route>
+
+              <Route path="/teachers" element={<Teachers />} />
+              <Route path="/teachers/addTeacher" element={<AddNewTeacher />} />
+              <Route path="/teachers/editTeacher/:id" element={<EditTeachersDetails />} />
+              <Route path="/teachers/classAssignment/:teacherId" element={<ClassAssignment />} />
+              <Route path="/teachers/:id" element={<DetailsView />} />
+
+              <Route path="/students" element={<Student />} />
+              <Route path="/students/addStudents" element={<AddNewStudent />} />
+              <Route path="/students/:id" element={<StudentDetails />} />
+              <Route path="/students/editStudent/:id" element={<EditStudentDetails />} />
+
+              <Route path="/leaves" element={<Leaves />} />
+              <Route path="/leaves/manageHolidays" element={<HolidayManagment />} />
+
+              {/* Subject Section Assignment */}
+              <Route path="/sectionSubjectAssignment" element={<SectionSubjectAssignment />} />
+            </Route>
+
+            {/* Leave Config — GLOBAL_ADMIN, SUPER_ADMIN, PRINCIPAL */}
+            <Route element={<RoleProtectedRoute allowedRoles={['GLOBAL_ADMIN', 'SUPER_ADMIN', 'PRINCIPAL', 'ADMIN']} />}>
+              <Route path="/leaves/leaveConfig" element={<LeaveConfig />} />
+              <Route path='/subjectsmaster' element={<SubjectsMaster />} />
+            </Route>
+
+            {/* Payroll */}
+            <Route element={<RoleProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'ACCOUNTANT']} />}>
+              <Route path="/payroll" element={<Payroll />} />
+            </Route>
+
+            {/* Stock */}
+            <Route element={<RoleProtectedRoute allowedRoles={STOCK_ACCOUNTANT_ROLES} />}>
+              <Route path="/stock" element={<Stock />} />
+              <Route path="/stock/stores" element={<Store />} />
+              <Route path="/stock/items" element={<Items />} />
+              <Route path="/stock/classConfig" element={<ClassConfig />} />
+              <Route path="/stock/transactions" element={<Transactions />} />
+              <Route path="/stock/movementHistory" element={<Movement />} />
+            </Route>
+
+            <Route element={<RoleProtectedRoute allowedRoles={STOCK_SELLER_ROLES} />}>
+              <Route path="/stock/studentOrders" element={<StudentOrders />} />
+              <Route path="/stock/studentOrders/addOrder" element={<CreateStudentOrder />} />
+              <Route path="/stock/studentOrders/editOrder" element={<EditStudentOrder />} />
+            </Route>
+
+            {/* Transport */}
+            <Route element={<RoleProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'PRINCIPAL']} />}>
+              <Route path="/route" element={<Transport_Management />} />
+              <Route path="/route/vehicles" element={<Vehicles />} />
+              <Route path="/route/Driver&Attendants" element={<Driver_Attendants />} />
+              <Route path="/route/routes_management" element={<Routes_Manage />} />
+              <Route path="/route/studentAllocations" element={<Student_Allocations />} />
+              <Route path="/route/feePlans" element={<Fee_Plans />} />
+              <Route path="/route/reports" element={<Reports />} />
+            </Route>
+
+            <Route element={<RoleProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'PRINCIPAL', 'TEACHER']} />}>
+              <Route path="/homework" element={<HomeworkPage />} />
+            </Route>
+
+            {/* Leaves redirect for non-admin */}
+            <Route element={<RoleProtectedRoute allowedRoles={['TEACHER', 'PRINCIPAL', 'RECEPTIONIST', 'ACCOUNTANT']} />}>
+              <Route path="/leaves" element={<Navigate to="/leaves/myLeaves" replace />} />
+            </Route>
+
+            {/* Schools Management */}
+            <Route element={<RoleProtectedRoute allowedRoles={['SUPER_ADMIN', 'GLOBAL_ADMIN']} />}>
+              <Route path="/schoolConfig" element={<SchoolConfig />} />
+              <Route path="/academicYear" element={<AcademicYear />} />
+            </Route>
+
+            {/* for events and notifications */}
+
+            {/* Circulars */}
+            <Route path="/communication/circulars" element={
+              <RoleProtectedRoute allowedRoles={['ADMIN', 'PRINCIPAL', 'TEACHER', 'GLOBAL_ADMIN', 'SUPER_ADMIN']}>
+                <CircularsPage />
+              </RoleProtectedRoute>
+            } />
+            <Route path="/communication/circulars/:id" element={
+              <RoleProtectedRoute allowedRoles={['ADMIN', 'PRINCIPAL', 'TEACHER', 'GLOBAL_ADMIN', 'SUPER_ADMIN']}>
+                <CircularsPage />
+              </RoleProtectedRoute>
+            } />
+
+            <Route path="/communication/circulars/create" element={
+              <RoleProtectedRoute allowedRoles={['ADMIN', 'PRINCIPAL', 'TEACHER', 'GLOBAL_ADMIN', 'SUPER_ADMIN']}>
+                <CreateCircularPage />
+              </RoleProtectedRoute>
+            } />
+
+            {/* Events */}
+            <Route path="/communication/events" element={
+              <RoleProtectedRoute allowedRoles={['ADMIN', 'PRINCIPAL', 'TEACHER', 'GLOBAL_ADMIN', 'SUPER_ADMIN']}>
+                <EventsPage />
+              </RoleProtectedRoute>
+            } />
+
+            <Route path="/communication/events/create" element={
+              <RoleProtectedRoute allowedRoles={['ADMIN', 'PRINCIPAL', 'TEACHER', 'GLOBAL_ADMIN', 'SUPER_ADMIN']}>
+                <CreateEventPage />
+              </RoleProtectedRoute>
+            } />
+
+            {/* Approval Queue — admin/principal only */}
+            <Route path="/communication/approval" element={
+              <RoleProtectedRoute allowedRoles={['ADMIN', 'PRINCIPAL', 'GLOBAL_ADMIN', 'SUPER_ADMIN']}>
+                <ApprovalQueuePage />
+              </RoleProtectedRoute>
+            } />
+
+            {/* Notifications */}
+            <Route path="/communication/notifications" element={
+              <RoleProtectedRoute allowedRoles={['ADMIN', 'PRINCIPAL', 'TEACHER', 'GLOBAL_ADMIN', 'SUPER_ADMIN']}>
+                <NotificationsPage />
+              </RoleProtectedRoute>
+            } />
+
+            {/* Fallback */}
+            <Route path="*" element={<RootRedirect />} />
+
           </Route>
-
-          {/* Leave Config — GLOBAL_ADMIN, SUPER_ADMIN, PRINCIPAL */}
-          <Route element={<RoleProtectedRoute allowedRoles={['GLOBAL_ADMIN', 'SUPER_ADMIN', 'PRINCIPAL', 'ADMIN']} />}>
-            <Route path="/leaves/leaveConfig" element={<LeaveConfig />} />
-            <Route path='/subjectsmaster' element={<SubjectsMaster />} />
-          </Route>
-
-          {/* Payroll */}
-          <Route element={<RoleProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'ACCOUNTANT']} />}>
-            <Route path="/payroll" element={<Payroll />} />
-          </Route>
-
-          {/* Stock */}
-          <Route element={<RoleProtectedRoute allowedRoles={STOCK_ACCOUNTANT_ROLES} />}>
-            <Route path="/stock" element={<Stock />} />
-            <Route path="/stock/stores" element={<Store />} />
-            <Route path="/stock/items" element={<Items />} />
-            <Route path="/stock/classConfig" element={<ClassConfig />} />
-            <Route path="/stock/transactions" element={<Transactions />} />
-            <Route path="/stock/movementHistory" element={<Movement />} />
-          </Route>
-
-          <Route element={<RoleProtectedRoute allowedRoles={STOCK_SELLER_ROLES} />}>
-            <Route path="/stock/studentOrders" element={<StudentOrders />} />
-            <Route path="/stock/studentOrders/addOrder" element={<CreateStudentOrder />} />
-            <Route path="/stock/studentOrders/editOrder" element={<EditStudentOrder />} />
-          </Route>
-
-          {/* Transport */}
-          <Route element={<RoleProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'PRINCIPAL']} />}>
-            <Route path="/route" element={<Transport_Management />} />
-            <Route path="/route/vehicles" element={<Vehicles />} />
-            <Route path="/route/Driver&Attendants" element={<Driver_Attendants />} />
-            <Route path="/route/routes_management" element={<Routes_Manage />} />
-            <Route path="/route/studentAllocations" element={<Student_Allocations />} />
-            <Route path="/route/feePlans" element={<Fee_Plans />} />
-            <Route path="/route/reports" element={<Reports />} />
-          </Route>
-
-          <Route element={<RoleProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'PRINCIPAL', 'TEACHER']} />}>
-            <Route path="/homework" element={<HomeworkPage />} />
-          </Route>
-
-
-          {/* Leaves redirect for non-admin */}
-          <Route element={<RoleProtectedRoute allowedRoles={['TEACHER', 'PRINCIPAL', 'RECEPTIONIST', 'ACCOUNTANT']} />}>
-            <Route path="/leaves" element={<Navigate to="/leaves/myLeaves" replace />} />
-          </Route>
-
-          {/* Schools Management */}
-          <Route element={<RoleProtectedRoute allowedRoles={['SUPER_ADMIN', 'GLOBAL_ADMIN']} />}>
-            <Route path="/schoolConfig" element={<SchoolConfig />} />
-            <Route path="/academicYear" element={<AcademicYear />} />
-          </Route>
-
-          {/* for events and notifications */}
-
-          {/* Circulars */}
-          <Route path="/communication/circulars" element={
-            <RoleProtectedRoute allowedRoles={['ADMIN', 'PRINCIPAL', 'TEACHER', 'GLOBAL_ADMIN', 'SUPER_ADMIN']}>
-              <CircularsPage />
-            </RoleProtectedRoute>
-          } />
-          <Route path="/communication/circulars/:id" element={
-            <RoleProtectedRoute allowedRoles={['ADMIN', 'PRINCIPAL', 'TEACHER', 'GLOBAL_ADMIN', 'SUPER_ADMIN']}>
-              <CircularsPage />
-            </RoleProtectedRoute>
-          } />
-
-          <Route path="/communication/circulars/create" element={
-            <RoleProtectedRoute allowedRoles={['ADMIN', 'PRINCIPAL', 'TEACHER', 'GLOBAL_ADMIN', 'SUPER_ADMIN']}>
-              <CreateCircularPage />
-            </RoleProtectedRoute>
-          } />
-
-          {/* Events */}
-          <Route path="/communication/events" element={
-            <RoleProtectedRoute allowedRoles={['ADMIN', 'PRINCIPAL', 'TEACHER', 'GLOBAL_ADMIN', 'SUPER_ADMIN']}>
-              <EventsPage />
-            </RoleProtectedRoute>
-          } />
-
-          <Route path="/communication/events/create" element={
-            <RoleProtectedRoute allowedRoles={['ADMIN', 'PRINCIPAL', 'TEACHER', 'GLOBAL_ADMIN', 'SUPER_ADMIN']}>
-              <CreateEventPage />
-            </RoleProtectedRoute>
-          } />
-
-          {/* Approval Queue — admin/principal only */}
-          <Route path="/communication/approval" element={
-            <RoleProtectedRoute allowedRoles={['ADMIN', 'PRINCIPAL', 'GLOBAL_ADMIN', 'SUPER_ADMIN']}>
-              <ApprovalQueuePage />
-            </RoleProtectedRoute>
-          } />
-
-          {/* Notifications */}
-          <Route path="/communication/notifications" element={
-            <RoleProtectedRoute allowedRoles={['ADMIN', 'PRINCIPAL', 'TEACHER', 'GLOBAL_ADMIN', 'SUPER_ADMIN']}>
-              <NotificationsPage />
-            </RoleProtectedRoute>
-          } />
-
-
-
-          {/* Fallback */}
-          <Route path="*" element={<RootRedirect />} />
-
         </Route>
-      </Route>
-    </Routes>
+      </Routes>
+    </Suspense>
   );
 };
 
