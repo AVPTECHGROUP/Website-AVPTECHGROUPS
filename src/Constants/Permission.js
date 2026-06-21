@@ -34,6 +34,8 @@ export const PERMISSIONS = {
   ACADEMIC_DELETE:      'ACADEMIC_DELETE',
   ACADEMIC_APPROVE:     'ACADEMIC_APPROVE',
   ACADEMIC_YEAR_MANAGE: 'ACADEMIC_YEAR_MANAGE',
+  CLASS_SECTION_MANAGE: 'CLASS_SECTION_MANAGE',
+  HOLIDAY_MANAGE:       'HOLIDAY_MANAGE',
 
   // ── Homework ─────────────────────────────────────────────────────────────────
   HOMEWORK_VIEW:    'HOMEWORK_VIEW',
@@ -56,11 +58,15 @@ export const PERMISSIONS = {
   EXAM_APPROVE:          'EXAM_APPROVE',
   EXAM_MARKS_ENTER:      'EXAM_MARKS_ENTER',
   EXAM_MARKS_VIEW_CLASS: 'EXAM_MARKS_VIEW_CLASS',
+  EXAM_ANALYTICS_VIEW:   'EXAM_ANALYTICS_VIEW',
+  EXAM_CONFIG_MANAGE:    'EXAM_CONFIG_MANAGE',
 
   // ── Communication ────────────────────────────────────────────────────────────
+  CIRCULAR_VIEW:    'CIRCULAR_VIEW',
   CIRCULAR_CREATE:  'CIRCULAR_CREATE',
   CIRCULAR_APPROVE: 'CIRCULAR_APPROVE',
   CIRCULAR_DELETE:  'CIRCULAR_DELETE',
+  EVENT_VIEW:       'EVENT_VIEW',
   EVENT_CREATE:     'EVENT_CREATE',
   EVENT_APPROVE:    'EVENT_APPROVE',
   EVENT_DELETE:     'EVENT_DELETE',
@@ -74,11 +80,12 @@ export const PERMISSIONS = {
   ATTENDANCE_APPROVE: 'ATTENDANCE_APPROVE',
 
   // ── Leaves ───────────────────────────────────────────────────────────────────
-  LEAVE_VIEW:    'LEAVE_VIEW',
-  LEAVE_CREATE:  'LEAVE_CREATE',
-  LEAVE_EDIT:    'LEAVE_EDIT',
-  LEAVE_DELETE:  'LEAVE_DELETE',
-  LEAVE_APPROVE: 'LEAVE_APPROVE',
+  LEAVE_VIEW:          'LEAVE_VIEW',
+  LEAVE_CREATE:        'LEAVE_CREATE',
+  LEAVE_EDIT:          'LEAVE_EDIT',
+  LEAVE_DELETE:        'LEAVE_DELETE',
+  LEAVE_APPROVE:       'LEAVE_APPROVE',
+  LEAVE_CONFIG_MANAGE: 'LEAVE_CONFIG_MANAGE',
 
   // ── Fee Management ───────────────────────────────────────────────────────────
   FEE_VIEW:             'FEE_VIEW',

@@ -304,7 +304,7 @@ const MainRoutes = () => {
             <Route
               path="/academics/classSections"
               element={
-                <PermissionProtectedRoute allowedPermissions={[P.ACADEMIC_YEAR_MANAGE]}>
+                <PermissionProtectedRoute allowedPermissions={[P.CLASS_SECTION_MANAGE]}>
                   <ClassSectionConfig />
                 </PermissionProtectedRoute>
               }
@@ -361,7 +361,7 @@ const MainRoutes = () => {
             <Route
               path="/exams/analytics"
               element={
-                <PermissionProtectedRoute allowedPermissions={[P.EXAM_APPROVE]}>
+                <PermissionProtectedRoute allowedPermissions={[P.EXAM_ANALYTICS_VIEW]}>
                   <Analytics />
                 </PermissionProtectedRoute>
               }
@@ -369,7 +369,7 @@ const MainRoutes = () => {
             <Route
               path="/exams/examConfig"
               element={
-                <PermissionProtectedRoute allowedPermissions={[P.EXAM_CREATE]}>
+                <PermissionProtectedRoute allowedPermissions={[P.EXAM_CONFIG_MANAGE]}>
                   <ExamConfiguration />
                 </PermissionProtectedRoute>
               }
@@ -425,7 +425,7 @@ const MainRoutes = () => {
             <Route
               path="/leaves/manageHolidays"
               element={
-                <PermissionProtectedRoute allowedPermissions={[P.LEAVE_APPROVE]}>
+                <PermissionProtectedRoute allowedPermissions={[P.HOLIDAY_MANAGE]}>
                   <HolidayManagment />
                 </PermissionProtectedRoute>
               }
@@ -433,7 +433,7 @@ const MainRoutes = () => {
             <Route
               path="/leaves/leaveConfig"
               element={
-                <PermissionProtectedRoute allowedPermissions={[P.LEAVE_APPROVE]}>
+                <PermissionProtectedRoute allowedPermissions={[P.LEAVE_CONFIG_MANAGE]}>
                   <LeaveConfig />
                 </PermissionProtectedRoute>
               }
@@ -505,7 +505,7 @@ const MainRoutes = () => {
             />
 
             {/* ── Communication ── */}
-            <Route element={<PermissionProtectedRoute allowedPermissions={[P.CIRCULAR_CREATE, P.CIRCULAR_APPROVE, P.CIRCULAR_DELETE]} />}>
+            <Route element={<PermissionProtectedRoute allowedPermissions={[P.CIRCULAR_VIEW, P.CIRCULAR_CREATE, P.CIRCULAR_APPROVE, P.CIRCULAR_DELETE]} />}>
               <Route path="/communication/circulars" element={<CircularsPage />} />
               <Route path="/communication/circulars/:id" element={<CircularsPage />} />
             </Route>
@@ -517,7 +517,7 @@ const MainRoutes = () => {
                 </PermissionProtectedRoute>
               }
             />
-            <Route element={<PermissionProtectedRoute allowedPermissions={[P.EVENT_CREATE, P.EVENT_APPROVE, P.EVENT_DELETE]} />}>
+            <Route element={<PermissionProtectedRoute allowedPermissions={[P.EVENT_VIEW, P.EVENT_CREATE, P.EVENT_APPROVE, P.EVENT_DELETE]} />}>
               <Route path="/communication/events" element={<EventsPage />} />
             </Route>
             <Route
