@@ -1,4 +1,6 @@
 import { ChevronDown, Search, RotateCcw, Plus, Loader2, CheckCheck } from "lucide-react";
+import { useAuth } from "../../hooks/useAuth";
+import { PERMISSIONS as P } from "../../Constants/Permission";
 
 function FilterSelect({ value, onChange, loading = false, disabled = false, minWidth = "", children }) {
   return (
@@ -83,6 +85,7 @@ export default function ControlBar({
 }) {
   const noClass   = !selectedClassId;
   const noSection = !selectedSectionId;
+  const { hasPermission } = useAuth();
 
   return (
     <>
@@ -207,17 +210,19 @@ export default function ControlBar({
 
         <div className="flex-1" />
 
-        {/* Assign button — requires a section to be selected */}
-        <button
-          onClick={onAssign}
-          disabled={noSection}
-          title={noSection ? "Select a class and section first" : "Assign new homework"}
-          className="inline-flex items-center gap-1.5 px-4 py-[7px] text-[13px] font-semibold
-            bg-blue-700 hover:bg-blue-800 text-white rounded-lg transition-colors
-            disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <Plus size={14} /> Assign Homework
-        </button>
+        {/* Assign button — requires HOMEWORK_CREATE permission and a section to be selected */}
+        {hasPermission(P.HOMEWORK_CREATE) && (
+          <button
+            onClick={onAssign}
+            disabled={noSection}
+            title={noSection ? "Select a class and section first" : "Assign new homework"}
+            className="inline-flex items-center gap-1.5 px-4 py-[7px] text-[13px] font-semibold
+              bg-blue-700 hover:bg-blue-800 text-white rounded-lg transition-colors
+              disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Plus size={14} /> Assign Homework
+          </button>
+        )}
       </div>
     </>
   );

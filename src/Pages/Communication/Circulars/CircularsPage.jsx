@@ -10,18 +10,8 @@ import CardComponent from '../../../Components/CommonComp/CardComponent';
 import ListLoader from '../../../Components/CommonComp/ListLoader';
 import { fetchCirculars, approveCircular, rejectCircular, deleteCircular } from '../../../Api/CircularApi.js';
 import CircularDetailModal from '../../../Components/CircularDetailsPopup/CircularDetailModel.jsx';
-import { useDecodedUser } from '../../../ContextAPI/UserContext';
-
-// ── Role guard ─────────────────────────────────────────────────────────────────
-// Only these roles may approve or reject circulars.
-// TEACHER (and any other unlisted role) cannot.
-const APPROVER_ROLES = ['PRINCIPAL', 'ADMIN', 'SUPER_ADMIN','GLOBAL_ADMIN', 'VICE_PRINCIPAL', 'HOD'];
-
-function useCanApprove() {
-  const { user } = useDecodedUser();
-  const role = (user?.userType ?? '').toUpperCase();
-  return APPROVER_ROLES.includes(role);
-}
+import { useAuth } from '../../../hooks/useAuth';
+import { PERMISSIONS as P } from '../../../Constants/Permission';
 
 // ── Static helpers ─────────────────────────────────────────────────────────────
 
@@ -172,8 +162,9 @@ function MobileCircularCard({ c, actionId, canApprove, onApprove, onReject, onDe
 export default function CircularsPage() {
   const navigate = useNavigate();
 
-  // ── Role check ──────────────────────────────────────────────────────────────
-  const canApprove = useCanApprove();
+  const { hasPermission } = useAuth();
+  const canApprove = hasPermission(P.CIRCULAR_APPROVE);
+  const canCreate  = hasPermission(P.CIRCULAR_CREATE);
 
   // ── State ──
   const [circulars, setCirculars] = useState([]);
@@ -291,12 +282,14 @@ export default function CircularsPage() {
             Manage and publish school circulars for staff, parents and students.
           </p>
         </div>
-        <button
-          onClick={() => navigate('/communication/circulars/create')}
-          className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold rounded-lg transition-colors whitespace-nowrap flex-shrink-0"
-        >
-          + <span className="hidden sm:inline">New</span> Circular
-        </button>
+        {canCreate && (
+          <button
+            onClick={() => navigate('/communication/circulars/create')}
+            className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold rounded-lg transition-colors whitespace-nowrap flex-shrink-0"
+          >
+            + <span className="hidden sm:inline">New</span> Circular
+          </button>
+        )}
       </div>
 
       {/* Stat cards */}

@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../../hooks/useAuth';
+import { PERMISSIONS as P } from '../../../Constants/Permission';
 import {
   ChevronRight,
   ChevronLeft,
@@ -37,6 +39,7 @@ const TeachersTable = ({
   onStatusToggle,
 }) => {
   const navigate = useNavigate();
+  const { hasPermission } = useAuth();
 
   // Which row id is currently being hovered (desktop only — drives checkbox visibility)
   const [hoveredId, setHoveredId] = useState(null);
@@ -101,18 +104,24 @@ const TeachersTable = ({
 
   const getActionOptions = (teacher) => {
     if (propActionOptions) return propActionOptions;
-    return [
+    const options = [
       { value: 'view', label: 'View', icon: Eye, text: 'text-gray-600', bg: 'bg-blue-50', hover: 'hover:bg-gray-200' },
-      { value: 'editTeacher', label: 'Edit', icon: Edit, text: 'text-blue-600', bg: 'bg-blue-50', hover: 'hover:bg-blue-100' },
-      {
-        value: 'toogleStatus',
-        label: teacher.status === 'ACTIVE' ? 'Deactivate' : 'Activate',
-        icon: Power,
-        text: teacher.status === 'ACTIVE' ? 'text-red-600' : 'text-green-600',
-        bg: teacher.status === 'ACTIVE' ? 'bg-red-50' : 'bg-green-50',
-        hover: teacher.status === 'ACTIVE' ? 'hover:bg-red-100' : 'hover:bg-green-100',
-      },
     ];
+    const editPerm = isUserTable ? P.USER_EDIT : P.TEACHER_EDIT;
+    if (hasPermission(editPerm)) {
+      options.push(
+        { value: 'editTeacher', label: 'Edit', icon: Edit, text: 'text-blue-600', bg: 'bg-blue-50', hover: 'hover:bg-blue-100' },
+        {
+          value: 'toogleStatus',
+          label: teacher.status === 'ACTIVE' ? 'Deactivate' : 'Activate',
+          icon: Power,
+          text: teacher.status === 'ACTIVE' ? 'text-red-600' : 'text-green-600',
+          bg: teacher.status === 'ACTIVE' ? 'bg-red-50' : 'bg-green-50',
+          hover: teacher.status === 'ACTIVE' ? 'hover:bg-red-100' : 'hover:bg-green-100',
+        },
+      );
+    }
+    return options;
   };
 
   // ── Checkbox cell ────────────────────────────────────────────────────────

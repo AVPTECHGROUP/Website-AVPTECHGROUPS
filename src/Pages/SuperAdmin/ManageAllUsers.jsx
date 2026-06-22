@@ -25,6 +25,8 @@ import { UserContext } from '../../ContextAPI/UserContext';
 import PasswordResetModal from '../../Components/PopupResetPassword/ResetPasswordComponent';
 import TooltipComponent from '../../Components/CommonComp/Tooltip_comp/TooltipComp';
 import ConfirmationModal from '../../Components/CommonComp/ConfirmationModel/ConfirmationModal';
+import { useAuth } from '../../hooks/useAuth';
+import { PERMISSIONS as P } from '../../Constants/Permission';
 
 const ManageAllUsers = () => {
     const [search, setsearch] = useState('');
@@ -46,6 +48,7 @@ const ManageAllUsers = () => {
     const [roleOptions, setRoleOptions] = useState([]);
     const [sorting, setSorting] = useState('firstName,asc');
     const { user } = useContext(UserContext);
+    const { hasPermission } = useAuth();
     const [isResetOpen, setisResetOpen] = useState(false);
     const [selectedUser, setSelectedUser] = useState(null);
     const [refressStat, setRefressStat] = useState(0);
@@ -322,10 +325,12 @@ const ManageAllUsers = () => {
 
                     {/* Filters */}
                     <div className="bg-white grid grid-cols-2 lg:grid-cols-5 gap-3 px-4 py-3 rounded-xl border border-gray-200 mb-4 mt-4">
-                        <button onClick={() => navigate('/manageUsers/adduser')}
-                            className="col-span-2 lg:col-span-1 px-4 py-2.5 w-full cursor-pointer rounded-lg font-medium flex items-center justify-center gap-2 transition-all bg-blue-600 text-white">
-                            <UserPlusIcon className="w-5 h-5" /> Add User
-                        </button>
+                        {hasPermission(P.USER_CREATE) && (
+                          <button onClick={() => navigate('/manageUsers/adduser')}
+                              className="col-span-2 lg:col-span-1 px-4 py-2.5 w-full cursor-pointer rounded-lg font-medium flex items-center justify-center gap-2 transition-all bg-blue-600 text-white">
+                              <UserPlusIcon className="w-5 h-5" /> Add User
+                          </button>
+                        )}
                         <div className="col-span-2 flex items-center gap-2 border rounded-lg border-gray-200 bg-gray-100 px-2 py-1 focus-within:shadow-sm focus-within:shadow-blue-200">
                             <SearchIcon className="w-5 h-5 text-gray-500" />
                             <input value={search} onChange={(e) => { setsearch(e.target.value); setpage(1); }}
