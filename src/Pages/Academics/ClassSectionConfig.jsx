@@ -277,8 +277,8 @@ const SectionModal = ({ mode, initial, classId, onSubmit, onClose, loading }) =>
 
   const validate = () => {
     const e = {};
-    if (!form.name.trim())              e.name     = 'Section name is required';
-    if (form.name.trim().length > 50)  e.name     = 'Max 50 characters';
+    if (!form.name.trim())               e.name     = 'Section name is required';
+    if (form.name.trim().length > 50)   e.name     = 'Max 50 characters';
     if (form.capacity !== '' && Number(form.capacity) < 1) e.capacity = 'Must be ≥ 1';
     if (form.description && form.description.length > 500) e.description = 'Max 500 characters';
     setErrors(e);
@@ -573,14 +573,14 @@ export default function ClassSectionConfig() {
   // ═══════════════════════════════════════════════════════════════════════════
   if (view === 'classes') {
     const classStatsCards = [
-      { IconName: BookOpen,     keyName: 'Total Classes',    val: totalClasses,    iconTxColor: 'text-blue-600',   iconBgColor: 'bg-blue-50'   },
+      { IconName: BookOpen,      keyName: 'Total Classes',    val: totalClasses,    iconTxColor: 'text-blue-600',   iconBgColor: 'bg-blue-50'   },
       { IconName: CheckCircle,  keyName: 'Active Classes',   val: activeClasses,   iconTxColor: 'text-green-600',  iconBgColor: 'bg-green-50'  },
-      { IconName: Layers,       keyName: 'Total Sections',   val: totalSections,   iconTxColor: 'text-purple-600', iconBgColor: 'bg-purple-50' },
-      { IconName: GraduationCap, keyName: 'Grade Range',     val: gradeRange,      iconTxColor: 'text-orange-400', iconBgColor: 'bg-orange-50'  },
+      { IconName: Layers,        keyName: 'Total Sections',   val: totalSections,   iconTxColor: 'text-purple-600', iconBgColor: 'bg-purple-50' },
+      { IconName: GraduationCap, keyName: 'Grade Range',      val: gradeRange,      iconTxColor: 'text-orange-400', iconBgColor: 'bg-orange-50'  },
     ];
 
     return (
-      <div className="min-h-screen bg-gray-50 p-4 lg:p-6">
+      <div className="min-h-screen bg-gray-50 p-4 xl:p-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div>
@@ -589,21 +589,21 @@ export default function ClassSectionConfig() {
           </div>
           <button
             onClick={() => setClassModal({ mode: 'add' })}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 text-white hover:bg-blue-700 font-medium text-sm transition-colors shadow-sm"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 text-white hover:bg-blue-700 font-medium text-sm transition-colors shadow-sm self-start sm:self-auto"
           >
             <Plus className="w-4 h-4" /> Add Class
           </button>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        {/* Stats - Shifted grid layout to xl for wider views to prevent compression at 1024px */}
+        <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
           {classStatsCards.map((card, i) => <CardComponent key={i} {...card} />)}
         </div>
 
         {/* Table panel */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
           {/* Filter bar */}
-          <div className="px-4 lg:px-6 py-4 border-b border-gray-200 flex flex-col sm:flex-row gap-3">
+          <div className="px-4 xl:px-6 py-4 border-b border-gray-200 flex flex-col sm:flex-row gap-3">
             <div className="flex flex-1 items-center gap-2 border border-gray-200 rounded-lg bg-gray-50 px-3 py-2 focus-within:ring-2 focus-within:ring-blue-200 focus-within:border-blue-400">
               <Search className="w-4 h-4 text-gray-400 shrink-0" />
               <input
@@ -619,7 +619,7 @@ export default function ClassSectionConfig() {
               <select
                 value={classGrade}
                 onChange={e => { setClassGrade(e.target.value); fetchClasses(classSearch, e.target.value, classStatus); }}
-                className="appearance-none pl-3 pr-8 py-2 text-sm border border-gray-200 bg-gray-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-200 cursor-pointer"
+                className="appearance-none pl-3 pr-8 py-2 text-sm border border-gray-200 bg-gray-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-200 cursor-pointer w-full"
               >
                 <option value="">All Grades</option>
                 {GRADE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
@@ -630,7 +630,7 @@ export default function ClassSectionConfig() {
               <select
                 value={classStatus}
                 onChange={e => { setClassStatus(e.target.value); fetchClasses(classSearch, classGrade, e.target.value); }}
-                className="appearance-none pl-3 pr-8 py-2 text-sm border border-gray-200 bg-gray-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-200 cursor-pointer"
+                className="appearance-none pl-3 pr-8 py-2 text-sm border border-gray-200 bg-gray-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-200 cursor-pointer w-full"
               >
                 <option value="">All Status</option>
                 <option value="ACTIVE">Active</option>
@@ -646,18 +646,19 @@ export default function ClassSectionConfig() {
             </button>
           </div>
 
-          {/* Desktop table */}
-          <div className="hidden md:block overflow-y-auto max-h-130">
-            <table className="w-full">
+          {/* Desktop table - Added explicit horizontal overflow safety wrapper */}
+          <div className="hidden md:block overflow-x-auto overflow-y-auto max-h-130 w-full">
+            <table className="w-full min-w-[700px]">
               <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
                 <tr className="text-sm">
-                  <th className="px-4 lg:px-6 py-3 text-left font-semibold text-gray-600 uppercase tracking-wide">#</th>
-                  <th className="px-4 lg:px-6 py-3 text-left font-semibold text-gray-600 uppercase tracking-wide">Class Name</th>
-                  <th className="px-4 lg:px-6 py-3 text-center font-semibold text-gray-600 uppercase tracking-wide">Grade</th>
-                  <th className="px-4 lg:px-6 py-3 text-center font-semibold text-gray-600 uppercase tracking-wide hidden lg:table-cell">Description</th>
-                  <th className="px-4 lg:px-6 py-3 text-center font-semibold text-gray-600 uppercase tracking-wide">Sections</th>
-                  <th className="px-4 lg:px-6 py-3 text-center font-semibold text-gray-600 uppercase tracking-wide">Status</th>
-                  <th className="px-4 lg:px-6 py-3 text-center font-semibold text-gray-600 uppercase tracking-wide">Actions</th>
+                  <th className="px-4 xl:px-6 py-3 text-left font-semibold text-gray-600 uppercase tracking-wide">#</th>
+                  <th className="px-4 xl:px-6 py-3 text-left font-semibold text-gray-600 uppercase tracking-wide">Class Name</th>
+                  <th className="px-4 xl:px-6 py-3 text-center font-semibold text-gray-600 uppercase tracking-wide">Grade</th>
+                  {/* Pushed to xl breakpoint to give action column room on laptop view grids */}
+                  <th className="px-4 xl:px-6 py-3 text-center font-semibold text-gray-600 uppercase tracking-wide hidden xl:table-cell">Description</th>
+                  <th className="px-4 xl:px-6 py-3 text-center font-semibold text-gray-600 uppercase tracking-wide">Sections</th>
+                  <th className="px-4 xl:px-6 py-3 text-center font-semibold text-gray-600 uppercase tracking-wide">Status</th>
+                  <th className="px-4 xl:px-6 py-3 text-center font-semibold text-gray-600 uppercase tracking-wide">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -679,21 +680,20 @@ export default function ClassSectionConfig() {
 
                 {!classLoading && classes.map((cls, idx) => (
                   <tr key={cls.id} className="hover:bg-gray-50 transition-colors text-sm">
-                    <td className="px-4 lg:px-6 py-4 text-gray-500">{idx + 1}</td>
-                    <td className="px-4 lg:px-6 py-4">
+                    <td className="px-4 xl:px-6 py-4 text-gray-500">{idx + 1}</td>
+                    <td className="px-4 xl:px-6 py-4">
                       <p className="font-semibold text-gray-900">{cls.name}</p>
                     </td>
-                    <td className="px-4 lg:px-6 py-4 text-center">
+                    <td className="px-4 xl:px-6 py-4 text-center">
                       <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${gradeColor(cls.gradeLevel)}`}>
                         {gradeLabelOf(cls.gradeLevel)}
                       </span>
                     </td>
-                    <td className="px-4 lg:px-6 py-4 text-center hidden lg:table-cell">
+                    <td className="px-4 xl:px-6 py-4 text-center hidden xl:table-cell">
                       <p className="text-gray-500 truncate max-w-[220px] mx-auto">{cls.description || '—'}</p>
                     </td>
                     
-                    {/* FIXED: Styled "Add Sections" Button Link with icon */}
-                    <td className="px-4 lg:px-6 py-4 text-center">
+                    <td className="px-4 xl:px-6 py-4 text-center">
                       <button
                         onClick={() => openSections(cls)}
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 border border-blue-200/50 text-xs font-semibold hover:bg-blue-100 hover:text-blue-700 transition-all cursor-pointer shadow-sm"
@@ -703,13 +703,12 @@ export default function ClassSectionConfig() {
                       </button>
                     </td>
 
-                    <td className="px-4 lg:px-6 py-4 text-center">
+                    <td className="px-4 xl:px-6 py-4 text-center">
                       <StatusBadge active={cls.status === 'ACTIVE'} />
                     </td>
 
-                    {/* FIXED: Actions column with clean named text buttons + hide conditional inactive trigger */}
-                    <td className="px-4 lg:px-6 py-4">
-                      <div className="flex items-center justify-center gap-3.5 font-bold text-xs">
+                    <td className="px-4 xl:px-6 py-4">
+                      <div className="flex items-center justify-center gap-3.5 font-bold text-xs whitespace-nowrap">
                         <button 
                           onClick={() => openSections(cls)}
                           className="flex items-center gap-1 text-indigo-600 hover:text-indigo-800 transition-colors"
@@ -767,7 +766,6 @@ export default function ClassSectionConfig() {
                         </span>
                       </div>
                       
-                      {/* Mobile action list alignment */}
                       <div className="flex items-center gap-3 text-xs font-bold">
                         <button onClick={() => openSections(cls)} className="text-indigo-600">View</button>
                         <button onClick={() => setClassModal({ mode: 'edit', data: cls })} className="text-blue-600">Edit</button>
@@ -819,7 +817,7 @@ export default function ClassSectionConfig() {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // PANEL 2 — SECTIONS (No changes requested here, completely intact)
+  // PANEL 2 — SECTIONS
   // ═══════════════════════════════════════════════════════════════════════════
   const sectionStatsCards = [
     { IconName: Layers,   keyName: 'Sections',         val: sections.length, iconTxColor: 'text-blue-600',   iconBgColor: 'bg-blue-50'   },
@@ -829,7 +827,7 @@ export default function ClassSectionConfig() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 lg:p-6">
+    <div className="min-h-screen bg-gray-50 p-4 xl:p-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div className="flex items-center gap-3">
@@ -851,21 +849,21 @@ export default function ClassSectionConfig() {
         </div>
         <button
           onClick={() => setSectionModal({ mode: 'add' })}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 text-white hover:bg-blue-700 font-medium text-sm transition-colors shadow-sm"
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 text-white hover:bg-blue-700 font-medium text-sm transition-colors shadow-sm self-start sm:self-auto"
         >
           <Plus className="w-4 h-4" /> Add Section
         </button>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
         {sectionStatsCards.map((card, i) => <CardComponent key={i} {...card} />)}
       </div>
 
       {/* Table panel */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         {/* Filter bar */}
-        <div className="px-4 lg:px-6 py-4 border-b border-gray-200 flex flex-col sm:flex-row gap-3">
+        <div className="px-4 xl:px-6 py-4 border-b border-gray-200 flex flex-col sm:flex-row gap-3">
           <div className="flex flex-1 items-center gap-2 border border-gray-200 rounded-lg bg-gray-50 px-3 py-2 focus-within:ring-2 focus-within:ring-blue-200 focus-within:border-blue-400">
             <Search className="w-4 h-4 text-gray-400 shrink-0" />
             <input
@@ -880,7 +878,7 @@ export default function ClassSectionConfig() {
             <select
               value={sectionStatus}
               onChange={e => { setSectionStatus(e.target.value); fetchSections(selectedClass?.id, e.target.value || undefined); }}
-              className="appearance-none pl-3 pr-8 py-2 text-sm border border-gray-200 bg-gray-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-200 cursor-pointer"
+              className="appearance-none pl-3 pr-8 py-2 text-sm border border-gray-200 bg-gray-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-200 cursor-pointer w-full"
             >
               <option value="">All Status</option>
               <option value="ACTIVE">Active</option>
@@ -890,16 +888,16 @@ export default function ClassSectionConfig() {
           </div>
         </div>
 
-        {/* Desktop table */}
-        <div className="hidden md:block overflow-y-auto max-h-130">
-          <table className="w-full">
+        {/* Desktop table - Added dynamic column hiding for teacher name up to xl screens */}
+        <div className="hidden md:block overflow-x-auto overflow-y-auto max-h-130 w-full">
+          <table className="w-full min-w-[700px]">
             <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
               <tr className="text-sm">
                 <th className="px-4 lg:px-6 py-3 text-left font-semibold text-gray-600 uppercase tracking-wide">#</th>
                 <th className="px-4 lg:px-6 py-3 text-left font-semibold text-gray-600 uppercase tracking-wide">Section</th>
                 <th className="px-4 lg:px-6 py-3 text-center font-semibold text-gray-600 uppercase tracking-wide">Room</th>
                 <th className="px-4 lg:px-6 py-3 text-center font-semibold text-gray-600 uppercase tracking-wide">Capacity / Enrolled</th>
-                <th className="px-4 lg:px-6 py-3 text-center font-semibold text-gray-600 uppercase tracking-wide hidden lg:table-cell">Class Teacher</th>
+                <th className="px-4 lg:px-6 py-3 text-center font-semibold text-gray-600 uppercase tracking-wide hidden xl:table-cell">Class Teacher</th>
                 <th className="px-4 lg:px-6 py-3 text-center font-semibold text-gray-600 uppercase tracking-wide">Status</th>
                 <th className="px-4 lg:px-6 py-3 text-center font-semibold text-gray-600 uppercase tracking-wide">Actions</th>
               </tr>
@@ -951,7 +949,7 @@ export default function ClassSectionConfig() {
                         <span className="text-gray-400 text-sm">{enr} / —</span>
                       )}
                     </td>
-                    <td className="px-4 lg:px-6 py-4 text-center hidden lg:table-cell">
+                    <td className="px-4 lg:px-6 py-4 text-center hidden xl:table-cell">
                       <p className="text-sm text-gray-600">
                         {sec.classTeacherName || <span className="text-gray-400 italic text-xs">No teacher assigned</span>}
                       </p>

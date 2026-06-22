@@ -17,23 +17,23 @@ function getExistingAttachUrl(hw) {
 function resolveExistingType(hw) {
   if (!hw?.attachmentType) return null;
   const t = hw.attachmentType.toLowerCase();
-  if (t.includes("pdf"))   return "pdf";
+  if (t.includes("pdf")) return "pdf";
   if (t.includes("image")) return "image";
   return "link";
 }
 
 // ── EMPTY form ────────────────────────────────────────────────────────────────
 const EMPTY_FORM = {
-  subjectId:      "",
-  title:          "",
-  description:    "",
-  assignedDate:   "",
-  dueDate:        "",
-  attachType:     "NONE",
-  linkUrl:        "",
-  status:         "PUBLISHED",
+  subjectId: "",
+  title: "",
+  description: "",
+  assignedDate: "",
+  dueDate: "",
+  attachType: "NONE",
+  linkUrl: "",
+  status: "PUBLISHED",
   academicYearId: "",
-  teacherId:      "",
+  teacherId: "",
 };
 
 // ── Shared helpers ────────────────────────────────────────────────────────────
@@ -74,19 +74,19 @@ function LazyAttachmentViewer({ url, type, label = "Attachment" }) {
   const [open, setOpen] = useState(false);
   if (!url) return null;
 
-  const isPdf   = type === "pdf";
+  const isPdf = type === "pdf";
   const isImage = type === "image";
-  const isLink  = !isPdf && !isImage;
+  const isLink = !isPdf && !isImage;
 
   const handleDownload = async (e) => {
     e.preventDefault();
     e.stopPropagation();
     try {
-      const res  = await fetch(url);
+      const res = await fetch(url);
       const blob = await res.blob();
       const blobUrl = URL.createObjectURL(blob);
       const a = document.createElement("a");
-      a.href     = blobUrl;
+      a.href = blobUrl;
       a.download = url.split("/").pop() || "attachment";
       document.body.appendChild(a);
       a.click();
@@ -101,9 +101,9 @@ function LazyAttachmentViewer({ url, type, label = "Attachment" }) {
     <div className="border border-gray-200 rounded-xl overflow-hidden">
       <div className="flex items-center justify-between px-3 py-2 bg-gray-50 border-b border-gray-200">
         <div className="flex items-center gap-1.5">
-          {isPdf   && <FileText  size={13} className="text-red-500"  />}
+          {isPdf && <FileText size={13} className="text-red-500" />}
           {isImage && <ImageIcon size={13} className="text-blue-500" />}
-          {isLink  && <Link2     size={13} className="text-gray-500" />}
+          {isLink && <Link2 size={13} className="text-gray-500" />}
           <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{label}</span>
         </div>
         <div className="flex items-center gap-2">
@@ -252,30 +252,30 @@ function resolveTeacherName(t) {
 
 // ── AssignModal ───────────────────────────────────────────────────────────────
 export default function AssignModal({
-  mode            = "assign",
+  mode = "assign",
   hw,
-  subjects        = [],
+  subjects = [],
   subjectsLoading = false,
-  submitting      = false,
+  submitting = false,
   onClose,
   onSave,
-  isTeacher       = false,
-  teacherId       = null,
-  teacherName     = "",
-  teachers        = [],
+  isTeacher = false,
+  teacherId = null,
+  teacherName = "",
+  teachers = [],
   teachersLoading = false,
 }) {
   const isEdit = mode === "edit";
 
-  const existingAttachUrl  = isEdit ? getExistingAttachUrl(hw) : null;
-  const existingAttachType = isEdit ? resolveExistingType(hw)  : null;
+  const existingAttachUrl = isEdit ? getExistingAttachUrl(hw) : null;
+  const existingAttachType = isEdit ? resolveExistingType(hw) : null;
 
   const [activeTab, setActiveTab] = useState("details");
 
   // ── Academic years from API ───────────────────────────────────────────────
-  const [academicYears,        setAcademicYears]        = useState([]);
+  const [academicYears, setAcademicYears] = useState([]);
   const [academicYearsLoading, setAcademicYearsLoading] = useState(false);
-  const [currentYearId,        setCurrentYearId]        = useState(null);
+  const [currentYearId, setCurrentYearId] = useState(null);
 
   useEffect(() => {
     const load = async () => {
@@ -285,12 +285,12 @@ export default function AssignModal({
         // Handle all known API shapes:
         // { years: [...] }  { data: [...] }  { content: [...] }  raw array
         const unwrap = (r) =>
-          Array.isArray(r)          ? r :
-          Array.isArray(r?.years)   ? r.years :
-          Array.isArray(r?.data)    ? r.data :
-          Array.isArray(r?.content) ? r.content : [];
+          Array.isArray(r) ? r :
+            Array.isArray(r?.years) ? r.years :
+              Array.isArray(r?.data) ? r.data :
+                Array.isArray(r?.content) ? r.content : [];
 
-        const list  = unwrap(res);
+        const list = unwrap(res);
         const curId = list.find(y => y.isCurrent)?.id ?? null;
 
         // Sort: current year first, then newest to oldest by id
@@ -320,21 +320,21 @@ export default function AssignModal({
   const [form, setForm] = useState(() =>
     isEdit && hw
       ? {
-          subjectId:      String(hw.subjectId ?? ""),
-          title:          hw.title        ?? "",
-          description:    hw.description  ?? hw.desc ?? "",
-          assignedDate:   hw.assignedDate ?? "",
-          dueDate:        hw.dueDate      ?? "",
-          attachType:     (hw.attachmentType ?? hw.attachType ?? hw.attach ?? "NONE").toUpperCase(),
-          linkUrl:        hw.linkUrl      ?? "",
-          status:         hw.status       ?? "PUBLISHED",
-          academicYearId: String(hw.academicYearId ?? ""),
-          teacherId:      String(hw.teacherId ?? ""),
-        }
+        subjectId: String(hw.subjectId ?? ""),
+        title: hw.title ?? "",
+        description: hw.description ?? hw.desc ?? "",
+        assignedDate: hw.assignedDate ?? "",
+        dueDate: hw.dueDate ?? "",
+        attachType: (hw.attachmentType ?? hw.attachType ?? hw.attach ?? "NONE").toUpperCase(),
+        linkUrl: hw.linkUrl ?? "",
+        status: hw.status ?? "PUBLISHED",
+        academicYearId: String(hw.academicYearId ?? ""),
+        teacherId: String(hw.teacherId ?? ""),
+      }
       : {
-          ...EMPTY_FORM,
-          teacherId: isTeacher && teacherId ? String(teacherId) : "",
-        }
+        ...EMPTY_FORM,
+        teacherId: isTeacher && teacherId ? String(teacherId) : "",
+      }
   );
 
   // ── When subjects load in edit mode, ensure subjectId is still set ─────────
@@ -381,22 +381,22 @@ export default function AssignModal({
     }
 
     const payload = {
-      subjectId:      form.subjectId,
-      title:          form.title.trim(),
-      status:         form.status,
+      subjectId: form.subjectId,
+      title: form.title.trim(),
+      status: form.status,
       academicYearId: Number(form.academicYearId),
       attachmentType: form.attachType || "NONE",
-      teacherId:      effectiveTeacherId,
-      ...(form.description.trim()  && { description:  form.description.trim()  }),
-      ...(form.assignedDate        && { assignedDate: form.assignedDate        }),
-      ...(form.dueDate             && { dueDate:      form.dueDate             }),
+      teacherId: effectiveTeacherId,
+      ...(form.description.trim() && { description: form.description.trim() }),
+      ...(form.assignedDate && { assignedDate: form.assignedDate }),
+      ...(form.dueDate && { dueDate: form.dueDate }),
       ...(form.attachType === "LINK" && form.linkUrl && { linkUrl: form.linkUrl }),
     };
 
     const isFileBased = form.attachType !== "NONE" && form.attachType !== "LINK";
 
     if (isEdit && isFileBased && !attachFile && existingAttachUrl) {
-      payload.attachmentUrl  = existingAttachUrl;
+      payload.attachmentUrl = existingAttachUrl;
       payload.attachmentType = hw.attachmentType ?? form.attachType;
     }
 
@@ -405,7 +405,7 @@ export default function AssignModal({
   };
 
   const showUpload = form.attachType !== "NONE" && form.attachType !== "LINK";
-  const showLink   = form.attachType === "LINK";
+  const showLink = form.attachType === "LINK";
 
   const canSubmit =
     !submitting &&
@@ -416,7 +416,7 @@ export default function AssignModal({
 
   const handleAttachTypeChange = (v) => { set("attachType", v); setAttachFile(null); };
   const contentHasDot = !!(form.description.trim() || form.attachType !== "NONE");
-  const isOnDetails   = activeTab === "details";
+  const isOnDetails = activeTab === "details";
 
   return (
     <div
@@ -594,11 +594,10 @@ export default function AssignModal({
                       {1000 - (form.description?.length ?? 0)} characters remaining
                     </span>
                   )}
-                  <span className={`text-[10px] ml-auto font-medium ${
-                    (form.description?.length ?? 0) >= 1000 ? "text-red-500"
-                    : (form.description?.length ?? 0) >= 950 ? "text-orange-400"
-                    : "text-gray-400"
-                  }`}>
+                  <span className={`text-[10px] ml-auto font-medium ${(form.description?.length ?? 0) >= 1000 ? "text-red-500"
+                      : (form.description?.length ?? 0) >= 950 ? "text-orange-400"
+                        : "text-gray-400"
+                    }`}>
                     {form.description?.length ?? 0} / 1000
                   </span>
                 </div>
