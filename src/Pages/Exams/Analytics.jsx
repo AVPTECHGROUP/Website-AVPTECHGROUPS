@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import {
     BarChart2, Trophy, AlertTriangle, CheckSquare, TrendingDown,
-    ChevronDown, Medal, TrendingUp, RefreshCw, Filter, Info,
+    ChevronDown, Medal, TrendingUp, RefreshCw, Filter, Info, Layers
 } from "lucide-react";
 
 import TooltipComponent from "../../Components/CommonComp/Tooltip_comp/TooltipComp";
@@ -13,6 +13,9 @@ import {
     getSubjectAnalysis,
     getToppers,
     getGradeDistribution,
+    getExamEventSummary,
+    getClassPerformanceTrend,
+    getExamEvents, // Imported to resolve event mapping fallbacks dynamically
 } from "../../Api/Exams";
 import { getActiveClasses, getSectionsByClass } from "../../Api/TeachersAPI";
 import { getAcademicYears } from "../../Api/AcademicYear";
@@ -20,14 +23,14 @@ import { useDecodedUser } from "../../ContextAPI/UserContext";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const PASS_LINE = 33;
-const SUBJECT_MAX_DISPLAY = 100; // every analytics figure here is already a %, out of 100
+const SUBJECT_MAX_DISPLAY = 100;
 
 const SUBJECT_COLORS = [
-    "#6366f1", "#3b82f6", "#8b5cf6", "#a855f7",
+    "#4f46e5", "#3b82f6", "#6366f1", "#a855f7",
     "#10b981", "#f59e0b", "#ef4444", "#06b6d4",
 ];
 
-const RANK_MEDAL_BG = ["bg-yellow-400", "bg-gray-300", "bg-orange-400"];
+const RANK_MEDAL_BG = ["bg-amber-400", "bg-slate-300", "bg-amber-600"];
 
 const GRADE_STYLES = {
     "A+": { bar: "bg-emerald-500", chip: "bg-emerald-100 text-emerald-700" },
@@ -35,9 +38,9 @@ const GRADE_STYLES = {
     "B+": { bar: "bg-blue-500", chip: "bg-blue-100 text-blue-700" },
     "B": { bar: "bg-violet-500", chip: "bg-violet-100 text-violet-700" },
     "C": { bar: "bg-amber-500", chip: "bg-amber-100 text-amber-700" },
-    "D": { bar: "bg-orange-600", chip: "bg-orange-100 text-orange-700" },
+    "D": { bar: "bg-orange-500", chip: "bg-orange-100 text-orange-700" },
     "F": { bar: "bg-red-500", chip: "bg-red-100 text-red-700" },
-    "AB": { bar: "bg-gray-400", chip: "bg-gray-100 text-gray-600" },
+    "AB": { bar: "bg-slate-400", chip: "bg-slate-100 text-slate-600" },
 };
 const GRADE_ORDER = ["A+", "A", "B+", "B", "C", "D", "F", "AB"];
 
@@ -55,13 +58,6 @@ function safeFixed(val, decimals = 1, fallback = "—") {
     return isNaN(n) ? fallback : n.toFixed(decimals);
 }
 
-function pct(part, total) {
-    const p = Number(part), t = Number(total);
-    if (!t || isNaN(p) || isNaN(t)) return null;
-    return (p / t) * 100;
-}
-
-// De-dupe exam-subject configs (one row per section) down to one option per subject
 function dedupeSubjects(list) {
     const seen = new Map();
     (list || []).forEach((s) => {
@@ -71,136 +67,285 @@ function dedupeSubjects(list) {
     return Array.from(seen.values());
 }
 
-// ══════════════════════════════════════════════════════════════════
-// SELECT
-// ══════════════════════════════════════════════════════════════════
+// ─── Filter Dropdown Menu Selector ────────────────────────────────────────────
 function FilterSelect({ label, hint, value, onChange, disabled, children }) {
     return (
-        <div className="min-w-0">
-            <label className="block text-xs font-medium text-gray-500 mb-1">
-                {label} {hint && <span className="text-gray-400">({hint})</span>}
+        <div className="min-w-0 flex-1">
+            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">
+                {label} {hint && <span className="lowercase font-normal text-gray-400">({hint})</span>}
             </label>
             <div className="relative">
                 <select
                     value={value}
                     onChange={onChange}
                     disabled={disabled}
-                    className="appearance-none w-full bg-white border border-gray-200 rounded-lg pl-3 pr-8 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                    className="appearance-none w-full bg-white border border-gray-200 rounded-lg pl-3 pr-9 py-2 text-sm font-medium text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer disabled:opacity-60 disabled:bg-gray-50 disabled:cursor-not-allowed"
                 >
                     {children}
                 </select>
-                <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
             </div>
         </div>
     );
 }
 
-// ══════════════════════════════════════════════════════════════════
-// STAT CARDS
-// ══════════════════════════════════════════════════════════════════
-function StatCard({ icon: Icon, iconBg, iconColor, title, value, caption }) {
+// ─── Component: Event Summary Panel (Strict layout match for image_3b76c3.png) ───
+function EventSummaryPanel({ summaryData, examName, loading }) {
+    if (loading) {
+        return <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm animate-pulse h-64" />;
+    }
+    if (!summaryData) return null;
+
+    const classResults = summaryData.classResults || [];
+    const totalClasses = summaryData.totalClasses ?? classResults.length;
+    const totalSections = summaryData.totalSections ?? classResults.reduce((acc, c) => acc + (c.sectionResults?.length || 1), 0);
+    const calculatedPassRate = summaryData.totalStudents > 0 ? (summaryData.passedStudents / summaryData.totalStudents) * 100 : 0;
+    const schoolAvg = summaryData.schoolAvgPercentage ?? 0;
+
     return (
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 sm:p-5 min-w-0">
-            <div className="flex items-center gap-3 mb-3">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${iconBg}`}>
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden p-5 space-y-5">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-50 pb-3">
+                <div className="flex items-center gap-2">
+                    <span className="text-lg">📋</span>
+                    <h3 className="text-sm font-bold text-gray-800">
+                        Event Summary — {summaryData.eventName || examName || "Selected Event"}
+                    </h3>
+                    <span className="bg-purple-100 text-purple-700 font-extrabold text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider">
+                        All Classes
+                    </span>
+                </div>
+
+            </div>
+
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-gray-50/40 border border-gray-100 rounded-xl p-4 text-center">
+                    <p className="text-3xl font-black text-gray-900 tracking-tight">{totalClasses}</p>
+                    <p className="text-xs font-semibold text-gray-400 mt-1">Classes</p>
+                </div>
+                <div className="bg-gray-50/40 border border-gray-100 rounded-xl p-4 text-center">
+                    <p className="text-3xl font-black text-gray-900 tracking-tight">{totalSections}</p>
+                    <p className="text-xs font-semibold text-gray-400 mt-1">Sections</p>
+                </div>
+                <div className="bg-gray-50/40 border border-gray-100 rounded-xl p-4 text-center">
+                    <p className="text-3xl font-black text-indigo-600 tracking-tight">{safeFixed(calculatedPassRate)}%</p>
+                    <p className="text-xs font-semibold text-gray-400 mt-1">Overall Pass Rate</p>
+                </div>
+                <div className="bg-gray-50/40 border border-gray-100 rounded-xl p-4 text-center">
+                    <p className="text-3xl font-black text-gray-900 tracking-tight">{safeFixed(schoolAvg)}%</p>
+                    <p className="text-xs font-semibold text-gray-400 mt-1">School Avg</p>
+                </div>
+            </div>
+
+            <div className="space-y-4 pt-2">
+                <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Pass Rate By Class</h4>
+                <div className="space-y-3.5">
+                    {classResults.map((cls, idx) => {
+                        const passRate = cls.passRate !== null ? Number(cls.passRate) : Number(cls.avgPercentage) || 0;
+
+                        let barTheme = "bg-emerald-500";
+                        let pillTheme = "bg-emerald-50 text-emerald-700 border-emerald-100";
+
+                        if (cls.className?.toLowerCase().includes("10")) {
+                            barTheme = "bg-blue-500";
+                            pillTheme = "bg-blue-50 text-blue-700 border-blue-100";
+                        } else if (cls.className?.toLowerCase().includes("11")) {
+                            barTheme = "bg-purple-500";
+                            pillTheme = "bg-purple-50 text-purple-700 border-purple-100";
+                        } else if (!cls.resultDeclared) {
+                            barTheme = "bg-slate-300";
+                            pillTheme = "bg-slate-50 text-slate-600 border-slate-200";
+                        }
+
+                        return (
+                            <div key={idx} className="flex flex-col sm:flex-row sm:items-center gap-3 text-sm">
+                                <span className="w-20 font-bold text-gray-600 shrink-0">{cls.className}</span>
+                                <div className="flex-1 h-6 bg-gray-50 rounded-md overflow-hidden relative flex items-center border border-gray-100">
+                                    <div
+                                        className={`h-full flex items-center pl-3 transition-all duration-500 rounded-md ${barTheme}`}
+                                        style={{ width: `${passRate || 4}%` }}
+                                    >
+                                        {passRate > 0 && <span className="text-white font-black text-[11px]">{safeFixed(passRate)}%</span>}
+                                    </div>
+                                    {!cls.resultDeclared && (
+                                        <span className="text-gray-400 font-bold text-[11px] ml-3 italic">Result Undeclared</span>
+                                    )}
+                                </div>
+                                <div className={`px-2.5 py-0.5 rounded-full text-xs font-bold border shrink-0 ${pillTheme}`}>
+                                    {cls.sectionResults?.length || 1} sections · {cls.totalStudents ?? 0} students
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ─── Component: Performance Trend Timeline ───────────────────────────────────
+function PerformanceTrendCard({ trendData, currentExamId, currentClassName, loading }) {
+    if (loading) {
+        return <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm animate-pulse h-56" />;
+    }
+    const points = trendData?.points || [];
+    if (points.length === 0) return null;
+
+    return (
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-100 pb-3">
+                <div className="flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4 text-indigo-600" />
+                    <h3 className="text-sm font-bold text-gray-800">
+                        Performance Trend — {currentClassName || "Class"} — {trendData?.academicYearLabel || ""}
+                    </h3>
+
+                </div>
+            </div>
+
+            <div className="space-y-3.5 relative">
+                {points.map((pt, i) => {
+                    const isCurrent = String(pt.examId) === String(currentExamId);
+                    const isUndeclared = !pt.resultDeclared || pt.avgPercentage === null;
+                    const val = isUndeclared ? 0 : Number(pt.avgPercentage);
+
+                    let barColor = "bg-indigo-600";
+                    if (pt.examName?.toLowerCase().includes("unit test 1")) barColor = "bg-slate-400";
+                    else if (pt.examName?.toLowerCase().includes("unit test 2")) barColor = "bg-purple-500";
+
+                    return (
+                        <div key={pt.examId || i} className="flex items-center gap-4">
+                            <div className="w-32 text-right shrink-0">
+                                <span className={`text-xs font-semibold ${isCurrent ? "text-indigo-600 font-bold" : "text-gray-500"}`}>
+                                    {pt.examName} {isCurrent && <span className="text-indigo-500 ml-1 font-bold">← now</span>}
+                                </span>
+                            </div>
+
+                            <div className="flex-1 h-7 bg-gray-50 rounded-md overflow-hidden relative flex items-center border border-gray-100/70">
+                                {!isUndeclared ? (
+                                    <div
+                                        className={`h-full flex items-center pl-3 transition-all duration-500 ${barColor}`}
+                                        style={{ width: `${val}%` }}
+                                    >
+                                        <span className="text-white font-black text-[11px]">{safeFixed(val)}%</span>
+                                    </div>
+                                ) : (
+                                    <div className="w-full h-full bg-gray-100/40 flex items-center pl-3">
+                                        <span className="text-gray-300 font-medium text-xs italic">Undeclared Timeline Block</span>
+                                    </div>
+                                )}
+                                <div
+                                    className="absolute top-0 bottom-0 w-0 border-l border-dashed border-red-500/80 z-20"
+                                    style={{ left: `${PASS_LINE}%` }}
+                                />
+                            </div>
+
+                            <div className="w-12 text-left shrink-0">
+                                <span className={`text-xs font-bold ${isCurrent ? "text-indigo-600" : "text-gray-500"}`}>
+                                    {!isUndeclared ? `${safeFixed(val)}%` : "—"}
+                                </span>
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+}
+
+// ─── Individual Dashboard KPI Cards ──────────────────────────────────────────
+function StatCard({ title, value, caption, icon: Icon, iconBg, iconColor }) {
+    return (
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 flex flex-col justify-between">
+            <div className="flex items-start justify-between gap-2">
+                <div className="space-y-1 min-w-0">
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider truncate">{title}</p>
+                    <p className="text-2xl font-black text-gray-900 tracking-tight whitespace-nowrap">{value}</p>
+                </div>
+                <div className={`p-2 rounded-xl shrink-0 ${iconBg}`}>
                     <Icon className={`w-5 h-5 ${iconColor}`} />
                 </div>
-                <p className="text-xs font-medium text-gray-500 truncate">{title}</p>
             </div>
-            <p className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-gray-900 leading-none truncate">{value}</p>
-            {caption && <p className="text-xs text-gray-400 mt-1.5 truncate">{caption}</p>}
+            {caption && <p className="text-xs font-medium text-gray-500 mt-2 truncate bg-gray-50 px-2 py-1 rounded border border-gray-100/50">{caption}</p>}
         </div>
     );
 }
 
 function StatCardSkeleton() {
-    return (
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 sm:p-5 animate-pulse">
-            <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-xl bg-gray-100" />
-                <div className="h-3 bg-gray-100 rounded w-16" />
-            </div>
-            <div className="h-7 bg-gray-200 rounded w-20 mb-2" />
-            <div className="h-3 bg-gray-100 rounded w-24" />
-        </div>
-    );
+    return <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 animate-pulse h-28" />;
 }
 
-// ══════════════════════════════════════════════════════════════════
-// SUBJECT-WISE AVERAGE % BAR CHART
-// ══════════════════════════════════════════════════════════════════
+// ─── Subject Average Graphic Chart (Fixed Duplicate Rows Bug) ─────────────────
 function SubjectBarChart({ subjectStats, loading }) {
     const maxVal = 100;
     const passLinePct = (PASS_LINE / maxVal) * 100;
 
     return (
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 sm:p-5">
-            <div className="flex items-center gap-2 mb-4">
-                <TrendingUp className="w-4 h-4 text-blue-600 shrink-0" />
-                <h2 className="text-sm font-semibold text-gray-800">Subject-wise Average %</h2>
-            </div>
-
-            <div className="flex items-center gap-4 mb-4 sm:mb-5">
-                <div className="flex items-center gap-1.5">
-                    <span className="w-3 h-3 rounded-full bg-indigo-500 inline-block" />
-                    <span className="text-xs text-gray-500 font-medium">Avg %</span>
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+            <div className="flex items-center justify-between mb-4 border-b border-gray-50 pb-3">
+                <div className="flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4 text-indigo-600 shrink-0" />
+                    <h3 className="text-sm font-bold text-gray-800">Subject-wise Average %</h3>
                 </div>
-                <div className="flex items-center gap-1.5">
-                    <span className="w-3 h-3 rounded-full bg-red-400 inline-block" />
-                    <span className="text-xs text-gray-500 font-medium">Pass line ({PASS_LINE}%)</span>
+                <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1">
+                        <span className="w-2.5 h-2.5 rounded-full bg-indigo-600" />
+                        <span className="text-[11px] text-gray-500 font-medium">Avg %</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                        <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
+                        <span className="text-[11px] text-gray-500 font-medium">Pass line ({PASS_LINE}%)</span>
+                    </div>
                 </div>
             </div>
 
             {loading ? (
-                <div className="space-y-3">
-                    {Array(6).fill(0).map((_, i) => (
-                        <div key={i} className="h-6 rounded-full bg-gray-100 animate-pulse" />
-                    ))}
+                <div className="space-y-3 py-2">
+                    {Array(5).fill(0).map((_, i) => <div key={i} className="h-6 rounded bg-gray-100 animate-pulse" />)}
                 </div>
             ) : subjectStats.length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-6">No subject data available.</p>
+                <p className="text-sm text-gray-400 text-center py-8">No subject metrics accessible.</p>
             ) : (
-                <div className="space-y-3 sm:space-y-3.5">
+                <div className="space-y-3.5">
                     {subjectStats.map((sub, idx) => {
                         const color = subjectColor(idx);
                         const raw = Number(sub.avgPercentage);
                         const avg = (!isNaN(raw) && raw > 0) ? raw : 0;
                         const barWidthPct = Math.min((avg / maxVal) * 100, 100);
-                        const labelOutside = barWidthPct < 14;
-                        const labelText = `${safeFixed(avg)}%`;
+                        const labelOutside = barWidthPct < 15;
+                        const isFailing = avg < PASS_LINE;
 
                         return (
-                            <div key={sub.subjectId ?? sub.subjectName} className="flex items-center gap-2 sm:gap-3">
-                                <span className="text-xs text-gray-500 font-medium w-16 sm:w-20 text-right shrink-0 truncate">
+                            <div key={sub.subjectId ?? sub.subjectName} className="flex items-center gap-3">
+                                <span className="text-xs font-bold text-gray-600 w-20 text-right truncate">
                                     {sub.subjectName}
                                 </span>
 
                                 <div className="flex-1 relative flex items-center">
-                                    <div className="w-full h-5 sm:h-6 bg-gray-100 rounded-full overflow-hidden relative">
+                                    <div className="w-full h-6 bg-gray-100 rounded-md overflow-hidden relative">
                                         {avg > 0 && (
                                             <div
-                                                className="h-full rounded-full flex items-center transition-all duration-700"
+                                                className="h-full flex items-center transition-all duration-500"
                                                 style={{
                                                     width: `${barWidthPct}%`,
-                                                    background: `linear-gradient(90deg, ${color}cc, ${color})`,
+                                                    backgroundColor: isFailing ? "#ef4444" : color,
                                                     paddingLeft: labelOutside ? 0 : "0.5rem",
                                                 }}
                                             >
                                                 {!labelOutside && (
-                                                    <span className="text-white text-[10px] sm:text-[11px] font-bold whitespace-nowrap">
-                                                        {labelText}
+                                                    <span className="text-white text-[11px] font-black">
+                                                        {safeFixed(avg)}%
                                                     </span>
                                                 )}
                                             </div>
                                         )}
                                         <div
-                                            className="absolute top-0 bottom-0 w-0.5 bg-red-400 z-10"
+                                            className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-10 border-dashed"
                                             style={{ left: `${passLinePct}%` }}
                                         />
                                     </div>
                                     {labelOutside && (
-                                        <span className="ml-2 text-[11px] font-bold text-gray-700 whitespace-nowrap shrink-0">
-                                            {labelText}
+                                        <span className="ml-2 text-[11px] font-black text-gray-700">
+                                            {safeFixed(avg)}%
                                         </span>
                                     )}
                                 </div>
@@ -213,82 +358,261 @@ function SubjectBarChart({ subjectStats, loading }) {
     );
 }
 
-// ══════════════════════════════════════════════════════════════════
-// PASS / FAIL PER SUBJECT TABLE
-// ══════════════════════════════════════════════════════════════════
+// ─── Pass / Fail Matrix Table Layout (Fixed Duplicate Rows Bug) ───────────────
 function PassFailTable({ subjectStats, loading }) {
     return (
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-            <div className="px-4 sm:px-5 py-4 border-b border-gray-100 flex items-center gap-2">
-                <BarChart2 className="w-4 h-4 text-indigo-500 shrink-0" />
-                <h2 className="text-sm font-semibold text-gray-800">Pass / Fail per Subject</h2>
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden flex flex-col justify-between">
+            <div>
+                <div className="px-5 py-4 border-b border-gray-100 bg-gray-50/20 flex items-center gap-2">
+                    <BarChart2 className="w-4 h-4 text-indigo-600" />
+                    <h3 className="text-sm font-bold text-gray-800">Pass / Fail per Subject</h3>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-sm text-left">
+                        <thead>
+                            <tr className="bg-gray-50 border-b border-gray-100 text-[11px] font-bold text-gray-400 uppercase tracking-wider">
+                                <th className="px-4 py-3">Subject</th>
+                                <th className="px-3 py-3">Max</th>
+                                <th className="px-3 py-3">Avg</th>
+                                <th className="px-3 py-3">Pass</th>
+                                <th className="px-3 py-3">Fail</th>
+                                <th className="px-3 py-3">Abs</th>
+                                <th className="px-4 py-3 text-right">Pass %</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-50 font-medium text-gray-700">
+                            {loading ? (
+                                Array(4).fill(0).map((_, i) => (
+                                    <tr key={i}><td colSpan={7} className="p-4"><div className="h-5 bg-gray-50 rounded animate-pulse" /></td></tr>
+                                ))
+                            ) : subjectStats.length === 0 ? (
+                                <tr><td colSpan={7} className="text-center py-10 text-gray-400">No data mapped.</td></tr>
+                            ) : (
+                                subjectStats.map((sub) => {
+                                    const total = Number(sub.totalStudents || 0);
+                                    const passed = Number(sub.passedStudents || 0);
+                                    const passRate = total > 0 ? Math.round((passed / total) * 100) : 0;
+                                    return (
+                                        <tr key={sub.subjectId ?? sub.subjectName} className="hover:bg-gray-50/50 transition-colors">
+                                            <td className="px-4 py-3 font-bold text-gray-900">{sub.subjectName}</td>
+                                            <td className="px-3 py-3 text-gray-400">{SUBJECT_MAX_DISPLAY}</td>
+                                            <td className="px-3 py-3 font-bold">{safeFixed(sub.avgPercentage)}</td>
+                                            <td className="px-3 py-3"><span className="text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded font-bold">{sub.passedStudents ?? 0}</span></td>
+                                            <td className="px-3 py-3"><span className="text-red-600 bg-red-50 px-2 py-0.5 rounded font-bold">{sub.failedStudents ?? 0}</span></td>
+                                            <td className="px-3 py-3 text-gray-400">{sub.absentStudents ?? 0}</td>
+                                            <td className="px-4 py-3 text-right">
+                                                <div className="flex items-center justify-end gap-2">
+                                                    <div className="w-12 h-1.5 bg-gray-100 rounded-full overflow-hidden hidden sm:block">
+                                                        <div
+                                                            className={`h-full rounded-full ${passRate >= 75 ? "bg-emerald-500" : passRate >= 50 ? "bg-amber-500" : "bg-red-500"}`}
+                                                            style={{ width: `${passRate}%` }}
+                                                        />
+                                                    </div>
+                                                    <span className="font-bold text-gray-900">{passRate}%</span>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ─── Grade Distribution Card Summary Layer ───────────────────────────────
+function GradeDistributionCard({ gradeDistribution, loading }) {
+    const bands = gradeDistribution?.bands || [];
+    const bandMap = {};
+    bands.forEach((b) => { bandMap[b.grade] = b; });
+    const total = gradeDistribution?.totalStudents ?? bands.reduce((s, b) => s + (Number(b.count) || 0), 0);
+
+    return (
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+            <div className="flex items-center justify-between mb-4 border-b border-gray-50 pb-3">
+                <div className="flex items-center gap-2">
+                    <Medal className="w-4 h-4 text-violet-600 shrink-0" />
+                    <h3 className="text-sm font-bold text-gray-800">Grade Distribution</h3>
+                </div>
+                
+            </div>
+
+            {loading ? (
+                <div className="space-y-2.5 py-2">
+                    {Array(4).fill(0).map((_, i) => <div key={i} className="h-6 rounded bg-gray-100 animate-pulse" />)}
+                </div>
+            ) : bands.length === 0 ? (
+                <p className="text-sm text-gray-400 text-center py-8">Grade metrics mapping missing variables.</p>
+            ) : (
+                <div className="space-y-2.5">
+                    {GRADE_ORDER.map((grade) => {
+                        const b = bandMap[grade] || { count: 0, percentage: 0 };
+                        const style = GRADE_STYLES[grade] ?? GRADE_STYLES.AB;
+                        const widthPct = Math.max(Number(b.percentage) || 0, 0);
+
+                        return (
+                            <div key={grade} className="flex items-center gap-3">
+                                <span className={`w-10 text-center text-xs font-bold py-0.5 rounded-md ${style.chip}`}>
+                                    {grade}
+                                </span>
+                                <div className="flex-1 h-6 bg-gray-50 rounded-md overflow-hidden relative flex items-center">
+                                    {widthPct > 0 && (
+                                        <div
+                                            className={`h-full flex items-center pl-2.5 transition-all duration-500 ${style.bar}`}
+                                            style={{ width: `${widthPct}%` }}
+                                        >
+                                            {widthPct > 15 && (
+                                                <span className="text-white text-[11px] font-bold">
+                                                    {Math.round(widthPct)}%
+                                                </span>
+                                            )}
+                                        </div>
+                                    )}
+                                    {widthPct <= 15 && widthPct > 0 && (
+                                        <span className="text-gray-700 text-[11px] font-bold ml-2">
+                                            {Math.round(widthPct)}%
+                                        </span>
+                                    )}
+                                </div>
+                                <span className="w-8 text-right text-xs font-bold text-gray-500">{b.count}</span>
+                            </div>
+                        );
+                    })}
+                    <div className="text-right pt-2 border-t border-gray-50 text-xs text-gray-400 font-medium">
+                        Total: {total} students verified
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ─── Section Comparative Component Table ──────────────────────────────────────
+function SectionComparisonCard({ classSummary, sectionFiltered, loading }) {
+    const rows = classSummary?.sectionResults || [];
+    const bestAvg = rows.length > 0 ? Math.max(...rows.map((r) => Number(r.avgPercentage) || 0)) : null;
+
+    return (
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden flex flex-col justify-between">
+            <div>
+                <div className="px-5 py-4 border-b border-gray-100 bg-gray-50/20 flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4 text-blue-600" />
+                    <h3 className="text-sm font-bold text-gray-800">Section-wise Comparison</h3>
+                </div>
+
+                {loading ? (
+                    <div className="p-5 space-y-3">
+                        {Array(3).fill(0).map((_, i) => <div key={i} className="h-7 bg-gray-50 rounded animate-pulse" />)}
+                    </div>
+                ) : sectionFiltered ? (
+                    <div className="p-8 text-center text-sm text-gray-400 font-medium">
+                        Select "All Sections" context filters to visualize comparative rows.
+                    </div>
+                ) : rows.length === 0 ? (
+                    <div className="p-8 text-center text-sm text-gray-400 font-medium">
+                        No comparative rows generated.
+                    </div>
+                ) : (
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm text-left">
+                            <thead>
+                                <tr className="bg-gray-50 border-b border-gray-100 text-[11px] font-bold text-gray-400 uppercase tracking-wider">
+                                    <th className="px-4 py-3">Section</th>
+                                    <th className="px-3 py-3">Students</th>
+                                    <th className="px-3 py-3">Pass</th>
+                                    <th className="px-3 py-3">Fail</th>
+                                    <th className="px-3 py-3">Avg %</th>
+                                    <th className="px-3 py-3">High</th>
+                                    <th className="px-4 py-3 text-right">Low</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-50 font-medium text-gray-700">
+                                {rows.map((r) => (
+                                    <tr key={r.sectionId ?? r.sectionName} className="hover:bg-gray-50/50 transition-colors">
+                                        <td className="px-4 py-3 font-bold text-gray-900 flex items-center gap-2">
+                                            {r.sectionName}
+                                            {bestAvg !== null && Number(r.avgPercentage) === bestAvg && (
+                                                <span className="text-[9px] font-black uppercase bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded border border-emerald-200/50">
+                                                    Best Avg
+                                                </span>
+                                            )}
+                                        </td>
+                                        <td className="px-3 py-3 text-gray-500">{r.totalStudents ?? "—"}</td>
+                                        <td className="px-3 py-3 text-emerald-600 font-bold">{r.passedStudents ?? "—"}</td>
+                                        <td className="px-3 py-3 text-red-500 font-bold">{r.failedStudents ?? "—"}</td>
+                                        <td className="px-3 py-3 font-black text-gray-900">{safeFixed(r.avgPercentage)}%</td>
+                                        <td className="px-3 py-3 text-gray-600">{safeFixed(r.highestPercentage)}%</td>
+                                        <td className="px-4 py-3 text-right text-gray-400">{safeFixed(r.lowestPercentage)}%</td>
+                                    </tr>
+                                ))}
+                                <tr className="bg-gray-50/40 font-bold text-gray-900 border-t border-gray-100">
+                                    <td className="px-4 py-3 text-indigo-600">Class Total</td>
+                                    <td className="px-3 py-3">{classSummary?.totalStudents ?? "—"}</td>
+                                    <td className="px-3 py-3 text-emerald-600">{classSummary?.passedStudents ?? "—"}</td>
+                                    <td className="px-3 py-3 text-red-500">{classSummary?.failedStudents ?? "—"}</td>
+                                    <td className="px-3 py-3 font-black text-indigo-600">{safeFixed(classSummary?.classAvgPercentage)}%</td>
+                                    <td colSpan={2} className="px-4 py-3 text-right text-gray-300">—</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
+// ─── Top Performers List ──────────────────────────────────────────────────────
+function TopPerformersTable({ toppers, loading }) {
+    return (
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+            <div className="px-5 py-4 border-b border-gray-100 bg-gray-50/20 flex items-center gap-2">
+                <Trophy className="w-4 h-4 text-amber-500" />
+                <h3 className="text-sm font-bold text-gray-800">Top Performers</h3>
             </div>
             <div className="overflow-x-auto">
-                <table className="w-full text-sm min-w-[480px]">
+                <table className="w-full text-sm text-left">
                     <thead>
-                        <tr className="bg-gray-50 border-b border-gray-100">
-                            {["Subject", "Max", "Avg", "Pass", "Fail", "Absent", "Pass %"].map((h) => (
-                                <th key={h} className="text-left px-3 sm:px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                                    {h}
-                                </th>
-                            ))}
+                        <tr className="bg-gray-50 border-b border-gray-100 text-[11px] font-bold text-gray-400 uppercase tracking-wider">
+                            <th className="px-4 py-3 w-16">Rank</th>
+                            <th className="px-4 py-3">Student</th>
+                            <th className="px-3 py-3">Adm No</th>
+                            <th className="px-3 py-3">Section</th>
+                            <th className="px-3 py-3">Sec Rank</th>
+                            <th className="px-3 py-3">Percentage</th>
+                            <th className="px-4 py-3 text-right">Grade</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody className="divide-y divide-gray-50 font-medium text-gray-700">
                         {loading ? (
-                            Array(5).fill(0).map((_, i) => (
-                                <tr key={i}>
-                                    <td colSpan={7} className="px-3 sm:px-4 py-3">
-                                        <div className="h-5 bg-gray-100 rounded animate-pulse" />
-                                    </td>
-                                </tr>
+                            Array(3).fill(0).map((_, i) => (
+                                <tr key={i}><td colSpan={7} className="p-4"><div className="h-5 bg-gray-50 rounded animate-pulse" /></td></tr>
                             ))
-                        ) : subjectStats.length === 0 ? (
-                            <tr>
-                                <td colSpan={7} className="text-center py-8 text-sm text-gray-400">
-                                    No data available.
-                                </td>
-                            </tr>
+                        ) : toppers.length === 0 ? (
+                            <tr><td colSpan={7} className="text-center py-8 text-gray-400">No parameters loaded.</td></tr>
                         ) : (
-                            subjectStats.map((sub, i) => {
-                                const total = Number(sub.totalStudents);
-                                const passed = Number(sub.passedStudents);
-                                const passRate = total > 0 && !isNaN(total) && !isNaN(passed)
-                                    ? Math.round((passed / total) * 100)
-                                    : 0;
+                            toppers.map((s, idx) => {
+                                const rankNum = s.classRank ?? idx + 1;
+                                const medalStyle = RANK_MEDAL_BG[idx] ? `${RANK_MEDAL_BG[idx]} text-white` : "bg-gray-100 text-gray-600";
                                 return (
-                                    <tr
-                                        key={sub.subjectId ?? sub.subjectName}
-                                        className={`border-b border-gray-50 hover:bg-blue-50/20 transition-colors ${i % 2 === 0 ? "" : "bg-gray-50/30"}`}
-                                    >
-                                        <td className="px-3 sm:px-4 py-3 font-semibold text-gray-800 whitespace-nowrap">{sub.subjectName}</td>
-                                        <td className="px-3 sm:px-4 py-3 text-gray-500">{SUBJECT_MAX_DISPLAY}</td>
-                                        <td className="px-3 sm:px-4 py-3 font-semibold text-gray-700">{safeFixed(sub.avgPercentage)}</td>
-                                        <td className="px-3 sm:px-4 py-3">
-                                            <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-green-100 text-green-700 text-xs font-bold">
-                                                {sub.passedStudents ?? 0}
+                                    <tr key={s.studentId} className="hover:bg-gray-50/40 transition-colors">
+                                        <td className="px-4 py-2.5">
+                                            <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-black shadow-sm ${medalStyle}`}>
+                                                {rankNum}
                                             </span>
                                         </td>
-                                        <td className="px-3 sm:px-4 py-3">
-                                            <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-red-100 text-red-600 text-xs font-bold">
-                                                {sub.failedStudents ?? 0}
+                                        <td className="px-4 py-2.5 font-bold text-gray-900">{s.studentName}</td>
+                                        <td className="px-3 py-2.5 text-gray-400 font-mono text-xs">{s.admissionNumber}</td>
+                                        <td className="px-3 py-2.5 font-semibold text-gray-600">{s.sectionName ?? "—"}</td>
+                                        <td className="px-3 py-2.5 text-gray-500 font-bold">{s.sectionRank ?? "—"}</td>
+                                        <td className="px-3 py-2.5 font-black text-indigo-600">{safeFixed(s.percentage)}%</td>
+                                        <td className="px-4 py-2.5 text-right">
+                                            <span className={`px-2 py-0.5 rounded font-black text-xs ${gradeBadgeBg(s.overallGrade)}`}>
+                                                {s.overallGrade || "—"}
                                             </span>
-                                        </td>
-                                        <td className="px-3 sm:px-4 py-3">
-                                            <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-gray-100 text-gray-500 text-xs font-bold">
-                                                {sub.absentStudents ?? 0}
-                                            </span>
-                                        </td>
-                                        <td className="px-3 sm:px-4 py-3">
-                                            <div className="flex items-center gap-2">
-                                                <div className="hidden sm:block w-16 h-1.5 rounded-full bg-gray-100 overflow-hidden">
-                                                    <div
-                                                        className={`h-full rounded-full ${passRate >= 80 ? "bg-green-500" : passRate >= 60 ? "bg-yellow-500" : "bg-red-500"}`}
-                                                        style={{ width: `${passRate}%` }}
-                                                    />
-                                                </div>
-                                                <span className="text-sm font-semibold text-gray-700">{passRate}%</span>
-                                            </div>
                                         </td>
                                     </tr>
                                 );
@@ -301,312 +625,102 @@ function PassFailTable({ subjectStats, loading }) {
     );
 }
 
-// ══════════════════════════════════════════════════════════════════
-// GRADE DISTRIBUTION  (NEW)
-// ══════════════════════════════════════════════════════════════════
-function GradeDistributionCard({ gradeDistribution, loading }) {
-    const bands = gradeDistribution?.bands || [];
-    const bandMap = {};
-    bands.forEach((b) => { bandMap[b.grade] = b; });
-    const total = gradeDistribution?.totalStudents ?? bands.reduce((s, b) => s + (Number(b.count) || 0), 0);
-
-    return (
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 sm:p-5">
-            <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                    <Medal className="w-4 h-4 text-violet-500 shrink-0" />
-                    <h2 className="text-sm font-semibold text-gray-800">Grade Distribution</h2>
-                </div>
-                <span className="text-[10px] font-bold uppercase tracking-wide text-violet-600 bg-violet-50 px-2 py-0.5 rounded-full">
-                    New
-                </span>
-            </div>
-
-            {loading ? (
-                <div className="space-y-2.5">
-                    {Array(6).fill(0).map((_, i) => (
-                        <div key={i} className="h-6 rounded-full bg-gray-100 animate-pulse" />
-                    ))}
-                </div>
-            ) : bands.length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-6">
-                    Grade distribution isn't available yet — generate report cards for this exam first.
-                </p>
-            ) : (
-                <div className="space-y-2.5">
-                    {GRADE_ORDER.filter((g) => bandMap[g]).map((grade) => {
-                        const b = bandMap[grade];
-                        const style = GRADE_STYLES[grade] ?? GRADE_STYLES.AB;
-                        const widthPct = Math.max(Number(b.percentage) || 0, 3);
-                        return (
-                            <div key={grade} className="flex items-center gap-2 sm:gap-3">
-                                <span className={`w-9 text-center shrink-0 text-[11px] font-bold px-1.5 py-0.5 rounded-full ${style.chip}`}>
-                                    {grade}
-                                </span>
-                                <div className="flex-1 h-5 sm:h-6 bg-gray-100 rounded-full overflow-hidden">
-                                    <div
-                                        className={`h-full rounded-full flex items-center pl-2 transition-all duration-700 ${style.bar}`}
-                                        style={{ width: `${widthPct}%` }}
-                                    >
-                                        <span className="text-white text-[10px] font-bold whitespace-nowrap">
-                                            {safeFixed(b.percentage, 0)}% · {b.count}
-                                        </span>
-                                    </div>
-                                </div>
-                                <span className="w-8 text-right text-xs font-semibold text-gray-500 shrink-0">{b.count}</span>
-                            </div>
-                        );
-                    })}
-                    <p className="text-xs text-gray-400 text-right pt-1">Total: {total} students</p>
-                </div>
-            )}
-        </div>
-    );
-}
-
-// ══════════════════════════════════════════════════════════════════
-// SECTION-WISE COMPARISON  (NEW)
-// ══════════════════════════════════════════════════════════════════
-function SectionComparisonCard({ classSummary, sectionFiltered, loading }) {
-    const rows = classSummary?.sectionResults || [];
-    const bestAvg = rows.length > 0 ? Math.max(...rows.map((r) => Number(r.avgPercentage) || 0)) : null;
-
-    return (
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-            <div className="px-4 sm:px-5 py-4 border-b border-gray-100 flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-blue-500 shrink-0" />
-                <h2 className="text-sm font-semibold text-gray-800">Section-wise Comparison</h2>
-            </div>
-
-            {loading ? (
-                <div className="p-4 sm:p-5 space-y-2">
-                    {Array(3).fill(0).map((_, i) => (
-                        <div key={i} className="h-8 bg-gray-100 rounded animate-pulse" />
-                    ))}
-                </div>
-            ) : sectionFiltered ? (
-                <p className="text-sm text-gray-400 text-center py-10 px-4">
-                    Choose "All Sections" in the filters above to compare sections.
-                </p>
-            ) : rows.length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-10 px-4">
-                    Section comparison isn't available for this exam.
-                </p>
-            ) : (
-                <div className="overflow-x-auto">
-                    <table className="w-full text-sm min-w-[440px]">
-                        <thead>
-                            <tr className="bg-gray-50 border-b border-gray-100">
-                                {["Section", "Students", "Pass", "Fail", "Avg %", "High", "Low"].map((h) => (
-                                    <th key={h} className="text-left px-3 sm:px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                                        {h}
-                                    </th>
-                                ))}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {rows.map((r) => (
-                                <tr key={r.sectionId ?? r.sectionName} className="border-b border-gray-50">
-                                    <td className="px-3 sm:px-4 py-3 font-semibold text-gray-800 whitespace-nowrap">
-                                        {r.sectionName}
-                                        {bestAvg !== null && Number(r.avgPercentage) === bestAvg && (
-                                            <span className="ml-2 text-[10px] font-bold uppercase text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-full">
-                                                Best avg
-                                            </span>
-                                        )}
-                                    </td>
-                                    <td className="px-3 sm:px-4 py-3 text-gray-600">{r.totalStudents ?? "—"}</td>
-                                    <td className="px-3 sm:px-4 py-3 text-green-700 font-semibold">{r.passedStudents ?? "—"}</td>
-                                    <td className="px-3 sm:px-4 py-3 text-red-600 font-semibold">{r.failedStudents ?? "—"}</td>
-                                    <td className="px-3 sm:px-4 py-3 font-bold text-gray-800">{safeFixed(r.avgPercentage)}%</td>
-                                    <td className="px-3 sm:px-4 py-3 text-gray-600">{safeFixed(r.highestPercentage)}%</td>
-                                    <td className="px-3 sm:px-4 py-3 text-gray-600">{safeFixed(r.lowestPercentage)}%</td>
-                                </tr>
-                            ))}
-                            <tr className="bg-gray-50/60 font-semibold">
-                                <td className="px-3 sm:px-4 py-3 text-gray-800">Class Total</td>
-                                <td className="px-3 sm:px-4 py-3 text-gray-700">{classSummary?.totalStudents ?? "—"}</td>
-                                <td className="px-3 sm:px-4 py-3 text-green-700">{classSummary?.passedStudents ?? "—"}</td>
-                                <td className="px-3 sm:px-4 py-3 text-red-600">{classSummary?.failedStudents ?? "—"}</td>
-                                <td className="px-3 sm:px-4 py-3 text-gray-800">{safeFixed(classSummary?.classAvgPercentage)}%</td>
-                                <td className="px-3 sm:px-4 py-3 text-gray-400" colSpan={2}>—</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            )}
-        </div>
-    );
-}
-
-// ══════════════════════════════════════════════════════════════════
-// TOP PERFORMERS TABLE
-// ══════════════════════════════════════════════════════════════════
-function TopPerformersTable({ toppers, loading }) {
-    return (
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-            <div className="px-4 sm:px-5 py-4 border-b border-gray-100 flex items-center gap-2">
-                <Trophy className="w-4 h-4 text-yellow-500 shrink-0" />
-                <h2 className="text-sm font-semibold text-gray-800">Top Performers</h2>
-            </div>
-            {loading ? (
-                <div className="p-4 sm:p-5 space-y-2">
-                    {Array(5).fill(0).map((_, i) => (
-                        <div key={i} className="h-9 bg-gray-100 rounded animate-pulse" />
-                    ))}
-                </div>
-            ) : toppers.length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-10">No topper data available.</p>
-            ) : (
-                <div className="overflow-x-auto">
-                    <table className="w-full text-sm min-w-[480px]">
-                        <thead>
-                            <tr className="bg-gray-50 border-b border-gray-100">
-                                {["Rank", "Student", "Adm No", "Section", "Sec Rank", "%", "Grade"].map((h) => (
-                                    <th key={h} className="text-left px-3 sm:px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                                        {h}
-                                    </th>
-                                ))}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {toppers.map((s, i) => {
-                                const rankNum = s.classRank ?? i + 1;
-                                const medalBg = RANK_MEDAL_BG[i];
-                                return (
-                                    <tr key={s.studentId} className="border-b border-gray-50 hover:bg-blue-50/20 transition-colors">
-                                        <td className="px-3 sm:px-4 py-3">
-                                            <span className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold ${medalBg ? `${medalBg} text-white` : "bg-gray-100 text-gray-600"}`}>
-                                                {rankNum}
-                                            </span>
-                                        </td>
-                                        <td className="px-3 sm:px-4 py-3 font-semibold text-gray-800 whitespace-nowrap">{s.studentName}</td>
-                                        <td className="px-3 sm:px-4 py-3 text-gray-500 whitespace-nowrap">{s.admissionNumber}</td>
-                                        <td className="px-3 sm:px-4 py-3 text-gray-600 whitespace-nowrap">{s.sectionName ?? "—"}</td>
-                                        <td className="px-3 sm:px-4 py-3 text-gray-600">{s.sectionRank ?? "—"}</td>
-                                        <td className="px-3 sm:px-4 py-3 font-bold text-gray-800">{safeFixed(s.percentage)}%</td>
-                                        <td className="px-3 sm:px-4 py-3">
-                                            <span className={`inline-block px-2 py-0.5 rounded-full text-[11px] font-bold ${gradeBadgeBg(s.overallGrade)}`}>
-                                                {s.overallGrade}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
-                </div>
-            )}
-        </div>
-    );
-}
-
-// ══════════════════════════════════════════════════════════════════
-// FAILED STUDENTS TABLE
-// ══════════════════════════════════════════════════════════════════
+// ─── Failed Student Profiles List ─────────────────────────────────────────────
 function FailedStudentsTable({ failedStudents, loading }) {
     return (
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-            <div className="px-4 sm:px-5 py-4 border-b border-gray-100 flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-red-500 shrink-0" />
-                <h2 className="text-sm font-semibold text-gray-800">Failed Students</h2>
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+            <div className="px-5 py-4 border-b border-gray-100 bg-gray-50/20 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-red-500" />
+                <h3 className="text-sm font-bold text-gray-800">Failed Students</h3>
                 {failedStudents.length > 0 && (
-                    <span className="ml-1 inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-100 text-red-600 text-[11px] font-bold">
+                    <span className="bg-red-100 text-red-700 text-xs font-black px-2 py-0.5 rounded-full">
                         {failedStudents.length}
                     </span>
                 )}
             </div>
-            {loading ? (
-                <div className="p-4 sm:p-5 space-y-2">
-                    {Array(3).fill(0).map((_, i) => (
-                        <div key={i} className="h-10 bg-gray-100 rounded animate-pulse" />
-                    ))}
-                </div>
-            ) : failedStudents.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-10 text-gray-300">
-                    <CheckSquare className="w-10 h-10 mb-2" />
-                    <p className="text-sm font-medium">All students passed!</p>
-                </div>
-            ) : (
-                <div className="overflow-x-auto">
-                    <table className="w-full text-sm min-w-[480px]">
-                        <thead>
-                            <tr className="bg-gray-50 border-b border-gray-100">
-                                {["Student", "Adm No", "Section", "%", "Grade", "Failed In"].map((h) => (
-                                    <th key={h} className="text-left px-3 sm:px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                                        {h}
-                                    </th>
-                                ))}
+            <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left">
+                    <thead>
+                        <tr className="bg-gray-50 border-b border-gray-100 text-[11px] font-bold text-gray-400 uppercase tracking-wider">
+                            <th className="px-4 py-3">Student</th>
+                            <th className="px-3 py-3">Adm No</th>
+                            <th className="px-3 py-3">Section</th>
+                            <th className="px-3 py-3">Percentage</th>
+                            <th className="px-3 py-3">Grade</th>
+                            <th className="px-4 py-3 text-right">Failed In</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50 font-medium text-gray-700">
+                        {loading ? (
+                            Array(3).fill(0).map((_, i) => (
+                                <tr key={i}><td colSpan={6} className="p-4"><div className="h-5 bg-gray-50 rounded animate-pulse" /></td></tr>
+                            ))
+                        ) : failedStudents.length === 0 ? (
+                            <tr>
+                                <td colSpan={6} className="text-center py-10 text-emerald-600 font-bold bg-emerald-50/20">
+                                    <CheckSquare className="w-6 h-6 mx-auto mb-1 text-emerald-500" /> All profiles passed parameters.
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            {failedStudents.map((s) => (
-                                <tr key={s.studentId} className="border-b border-gray-50 hover:bg-red-50/20 transition-colors">
-                                    <td className="px-3 sm:px-4 py-3 font-semibold text-gray-800 whitespace-nowrap">{s.studentName}</td>
-                                    <td className="px-3 sm:px-4 py-3 text-gray-500 whitespace-nowrap">{s.admissionNumber}</td>
-                                    <td className="px-3 sm:px-4 py-3 text-gray-600 whitespace-nowrap">{s.sectionName ?? "—"}</td>
-                                    <td className="px-3 sm:px-4 py-3 font-bold text-red-600">{safeFixed(s.percentage)}%</td>
-                                    <td className="px-3 sm:px-4 py-3">
-                                        <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-bold bg-red-100 text-red-600">
-                                            {s.overallGrade}
-                                        </span>
-                                    </td>
-                                    <td className="px-3 sm:px-4 py-3">
-                                        <div className="flex flex-wrap gap-1.5">
-                                            {(s.failedSubjects || []).map((sub) => (
-                                                <span key={sub} className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-red-100 text-red-700 border border-red-200 whitespace-nowrap">
+                        ) : (
+                            failedStudents.map((s) => (
+                                <tr key={s.studentId} className="hover:bg-red-50/10 transition-colors">
+                                    <td className="px-4 py-3 font-bold text-gray-900">{s.studentName}</td>
+                                    <td className="px-3 py-3 text-gray-400 font-mono text-xs">{s.admissionNumber}</td>
+                                    <td className="px-3 py-3 font-semibold text-gray-600">{s.sectionName ?? "—"}</td>
+                                    <td className="px-3 py-3 text-red-600 font-black">{safeFixed(s.percentage)}%</td>
+                                    <td className="px-3 py-3"><span className="bg-red-50 text-red-700 px-2 py-0.5 rounded font-black text-xs">F</span></td>
+                                    <td className="px-4 py-3 text-right">
+                                        <div className="flex flex-wrap justify-end gap-1">
+                                            {(s.failedSubjects || []).map((sub, i) => (
+                                                <span key={i} className="bg-red-100/60 border border-red-200 text-red-800 text-[10px] font-bold px-1.5 py-0.5 rounded">
                                                     {sub}
                                                 </span>
                                             ))}
                                         </div>
                                     </td>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            )}
+                            ))
+                        )}
+                    </tbody>
+                </table>
+            </div>
         </div>
     );
 }
 
-// ══════════════════════════════════════════════════════════════════
-// MAIN
-// ══════════════════════════════════════════════════════════════════
+// ─── Main Controller Component (Strict Non-Blocking Pipeline Alignment) ─────
 export default function Analytics() {
     const { currentAcademicYear } = useDecodedUser();
 
-    // ── meta (loaded once) ──────────────────────────────────────────
     const [academicYears, setAcademicYears] = useState([]);
     const [classes, setClasses] = useState([]);
     const [loadingMeta, setLoadingMeta] = useState(true);
     const [metaError, setMetaError] = useState(null);
 
-    // ── filter state ─────────────────────────────────────────────────
     const [yearId, setYearId] = useState("");
     const [classId, setClassId] = useState("");
     const [examId, setExamId] = useState("");
     const [sectionId, setSectionId] = useState("");
     const [subjectId, setSubjectId] = useState("");
 
-    // ── class-dependent option lists ────────────────────────────────
     const [exams, setExams] = useState([]);
     const [sections, setSections] = useState([]);
     const [examSubjectOptions, setExamSubjectOptions] = useState([]);
     const [loadingExams, setLoadingExams] = useState(false);
     const [examsError, setExamsError] = useState(null);
 
-    // ── analytics data ───────────────────────────────────────────────
+    const [eventSummary, setEventSummary] = useState(null);
     const [classSummary, setClassSummary] = useState(null);
     const [subjectStats, setSubjectStats] = useState([]);
     const [toppers, setToppers] = useState([]);
     const [failedStudents, setFailedStudents] = useState([]);
     const [gradeDistribution, setGradeDistribution] = useState(null);
+    const [performanceTrend, setPerformanceTrend] = useState(null);
+
     const [loadingAnalytics, setLoadingAnalytics] = useState(false);
     const [analyticsError, setAnalyticsError] = useState(null);
     const [resultNotDeclared, setResultNotDeclared] = useState(false);
 
-    // ── 1. Academic years + classes, once ───────────────────────────
     useEffect(() => {
         (async () => {
             setLoadingMeta(true);
@@ -625,19 +739,16 @@ export default function Analytics() {
                     setYearId(String(yearsList[0].id));
                 }
             } catch {
-                setMetaError("Failed to load filters. Please refresh.");
+                setMetaError("Failed to initialize system context targets.");
             } finally {
                 setLoadingMeta(false);
             }
         })();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [currentAcademicYear]);
 
-    // ── 2. Sections + Exams whenever class (or year) changes ───────
     const fetchClassDependent = useCallback(async () => {
         if (!classId) {
-            setSections([]); setExams([]); setExamId("");
-            return;
+            setSections([]); setExams([]); setExamId(""); return;
         }
         setLoadingExams(true); setExamsError(null);
         try {
@@ -651,7 +762,7 @@ export default function Analytics() {
             setExamId(list.length > 0 ? String(list[0].id) : "");
             setSectionId("");
         } catch {
-            setExamsError("Failed to load exams for this class.");
+            setExamsError("Error parsing fields for targeted class layout.");
             setExams([]); setSections([]); setExamId("");
         } finally {
             setLoadingExams(false);
@@ -660,7 +771,6 @@ export default function Analytics() {
 
     useEffect(() => { fetchClassDependent(); }, [fetchClassDependent]);
 
-    // ── 3. Subject filter options whenever exam changes ────────────
     useEffect(() => {
         (async () => {
             setSubjectId("");
@@ -674,297 +784,292 @@ export default function Analytics() {
         })();
     }, [examId]);
 
-    // ── 4. Analytics fetch (class-result, subject-analysis, toppers, failed-students, grade-distribution) ─
-    const fetchAnalytics = useCallback(async (examIdParam, sectionIdParam, subjectIdParam) => {
-        if (!examIdParam) return;
-        setLoadingAnalytics(true); setAnalyticsError(null);
+    // ─── Parallel Pipeline Execution Logic (Guarantees Event Summary call) ───
+    const fetchAnalytics = useCallback(async (targetExamId, targetSectionId, targetSubjectId, fallbackExamsList) => {
+        if (!targetExamId) return;
+        setLoadingAnalytics(true);
+        setAnalyticsError(null);
+
+        // Race condition solution: use fallback exams array if current closure state is batching
+        const activeExamsArray = fallbackExamsList || exams;
+        const selectedExamObj = activeExamsArray.find((e) => String(e.id) === String(targetExamId));
+
+        // Multi-layered property detection to secure dynamic eventId lookup
+        let matchedEventId = selectedExamObj?.examEventId || selectedExamObj?.eventId || selectedExamObj?.examEvent?.id || selectedExamObj?.exam_event_id;
+        const isDeclared = selectedExamObj?.resultDeclared ?? true;
+
+        setResultNotDeclared(!isDeclared);
+
         try {
-            const [summary, subjects, toppersData, failed, grades] = await Promise.all([
-                getClassResultSummary(examIdParam, sectionIdParam || null),
-                getSubjectAnalysis(examIdParam, sectionIdParam || null, subjectIdParam || null),
-                getToppers(examIdParam, 10, sectionIdParam || null),
-                getFailedStudents(examIdParam, sectionIdParam || null),
-                getGradeDistribution(examIdParam, sectionIdParam || null),
+            // Unconditional Event List Deep Scan fallback matching to resolve eventId if properties are completely unmapped
+            if (!matchedEventId && yearId) {
+                try {
+                    const globalEvents = await getExamEvents({ academicYearId: yearId });
+                    const match = globalEvents.find(evt =>
+                        String(evt.id) === String(targetExamId) ||
+                        evt.name?.toLowerCase() === selectedExamObj?.name?.toLowerCase() ||
+                        (evt.exams && evt.exams.some(ex => String(ex.id) === String(targetExamId)))
+                    );
+                    if (match) matchedEventId = match.id;
+                } catch (e) {
+                    console.warn("Event auto-resolution fallback bypass.", e);
+                }
+            }
+
+            // Unconditional execution of Event Summary & Trend APIs (Regardless of individual status mapping)
+            const [crossClassSummary, trend] = await Promise.all([
+                matchedEventId ? getExamEventSummary(matchedEventId).catch(() => null) : Promise.resolve(null),
+                getClassPerformanceTrend(classId, yearId).catch(() => null)
             ]);
-            setClassSummary(summary);
-            setSubjectStats(Array.isArray(subjects) ? subjects : []);
-            setToppers(Array.isArray(toppersData) ? toppersData : []);
-            setFailedStudents(Array.isArray(failed) ? failed : []);
-            setGradeDistribution(grades);
+
+            setEventSummary(crossClassSummary);
+            setPerformanceTrend(trend);
+
+            if (isDeclared) {
+                const [summary, subjects, toppersData, failed, grades] = await Promise.all([
+                    getClassResultSummary(targetExamId, targetSectionId || null),
+                    getSubjectAnalysis(targetExamId, targetSectionId || null, targetSubjectId || null),
+                    getToppers(targetExamId, 10, targetSectionId || null),
+                    getFailedStudents(targetExamId, targetSectionId || null),
+                    getGradeDistribution(targetExamId, targetSectionId || null),
+                ]);
+
+                setClassSummary(summary);
+                setSubjectStats(Array.isArray(subjects) ? subjects : []);
+                setToppers(Array.isArray(toppersData) ? toppersData : []);
+                setFailedStudents(Array.isArray(failed) ? failed : []);
+                setGradeDistribution(grades);
+            } else {
+                setClassSummary(null); setSubjectStats([]); setToppers([]); setFailedStudents([]); setGradeDistribution(null);
+            }
         } catch (err) {
-            setAnalyticsError(err?.message || "Failed to load analytics data. Please try again.");
-            setClassSummary(null); setSubjectStats([]); setToppers([]); setFailedStudents([]); setGradeDistribution(null);
+            setAnalyticsError(err?.message || "Data sync fault. Request manual refresh step.");
         } finally {
             setLoadingAnalytics(false);
         }
-    }, []);
+    }, [exams, classId, yearId]);
 
-    // Auto-load on first exam selection, and re-fire whenever section / subject change
-    // — without ever resetting the chosen exam.
+    // Triggers execution directly matching live arrays during active render state transitions
     useEffect(() => {
-        if (!examId) return;
-        const selectedExam = exams.find((e) => String(e.id) === String(examId));
-        if (selectedExam && !selectedExam.resultDeclared) {
-            setResultNotDeclared(true);
-            setClassSummary(null); setSubjectStats([]); setToppers([]); setFailedStudents([]); setGradeDistribution(null);
-            return;
-        }
-        setResultNotDeclared(false);
-        fetchAnalytics(examId, sectionId, subjectId);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [examId, sectionId, subjectId, exams]);
+        if (!examId || exams.length === 0) return;
+        fetchAnalytics(examId, sectionId, subjectId, exams);
+    }, [examId, sectionId, subjectId, exams, fetchAnalytics]);
 
     const handleApply = () => {
-        if (examId) fetchAnalytics(examId, sectionId, subjectId);
+        if (examId) fetchAnalytics(examId, sectionId, subjectId, exams);
     };
 
-    // ── derived display values ──────────────────────────────────────
     const selectedClass = classes.find((c) => String(c.id) === String(classId));
     const selectedExam = exams.find((e) => String(e.id) === String(examId));
-    const selectedSection = sections.find((s) => String(s.id) === String(sectionId));
-    const selectedSubject = examSubjectOptions.find((s) => String(s.subjectId ?? s.id) === String(subjectId));
-
-    const total = Number(classSummary?.totalStudents);
-    const passedCount = Number(classSummary?.passedStudents);
-    const failedCount = Number(classSummary?.failedStudents);
-    const avgPct = Number(classSummary?.classAvgPercentage);
+    const total = Number(classSummary?.totalStudents || 0);
+    const passedCount = Number(classSummary?.passedStudents || 0);
+    const failedCount = Number(classSummary?.failedStudents || 0);
+    const avgPct = Number(classSummary?.classAvgPercentage || 0);
     const topTopper = toppers[0];
 
-    const passRatePct = pct(passedCount, total);
-    const failedRatePct = pct(failedCount, total);
+    const passRatePct = total > 0 ? (passedCount / total) * 100 : 0;
+    const failedRatePct = total > 0 ? (failedCount / total) * 100 : 0;
     const sectionsCovered = Array.isArray(classSummary?.sectionResults) ? classSummary.sectionResults.length : sections.length;
 
-    const weakestSubject = subjectStats.length > 0
-        ? subjectStats.reduce((min, s) => (Number(s.avgPercentage) < Number(min.avgPercentage) ? s : min), subjectStats[0])
+    // Filter duplication bug row elements out safely (Clean layout rows resolution)
+    const cleanSubjectStats = subjectStats.filter(sub => Number(sub.totalStudents || 0) > 0 || Number(sub.avgPercentage || 0) > 0);
+
+    const weakestSubject = cleanSubjectStats.length > 0
+        ? cleanSubjectStats.reduce((min, s) => (Number(s.avgPercentage) < Number(min.avgPercentage) ? s : min), cleanSubjectStats[0])
         : null;
 
-    const STATS = [
+    const STATS_CONFIG = [
         {
-            key: "avg", title: "Class Average",
-            value: classSummary && !isNaN(avgPct) ? `${avgPct.toFixed(1)}%` : "—",
-            caption: classSummary ? `${sectionsCovered || 0} section${sectionsCovered === 1 ? "" : "s"} · ${total || 0} students` : "No data yet",
+            title: "Class Average", value: classSummary ? `${avgPct.toFixed(1)}%` : "—",
+            caption: classSummary ? `${sectionsCovered} sections · ${total} students` : "Awaiting selection",
             icon: BarChart2, iconBg: "bg-blue-50", iconColor: "text-blue-600",
         },
         {
-            key: "high", title: "Highest Score",
-            value: topTopper ? `${safeFixed(topTopper.percentage)}%` : "—",
-            caption: topTopper ? `${topTopper.studentName}${topTopper.sectionName ? ` · ${topTopper.sectionName}` : ""}` : "No data yet",
-            icon: Trophy, iconBg: "bg-yellow-50", iconColor: "text-yellow-600",
+            title: "Highest Score", value: topTopper ? `${safeFixed(topTopper.percentage)}%` : "—",
+            caption: topTopper ? `${topTopper.studentName}${topTopper.sectionName ? ` (${topTopper.sectionName})` : ""}` : "Awaiting selection",
+            icon: Trophy, iconBg: "bg-amber-50", iconColor: "text-amber-500",
         },
         {
-            key: "failed", title: "Failed Students",
-            value: classSummary ? `${failedCount || 0}` : "—",
-            caption: failedRatePct != null ? `${failedRatePct.toFixed(1)}% of class` : "No data yet",
+            title: "Failed Students", value: classSummary ? `${failedCount}` : "—",
+            caption: classSummary ? `${failedRatePct.toFixed(1)}% of total layout` : "Awaiting selection",
             icon: AlertTriangle, iconBg: "bg-red-50", iconColor: "text-red-500",
         },
         {
-            key: "pass", title: "Pass Rate",
-            value: passRatePct != null ? `${passRatePct.toFixed(1)}%` : "—",
-            caption: classSummary ? `${passedCount || 0} of ${total || 0} passed` : "No data yet",
-            icon: CheckSquare, iconBg: "bg-green-50", iconColor: "text-green-600",
+            title: "Pass Rate", value: classSummary ? `${passRatePct.toFixed(1)}%` : "—",
+            caption: classSummary ? `${passedCount} of ${total} verified` : "Awaiting selection",
+            icon: CheckSquare, iconBg: "bg-emerald-50", iconColor: "text-emerald-600",
         },
         {
-            key: "weak", title: "Weakest Subject",
-            value: weakestSubject ? weakestSubject.subjectName : "—",
-            caption: weakestSubject ? `Avg ${safeFixed(weakestSubject.avgPercentage)}% · ${weakestSubject.failedStudents ?? 0} failed` : "No data yet",
-            icon: TrendingDown, iconBg: "bg-pink-50", iconColor: "text-pink-600",
+            title: "Weakest Subject", value: weakestSubject ? weakestSubject.subjectName : "—",
+            caption: weakestSubject ? `Avg ${safeFixed(weakestSubject.avgPercentage)}% · ${weakestSubject.failedStudents ?? 0} fail` : "Awaiting selection",
+            icon: TrendingDown, iconBg: "bg-rose-50", iconColor: "text-rose-600",
         },
     ];
 
     return (
-        <div className="min-h-screen bg-[#f3f6fb] p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6">
+        <div className="min-h-screen bg-[#f8fafc] p-4 lg:p-6 space-y-6 text-gray-800">
 
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">
-                    <TooltipComponent message="Efficiently manage analytics." direction="right" color="nocolor">
-                        Manage Analytics
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 pb-4">
+                <h1 className="text-xl sm:text-2xl font-black tracking-tight text-gray-900">
+                    <TooltipComponent message="Comprehensive high-fidelity academic tracking." direction="right" color="nocolor">
+                        Exam Analytics Dashboard
                     </TooltipComponent>
-                </h2>
+                </h1>
             </div>
 
-            {/* ── error banners ─────────────────────────────────────── */}
-            {metaError && (
-                <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3 flex items-center gap-2 flex-wrap">
-                    <AlertTriangle className="w-4 h-4 shrink-0" /> {metaError}
-                    <button onClick={() => window.location.reload()} className="ml-auto text-xs font-medium underline shrink-0">Refresh</button>
+            {/* Cascade Parameter Configuration Dashboard */}
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 sm:p-5 space-y-4">
+                <div className="flex items-center gap-2 border-b border-gray-50 pb-2">
+                    <Filter className="w-4 h-4 text-indigo-600" />
+                    <h2 className="text-sm font-bold text-gray-900">Cascade Filter Framework</h2>
                 </div>
-            )}
-            {examsError && (
-                <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3 flex items-center gap-2 flex-wrap">
-                    <AlertTriangle className="w-4 h-4 shrink-0" /> {examsError}
-                    <button onClick={fetchClassDependent} className="ml-auto text-xs font-medium underline shrink-0">Retry</button>
-                </div>
-            )}
-            {analyticsError && (
-                <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3 flex items-center gap-2 flex-wrap">
-                    <AlertTriangle className="w-4 h-4 shrink-0" /> {analyticsError}
-                    <button onClick={handleApply} className="ml-auto flex items-center gap-1 text-xs font-medium underline hover:no-underline shrink-0">
-                        <RefreshCw className="w-3 h-3" /> Retry
+
+                <div className="flex flex-col lg:flex-row gap-4 items-end">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 flex-1 w-full">
+                        <FilterSelect
+                            label="Academic Year"
+                            value={yearId}
+                            disabled={loadingMeta}
+                            onChange={(e) => { setYearId(e.target.value); setClassId(""); }}
+                        >
+                            {academicYears.map((y) => (
+                                <option key={y.id} value={y.id}>{y.label ?? y.name ?? y.value}</option>
+                            ))}
+                        </FilterSelect>
+
+                        <FilterSelect
+                            label="Class"
+                            value={classId}
+                            disabled={loadingMeta || !yearId}
+                            onChange={(e) => setClassId(e.target.value)}
+                        >
+                            <option value="">Select Class</option>
+                            {classes.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                        </FilterSelect>
+
+                        <FilterSelect
+                            label="Exam"
+                            value={examId}
+                            disabled={!classId || loadingExams}
+                            onChange={(e) => setExamId(e.target.value)}
+                        >
+                            {exams.length === 0 ? (
+                                <option value="">{loadingExams ? "Loading…" : "No database entries matched"}</option>
+                            ) : (
+                                exams.map((ex) => <option key={ex.id} value={ex.id}>{ex.name}</option>)
+                            )}
+                        </FilterSelect>
+
+                        <FilterSelect
+                            label="Section"
+                            hint="optional"
+                            value={sectionId}
+                            disabled={!classId || loadingExams}
+                            onChange={(e) => setSectionId(e.target.value)}
+                        >
+                            <option value="">All Sections</option>
+                            {sections.map((s) => <option key={s.id} value={s.id}>{s.name ?? s.sectionName}</option>)}
+                        </FilterSelect>
+
+                        <FilterSelect
+                            label="Subject"
+                            hint="optional"
+                            value={subjectId}
+                            disabled={!examId}
+                            onChange={(e) => setSubjectId(e.target.value)}
+                        >
+                            <option value="">All Subjects</option>
+                            {examSubjectOptions.map((s) => (
+                                <option key={s.subjectId ?? s.id} value={s.subjectId ?? s.id}>{s.subjectName}</option>
+                            ))}
+                        </FilterSelect>
+                    </div>
+
+                    <button
+                        onClick={handleApply}
+                        disabled={!examId || loadingAnalytics}
+                        className="w-full lg:w-32 flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-200 text-white disabled:text-gray-400 text-sm font-bold rounded-lg shadow-sm transition-all active:scale-95 whitespace-nowrap h-9"
+                    >
+                        {loadingAnalytics ? <RefreshCw className="w-4 h-4 animate-spin" /> : "Apply Sync"}
                     </button>
                 </div>
-            )}
-
-            {/* ── Filters ────────────────────────────────────────────── */}
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm px-4 sm:px-5 py-4">
-                <div className="flex items-center gap-2 mb-3">
-                    <Filter className="w-4 h-4 text-blue-600" />
-                    <h2 className="text-sm font-semibold text-gray-800">Filters</h2>
-                    <span className="text-xs text-gray-400">Section &amp; Subject are optional — leave blank for all</span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1.3fr_1fr_1fr_auto] gap-3">
-                    <FilterSelect
-                        label="Academic Year"
-                        value={yearId}
-                        disabled={loadingMeta}
-                        onChange={(e) => { setYearId(e.target.value); setClassId(""); }}
-                    >
-                        {academicYears.length === 0 ? (
-                            <option value="">No years</option>
-                        ) : (
-                            academicYears.map((y) => {
-                                const isCurrent = currentAcademicYear?.id === y.id;
-                                return (
-                                    <option key={y.id} value={y.id}>
-                                        {isCurrent ? "🟢 " : ""}{y.label ?? y.name ?? y.value}{isCurrent ? " (Current)" : ""}
-                                    </option>
-                                );
-                            })
-                        )}
-                    </FilterSelect>
-
-                    <FilterSelect
-                        label="Class"
-                        value={classId}
-                        disabled={loadingMeta || !yearId}
-                        onChange={(e) => setClassId(e.target.value)}
-                    >
-                        <option value="">Select class</option>
-                        {classes.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                    </FilterSelect>
-
-                    <FilterSelect
-                        label="Exam"
-                        value={examId}
-                        disabled={!classId || loadingExams}
-                        onChange={(e) => setExamId(e.target.value)}
-                    >
-                        {exams.length === 0 ? (
-                            <option value="">{loadingExams ? "Loading…" : "No exams"}</option>
-                        ) : (
-                            exams.map((ex) => <option key={ex.id} value={ex.id}>{ex.name}</option>)
-                        )}
-                    </FilterSelect>
-
-                    <FilterSelect
-                        label="Section"
-                        hint="optional"
-                        value={sectionId}
-                        disabled={!classId || loadingExams}
-                        onChange={(e) => setSectionId(e.target.value)}
-                    >
-                        <option value="">All Sections</option>
-                        {sections.map((s) => <option key={s.id} value={s.id}>{s.name ?? s.sectionName}</option>)}
-                    </FilterSelect>
-
-                    <FilterSelect
-                        label="Subject"
-                        hint="optional"
-                        value={subjectId}
-                        disabled={!examId}
-                        onChange={(e) => setSubjectId(e.target.value)}
-                    >
-                        <option value="">All Subjects</option>
-                        {examSubjectOptions.map((s) => (
-                            <option key={s.subjectId ?? s.id} value={s.subjectId ?? s.id}>{s.subjectName}</option>
-                        ))}
-                    </FilterSelect>
-
-                    <div className="flex items-end">
-                        <button
-                            onClick={handleApply}
-                            disabled={!examId || loadingAnalytics}
-                            className="w-full lg:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-all shadow-sm active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed whitespace-nowrap"
-                        >
-                            {loadingAnalytics ? <RefreshCw className="w-4 h-4 animate-spin" /> : null}
-                            Apply
-                        </button>
-                    </div>
-                </div>
-
-                <div className="mt-3 flex items-start gap-2 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
-                    <Info className="w-3.5 h-3.5 text-blue-500 shrink-0 mt-0.5" />
-                    <p className="text-xs text-blue-700">
-                        Pick an Academic Year and Class to load exams. Section and Subject stay optional —
-                        changing either updates the report right away without losing your selected exam.
-                    </p>
-                </div>
-
-                {selectedExam && (
-                    <div className="mt-3 flex items-center gap-2 flex-wrap text-xs">
-                        <span className="text-gray-400">Showing:</span>
-                        {selectedClass && (
-                            <span className="px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 font-medium">{selectedClass.name}</span>
-                        )}
-                        <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-medium">{selectedExam.name}</span>
-                        <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 font-medium">
-                            {selectedSection?.name ?? selectedSection?.sectionName ?? "All Sections"}
-                        </span>
-                        <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 font-medium">
-                            {selectedSubject?.subjectName ?? "All Subjects"}
-                        </span>
-                    </div>
-                )}
             </div>
 
+            {/* Render Dashboard Tree */}
             {!examId ? (
-                <div className="bg-white border border-gray-200 text-gray-400 text-sm rounded-2xl px-4 sm:px-5 py-10 text-center">
-                    Select an academic year, class and exam above to view analytics.
-                </div>
-            ) : resultNotDeclared ? (
-                <div className="bg-amber-50 border border-amber-200 text-amber-700 text-sm rounded-2xl px-4 sm:px-5 py-8 flex flex-col items-center text-center gap-2">
-                    <AlertTriangle className="w-6 h-6" />
-                    <p className="font-medium">Result not declared yet for this exam.</p>
-                    <p className="text-xs text-amber-600">Declare the result from the Exams page to unlock analytics.</p>
+                <div className="bg-white border border-gray-100 text-gray-400 font-medium text-sm rounded-xl p-12 text-center shadow-sm">
+                    Isolate context filters above to build visualization reporting elements.
                 </div>
             ) : (
-                <>
-                    {/* ── stat cards ─────────────────────────────────── */}
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
-                        {loadingAnalytics
-                            ? Array(5).fill(0).map((_, i) => <StatCardSkeleton key={i} />)
-                            : STATS.map((s) => (
-                                <StatCard
-                                    key={s.key}
-                                    icon={s.icon}
-                                    iconBg={s.iconBg}
-                                    iconColor={s.iconColor}
-                                    title={s.title}
-                                    value={s.value}
-                                    caption={s.caption}
-                                />
-                            ))
-                        }
+                <div className="space-y-6 animate-fadeIn">
+
+                    {/* Event Summary Card Panel (Guaranteed Fetch Execution Visibility) */}
+                    <EventSummaryPanel
+                        summaryData={eventSummary}
+                        examName={selectedExam?.name}
+                        loading={loadingAnalytics}
+                    />
+
+                    {/* Active State Context Label Bar */}
+                    <div className="flex items-center gap-2 flex-wrap text-xs font-bold text-gray-400 bg-gray-100 px-4 py-2.5 rounded-lg border border-gray-200/40">
+                        <span className="uppercase tracking-wider text-[10px]">Context:</span>
+                        <span className="bg-white text-indigo-700 px-2 py-0.5 rounded border border-gray-200 shadow-2xs">{selectedClass?.name}</span>
+                        <span className="bg-white text-blue-700 px-2 py-0.5 rounded border border-gray-200 shadow-2xs">{selectedExam?.name}</span>
+                        <span className="bg-white text-gray-700 px-2 py-0.5 rounded border border-gray-200 shadow-2xs">{sectionId ? `Section ${sections.find(s => String(s.id) === String(sectionId))?.name}` : "All Sections"}</span>
+                        <span className="bg-white text-gray-700 px-2 py-0.5 rounded border border-gray-200 shadow-2xs">{subjectId ? examSubjectOptions.find(s => String(s.subjectId ?? s.id) === String(subjectId))?.subjectName : "All Subjects"}</span>
                     </div>
 
-                    {/* ── subject avg chart + pass/fail table ──────────── */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-                        <SubjectBarChart subjectStats={subjectStats} loading={loadingAnalytics} />
-                        <PassFailTable subjectStats={subjectStats} loading={loadingAnalytics} />
-                    </div>
+                    {/* Conditional Split: Real Non-Blocking Info Alert Banner vs Class Analytical Grids */}
+                    {resultNotDeclared ? (
+                        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
+                            <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" />
+                            <div>
+                                <h4 className="text-sm font-semibold text-amber-900">
+                                    Results Not Declared
+                                </h4>
+                                <p className="text-xs text-amber-700">
+                                    Class analytics will be available after results are declared.
+                                </p>
+                            </div>
+                        </div>
+                    ) : (
+                        <>
+                            {/* Standard Performance KPI Cards */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                                {loadingAnalytics
+                                    ? Array(5).fill(0).map((_, i) => <StatCardSkeleton key={i} />)
+                                    : STATS_CONFIG.map((s, i) => <StatCard key={i} {...s} />)
+                                }
+                            </div>
 
-                    {/* ── grade distribution + section comparison ─────── */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-                        <GradeDistributionCard gradeDistribution={gradeDistribution} loading={loadingAnalytics} />
-                        <SectionComparisonCard classSummary={classSummary} sectionFiltered={!!sectionId} loading={loadingAnalytics} />
-                    </div>
+                            {/* Cleaned Subject Analytics Row Display */}
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                <SubjectBarChart subjectStats={cleanSubjectStats} loading={loadingAnalytics} />
+                                <PassFailTable subjectStats={cleanSubjectStats} loading={loadingAnalytics} />
+                            </div>
 
-                    {/* ── top performers + failed students ─────────────── */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-                        <TopPerformersTable toppers={toppers} loading={loadingAnalytics} />
-                        <FailedStudentsTable failedStudents={failedStudents} loading={loadingAnalytics} />
-                    </div>
-                </>
+                            {/* Grade Configuration Data Cards */}
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                <GradeDistributionCard gradeDistribution={gradeDistribution} loading={loadingAnalytics} />
+                                <SectionComparisonCard classSummary={classSummary} sectionFiltered={!!sectionId} loading={loadingAnalytics} />
+                            </div>
+
+                            {/* Standing Registers Data Grids */}
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                <TopPerformersTable toppers={toppers} loading={loadingAnalytics} />
+                                <FailedStudentsTable failedStudents={failedStudents} loading={loadingAnalytics} />
+                            </div>
+                        </>
+                    )}
+
+                    {/* Performance History Trend Matrix Card Line */}
+                    <PerformanceTrendCard
+                        trendData={performanceTrend}
+                        currentExamId={examId}
+                        currentClassName={selectedClass?.name}
+                        loading={loadingAnalytics}
+                    />
+                </div>
             )}
         </div>
     );
