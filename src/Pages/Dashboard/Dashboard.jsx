@@ -7,9 +7,9 @@ import {
 } from "lucide-react";
 import { Chart, ArcElement, Tooltip, Legend } from "chart.js";
 import { Doughnut } from "react-chartjs-2";
-import CardComponent from "../Components/CommonComp/CardComponent";
-import CardLoader from "../Components/CommonComp/CardLoader";
-import { getDashboardAnalytics, getUpcomingHolidays } from "../Api/DashboardApi";
+import CardComponent from "../../Components/CommonComp/CardComponent";
+import CardLoader from "../../Components/CommonComp/CardLoader";
+import { getDashboardAnalytics, getUpcomingHolidays } from "../../Api/DashboardApi";
 import { useNavigate } from "react-router-dom";
 
 Chart.register(ArcElement, Tooltip, Legend);

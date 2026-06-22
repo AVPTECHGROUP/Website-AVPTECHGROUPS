@@ -15,28 +15,28 @@ import { useNavigate } from "react-router-dom";
 
 export default function Stores() {
   // ── Filters & pagination ───────────────────────────────────────
-  const [search,       setSearch]       = useState("");
+  const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("Active");
-  const [page,         setPage]         = useState(1);
-  const [rowsPerPage,  setRowsPerPage]  = useState(10);
+  const [page, setPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
 
   // ── Data ───────────────────────────────────────────────────────
-  const [storesData,  setStoresData]  = useState([]);
+  const [storesData, setStoresData] = useState([]);
   const [totalStores, setTotalStores] = useState(0);
-  const [totalPages,  setTotalPages]  = useState(0);
-  const [stats,       setStats]       = useState(null);
+  const [totalPages, setTotalPages] = useState(0);
+  const [stats, setStats] = useState(null);
 
   // ── Loading / action state ─────────────────────────────────────
   const [tableLoading, setTableLoading] = useState(true);
   const [statsLoading, setStatsLoading] = useState(true);
-  const [togglingId,   setTogglingId]   = useState(null);
+  const [togglingId, setTogglingId] = useState(null);
   const [noStoreFound, setNoStoreFound] = useState(false);
-  const [error,        setError]        = useState(null);
+  const [error, setError] = useState(null);
 
   // ── Modals ─────────────────────────────────────────────────────
   const [isNewStoreOpen, setIsNewStoreOpen] = useState(false);
-  const [editStoreData,  setEditStoreData]  = useState(null);
+  const [editStoreData, setEditStoreData] = useState(null);
 
   const navigate = useNavigate();
 
@@ -68,9 +68,9 @@ export default function Stores() {
       setNoStoreFound(false);
 
       const apiStatus =
-      
+
         statusFilter === "All Status" ? "" :
-        statusFilter === "Active"     ? "ACTIVE" : "INACTIVE";
+          statusFilter === "Active" ? "ACTIVE" : "INACTIVE";
 
       const res = await getStockList(page - 1, rowsPerPage, debouncedSearch, apiStatus);
       const stores = res.stores || [];
@@ -94,28 +94,28 @@ export default function Stores() {
 
   // ── Derived ────────────────────────────────────────────────────
   const statCards = useMemo(() => [
-    { key: "Total Stores",    val: stats?.totalStores    ?? 0, icon: Store,         txColor: "text-blue-600",   bgColor: "bg-blue-50"   },
-    { key: "Active Stores",   val: stats?.activeStores   ?? 0, icon: CheckCircle,   txColor: "text-green-600",  bgColor: "bg-green-50"  },
-    { key: "Inactive Stores", val: stats?.inactiveStores ?? 0, icon: XCircle,       txColor: "text-red-500",    bgColor: "bg-red-50"    },
-    { key: "Total Items",     val: stats?.totalItems     ?? 0, icon: Layers,        txColor: "text-purple-600", bgColor: "bg-purple-50" },
-    { key: "Low Stock",       val: stats?.lowStockAlerts ?? 0, icon: AlertTriangle, txColor: "text-orange-500", bgColor: "bg-orange-50" },
+    { key: "Total Stores", val: stats?.totalStores ?? 0, icon: Store, txColor: "text-blue-600", bgColor: "bg-blue-50" },
+    { key: "Active Stores", val: stats?.activeStores ?? 0, icon: CheckCircle, txColor: "text-green-600", bgColor: "bg-green-50" },
+    { key: "Inactive Stores", val: stats?.inactiveStores ?? 0, icon: XCircle, txColor: "text-red-500", bgColor: "bg-red-50" },
+    { key: "Total Items", val: stats?.totalItems ?? 0, icon: Layers, txColor: "text-purple-600", bgColor: "bg-purple-50" },
+    { key: "Low Stock", val: stats?.lowStockAlerts ?? 0, icon: AlertTriangle, txColor: "text-orange-500", bgColor: "bg-orange-50" },
   ], [stats]);
 
   const resetPage = () => setPage(1);
 
   // ── Action options per row ─────────────────────────────────────
   const getActionOptions = (store) => [
-    { value: "edit",  label: "Edit",  icon: Edit,    text: "text-blue-600",   bg: "bg-blue-50",   hover: "hover:bg-blue-100"   },
+    { value: "edit", label: "Edit", icon: Edit, text: "text-blue-600", bg: "bg-blue-50", hover: "hover:bg-blue-100" },
     { value: "stock", label: "Stock", icon: Package, text: "text-orange-600", bg: "bg-orange-50", hover: "hover:bg-orange-100" },
     {
-      value:    "toggleStatus",
-      label:    togglingId === store.id
-                  ? (store.status === "ACTIVE" ? "Deactivating…" : "Activating…")
-                  : (store.status === "ACTIVE" ? "Inactive"    : "Activate"),
-      icon:     store.status === "ACTIVE" ? MinusCircle : Power,
-      text:     store.status === "ACTIVE" ? "text-red-600"   : "text-green-600",
-      bg:       store.status === "ACTIVE" ? "bg-red-50"      : "bg-green-50",
-      hover:    store.status === "ACTIVE" ? "hover:bg-red-100" : "hover:bg-green-100",
+      value: "toggleStatus",
+      label: togglingId === store.id
+        ? (store.status === "ACTIVE" ? "Deactivating…" : "Activating…")
+        : (store.status === "ACTIVE" ? "Inactive" : "Activate"),
+      icon: store.status === "ACTIVE" ? MinusCircle : Power,
+      text: store.status === "ACTIVE" ? "text-red-600" : "text-green-600",
+      bg: store.status === "ACTIVE" ? "bg-red-50" : "bg-green-50",
+      hover: store.status === "ACTIVE" ? "hover:bg-red-100" : "hover:bg-green-100",
       disabled: togglingId === store.id,
     },
   ];
@@ -172,78 +172,78 @@ export default function Stores() {
     <div className="min-h-screen bg-linear-to-b from-sky-50 to-sky-100">
       <div className="p-2 sm:p-5 lg:p-4">
 
-          {/* Page Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Stores</h2>
-              <p className="text-gray-500 mt-1 font-medium text-sm sm:text-base">
-                Manage store locations, codes and activation status.
-              </p>
+        {/* Page Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Stores</h2>
+            <p className="text-gray-500 mt-1 font-medium text-sm sm:text-base">
+              Manage store locations, codes and activation status.
+            </p>
+          </div>
+        </div>
+
+        {/* Stat Cards */}
+        <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 text-sm mt-5">
+          {statsLoading
+            ? statCards.map((_, i) => <CardLoader key={i} />)
+            : statCards.map((s) => (
+              <CardComponent
+                key={s.key}
+                IconName={s.icon}
+                keyName={s.key.toUpperCase()}
+                val={s.val}
+                iconTxColor={s.txColor}
+                iconBgColor={s.bgColor}
+              />
+            ))}
+        </div>
+
+        {/* ── Main Panel ── */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mt-4">
+
+          {/* Panel Header: icon + title + New Store button */}
+          <div className="flex items-center justify-between gap-3 px-4 md:px-5 py-3 md:py-4 border-b border-gray-100">
+            <div className="flex items-center gap-2 min-w-0">
+              <Store className="w-5 h-5 text-blue-500 shrink-0" />
+              <h2 className="font-semibold text-gray-800 text-base md:text-lg truncate">Stores</h2>
             </div>
+            <button
+              onClick={() => { setEditStoreData(null); setIsNewStoreOpen(true); }}
+              className="flex items-center gap-1.5 cursor-pointer bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs md:text-sm font-semibold px-3 md:px-4 py-2 rounded-lg transition-colors shrink-0"
+            >
+              <Plus className="w-3.5 h-3.5 md:w-4 md:h-4" />
+              New Store
+            </button>
           </div>
 
-          {/* Stat Cards */}
-          <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 text-sm mt-5">
-            {statsLoading
-              ? statCards.map((_, i) => <CardLoader key={i} />)
-              : statCards.map((s) => (
-                <CardComponent
-                  key={s.key}
-                  IconName={s.icon}
-                  keyName={s.key.toUpperCase()}
-                  val={s.val}
-                  iconTxColor={s.txColor}
-                  iconBgColor={s.bgColor}
-                />
-              ))}
+          <NewStore
+            isOpen={isNewStoreOpen}
+            onClose={() => { setIsNewStoreOpen(false); setEditStoreData(null); }}
+            initialData={editStoreData}
+            onSave={handleSave}
+          />
+
+          {/* Filters */}
+          <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100">
+            <div className="flex flex-1 items-center gap-2 border rounded-lg border-gray-200 bg-gray-50 px-3 py-2 focus-within:ring-2 focus-within:ring-blue-200 focus-within:border-blue-400 transition">
+              <SearchIcon className="w-4 h-4 text-gray-400 shrink-0" />
+              <input
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); resetPage(); }}
+                placeholder="Search by name or code…"
+                className="text-sm focus:outline-none text-gray-600 w-full bg-transparent"
+              />
+            </div>
+            <select
+              value={statusFilter}
+              onChange={(e) => { setStatusFilter(e.target.value); resetPage(); }}
+              className="px-3 py-2 border border-gray-200 bg-gray-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-200 text-sm text-gray-700 w-40 shrink-0"
+            >
+              <option value="All Status">All Status</option>
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+            </select>
           </div>
-
-          {/* ── Main Panel ── */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mt-4">
-
-            {/* Panel Header: icon + title + New Store button */}
-            <div className="flex items-center justify-between gap-3 px-4 md:px-5 py-3 md:py-4 border-b border-gray-100">
-              <div className="flex items-center gap-2 min-w-0">
-                <Store className="w-5 h-5 text-blue-500 shrink-0" />
-                <h2 className="font-semibold text-gray-800 text-base md:text-lg truncate">Stores</h2>
-              </div>
-              <button
-                onClick={() => { setEditStoreData(null); setIsNewStoreOpen(true); }}
-                className="flex items-center gap-1.5 cursor-pointer bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs md:text-sm font-semibold px-3 md:px-4 py-2 rounded-lg transition-colors shrink-0"
-              >
-                <Plus className="w-3.5 h-3.5 md:w-4 md:h-4" />
-                New Store
-              </button>
-            </div>
-
-            <NewStore
-              isOpen={isNewStoreOpen}
-              onClose={() => { setIsNewStoreOpen(false); setEditStoreData(null); }}
-              initialData={editStoreData}
-              onSave={handleSave}
-            />
-
-            {/* Filters */}
-            <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100">
-              <div className="flex flex-1 items-center gap-2 border rounded-lg border-gray-200 bg-gray-50 px-3 py-2 focus-within:ring-2 focus-within:ring-blue-200 focus-within:border-blue-400 transition">
-                <SearchIcon className="w-4 h-4 text-gray-400 shrink-0" />
-                <input
-                  value={search}
-                  onChange={(e) => { setSearch(e.target.value); resetPage(); }}
-                  placeholder="Search by name or code…"
-                  className="text-sm focus:outline-none text-gray-600 w-full bg-transparent"
-                />
-              </div>
-              <select
-                value={statusFilter}
-                onChange={(e) => { setStatusFilter(e.target.value); resetPage(); }}
-                className="px-3 py-2 border border-gray-200 bg-gray-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-200 text-sm text-gray-700 w-40 shrink-0"
-              >
-                <option value="All Status">All Status</option>
-                <option value="Active">Active</option>
-                <option value="Inactive">Inactive</option>
-              </select>
-            </div>
 
           {/* ── MOBILE / TABLET CARDS (below lg) ── */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:hidden px-4 py-4">
@@ -286,9 +286,8 @@ export default function Stores() {
                         <p className="text-xs text-gray-400 truncate">{store.description}</p>
                       </div>
                     </div>
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold shrink-0 ${
-                      store.status === "ACTIVE" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-500"
-                    }`}>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold shrink-0 ${store.status === "ACTIVE" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-500"
+                      }`}>
                       {store.status === "ACTIVE" ? "Active" : "Inactive"}
                     </span>
                   </div>
@@ -371,11 +370,10 @@ export default function Stores() {
                           <span className="text-gray-600">{store.location}</span>
                         </td>
                         <td className={tdStyle}>
-                          <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-sm text-xs font-medium ${
-                            store.status === "ACTIVE"
+                          <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-sm text-xs font-medium ${store.status === "ACTIVE"
                               ? "bg-green-50 text-green-700"
                               : "bg-red-50 text-red-700"
-                          }`}>
+                            }`}>
                             {store.status === "ACTIVE" ? "Active" : "Inactive"}
                           </span>
                         </td>
@@ -425,9 +423,8 @@ export default function Stores() {
                   <button
                     key={idx + 1}
                     onClick={() => setPage(idx + 1)}
-                    className={`px-3 py-1 rounded transition-all ${
-                      page === idx + 1 ? "bg-blue-500 text-white" : "text-gray-600 hover:bg-gray-100"
-                    }`}
+                    className={`px-3 py-1 rounded transition-all ${page === idx + 1 ? "bg-blue-500 text-white" : "text-gray-600 hover:bg-gray-100"
+                      }`}
                   >
                     {idx + 1}
                   </button>
@@ -477,9 +474,8 @@ export default function Stores() {
                       <button
                         key={idx + 1}
                         onClick={() => setPage(idx + 1)}
-                        className={`px-3 py-1 rounded transition-all ${
-                          page === idx + 1 ? "bg-blue-500 text-white" : "text-gray-600 hover:bg-gray-100"
-                        }`}
+                        className={`px-3 py-1 rounded transition-all ${page === idx + 1 ? "bg-blue-500 text-white" : "text-gray-600 hover:bg-gray-100"
+                          }`}
                       >
                         {idx + 1}
                       </button>
@@ -508,7 +504,7 @@ export default function Stores() {
             </div>
           </div>
 
-          </div>{/* ── end white panel ── */}
+        </div>{/* ── end white panel ── */}
 
       </div>
     </div>

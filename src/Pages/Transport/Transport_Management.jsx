@@ -218,8 +218,8 @@ export default function Transport_Management() {
 
       <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-6">
 
-        {/* ── Stat Cards ── */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        {/* ── Stat Cards ── */}  
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {loadingStats ? (
             <><CardLoader /><CardLoader /><CardLoader /><CardLoader /></>
           ) : (
@@ -389,7 +389,7 @@ export default function Transport_Management() {
               )}
             </div>
           </div>
-        </div>        
+        </div>
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
           <div className="px-4 sm:px-5 py-4 border-b border-gray-100 flex items-center gap-2">
             <MapPin className="w-4 h-4 text-teal-500" />

@@ -8,10 +8,10 @@ import RoleProtectedRoute from '../utils/RoleProtectedRoute';
 
 // ─── Lazy-loaded Pages (code-split, fetched only when route is hit) ───────────
 const Login = lazy(() => import('../Pages/Login_2'));
-const Dashboard = lazy(() => import('../Pages/Dashboard'));
+const Dashboard = lazy(() => import('../Pages/Dashboard/Dashboard'));
 const Attendance = lazy(() => import('../Pages/Attendance/Attendance'));
 const Leaves = lazy(() => import('../Pages/Leaves/Leaves'));
-const Payroll = lazy(() => import('../Pages/Payroll'));
+// const Payroll = lazy(() => import('../Pages/Payroll'));
 const Teachers = lazy(() => import('../Pages/Teachers/Teachers'));
 const Settings = lazy(() => import('../Pages/Settings'));
 
@@ -262,11 +262,6 @@ const MainRoutes = () => {
             <Route element={<RoleProtectedRoute allowedRoles={['GLOBAL_ADMIN', 'SUPER_ADMIN', 'PRINCIPAL', 'ADMIN']} />}>
               <Route path="/leaves/leaveConfig" element={<LeaveConfig />} />
               <Route path='/subjectsmaster' element={<SubjectsMaster />} />
-            </Route>
-
-            {/* Payroll */}
-            <Route element={<RoleProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'ACCOUNTANT']} />}>
-              <Route path="/payroll" element={<Payroll />} />
             </Route>
 
             {/* Stock */}
