@@ -14,6 +14,7 @@ import {
     ArrowDown,
     ArrowUp,
     UserPlusIcon,
+    Eye,
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { activateUserStatus, allUserFilter, deactivateUserStatus, getAllUserRoles, getUsersStatistics, resetUserPassword } from '../../Api/userManagementAPI';
@@ -256,10 +257,10 @@ const ManageAllUsers = () => {
     // ✅ Build dynamic action options per user based on their current status
     const getActionOptions = (sys_user) => {
         const baseOptions = [
+            { value: "viewUser", label: "View", icon: Eye, text: "text-gray-600", bg: "bg-gray-50", hover: "hover:bg-gray-200" },
             { value: "editUser", label: "Edit", icon: UserPenIcon, text: "text-blue-600", bg: "bg-blue-50", hover: "hover:bg-blue-100" },
             {
                 value: "toogleStatus",
-                // ✅ Dynamic label: "Deactivate" if ACTIVE, "Activate" if INACTIVE
                 label: sys_user.status === 'ACTIVE' ? 'Deactivate' : 'Activate',
                 icon: Power,
                 text: sys_user.status === 'ACTIVE' ? "text-red-600" : "text-green-600",
@@ -277,18 +278,24 @@ const ManageAllUsers = () => {
     };
 
     const callAllActions = async (optVal, sys_user) => {
-        if (optVal === 'editUser' && sys_user.role[0] !== 'TEACHER') {
+        if (optVal === 'viewUser') {
+            navigate(`/manageUsers/${sys_user.id}`);
+        }
+        else if (optVal === 'editUser' && sys_user.role[0] !== 'TEACHER') {
             navigate(`/manageUsers/editUser/${sys_user.id}`);
         }
-
-        if (optVal === 'editUser' && sys_user.role[0] === 'TEACHER') {
-          //  setSelectedTeacherId(sys_user.id);
+        else if (optVal === 'editUser' && sys_user.role[0] === 'TEACHER') {
             if (sys_user.id !== null) {
                 setIsConfirmOpen(true);
             }
         }
-        else if (optVal === 'resetPassword') { setSelectedUser(sys_user); setisResetOpen(true); }
-        else if (optVal === 'toogleStatus') handleToggleStatus(sys_user.id, sys_user.name, sys_user.status);
+        else if (optVal === 'resetPassword') {
+            setSelectedUser(sys_user);
+            setisResetOpen(true);
+        }
+        else if (optVal === 'toogleStatus') {
+            handleToggleStatus(sys_user.id, sys_user.name, sys_user.status);
+        }
     };
 
     return (
