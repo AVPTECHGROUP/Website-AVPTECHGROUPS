@@ -3,7 +3,7 @@ import {
   Plus, Edit2, Trash2, RefreshCw, X, Search, ChevronDown,
   Eye, ArrowLeft, BookOpen, Users, Layers, AlertTriangle,
   GraduationCap, Hash, CheckCircle, SearchX, XCircle,
-  Hash as HashIcon, AlignLeft, ListOrdered, LayoutGrid
+  AlignLeft, ListOrdered, LayoutGrid
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import CardComponent from '../../Components/CommonComp/CardComponent';
@@ -60,9 +60,8 @@ const occupancyColor = (pct) => {
 
 // ─── Status Badge ─────────────────────────────────────────────────────────────
 const StatusBadge = ({ active }) => (
-  <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-sm text-xs font-medium ${
-    active ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'
-  }`}>
+  <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-sm text-xs font-medium ${active ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'
+    }`}>
     <span className={`w-1.5 h-1.5 rounded-full ${active ? 'bg-green-700' : 'bg-gray-400'}`} />
     {active ? 'Active' : 'Inactive'}
   </span>
@@ -74,7 +73,6 @@ const ClassDetailModal = ({ cls, onClose, onEdit, onInactive, onManageSections }
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
-
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <div className="flex items-center gap-3">
@@ -86,15 +84,13 @@ const ClassDetailModal = ({ cls, onClose, onEdit, onInactive, onManageSections }
               <p className="text-xs text-gray-400">Class Details</p>
             </div>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors cursor-pointer">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Body */}
         <div className="px-6 py-5 space-y-4">
-
-          {/* Grade + Status row */}
           <div className="flex items-center gap-3 flex-wrap">
             <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${gradeColor(cls.gradeLevel)}`}>
               {gradeLabelOf(cls.gradeLevel)}
@@ -102,24 +98,19 @@ const ClassDetailModal = ({ cls, onClose, onEdit, onInactive, onManageSections }
             <StatusBadge active={cls.status === 'ACTIVE'} />
           </div>
 
-          {/* Info grid */}
           <div className="grid grid-cols-2 gap-3">
-
             <div className="bg-gray-50 rounded-xl px-4 py-3">
               <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Total Sections</p>
               <p className="text-2xl font-bold text-gray-900">{cls.totalSections ?? 0}</p>
             </div>
-
             <div className="bg-gray-50 rounded-xl px-4 py-3">
               <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Display Order</p>
               <p className="text-2xl font-bold text-gray-900">
                 {cls.displayOrder != null ? cls.displayOrder : <span className="text-gray-400 text-sm font-normal">—</span>}
               </p>
             </div>
-
           </div>
 
-          {/* Description */}
           <div className="bg-gray-50 rounded-xl px-4 py-3">
             <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Description</p>
             {cls.description
@@ -128,7 +119,6 @@ const ClassDetailModal = ({ cls, onClose, onEdit, onInactive, onManageSections }
             }
           </div>
 
-          {/* Grade Level detail */}
           <div className="flex items-center gap-3 px-4 py-3 bg-gray-50 rounded-xl">
             <GraduationCap className="w-4 h-4 text-gray-400 shrink-0" />
             <div>
@@ -139,39 +129,34 @@ const ClassDetailModal = ({ cls, onClose, onEdit, onInactive, onManageSections }
               </p>
             </div>
           </div>
-
         </div>
 
         {/* Footer actions */}
         <div className="flex flex-wrap items-center justify-between gap-2 px-6 py-4 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
-
-          {/* Left — Manage Sections */}
           <button
             onClick={() => { onClose(); onManageSections(cls); }}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 font-semibold text-sm transition-colors"
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 font-semibold text-sm transition-colors cursor-pointer"
           >
             <Layers className="w-4 h-4" />
             Manage Sections
           </button>
 
-          {/* Right — Edit + Inactive */}
           <div className="flex items-center gap-2">
             {cls.status !== 'INACTIVE' && (
               <button
                 onClick={() => { onClose(); onInactive(cls); }}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 font-medium text-sm transition-colors"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 font-semibold text-sm transition-colors cursor-pointer"
               >
                 <XCircle className="w-4 h-4" /> Inactive
               </button>
             )}
             <button
               onClick={() => { onClose(); onEdit(cls); }}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 font-semibold text-sm transition-colors"
+              className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 font-semibold text-sm transition-colors cursor-pointer"
             >
               <Edit2 className="w-4 h-4" /> Edit
             </button>
           </div>
-
         </div>
       </div>
     </div>
@@ -196,11 +181,11 @@ const DeleteModal = ({ title, message, subMessage, onConfirm, onCancel, loading 
       </div>
       <div className="flex gap-3 justify-end px-6 py-4 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
         <button onClick={onCancel} disabled={loading}
-          className="px-4 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-100 font-medium text-sm transition-colors">
+          className="px-4 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-100 font-medium text-sm transition-colors cursor-pointer">
           Cancel
         </button>
         <button onClick={onConfirm} disabled={loading}
-          className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 font-medium text-sm transition-colors flex items-center gap-2 disabled:opacity-60">
+          className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 font-medium text-sm transition-colors flex items-center gap-2 disabled:opacity-60 cursor-pointer">
           {loading && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
           Confirm
         </button>
@@ -219,11 +204,11 @@ const ClassModal = ({ mode, initial, onSubmit, onClose, loading }) => {
   useEffect(() => {
     if (mode === 'edit' && initial) {
       setForm({
-        name:         initial.name         ?? '',
-        gradeLevel:   initial.gradeLevel   ?? '',
-        description:  initial.description  ?? '',
+        name: initial.name ?? '',
+        gradeLevel: initial.gradeLevel ?? '',
+        description: initial.description ?? '',
         displayOrder: initial.displayOrder ?? '',
-        status:       initial.status       ?? 'ACTIVE',
+        status: initial.status ?? 'ACTIVE',
       });
     } else {
       setForm(EMPTY_CLASS);
@@ -234,9 +219,9 @@ const ClassModal = ({ mode, initial, onSubmit, onClose, loading }) => {
 
   const validate = () => {
     const e = {};
-    if (!form.name.trim())           e.name       = 'Class name is required';
-    if (form.name.trim().length > 50) e.name      = 'Max 50 characters';
-    if (form.gradeLevel === '')       e.gradeLevel = 'Grade level is required';
+    if (!form.name.trim()) e.name = 'Class name is required';
+    if (form.name.trim().length > 50) e.name = 'Max 50 characters';
+    if (form.gradeLevel === '') e.gradeLevel = 'Grade level is required';
     if (Number(form.gradeLevel) < 0 || Number(form.gradeLevel) > 15) e.gradeLevel = 'Must be 0–15';
     if (form.description && form.description.length > 500) e.description = 'Max 500 characters';
     setErrors(e);
@@ -247,11 +232,11 @@ const ClassModal = ({ mode, initial, onSubmit, onClose, loading }) => {
     e.preventDefault();
     if (!validate()) return;
     onSubmit({
-      name:         form.name.trim(),
-      gradeLevel:   Number(form.gradeLevel),
-      description:  form.description?.trim() || null,
+      name: form.name.trim(),
+      gradeLevel: Number(form.gradeLevel),
+      description: form.description?.trim() || null,
       displayOrder: form.displayOrder !== '' ? Number(form.displayOrder) : null,
-      status:       form.status,
+      status: form.status,
     });
   };
 
@@ -267,7 +252,7 @@ const ClassModal = ({ mode, initial, onSubmit, onClose, loading }) => {
               {mode === 'add' ? 'Add Class' : 'Edit Class'}
             </h2>
           </div>
-          <button onClick={onClose} disabled={loading} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+          <button onClick={onClose} disabled={loading} className="text-gray-400 hover:text-gray-600 cursor-pointer"><X className="w-5 h-5" /></button>
         </div>
 
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto">
@@ -333,11 +318,11 @@ const ClassModal = ({ mode, initial, onSubmit, onClose, loading }) => {
 
         <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100 bg-gray-50">
           <button type="button" onClick={onClose} disabled={loading}
-            className="px-4 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-100 font-medium text-sm transition-colors">
+            className="px-4 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-100 font-medium text-sm transition-colors cursor-pointer">
             Cancel
           </button>
           <button type="button" onClick={(e) => handleSubmit(e)} disabled={loading}
-            className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 font-medium text-sm transition-colors flex items-center gap-2 disabled:opacity-60">
+            className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 font-medium text-sm transition-colors flex items-center gap-2 disabled:opacity-60 cursor-pointer">
             {loading && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
             {mode === 'add' ? 'Create Class' : 'Save Changes'}
           </button>
@@ -371,13 +356,13 @@ const SectionModal = ({ mode, initial, classId, onSubmit, onClose, loading }) =>
   useEffect(() => {
     if (mode === 'edit' && initial) {
       setForm({
-        name:            initial.name            ?? '',
-        roomNumber:      initial.roomNumber      ?? '',
-        capacity:        initial.capacity        ?? '',
-        classTeacherId:  initial.classTeacherId  ?? '',
-        description:     initial.description     ?? '',
-        displayOrder:    initial.displayOrder    ?? '',
-        status:          initial.status          ?? 'ACTIVE',
+        name: initial.name ?? '',
+        roomNumber: initial.roomNumber ?? '',
+        capacity: initial.capacity ?? '',
+        classTeacherId: initial.classTeacherId ?? '',
+        description: initial.description ?? '',
+        displayOrder: initial.displayOrder ?? '',
+        status: initial.status ?? 'ACTIVE',
       });
     } else {
       setForm(EMPTY_SECTION);
@@ -388,8 +373,8 @@ const SectionModal = ({ mode, initial, classId, onSubmit, onClose, loading }) =>
 
   const validate = () => {
     const e = {};
-    if (!form.name.trim())               e.name     = 'Section name is required';
-    if (form.name.trim().length > 50)   e.name     = 'Max 50 characters';
+    if (!form.name.trim()) e.name = 'Section name is required';
+    if (form.name.trim().length > 50) e.name = 'Max 50 characters';
     if (form.capacity !== '' && Number(form.capacity) < 1) e.capacity = 'Must be ≥ 1';
     if (form.description && form.description.length > 500) e.description = 'Max 500 characters';
     setErrors(e);
@@ -401,13 +386,13 @@ const SectionModal = ({ mode, initial, classId, onSubmit, onClose, loading }) =>
     if (!validate()) return;
     onSubmit({
       classId,
-      name:           form.name.trim(),
-      roomNumber:     form.roomNumber?.trim() || null,
-      capacity:       form.capacity !== '' ? Number(form.capacity) : null,
+      name: form.name.trim(),
+      roomNumber: form.roomNumber?.trim() || null,
+      capacity: form.capacity !== '' ? Number(form.capacity) : null,
       classTeacherId: form.classTeacherId !== '' ? Number(form.classTeacherId) : null,
-      description:    form.description?.trim() || null,
-      displayOrder:   form.displayOrder !== '' ? Number(form.displayOrder) : null,
-      status:         form.status,
+      description: form.description?.trim() || null,
+      displayOrder: form.displayOrder !== '' ? Number(form.displayOrder) : null,
+      status: form.status,
     });
   };
 
@@ -423,7 +408,7 @@ const SectionModal = ({ mode, initial, classId, onSubmit, onClose, loading }) =>
               {mode === 'add' ? 'Add Section' : 'Edit Section'}
             </h2>
           </div>
-          <button onClick={onClose} disabled={loading} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+          <button onClick={onClose} disabled={loading} className="text-gray-400 hover:text-gray-600 cursor-pointer"><X className="w-5 h-5" /></button>
         </div>
 
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto">
@@ -505,11 +490,11 @@ const SectionModal = ({ mode, initial, classId, onSubmit, onClose, loading }) =>
 
         <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100 bg-gray-50">
           <button type="button" onClick={onClose} disabled={loading}
-            className="px-4 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-100 font-medium text-sm transition-colors">
+            className="px-4 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-100 font-medium text-sm transition-colors cursor-pointer">
             Cancel
           </button>
           <button type="button" onClick={handleSubmit} disabled={loading}
-            className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 font-medium text-sm transition-colors flex items-center gap-2 disabled:opacity-60">
+            className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 font-medium text-sm transition-colors flex items-center gap-2 disabled:opacity-60 cursor-pointer">
             {loading && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
             {mode === 'add' ? 'Create Section' : 'Save Changes'}
           </button>
@@ -543,7 +528,6 @@ export default function ClassSectionConfig() {
   const [submitLoading, setSubmitLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
-  // ── NEW: class detail view popup state ────────────────────────────────────
   const [viewClass, setViewClass] = useState(null);
 
   const fetchClasses = useCallback(async (search = classSearch, grade = classGrade, status = classStatus) => {
@@ -561,12 +545,18 @@ export default function ClassSectionConfig() {
 
   useEffect(() => { fetchClasses(); }, []);
 
-  const fetchSections = useCallback(async (classIdParam, status = sectionStatus) => {
+  const fetchSections = useCallback(async (classIdParam, status) => {
     const cid = classIdParam ?? selectedClass?.id;
     if (!cid) return;
+
+    const targetStatus = status !== undefined ? status : sectionStatus;
+
     try {
       setSectionLoading(true);
-      const res = await getSectionsByClass(cid, status || undefined);
+
+      const apiStatus = targetStatus === '' ? undefined : targetStatus;
+
+      const res = await getSectionsByClass(cid, apiStatus);
       setSections(res.data || []);
     } catch (err) {
       toast.error(err.message || 'Failed to load sections');
@@ -619,7 +609,7 @@ export default function ClassSectionConfig() {
         toast.success(`Section ${payload.name} updated successfully`);
       }
       setSectionModal(null);
-      await fetchSections(selectedClass?.id);
+      await fetchSections(selectedClass?.id, sectionStatus);
     } catch (err) {
       toast.error(err.message || 'Failed to save section');
     } finally {
@@ -639,7 +629,7 @@ export default function ClassSectionConfig() {
         await fetchClasses();
       } else {
         await deleteSection(item.id);
-        toast.success(`Section ${item.name} deleted successfully`);
+        toast.success(`Section ${item.name} marked inactive successfully`);
         const updatedClass = {
           ...selectedClass,
           totalSections: Math.max((selectedClass?.totalSections ?? 1) - 1, 0),
@@ -647,7 +637,7 @@ export default function ClassSectionConfig() {
         setSelectedClass(updatedClass);
         setClasses(prev => prev.map(c => (c.id === updatedClass.id ? updatedClass : c)));
         setDeleteTarget(null);
-        await fetchSections(selectedClass?.id);
+        await fetchSections(selectedClass?.id, sectionStatus);
       }
     } catch (err) {
       toast.error(err.message || 'Failed to proceed');
@@ -657,17 +647,17 @@ export default function ClassSectionConfig() {
     }
   };
 
-  const totalClasses   = classes.length;
-  const activeClasses  = classes.filter(c => c.status === 'ACTIVE').length;
-  const totalSections  = classes.reduce((s, c) => s + (c.totalSections || 0), 0);
-  const gradeLevels    = classes.map(c => c.gradeLevel).filter(g => g !== null && g !== undefined);
-  const gradeRange     = gradeLevels.length
+  const totalClasses = classes.length;
+  const activeClasses = classes.filter(c => c.status === 'ACTIVE').length;
+  const totalSections = classes.reduce((s, c) => s + (c.totalSections || 0), 0);
+  const gradeLevels = classes.map(c => c.gradeLevel).filter(g => g !== null && g !== undefined);
+  const gradeRange = gradeLevels.length
     ? `${gradeLabelOf(Math.min(...gradeLevels))} – ${gradeLabelOf(Math.max(...gradeLevels))}`
     : '—';
 
-  const totalCapacity   = sections.reduce((s, sec) => s + (sec.capacity || 0), 0);
-  const totalEnrolled   = sections.reduce((s, sec) => s + (sec.currentStrength || 0), 0);
-  const occupancyPct    = totalCapacity > 0 ? Math.round((totalEnrolled / totalCapacity) * 100) : 0;
+  const totalCapacity = sections.reduce((s, sec) => s + (sec.capacity || 0), 0);
+  const totalEnrolled = sections.reduce((s, sec) => s + (sec.currentStrength || 0), 0);
+  const occupancyPct = totalCapacity > 0 ? Math.round((totalEnrolled / totalCapacity) * 100) : 0;
 
   const filteredSections = sections.filter(sec => {
     if (!sectionSearch) return true;
@@ -680,10 +670,10 @@ export default function ClassSectionConfig() {
   // ═══════════════════════════════════════════════════════════════════════════
   if (view === 'classes') {
     const classStatsCards = [
-      { IconName: BookOpen,      keyName: 'Total Classes',  val: totalClasses,   iconTxColor: 'text-blue-600',   iconBgColor: 'bg-blue-50'   },
-      { IconName: CheckCircle,   keyName: 'Active Classes', val: activeClasses,  iconTxColor: 'text-green-600',  iconBgColor: 'bg-green-50'  },
-      { IconName: Layers,        keyName: 'Total Sections', val: totalSections,  iconTxColor: 'text-purple-600', iconBgColor: 'bg-purple-50' },
-      { IconName: GraduationCap, keyName: 'Grade Range',    val: gradeRange,     iconTxColor: 'text-orange-400', iconBgColor: 'bg-orange-50' },
+      { IconName: BookOpen, keyName: 'Total Classes', val: totalClasses, iconTxColor: 'text-blue-600', iconBgColor: 'bg-blue-50' },
+      { IconName: CheckCircle, keyName: 'Active Classes', val: activeClasses, iconTxColor: 'text-green-600', iconBgColor: 'bg-green-50' },
+      { IconName: Layers, keyName: 'Total Sections', val: totalSections, iconTxColor: 'text-purple-600', iconBgColor: 'bg-purple-50' },
+      { IconName: GraduationCap, keyName: 'Grade Range', val: gradeRange, iconTxColor: 'text-orange-400', iconBgColor: 'bg-orange-50' },
     ];
 
     return (
@@ -696,21 +686,21 @@ export default function ClassSectionConfig() {
           </div>
           <button
             onClick={() => setClassModal({ mode: 'add' })}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 text-white hover:bg-blue-700 font-medium text-sm transition-colors shadow-sm self-start sm:self-auto"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 text-white hover:bg-blue-700 font-medium text-sm transition-colors shadow-sm self-start sm:self-auto cursor-pointer"
           >
             <Plus className="w-4 h-4" /> Add Class
           </button>
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           {classStatsCards.map((card, i) => <CardComponent key={i} {...card} />)}
         </div>
 
         {/* Table panel */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
           {/* Filter bar */}
-          <div className="px-4 xl:px-6 py-4 border-b border-gray-200 flex flex-col sm:flex-row gap-3">
+          <div className="px-3 lg:px-4 py-4 border-b border-gray-200 flex flex-col sm:flex-row gap-3">
             <div className="flex flex-1 items-center gap-2 border border-gray-200 rounded-lg bg-gray-50 px-3 py-2 focus-within:ring-2 focus-within:ring-blue-200 focus-within:border-blue-400">
               <Search className="w-4 h-4 text-gray-400 shrink-0" />
               <input
@@ -747,28 +737,27 @@ export default function ClassSectionConfig() {
             </div>
             <button
               onClick={() => fetchClasses(classSearch, classGrade, classStatus)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors cursor-pointer"
             >
               Search
             </button>
           </div>
 
           {/* Desktop table */}
-          <div className="hidden md:block overflow-x-auto overflow-y-auto max-h-130 w-full">
+          <div className="hidden lg:block overflow-x-auto overflow-y-auto max-h-130 w-full">
             <table className="w-full min-w-[700px]">
               <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
                 <tr className="text-sm">
-                  <th className="px-4 xl:px-6 py-3 text-left font-semibold text-gray-600 uppercase tracking-wide">#</th>
-                  <th className="px-4 xl:px-6 py-3 text-left font-semibold text-gray-600 uppercase tracking-wide">Class Name</th>
-                  <th className="px-4 xl:px-6 py-3 text-center font-semibold text-gray-600 uppercase tracking-wide">Grade</th>
-                  <th className="px-4 xl:px-6 py-3 text-center font-semibold text-gray-600 uppercase tracking-wide hidden xl:table-cell">Description</th>
-                  <th className="px-4 xl:px-6 py-3 text-center font-semibold text-gray-600 uppercase tracking-wide">Sections</th>
-                  <th className="px-4 xl:px-6 py-3 text-center font-semibold text-gray-600 uppercase tracking-wide">Status</th>
-                  <th className="px-4 xl:px-6 py-3 text-center font-semibold text-gray-600 uppercase tracking-wide">Actions</th>
+                  <th className="px-3 lg:px-4 py-4 text-left font-semibold text-gray-600 uppercase tracking-wide">Class Name</th>
+                  <th className="px-3 lg:px-4 py-4 text-center font-semibold text-gray-600 uppercase tracking-wide">Grade</th>
+                  <th className="px-3 lg:px-4 py-4 text-center font-semibold text-gray-600 uppercase tracking-wide hidden xl:table-cell">Description</th>
+                  <th className="px-3 lg:px-4 py-4 text-center font-semibold text-gray-600 uppercase tracking-wide">Sections</th>
+                  <th className="px-3 lg:px-4 py-4 text-center font-semibold text-gray-600 uppercase tracking-wide">Status</th>
+                  <th className="px-3 lg:px-4 py-4 text-center font-semibold text-gray-600 uppercase tracking-wide">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {classLoading && <ListLoader avatar={false} />}
+                {classLoading && <ListLoader avatar={false} colSpanSet={7} />}
 
                 {!classLoading && classes.length === 0 && (
                   <tr>
@@ -786,19 +775,18 @@ export default function ClassSectionConfig() {
 
                 {!classLoading && classes.map((cls, idx) => (
                   <tr key={cls.id} className="hover:bg-gray-50 transition-colors text-sm">
-                    <td className="px-4 xl:px-6 py-4 text-gray-500">{idx + 1}</td>
-                    <td className="px-4 xl:px-6 py-4">
+                    <td className="px-3 lg:px-4 py-4">
                       <p className="font-semibold text-gray-900">{cls.name}</p>
                     </td>
-                    <td className="px-4 xl:px-6 py-4 text-center">
+                    <td className="px-3 lg:px-4 py-4 text-center">
                       <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${gradeColor(cls.gradeLevel)}`}>
                         {gradeLabelOf(cls.gradeLevel)}
                       </span>
                     </td>
-                    <td className="px-4 xl:px-6 py-4 text-center hidden xl:table-cell">
+                    <td className="px-3 lg:px-4 py-4 text-center hidden xl:table-cell">
                       <p className="text-gray-500 truncate max-w-[220px] mx-auto">{cls.description || '—'}</p>
                     </td>
-                    <td className="px-4 xl:px-6 py-4 text-center">
+                    <td className="px-3 lg:px-4 py-4 text-center">
                       <button
                         onClick={() => openSections(cls)}
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 border border-blue-200/50 text-xs font-semibold hover:bg-blue-100 hover:text-blue-700 transition-all cursor-pointer shadow-sm"
@@ -807,28 +795,29 @@ export default function ClassSectionConfig() {
                         <span>Add Sections ({cls.totalSections ?? 0})</span>
                       </button>
                     </td>
-                    <td className="px-4 xl:px-6 py-4 text-center">
+                    <td className="px-3 lg:px-4 py-4 text-center">
                       <StatusBadge active={cls.status === 'ACTIVE'} />
                     </td>
-                    <td className="px-4 xl:px-6 py-4">
-                      <div className="flex items-center justify-center gap-3.5 font-bold text-xs whitespace-nowrap">
-                        {/* ── VIEW → opens detail popup instead of navigating ── */}
+                    {/* FIXED: Mapped explicit Edit and Inactive labels matching image_18bd48.png structure */}
+                    <td className="px-3 lg:px-4 py-4">
+                      <div className="flex items-center justify-center gap-4 text-xs font-semibold whitespace-nowrap">
                         <button
                           onClick={() => setViewClass(cls)}
-                          className="flex items-center gap-1 text-indigo-600 hover:text-indigo-800 transition-colors"
+                          className="flex items-center gap-1 text-indigo-600 hover:text-indigo-800 transition-colors cursor-pointer"
                         >
                           <Eye className="w-3.5 h-3.5" /> View
                         </button>
                         <button
                           onClick={() => setClassModal({ mode: 'edit', data: cls })}
-                          className="flex items-center gap-1 text-blue-600 hover:text-blue-800 transition-colors"
+                          className="flex items-center gap-1 text-blue-600 hover:text-blue-800 transition-colors cursor-pointer"
                         >
                           <Edit2 className="w-3.5 h-3.5" /> Edit
                         </button>
+                        {/* Hides 'Inactive' button completely if status is already INACTIVE */}
                         {cls.status !== 'INACTIVE' && (
                           <button
                             onClick={() => setDeleteTarget({ type: 'class', item: cls })}
-                            className="flex items-center gap-1 text-red-500 hover:text-red-700 transition-colors"
+                            className="flex items-center gap-1 text-red-500 hover:text-red-700 transition-colors cursor-pointer"
                           >
                             <XCircle className="w-3.5 h-3.5" /> Inactive
                           </button>
@@ -842,7 +831,7 @@ export default function ClassSectionConfig() {
           </div>
 
           {/* Mobile cards */}
-          <div className="md:hidden">
+          <div className="lg:hidden">
             {classLoading && (
               <div className="flex justify-center items-center py-12">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
@@ -870,18 +859,17 @@ export default function ClassSectionConfig() {
                         </span>
                       </div>
                       <div className="flex items-center gap-3 text-xs font-bold">
-                        {/* ── VIEW on mobile → popup too ── */}
-                        <button onClick={() => setViewClass(cls)} className="text-indigo-600">View</button>
-                        <button onClick={() => setClassModal({ mode: 'edit', data: cls })} className="text-blue-600">Edit</button>
+                        <button onClick={() => setViewClass(cls)} className="text-indigo-600 cursor-pointer">View</button>
+                        <button onClick={() => setClassModal({ mode: 'edit', data: cls })} className="text-blue-600 cursor-pointer">Edit</button>
                         {cls.status !== 'INACTIVE' && (
-                          <button onClick={() => setDeleteTarget({ type: 'class', item: cls })} className="text-red-500">Inactive</button>
+                          <button onClick={() => setDeleteTarget({ type: 'class', item: cls })} className="text-red-500 cursor-pointer">Inactive</button>
                         )}
                       </div>
                     </div>
                     <div className="flex items-center justify-between gap-3 text-xs text-gray-500 mt-2">
                       <button
                         onClick={() => openSections(cls)}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-blue-50 text-blue-600 border border-blue-100 font-semibold"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-blue-50 text-blue-600 border border-blue-100 font-semibold cursor-pointer"
                       >
                         <Plus className="w-3 h-3" /> Add Sections ({cls.totalSections ?? 0})
                       </button>
@@ -895,7 +883,7 @@ export default function ClassSectionConfig() {
           </div>
         </div>
 
-        {/* ── Class Detail Popup ── */}
+        {/* Modals Containers */}
         {viewClass && (
           <ClassDetailModal
             cls={viewClass}
@@ -934,10 +922,11 @@ export default function ClassSectionConfig() {
   // PANEL 2 — SECTIONS
   // ═══════════════════════════════════════════════════════════════════════════
   const sectionStatsCards = [
-    { IconName: Layers, keyName: 'Sections',       val: sections.length, iconTxColor: 'text-blue-600',   iconBgColor: 'bg-blue-50'   },
-    { IconName: Users,  keyName: 'Total Capacity', val: totalCapacity,   iconTxColor: 'text-purple-600', iconBgColor: 'bg-purple-50' },
-    { IconName: Users,  keyName: 'Enrolled',       val: totalEnrolled,   iconTxColor: 'text-green-600',  iconBgColor: 'bg-green-50'  },
-    { IconName: Hash,   keyName: 'Occupancy',      val: `${occupancyPct}%`,
+    { IconName: Layers, keyName: 'Sections', val: sections.length, iconTxColor: 'text-blue-600', iconBgColor: 'bg-blue-50' },
+    { IconName: Users, keyName: 'Total Capacity', val: totalCapacity, iconTxColor: 'text-purple-600', iconBgColor: 'bg-purple-50' },
+    { IconName: Users, keyName: 'Enrolled', val: totalEnrolled, iconTxColor: 'text-green-600', iconBgColor: 'bg-green-50' },
+    {
+      IconName: Hash, keyName: 'Occupancy', val: `${occupancyPct}%`,
       iconTxColor: totalCapacity === 0 ? 'text-gray-400' : occupancyPct >= 90 ? 'text-red-600' : occupancyPct >= 70 ? 'text-amber-600' : 'text-green-600',
       iconBgColor: totalCapacity === 0 ? 'bg-gray-50' : occupancyPct >= 90 ? 'bg-red-50' : occupancyPct >= 70 ? 'bg-amber-50' : 'bg-green-50',
     },
@@ -950,7 +939,7 @@ export default function ClassSectionConfig() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => { setView('classes'); setSelectedClass(null); setSections([]); }}
-            className="p-2 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 transition-colors"
+            className="p-2 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 transition-colors cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4 text-gray-600" />
           </button>
@@ -966,21 +955,20 @@ export default function ClassSectionConfig() {
         </div>
         <button
           onClick={() => setSectionModal({ mode: 'add' })}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 text-white hover:bg-blue-700 font-medium text-sm transition-colors shadow-sm self-start sm:self-auto"
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 text-white hover:bg-blue-700 font-medium text-sm transition-colors shadow-sm self-start sm:self-auto cursor-pointer"
         >
           <Plus className="w-4 h-4" /> Add Section
         </button>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {sectionStatsCards.map((card, i) => <CardComponent key={i} {...card} />)}
       </div>
 
-      {/* Table panel */}
+      {/* Sections Table Panel */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        {/* Filter bar */}
-        <div className="px-4 xl:px-6 py-4 border-b border-gray-200 flex flex-col sm:flex-row gap-3">
+        <div className="px-3 lg:px-4 py-4 border-b border-gray-200 flex flex-col sm:flex-row gap-3">
           <div className="flex flex-1 items-center gap-2 border border-gray-200 rounded-lg bg-gray-50 px-3 py-2 focus-within:ring-2 focus-within:ring-blue-200 focus-within:border-blue-400">
             <Search className="w-4 h-4 text-gray-400 shrink-0" />
             <input
@@ -994,7 +982,10 @@ export default function ClassSectionConfig() {
           <div className="relative">
             <select
               value={sectionStatus}
-              onChange={e => { setSectionStatus(e.target.value); fetchSections(selectedClass?.id, e.target.value || undefined); }}
+              onChange={e => {
+                setSectionStatus(e.target.value);
+                fetchSections(selectedClass?.id, e.target.value); // Direct value pass karein bina short-circuit kiye
+              }}
               className="appearance-none pl-3 pr-8 py-2 text-sm border border-gray-200 bg-gray-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-200 cursor-pointer w-full"
             >
               <option value="">All Status</option>
@@ -1005,12 +996,11 @@ export default function ClassSectionConfig() {
           </div>
         </div>
 
-        {/* Desktop table */}
+        {/* Desktop Sections Table */}
         <div className="hidden md:block overflow-x-auto overflow-y-auto max-h-130 w-full">
           <table className="w-full min-w-[700px]">
             <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
               <tr className="text-sm">
-                <th className="px-4 lg:px-6 py-3 text-left font-semibold text-gray-600 uppercase tracking-wide">#</th>
                 <th className="px-4 lg:px-6 py-3 text-left font-semibold text-gray-600 uppercase tracking-wide">Section</th>
                 <th className="px-4 lg:px-6 py-3 text-center font-semibold text-gray-600 uppercase tracking-wide">Room</th>
                 <th className="px-4 lg:px-6 py-3 text-center font-semibold text-gray-600 uppercase tracking-wide">Capacity / Enrolled</th>
@@ -1020,7 +1010,7 @@ export default function ClassSectionConfig() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {sectionLoading && <ListLoader avatar={false} />}
+              {sectionLoading && <ListLoader avatar={false} colSpanSet={7} />}
 
               {!sectionLoading && filteredSections.length === 0 && (
                 <tr>
@@ -1042,7 +1032,6 @@ export default function ClassSectionConfig() {
                 const pct = cap > 0 ? Math.round((enr / cap) * 100) : 0;
                 return (
                   <tr key={sec.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 lg:px-6 py-4 text-sm text-gray-500">{idx + 1}</td>
                     <td className="px-4 lg:px-6 py-4">
                       <p className="font-semibold text-gray-900 text-sm">{sec.name}</p>
                       {sec.description && <p className="text-xs text-gray-400 mt-0.5 truncate max-w-[180px]">{sec.description}</p>}
@@ -1074,16 +1063,24 @@ export default function ClassSectionConfig() {
                     <td className="px-4 lg:px-6 py-4 text-center">
                       <StatusBadge active={sec.status === 'ACTIVE'} />
                     </td>
+                    {/* FIXED: Mapped explicit text labels (Edit & Inactive) for Sections Table as well to maintain design uniformity */}
                     <td className="px-4 lg:px-6 py-4">
-                      <div className="flex items-center justify-center gap-2">
-                        <button onClick={() => setSectionModal({ mode: 'edit', data: sec })}
-                          className="p-2 hover:bg-blue-50 rounded-lg transition-colors" title="Edit">
-                          <Edit2 className="w-4 lg:w-5 h-4 lg:h-5 text-blue-600" />
+                      <div className="flex items-center justify-center gap-4 text-xs font-semibold whitespace-nowrap">
+                        <button
+                          onClick={() => setSectionModal({ mode: 'edit', data: sec })}
+                          className="flex items-center gap-1 text-blue-600 hover:text-blue-800 transition-colors cursor-pointer"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" /> Edit
                         </button>
-                        <button onClick={() => setDeleteTarget({ type: 'section', item: sec })}
-                          className="p-2 hover:bg-red-50 rounded-lg transition-colors" title="Delete">
-                          <Trash2 className="w-4 lg:w-5 h-4 lg:h-5 text-red-500" />
-                        </button>
+                        {/* Hides 'Inactive' button completely if Section status is already INACTIVE */}
+                        {sec.status !== 'INACTIVE' && (
+                          <button
+                            onClick={() => setDeleteTarget({ type: 'section', item: sec })}
+                            className="flex items-center gap-1 text-red-500 hover:text-red-700 transition-colors cursor-pointer"
+                          >
+                            <XCircle className="w-3.5 h-3.5" /> Inactive
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -1093,8 +1090,8 @@ export default function ClassSectionConfig() {
           </table>
         </div>
 
-        {/* Mobile cards */}
-        <div className="md:hidden">
+        {/* Mobile Sections Cards Layout */}
+        <div className="lg:hidden">
           {sectionLoading && (
             <div className="flex justify-center items-center py-12">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
@@ -1125,13 +1122,11 @@ export default function ClassSectionConfig() {
                           <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-gray-100 text-gray-600 text-xs font-medium mt-1">{sec.roomNumber}</span>
                         )}
                       </div>
-                      <div className="flex gap-1">
-                        <button onClick={() => setSectionModal({ mode: 'edit', data: sec })} className="p-1.5 hover:bg-blue-50 rounded-lg">
-                          <Edit2 className="w-4 h-4 text-blue-600" />
-                        </button>
-                        <button onClick={() => setDeleteTarget({ type: 'section', item: sec })} className="p-1.5 hover:bg-red-50 rounded-lg">
-                          <Trash2 className="w-4 h-4 text-red-500" />
-                        </button>
+                      <div className="flex gap-3 text-xs font-bold items-center">
+                        <button onClick={() => setSectionModal({ mode: 'edit', data: sec })} className="text-blue-600 cursor-pointer">Edit</button>
+                        {sec.status !== 'INACTIVE' && (
+                          <button onClick={() => setDeleteTarget({ type: 'section', item: sec })} className="text-red-500 cursor-pointer">Inactive</button>
+                        )}
                       </div>
                     </div>
                     <div className="flex flex-wrap gap-3 text-xs text-gray-600 mt-1">
@@ -1156,6 +1151,7 @@ export default function ClassSectionConfig() {
         </div>
       </div>
 
+      {/* Section Dialog Modals */}
       {sectionModal && (
         <SectionModal
           mode={sectionModal.mode}
@@ -1169,9 +1165,9 @@ export default function ClassSectionConfig() {
 
       {deleteTarget?.type === 'section' && (
         <DeleteModal
-          title="Delete Section"
-          message={`Are you sure you want to delete Section "${deleteTarget.item.name}"?`}
-          subMessage={`This will fail if students are currently enrolled (${deleteTarget.item.currentStrength || 0} enrolled).`}
+          title="Move Section to Inactive"
+          message={`Are you sure you want to mark Section "${deleteTarget.item.name}" as Inactive?`}
+          subMessage={`This configuration won't be displayed on active workflows (${deleteTarget.item.currentStrength || 0} currently enrolled).`}
           onConfirm={handleDeleteConfirm}
           onCancel={() => setDeleteTarget(null)}
           loading={deleteLoading}
