@@ -71,15 +71,15 @@ function dedupeSubjects(list) {
 function FilterSelect({ label, hint, value, onChange, disabled, children }) {
     return (
         <div className="min-w-0 flex-1">
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">
-                {label} {hint && <span className="lowercase font-normal text-gray-400">({hint})</span>}
+            <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2">
+                {label} {hint && <span className="normal-case font-medium text-slate-400">({hint})</span>}
             </label>
             <div className="relative">
                 <select
                     value={value}
                     onChange={onChange}
                     disabled={disabled}
-                    className="appearance-none w-full bg-white border border-gray-200 rounded-lg pl-3 pr-9 py-2 text-sm font-medium text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer disabled:opacity-60 disabled:bg-gray-50 disabled:cursor-not-allowed"
+                    className="appearance-none w-full bg-white border border-gray-200 rounded-lg pl-4 pr-10 h-12 text-sm font-medium text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer disabled:opacity-60 disabled:bg-gray-50 disabled:cursor-not-allowed"
                 >
                     {children}
                 </select>
@@ -437,7 +437,7 @@ function GradeDistributionCard({ gradeDistribution, loading }) {
                     <Medal className="w-4 h-4 text-violet-600 shrink-0" />
                     <h3 className="text-sm font-bold text-gray-800">Grade Distribution</h3>
                 </div>
-                
+
             </div>
 
             {loading ? (
@@ -918,14 +918,14 @@ export default function Analytics() {
             </div>
 
             {/* Cascade Parameter Configuration Dashboard */}
-            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 sm:p-5 space-y-4">
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-6">
                 <div className="flex items-center gap-2 border-b border-gray-50 pb-2">
                     <Filter className="w-4 h-4 text-indigo-600" />
                     <h2 className="text-sm font-bold text-gray-900">Cascade Filter Framework</h2>
                 </div>
 
-                <div className="flex flex-col lg:flex-row gap-4 items-end">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 flex-1 w-full">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-[1fr_1fr_1fr_1fr_1fr_160px] gap-5 items-end">
+                    <div className="contents">
                         <FilterSelect
                             label="Academic Year"
                             value={yearId}
@@ -954,7 +954,7 @@ export default function Analytics() {
                             onChange={(e) => setExamId(e.target.value)}
                         >
                             {exams.length === 0 ? (
-                                <option value="">{loadingExams ? "Loading…" : "No database entries matched"}</option>
+                                <option value="">{loadingExams ? "Loading…" : "Select Exam"}</option>
                             ) : (
                                 exams.map((ex) => <option key={ex.id} value={ex.id}>{ex.name}</option>)
                             )}
@@ -988,7 +988,20 @@ export default function Analytics() {
                     <button
                         onClick={handleApply}
                         disabled={!examId || loadingAnalytics}
-                        className="w-full lg:w-32 flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-200 text-white disabled:text-gray-400 text-sm font-bold rounded-lg shadow-sm transition-all active:scale-95 whitespace-nowrap h-9"
+                        className="
+w-full
+h-12
+bg-indigo-600
+hover:bg-indigo-700
+text-white
+font-bold
+text-base
+rounded-xl
+shadow-md
+transition-all
+flex items-center
+justify-center
+"
                     >
                         {loadingAnalytics ? <RefreshCw className="w-4 h-4 animate-spin" /> : "Apply Sync"}
                     </button>

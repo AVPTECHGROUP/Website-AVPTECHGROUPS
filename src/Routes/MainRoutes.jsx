@@ -39,6 +39,7 @@ const ManageAllUsers = lazy(() => import('../Pages/SuperAdmin/ManageAllUsers'));
 const ApplyLeaves = lazy(() => import('../Pages/Leaves/ApplyLeaves'));
 const MyLeaves = lazy(() => import('../Pages/Leaves/MyLeaves'));
 const SuperAdminSchools = lazy(() => import('../Pages/SuperAdmin/SuperAdminSchools'));
+const UserView = lazy(() => import('../Pages/SuperAdmin/UserView'));
 
 // Students
 const Student = lazy(() => import('../Pages/Students/Students'));
@@ -221,6 +222,7 @@ const MainRoutes = () => {
             <Route element={<RoleProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'PRINCIPAL']} />}>
               <Route path="/manageUsers/addUser" element={<AddnewSystemUser />} />
               <Route path="/manageUsers/editUser/:id" element={<EditSysUser />} />
+              <Route path="/manageUsers/:id" element={<UserView/>} />
               <Route path="/manageUsers" element={<ManageAllUsers />} />
 
               <Route path="/attendance" element={<Attendance />} />
