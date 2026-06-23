@@ -316,186 +316,151 @@ export default function LeaveDashboard() {
               4. The wrapper also caps height with overflow-y: auto for the
                  vertical scroll when there are many rows.
           ═══════════════════════════════════════════════════════════════ */}
-          <div className="hidden md:block w-full" style={{ minWidth: 0 }}>
-            <div
-              style={{
-                overflowX: 'auto',   /* ← horizontal scroll on laptop */
-                overflowY: 'auto',
-                maxHeight: '32rem',
-                width: '100%',
-                WebkitOverflowScrolling: 'touch', /* smooth on iOS/trackpad */
-              }}
-            >
-              <table
-                className="w-full"
-                style={{ minWidth: '700px', tableLayout: 'fixed' }}
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
+            {/* DESKTOP TABLE */}
+            <div className="hidden lg:block rounded-t-xl">
+              <div
+                style={{
+                  overflowX: 'auto',
+                  overflowY: 'auto',
+                  maxHeight: 'calc(100vh - 380px)',
+                  WebkitOverflowScrolling: 'touch',
+                }}
               >
-                <colgroup>
-                  <col style={{ width: '170px' }} />
-                  <col style={{ width: '155px' }} />
-                  <col style={{ width: '90px' }} />
-                  <col style={{ width: '210px' }} />
-                  <col style={{ width: '130px' }} />
-                  <col style={{ width: '85px' }} />
-                </colgroup>
+                <table style={{ width: '100%', minWidth: '700px', tableLayout: 'fixed' }}>
+                  <colgroup>
+                    <col style={{ width: '18%' }} />
+                    <col style={{ width: '20%' }} />
+                    <col style={{ width: '10%' }} />
+                    <col style={{ width: '30%' }} />
+                    <col style={{ width: '10%' }} />
+                    <col style={{ width: '12%' }} />
+                  </colgroup>
 
-                <thead
-                  className="bg-slate-50 border-b border-slate-200"
-                  style={{ position: 'sticky', top: 0, zIndex: 10 }}
-                >
-                  <tr>
-                    {['Leave Type', 'Period', 'Duration', 'Reason', 'Status', 'Action'].map((h) => (
-                      <th
-                        key={h}
-                        className="px-4 lg:px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap"
-                      >
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-
-                <tbody className="divide-y divide-slate-100 bg-white">
-                  {loading ? (
-                    <ListLoader avatar={false} />
-                  ) : error ? (
+                  <thead className="bg-slate-50 sticky top-0 z-10 border-b border-slate-200">
                     <tr>
-                      <td colSpan="6" className="py-16 text-center">
-                        <UserRoundX className="mx-auto mb-3 text-red-400 w-12 h-12" />
-                        <p className="text-red-600 font-medium">{error}</p>
-                      </td>
-                    </tr>
-                  ) : noReqFound ? (
-                    <tr>
-                      <td colSpan="6" className="py-16 text-center">
-                        <SearchX className="mx-auto mb-3 text-blue-400 w-12 h-12" />
-                        <p className="text-slate-600 font-medium">No Request Found</p>
-                      </td>
-                    </tr>
-                  ) : (
-                    leaveData.map((leaveReq) => {
-                      const StatusIcon = statusIcons[leaveReq.currLeavestatus];
-                      return (
-                        <tr
-                          key={leaveReq.leaveId}
-                          className="hover:bg-slate-50 transition-colors"
+                      {['Leave Type', 'Period', 'Duration', 'Reason', 'Status', 'Action'].map((h) => (
+                        <th
+                          key={h}
+                          className="px-4 lg:px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider"
                         >
-                          {/* Leave Type */}
-                          <td className="px-4 lg:px-5 py-4">
-                            <div className="flex items-center gap-3" style={{ minWidth: 0 }}>
-                              <div className="w-9 h-9 rounded-xl bg-violet-100 flex items-center justify-center flex-shrink-0">
-                                <Calendar className="w-4 h-4 text-violet-600" />
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+
+                  <tbody className="divide-y divide-slate-100 bg-white">
+                    {loading ? (
+                      <ListLoader avatar={false} />
+                    ) : error ? (
+                      <tr>
+                        <td colSpan={6} className="py-16 text-center">
+                          <UserRoundX className="mx-auto mb-3 text-red-400 w-12 h-12" />
+                          <p className="text-red-600 font-medium">{error}</p>
+                        </td>
+                      </tr>
+                    ) : noReqFound ? (
+                      <tr>
+                        <td colSpan={6} className="py-16 text-center">
+                          <SearchX className="mx-auto mb-3 text-blue-400 w-12 h-12" />
+                          <p className="text-slate-600 font-medium">No Request Found</p>
+                        </td>
+                      </tr>
+                    ) : (
+                      leaveData.map((leaveReq) => {
+                        const StatusIcon = statusIcons[leaveReq.currLeavestatus];
+                        return (
+                          <tr key={leaveReq.leaveId} className="hover:bg-slate-50 transition-colors">
+
+                            {/* Leave Type */}
+                            <td className="px-4 py-4">
+                              <div className="flex items-center gap-3" style={{ minWidth: 0 }}>
+                                <div className="w-9 h-9 rounded-xl bg-violet-100 flex items-center justify-center shrink-0">
+                                  <Calendar className="w-4 h-4 text-violet-600" />
+                                </div>
+                                <p
+                                  className="text-sm font-semibold text-slate-800"
+                                  style={{ wordBreak: 'break-word', overflowWrap: 'anywhere', minWidth: 0 }}
+                                >
+                                  {compareAndGetLabel(listOfLeaveType, leaveReq.leaveType)}
+                                </p>
                               </div>
-                              <p
-                                className="text-sm font-semibold text-slate-800"
-                                style={{
-                                  wordBreak: 'break-word',
-                                  overflowWrap: 'anywhere',
-                                  minWidth: 0,
-                                }}
-                              >
-                                {compareAndGetLabel(listOfLeaveType, leaveReq.leaveType)}
-                              </p>
-                            </div>
-                          </td>
+                            </td>
 
-                          {/* Period */}
-                          <td className="px-4 lg:px-5 py-4">
-                            <div className="flex items-start gap-2 text-sm text-slate-700">
-                              <Clock3 className="w-4 h-4 text-slate-400 flex-shrink-0 mt-0.5" />
-                              <span
-                                style={{
-                                  wordBreak: 'break-word',
-                                  overflowWrap: 'anywhere',
-                                  minWidth: 0,
-                                }}
-                              >
-                                {formatDateRange(leaveReq.fromDate, leaveReq.toDate)}
+                            {/* Period */}
+                            <td className="px-4 py-4">
+                              <div className="flex items-start gap-2" style={{ minWidth: 0 }}>
+                                <Clock3 className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
+                                <span
+                                  className="text-sm text-slate-700"
+                                  style={{ wordBreak: 'break-word', overflowWrap: 'anywhere', minWidth: 0 }}
+                                >
+                                  {formatDateRange(leaveReq.fromDate, leaveReq.toDate)}
+                                </span>
+                              </div>
+                            </td>
+
+                            {/* Duration */}
+                            <td className="px-4 py-4 whitespace-nowrap">
+                              <span className="text-sm font-semibold text-slate-800">
+                                {leaveReq.totalDays} {leaveReq.totalDays === 1 ? 'day' : 'days'}
                               </span>
-                            </div>
-                          </td>
+                            </td>
 
-                          {/* Duration */}
-                          <td className="px-4 lg:px-5 py-4 whitespace-nowrap">
-                            <span className="text-sm font-semibold text-slate-800">
-                              {leaveReq.totalDays}{' '}
-                              {leaveReq.totalDays === 1 ? 'day' : 'days'}
-                            </span>
-                          </td>
+                            {/* Reason */}
+                            <td className="px-4 lg:px-5 py-4">
+                              <div className="flex items-start gap-2" style={{ minWidth: 0 }}>
+                                <FileText className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" />
+                                <p
+                                  className="text-sm text-slate-600 leading-relaxed"
+                                  title={leaveReq.reason}
+                                  style={{
+                                    flex: 1,
+                                    width: 0,
+                                    wordBreak: 'break-word',
+                                    overflowWrap: 'anywhere',
+                                    whiteSpace: 'pre-wrap',
+                                  }}
+                                >
+                                  {leaveReq.reason || '-'}
+                                </p>
+                              </div>
+                            </td>
 
-                          {/* Reason
-                              overflowWrap: 'anywhere' is the key — it breaks
-                              even a single unbreakable word (URL, long string)
-                              that has no natural break point.
-                          */}
-                          <td className="px-4 lg:px-5 py-4">
-                            <div className="flex items-start gap-2" style={{ minWidth: 0 }}>
-                              <FileText className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" />
-                              <p
-                                className="text-sm text-slate-600 leading-relaxed"
-                                title={leaveReq.reason}
-                                style={{
-                                  wordBreak: 'break-word',
-                                  overflowWrap: 'anywhere',
-                                  whiteSpace: 'normal',
-                                  minWidth: 0,
-                                  flex: 1,
-                                }}
-                              >
-                                {leaveReq.reason || '-'}
-                              </p>
-                            </div>
-                          </td>
+                            {/* Status */}
+                            <td className="px-4 py-4 whitespace-nowrap">
+                              <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${statusStyles[leaveReq.currLeavestatus]}`}>
+                                <StatusIcon className="w-3.5 h-3.5 shrink-0" />
+                                {leaveReq.currLeavestatus}
+                              </span>
+                            </td>
 
-                          {/* Status */}
-                          <td className="px-4 lg:px-5 py-4 whitespace-nowrap">
-                            <span
-                              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${statusStyles[leaveReq.currLeavestatus]}`}
-                            >
-                              <StatusIcon className="w-3.5 h-3.5 flex-shrink-0" />
-                              {leaveReq.currLeavestatus}
-                            </span>
-                          </td>
-
-                          {/* Action */}
-                          <td className="px-4 lg:px-5 py-4 whitespace-nowrap">
-                            {leaveReq.currLeavestatus === 'PENDING' ? (
-                              <button
-                                onClick={() => handleCancelLeave(leaveReq)}
-                                className="px-3 py-1.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 text-xs font-semibold transition-colors"
-                              >
-                                Cancel
-                              </button>
-                            ) : (
-                              <span className="text-slate-400 text-sm">—</span>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
+                            {/* Action */}
+                            <td className="px-4 py-4 whitespace-nowrap">
+                              {leaveReq.currLeavestatus === 'PENDING' ? (
+                                <button
+                                  onClick={() => handleCancelLeave(leaveReq)}
+                                  className="px-3 py-1.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 text-xs font-semibold transition-colors"
+                                >
+                                  Cancel
+                                </button>
+                              ) : (
+                                <span className="text-slate-400">—</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
-
-          {/* ═══════════════════════════════════════════════════════════════
-              MOBILE CARDS  (below md → up to 767 px)
-
-              KEY FIXES:
-              ──────────
-              1. Card has maxWidth: 100% + boxSizing: border-box — it can
-                 never be wider than its parent.
-              2. The left flex child has  flex: 1 + minWidth: 0  so it
-                 shrinks and doesn't push the badge off-screen.
-              3. Reason <p> uses  flex: 1; width: 0  (not minWidth: 0) —
-                 this forces the paragraph to take only its fair share of
-                 the row instead of its natural content width.
-              4. overflowWrap: 'anywhere' handles single long words /
-                 URLs that have no natural break point; whiteSpace: 'pre-wrap'
-                 preserves intentional newlines while still wrapping.
-          ═══════════════════════════════════════════════════════════════ */}
-          <div className="md:hidden">
+          {/* 
+              MOBILE CARDS  (below md → up to 767 px) */}
+          <div className="lg:hidden">
             {loading ? (
               <div className="py-16 flex flex-col items-center gap-3">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
@@ -583,15 +548,6 @@ export default function LeaveDashboard() {
                             style={{ maxWidth: '100%' }}
                           >
                             <FileText className="w-3.5 h-3.5 text-slate-400 mt-0.5 flex-shrink-0" />
-                            {/*
-                              flex: 1 + width: 0  ← the real fix.
-                              width:0 makes the browser treat the flex item
-                              as zero-wide, then flex:1 stretches it to fill
-                              available space. Without width:0 the item would
-                              report its content width (the full reason string)
-                              and never wrap. overflowWrap:'anywhere' handles
-                              single words with no break opportunity.
-                            */}
                             <p
                               className="text-xs text-slate-600 leading-relaxed"
                               style={{
