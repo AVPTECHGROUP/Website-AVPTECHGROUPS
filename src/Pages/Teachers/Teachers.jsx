@@ -10,9 +10,7 @@ import TeachersTable from '../../Components/Teacher/ManagementComponents/Teacher
 import PasswordResetModal from '../../Components/PopupResetPassword/ResetPasswordComponent';
 import { resetUserPassword } from '../../Api/userManagementAPI';
 
-
 const Teachers = () => {
-
   // Search and Filters
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -187,13 +185,10 @@ const Teachers = () => {
     });
   };
 
-  // ── Row Selection Handler ─────────────────────────────────────────────────
-  // Single-select: same row clicked again → deselect. Different row → replace.
   const handleRowSelect = (teacher) => {
     setSelectedTeacher((prev) => (prev?.id === teacher.id ? null : teacher));
   };
 
-  // ── Reset Password API (same pattern as ManageAllUsers) ───────────────────
   const resetPassword = async (id) => {
     try {
       return await resetUserPassword(id);
@@ -202,18 +197,80 @@ const Teachers = () => {
     }
   };
 
-  // FETCH ON DEPENDENCY CHANGE
+  // ── CSV CELL ESCAPING HELPER ─────────────────────────────────────────────
+  const csvCell = (val) => {
+    const str = val == null ? '' : String(val).trim();
+    if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+      return `"${str.replace(/"/g, '""')}"`;
+    }
+    return str;
+  };
+
+  // ── EXPORT CSV LOGIC FOR TEACHERS ────────────────────────────────────────
+  const handleExportTeachersCSV = () => {
+    if (teachers.length === 0) {
+      toast.info('No teachers on this page to export.');
+      return;
+    }
+
+    // Header structure according to the table fields
+    const HEADERS = [
+      'Full Name',
+      'Employee Code',
+      'Designation/Role',
+      'Mobile Number',
+      'Assigned Classes',
+      'Salary Type',
+      'Status',
+      'Attendance Access',
+      'Payroll Status',
+      'Joining Date'
+    ];
+
+    // Mapping over current paginated mapped teachers array
+    const dataRows = teachers.map((t) =>
+      [
+        csvCell(t.name),
+        csvCell(t.employeeCode),
+        csvCell(t.role),
+        csvCell(t.mobile),
+        csvCell(t.classes.join(' | ')), // Multiple classes separated by pipe operator
+        csvCell(t.salaryType),
+        csvCell(t.status),
+        csvCell(t.attendance),
+        csvCell(t.payroll),
+        csvCell(t.joiningDate),
+      ].join(',')
+    );
+
+    const csvString = [HEADERS.join(','), ...dataRows].join('\n');
+    const blob = new Blob(['\uFEFF' + csvString], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+
+    const date = new Date().toISOString().slice(0, 10);
+    anchor.href = url;
+    anchor.download = `teachers_page${page}of${totalPages}_${rowsPerPage}rows_${date}.csv`;
+
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    URL.revokeObjectURL(url);
+
+    toast.success(
+      `✓ Exported ${teachers.length} teacher${teachers.length !== 1 ? 's' : ''} — CSV ${page} of ${totalPages}`
+    );
+  };
+
   useEffect(() => {
     fetchTeachers();
   }, [page, rowsPerPage, debouncedSearch, statusFilter, classFilter, salaryFilter, hasActiveFilters]);
 
-  // FETCH STATISTICS AND CLASSES ONCE ON MOUNT
   useEffect(() => {
     fetchStatistics();
     fetchClasses();
   }, []);
 
-  // BUILD STATS OBJECT
   const total = statistics.totalTeachers || 0;
   const active = statistics.activeTeachers || 0;
   const inActive = statistics.inactiveTeachers || 0;
@@ -234,21 +291,18 @@ const Teachers = () => {
     <div className="flex h-screen overflow-hidden bg-linear-to-b from-sky-50 to-sky-100">
       <div ref={scrollContainerRef} className="flex-1 overflow-auto w-0">
 
-        {/* COMPONENT 1: Header with Stats */}
         <TeachersHeader stats={stats} loading={statsLoading} />
 
-        {/* Page Content */}
         <div className="flex-1 overflow-auto p-4 pt-0 sm:p-5 sm:pt-0 lg:p-4 lg:pt-0">
-
-          <div className="flex items-center gap-2">  
-
+          <div className="flex items-center gap-2">
+            {/* Passed handleExportTeachersCSV handler into QuickActions component */}
             <QuickActions
               teacherId={selectedTeacher?.id ?? null}
               onResetPassword={() => setIsResetOpen(true)}
+              onExportCSV={handleExportTeachersCSV}
             />
           </div>
 
-          {/* COMPONENT 3: Filters with Search */}
           <TeachersFilters
             search={search}
             setSearch={setSearch}
@@ -265,7 +319,7 @@ const Teachers = () => {
           <TeachersTable
             selectedTeacherId={selectedTeacher?.id ?? null}
             onRowSelect={handleRowSelect}
-            assignTeacherId={() => { }}   // kept for backward compat
+            assignTeacherId={() => { }}
             teachers={teachers}
             setTeachers={setTeachers}
             loading={loading}
@@ -281,8 +335,6 @@ const Teachers = () => {
           />
         </div>
 
-        {/* ── Reset Password Modal ────────────────────────────────────────── */}
-        {/* Exact same integration as ManageAllUsers.jsx */}
         <PasswordResetModal
           isOpen={isResetOpen}
           onClose={() => setIsResetOpen(false)}
