@@ -17,29 +17,29 @@ import { toast } from 'react-toastify';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 const LEAVE_TYPE_OPTIONS = [
-  { value: 'SICK_LEAVE',        label: 'Sick Leave',        defaultLimit: 12,  carryForward: false, maxCarryDays: 0  },
-  { value: 'CASUAL_LEAVE',      label: 'Casual Leave',      defaultLimit: 10,  carryForward: false, maxCarryDays: 0  },
-  { value: 'EARNED_LEAVE',      label: 'Earned Leave',      defaultLimit: 15,  carryForward: true,  maxCarryDays: 10 },
-  { value: 'UNPAID_LEAVE',      label: 'Unpaid Leave',      defaultLimit: 0,   carryForward: false, maxCarryDays: 0  },
-  { value: 'MATERNITY_LEAVE',   label: 'Maternity Leave',   defaultLimit: 180, carryForward: false, maxCarryDays: 0  },
-  { value: 'PATERNITY_LEAVE',   label: 'Paternity Leave',   defaultLimit: 15,  carryForward: false, maxCarryDays: 0  },
-  { value: 'BEREAVEMENT_LEAVE', label: 'Bereavement Leave', defaultLimit: 5,   carryForward: false, maxCarryDays: 0  },
-  { value: 'STUDY_LEAVE',       label: 'Study Leave',       defaultLimit: 7,   carryForward: false, maxCarryDays: 0  },
-  { value: 'COMPENSATORY_OFF',  label: 'Compensatory Off',  defaultLimit: 12,  carryForward: false, maxCarryDays: 0  },
-  { value: 'SPECIAL_LEAVE',     label: 'Special Leave',     defaultLimit: 3,   carryForward: false, maxCarryDays: 0  },
+  { value: 'SICK_LEAVE', label: 'Sick Leave', defaultLimit: 12, carryForward: false, maxCarryDays: 0 },
+  { value: 'CASUAL_LEAVE', label: 'Casual Leave', defaultLimit: 10, carryForward: false, maxCarryDays: 0 },
+  { value: 'EARNED_LEAVE', label: 'Earned Leave', defaultLimit: 15, carryForward: true, maxCarryDays: 10 },
+  { value: 'UNPAID_LEAVE', label: 'Unpaid Leave', defaultLimit: 0, carryForward: false, maxCarryDays: 0 },
+  { value: 'MATERNITY_LEAVE', label: 'Maternity Leave', defaultLimit: 180, carryForward: false, maxCarryDays: 0 },
+  { value: 'PATERNITY_LEAVE', label: 'Paternity Leave', defaultLimit: 15, carryForward: false, maxCarryDays: 0 },
+  { value: 'BEREAVEMENT_LEAVE', label: 'Bereavement Leave', defaultLimit: 5, carryForward: false, maxCarryDays: 0 },
+  { value: 'STUDY_LEAVE', label: 'Study Leave', defaultLimit: 7, carryForward: false, maxCarryDays: 0 },
+  { value: 'COMPENSATORY_OFF', label: 'Compensatory Off', defaultLimit: 12, carryForward: false, maxCarryDays: 0 },
+  { value: 'SPECIAL_LEAVE', label: 'Special Leave', defaultLimit: 3, carryForward: false, maxCarryDays: 0 },
 ];
 
 const LEAVE_TYPE_COLORS = {
-  SICK_LEAVE:        'bg-red-50 text-red-600 border-red-200',
-  CASUAL_LEAVE:      'bg-blue-50 text-blue-600 border-blue-200',
-  EARNED_LEAVE:      'bg-green-50 text-green-600 border-green-200',
-  UNPAID_LEAVE:      'bg-gray-100 text-gray-600 border-gray-200',
-  MATERNITY_LEAVE:   'bg-pink-50 text-pink-600 border-pink-200',
-  PATERNITY_LEAVE:   'bg-indigo-50 text-indigo-600 border-indigo-200',
+  SICK_LEAVE: 'bg-red-50 text-red-600 border-red-200',
+  CASUAL_LEAVE: 'bg-blue-50 text-blue-600 border-blue-200',
+  EARNED_LEAVE: 'bg-green-50 text-green-600 border-green-200',
+  UNPAID_LEAVE: 'bg-gray-100 text-gray-600 border-gray-200',
+  MATERNITY_LEAVE: 'bg-pink-50 text-pink-600 border-pink-200',
+  PATERNITY_LEAVE: 'bg-indigo-50 text-indigo-600 border-indigo-200',
   BEREAVEMENT_LEAVE: 'bg-slate-50 text-slate-600 border-slate-200',
-  STUDY_LEAVE:       'bg-yellow-50 text-yellow-600 border-yellow-200',
-  COMPENSATORY_OFF:  'bg-orange-50 text-orange-600 border-orange-200',
-  SPECIAL_LEAVE:     'bg-purple-50 text-purple-600 border-purple-200',
+  STUDY_LEAVE: 'bg-yellow-50 text-yellow-600 border-yellow-200',
+  COMPENSATORY_OFF: 'bg-orange-50 text-orange-600 border-orange-200',
+  SPECIAL_LEAVE: 'bg-purple-50 text-purple-600 border-purple-200',
 };
 
 const EMPTY_FORM = {
@@ -257,10 +257,10 @@ const LeaveConfigModal = ({ mode, initialData, activeTypes, onSubmit, onClose, l
   useEffect(() => {
     if (mode === 'edit' && initialData) {
       setForm({
-        leaveType:           initialData.leaveType           ?? '',
-        leaveName:           initialData.leaveName           ?? '',
-        annualLimit:         initialData.annualLimit         ?? '',
-        description:         initialData.description        ?? '',
+        leaveType: initialData.leaveType ?? '',
+        leaveName: initialData.leaveName ?? '',
+        annualLimit: initialData.annualLimit ?? '',
+        description: initialData.description ?? '',
         carryForwardAllowed: initialData.carryForwardAllowed ?? false,
         maxCarryForwardDays: initialData.maxCarryForwardDays ?? 0,
       });
@@ -274,9 +274,9 @@ const LeaveConfigModal = ({ mode, initialData, activeTypes, onSubmit, onClose, l
     const option = LEAVE_TYPE_OPTIONS.find(o => o.value === value);
     setForm(prev => ({
       ...prev,
-      leaveType:           value,
-      leaveName:           option ? option.label        : prev.leaveName,
-      annualLimit:         option ? option.defaultLimit : prev.annualLimit,
+      leaveType: value,
+      leaveName: option ? option.label : prev.leaveName,
+      annualLimit: option ? option.defaultLimit : prev.annualLimit,
       carryForwardAllowed: option ? option.carryForward : prev.carryForwardAllowed,
       maxCarryForwardDays: option ? option.maxCarryDays : prev.maxCarryForwardDays,
     }));
@@ -284,12 +284,12 @@ const LeaveConfigModal = ({ mode, initialData, activeTypes, onSubmit, onClose, l
 
   const validate = () => {
     const e = {};
-    if (!form.leaveType)                         e.leaveType    = 'Leave type is required';
-    if (!form.leaveName.trim())                  e.leaveName    = 'Display name is required';
-    if (form.leaveName.trim().length < 2)        e.leaveName    = 'Min 2 characters';
-    if (form.leaveName.trim().length > 100)      e.leaveName    = 'Max 100 characters';
+    if (!form.leaveType) e.leaveType = 'Leave type is required';
+    if (!form.leaveName.trim()) e.leaveName = 'Display name is required';
+    if (form.leaveName.trim().length < 2) e.leaveName = 'Min 2 characters';
+    if (form.leaveName.trim().length > 100) e.leaveName = 'Max 100 characters';
     if (form.annualLimit === '' || form.annualLimit === null) e.annualLimit = 'Annual limit is required';
-    if (Number(form.annualLimit) < 0)            e.annualLimit  = 'Must be ≥ 0';
+    if (Number(form.annualLimit) < 0) e.annualLimit = 'Must be ≥ 0';
     if (form.description && form.description.length > 500) e.description = 'Max 500 characters';
     if (form.carryForwardAllowed && Number(form.maxCarryForwardDays) < 0) e.maxCarryForwardDays = 'Must be ≥ 0';
     // Only block if an ACTIVE row exists — inactive rows get auto-reactivated by POST
@@ -302,10 +302,10 @@ const LeaveConfigModal = ({ mode, initialData, activeTypes, onSubmit, onClose, l
     e.preventDefault();
     if (!validate()) return;
     onSubmit({
-      leaveType:           form.leaveType,
-      leaveName:           form.leaveName.trim(),
-      annualLimit:         Number(form.annualLimit),
-      description:         form.description?.trim() || null,
+      leaveType: form.leaveType,
+      leaveName: form.leaveName.trim(),
+      annualLimit: Number(form.annualLimit),
+      description: form.description?.trim() || null,
       carryForwardAllowed: form.carryForwardAllowed,
       maxCarryForwardDays: Number(form.maxCarryForwardDays),
     });
@@ -471,27 +471,27 @@ const LeaveConfigModal = ({ mode, initialData, activeTypes, onSubmit, onClose, l
 
 // ─── Main Page ───────────────────────────────────────────────────────────────
 export default function LeaveConfig() {
-  const [configs, setConfigs]         = useState([]);
-  const [loading, setLoading]         = useState(false);
+  const [configs, setConfigs] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [submitLoading, setSubmitLoading] = useState(false);
   const [seedLoading, setSeedLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
-  const [filterStatus, setFilterStatus]       = useState('all'); // 'all' | 'active' | 'inactive'
-  const [modalMode, setModalMode]              = useState(null);  // 'add' | 'edit' | null
-  const [editTarget, setEditTarget]            = useState(null);
-  const [deleteTarget, setDeleteTarget]        = useState(null);
-  const [reEnableTarget, setReEnableTarget]    = useState(null);
-  const [reEnableLoading, setReEnableLoading]  = useState(false);
-  const [showSeedConfirm, setShowSeedConfirm]  = useState(false);
-  const [viewTarget, setViewTarget]            = useState(null);
+  const [filterStatus, setFilterStatus] = useState('all'); // 'all' | 'active' | 'inactive'
+  const [modalMode, setModalMode] = useState(null);  // 'add' | 'edit' | null
+  const [editTarget, setEditTarget] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [reEnableTarget, setReEnableTarget] = useState(null);
+  const [reEnableLoading, setReEnableLoading] = useState(false);
+  const [showSeedConfirm, setShowSeedConfirm] = useState(false);
+  const [viewTarget, setViewTarget] = useState(null);
 
   // Full unfiltered list for stats (always all records)
   const [allConfigs, setAllConfigs] = useState([]);
-  const totalConfigs      = allConfigs.length;
-  const activeConfigs     = allConfigs.filter(c => c.isActive).length;
+  const totalConfigs = allConfigs.length;
+  const activeConfigs = allConfigs.filter(c => c.isActive).length;
   const carryForwardCount = allConfigs.filter(c => c.carryForwardAllowed).length;
-  const totalAnnualDays   = allConfigs.filter(c => c.isActive).reduce((sum, c) => sum + (c.annualLimit || 0), 0);
+  const totalAnnualDays = allConfigs.filter(c => c.isActive).reduce((sum, c) => sum + (c.annualLimit || 0), 0);
 
   // Only ACTIVE types block the "Add" form dropdown
   const activeTypes = allConfigs.filter(c => c.isActive).map(c => c.leaveType);
@@ -595,10 +595,10 @@ export default function LeaveConfig() {
     try {
       setReEnableLoading(true);
       await createLeaveConfig({
-        leaveType:           reEnableTarget.leaveType,
-        leaveName:           reEnableTarget.leaveName,
-        annualLimit:         reEnableTarget.annualLimit,
-        description:         reEnableTarget.description || null,
+        leaveType: reEnableTarget.leaveType,
+        leaveName: reEnableTarget.leaveName,
+        annualLimit: reEnableTarget.annualLimit,
+        description: reEnableTarget.description || null,
         carryForwardAllowed: reEnableTarget.carryForwardAllowed,
         maxCarryForwardDays: reEnableTarget.maxCarryForwardDays,
       });
@@ -614,10 +614,10 @@ export default function LeaveConfig() {
 
   // ── Stat cards ──
   const statsCards = [
-    { IconName: Layers,       keyName: 'Total Types',      val: totalConfigs,      iconTxColor: 'text-blue-600',   iconBgColor: 'bg-blue-50'   },
-    { IconName: CheckCircle,  keyName: 'Active Types',     val: activeConfigs,     iconTxColor: 'text-green-600',  iconBgColor: 'bg-green-50'  },
-    { IconName: CalendarDays, keyName: 'Total Annual Days', val: totalAnnualDays,  iconTxColor: 'text-purple-600', iconBgColor: 'bg-purple-50' },
-    { IconName: RotateCcw,    keyName: 'Carry Forward',    val: carryForwardCount, iconTxColor: 'text-orange-600', iconBgColor: 'bg-orange-50' },
+    { IconName: Layers, keyName: 'Total Types', val: totalConfigs, iconTxColor: 'text-blue-600', iconBgColor: 'bg-blue-50' },
+    { IconName: CheckCircle, keyName: 'Active Types', val: activeConfigs, iconTxColor: 'text-green-600', iconBgColor: 'bg-green-50' },
+    { IconName: CalendarDays, keyName: 'Total Annual Days', val: totalAnnualDays, iconTxColor: 'text-purple-600', iconBgColor: 'bg-purple-50' },
+    { IconName: RotateCcw, keyName: 'Carry Forward', val: carryForwardCount, iconTxColor: 'text-orange-600', iconBgColor: 'bg-orange-50' },
   ];
 
   return (
@@ -749,9 +749,8 @@ export default function LeaveConfig() {
                       )}
                     </td>
                     <td className="px-4 lg:px-6 py-4 text-center">
-                      <span className={`inline-flex size-fit items-center gap-1 px-3 py-1 rounded-sm text-xs font-medium ${
-                        cfg.isActive ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'
-                      }`}>
+                      <span className={`inline-flex size-fit items-center gap-1 px-3 py-1 rounded-sm text-xs font-medium ${cfg.isActive ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'
+                        }`}>
                         <span className={`w-1.5 h-1.5 rounded-full ${cfg.isActive ? 'bg-green-700' : 'bg-gray-400'}`} />
                         {cfg.isActive ? 'Active' : 'Inactive'}
                       </span>
@@ -765,9 +764,8 @@ export default function LeaveConfig() {
                           className="relative inline-flex h-5 w-10 items-center rounded-full transition-colors focus:outline-none"
                           style={{ backgroundColor: cfg.isActive ? '#22c55e' : '#d1d5db' }}
                         >
-                          <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform ${
-                            cfg.isActive ? 'translate-x-5' : 'translate-x-1'
-                          }`} />
+                          <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform ${cfg.isActive ? 'translate-x-5' : 'translate-x-1'
+                            }`} />
                         </button>
                         <button
                           onClick={() => setViewTarget(cfg)}
@@ -844,9 +842,8 @@ export default function LeaveConfig() {
                           )}
                         </p>
                         <div className="mt-1">
-                          <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-sm text-xs font-medium ${
-                            cfg.isActive ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'
-                          }`}>
+                          <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-sm text-xs font-medium ${cfg.isActive ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'
+                            }`}>
                             <span className={`w-1.5 h-1.5 rounded-full ${cfg.isActive ? 'bg-green-700' : 'bg-gray-400'}`} />
                             {cfg.isActive ? 'Active' : 'Inactive'}
                           </span>

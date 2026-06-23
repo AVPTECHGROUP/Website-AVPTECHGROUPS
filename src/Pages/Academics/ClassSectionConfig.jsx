@@ -2,7 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   Plus, Edit2, Trash2, RefreshCw, X, Search, ChevronDown,
   Eye, ArrowLeft, BookOpen, Users, Layers, AlertTriangle,
-  GraduationCap, Hash, CheckCircle, SearchX, XCircle
+  GraduationCap, Hash, CheckCircle, SearchX, XCircle,
+  Hash as HashIcon, AlignLeft, ListOrdered, LayoutGrid
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import CardComponent from '../../Components/CommonComp/CardComponent';
@@ -66,6 +67,116 @@ const StatusBadge = ({ active }) => (
     {active ? 'Active' : 'Inactive'}
   </span>
 );
+
+// ─── Class Detail View Modal ──────────────────────────────────────────────────
+const ClassDetailModal = ({ cls, onClose, onEdit, onInactive, onManageSections }) => {
+  if (!cls) return null;
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
+              <BookOpen className="w-4.5 h-4.5 text-blue-600" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-gray-900">{cls.name}</h2>
+              <p className="text-xs text-gray-400">Class Details</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="px-6 py-5 space-y-4">
+
+          {/* Grade + Status row */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${gradeColor(cls.gradeLevel)}`}>
+              {gradeLabelOf(cls.gradeLevel)}
+            </span>
+            <StatusBadge active={cls.status === 'ACTIVE'} />
+          </div>
+
+          {/* Info grid */}
+          <div className="grid grid-cols-2 gap-3">
+
+            <div className="bg-gray-50 rounded-xl px-4 py-3">
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Total Sections</p>
+              <p className="text-2xl font-bold text-gray-900">{cls.totalSections ?? 0}</p>
+            </div>
+
+            <div className="bg-gray-50 rounded-xl px-4 py-3">
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Display Order</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {cls.displayOrder != null ? cls.displayOrder : <span className="text-gray-400 text-sm font-normal">—</span>}
+              </p>
+            </div>
+
+          </div>
+
+          {/* Description */}
+          <div className="bg-gray-50 rounded-xl px-4 py-3">
+            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Description</p>
+            {cls.description
+              ? <p className="text-sm text-gray-700 leading-relaxed">{cls.description}</p>
+              : <p className="text-sm text-gray-400 italic">No description provided.</p>
+            }
+          </div>
+
+          {/* Grade Level detail */}
+          <div className="flex items-center gap-3 px-4 py-3 bg-gray-50 rounded-xl">
+            <GraduationCap className="w-4 h-4 text-gray-400 shrink-0" />
+            <div>
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Grade Level</p>
+              <p className="text-sm font-semibold text-gray-800 mt-0.5">
+                {gradeLabelOf(cls.gradeLevel)}
+                <span className="text-gray-400 font-normal text-xs ml-1">(Level {cls.gradeLevel})</span>
+              </p>
+            </div>
+          </div>
+
+        </div>
+
+        {/* Footer actions */}
+        <div className="flex flex-wrap items-center justify-between gap-2 px-6 py-4 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
+
+          {/* Left — Manage Sections */}
+          <button
+            onClick={() => { onClose(); onManageSections(cls); }}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 font-semibold text-sm transition-colors"
+          >
+            <Layers className="w-4 h-4" />
+            Manage Sections
+          </button>
+
+          {/* Right — Edit + Inactive */}
+          <div className="flex items-center gap-2">
+            {cls.status !== 'INACTIVE' && (
+              <button
+                onClick={() => { onClose(); onInactive(cls); }}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 font-medium text-sm transition-colors"
+              >
+                <XCircle className="w-4 h-4" /> Inactive
+              </button>
+            )}
+            <button
+              onClick={() => { onClose(); onEdit(cls); }}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 font-semibold text-sm transition-colors"
+            >
+              <Edit2 className="w-4 h-4" /> Edit
+            </button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // ─── Delete Confirm Modal ─────────────────────────────────────────────────────
 const DeleteModal = ({ title, message, subMessage, onConfirm, onCancel, loading }) => (
@@ -412,7 +523,7 @@ const SectionModal = ({ mode, initial, classId, onSubmit, onClose, loading }) =>
 export default function ClassSectionConfig() {
   const schoolId = getSchoolId();
 
-  const [view, setView] = useState('classes'); 
+  const [view, setView] = useState('classes');
   const [selectedClass, setSelectedClass] = useState(null);
 
   const [classes, setClasses] = useState([]);
@@ -426,11 +537,14 @@ export default function ClassSectionConfig() {
   const [sectionSearch, setSectionSearch] = useState('');
   const [sectionStatus, setSectionStatus] = useState('');
 
-  const [classModal, setClassModal] = useState(null);   
+  const [classModal, setClassModal] = useState(null);
   const [sectionModal, setSectionModal] = useState(null);
-  const [deleteTarget, setDeleteTarget] = useState(null); 
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const [submitLoading, setSubmitLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
+
+  // ── NEW: class detail view popup state ────────────────────────────────────
+  const [viewClass, setViewClass] = useState(null);
 
   const fetchClasses = useCallback(async (search = classSearch, grade = classGrade, status = classStatus) => {
     if (!schoolId) { toast.error('School ID not found — please re-login'); return; }
@@ -494,15 +608,12 @@ export default function ClassSectionConfig() {
       if (sectionModal.mode === 'add') {
         await createSection(payload);
         toast.success(`Section ${payload.name} created successfully`);
-
         const updatedClass = {
           ...selectedClass,
           totalSections: (selectedClass?.totalSections ?? 0) + 1,
         };
         setSelectedClass(updatedClass);
-        setClasses(prev =>
-          prev.map(c => (c.id === updatedClass.id ? updatedClass : c))
-        );
+        setClasses(prev => prev.map(c => (c.id === updatedClass.id ? updatedClass : c)));
       } else {
         await updateSection(sectionModal.data.id, payload);
         toast.success(`Section ${payload.name} updated successfully`);
@@ -529,16 +640,12 @@ export default function ClassSectionConfig() {
       } else {
         await deleteSection(item.id);
         toast.success(`Section ${item.name} deleted successfully`);
-
         const updatedClass = {
           ...selectedClass,
           totalSections: Math.max((selectedClass?.totalSections ?? 1) - 1, 0),
         };
         setSelectedClass(updatedClass);
-        setClasses(prev =>
-          prev.map(c => (c.id === updatedClass.id ? updatedClass : c))
-        );
-
+        setClasses(prev => prev.map(c => (c.id === updatedClass.id ? updatedClass : c)));
         setDeleteTarget(null);
         await fetchSections(selectedClass?.id);
       }
@@ -573,10 +680,10 @@ export default function ClassSectionConfig() {
   // ═══════════════════════════════════════════════════════════════════════════
   if (view === 'classes') {
     const classStatsCards = [
-      { IconName: BookOpen,      keyName: 'Total Classes',    val: totalClasses,    iconTxColor: 'text-blue-600',   iconBgColor: 'bg-blue-50'   },
-      { IconName: CheckCircle,  keyName: 'Active Classes',   val: activeClasses,   iconTxColor: 'text-green-600',  iconBgColor: 'bg-green-50'  },
-      { IconName: Layers,        keyName: 'Total Sections',   val: totalSections,   iconTxColor: 'text-purple-600', iconBgColor: 'bg-purple-50' },
-      { IconName: GraduationCap, keyName: 'Grade Range',      val: gradeRange,      iconTxColor: 'text-orange-400', iconBgColor: 'bg-orange-50'  },
+      { IconName: BookOpen,      keyName: 'Total Classes',  val: totalClasses,   iconTxColor: 'text-blue-600',   iconBgColor: 'bg-blue-50'   },
+      { IconName: CheckCircle,   keyName: 'Active Classes', val: activeClasses,  iconTxColor: 'text-green-600',  iconBgColor: 'bg-green-50'  },
+      { IconName: Layers,        keyName: 'Total Sections', val: totalSections,  iconTxColor: 'text-purple-600', iconBgColor: 'bg-purple-50' },
+      { IconName: GraduationCap, keyName: 'Grade Range',    val: gradeRange,     iconTxColor: 'text-orange-400', iconBgColor: 'bg-orange-50' },
     ];
 
     return (
@@ -595,7 +702,7 @@ export default function ClassSectionConfig() {
           </button>
         </div>
 
-        {/* Stats - Shifted grid layout to xl for wider views to prevent compression at 1024px */}
+        {/* Stats */}
         <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
           {classStatsCards.map((card, i) => <CardComponent key={i} {...card} />)}
         </div>
@@ -646,7 +753,7 @@ export default function ClassSectionConfig() {
             </button>
           </div>
 
-          {/* Desktop table - Added explicit horizontal overflow safety wrapper */}
+          {/* Desktop table */}
           <div className="hidden md:block overflow-x-auto overflow-y-auto max-h-130 w-full">
             <table className="w-full min-w-[700px]">
               <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
@@ -654,7 +761,6 @@ export default function ClassSectionConfig() {
                   <th className="px-4 xl:px-6 py-3 text-left font-semibold text-gray-600 uppercase tracking-wide">#</th>
                   <th className="px-4 xl:px-6 py-3 text-left font-semibold text-gray-600 uppercase tracking-wide">Class Name</th>
                   <th className="px-4 xl:px-6 py-3 text-center font-semibold text-gray-600 uppercase tracking-wide">Grade</th>
-                  {/* Pushed to xl breakpoint to give action column room on laptop view grids */}
                   <th className="px-4 xl:px-6 py-3 text-center font-semibold text-gray-600 uppercase tracking-wide hidden xl:table-cell">Description</th>
                   <th className="px-4 xl:px-6 py-3 text-center font-semibold text-gray-600 uppercase tracking-wide">Sections</th>
                   <th className="px-4 xl:px-6 py-3 text-center font-semibold text-gray-600 uppercase tracking-wide">Status</th>
@@ -692,7 +798,6 @@ export default function ClassSectionConfig() {
                     <td className="px-4 xl:px-6 py-4 text-center hidden xl:table-cell">
                       <p className="text-gray-500 truncate max-w-[220px] mx-auto">{cls.description || '—'}</p>
                     </td>
-                    
                     <td className="px-4 xl:px-6 py-4 text-center">
                       <button
                         onClick={() => openSections(cls)}
@@ -702,27 +807,26 @@ export default function ClassSectionConfig() {
                         <span>Add Sections ({cls.totalSections ?? 0})</span>
                       </button>
                     </td>
-
                     <td className="px-4 xl:px-6 py-4 text-center">
                       <StatusBadge active={cls.status === 'ACTIVE'} />
                     </td>
-
                     <td className="px-4 xl:px-6 py-4">
                       <div className="flex items-center justify-center gap-3.5 font-bold text-xs whitespace-nowrap">
-                        <button 
-                          onClick={() => openSections(cls)}
+                        {/* ── VIEW → opens detail popup instead of navigating ── */}
+                        <button
+                          onClick={() => setViewClass(cls)}
                           className="flex items-center gap-1 text-indigo-600 hover:text-indigo-800 transition-colors"
                         >
                           <Eye className="w-3.5 h-3.5" /> View
                         </button>
-                        <button 
+                        <button
                           onClick={() => setClassModal({ mode: 'edit', data: cls })}
                           className="flex items-center gap-1 text-blue-600 hover:text-blue-800 transition-colors"
                         >
                           <Edit2 className="w-3.5 h-3.5" /> Edit
                         </button>
                         {cls.status !== 'INACTIVE' && (
-                          <button 
+                          <button
                             onClick={() => setDeleteTarget({ type: 'class', item: cls })}
                             className="flex items-center gap-1 text-red-500 hover:text-red-700 transition-colors"
                           >
@@ -737,7 +841,7 @@ export default function ClassSectionConfig() {
             </table>
           </div>
 
-          {/* Mobile cards View */}
+          {/* Mobile cards */}
           <div className="md:hidden">
             {classLoading && (
               <div className="flex justify-center items-center py-12">
@@ -765,16 +869,15 @@ export default function ClassSectionConfig() {
                           {gradeLabelOf(cls.gradeLevel)}
                         </span>
                       </div>
-                      
                       <div className="flex items-center gap-3 text-xs font-bold">
-                        <button onClick={() => openSections(cls)} className="text-indigo-600">View</button>
+                        {/* ── VIEW on mobile → popup too ── */}
+                        <button onClick={() => setViewClass(cls)} className="text-indigo-600">View</button>
                         <button onClick={() => setClassModal({ mode: 'edit', data: cls })} className="text-blue-600">Edit</button>
                         {cls.status !== 'INACTIVE' && (
                           <button onClick={() => setDeleteTarget({ type: 'class', item: cls })} className="text-red-500">Inactive</button>
                         )}
                       </div>
                     </div>
-                    
                     <div className="flex items-center justify-between gap-3 text-xs text-gray-500 mt-2">
                       <button
                         onClick={() => openSections(cls)}
@@ -791,6 +894,17 @@ export default function ClassSectionConfig() {
             )}
           </div>
         </div>
+
+        {/* ── Class Detail Popup ── */}
+        {viewClass && (
+          <ClassDetailModal
+            cls={viewClass}
+            onClose={() => setViewClass(null)}
+            onEdit={(cls) => setClassModal({ mode: 'edit', data: cls })}
+            onInactive={(cls) => setDeleteTarget({ type: 'class', item: cls })}
+            onManageSections={openSections}
+          />
+        )}
 
         {classModal && (
           <ClassModal
@@ -820,10 +934,13 @@ export default function ClassSectionConfig() {
   // PANEL 2 — SECTIONS
   // ═══════════════════════════════════════════════════════════════════════════
   const sectionStatsCards = [
-    { IconName: Layers,   keyName: 'Sections',         val: sections.length, iconTxColor: 'text-blue-600',   iconBgColor: 'bg-blue-50'   },
-    { IconName: Users,    keyName: 'Total Capacity',   val: totalCapacity,   iconTxColor: 'text-purple-600', iconBgColor: 'bg-purple-50' },
-    { IconName: Users,    keyName: 'Enrolled',         val: totalEnrolled,   iconTxColor: 'text-green-600',  iconBgColor: 'bg-green-50'  },
-    { IconName: Hash,     keyName: 'Occupancy',        val: `${occupancyPct}%`, iconTxColor: totalCapacity === 0 ? 'text-gray-400' : occupancyPct >= 90 ? 'text-red-600' : occupancyPct >= 70 ? 'text-amber-600' : 'text-green-600', iconBgColor: totalCapacity === 0 ? 'bg-gray-50' : occupancyPct >= 90 ? 'bg-red-50' : occupancyPct >= 70 ? 'bg-amber-50' : 'bg-green-50' },
+    { IconName: Layers, keyName: 'Sections',       val: sections.length, iconTxColor: 'text-blue-600',   iconBgColor: 'bg-blue-50'   },
+    { IconName: Users,  keyName: 'Total Capacity', val: totalCapacity,   iconTxColor: 'text-purple-600', iconBgColor: 'bg-purple-50' },
+    { IconName: Users,  keyName: 'Enrolled',       val: totalEnrolled,   iconTxColor: 'text-green-600',  iconBgColor: 'bg-green-50'  },
+    { IconName: Hash,   keyName: 'Occupancy',      val: `${occupancyPct}%`,
+      iconTxColor: totalCapacity === 0 ? 'text-gray-400' : occupancyPct >= 90 ? 'text-red-600' : occupancyPct >= 70 ? 'text-amber-600' : 'text-green-600',
+      iconBgColor: totalCapacity === 0 ? 'bg-gray-50' : occupancyPct >= 90 ? 'bg-red-50' : occupancyPct >= 70 ? 'bg-amber-50' : 'bg-green-50',
+    },
   ];
 
   return (
@@ -888,7 +1005,7 @@ export default function ClassSectionConfig() {
           </div>
         </div>
 
-        {/* Desktop table - Added dynamic column hiding for teacher name up to xl screens */}
+        {/* Desktop table */}
         <div className="hidden md:block overflow-x-auto overflow-y-auto max-h-130 w-full">
           <table className="w-full min-w-[700px]">
             <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">

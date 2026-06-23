@@ -7,28 +7,21 @@ import { getSubjectCategoryLov } from "../../Api/ListOfValues";
 import AddNewSubject from "./AddnewSubject";
 import SectionSubjectAssignment from "../../Pages/SubjectManagement/SectionSubjectAssignment";
 
-/* ═══════════════════════════════════════════
-   CONSTANTS
-═══════════════════════════════════════════ */
-
-// FIX 1: Added all 10 API category values + label-based fallback keys
-// The list API sends `subject.category` as a LABEL (e.g. "Social Studies"),
-// so we also key by LABEL_UPPERCASED_NO_SPACES to cover both shapes.
 const CAT_CLS = {
   // ── by VALUE key (what the LOV/edit API sends) ──────────────────────────
-  CORE:           "bg-blue-50    text-blue-700    border-blue-200",
-  LANGUAGE:       "bg-violet-50  text-violet-700  border-violet-200",
-  SCIENCE:        "bg-emerald-50 text-emerald-700 border-emerald-200",
-  ARTS:           "bg-pink-50    text-pink-700    border-pink-200",
-  SPORTS:         "bg-orange-50  text-orange-700  border-orange-200",
-  ELECTIVE:       "bg-amber-50   text-amber-700   border-amber-200",
-  SOCIAL:         "bg-teal-50    text-teal-700    border-teal-200",
-  COMPUTER:       "bg-cyan-50    text-cyan-700    border-cyan-200",
-  VOCATIONAL:     "bg-lime-50    text-lime-700    border-lime-200",
-  OTHER:          "bg-slate-100  text-slate-600   border-slate-200",
+  CORE: "bg-blue-50    text-blue-700    border-blue-200",
+  LANGUAGE: "bg-violet-50  text-violet-700  border-violet-200",
+  SCIENCE: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  ARTS: "bg-pink-50    text-pink-700    border-pink-200",
+  SPORTS: "bg-orange-50  text-orange-700  border-orange-200",
+  ELECTIVE: "bg-amber-50   text-amber-700   border-amber-200",
+  SOCIAL: "bg-teal-50    text-teal-700    border-teal-200",
+  COMPUTER: "bg-cyan-50    text-cyan-700    border-cyan-200",
+  VOCATIONAL: "bg-lime-50    text-lime-700    border-lime-200",
+  OTHER: "bg-slate-100  text-slate-600   border-slate-200",
   // ── by LABEL uppercased + spaces stripped (what the list API sends) ─────
-  SOCIALSTUDIES:  "bg-teal-50    text-teal-700    border-teal-200",
-  COMPUTERSCIENCE:"bg-cyan-50    text-cyan-700    border-cyan-200",
+  SOCIALSTUDIES: "bg-teal-50    text-teal-700    border-teal-200",
+  COMPUTERSCIENCE: "bg-cyan-50    text-cyan-700    border-cyan-200",
 };
 
 const ROW_OPTIONS = [10, 20, 30];
@@ -36,12 +29,12 @@ const ROW_OPTIONS = [10, 20, 30];
 /* ═══════════════════════════════════════════
    TINY SVG ICONS
 ═══════════════════════════════════════════ */
-const IPlus  = () => <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>;
-const IEdit  = () => <svg className="w-3.5 h-3.5 text-orange-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>;
+const IPlus = () => <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>;
+const IEdit = () => <svg className="w-3.5 h-3.5 text-orange-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>;
 const ITrash = () => <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>;
-const ISearch= () => <svg className="w-4 h-4 text-slate-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" strokeLinecap="round" /></svg>;
-const ISpin  = () => <svg className="w-6 h-6 animate-spin text-indigo-500" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" /></svg>;
-const IChev  = () => <svg className="w-4 h-4 text-slate-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>;
+const ISearch = () => <svg className="w-4 h-4 text-slate-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" strokeLinecap="round" /></svg>;
+const ISpin = () => <svg className="w-6 h-6 animate-spin text-indigo-500" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" /></svg>;
+const IChev = () => <svg className="w-4 h-4 text-slate-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>;
 
 /* ═══════════════════════════════════════════
    REUSABLE ATOMS
@@ -61,9 +54,8 @@ function CatBadge({ cat }) {
 
 function StatusBadge({ active }) {
   return (
-    <span className={`inline-block text-xs font-semibold px-2.5 py-0.5 rounded-full whitespace-nowrap ${
-      active ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-500"
-    }`}>
+    <span className={`inline-block text-xs font-semibold px-2.5 py-0.5 rounded-full whitespace-nowrap ${active ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-500"
+      }`}>
       {active ? "Active" : "INACTIVE"}
     </span>
   );
@@ -199,9 +191,8 @@ function Pagination({ page, totalPages, onChange }) {
             )}
             <button
               onClick={() => onChange(n)}
-              className={`w-8 h-8 text-sm rounded-lg font-medium transition-colors ${
-                page === n ? "bg-indigo-600 text-white" : "text-slate-600 border border-slate-200 hover:bg-slate-100"
-              }`}
+              className={`w-8 h-8 text-sm rounded-lg font-medium transition-colors ${page === n ? "bg-indigo-600 text-white" : "text-slate-600 border border-slate-200 hover:bg-slate-100"
+                }`}
             >{n + 1}</button>
           </span>
         );
@@ -221,23 +212,23 @@ function Pagination({ page, totalPages, onChange }) {
    MAIN PAGE
 ═══════════════════════════════════════════ */
 export default function SubjectsMaster() {
-  const [subjects,      setSubjects]      = useState([]);
+  const [subjects, setSubjects] = useState([]);
   const [totalElements, setTotalElements] = useState(0);
-  const [totalPages,    setTotalPages]    = useState(1);
-  const [loading,       setLoading]       = useState(false);
-  const [error,         setError]         = useState("");
+  const [totalPages, setTotalPages] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const [categories,        setCategories]        = useState([]);
+  const [categories, setCategories] = useState([]);
   const [categoriesLoading, setCategoriesLoading] = useState(false);
 
-  const [page,           setPage]           = useState(0);
-  const [size,           setSize]           = useState(10);
-  const [statusFilter,   setStatusFilter]   = useState("ALL");
+  const [page, setPage] = useState(0);
+  const [size, setSize] = useState(10);
+  const [statusFilter, setStatusFilter] = useState("ALL");
   const [categoryFilter, setCategoryFilter] = useState("ALL");
-  const [searchQuery,    setSearchQuery]    = useState("");
-  const [debouncedSearch,setDebouncedSearch]= useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
 
-  const [modal,        setModal]        = useState(null);
+  const [modal, setModal] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
 
   const [activeTab, setActiveTab] = useState("materSubject");
@@ -261,7 +252,7 @@ export default function SubjectsMaster() {
         size,
         sort: "id",
         search: debouncedSearch,
-        status:   statusFilter   === "ALL" ? "" : statusFilter,
+        status: statusFilter === "ALL" ? "" : statusFilter,
         category: categoryFilter === "ALL" ? "" : categoryFilter,
       };
       const result = await getSubjectsWithFilters(params);
@@ -295,7 +286,7 @@ export default function SubjectsMaster() {
     fetchCategories();
   }, []);
 
-  const handleSaved   = () => { setModal(null);        fetchSubjects(); };
+  const handleSaved = () => { setModal(null); fetchSubjects(); };
   const handleDeleted = () => { setDeleteTarget(null); fetchSubjects(); };
 
   return (
@@ -324,21 +315,19 @@ export default function SubjectsMaster() {
             <div className="sm-tabs mt-3 flex overflow-x-auto border-b border-slate-200 -mb-px gap-0">
               <button
                 onClick={() => setActiveTab("materSubject")}
-                className={`flex-shrink-0 flex items-center gap-1.5 px-3 sm:px-4 pb-3 text-xs sm:text-sm font-semibold whitespace-nowrap transition-colors border-b-2 ${
-                  activeTab === "materSubject"
-                    ? "text-indigo-600 border-indigo-600"
-                    : "text-slate-400 border-transparent hover:text-slate-600"
-                }`}
+                className={`flex-shrink-0 flex items-center gap-1.5 px-3 sm:px-4 pb-3 text-xs sm:text-sm font-semibold whitespace-nowrap transition-colors border-b-2 ${activeTab === "materSubject"
+                  ? "text-indigo-600 border-indigo-600"
+                  : "text-slate-400 border-transparent hover:text-slate-600"
+                  }`}
               >
                 Subjects
               </button>
               <button
                 onClick={() => setActiveTab("assignment")}
-                className={`flex-shrink-0 flex items-center gap-1.5 px-3 sm:px-4 pb-3 text-xs sm:text-sm font-semibold whitespace-nowrap transition-colors border-b-2 ${
-                  activeTab === "assignment"
-                    ? "text-indigo-600 border-indigo-600"
-                    : "text-slate-400 border-transparent hover:text-slate-600"
-                }`}
+                className={`flex-shrink-0 flex items-center gap-1.5 px-3 sm:px-4 pb-3 text-xs sm:text-sm font-semibold whitespace-nowrap transition-colors border-b-2 ${activeTab === "assignment"
+                  ? "text-indigo-600 border-indigo-600"
+                  : "text-slate-400 border-transparent hover:text-slate-600"
+                  }`}
               >
                 <span className="hidden sm:inline">Section–Subject Assignment</span>
                 <span className="sm:hidden">Assignment</span>
@@ -356,43 +345,33 @@ export default function SubjectsMaster() {
         <div className={`${activeTab === "assignment" ? "hidden" : ""} px-3 sm:px-4 md:px-6 py-3 sm:py-4`}>
           <div className="w-full bg-white rounded-xl xl:rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
 
-            {/* ── TOOLBAR ── */}
-            <div className="px-3 sm:px-4 xl:px-5 py-3 border-b border-slate-100 space-y-2.5">
+            <div className="px-4 py-4 border-b border-slate-100 space-y-4">
 
-              {/* Row A: Title + Add button */}
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <div className="min-w-0">
-                  <h2 className="text-base sm:text-lg font-bold text-slate-800 truncate">All Subjects</h2>
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    <span className="font-semibold text-slate-600">{totalElements}</span> total subjects
-                  </p>
-                </div>
-                <button
-                  onClick={() => setModal({ mode: "add" })}
-                  className="flex-shrink-0 flex items-center justify-center sm:justify-start gap-1.5 w-full sm:w-auto px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-semibold rounded-lg shadow-sm transition-colors whitespace-nowrap"
-                  style={{ minHeight: 36 }}
-                >
-                  <IPlus /> Add Subject
-                </button>
+              {/* Row A: Title Section */}
+              <div className="min-w-0">
+                <h2 className="text-base sm:text-lg font-bold text-slate-800 truncate">All Subjects</h2>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  <span className="font-semibold text-slate-600">{totalElements}</span> total subjects
+                </p>
               </div>
 
-              {/* Row B: Search + Filters */}
-              <div className="flex flex-col gap-2">
-                <div className="relative w-full">
-                  <span className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none">
-                    <ISearch />
-                  </span>
+              {/* Row B: Responsive Flexbox/Grid Container for Search, Dropdowns & Button */}
+              <div className="flex flex-col sm:grid sm:grid-cols-2 lg:flex lg:flex-row items-center gap-3 w-full">
+
+                {/* 1. Search Bar - Desktop/Laptop par dynamically full flexible space use karega */}
+                <div className="w-full lg:flex-1 col-span-2 relative flex items-center gap-2 border border-slate-200 rounded-lg bg-white px-3 py-2 focus-within:ring-2 focus-within:ring-indigo-200 transition-all">
+                  <span className="text-slate-400 shrink-0"><ISearch /></span>
                   <input
                     type="text"
                     placeholder="Search by name or code…"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-8 pr-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300"
-                    style={{ minHeight: 38 }}
+                    className="w-full text-sm text-slate-600 focus:outline-none bg-transparent placeholder:text-slate-400"
+                    style={{ minHeight: 22 }}
                   />
                   {searchQuery !== debouncedSearch && (
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2">
-                      <svg className="w-3.5 h-3.5 animate-spin text-indigo-400" fill="none" viewBox="0 0 24 24">
+                    <span className="shrink-0 flex items-center justify-center">
+                      <svg className="w-4 h-4 animate-spin text-indigo-500" fill="none" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                       </svg>
@@ -400,188 +379,201 @@ export default function SubjectsMaster() {
                   )}
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:flex md:items-center gap-2">
-                  <NativeSelect
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                    className="w-full md:w-40"
-                  >
-                    <option value="ALL">All Status</option>
-                    <option value="ACTIVE">Active</option>
-                    <option value="INACTIVE">Inactive</option>
-                  </NativeSelect>
+                {/* 2. Status Select Filter */}
+                <NativeSelect
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="w-full sm:w-auto lg:w-35 shrink-0"
+                >
+                  <option value="ALL">All Status</option>
+                  <option value="ACTIVE">Active</option>
+                  <option value="INACTIVE">Inactive</option>
+                </NativeSelect>
 
-                  <NativeSelect
-                    value={categoryFilter}
-                    onChange={(e) => setCategoryFilter(e.target.value)}
-                    className="w-full md:w-48"
-                    disabled={categoriesLoading}
-                  >
-                    <option value="ALL">
-                      {categoriesLoading ? "Loading categories…" : "All Categories"}
+                {/* 3. Category Select Filter */}
+                <NativeSelect
+                  value={categoryFilter}
+                  onChange={(e) => setCategoryFilter(e.target.value)}
+                  className="w-full sm:w-auto lg:w-35 shrink-0"
+                  disabled={categoriesLoading}
+                >
+                  <option value="ALL">
+                    {categoriesLoading ? "Loading..." : "All Categories"}
+                  </option>
+                  {categories.map((c) => (
+                    <option key={c.value || c.id} value={c.value || c.id}>
+                      {c.label || c.value}
                     </option>
-                    {categories.map((c) => (
-                      <option key={c.value || c.id} value={c.value || c.id}>
-                        {c.label || c.value}
-                      </option>
-                    ))}
-                  </NativeSelect>
-                </div>
-              </div>
-            </div>
+                  ))}
+                </NativeSelect>
 
-            {/* Error banner */}
-            {error && (
-              <div className="mx-3 sm:mx-4 xl:mx-5 mt-4 flex items-start gap-2 bg-red-50 border border-red-200 text-red-600 text-xs sm:text-sm px-4 py-3 rounded-lg">
-                <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12A9 9 0 113 12a9 9 0 0118 0z" />
-                </svg>
-                <span className="break-words min-w-0">{error}</span>
-              </div>
-            )}
-
-            {/* Loading */}
-            {loading && (
-              <div className="py-16 flex flex-col items-center gap-3 text-slate-400">
-                <ISpin />
-                <p className="text-sm">Loading subjects…</p>
-              </div>
-            )}
-
-            {/* Empty */}
-            {!loading && subjects.length === 0 && (
-              <div className="py-16 flex flex-col items-center gap-2 text-slate-400">
-                <svg className="w-10 h-10 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                <p className="text-sm font-medium">No subjects found.</p>
-                <p className="text-xs">Try adjusting your search or filters</p>
-              </div>
-            )}
-
-            {/* ── MOBILE CARDS (< 1280px) ── */}
-            {!loading && subjects.length > 0 && (
-              <div className="xl:hidden p-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {subjects.map((s) => (
-                  <SubjectCard
-                    key={s.id}
-                    s={s}
-                    onEdit={(s) => setModal({ mode: "edit", subject: s })}
-                    onDelete={(s) => setDeleteTarget(s)}
-                  />
-                ))}
-              </div>
-            )}
-
-            {/* ── DESKTOP TABLE (≥ 1280px) ── */}
-            {!loading && subjects.length > 0 && (
-              <div className="hidden xl:block w-full overflow-x-auto">
-                <table className="w-full text-sm" style={{ minWidth: "100%" }}>
-                  <thead>
-                    <tr className="bg-slate-50 border-y border-slate-200 text-left">
-                      {[
-                        { h: "Code",         cls: "w-20"         },
-                        { h: "Subject Name", cls: ""             },
-                        { h: "Category",     cls: "w-36"         },
-                        { h: "Description",  cls: ""             },
-                        { h: "Status",       cls: "text-center w-24" },
-                        { h: "Actions",      cls: "text-right  w-36" },
-                      ].map(({ h, cls }) => (
-                        <th key={h}
-                          className={`py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap ${cls}`}
-                        >{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {subjects.map((s) => {
-                      const isActive = s.status === "ACTIVE";
-                      return (
-                        <tr key={s.id} className="border-b border-slate-100 hover:bg-indigo-50/30 transition-colors">
-                          <td className="py-3 px-4 whitespace-nowrap">
-                            <span className="sm-mono inline-block px-2 py-0.5 rounded bg-slate-100 text-slate-600 text-xs font-medium">
-                              {s.code}
-                            </span>
-                          </td>
-                          <td className="py-3 px-4 font-semibold text-slate-800 max-w-xs truncate">
-                            {s.name}
-                          </td>
-                          <td className="py-3 px-4 whitespace-nowrap">
-                            <CatBadge cat={s.category} />
-                          </td>
-                          <td className="py-3 px-4 text-slate-500 max-w-xs truncate whitespace-nowrap">
-                            {s.description || "—"}
-                          </td>
-                          <td className="py-3 px-4 text-center whitespace-nowrap">
-                            <StatusBadge active={isActive} />
-                          </td>
-                          <td className="py-3 px-4 whitespace-nowrap">
-                            <div className="flex items-center justify-end gap-2">
-                              <button
-                                onClick={() => setModal({ mode: "edit", subject: s })}
-                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors"
-                                style={{ minHeight: 32 }}
-                              >
-                                <IEdit /> Edit
-                              </button>
-                              <button
-                                onClick={() => setDeleteTarget(s)}
-                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-600 border border-red-200 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
-                                style={{ minHeight: 32 }}
-                              >
-                                <ITrash /> Delete
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-
-            {/* ── FOOTER ── */}
-            {!loading && subjects.length > 0 && (
-              <div className="px-3 sm:px-5 py-3.5 border-t border-slate-100 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-sm text-slate-500 whitespace-nowrap">Rows per page:</span>
-                  <NativeSelect
-                    value={size}
-                    onChange={(e) => setSize(Number(e.target.value))}
-                    className="w-20"
-                  >
-                    {ROW_OPTIONS.map((n) => <option key={n} value={n}>{n}</option>)}
-                  </NativeSelect>
-                  <span className="text-sm text-slate-400 whitespace-nowrap">
-                    <span className="font-medium text-slate-600">{subjects.length}</span>
-                    {" "}of{" "}
-                    <span className="font-medium text-slate-600">{totalElements}</span>
-                    {" "}subjects
-                  </span>
-                </div>
-                <Pagination page={page} totalPages={totalPages} onChange={setPage} />
-              </div>
-            )}
+                {/* 4. Add Subject Primary Button */}
+                <button
+                  onClick={() => setModal({ mode: "add" })}
+                  className="w-full sm:w-auto col-span-2 lg:w-auto shrink-0 flex items-center justify-center gap-1.5 px-3 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-semibold rounded-lg shadow-sm transition-all whitespace-nowrap cursor-pointer active:scale-98"
+                  style={{ minHeight: 38 }}
+                >
+                  <IPlus /> Add Subject
+                </button>
 
           </div>
         </div>
-      </div>
 
-      {modal && (
-        <AddNewSubject
-          subject={modal.mode === "edit" ? modal.subject : null}
-          onClose={() => setModal(null)}
-          onSaved={handleSaved}
-        />
-      )}
-      {deleteTarget && (
-        <DeleteDialog
-          subject={deleteTarget}
-          onClose={() => setDeleteTarget(null)}
-          onConfirm={handleDeleted}
-        />
-      )}
+        {/* Error banner */}
+        {error && (
+          <div className="mx-3 sm:mx-4 xl:mx-5 mt-4 flex items-start gap-2 bg-red-50 border border-red-200 text-red-600 text-xs sm:text-sm px-4 py-3 rounded-lg">
+            <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12A9 9 0 113 12a9 9 0 0118 0z" />
+            </svg>
+            <span className="break-words min-w-0">{error}</span>
+          </div>
+        )}
+
+        {/* Loading */}
+        {loading && (
+          <div className="py-16 flex flex-col items-center gap-3 text-slate-400">
+            <ISpin />
+            <p className="text-sm">Loading subjects…</p>
+          </div>
+        )}
+
+        {/* Empty */}
+        {!loading && subjects.length === 0 && (
+          <div className="py-16 flex flex-col items-center gap-2 text-slate-400">
+            <svg className="w-10 h-10 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <p className="text-sm font-medium">No subjects found.</p>
+            <p className="text-xs">Try adjusting your search or filters</p>
+          </div>
+        )}
+
+        {/* ── MOBILE CARDS (< 1280px) ── */}
+        {!loading && subjects.length > 0 && (
+          <div className="xl:hidden p-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {subjects.map((s) => (
+              <SubjectCard
+                key={s.id}
+                s={s}
+                onEdit={(s) => setModal({ mode: "edit", subject: s })}
+                onDelete={(s) => setDeleteTarget(s)}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* ── DESKTOP TABLE (≥ 1280px) ── */}
+        {!loading && subjects.length > 0 && (
+          <div className="hidden xl:block w-full overflow-x-auto">
+            <table className="w-full text-sm" style={{ minWidth: "100%" }}>
+              <thead>
+                <tr className="bg-slate-50 border-y border-slate-200 text-left">
+                  {[
+                    { h: "Code", cls: "w-20" },
+                    { h: "Subject Name", cls: "" },
+                    { h: "Category", cls: "w-36" },
+                    { h: "Description", cls: "" },
+                    { h: "Status", cls: "text-center w-24" },
+                    { h: "Actions", cls: "text-right  w-36" },
+                  ].map(({ h, cls }) => (
+                    <th key={h}
+                      className={`py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap ${cls}`}
+                    >{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {subjects.map((s) => {
+                  const isActive = s.status === "ACTIVE";
+                  return (
+                    <tr key={s.id} className="border-b border-slate-100 hover:bg-indigo-50/30 transition-colors">
+                      <td className="py-3 px-4 whitespace-nowrap">
+                        <span className="sm-mono inline-block px-2 py-0.5 rounded bg-slate-100 text-slate-600 text-xs font-medium">
+                          {s.code}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 font-semibold text-slate-800 max-w-xs truncate">
+                        {s.name}
+                      </td>
+                      <td className="py-3 px-4 whitespace-nowrap">
+                        <CatBadge cat={s.category} />
+                      </td>
+                      <td className="py-3 px-4 text-slate-500 max-w-xs truncate whitespace-nowrap">
+                        {s.description || "—"}
+                      </td>
+                      <td className="py-3 px-4 text-center whitespace-nowrap">
+                        <StatusBadge active={isActive} />
+                      </td>
+                      <td className="py-3 px-4 whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => setModal({ mode: "edit", subject: s })}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors"
+                            style={{ minHeight: 32 }}
+                          >
+                            <IEdit /> Edit
+                          </button>
+                          <button
+                            onClick={() => setDeleteTarget(s)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-600 border border-red-200 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
+                            style={{ minHeight: 32 }}
+                          >
+                            <ITrash /> Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* ── FOOTER ── */}
+        {!loading && subjects.length > 0 && (
+          <div className="px-3 sm:px-5 py-3.5 border-t border-slate-100 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm text-slate-500 whitespace-nowrap">Rows per page:</span>
+              <NativeSelect
+                value={size}
+                onChange={(e) => setSize(Number(e.target.value))}
+                className="w-20"
+              >
+                {ROW_OPTIONS.map((n) => <option key={n} value={n}>{n}</option>)}
+              </NativeSelect>
+              <span className="text-sm text-slate-400 whitespace-nowrap">
+                <span className="font-medium text-slate-600">{subjects.length}</span>
+                {" "}of{" "}
+                <span className="font-medium text-slate-600">{totalElements}</span>
+                {" "}subjects
+              </span>
+            </div>
+            <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+          </div>
+        )}
+
+      </div>
+    </div >
+      </div >
+
+    { modal && (
+      <AddNewSubject
+        subject={modal.mode === "edit" ? modal.subject : null}
+        onClose={() => setModal(null)}
+        onSaved={handleSaved}
+      />
+    )
+}
+{
+  deleteTarget && (
+    <DeleteDialog
+      subject={deleteTarget}
+      onClose={() => setDeleteTarget(null)}
+      onConfirm={handleDeleted}
+    />
+  )
+}
     </>
   );
 }

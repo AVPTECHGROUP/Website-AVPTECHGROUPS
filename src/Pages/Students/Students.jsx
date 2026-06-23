@@ -11,9 +11,9 @@ import {
     UserPlus,
     Info,
     ChevronDown,
-    Upload, // Added upload icon for CSV export button
+    Upload,
 } from 'lucide-react';
-import { toast } from 'react-toastify'; // Added toast notification import
+import { toast } from 'react-toastify';
 import CardComponent from '../../Components/CommonComp/CardComponent';
 import { getStudents, searchStudents } from '../../Api/StudentsApi';
 import { getAllSections } from '../../Api/TeachersAPI';
@@ -255,7 +255,7 @@ const Student = () => {
         );
     };
 
-    // ── CSV EXPORT LOGIC FOR STUDENTS ───────────────────────────────────────────
+    // ── CSV EXPORT ──────────────────────────────────────────────────────────────
     const csvCell = (val) => {
         const str = val == null ? '' : String(val).trim();
         if (str.includes(',') || str.includes('"') || str.includes('\n')) {
@@ -269,17 +269,7 @@ const Student = () => {
             toast.info('No students on this page to export.');
             return;
         }
-
-        const HEADERS = [
-            'Student Name',
-            'Admission Number',
-            'Mobile Number',
-            'Email',
-            'Class',
-            'Section',
-            'Status'
-        ];
-
+        const HEADERS = ['Student Name', 'Admission Number', 'Mobile Number', 'Email', 'Class', 'Section', 'Status'];
         const dataRows = students.map((s) => [
             csvCell(s.name || 'Unknown'),
             csvCell(s.admissionNumber || 'N/A'),
@@ -289,24 +279,18 @@ const Student = () => {
             csvCell(s.sectionName || 'N/A'),
             csvCell(s.status || 'N/A'),
         ].join(','));
-
         const csvString = [HEADERS.join(','), ...dataRows].join('\n');
         const blob = new Blob(['\uFEFF' + csvString], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const anchor = document.createElement('a');
-
         const date = new Date().toISOString().slice(0, 10);
         anchor.href = url;
         anchor.download = `students_page${page}of${totalPages}_${rowsPerPage}rows_${date}.csv`;
-
         document.body.appendChild(anchor);
         anchor.click();
         document.body.removeChild(anchor);
         URL.revokeObjectURL(url);
-
-        toast.success(
-            `✓ Exported ${students.length} student${students.length !== 1 ? 's' : ''} — Page ${page} of ${totalPages}`
-        );
+        toast.success(`✓ Exported ${students.length} student${students.length !== 1 ? 's' : ''} — CSV ${page} of ${totalPages}`);
     };
 
     return (
@@ -350,11 +334,15 @@ const Student = () => {
                         ))}
                 </div>
 
-                {/* ── Toolbar: Add + Search + Filters ── */}
-                <div className="bg-white flex flex-col sm:flex-row flex-wrap items-center gap-2.5 px-3 py-2.5 rounded-xl border border-gray-200 shrink-0 w-full">
+                {/* ── Toolbar ──────────────────────────────────────────────────────────────
+                    mobile (<sm)      : sab ek ke niche ek
+                    tablet (sm–lg)    : search full width, dropdowns+buttons side-by-side row
+                    desktop (lg+)     : single row — search flex-1, rest shrink-0
+                ──────────────────────────────────────────────────────────────────────── */}
+                <div className="bg-white flex flex-col lg:flex-row lg:items-center gap-2 px-3 py-2.5 rounded-xl border border-gray-200 shrink-0 w-full">
 
-                    {/* Search Field */}
-                    <div className="flex-1 min-w-[200px] flex items-center gap-2 border border-gray-200 rounded-lg bg-gray-100 px-3 py-2.5 focus-within:ring-2 focus-within:ring-blue-200 transition-all w-full">
+                    {/* 1. Search — flex-1 on lg so it takes all leftover space */}
+                    <div className="w-full lg:flex-1 lg:min-w-0 flex items-center gap-2 border border-gray-200 rounded-lg bg-gray-100 px-3 py-2.5 focus-within:ring-2 focus-within:ring-blue-200 transition-all">
                         <SearchIcon className="w-4 h-4 text-gray-400 shrink-0" />
                         <input
                             value={searchInput}
@@ -375,59 +363,63 @@ const Student = () => {
                         )}
                     </div>
 
-                    {/* Class/Section Dropdown */}
-                    <div className="relative shrink-0 w-full sm:w-40">
-                        <select
-                            value={selectedSectionId}
-                            onChange={handleSectionChange}
-                            disabled={sectionsLoading}
-                            className={dropdownClass}
-                        >
-                            <option value="">All Classes</option>
-                            {groupedSections.map((grp) => (
-                                <optgroup key={grp.classId} label={grp.className}>
-                                    {grp.sections.map((sec) => (
-                                        <option key={sec.id} value={sec.id}>
-                                            {grp.className} – {sec.name}
-                                        </option>
-                                    ))}
-                                </optgroup>
-                            ))}
-                        </select>
-                        <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                    {/* 2. Dropdowns — side-by-side on all screens, shrink-0 on lg */}
+                    <div className="flex items-center gap-2 w-full lg:w-auto lg:shrink-0">
+                        {/* Class/Section Dropdown */}
+                        <div className="relative flex-1 lg:w-36">
+                            <select
+                                value={selectedSectionId}
+                                onChange={handleSectionChange}
+                                disabled={sectionsLoading}
+                                className={dropdownClass}
+                            >
+                                <option value="">All Classes</option>
+                                {groupedSections.map((grp) => (
+                                    <optgroup key={grp.classId} label={grp.className}>
+                                        {grp.sections.map((sec) => (
+                                            <option key={sec.id} value={sec.id}>
+                                                {grp.className} – {sec.name}
+                                            </option>
+                                        ))}
+                                    </optgroup>
+                                ))}
+                            </select>
+                            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                        </div>
+
+                        {/* Status Dropdown */}
+                        <div className="relative flex-1 lg:w-28">
+                            <select
+                                value={statusFilter}
+                                onChange={handleStatusChange}
+                                className={dropdownClass}
+                            >
+                                <option value="">All Status</option>
+                                <option value="ACTIVE">Active</option>
+                                <option value="INACTIVE">Inactive</option>
+                            </select>
+                            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                        </div>
                     </div>
 
-                    {/* Status Dropdown */}
-                    <div className="relative shrink-0 w-full sm:w-32">
-                        <select
-                            value={statusFilter}
-                            onChange={handleStatusChange}
-                            className={dropdownClass}
+                    {/* 3. Action Buttons — side-by-side on all screens, shrink-0 on lg */}
+                    <div className="flex items-center gap-2 w-full lg:w-auto lg:shrink-0">
+                        <button
+                            onClick={() => navigate('/students/addStudents')}
+                            className="flex-1 lg:flex-none flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg font-semibold text-xs bg-blue-600 hover:bg-blue-700 active:scale-[0.97] text-white transition-all whitespace-nowrap cursor-pointer"
                         >
-                            <option value="">All Status</option>
-                            <option value="ACTIVE">Active</option>
-                            <option value="INACTIVE">Inactive</option>
-                        </select>
-                        <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                            <UserPlus className="w-4 h-4" />
+                            Add Student
+                        </button>
+
+                        <button
+                            onClick={handleExportStudentsCSV}
+                            className="flex-1 lg:flex-none flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg font-semibold text-xs bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 active:scale-[0.97] transition-all whitespace-nowrap cursor-pointer"
+                        >
+                            <Upload className="w-4 h-4 text-gray-500" />
+                            Export CSV
+                        </button>
                     </div>
-
-                    {/* Add Student Button */}
-                    <button
-                        onClick={() => navigate('/students/addStudents')}
-                        className="shrink-0 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg font-semibold text-xs bg-blue-600 hover:bg-blue-700 active:scale-[0.97] text-white transition-all whitespace-nowrap w-full sm:w-auto cursor-pointer"
-                    >
-                        <UserPlus className="w-4 h-4" />
-                        Add Student
-                    </button>
-
-                    {/* Fixed Export CSV Button - Mapped directly to current pagination page values */}
-                    <button
-                        onClick={handleExportStudentsCSV}
-                        className="shrink-0 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg font-semibold text-xs bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 active:scale-[0.97] transition-all whitespace-nowrap w-full sm:w-auto cursor-pointer"
-                    >
-                        <Upload className="w-4 h-4 text-gray-500" />
-                        Export CSV
-                    </button>
                 </div>
 
                 {/* ── MOBILE / TABLET CARDS ── */}
@@ -618,7 +610,7 @@ const Student = () => {
                         </table>
                     </div>
 
-                    {/* Pagination Footer Area */}
+                    {/* Pagination Footer */}
                     <div className="shrink-0 px-4 py-2.5 border-t border-gray-100 bg-white flex flex-wrap items-center justify-between gap-2">
                         <div className="flex items-center gap-3">
                             <span className="text-xs text-gray-500">
