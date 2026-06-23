@@ -304,17 +304,6 @@ export default function LeaveDashboard() {
 
           {/* ═══════════════════════════════════════════════════════════════
               DESKTOP TABLE  (md and above → 768 px+)
-              
-              KEY FIXES for laptop / 1014 px:
-              ─────────────────────────────────
-              1. The WRAPPER has overflow-x: auto (not hidden) so that when
-                 the viewport is narrower than minWidth on the table the user
-                 gets a horizontal scrollbar instead of content being clipped.
-              2. The TABLE has minWidth: 700px so columns never get crushed.
-              3. tableLayout: fixed + <colgroup> gives every column a stable
-                 width and stops the Reason column from expanding infinitely.
-              4. The wrapper also caps height with overflow-y: auto for the
-                 vertical scroll when there are many rows.
           ═══════════════════════════════════════════════════════════════ */}
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
             {/* DESKTOP TABLE */}
@@ -342,7 +331,7 @@ export default function LeaveDashboard() {
                       {['Leave Type', 'Period', 'Duration', 'Reason', 'Status', 'Action'].map((h) => (
                         <th
                           key={h}
-                          className="px-4 lg:px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider"
+                          className="px-2 lg:px-3 py-2 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider"
                         >
                           {h}
                         </th>
@@ -374,13 +363,13 @@ export default function LeaveDashboard() {
                           <tr key={leaveReq.leaveId} className="hover:bg-slate-50 transition-colors">
 
                             {/* Leave Type */}
-                            <td className="px-4 py-4">
-                              <div className="flex items-center gap-3" style={{ minWidth: 0 }}>
-                                <div className="w-9 h-9 rounded-xl bg-violet-100 flex items-center justify-center shrink-0">
-                                  <Calendar className="w-4 h-4 text-violet-600" />
+                            <td className="px-2 py-2">
+                              <div className="flex items-center gap-1" style={{ minWidth: 0 }}>
+                                <div className="w-6 h-6 rounded-xl bg-violet-100 flex items-center justify-center shrink-0">
+                                  <Calendar className="w-3 h-3 text-violet-600" />
                                 </div>
                                 <p
-                                  className="text-sm font-semibold text-slate-800"
+                                  className="text-xs font-semibold text-slate-800"
                                   style={{ wordBreak: 'break-word', overflowWrap: 'anywhere', minWidth: 0 }}
                                 >
                                   {compareAndGetLabel(listOfLeaveType, leaveReq.leaveType)}
@@ -393,7 +382,7 @@ export default function LeaveDashboard() {
                               <div className="flex items-start gap-2" style={{ minWidth: 0 }}>
                                 <Clock3 className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
                                 <span
-                                  className="text-sm text-slate-700"
+                                  className="text-xs text-slate-700"
                                   style={{ wordBreak: 'break-word', overflowWrap: 'anywhere', minWidth: 0 }}
                                 >
                                   {formatDateRange(leaveReq.fromDate, leaveReq.toDate)}
@@ -402,18 +391,18 @@ export default function LeaveDashboard() {
                             </td>
 
                             {/* Duration */}
-                            <td className="px-4 py-4 whitespace-nowrap">
-                              <span className="text-sm font-semibold text-slate-800">
+                            <td className="px-2 py-2 whitespace-nowrap">
+                              <span className="text-xs font-semibold text-slate-800">
                                 {leaveReq.totalDays} {leaveReq.totalDays === 1 ? 'day' : 'days'}
                               </span>
                             </td>
 
                             {/* Reason */}
-                            <td className="px-4 lg:px-5 py-4">
+                            <td className="px-2 lg:px-3 py-2">
                               <div className="flex items-start gap-2" style={{ minWidth: 0 }}>
                                 <FileText className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" />
                                 <p
-                                  className="text-sm text-slate-600 leading-relaxed"
+                                  className="text-xs text-slate-600 leading-relaxed"
                                   title={leaveReq.reason}
                                   style={{
                                     flex: 1,
@@ -429,24 +418,26 @@ export default function LeaveDashboard() {
                             </td>
 
                             {/* Status */}
-                            <td className="px-4 py-4 whitespace-nowrap">
-                              <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${statusStyles[leaveReq.currLeavestatus]}`}>
-                                <StatusIcon className="w-3.5 h-3.5 shrink-0" />
+                            <td className="px-1 py-1 whitespace-nowrap">
+                              <span
+                                className={`inline-flex items-center gap-1 px-1 py-0.5 rounded-full text-[10px] font-xs ${statusStyles[leaveReq.currLeavestatus]}`}
+                              >
+                                <StatusIcon className="w-3 h-3 shrink-0" />
                                 {leaveReq.currLeavestatus}
                               </span>
                             </td>
 
                             {/* Action */}
-                            <td className="px-4 py-4 whitespace-nowrap">
-                              {leaveReq.currLeavestatus === 'PENDING' ? (
+                            <td className="px-2 py-2 whitespace-nowrap items-center">
+                              {leaveReq.currLeavestatus === "PENDING" ? (
                                 <button
                                   onClick={() => handleCancelLeave(leaveReq)}
-                                  className="px-3 py-1.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 text-xs font-semibold transition-colors"
+                                  className="px-2 py-0.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-700 text-[10px] font-medium transition-colors"
                                 >
                                   Cancel
                                 </button>
                               ) : (
-                                <span className="text-slate-400">—</span>
+                                <span className="text-slate-400 text-xs text-center"> - </span>
                               )}
                             </td>
                           </tr>
