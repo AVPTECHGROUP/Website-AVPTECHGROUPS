@@ -1,4 +1,4 @@
-function jwtDecode(token) {
+export function jwtDecode(token) {
   if (!token) return null;
   try {
     const parts = token.split('.');
