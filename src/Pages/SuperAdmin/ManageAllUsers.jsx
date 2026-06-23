@@ -329,16 +329,16 @@ const ManageAllUsers = () => {
 
                     {/* Filters */}
                     <div className="bg-white grid grid-cols-2 lg:grid-cols-5 gap-3 px-4 py-3 rounded-xl border border-gray-200 mb-4 mt-4">
-                        <button onClick={() => navigate('/manageUsers/adduser')}
-                            className="col-span-2 lg:col-span-1 px-4 py-2.5 w-full cursor-pointer rounded-lg font-medium flex items-center justify-center gap-2 transition-all bg-blue-600 text-white">
-                            <UserPlusIcon className="w-5 h-5" /> Add User
-                        </button>
                         <div className="col-span-2 flex items-center gap-2 border rounded-lg border-gray-200 bg-gray-100 px-2 py-1 focus-within:shadow-sm focus-within:shadow-blue-200">
                             <SearchIcon className="w-5 h-5 text-gray-500" />
                             <input value={search} onChange={(e) => { setsearch(e.target.value); setpage(1); }}
                                 placeholder="Search by name, email or ID.."
                                 className="text-base sm:text-sm font-normal focus:outline-none appearance-none text-gray-600 w-full bg-transparent" />
                         </div>
+                        <button onClick={() => navigate('/manageUsers/adduser')}
+                            className="col-span-2 lg:col-span-1 px-4 py-2.5 w-full cursor-pointer rounded-lg font-medium flex items-center justify-center gap-2 transition-all bg-blue-600 text-white">
+                            <UserPlusIcon className="w-5 h-5" /> Add User
+                        </button>
                         <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setpage(1); }}
                             className="col-span-1 px-4 py-2 border cursor-pointer border-gray-200 bg-gray-100 rounded-lg focus:outline-none focus:shadow-sm focus:shadow-blue-200 text-sm">
                             <option value="All Status">All Status</option>

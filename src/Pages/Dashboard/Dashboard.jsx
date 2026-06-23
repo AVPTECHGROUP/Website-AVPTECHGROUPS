@@ -39,24 +39,24 @@ const getDaysAway = (dateStr) => {
 const holidayTypeStyle = (type, isOptional) => {
   if (isOptional) return { label: "Optional", color: "bg-gray-100 text-gray-600" };
   switch (type) {
-    case "NATIONAL":  return { label: "National",  color: "bg-orange-100 text-orange-600" };
+    case "NATIONAL": return { label: "National", color: "bg-orange-100 text-orange-600" };
     case "RELIGIOUS": return { label: "Religious", color: "bg-purple-100 text-purple-600" };
-    default:          return { label: type,        color: "bg-blue-100 text-blue-600" };
+    default: return { label: type, color: "bg-blue-100 text-blue-600" };
   }
 };
 
 // ─── Accent colour map ────────────────────────────────────────────────────────
 const ACCENT = {
-  blue:   { hex: "#3B82F6", rgb: "59,130,246" },
-  green:  { hex: "#22C55E", rgb: "34,197,94"  },
+  blue: { hex: "#3B82F6", rgb: "59,130,246" },
+  green: { hex: "#22C55E", rgb: "34,197,94" },
   purple: { hex: "#A855F7", rgb: "168,85,247" },
 };
 
 // ─── Compact People Stat Card ─────────────────────────────────────────────────
 // FIX: all content constrained inside card, no overflow on any screen width
 function PeopleStatCard({ label, val, active, inactive, inactivePercent, accent: accentKey, iconColor, bgColor, icon: Icon }) {
-  const ac        = ACCENT[accentKey] || ACCENT.blue;
-  const fillPct   = val > 0 ? (active / val) * 100 : 0;
+  const ac = ACCENT[accentKey] || ACCENT.blue;
+  const fillPct = val > 0 ? (active / val) * 100 : 0;
   const activePct = val > 0 ? Math.round((active / val) * 100) : 0;
 
   return (
@@ -128,14 +128,14 @@ function PeopleStatCard({ label, val, active, inactive, inactivePercent, accent:
 
 // ─── Quick actions config ─────────────────────────────────────────────────────
 const quickActions = [
-  { label: "Review Attendance", sub: "pending",           icon: Eye,           bg: "bg-orange-50", iconColor: "text-orange-500",  key: "pendingAttendanceApprovals", route: "/attendance/usersAttendance" },
-  { label: "Approve Leaves",    sub: "pending",           icon: CheckSquare,   bg: "bg-green-50",  iconColor: "text-green-600",   key: "pendingLeaveRequests",       route: "/leaves" },
-  { label: "Add New User",      sub: "New Staff",         icon: UserPlus,      bg: "bg-blue-50",   iconColor: "text-blue-600",    key: null,                         route: "/manageUsers/adduser" },
-  { label: "Add New Teacher",   sub: "New Teacher",       icon: UserPlus,      bg: "bg-blue-50",   iconColor: "text-blue-600",    key: null,                         route: "/teachers/addTeacher" },
-  { label: "Admit Student",     sub: "New registration",  icon: GraduationCap, bg: "bg-purple-50", iconColor: "text-purple-600",  key: null,                         route: "/students/addStudents" },
-  { label: "Manage Stock",      sub: "Inventory",         icon: Package,       bg: "bg-yellow-50", iconColor: "text-yellow-600",  key: null,                         route: "/stock" },
-  { label: "Transport",         sub: "Allocate / Manage", icon: Bus,           bg: "bg-cyan-50",   iconColor: "text-cyan-600",    key: null,                         route: "/route" },
-  { label: "Reports",           sub: "Attendance / Leave",icon: FileBarChart,  bg: "bg-indigo-50", iconColor: "text-indigo-600",  key: null,                         route: "/attendance" },
+  { label: "Review Attendance", sub: "pending", icon: Eye, bg: "bg-orange-50", iconColor: "text-orange-500", key: "pendingAttendanceApprovals", route: "/attendance/usersAttendance" },
+  { label: "Approve Leaves", sub: "pending", icon: CheckSquare, bg: "bg-green-50", iconColor: "text-green-600", key: "pendingLeaveRequests", route: "/leaves" },
+  { label: "Add New User", sub: "New Staff", icon: UserPlus, bg: "bg-blue-50", iconColor: "text-blue-600", key: null, route: "/manageUsers/adduser" },
+  { label: "Add New Teacher", sub: "New Teacher", icon: UserPlus, bg: "bg-blue-50", iconColor: "text-blue-600", key: null, route: "/teachers/addTeacher" },
+  { label: "Admit Student", sub: "New registration", icon: GraduationCap, bg: "bg-purple-50", iconColor: "text-purple-600", key: null, route: "/students/addStudents" },
+  { label: "Manage Stock", sub: "Inventory", icon: Package, bg: "bg-yellow-50", iconColor: "text-yellow-600", key: null, route: "/stock" },
+  { label: "Transport", sub: "Allocate / Manage", icon: Bus, bg: "bg-cyan-50", iconColor: "text-cyan-600", key: null, route: "/route" },
+  { label: "Reports", sub: "Attendance / Leave", icon: FileBarChart, bg: "bg-indigo-50", iconColor: "text-indigo-600", key: null, route: "/attendance" },
 ];
 
 const doughnutOptions = {
@@ -146,11 +146,11 @@ const doughnutOptions = {
 
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 export default function Dashboard() {
-  const [stats,      setStats]      = useState(null);
-  const [holidays,   setHolidays]   = useState([]);
-  const [loading,    setLoading]    = useState(true);
-  const [error,      setError]      = useState(null);
-  const [userName,   setUserName]   = useState("");
+  const [stats, setStats] = useState(null);
+  const [holidays, setHolidays] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [userName, setUserName] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
 
   const navigate = useNavigate();
@@ -168,7 +168,7 @@ export default function Dashboard() {
     let cancelled = false;
     setLoading(true);
     setError(null);
-    Promise.all([getDashboardAnalytics(), getUpcomingHolidays(5)])
+    Promise.all([getDashboardAnalytics(), getUpcomingHolidays(4)])
       .then(([statsData, holidaysData]) => {
         if (cancelled) return;
         setStats(statsData);
@@ -211,12 +211,12 @@ export default function Dashboard() {
     },
   ] : [];
 
-  const attendanceTotalRecords = stats?.attendanceTotalRecords    || 0;
-  const attendancePresent      = stats?.attendancePresent         || 0;
-  const attendanceLate         = stats?.attendanceLate            || 0;
-  const attendanceAbsent       = stats?.attendanceAbsent          || 0;
-  const attendanceOnLeave      = stats?.attendanceOnLeave         || 0;
-  const attendancePending      = stats?.attendancePendingApproval || 0;
+  const attendanceTotalRecords = stats?.attendanceTotalRecords || 0;
+  const attendancePresent = stats?.attendancePresent || 0;
+  const attendanceLate = stats?.attendanceLate || 0;
+  const attendanceAbsent = stats?.attendanceAbsent || 0;
+  const attendanceOnLeave = stats?.attendanceOnLeave || 0;
+  const attendancePending = stats?.attendancePendingApproval || 0;
   const presentPct = attendanceTotalRecords > 0
     ? Math.round((attendancePresent / attendanceTotalRecords) * 100) : 0;
 
@@ -233,10 +233,10 @@ export default function Dashboard() {
   };
 
   const attendanceRows = [
-    { label: "Present",        val: attendancePresent, hex: "#22C55E" },
-    { label: "Late",           val: attendanceLate,    hex: "#FACC15" },
-    { label: "Absent",         val: attendanceAbsent,  hex: "#EF4444" },
-    { label: "On Leave",       val: attendanceOnLeave, hex: "#94A3B8" },
+    { label: "Present", val: attendancePresent, hex: "#22C55E" },
+    { label: "Late", val: attendanceLate, hex: "#FACC15" },
+    { label: "Absent", val: attendanceAbsent, hex: "#EF4444" },
+    { label: "On Leave", val: attendanceOnLeave, hex: "#94A3B8" },
     { label: "Pending Review", val: attendancePending, hex: "#FB923C" },
   ].map((r) => ({
     ...r,
@@ -245,23 +245,23 @@ export default function Dashboard() {
       : "0%",
   }));
 
-  const nextHoliday          = holidays[0] ?? null;
-  const nextHolidayName      = nextHoliday?.name        || stats?.nextHolidayName || "—";
-  const nextHolidayDate      = nextHoliday?.holidayDate || stats?.nextHolidayDate;
-  const nextHolidayDays      = nextHolidayDate ? getDaysAway(nextHolidayDate) : stats?.daysUntilNextHoliday;
+  const nextHoliday = holidays[0] ?? null;
+  const nextHolidayName = nextHoliday?.name || stats?.nextHolidayName || "—";
+  const nextHolidayDate = nextHoliday?.holidayDate || stats?.nextHolidayDate;
+  const nextHolidayDays = nextHolidayDate ? getDaysAway(nextHolidayDate) : stats?.daysUntilNextHoliday;
   const nextHolidayFormatted = nextHolidayDate ? formatHolidayDate(nextHolidayDate) : null;
-  const nextHolidayTypeRaw   = nextHoliday?.holidayType || stats?.nextHolidayType || "NATIONAL";
+  const nextHolidayTypeRaw = nextHoliday?.holidayType || stats?.nextHolidayType || "NATIONAL";
 
   const pendingActionsCards = stats ? [
     {
-      id: 1, label: "Pending Leave Requests",     val: stats.pendingLeaveRequests || 0,
-      sub: "Awaiting approval",                   badge: "Needs Action",
+      id: 1, label: "Pending Leave Requests", val: stats.pendingLeaveRequests || 0,
+      sub: "Awaiting approval", badge: "Needs Action",
       badgeColor: "text-orange-600", bg: "bg-orange-50", border: "border-orange-200",
       route: "/leaves",
     },
     {
-      id: 2, label: "Attendance Manual Reviews",  val: stats.pendingAttendanceApprovals || 0,
-      sub: "Face confidence below threshold",     badge: "Review Now",
+      id: 2, label: "Attendance Manual Reviews", val: stats.pendingAttendanceApprovals || 0,
+      sub: "Face confidence below threshold", badge: "Review Now",
       badgeColor: "text-red-600", bg: "bg-red-50", border: "border-red-200",
       route: "/attendance/usersAttendance",
     },
@@ -282,7 +282,7 @@ export default function Dashboard() {
           <div className="flex items-center gap-3 min-w-0">
             <div className="min-w-0">
               <p className="text-[12px] font-bold text-blue-500 uppercase tracking-[0.12em]">
-                {getGreeting()} 
+                {getGreeting()}
               </p>
               <h1 className="text-xl sm:text-4xl font-bold text-gray-900 ">
                 {userName || "Admin"}
@@ -385,7 +385,7 @@ export default function Dashboard() {
                     Next Holiday
                   </p>
                   {/* Name on its own line, date+days below — no single long truncated string */}
-                  <p className="text-sm font-black text-white truncate leading-tight">
+                  <p className="text-sm font-bold text-white truncate leading-tight">
                     {nextHolidayName}
                   </p>
                   {(nextHolidayFormatted || nextHolidayDays != null) && (
@@ -500,12 +500,12 @@ export default function Dashboard() {
               {/* Summary pills — wraps naturally on small screens */}
               <div className="px-4 pb-4 flex flex-wrap gap-1.5">
                 {[
-                  { label: "Total",    val: attendanceTotalRecords, hex: "#64748B" },
-                  { label: "Present",  val: attendancePresent,      hex: "#22C55E" },
-                  { label: "Late",     val: attendanceLate,         hex: "#F59E0B" },
-                  { label: "Absent",   val: attendanceAbsent,       hex: "#EF4444" },
-                  { label: "On Leave", val: attendanceOnLeave,      hex: "#94A3B8" },
-                  { label: "Pending",  val: attendancePending,      hex: "#F97316" },
+                  { label: "Total", val: attendanceTotalRecords, hex: "#64748B" },
+                  { label: "Present", val: attendancePresent, hex: "#22C55E" },
+                  { label: "Late", val: attendanceLate, hex: "#F59E0B" },
+                  { label: "Absent", val: attendanceAbsent, hex: "#EF4444" },
+                  { label: "On Leave", val: attendanceOnLeave, hex: "#94A3B8" },
+                  { label: "Pending", val: attendancePending, hex: "#F97316" },
                 ].map((s) => (
                   <div
                     key={s.label}
@@ -589,7 +589,7 @@ export default function Dashboard() {
           </div>
 
           {/* ── RIGHT COL ── */}
-          <div className="space-y-4">
+          <div className="space-y-2">
 
             {/* Holiday Hero */}
             {loading ? (
@@ -630,10 +630,9 @@ export default function Dashboard() {
                       🗓 {nextHolidayDays ?? "—"} day{nextHolidayDays !== 1 ? "s" : ""} away
                     </span>
                     <span
-                      className={`text-xs font-black px-2.5 py-1.5 rounded-xl bg-white whitespace-nowrap ${
-                        nextHolidayTypeRaw === "NATIONAL"  ? "text-orange-600" :
-                        nextHolidayTypeRaw === "RELIGIOUS" ? "text-purple-600" : "text-blue-600"
-                      }`}
+                      className={`text-xs font-black px-2.5 py-1.5 rounded-xl bg-white whitespace-nowrap ${nextHolidayTypeRaw === "NATIONAL" ? "text-orange-600" :
+                          nextHolidayTypeRaw === "RELIGIOUS" ? "text-purple-600" : "text-blue-600"
+                        }`}
                     >
                       {nextHolidayTypeRaw}
                     </span>
@@ -675,7 +674,7 @@ export default function Dashboard() {
                     </div>
                   ))
                   : holidays.map((h) => {
-                    const fmt      = formatHolidayDate(h.holidayDate);
+                    const fmt = formatHolidayDate(h.holidayDate);
                     const daysAway = getDaysAway(h.holidayDate);
                     const typeInfo = holidayTypeStyle(h.holidayType, h.isOptional);
                     return (
@@ -719,8 +718,8 @@ export default function Dashboard() {
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden w-full">
           <div className="px-4 py-3 border-b border-gray-100">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 bg-blue-50 rounded-xl flex items-center justify-center shrink-0">
-                <Zap className="w-4 h-4 text-blue-600" />
+              <div className="w-8 h-8 bg-sky-50 rounded-xl flex items-center justify-center shrink-0">
+                <Zap className="w-4 h-4 text-sky-500" />
               </div>
               <div>
                 <h2 className="font-bold text-gray-900 text-sm">Quick Actions</h2>
@@ -729,35 +728,35 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/*
-            Mobile  (<640px) : 4 columns so all 8 items fit in 2 rows with decent size
-            Tablet  (≥640px) : 4 cols
-            Desktop (≥1024px): 8 cols
-          */}
-          <div className="grid grid-cols-4 sm:grid-cols-4 lg:grid-cols-8 gap-2 p-3 sm:p-4">
+          {/* FIX IMPLEMENTED: 
+    - Mobile par grid-cols-2 kiya taaki text ko puri width mile.
+    - Tablets par grid-cols-4 aur Desktop screens par grid-cols-8 banega.
+  */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2.5 p-3 sm:p-4">
             {quickActions.map((qa) => {
-              const dynamicSub =
-                qa.key && stats ? `${stats[qa.key] || 0} pending` : qa.sub;
-              const subColor =
-                qa.key && stats && stats[qa.key] > 0 ? "text-red-500" : "text-gray-400";
+              const dynamicSub = qa.key && stats ? `${stats[qa.key] || 0} pending` : qa.sub;
+              const subColor = qa.key && stats && stats[qa.key] > 0 ? "text-red-500" : "text-gray-400";
 
               return (
                 <button
                   key={qa.label}
                   onClick={() => qa.route && navigate(qa.route)}
-                  className="flex flex-col items-center gap-1.5 bg-slate-50 hover:bg-blue-50 border
-                             border-gray-100 hover:border-blue-200 rounded-xl p-2 sm:p-3 transition-all
-                             group hover:-translate-y-0.5 hover:shadow-sm cursor-pointer w-full min-w-0"
+                  className="flex flex-col items-center gap-1.5 bg-slate-50 hover:bg-sky-50 border
+                     border-gray-100 hover:border-sky-200 rounded-xl p-3 transition-all
+                     group hover:-translate-y-0.5 hover:shadow-sm cursor-pointer w-full min-w-0"
                 >
-                  <div
-                    className={`w-9 h-9 sm:w-10 sm:h-10 ${qa.bg} rounded-xl flex items-center
-                                justify-center shrink-0 transition-transform duration-200 group-hover:scale-110`}
-                  >
+                  <div className={`w-9 h-9 sm:w-10 sm:h-10 ${qa.bg} rounded-xl flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-110`}>
                     <qa.icon className={`w-4 h-4 sm:w-5 sm:h-5 ${qa.iconColor}`} />
                   </div>
-                  <p className="text-[10px] sm:text-xs font-bold text-gray-700 text-center leading-tight w-full truncate">
+
+                  {/* FIX IMPLEMENTED: 
+            - 'truncate' ko hatakar 'whitespace-normal' aur 'line-clamp-2' use kiya hai.
+            - Isse text agar bada hoga toh break hokar next line me aa jayega, par '...' se katega nahi.
+          */}
+                  <p className="text-[11px] sm:text-xs font-bold text-gray-700 text-center leading-tight w-full whitespace-normal line-clamp-2 min-h-[28px] flex items-center justify-center">
                     {qa.label}
                   </p>
+
                   <p className={`text-[10px] ${subColor} text-center leading-tight font-medium hidden sm:block`}>
                     {dynamicSub}
                   </p>
