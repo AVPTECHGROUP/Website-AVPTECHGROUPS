@@ -18,9 +18,8 @@ import ListLoader from '../../CommonComp/ListLoader';
 
 const TeachersTable = ({
   // ── NEW: selection props ─────────────────────────────────────────────────
-  selectedTeacherId, // id of the currently selected row (null if none)
-  onRowSelect,       // (teacher) => void — called when checkbox / row is clicked
-  // ── existing props ───────────────────────────────────────────────────────
+  selectedTeacherId,
+  onRowSelect,
   assignTeacherId,
   teachers,
   setTeachers,
@@ -145,8 +144,8 @@ const TeachersTable = ({
             ${isSelected
               ? 'bg-blue-600 border-blue-600'
               : isVisible
-              ? 'border-gray-400 bg-white hover:border-blue-400'
-              : 'border-transparent bg-transparent'
+                ? 'border-gray-400 bg-white hover:border-blue-400'
+                : 'border-transparent bg-transparent'
             }`}
         >
           {isSelected && (
@@ -215,18 +214,21 @@ const TeachersTable = ({
                       </div>
                     )}
                     {resolveTeacherImage(teacher) ? (
-                      <img 
-                        src={resolveTeacherImage(teacher)} 
+                      <img
+                        src={resolveTeacherImage(teacher)}
                         alt={resolveTeacherName(teacher)}
-                        className="w-9 h-9 rounded-full object-cover shrink-0"
-                        onError={(e) => {
-                          e.target.style.display = 'none';
-                          e.target.nextElementSibling.style.display = 'flex';
-                        }}
+                        className="
+        w-10
+        h-10
+        rounded-full
+        object-cover
+        shrink-0
+        overflow-hidden
+    "
                       />
                     ) : null}
                     <div className={`w-9 h-9 rounded-full ${getAvatarColor(resolveTeacherName(teacher))} flex items-center justify-center text-white text-sm font-semibold shrink-0 ${resolveTeacherImage(teacher) ? 'hidden' : ''}`}
-                         style={resolveTeacherImage(teacher) ? { display: 'none' } : {}}>
+                      style={resolveTeacherImage(teacher) ? { display: 'none' } : {}}>
                       {resolveTeacherAvatar(teacher)}
                     </div>
                     {/* <div className={`w-12 h-12 rounded-full ${getAvatarColor(teacher.name)} flex items-center justify-center text-white font-semibold`}>
@@ -368,19 +370,38 @@ const TeachersTable = ({
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-3 border border-transparent hover:border-gray-300 rounded transition-colors cursor-pointer">
                           {resolveTeacherImage(teacher) ? (
-                            <img 
-                              src={resolveTeacherImage(teacher)} 
+                            <img
+                              src={resolveTeacherImage(teacher)}
                               alt={resolveTeacherName(teacher)}
-                              fit="cover"
-                              className="w-10 h-10 rounded-full object-cover"
-                              onError={(e) => {
-                                e.target.style.display = 'none';
-                                e.target.nextElementSibling.style.display = 'flex';
-                              }}
+                              className="
+            w-10
+            h-10
+            rounded-full
+            object-cover
+            shrink-0
+        "
                             />
-                          ) : null}
+                          ) : (
+                            <div
+                              className={`
+            w-10
+            h-10
+            rounded-full
+            ${getAvatarColor(resolveTeacherName(teacher))}
+            flex
+            items-center
+            justify-center
+            text-white
+            text-sm
+            font-semibold
+            shrink-0
+        `}
+                            >
+                              {resolveTeacherAvatar(teacher)}
+                            </div>
+                          )}
                           <div className={`w-10 h-10 rounded-full ${getAvatarColor(resolveTeacherName(teacher))} flex items-center justify-center text-white text-sm font-semibold shrink-0 ${resolveTeacherImage(teacher) ? 'hidden' : ''}`}
-                               style={resolveTeacherImage(teacher) ? { display: 'none' } : {}}>
+                            style={resolveTeacherImage(teacher) ? { display: 'none' } : {}}>
                             {resolveTeacherAvatar(teacher)}
                           </div>
                           <div>

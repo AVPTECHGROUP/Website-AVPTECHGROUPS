@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
     Calendar, Plus, Eye, Pencil, Trash2, Send,
-    Search, ChevronDown, Settings2, BookOpen, Clock, UserSearch,RefreshCw
+    Search, ChevronDown, Settings2, BookOpen, Clock, UserSearch, RefreshCw
 } from 'lucide-react';
 import CardComponent from '../../Components/CommonComp/CardComponent';
 import CardLoader from '../../Components/CommonComp/CardLoader';
@@ -239,87 +239,74 @@ export default function TimeTable() {
                     </div>
                 </div>
 
-               {/* Filters */}
-<div className="p-4 border-b border-gray-100">
-  <div className="flex flex-col lg:flex-row gap-3">
+                {/* Filters */}
+                <div className="p-4 border-b border-gray-100">
+                    <div className="flex flex-col md:flex-row items-center gap-3">
 
-    {/* Search */}
-    <div className="relative flex-1">
-      <Search
-        size={16}
-        className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-      />
-      <input
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        placeholder="Search class..."
-        className="w-full h-11 pl-10 pr-4 border border-gray-300 rounded-lg text-sm
+                        {/* Search */}
+                        <div className="relative flex-1 w-full">
+                            <Search
+                                size={16}
+                                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                            />
+                            <input
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                placeholder="Search class..."
+                                className="w-full h-11 pl-10 pr-4 border border-gray-300 rounded-lg text-sm
         focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400"
-      />
-    </div>
+                            />
+                        </div>
 
-    {/* Status Filter */}
-    <div className="relative min-w-[220px]">
-      <select
-        value={statusFilter}
-        onChange={(e) => setStatusFilter(e.target.value)}
-        className="w-full h-11 appearance-none bg-white border border-gray-300
-        rounded-lg pl-4 pr-10 text-sm text-gray-700
+                        {/* Status Filter */}
+                        <div className="relative w-full md:w-auto md:min-w-[180px]">
+                            <select
+                                value={statusFilter}
+                                onChange={(e) => setStatusFilter(e.target.value)}
+                                className="w-full h-11 appearance-none bg-white border border-gray-300
+        rounded-lg pl-4 pr-10 text-sm text-gray-700 cursor-pointer
         focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400"
-      >
-        <option>All Status</option>
-        <option>Draft</option>
-        <option>Published</option>
-      </select>
+                            >
+                                <option>All Status</option>
+                                <option>Draft</option>
+                                <option>Published</option>
+                            </select>
 
-      <ChevronDown
-        size={16}
-        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-      />
-    </div>
+                            <ChevronDown
+                                size={16}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                            />
+                        </div>
 
-    {/* Class Filter */}
-    <div className="relative min-w-[220px]">
-      <select
-        value={classFilter}
-        onChange={(e) => setClassFilter(e.target.value)}
-        className="w-full h-11 appearance-none bg-white border border-gray-300
-        rounded-lg pl-4 pr-10 text-sm text-gray-700
+                        {/* Class Filter */}
+                        <div className="relative w-full md:w-auto md:min-w-[180px]">
+                            <select
+                                value={classFilter}
+                                onChange={(e) => setClassFilter(e.target.value)}
+                                className="w-full h-11 appearance-none bg-white border border-gray-300
+        rounded-lg pl-4 pr-10 text-sm text-gray-700 cursor-pointer
         focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400"
-      >
-        <option>All Class</option>
-        {uniqueClasses.map((cls) => (
-          <option key={cls}>{cls}</option>
-        ))}
-      </select>
+                            >
+                                <option>All Class</option>
+                                {uniqueClasses.map((cls) => (
+                                    <option key={cls}>{cls}</option>
+                                ))}
+                            </select>
 
-      <ChevronDown
-        size={16}
-        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-      />
-    </div>
-
-    {/* Refresh */}
-    <button
-      onClick={() => loadTimetables(yearFilter?.id || null)}
-      className="h-11 px-5 flex items-center justify-center gap-2
-      border border-gray-300 rounded-lg bg-white
-      text-sm font-medium text-gray-700
-      hover:bg-gray-50 transition whitespace-nowrap"
-    >
-      <RefreshCw size={16} />
-      Refresh
-    </button>
-
-  </div>
-</div>
+                            <ChevronDown
+                                size={16}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                            />
+                        </div>
+                    </div>
+                </div>
 
                 {/* Table Desktop */}
                 <div className="hidden md:block overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead>
                             <tr className="bg-gray-50 border-b border-gray-100">
-                                {['CLASS', 'SECTION',  'STATUS', 'LAST UPDATED', 'ACTIONS'].map(h => (
+                                {['CLASS', 'SECTION', 'STATUS', 'LAST UPDATED', 'ACTIONS'].map(h => (
                                     <th key={h} className="text-left px-5 py-3 text-xs font-semibold text-gray-500 tracking-wider">{h}</th>
                                 ))}
                             </tr>
@@ -338,7 +325,7 @@ export default function TimeTable() {
                                 <tr key={tt.id} className="hover:bg-gray-50/60 transition">
                                     <td className="px-5 py-4 font-medium text-gray-900">{tt.class}</td>
                                     <td className="px-5 py-4 text-gray-600">{tt.section}</td>
-                                    
+
                                     <td className="px-5 py-4"><StatusBadge status={tt.status} /></td>
                                     <td className="px-5 py-4 text-gray-500">{tt.lastUpdated}</td>
                                     <td className="px-5 py-4">

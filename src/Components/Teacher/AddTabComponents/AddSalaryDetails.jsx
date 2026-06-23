@@ -239,7 +239,6 @@ const AddSalaryDetails = ({ formData, setFormData, handleInputChange, errors = {
                                     </span>
                                 </div>
                                 <ErrorText msg={errors?.baseSalary} />
-                                <p className="text-xs text-gray-500 mt-1.5">Calculated based on a 22-day working month</p>
                             </div>
                         </div>
                     </div>

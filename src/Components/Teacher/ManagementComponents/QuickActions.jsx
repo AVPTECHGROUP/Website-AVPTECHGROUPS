@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { UserPlusIcon, Plus, KeyIcon } from 'lucide-react';
+import { UserPlusIcon, Plus, KeyIcon,Upload } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuth';
 import { PERMISSIONS as P } from '../../../Constants/Permission';
 
-const QuickActions = ({ teacherId, onResetPassword }) => {
+const QuickActions = ({ teacherId, onResetPassword, onExportCSV }) => {
   const navigate = useNavigate();
   const [disablebtn, setDisablebtn] = useState(null);
   const { hasPermission } = useAuth();
@@ -23,16 +23,14 @@ const QuickActions = ({ teacherId, onResetPassword }) => {
 
       <div className="flex flex-col sm:flex-row items-center ml-10 lg:ml-0 sm:ml-0 md:ml-0 justify-center sm:items-center gap-3 sm:gap-5 lg:w-fit sm:w-fit w-60">
 
-        {/* Add Teacher — requires TEACHER_CREATE */}
-        {hasPermission(P.TEACHER_CREATE) && (
-          <button
-            onClick={() => navigate('/teachers/addTeacher')}
-            className="px-4 sm:px-5 py-2.5 w-full sm:w-fit rounded-lg font-medium flex items-center justify-center gap-2 transition-all bg-blue-600 text-white hover:bg-blue-700 cursor-pointer"
-          >
-            <UserPlusIcon className="w-5 h-5" />
-            <span className="text-sm sm:text-base">Add Teacher</span>
-          </button>
-        )}
+        {/* Add Teacher*/}
+        <button
+          onClick={() => navigate('/teachers/addTeacher')}
+          className="px-4 sm:px-5 py-2.5 w-full sm:w-fit rounded-lg font-medium flex items-center justify-center gap-2 transition-all bg-blue-600 text-white hover:bg-blue-700 cursor-pointer"
+        >
+          <UserPlusIcon className="w-5 h-5" />
+          <span className="text-sm md:text-sm sm:text-base">Add Teacher</span>
+        </button>
 
         {/* Assign Subjects — requires TEACHER_EDIT */}
         {hasPermission(P.TEACHER_EDIT) && (
@@ -68,6 +66,14 @@ const QuickActions = ({ teacherId, onResetPassword }) => {
           </button>
         )}
 
+        {/* Export CSV Button (FIXED: Triggers current active page sync export handler) */}
+        <button
+          onClick={onExportCSV}
+          className="px-4 sm:px-5 py-2.5 w-full sm:w-fit rounded-lg font-semibold flex items-center justify-center gap-2 transition-all bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 cursor-pointer active:scale-95 shadow-2xs"
+        >
+          <Upload className="w-5 h-5 text-gray-500" />
+          <span className="text-sm sm:text-base">Export CSV</span>
+        </button>
       </div>
     </div>
   );

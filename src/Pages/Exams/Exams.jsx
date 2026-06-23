@@ -326,12 +326,19 @@ function EventItem({ event, expanded, onToggle, sectionsCache, onLoadSections, o
                             <div className={`h-full ${meta.bar}`} style={{ width: `${pct}%` }} />
                         </div>
                     </div>
+<<<<<<< HEAD
                     {hasPermission(P.EXAM_EDIT) && (
                       <ActionBtn Icon={Edit2} label="Edit" tone="neutral" compact onClick={() => onEdit(event)} />
                     )}
                     {hasPermission(P.EXAM_CREATE) && (
                       <ActionBtn Icon={Copy} label="Copy" tone="neutral" compact onClick={() => onCopy(event)} />
                     )}
+=======
+                    <div className="cursor-pointer flex">
+                    <ActionBtn Icon={Edit2}  label="Edit" tone="neutral" compact onClick={() => onEdit(event)} />
+                    <ActionBtn Icon={Copy}  label="Copy" tone="neutral" compact onClick={() => onCopy(event)} />
+                    </div>
+>>>>>>> 919065858fd7047c4899a54ec584e1739bb922f3
                 </div>
             </div>
 
@@ -678,25 +685,84 @@ export default function ExamEvents() {
 
     // Fetch Events list data matching filters
     const fetchEvents = useCallback(async () => {
-        setLoadingEvents(true); setErrorEvents(null);
+        setLoadingEvents(true);
+        setErrorEvents(null);
+
         try {
+
             const f = {};
-            if (yearId) f.academicYearId = yearId;
-            if (typeId) f.examTypeId = typeId;
-            if (status) f.status = status;
 
-            let list = await getExamEvents(f);
-            list = Array.isArray(list) ? list : [];
-
-            if (classId) {
-                list = list
-                    .map(ev => ({ ...ev, exams: (ev.exams || []).filter(e => String(e.schoolClassId) === String(classId)) }))
-                    .filter(ev => ev.exams.length > 0);
+            if (yearId) {
+                f.academicYearId = yearId;
             }
 
+            // REMOVE status and examType from API params
+            // frontend will handle these
+
+
+            let list = await getExamEvents(f);
+
+            list = Array.isArray(list) ? list : [];
+
+
+            // Exam Type Filter
+            if (typeId) {
+
+                list = list.filter(ev =>
+                    String(ev.examTypeId) === String(typeId)
+                );
+
+            }
+
+
+            // Class Filter
+            if (classId) {
+
+                list = list
+                    .map(ev => ({
+                        ...ev,
+                        exams: (ev.exams || []).filter(
+                            e => String(e.schoolClassId) === String(classId)
+                        )
+                    }))
+                    .filter(ev => ev.exams.length > 0);
+
+            }
+
+
+
+            // Status Filter
+            if (status) {
+
+                list = list.filter(ev => {
+
+                    const currentStatus = eventStatus(ev);
+
+                    return currentStatus === status;
+
+                });
+
+            }
+
+
             setEvents(list);
-        } catch { setErrorEvents("Failed to load exam events."); setEvents([]); }
-        finally { setLoadingEvents(false); }
+
+
+        } catch (err) {
+
+            console.log(err);
+
+            setErrorEvents("Failed to load exam events.");
+            setEvents([]);
+
+        }
+        finally {
+
+            setLoadingEvents(false);
+
+        }
+
+
     }, [yearId, typeId, status, classId]);
 
     useEffect(() => { if (!loadingMeta) fetchEvents(); }, [fetchEvents, loadingMeta]);
@@ -834,7 +900,7 @@ export default function ExamEvents() {
     return (
         <div className="min-h-screen bg-[#f3f6fb] overflow-x-hidden">
             <div className="p-2 md:p-3 lg:p-4 xl:p-6 space-y-2 md:space-y-3 lg:space-y-4 max-w-[1700px] mx-auto">
-                
+
                 {/* ── PAGE HEADER ─────────────────────────────────── */}
                 <div className="flex items-center justify-between">
                     <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">
@@ -891,11 +957,12 @@ export default function ExamEvents() {
                         <button
                             onClick={handleExportSchedule}
                             disabled={loadingEvents || events.length === 0}
-                            className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-white border border-gray-200 text-gray-700 text-xs sm:text-sm font-semibold rounded-lg transition-all hover:bg-gray-50 active:scale-95 disabled:opacity-50 whitespace-nowrap"
+                            className="flex items-center cursor-pointer justify-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-white border border-gray-200 text-gray-700 text-xs sm:text-sm font-semibold rounded-lg transition-all hover:bg-gray-50 active:scale-95 disabled:opacity-50 whitespace-nowrap"
                         >
                             <Download className="w-4 h-4 shrink-0" /> <span className="hidden sm:inline">Export Schedule</span><span className="sm:hidden">Export</span>
                         </button>
 
+<<<<<<< HEAD
                         {hasPermission(P.EXAM_CREATE) && (
                           <button
                               onClick={() => setShowWizard(true)}
@@ -905,6 +972,15 @@ export default function ExamEvents() {
                               <Plus className="w-4 h-4 shrink-0" /> <span className="hidden sm:inline">New Exam Event</span><span className="sm:hidden">New</span>
                           </button>
                         )}
+=======
+                        <button
+                            onClick={() => setShowWizard(true)}
+                            disabled={loadingMeta}
+                            className="flex items-center cursor-pointer justify-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold rounded-lg transition-all shadow-sm active:scale-95 disabled:opacity-60 whitespace-nowrap"
+                        >
+                            <Plus className="w-4 h-4 shrink-0" /> <span className="hidden sm:inline">New Exam Event</span><span className="sm:hidden">New</span>
+                        </button>
+>>>>>>> 919065858fd7047c4899a54ec584e1739bb922f3
                     </div>
                 </div>
 
