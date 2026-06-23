@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Plus, Edit2, Trash2, RefreshCw, X, Settings, Eye,
+  Plus, Edit2, RefreshCw, X, Settings, Eye,
   CheckCircle, RotateCcw, RotateCw, SearchX,
   CalendarDays, Layers, ToggleLeft, ToggleRight, AlertTriangle,
 } from 'lucide-react';
@@ -13,34 +13,34 @@ import {
   deleteLeaveConfig,
   seedLeaveConfigs,
 } from '../../Api/LeaveConfigAPI';
+import { getListOfValues } from '../../Api/ListOfValues';
 import { toast } from 'react-toastify';
 
-// ─── Constants ───────────────────────────────────────────────────────────────
-const LEAVE_TYPE_OPTIONS = [
-  { value: 'SICK_LEAVE',        label: 'Sick Leave',        defaultLimit: 12,  carryForward: false, maxCarryDays: 0  },
-  { value: 'CASUAL_LEAVE',      label: 'Casual Leave',      defaultLimit: 10,  carryForward: false, maxCarryDays: 0  },
-  { value: 'EARNED_LEAVE',      label: 'Earned Leave',      defaultLimit: 15,  carryForward: true,  maxCarryDays: 10 },
-  { value: 'UNPAID_LEAVE',      label: 'Unpaid Leave',      defaultLimit: 0,   carryForward: false, maxCarryDays: 0  },
-  { value: 'MATERNITY_LEAVE',   label: 'Maternity Leave',   defaultLimit: 180, carryForward: false, maxCarryDays: 0  },
-  { value: 'PATERNITY_LEAVE',   label: 'Paternity Leave',   defaultLimit: 15,  carryForward: false, maxCarryDays: 0  },
-  { value: 'BEREAVEMENT_LEAVE', label: 'Bereavement Leave', defaultLimit: 5,   carryForward: false, maxCarryDays: 0  },
-  { value: 'STUDY_LEAVE',       label: 'Study Leave',       defaultLimit: 7,   carryForward: false, maxCarryDays: 0  },
-  { value: 'COMPENSATORY_OFF',  label: 'Compensatory Off',  defaultLimit: 12,  carryForward: false, maxCarryDays: 0  },
-  { value: 'SPECIAL_LEAVE',     label: 'Special Leave',     defaultLimit: 3,   carryForward: false, maxCarryDays: 0  },
+// ─── Leave Type Colors (keyed by value string) ────────────────────────────────
+// Falls back to a neutral style for unknown types
+const LEAVE_TYPE_COLOR_PALETTE = [
+  'bg-red-50 text-red-600 border-red-200',
+  'bg-blue-50 text-blue-600 border-blue-200',
+  'bg-green-50 text-green-600 border-green-200',
+  'bg-gray-100 text-gray-600 border-gray-200',
+  'bg-pink-50 text-pink-600 border-pink-200',
+  'bg-indigo-50 text-indigo-600 border-indigo-200',
+  'bg-slate-50 text-slate-600 border-slate-200',
+  'bg-yellow-50 text-yellow-600 border-yellow-200',
+  'bg-orange-50 text-orange-600 border-orange-200',
+  'bg-purple-50 text-purple-600 border-purple-200',
 ];
 
-const LEAVE_TYPE_COLORS = {
-  SICK_LEAVE:        'bg-red-50 text-red-600 border-red-200',
-  CASUAL_LEAVE:      'bg-blue-50 text-blue-600 border-blue-200',
-  EARNED_LEAVE:      'bg-green-50 text-green-600 border-green-200',
-  UNPAID_LEAVE:      'bg-gray-100 text-gray-600 border-gray-200',
-  MATERNITY_LEAVE:   'bg-pink-50 text-pink-600 border-pink-200',
-  PATERNITY_LEAVE:   'bg-indigo-50 text-indigo-600 border-indigo-200',
-  BEREAVEMENT_LEAVE: 'bg-slate-50 text-slate-600 border-slate-200',
-  STUDY_LEAVE:       'bg-yellow-50 text-yellow-600 border-yellow-200',
-  COMPENSATORY_OFF:  'bg-orange-50 text-orange-600 border-orange-200',
-  SPECIAL_LEAVE:     'bg-purple-50 text-purple-600 border-purple-200',
+// Build a stable color map from the dynamic list
+const buildColorMap = (leaveTypes) => {
+  const map = {};
+  leaveTypes.forEach((lt, i) => {
+    map[lt.value] = LEAVE_TYPE_COLOR_PALETTE[i % LEAVE_TYPE_COLOR_PALETTE.length];
+  });
+  return map;
 };
+
+const FALLBACK_COLOR = 'bg-gray-100 text-gray-600 border-gray-200';
 
 const EMPTY_FORM = {
   leaveType: '',
@@ -51,10 +51,10 @@ const EMPTY_FORM = {
   maxCarryForwardDays: 0,
 };
 
-// ─── View Modal ─────────────────────────────────────────────────────────────
-const ViewLeaveConfigModal = ({ config, onClose }) => {
+// ─── View Modal ───────────────────────────────────────────────────────────────
+const ViewLeaveConfigModal = ({ config, colorMap, onClose }) => {
   if (!config) return null;
-  const colorClass = LEAVE_TYPE_COLORS[config.leaveType] || 'bg-gray-100 text-gray-600 border-gray-200';
+  const colorClass = colorMap[config.leaveType] || FALLBACK_COLOR;
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
@@ -78,7 +78,6 @@ const ViewLeaveConfigModal = ({ config, onClose }) => {
 
         {/* Body */}
         <div className="px-6 py-5 space-y-4">
-          {/* Row 1 */}
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-gray-50 rounded-xl px-4 py-3">
               <p className="text-xs text-gray-500 mb-1">Annual Limit</p>
@@ -103,7 +102,6 @@ const ViewLeaveConfigModal = ({ config, onClose }) => {
             </div>
           </div>
 
-          {/* Carry Forward */}
           <div className="bg-gray-50 rounded-xl px-4 py-3">
             <p className="text-xs text-gray-500 mb-1">Carry Forward</p>
             {config.carryForwardAllowed ? (
@@ -121,7 +119,6 @@ const ViewLeaveConfigModal = ({ config, onClose }) => {
             )}
           </div>
 
-          {/* Description */}
           {config.description && (
             <div className="bg-gray-50 rounded-xl px-4 py-3">
               <p className="text-xs text-gray-500 mb-1">Description</p>
@@ -130,7 +127,6 @@ const ViewLeaveConfigModal = ({ config, onClose }) => {
           )}
         </div>
 
-        {/* Footer */}
         <div className="px-6 py-4 border-t border-gray-100 flex justify-end">
           <button
             onClick={onClose}
@@ -144,7 +140,7 @@ const ViewLeaveConfigModal = ({ config, onClose }) => {
   );
 };
 
-// ─── Delete Confirm Modal ────────────────────────────────────────────────────
+// ─── Delete Confirm Modal ─────────────────────────────────────────────────────
 const DeleteConfirmModal = ({ config, onConfirm, onCancel, loading }) => (
   <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
@@ -181,7 +177,7 @@ const DeleteConfirmModal = ({ config, onConfirm, onCancel, loading }) => (
   </div>
 );
 
-// ─── Seed Confirm Modal ─────────────────────────────────────────────────────
+// ─── Seed Confirm Modal ───────────────────────────────────────────────────────
 const SeedConfirmModal = ({ onConfirm, onCancel, loading }) => (
   <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
@@ -192,7 +188,7 @@ const SeedConfirmModal = ({ onConfirm, onCancel, loading }) => (
         <h2 className="text-lg font-bold text-gray-900">Seed Default Leave Types</h2>
       </div>
       <p className="text-gray-600 mb-1">
-        This will provision all <span className="font-semibold text-gray-900">10 standard leave types</span> with platform-recommended defaults.
+        This will provision all <span className="font-semibold text-gray-900">standard leave types</span> with platform-recommended defaults.
       </p>
       <p className="text-sm text-gray-500 mb-6">
         Only runs if no active configurations exist. If active configs already exist, this is a no-op.
@@ -218,7 +214,7 @@ const SeedConfirmModal = ({ onConfirm, onCancel, loading }) => (
   </div>
 );
 
-// ─── Re-enable Confirm Modal ─────────────────────────────────────────────────
+// ─── Re-enable Confirm Modal ──────────────────────────────────────────────────
 const ReEnableConfirmModal = ({ config, onConfirm, onCancel, loading }) => (
   <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
@@ -249,18 +245,18 @@ const ReEnableConfirmModal = ({ config, onConfirm, onCancel, loading }) => (
   </div>
 );
 
-// ─── Add / Edit Modal ────────────────────────────────────────────────────────
-const LeaveConfigModal = ({ mode, initialData, activeTypes, onSubmit, onClose, loading }) => {
+// ─── Add / Edit Modal ─────────────────────────────────────────────────────────
+const LeaveConfigModal = ({ mode, initialData, activeTypes, leaveTypeOptions, onSubmit, onClose, loading }) => {
   const [form, setForm] = useState(EMPTY_FORM);
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
     if (mode === 'edit' && initialData) {
       setForm({
-        leaveType:           initialData.leaveType           ?? '',
-        leaveName:           initialData.leaveName           ?? '',
-        annualLimit:         initialData.annualLimit         ?? '',
-        description:         initialData.description        ?? '',
+        leaveType: initialData.leaveType ?? '',
+        leaveName: initialData.leaveName ?? '',
+        annualLimit: initialData.annualLimit ?? '',
+        description: initialData.description ?? '',
         carryForwardAllowed: initialData.carryForwardAllowed ?? false,
         maxCarryForwardDays: initialData.maxCarryForwardDays ?? 0,
       });
@@ -269,31 +265,28 @@ const LeaveConfigModal = ({ mode, initialData, activeTypes, onSubmit, onClose, l
     }
   }, [mode, initialData]);
 
-  // Auto-fill leaveName, limit, and carry-forward defaults when leaveType selected
+  // Auto-fill leaveName when a leave type is selected
   const handleLeaveTypeChange = (value) => {
-    const option = LEAVE_TYPE_OPTIONS.find(o => o.value === value);
+    const option = leaveTypeOptions.find(o => o.value === value);
     setForm(prev => ({
       ...prev,
-      leaveType:           value,
-      leaveName:           option ? option.label        : prev.leaveName,
-      annualLimit:         option ? option.defaultLimit : prev.annualLimit,
-      carryForwardAllowed: option ? option.carryForward : prev.carryForwardAllowed,
-      maxCarryForwardDays: option ? option.maxCarryDays : prev.maxCarryForwardDays,
+      leaveType: value,
+      leaveName: option ? option.label : prev.leaveName,
     }));
   };
 
   const validate = () => {
     const e = {};
-    if (!form.leaveType)                         e.leaveType    = 'Leave type is required';
-    if (!form.leaveName.trim())                  e.leaveName    = 'Display name is required';
-    if (form.leaveName.trim().length < 2)        e.leaveName    = 'Min 2 characters';
-    if (form.leaveName.trim().length > 100)      e.leaveName    = 'Max 100 characters';
+    if (!form.leaveType) e.leaveType = 'Leave type is required';
+    if (!form.leaveName.trim()) e.leaveName = 'Display name is required';
+    if (form.leaveName.trim().length < 2) e.leaveName = 'Min 2 characters';
+    if (form.leaveName.trim().length > 100) e.leaveName = 'Max 100 characters';
     if (form.annualLimit === '' || form.annualLimit === null) e.annualLimit = 'Annual limit is required';
-    if (Number(form.annualLimit) < 0)            e.annualLimit  = 'Must be ≥ 0';
+    if (Number(form.annualLimit) < 0) e.annualLimit = 'Must be ≥ 0';
     if (form.description && form.description.length > 500) e.description = 'Max 500 characters';
     if (form.carryForwardAllowed && Number(form.maxCarryForwardDays) < 0) e.maxCarryForwardDays = 'Must be ≥ 0';
-    // Only block if an ACTIVE row exists — inactive rows get auto-reactivated by POST
-    if (mode === 'add' && activeTypes.includes(form.leaveType)) e.leaveType = 'An active config for this leave type already exists — use Edit to update it';
+    if (mode === 'add' && activeTypes.includes(form.leaveType))
+      e.leaveType = 'An active config for this leave type already exists — use Edit to update it';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -302,14 +295,18 @@ const LeaveConfigModal = ({ mode, initialData, activeTypes, onSubmit, onClose, l
     e.preventDefault();
     if (!validate()) return;
     onSubmit({
-      leaveType:           form.leaveType,
-      leaveName:           form.leaveName.trim(),
-      annualLimit:         Number(form.annualLimit),
-      description:         form.description?.trim() || null,
+      leaveType: form.leaveType,
+      leaveName: form.leaveName.trim(),
+      annualLimit: Number(form.annualLimit),
+      description: form.description?.trim() || null,
       carryForwardAllowed: form.carryForwardAllowed,
       maxCarryForwardDays: Number(form.maxCarryForwardDays),
     });
   };
+
+  // Find the label for the current leaveType when in edit mode
+  const editLeaveTypeLabel =
+    leaveTypeOptions.find(o => o.value === form.leaveType)?.label || form.leaveType;
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
@@ -337,19 +334,26 @@ const LeaveConfigModal = ({ mode, initialData, activeTypes, onSubmit, onClose, l
               Leave Type <span className="text-red-500">*</span>
             </label>
             {mode === 'add' ? (
-              <select
-                value={form.leaveType}
-                onChange={e => handleLeaveTypeChange(e.target.value)}
-                className={`w-full border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 ${errors.leaveType ? 'border-red-400' : 'border-gray-200'}`}
-              >
-                <option value="">— Select leave type —</option>
-                {LEAVE_TYPE_OPTIONS.map(o => (
-                  <option key={o.value} value={o.value}>{o.label}</option>
-                ))}
-              </select>
+              leaveTypeOptions.length === 0 ? (
+                <div className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-gray-50 text-gray-400 flex items-center gap-2">
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  Loading leave types…
+                </div>
+              ) : (
+                <select
+                  value={form.leaveType}
+                  onChange={e => handleLeaveTypeChange(e.target.value)}
+                  className={`w-full border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white ${errors.leaveType ? 'border-red-400' : 'border-gray-200'}`}
+                >
+                  <option value="">— Select leave type —</option>
+                  {leaveTypeOptions.map(o => (
+                    <option key={o.id ?? o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
+              )
             ) : (
               <input
-                value={LEAVE_TYPE_OPTIONS.find(o => o.value === form.leaveType)?.label || form.leaveType}
+                value={editLeaveTypeLabel}
                 disabled
                 className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-gray-50 text-gray-500"
               />
@@ -409,7 +413,7 @@ const LeaveConfigModal = ({ mode, initialData, activeTypes, onSubmit, onClose, l
             </div>
           </div>
 
-          {/* Carry Forward */}
+          {/* Carry Forward Toggle */}
           <div className="flex items-center justify-between border border-gray-200 rounded-xl px-4 py-3">
             <div>
               <p className="text-sm font-medium text-gray-700">Carry Forward</p>
@@ -427,7 +431,7 @@ const LeaveConfigModal = ({ mode, initialData, activeTypes, onSubmit, onClose, l
             </button>
           </div>
 
-          {/* Max Carry Forward Days — only if carry forward enabled */}
+          {/* Max Carry Forward Days */}
           {form.carryForwardAllowed && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -469,48 +473,69 @@ const LeaveConfigModal = ({ mode, initialData, activeTypes, onSubmit, onClose, l
   );
 };
 
-// ─── Main Page ───────────────────────────────────────────────────────────────
+// ─── Main Page ────────────────────────────────────────────────────────────────
 export default function LeaveConfig() {
-  const [configs, setConfigs]         = useState([]);
-  const [loading, setLoading]         = useState(false);
+  const [configs, setConfigs] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [submitLoading, setSubmitLoading] = useState(false);
   const [seedLoading, setSeedLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [reEnableLoading, setReEnableLoading] = useState(false);
 
-  const [filterStatus, setFilterStatus]       = useState('all'); // 'all' | 'active' | 'inactive'
-  const [modalMode, setModalMode]              = useState(null);  // 'add' | 'edit' | null
-  const [editTarget, setEditTarget]            = useState(null);
-  const [deleteTarget, setDeleteTarget]        = useState(null);
-  const [reEnableTarget, setReEnableTarget]    = useState(null);
-  const [reEnableLoading, setReEnableLoading]  = useState(false);
-  const [showSeedConfirm, setShowSeedConfirm]  = useState(false);
-  const [viewTarget, setViewTarget]            = useState(null);
+  // Dynamic leave types from API
+  const [leaveTypeOptions, setLeaveTypeOptions] = useState([]);
+  const [colorMap, setColorMap] = useState({});
 
-  // Full unfiltered list for stats (always all records)
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [modalMode, setModalMode] = useState(null);
+  const [editTarget, setEditTarget] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [reEnableTarget, setReEnableTarget] = useState(null);
+  const [showSeedConfirm, setShowSeedConfirm] = useState(false);
+  const [viewTarget, setViewTarget] = useState(null);
+
   const [allConfigs, setAllConfigs] = useState([]);
-  const totalConfigs      = allConfigs.length;
-  const activeConfigs     = allConfigs.filter(c => c.isActive).length;
-  const carryForwardCount = allConfigs.filter(c => c.carryForwardAllowed).length;
-  const totalAnnualDays   = allConfigs.filter(c => c.isActive).reduce((sum, c) => sum + (c.annualLimit || 0), 0);
 
-  // Only ACTIVE types block the "Add" form dropdown
+  const totalConfigs = allConfigs.length;
+  const activeConfigs = allConfigs.filter(c => c.isActive).length;
+  const carryForwardCount = allConfigs.filter(c => c.carryForwardAllowed).length;
+  const totalAnnualDays = allConfigs.filter(c => c.isActive).reduce((sum, c) => sum + (c.annualLimit || 0), 0);
   const activeTypes = allConfigs.filter(c => c.isActive).map(c => c.leaveType);
 
-  // ── Fetch ──
+  // ── Fetch dynamic leave types ──
+  useEffect(() => {
+    const fetchListOfValues = async () => {
+      try {
+        const leaveTypeRes = await getListOfValues('LEAVE_TYPE');
+        const formatted = leaveTypeRes.map(item => ({
+          id: item.id,
+          value: item.value,
+          label: item.label,
+        }));
+        setLeaveTypeOptions(formatted);
+        setColorMap(buildColorMap(formatted));
+      } catch (e) {
+        console.error('get list of values error:', e.message);
+        toast.error('Failed to load leave type options');
+      }
+    };
+    fetchListOfValues();
+  }, []);
+
+  // ── Fetch configs ──
   const fetchConfigs = async (filter = filterStatus) => {
     try {
       setLoading(true);
       const isActiveParam = filter === 'active' ? true : filter === 'inactive' ? false : undefined;
       const res = await getAllLeaveConfigs(isActiveParam);
       setConfigs(res.data || []);
-      // Keep full list up-to-date for stats
       if (filter !== 'all') {
         const allRes = await getAllLeaveConfigs(undefined);
         setAllConfigs(allRes.data || []);
       } else {
         setAllConfigs(res.data || []);
       }
-    } catch (err) {
+    } catch {
       toast.error('Failed to load leave configurations');
     } finally {
       setLoading(false);
@@ -524,7 +549,7 @@ export default function LeaveConfig() {
     fetchConfigs(key);
   };
 
-  // ── Seed Defaults ──
+  // ── Seed ──
   const handleSeedConfirm = async () => {
     try {
       setSeedLoading(true);
@@ -555,10 +580,7 @@ export default function LeaveConfig() {
   };
 
   // ── Edit ──
-  const handleEditClick = (config) => {
-    setEditTarget(config);
-    setModalMode('edit');
-  };
+  const handleEditClick = (config) => { setEditTarget(config); setModalMode('edit'); };
 
   const handleEdit = async (payload) => {
     try {
@@ -590,15 +612,15 @@ export default function LeaveConfig() {
     }
   };
 
-  // ── Re-enable (POST same leaveType — backend auto-reactivates inactive row) ──
+  // ── Re-enable ──
   const handleReEnableConfirm = async () => {
     try {
       setReEnableLoading(true);
       await createLeaveConfig({
-        leaveType:           reEnableTarget.leaveType,
-        leaveName:           reEnableTarget.leaveName,
-        annualLimit:         reEnableTarget.annualLimit,
-        description:         reEnableTarget.description || null,
+        leaveType: reEnableTarget.leaveType,
+        leaveName: reEnableTarget.leaveName,
+        annualLimit: reEnableTarget.annualLimit,
+        description: reEnableTarget.description || null,
         carryForwardAllowed: reEnableTarget.carryForwardAllowed,
         maxCarryForwardDays: reEnableTarget.maxCarryForwardDays,
       });
@@ -614,14 +636,15 @@ export default function LeaveConfig() {
 
   // ── Stat cards ──
   const statsCards = [
-    { IconName: Layers,       keyName: 'Total Types',      val: totalConfigs,      iconTxColor: 'text-blue-600',   iconBgColor: 'bg-blue-50'   },
-    { IconName: CheckCircle,  keyName: 'Active Types',     val: activeConfigs,     iconTxColor: 'text-green-600',  iconBgColor: 'bg-green-50'  },
-    { IconName: CalendarDays, keyName: 'Total Annual Days', val: totalAnnualDays,  iconTxColor: 'text-purple-600', iconBgColor: 'bg-purple-50' },
-    { IconName: RotateCcw,    keyName: 'Carry Forward',    val: carryForwardCount, iconTxColor: 'text-orange-600', iconBgColor: 'bg-orange-50' },
+    { IconName: Layers, keyName: 'Total Types', val: totalConfigs, iconTxColor: 'text-blue-600', iconBgColor: 'bg-blue-50' },
+    { IconName: CheckCircle, keyName: 'Active Types', val: activeConfigs, iconTxColor: 'text-green-600', iconBgColor: 'bg-green-50' },
+    { IconName: CalendarDays, keyName: 'Total Annual Days', val: totalAnnualDays, iconTxColor: 'text-purple-600', iconBgColor: 'bg-purple-50' },
+    { IconName: RotateCcw, keyName: 'Carry Forward', val: carryForwardCount, iconTxColor: 'text-orange-600', iconBgColor: 'bg-orange-50' },
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 lg:p-6">
+    <div className="min-h-screen bg-gray-50 p-4 lg:p-6 bg-linear-to-b from-sky-50 to-sky-100">
+
       {/* ── Header ── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
@@ -636,10 +659,7 @@ export default function LeaveConfig() {
             disabled={seedLoading}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 font-medium text-sm transition-colors shadow-sm disabled:opacity-60"
           >
-            {seedLoading
-              ? <RefreshCw className="w-4 h-4 animate-spin" />
-              : <RefreshCw className="w-4 h-4" />
-            }
+            <RefreshCw className={`w-4 h-4 ${seedLoading ? 'animate-spin' : ''}`} />
             Seed Defaults
           </button>
           <button
@@ -653,15 +673,16 @@ export default function LeaveConfig() {
       </div>
 
       {/* ── Stats Cards ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 text-sm mt-5 mb-6">
         {statsCards.map((card, i) => (
           <CardComponent key={i} {...card} />
         ))}
       </div>
 
-      {/* ── Table ── */}
+      {/* ── Table Card ── */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        {/* Table Header + Status Filter Dropdown */}
+
+        {/* Table toolbar */}
         <div className="px-4 lg:px-6 py-4 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <h2 className="font-semibold text-gray-900">
             Leave Types
@@ -678,125 +699,127 @@ export default function LeaveConfig() {
           </select>
         </div>
 
-        {/* ===== DESKTOP TABLE ===== */}
-        <div className="hidden md:block overflow-y-auto max-h-130">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
-              <tr className="text-sm">
-                <th className="px-4 lg:px-6 py-3 text-left font-semibold text-gray-600 uppercase tracking-wide">#</th>
-                <th className="px-4 lg:px-6 py-3 text-left font-semibold text-gray-600 uppercase tracking-wide">Leave Type</th>
-                <th className="px-4 lg:px-6 py-3 text-left font-semibold text-gray-600 uppercase tracking-wide">Display Name</th>
-                <th className="px-4 lg:px-6 py-3 text-center font-semibold text-gray-600 uppercase tracking-wide">Annual Limit</th>
-                <th className="px-4 lg:px-6 py-3 text-center font-semibold text-gray-600 uppercase tracking-wide hidden lg:table-cell">Carry Forward</th>
-                <th className="px-4 lg:px-6 py-3 text-center font-semibold text-gray-600 uppercase tracking-wide">Status</th>
-                <th className="px-4 lg:px-6 py-3 text-center font-semibold text-gray-600 uppercase tracking-wide">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-
-              {/* Loading */}
-              {loading && <ListLoader avatar={false} />}
-
-              {/* Empty */}
-              {!loading && configs.length === 0 && (
-                <tr>
-                  <td colSpan="7" className="py-16 text-center">
-                    <div className="flex flex-col items-center gap-2">
-                      <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto">
-                        <SearchX className="w-6 h-6 text-blue-500" />
-                      </div>
-                      <p className="text-sm font-semibold text-gray-700">
-                        {filterStatus === 'inactive' ? 'No inactive leave types' : filterStatus === 'active' ? 'No active leave types' : 'No leave types configured'}
-                      </p>
-                      {filterStatus === 'all' && (
-                        <p className="text-xs text-gray-500">Click <span className="font-medium text-blue-500">"Seed Defaults"</span> to set up standard leave types, or add one manually.</p>
-                      )}
-                    </div>
-                  </td>
+        {/* ═══ DESKTOP TABLE — hidden below md, horizontal scroll when needed ═══ */}
+        <div className="hidden md:block w-full min-w-0">
+          {/* overflow-x-auto ensures horizontal scroll stays INSIDE the card; min-w-0 prevents flex/grid blowout */}
+          <div className="overflow-x-auto overflow-y-auto max-h-[32rem] w-full">
+            <table className="w-full min-w-[700px] table-fixed" style={{ minWidth: '700px' }}>
+              <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
+                <tr className="text-xs">
+                  <th className="px-4 lg:px-5 py-3 text-left font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap w-10">#</th>
+                  <th className="px-4 lg:px-5 py-3 text-left font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Leave Type</th>
+                  <th className="px-4 lg:px-5 py-3 text-left font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Display Name</th>
+                  <th className="px-4 lg:px-5 py-3 text-center font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Annual Limit</th>
+                  <th className="px-4 lg:px-5 py-3 text-center font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Carry Forward</th>
+                  <th className="px-4 lg:px-5 py-3 text-center font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Status</th>
+                  <th className="px-4 lg:px-5 py-3 text-center font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Actions</th>
                 </tr>
-              )}
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-100">
 
-              {/* Data rows */}
-              {!loading && configs.length > 0 && configs.map((cfg, idx) => {
-                const isInactive = !cfg.isActive;
-                return (
-                  <tr key={cfg.id} className={`transition-colors ${isInactive ? 'bg-gray-50/60' : 'hover:bg-gray-50'}`}>
-                    <td className="px-4 lg:px-6 py-4">
-                      <span className={`text-sm ${isInactive ? 'text-gray-400' : 'text-gray-500'}`}>{idx + 1}</span>
-                    </td>
-                    <td className="px-4 lg:px-6 py-4">
-                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${LEAVE_TYPE_COLORS[cfg.leaveType] || 'bg-gray-100 text-gray-600 border-gray-200'} ${isInactive ? 'opacity-60' : ''}`}>
-                        {cfg.leaveType.replace(/_/g, ' ')}
-                      </span>
-                    </td>
-                    <td className="px-4 lg:px-6 py-4">
-                      <p className={`font-semibold text-xs lg:text-sm ${isInactive ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
-                        {cfg.leaveName}
-                      </p>
-                    </td>
-                    <td className="px-4 lg:px-6 py-4 text-center">
-                      <span className={`text-sm font-semibold ${isInactive ? 'text-gray-400' : 'text-gray-900'}`}>{cfg.annualLimit}</span>
-                      <span className="text-gray-400 text-xs ml-1">days</span>
-                    </td>
-                    <td className="px-4 lg:px-6 py-4 text-center hidden lg:table-cell">
-                      {cfg.carryForwardAllowed ? (
-                        <span className={`inline-flex items-center gap-1 text-sm ${isInactive ? 'text-gray-400' : 'text-blue-600'}`}>
-                          <CheckCircle className="w-4 h-4" />
-                          <span className="text-xs">{cfg.maxCarryForwardDays === 0 ? 'Unlimited' : `${cfg.maxCarryForwardDays}d`}</span>
-                        </span>
-                      ) : (
-                        <span className="text-gray-400 text-sm">—</span>
-                      )}
-                    </td>
-                    <td className="px-4 lg:px-6 py-4 text-center">
-                      <span className={`inline-flex size-fit items-center gap-1 px-3 py-1 rounded-sm text-xs font-medium ${
-                        cfg.isActive ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'
-                      }`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${cfg.isActive ? 'bg-green-700' : 'bg-gray-400'}`} />
-                        {cfg.isActive ? 'Active' : 'Inactive'}
-                      </span>
-                    </td>
-                    <td className="px-4 lg:px-6 py-4">
-                      <div className="flex justify-center items-center gap-2">
-                        {/* Toggle */}
-                        <button
-                          onClick={() => cfg.isActive ? setDeleteTarget(cfg) : setReEnableTarget(cfg)}
-                          title={cfg.isActive ? 'Click to disable' : 'Click to re-enable'}
-                          className="relative inline-flex h-5 w-10 items-center rounded-full transition-colors focus:outline-none"
-                          style={{ backgroundColor: cfg.isActive ? '#22c55e' : '#d1d5db' }}
-                        >
-                          <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform ${
-                            cfg.isActive ? 'translate-x-5' : 'translate-x-1'
-                          }`} />
-                        </button>
-                        <button
-                          onClick={() => setViewTarget(cfg)}
-                          className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                          title="View"
-                        >
-                          <Eye className="w-4 lg:w-5 h-4 lg:h-5 text-gray-500" />
-                        </button>
-                        <button
-                          onClick={() => handleEditClick(cfg)}
-                          className="p-2 hover:bg-blue-50 rounded-lg transition-colors"
-                          title="Edit"
-                        >
-                          <Edit2 className="w-4 lg:w-5 h-4 lg:h-5 text-blue-600" />
-                        </button>
+                {loading && <ListLoader avatar={false} />}
+
+                {!loading && configs.length === 0 && (
+                  <tr>
+                    <td colSpan="7" className="py-16 text-center">
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto">
+                          <SearchX className="w-6 h-6 text-blue-500" />
+                        </div>
+                        <p className="text-sm font-semibold text-gray-700">
+                          {filterStatus === 'inactive'
+                            ? 'No inactive leave types'
+                            : filterStatus === 'active'
+                              ? 'No active leave types'
+                              : 'No leave types configured'}
+                        </p>
+                        {filterStatus === 'all' && (
+                          <p className="text-xs text-gray-500">
+                            Click <span className="font-medium text-blue-500">"Seed Defaults"</span> to set up standard leave types, or add one manually.
+                          </p>
+                        )}
                       </div>
                     </td>
                   </tr>
-                );
-              })}
+                )}
 
-            </tbody>
-          </table>
+                {!loading && configs.length > 0 && configs.map((cfg, idx) => {
+                  const isInactive = !cfg.isActive;
+                  const badgeColor = colorMap[cfg.leaveType] || FALLBACK_COLOR;
+                  return (
+                    <tr key={cfg.id} className={`transition-colors ${isInactive ? 'bg-gray-50/60' : 'hover:bg-gray-50'}`}>
+                      <td className="px-4 lg:px-5 py-3.5">
+                        <span className={`text-sm ${isInactive ? 'text-gray-400' : 'text-gray-500'}`}>{idx + 1}</span>
+                      </td>
+                      <td className="px-4 lg:px-5 py-3.5">
+                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap border ${badgeColor} ${isInactive ? 'opacity-60' : ''}`}>
+                          {cfg.leaveType.replace(/_/g, ' ')}
+                        </span>
+                      </td>
+                      <td className="px-4 lg:px-5 py-3.5">
+                        <p className={`font-semibold text-sm whitespace-nowrap ${isInactive ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
+                          {cfg.leaveName}
+                        </p>
+                      </td>
+                      <td className="px-4 lg:px-5 py-3.5 text-center whitespace-nowrap">
+                        <span className={`text-sm font-semibold ${isInactive ? 'text-gray-400' : 'text-gray-900'}`}>{cfg.annualLimit}</span>
+                        <span className="text-gray-400 text-xs ml-1">days</span>
+                      </td>
+                      <td className="px-4 lg:px-5 py-3.5 text-center whitespace-nowrap">
+                        {cfg.carryForwardAllowed ? (
+                          <span className={`inline-flex items-center gap-1 text-sm ${isInactive ? 'text-gray-400' : 'text-blue-600'}`}>
+                            <CheckCircle className="w-4 h-4 flex-shrink-0" />
+                            <span className="text-xs">{cfg.maxCarryForwardDays === 0 ? 'Unlimited' : `${cfg.maxCarryForwardDays}d`}</span>
+                          </span>
+                        ) : (
+                          <span className="text-gray-400 text-sm">—</span>
+                        )}
+                      </td>
+                      <td className="px-4 lg:px-5 py-3.5 text-center whitespace-nowrap">
+                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-sm text-xs font-medium ${cfg.isActive ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'
+                          }`}>
+                          <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${cfg.isActive ? 'bg-green-700' : 'bg-gray-400'}`} />
+                          {cfg.isActive ? 'Active' : 'Inactive'}
+                        </span>
+                      </td>
+                      <td className="px-4 lg:px-5 py-3.5">
+                        <div className="flex justify-center items-center gap-2 whitespace-nowrap">
+                          {/* Toggle */}
+                          <button
+                            onClick={() => cfg.isActive ? setDeleteTarget(cfg) : setReEnableTarget(cfg)}
+                            title={cfg.isActive ? 'Click to disable' : 'Click to re-enable'}
+                            className="relative inline-flex h-5 w-10 flex-shrink-0 items-center rounded-full transition-colors focus:outline-none"
+                            style={{ backgroundColor: cfg.isActive ? '#22c55e' : '#d1d5db' }}
+                          >
+                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform ${cfg.isActive ? 'translate-x-5' : 'translate-x-1'}`} />
+                          </button>
+                          <button
+                            onClick={() => setViewTarget(cfg)}
+                            className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                            title="View"
+                          >
+                            <Eye className="w-4 h-4 text-gray-500" />
+                          </button>
+                          <button
+                            onClick={() => handleEditClick(cfg)}
+                            className="p-1.5 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Edit"
+                          >
+                            <Edit2 className="w-4 h-4 text-blue-600" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+
+              </tbody>
+            </table>
+          </div>
         </div>
 
-        {/* ===== MOBILE CARDS ===== */}
+        {/* ═══ MOBILE CARDS — visible below md ═══ */}
         <div className="md:hidden">
-
-          {/* Loading */}
           {loading && (
             <div className="text-center py-8">
               <div className="flex flex-col items-center">
@@ -806,7 +829,6 @@ export default function LeaveConfig() {
             </div>
           )}
 
-          {/* Empty */}
           {!loading && configs.length === 0 && (
             <div className="py-16 text-center">
               <div className="flex flex-col items-center gap-2">
@@ -814,46 +836,53 @@ export default function LeaveConfig() {
                   <SearchX className="w-6 h-6 text-blue-500" />
                 </div>
                 <p className="text-sm font-semibold text-gray-700">
-                  {filterStatus === 'inactive' ? 'No inactive leave types' : filterStatus === 'active' ? 'No active leave types' : 'No leave types configured'}
+                  {filterStatus === 'inactive'
+                    ? 'No inactive leave types'
+                    : filterStatus === 'active'
+                      ? 'No active leave types'
+                      : 'No leave types configured'}
                 </p>
               </div>
             </div>
           )}
 
-          {/* Cards */}
           {!loading && configs.length > 0 && (
-            <div className="divide-y divide-gray-200">
+            <div className="divide-y divide-gray-100">
               {configs.map((cfg) => {
                 const isInactive = !cfg.isActive;
+                const badgeColor = colorMap[cfg.leaveType] || FALLBACK_COLOR;
                 return (
-                  <div key={cfg.id} className={`p-4 hover:bg-gray-50 transition-colors ${isInactive ? 'opacity-80' : ''}`}>
-                    <div className="flex justify-between items-start mb-3">
-                      <div className="flex-1 pr-3">
-                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium mb-1 ${LEAVE_TYPE_COLORS[cfg.leaveType] || 'bg-gray-100 text-gray-600'} ${isInactive ? 'opacity-60' : ''}`}>
+                  <div key={cfg.id} className={`p-4 transition-colors ${isInactive ? 'opacity-80 bg-gray-50/40' : 'hover:bg-gray-50'}`}>
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1 min-w-0 pr-3">
+                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${badgeColor} ${isInactive ? 'opacity-60' : ''}`}>
                           {cfg.leaveType.replace(/_/g, ' ')}
                         </span>
-                        <p className={`font-semibold text-sm mt-1 ${isInactive ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
+                        <p className={`font-semibold text-sm mt-1.5 truncate ${isInactive ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
                           {cfg.leaveName}
                         </p>
-                        <p className="text-xs text-gray-500 mt-1">
-                          <span className="font-medium text-gray-700">{cfg.annualLimit}</span> days/year
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
+                          <span className="text-xs text-gray-500">
+                            <span className="font-medium text-gray-700">{cfg.annualLimit}</span> days/year
+                          </span>
                           {cfg.carryForwardAllowed && (
-                            <span className={`ml-2 ${isInactive ? 'text-gray-400' : 'text-blue-600'}`}>
-                              · Carry: {cfg.maxCarryForwardDays === 0 ? 'Unlimited' : `${cfg.maxCarryForwardDays}d`}
+                            <span className={`text-xs ${isInactive ? 'text-gray-400' : 'text-blue-600'}`}>
+                              Carry: {cfg.maxCarryForwardDays === 0 ? 'Unlimited' : `${cfg.maxCarryForwardDays}d`}
                             </span>
                           )}
-                        </p>
-                        <div className="mt-1">
-                          <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-sm text-xs font-medium ${
-                            cfg.isActive ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'
-                          }`}>
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-sm text-xs font-medium ${cfg.isActive ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'
+                            }`}>
                             <span className={`w-1.5 h-1.5 rounded-full ${cfg.isActive ? 'bg-green-700' : 'bg-gray-400'}`} />
                             {cfg.isActive ? 'Active' : 'Inactive'}
                           </span>
                         </div>
+                        {cfg.description && (
+                          <p className="text-xs text-gray-400 mt-1.5 line-clamp-2">{cfg.description}</p>
+                        )}
                       </div>
-                      <div className="flex items-center gap-2">
-                        {/* Toggle */}
+
+                      {/* Action buttons */}
+                      <div className="flex flex-col items-end gap-2 flex-shrink-0">
                         <button
                           onClick={() => cfg.isActive ? setDeleteTarget(cfg) : setReEnableTarget(cfg)}
                           title={cfg.isActive ? 'Disable' : 'Re-enable'}
@@ -862,17 +891,16 @@ export default function LeaveConfig() {
                         >
                           <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform ${cfg.isActive ? 'translate-x-5' : 'translate-x-1'}`} />
                         </button>
-                        <button onClick={() => setViewTarget(cfg)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors" title="View">
-                          <Eye className="w-4 h-4 text-gray-500" />
-                        </button>
-                        <button onClick={() => handleEditClick(cfg)} className="p-2 hover:bg-blue-50 rounded-lg transition-colors" title="Edit">
-                          <Edit2 className="w-4 h-4 text-blue-600" />
-                        </button>
+                        <div className="flex items-center gap-1">
+                          <button onClick={() => setViewTarget(cfg)} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors" title="View">
+                            <Eye className="w-4 h-4 text-gray-500" />
+                          </button>
+                          <button onClick={() => handleEditClick(cfg)} className="p-1.5 hover:bg-blue-50 rounded-lg transition-colors" title="Edit">
+                            <Edit2 className="w-4 h-4 text-blue-600" />
+                          </button>
+                        </div>
                       </div>
                     </div>
-                    {cfg.description && (
-                      <p className="text-xs text-gray-500 line-clamp-2">{cfg.description}</p>
-                    )}
                   </div>
                 );
               })}
@@ -881,19 +909,19 @@ export default function LeaveConfig() {
         </div>
       </div>
 
-      {/* ── Add / Edit Modal ── */}
+      {/* ── Modals ── */}
       {(modalMode === 'add' || modalMode === 'edit') && (
         <LeaveConfigModal
           mode={modalMode}
           initialData={modalMode === 'edit' ? editTarget : null}
           activeTypes={activeTypes}
+          leaveTypeOptions={leaveTypeOptions}
           onSubmit={modalMode === 'add' ? handleAdd : handleEdit}
           onClose={() => { setModalMode(null); setEditTarget(null); }}
           loading={submitLoading}
         />
       )}
 
-      {/* ── Delete Confirm Modal ── */}
       {deleteTarget && (
         <DeleteConfirmModal
           config={deleteTarget}
@@ -903,7 +931,6 @@ export default function LeaveConfig() {
         />
       )}
 
-      {/* ── Re-enable Confirm Modal ── */}
       {reEnableTarget && (
         <ReEnableConfirmModal
           config={reEnableTarget}
@@ -913,15 +940,14 @@ export default function LeaveConfig() {
         />
       )}
 
-      {/* ── View Modal ── */}
       {viewTarget && (
         <ViewLeaveConfigModal
           config={viewTarget}
+          colorMap={colorMap}
           onClose={() => setViewTarget(null)}
         />
       )}
 
-      {/* ── Seed Confirm Modal ── */}
       {showSeedConfirm && (
         <SeedConfirmModal
           onConfirm={handleSeedConfirm}
