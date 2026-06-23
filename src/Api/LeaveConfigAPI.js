@@ -6,7 +6,7 @@ const BASE_URL = `${import.meta.env.VITE_API_BASE}/leave/config`;
 
 // 1. Get all leave configurations
 // isActive: undefined = all | true = active only | false = inactive only
-export const getAllLeaveConfigs = async (isActive = true) => {
+export const getAllLeaveConfigs = async (isActive) => {
   try {
     const params = new URLSearchParams();
     if (isActive !== undefined) params.append('isActive', isActive);
