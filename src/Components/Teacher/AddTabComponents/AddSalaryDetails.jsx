@@ -52,12 +52,13 @@ const AddSalaryDetails = ({ formData, setFormData, handleInputChange, errors = {
         { label: 'Other Deductions', key: 'otherDeductions' },
     ];
 
+    // ✅ FIX: leaveDeductionPerDay is a daily RATE used during payroll processing,
+    // not a fixed monthly deduction — exclude it from the config-time net estimate.
     const calculateNet = () => {
         const base = parseFloat(formData.baseSalary) || 0;
         const allowanceTotal = allowances.reduce((sum, a) => sum + parseFloat(a.amount || 0), 0);
-        const penaltyTotal = penalties.reduce((sum, p) => sum + Math.abs(parseFloat(p.amount || 0)), 0);
-        const leaveDeduction = parseFloat(formData.leaveDeductionPerDay) || 0;
-        return base + allowanceTotal - penaltyTotal - leaveDeduction;
+        const penaltyTotal = penalties.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
+        return base + allowanceTotal - penaltyTotal;
     };
 
     const getAvailableAllowances = () => {
@@ -129,7 +130,6 @@ const AddSalaryDetails = ({ formData, setFormData, handleInputChange, errors = {
         setShowAddPenaltyForm(false);
     };
 
-    // Clear individual salary errors on change
     const handleBaseSalaryChange = (e) => {
         setFormData(prev => ({ ...prev, baseSalary: e.target.value }));
         if (e.target.value && Number(e.target.value) > 0) {
@@ -143,49 +143,54 @@ const AddSalaryDetails = ({ formData, setFormData, handleInputChange, errors = {
     };
 
     return (
-        <div className="max-w-6xl mx-auto p-4 sm:p-6">
+        <div className="w-full px-0 py-2 sm:py-4">
+
             {/* Header */}
             <div className="mb-4 sm:mb-6">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0 mb-2">
-                    <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Teacher Salary Configuration</h1>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-1.5">
+                    <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 leading-tight">
+                        Teacher Salary Configuration
+                    </h1>
                     <span className="bg-green-100 border border-green-200 shadow-xs text-green-700 px-3 py-1 rounded-full text-xs sm:text-sm font-medium w-fit">
                         ELIGIBLE
                     </span>
                 </div>
-                <p className="text-sm sm:text-base text-gray-600">Configure monthly and daily payroll rules for faculty members.</p>
+                <p className="text-xs sm:text-sm md:text-base text-gray-500">
+                    Configure monthly and daily payroll rules for faculty members.
+                </p>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6">
 
                 {/* ── Left Column ────────────────────────────────────────────────── */}
-                <div className="col-span-2 space-y-6">
+                <div className="col-span-1 lg:col-span-2 space-y-4 sm:space-y-5 md:space-y-6">
 
                     {/* Core Compensation */}
-                    <div className={`bg-white rounded-xl shadow-sm border p-6 ${errors?.salaryType || errors?.baseSalary ? 'border-red-300' : 'border-gray-200'}`}>
-                        <div className="flex items-center gap-2 mb-6">
-                            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                                <Wallet className="w-5 h-5 text-blue-600" />
+                    <div className={`bg-white rounded-xl shadow-sm border p-4 sm:p-5 md:p-6 ${errors?.salaryType || errors?.baseSalary ? 'border-red-300' : 'border-gray-200'}`}>
+                        <div className="flex items-center gap-2 mb-4 sm:mb-6">
+                            <div className="w-7 h-7 sm:w-8 sm:h-8 bg-blue-100 rounded-lg flex items-center justify-center shrink-0">
+                                <Wallet className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
                             </div>
-                            <h2 className="text-lg font-semibold text-gray-900">Core Compensation</h2>
+                            <h2 className="text-base sm:text-lg font-semibold text-gray-900">Core Compensation</h2>
                             {(errors?.salaryType || errors?.baseSalary) && (
-                                <span className="ml-auto text-xs text-red-500 font-medium bg-red-50 px-2 py-0.5 rounded-full border border-red-200">
+                                <span className="ml-auto text-xs text-red-500 font-medium bg-red-50 px-2 py-0.5 rounded-full border border-red-200 whitespace-nowrap">
                                     Required
                                 </span>
                             )}
                         </div>
 
-                        <div className="space-y-6">
+                        <div className="space-y-4 sm:space-y-6">
 
                             {/* Salary Type */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-3">
-                                    SALARY TYPE <span className="text-red-500">*</span>
+                                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2 sm:mb-3 tracking-wide uppercase">
+                                    Salary Type <span className="text-red-500">*</span>
                                 </label>
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-2 gap-3 sm:gap-4">
                                     <button
                                         type="button"
                                         onClick={() => handleSalaryTypeSelect('MONTHLY')}
-                                        className={`py-3 px-4 rounded-lg font-medium transition-colors border-2 ${formData.salaryType === 'MONTHLY'
+                                        className={`py-2.5 sm:py-3 px-3 sm:px-4 rounded-lg text-sm sm:text-base font-medium transition-colors border-2 ${formData.salaryType === 'MONTHLY'
                                             ? 'bg-blue-50 text-blue-700 border-blue-500'
                                             : errors?.salaryType
                                                 ? 'bg-red-50 text-red-600 border-red-300 hover:border-red-400'
@@ -197,7 +202,7 @@ const AddSalaryDetails = ({ formData, setFormData, handleInputChange, errors = {
                                     <button
                                         type="button"
                                         onClick={() => handleSalaryTypeSelect('PER_DAY')}
-                                        className={`py-3 px-4 rounded-lg font-medium transition-colors border-2 ${formData.salaryType === 'PER_DAY'
+                                        className={`py-2.5 sm:py-3 px-3 sm:px-4 rounded-lg text-sm sm:text-base font-medium transition-colors border-2 ${formData.salaryType === 'PER_DAY'
                                             ? 'bg-blue-50 text-blue-700 border-blue-500'
                                             : errors?.salaryType
                                                 ? 'bg-red-50 text-red-600 border-red-300 hover:border-red-400'
@@ -212,11 +217,11 @@ const AddSalaryDetails = ({ formData, setFormData, handleInputChange, errors = {
 
                             {/* Base Salary */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-3">
-                                    BASE SALARY AMOUNT <span className="text-red-500">*</span>
+                                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2 sm:mb-3 tracking-wide uppercase">
+                                    Base Salary Amount <span className="text-red-500">*</span>
                                 </label>
                                 <div className="relative">
-                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">₹</span>
+                                    <span className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm sm:text-base">₹</span>
                                     <input
                                         name="baseSalary"
                                         type="number"
@@ -224,31 +229,31 @@ const AddSalaryDetails = ({ formData, setFormData, handleInputChange, errors = {
                                         value={formData.baseSalary}
                                         onChange={handleBaseSalaryChange}
                                         placeholder="0"
-                                        className={`w-full pl-8 pr-32 py-3 border-2 rounded-lg text-lg font-semibold focus:outline-none focus:ring-2 transition-colors ${errors?.baseSalary
+                                        className={`w-full pl-7 sm:pl-8 pr-28 sm:pr-32 py-2.5 sm:py-3 border-2 rounded-lg text-base sm:text-lg font-semibold focus:outline-none focus:ring-2 transition-colors ${errors?.baseSalary
                                             ? 'border-red-400 bg-red-50 focus:ring-red-300 focus:border-red-500'
                                             : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
                                             }`}
                                     />
-                                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-gray-500">
+                                    <span className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 text-xs sm:text-sm text-gray-500 whitespace-nowrap">
                                         {formData.salaryType === 'PER_DAY' ? 'INR / DAY' : 'INR / MONTH'}
                                     </span>
                                 </div>
                                 <ErrorText msg={errors?.baseSalary} />
-                                <p className="text-xs text-gray-500 mt-2">Calculated based on a 22-day working month</p>
+                                <p className="text-xs text-gray-500 mt-1.5">Calculated based on a 22-day working month</p>
                             </div>
                         </div>
                     </div>
 
                     {/* Leave Deduction Rules */}
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                        <div className="flex items-center justify-between mb-6">
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-5 md:p-6">
+                        <div className="flex items-center justify-between mb-4 sm:mb-6">
                             <div className="flex items-center gap-2">
-                                <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
-                                    <Calendar className="w-5 h-5 text-red-600" />
+                                <div className="w-7 h-7 sm:w-8 sm:h-8 bg-red-100 rounded-lg flex items-center justify-center shrink-0">
+                                    <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" />
                                 </div>
-                                <h2 className="text-lg font-semibold text-gray-900">Leave Deduction Rules</h2>
+                                <h2 className="text-base sm:text-lg font-semibold text-gray-900">Leave Deduction Rules</h2>
                             </div>
-                            <label className="relative inline-flex items-center cursor-pointer">
+                            <label className="relative inline-flex items-center cursor-pointer shrink-0 ml-2">
                                 <input
                                     type="checkbox"
                                     checked={leaveDeductionEnabled}
@@ -260,17 +265,18 @@ const AddSalaryDetails = ({ formData, setFormData, handleInputChange, errors = {
                                     }}
                                     className="sr-only peer"
                                 />
-                                <div className="w-12 p-0.5 px-1 shadow h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:absolute after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                <div className="w-11 sm:w-12 p-0.5 px-1 shadow h-5 sm:h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:absolute after:bg-white after:rounded-full after:h-4 after:w-4 sm:after:h-5 sm:after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                             </label>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-6">
+                        {/* ✅ Stack on mobile, side-by-side on sm+ */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-3">
-                                    UNPAID LEAVE (DAILY)
+                                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2 sm:mb-3 tracking-wide uppercase">
+                                    Unpaid Leave (Daily Rate)
                                 </label>
                                 <div className="relative">
-                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">₹</span>
+                                    <span className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm">₹</span>
                                     <input
                                         type="number"
                                         name="leaveDeductionPerDay"
@@ -279,16 +285,18 @@ const AddSalaryDetails = ({ formData, setFormData, handleInputChange, errors = {
                                         disabled={!leaveDeductionEnabled}
                                         min="0"
                                         placeholder="0"
-                                        className="w-full pl-8 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed"
+                                        className="w-full pl-7 sm:pl-8 pr-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed"
                                     />
                                 </div>
+                                {/* ✅ Clarify it's a rate, not deducted here */}
+                                <p className="text-xs text-gray-500 mt-1.5">Rate applied per absent day during payroll</p>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-3">
-                                    LATE ARRIVAL PENALTY
+                                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2 sm:mb-3 tracking-wide uppercase">
+                                    Late Arrival Penalty
                                 </label>
                                 <div className="relative">
-                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">₹</span>
+                                    <span className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm">₹</span>
                                     <input
                                         type="number"
                                         name="lateArrivalPenalty"
@@ -297,49 +305,49 @@ const AddSalaryDetails = ({ formData, setFormData, handleInputChange, errors = {
                                         disabled={!leaveDeductionEnabled}
                                         min="0"
                                         placeholder="0"
-                                        className="w-full pl-8 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed"
+                                        className="w-full pl-7 sm:pl-8 pr-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed"
                                     />
                                 </div>
-                                <p className="text-xs text-gray-500 mt-2">Deducted per 15 minutes of delay</p>
+                                <p className="text-xs text-gray-500 mt-1.5">Deducted per 15 minutes of delay</p>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 {/* ── Right Column ────────────────────────────────────────────────── */}
-                <div className="space-y-6">
+                <div className="col-span-1 space-y-4 sm:space-y-5 md:space-y-6">
 
                     {/* Allowances */}
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="font-semibold text-gray-900">Allowances</h3>
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-5 md:p-6">
+                        <div className="flex items-center justify-between mb-3 sm:mb-4">
+                            <h3 className="font-semibold text-gray-900 text-sm sm:text-base">Allowances</h3>
                             <button
                                 type="button"
                                 onClick={() => setShowAddAllowanceForm(!showAddAllowanceForm)}
-                                className="text-blue-600 hover:text-blue-700 flex items-center gap-1 text-sm font-medium cursor-pointer"
+                                className="text-blue-600 hover:text-blue-700 flex items-center gap-1 text-xs sm:text-sm font-medium cursor-pointer"
                             >
-                                <Plus className="w-4 h-4" />
+                                <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                 Add New
                             </button>
                         </div>
 
-                        <div className="space-y-3">
+                        <div className="space-y-2.5 sm:space-y-3">
                             {showAddAllowanceForm && (
-                                <div className="bg-white p-3 sm:p-4 rounded-md shadow-sm space-y-3 border border-blue-200">
+                                <div className="bg-white p-3 sm:p-4 rounded-md shadow-sm space-y-2.5 sm:space-y-3 border border-blue-200">
                                     {getAvailableAllowances().length > 0 ? (
                                         <>
                                             <select
                                                 value={newAllowance.name}
                                                 onChange={(e) => setNewAllowance(prev => ({ ...prev, name: e.target.value }))}
-                                                className="w-full border-2 border-gray-300 px-2 py-2 text-sm outline-none rounded-sm focus:border-blue-500"
+                                                className="w-full border-2 border-gray-300 px-2 py-2 text-xs sm:text-sm outline-none rounded-sm focus:border-blue-500"
                                             >
                                                 <option value="" disabled>Select allowance</option>
                                                 {getAvailableAllowances().map(option => (
                                                     <option key={option} value={option}>{ALLOWANCE_LABELS[option]}</option>
                                                 ))}
                                             </select>
-                                            <div className="flex gap-2 border-2 border-gray-300 px-2 py-1">
-                                                <span className="text-gray-500 text-xl">₹</span>
+                                            <div className="flex gap-2 border-2 border-gray-300 px-2 py-1 rounded-sm">
+                                                <span className="text-gray-500 text-lg sm:text-xl">₹</span>
                                                 <input
                                                     type="number"
                                                     step="0.01"
@@ -347,40 +355,40 @@ const AddSalaryDetails = ({ formData, setFormData, handleInputChange, errors = {
                                                     value={newAllowance.amount}
                                                     onChange={(e) => setNewAllowance(prev => ({ ...prev, amount: e.target.value }))}
                                                     placeholder="0.00"
-                                                    className="w-full text-sm outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                                                    className="w-full text-xs sm:text-sm outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                                                 />
                                             </div>
                                             <div className="flex gap-2">
-                                                <button type="button" onClick={handleAddAllowance} className="flex-1 bg-blue-500 text-white px-4 py-2 text-sm rounded hover:bg-blue-600 transition">Add</button>
-                                                <button type="button" onClick={() => setShowAddAllowanceForm(false)} className="flex-1 bg-gray-300 text-gray-700 px-4 py-2 text-sm rounded hover:bg-gray-400 transition">Cancel</button>
+                                                <button type="button" onClick={handleAddAllowance} className="flex-1 bg-blue-500 text-white px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm rounded hover:bg-blue-600 transition">Add</button>
+                                                <button type="button" onClick={() => setShowAddAllowanceForm(false)} className="flex-1 bg-gray-300 text-gray-700 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm rounded hover:bg-gray-400 transition">Cancel</button>
                                             </div>
                                         </>
                                     ) : (
-                                        <div className="text-center text-sm text-gray-500 py-4">All allowances have been added</div>
+                                        <div className="text-center text-xs sm:text-sm text-gray-500 py-3 sm:py-4">All allowances have been added</div>
                                     )}
                                 </div>
                             )}
 
                             {allowances.length === 0 && !showAddAllowanceForm && (
-                                <p className="text-sm text-gray-400 text-center py-4 border border-dashed border-gray-200 rounded-lg">
+                                <p className="text-xs sm:text-sm text-gray-400 text-center py-4 border border-dashed border-gray-200 rounded-lg">
                                     No allowances added yet
                                 </p>
                             )}
 
                             {allowances.map((allowance) => (
-                                <div key={allowance.id} className="flex items-center justify-between gap-4 p-3 rounded-md border border-gray-200 bg-white hover:bg-gray-50 transition">
-                                    <div className="w-9 h-9 bg-blue-100 text-blue-600 rounded-md flex items-center justify-center shrink-0">
-                                        <IndianRupee className="w-5 h-5" />
+                                <div key={allowance.id} className="flex items-center justify-between gap-2 sm:gap-3 p-2.5 sm:p-3 rounded-md border border-gray-200 bg-white hover:bg-gray-50 transition">
+                                    <div className="w-8 h-8 sm:w-9 sm:h-9 bg-blue-100 text-blue-600 rounded-md flex items-center justify-center shrink-0">
+                                        <IndianRupee className="w-4 h-4 sm:w-5 sm:h-5" />
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <p className="font-medium text-gray-900 text-sm truncate">{ALLOWANCE_LABELS[allowance.name]}</p>
+                                        <p className="font-medium text-gray-900 text-xs sm:text-sm truncate">{ALLOWANCE_LABELS[allowance.name]}</p>
                                     </div>
-                                    <div className="flex items-center gap-3 shrink-0">
-                                        <span className="font-semibold text-gray-900 text-sm">₹{allowance.amount.toLocaleString()}</span>
+                                    <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+                                        <span className="font-semibold text-gray-900 text-xs sm:text-sm">₹{allowance.amount.toLocaleString()}</span>
                                         <button
                                             type="button"
                                             onClick={() => handleDeleteAllowance(allowance.id, allowance.name)}
-                                            className="w-7 h-7 flex items-center justify-center rounded-md bg-gray-200 text-gray-600 hover:bg-red-100 hover:text-red-600 transition"
+                                            className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center rounded-md bg-gray-200 text-gray-600 hover:bg-red-100 hover:text-red-600 transition text-xs"
                                         >✕</button>
                                     </div>
                                 </div>
@@ -389,36 +397,36 @@ const AddSalaryDetails = ({ formData, setFormData, handleInputChange, errors = {
                     </div>
 
                     {/* Active Penalties */}
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="font-semibold text-gray-900">Active Penalties</h3>
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-5 md:p-6">
+                        <div className="flex items-center justify-between mb-3 sm:mb-4">
+                            <h3 className="font-semibold text-gray-900 text-sm sm:text-base">Active Deductions</h3>
                             <button
                                 type="button"
                                 onClick={() => setShowAddPenaltyForm(!showAddPenaltyForm)}
-                                className="text-red-600 hover:text-red-700 flex items-center gap-1 text-sm font-medium cursor-pointer"
+                                className="text-red-600 hover:text-red-700 flex items-center gap-1 text-xs sm:text-sm font-medium cursor-pointer"
                             >
-                                <Plus className="w-4 h-4" />
+                                <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                 Add
                             </button>
                         </div>
 
-                        <div className="space-y-3">
+                        <div className="space-y-2.5 sm:space-y-3">
                             {showAddPenaltyForm && (
-                                <div className="bg-white p-3 sm:p-4 rounded-md shadow-sm space-y-3 border border-red-200">
+                                <div className="bg-white p-3 sm:p-4 rounded-md shadow-sm space-y-2.5 sm:space-y-3 border border-red-200">
                                     {getAvailableDeductions().length > 0 ? (
                                         <>
                                             <select
                                                 value={newPenalty.name}
                                                 onChange={(e) => setNewPenalty(prev => ({ ...prev, name: e.target.value }))}
-                                                className="w-full border-2 border-gray-300 px-2 py-2 text-sm outline-none rounded-sm focus:border-red-500"
+                                                className="w-full border-2 border-gray-300 px-2 py-2 text-xs sm:text-sm outline-none rounded-sm focus:border-red-500"
                                             >
                                                 <option value="" disabled>Select deduction</option>
                                                 {getAvailableDeductions().map(option => (
                                                     <option key={option.key} value={option.key}>{option.label}</option>
                                                 ))}
                                             </select>
-                                            <div className="flex gap-2 border-2 border-gray-300 px-2 py-1">
-                                                <span className="text-gray-500 text-xl">₹</span>
+                                            <div className="flex gap-2 border-2 border-gray-300 px-2 py-1 rounded-sm">
+                                                <span className="text-gray-500 text-lg sm:text-xl">₹</span>
                                                 <input
                                                     type="number"
                                                     step="0.01"
@@ -426,40 +434,40 @@ const AddSalaryDetails = ({ formData, setFormData, handleInputChange, errors = {
                                                     placeholder="0.00"
                                                     value={newPenalty.amount}
                                                     onChange={(e) => setNewPenalty(prev => ({ ...prev, amount: e.target.value }))}
-                                                    className="w-full text-sm outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                                                    className="w-full text-xs sm:text-sm outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                                                 />
                                             </div>
                                             <div className="flex gap-2">
-                                                <button type="button" onClick={handleAddPenalty} className="flex-1 bg-red-500 text-white px-4 py-2 text-sm rounded hover:bg-red-600 transition">Add</button>
-                                                <button type="button" onClick={() => setShowAddPenaltyForm(false)} className="flex-1 bg-gray-300 text-gray-700 px-4 py-2 text-sm rounded hover:bg-gray-400 transition">Cancel</button>
+                                                <button type="button" onClick={handleAddPenalty} className="flex-1 bg-red-500 text-white px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm rounded hover:bg-red-600 transition">Add</button>
+                                                <button type="button" onClick={() => setShowAddPenaltyForm(false)} className="flex-1 bg-gray-300 text-gray-700 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm rounded hover:bg-gray-400 transition">Cancel</button>
                                             </div>
                                         </>
                                     ) : (
-                                        <div className="text-center text-sm text-gray-500 py-4">All deductions have been added</div>
+                                        <div className="text-center text-xs sm:text-sm text-gray-500 py-3 sm:py-4">All deductions have been added</div>
                                     )}
                                 </div>
                             )}
 
                             {penalties.length === 0 && !showAddPenaltyForm && (
-                                <p className="text-sm text-gray-400 text-center py-4 border border-dashed border-gray-200 rounded-lg">
-                                    No penalties added yet
+                                <p className="text-xs sm:text-sm text-gray-400 text-center py-4 border border-dashed border-gray-200 rounded-lg">
+                                    No deductions added yet
                                 </p>
                             )}
 
                             {penalties.map((penalty) => (
-                                <div key={penalty.id} className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 border border-gray-100">
-                                    <div className="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center shrink-0">
-                                        <RotateCcw className="w-5 h-5 text-orange-400" />
+                                <div key={penalty.id} className="flex items-center gap-2 sm:gap-3 p-2.5 sm:p-3 rounded-lg hover:bg-gray-50 border border-gray-100">
+                                    <div className="w-8 h-8 sm:w-10 sm:h-10 bg-yellow-100 rounded-lg flex items-center justify-center shrink-0">
+                                        <RotateCcw className="w-4 h-4 sm:w-5 sm:h-5 text-orange-400" />
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <div className="font-medium text-gray-900 text-sm">{penalty.label}</div>
+                                        <div className="font-medium text-gray-900 text-xs sm:text-sm">{penalty.label}</div>
                                     </div>
-                                    <div className="flex items-center gap-3 shrink-0">
-                                        <div className="font-semibold text-red-600">-₹{penalty.amount.toLocaleString()}</div>
+                                    <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+                                        <div className="font-semibold text-red-600 text-xs sm:text-sm">-₹{penalty.amount.toLocaleString()}</div>
                                         <button
                                             type="button"
                                             onClick={() => handleDeletePenalty(penalty.id, penalty.key)}
-                                            className="text-red-400 hover:text-red-600 text-sm transition-colors"
+                                            className="text-red-400 hover:text-red-600 text-xs sm:text-sm transition-colors"
                                         >✕</button>
                                     </div>
                                 </div>
@@ -468,33 +476,39 @@ const AddSalaryDetails = ({ formData, setFormData, handleInputChange, errors = {
                     </div>
 
                     {/* Net Estimate */}
-                    <div className="bg-blue-50 rounded-xl border border-blue-200 p-6 my-6">
-                        <div className="text-sm font-medium text-blue-700 mb-2">TOTAL ESTIMATED NET</div>
-                        <div className="text-3xl font-bold text-gray-900 mb-1">
+                    <div className="bg-blue-50 rounded-xl border border-blue-200 p-4 sm:p-5 md:p-6">
+                        <div className="text-xs sm:text-sm font-medium text-blue-700 mb-1.5 sm:mb-2 tracking-wide uppercase">
+                            Total Estimated Net
+                        </div>
+                        <div className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">
                             ₹{calculateNet().toLocaleString()}
-                            <span className="text-lg font-normal text-gray-600">
+                            <span className="text-base sm:text-lg font-normal text-gray-600 ml-0.5">
                                 {formData.salaryType === 'PER_DAY' ? '/day' : '/month'}
                             </span>
                         </div>
-                        <p className="text-xs text-gray-600">After all active allowances and average penalties are applied</p>
+                        {/* ✅ Updated copy — make it clear leave rates are excluded */}
+                        <p className="text-xs text-gray-500">
+                            Base + allowances − fixed deductions.
+                            Leave & late-arrival rates are applied during payroll processing.
+                        </p>
                     </div>
                 </div>
             </div>
 
             {/* Warning Banner */}
-            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mt-4 flex items-center gap-3">
-                <AlertTriangle className="w-5 h-5 text-yellow-600 shrink-0" />
-                <p className="text-sm text-orange-800">
-                    <strong>Attention:</strong> Changes made to the salary structure will only apply to future payroll cycles. Current processing cycles will remain unaffected.
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 sm:p-4 mt-4 flex items-start sm:items-center gap-3">
+                <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-600 shrink-0 mt-0.5 sm:mt-0" />
+                <p className="text-xs sm:text-sm text-orange-800">
+                    <strong>Attention:</strong> Changes to the salary structure apply to future payroll cycles only. Current processing cycles remain unaffected.
                 </p>
             </div>
 
             {/* Reset Button */}
-            <div className="flex justify-end gap-4 mt-6">
+            <div className="flex justify-end gap-4 mt-4 sm:mt-6">
                 <button
                     type="button"
                     onClick={handleReset}
-                    className="px-6 py-3 text-xs lg:text-base border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors cursor-pointer"
+                    className="px-4 sm:px-6 py-2.5 sm:py-3 text-xs sm:text-sm lg:text-base border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors cursor-pointer"
                 >
                     Reset
                 </button>
