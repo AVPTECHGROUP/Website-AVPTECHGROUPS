@@ -1,10 +1,6 @@
-<<<<<<< HEAD
-import { ChevronDown, Search, RotateCcw, Plus, Loader2, CheckCheck } from "lucide-react";
+import { ChevronDown, Search, RotateCcw, Plus, Loader2, CheckCheck, Filter } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import { PERMISSIONS as P } from "../../Constants/Permission";
-=======
-import { ChevronDown, Search, Plus, Filter, CheckCheck } from "lucide-react";
->>>>>>> 919065858fd7047c4899a54ec584e1739bb922f3
 
 function FilterSelect({ value, onChange, loading = false, disabled = false, className = "", children }) {
   return (
@@ -67,42 +63,8 @@ export default function ControlBar({
           onClick={onReset}
           className="text-xs font-medium text-slate-400 hover:text-blue-600 transition-colors cursor-pointer select-none"
         >
-<<<<<<< HEAD
-          <RotateCcw size={13} /> Reset
-        </button>
-
-        {/* Apply — fires the actual API fetch */}
-        <button
-          onClick={onApply}
-          disabled={noSection}
-          title={noSection ? "Select a class and section first" : "Fetch homework with current filters"}
-          className="inline-flex items-center gap-1.5 px-3.5 py-[7px] text-[13px] font-semibold
-            border border-green-600 rounded-lg text-green-700 bg-green-50
-            hover:bg-green-100 transition-colors
-            disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <CheckCheck size={14} /> Apply
-        </button>
-
-        <div className="flex-1" />
-
-        {/* Assign button — requires HOMEWORK_CREATE permission and a section to be selected */}
-        {hasPermission(P.HOMEWORK_CREATE) && (
-          <button
-            onClick={onAssign}
-            disabled={noSection}
-            title={noSection ? "Select a class and section first" : "Assign new homework"}
-            className="inline-flex items-center gap-1.5 px-4 py-[7px] text-[13px] font-semibold
-              bg-blue-700 hover:bg-blue-800 text-white rounded-lg transition-colors
-              disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Plus size={14} /> Assign Homework
-          </button>
-        )}
-=======
           Reset
         </button>
->>>>>>> 919065858fd7047c4899a54ec584e1739bb922f3
       </div>
 
       {/* Extremely Compact Inline Inputs Content Layer */}

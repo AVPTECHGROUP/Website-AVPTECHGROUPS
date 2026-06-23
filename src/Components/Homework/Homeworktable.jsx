@@ -177,7 +177,6 @@ function HwRow({ hw, index, submitting, onView, onEdit, onCancel }) {
 
       <td className="px-4 py-3.5">
         <div className="flex items-center gap-2">
-<<<<<<< HEAD
           <ActionBtn
             onClick={() => onView(hw)}
             disabled={false}
@@ -208,11 +207,6 @@ function HwRow({ hw, index, submitting, onView, onEdit, onCancel }) {
               variant="cancel"
             />
           )}
-=======
-          <ActionBtn onClick={() => onView(hw)} disabled={false} title="View homework" icon={Eye} label="View" variant="view" />
-          <ActionBtn onClick={() => !cancelled && onEdit(hw)} disabled={cancelled || submitting} title={cancelled ? "Cannot edit a cancelled homework" : "Edit homework"} icon={Pencil} label="Edit" variant="edit" />
-          <ActionBtn onClick={() => !cancelled && !submitting && onCancel(hw.id)} disabled={cancelled || submitting} title={cancelled ? "Already cancelled" : "Cancel homework"} icon={submitting ? Loader2 : Ban} label={cancelled ? "Cancelled" : "Cancel"} variant="cancel" />
->>>>>>> 919065858fd7047c4899a54ec584e1739bb922f3
         </div>
       </td>
     </tr>

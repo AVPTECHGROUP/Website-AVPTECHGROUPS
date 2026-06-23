@@ -326,19 +326,12 @@ function EventItem({ event, expanded, onToggle, sectionsCache, onLoadSections, o
                             <div className={`h-full ${meta.bar}`} style={{ width: `${pct}%` }} />
                         </div>
                     </div>
-<<<<<<< HEAD
                     {hasPermission(P.EXAM_EDIT) && (
                       <ActionBtn Icon={Edit2} label="Edit" tone="neutral" compact onClick={() => onEdit(event)} />
                     )}
                     {hasPermission(P.EXAM_CREATE) && (
                       <ActionBtn Icon={Copy} label="Copy" tone="neutral" compact onClick={() => onCopy(event)} />
                     )}
-=======
-                    <div className="cursor-pointer flex">
-                    <ActionBtn Icon={Edit2}  label="Edit" tone="neutral" compact onClick={() => onEdit(event)} />
-                    <ActionBtn Icon={Copy}  label="Copy" tone="neutral" compact onClick={() => onCopy(event)} />
-                    </div>
->>>>>>> 919065858fd7047c4899a54ec584e1739bb922f3
                 </div>
             </div>
 
@@ -962,7 +955,6 @@ export default function ExamEvents() {
                             <Download className="w-4 h-4 shrink-0" /> <span className="hidden sm:inline">Export Schedule</span><span className="sm:hidden">Export</span>
                         </button>
 
-<<<<<<< HEAD
                         {hasPermission(P.EXAM_CREATE) && (
                           <button
                               onClick={() => setShowWizard(true)}
@@ -972,15 +964,6 @@ export default function ExamEvents() {
                               <Plus className="w-4 h-4 shrink-0" /> <span className="hidden sm:inline">New Exam Event</span><span className="sm:hidden">New</span>
                           </button>
                         )}
-=======
-                        <button
-                            onClick={() => setShowWizard(true)}
-                            disabled={loadingMeta}
-                            className="flex items-center cursor-pointer justify-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold rounded-lg transition-all shadow-sm active:scale-95 disabled:opacity-60 whitespace-nowrap"
-                        >
-                            <Plus className="w-4 h-4 shrink-0" /> <span className="hidden sm:inline">New Exam Event</span><span className="sm:hidden">New</span>
-                        </button>
->>>>>>> 919065858fd7047c4899a54ec584e1739bb922f3
                     </div>
                 </div>
 
