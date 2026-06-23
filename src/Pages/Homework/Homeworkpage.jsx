@@ -5,10 +5,10 @@ import ConfirmModal from "../../Components/Homework/confirmmodal";
 
 import { useDecodedUser } from "../../ContextAPI/UserContext";
 
-import ControlBar    from "../../Components/Homework/Controlbar";
+import ControlBar from "../../Components/Homework/Controlbar";
 import HomeworkTable from "../../Components/Homework/Homeworktable";
-import AssignModal   from "../../Components/Homework/Assignmodal";
-import ViewModal     from "../../Components/Homework/Viewmodal";
+import AssignModal from "../../Components/Homework/Assignmodal";
+import ViewModal from "../../Components/Homework/Viewmodal";
 
 import {
   createHomework,
@@ -24,7 +24,7 @@ import {
 import { getActiveClasses, getSectionsByClass } from "../../Api/ClassSectionAPI";
 
 const showError = (err, fallback = "Something went wrong") =>
-    toast.error(typeof err?.message === "string" ? err.message : fallback);
+  toast.error(typeof err?.message === "string" ? err.message : fallback);
 
 const getDefaultDates = () => {
   const today = new Date();
@@ -36,12 +36,12 @@ const getDefaultDates = () => {
 
 const EMPTY_FILTERS = {
   subjectFilter: "",
-  statusFilter:  "",
-  search:        "",
+  statusFilter: "",
+  search: "",
   ...getDefaultDates(),
 };
 
-const normClass   = (item) => ({ id: item.id ?? item.classId ?? "",   label: item.name ?? item.className ?? item.label ?? "" });
+const normClass = (item) => ({ id: item.id ?? item.classId ?? "", label: item.name ?? item.className ?? item.label ?? "" });
 const normSection = (item) => ({ id: item.id ?? item.sectionId ?? "", label: item.name ?? item.sectionName ?? item.label ?? "" });
 const normSubject = (item) => ({ id: item.subjectId ?? item.id ?? "", label: item.subjectName ?? item.name ?? item.label ?? "" });
 
@@ -62,7 +62,7 @@ const normTeacher = (item) => ({
  * The GET /homework/:id endpoint returns all of them.
  */
 async function fetchFullRecord(id) {
-  const res  = await getHomeworkById(id);
+  const res = await getHomeworkById(id);
   const full = res?.data ?? res;
   return (full?.id) ? full : null;
 }
@@ -70,12 +70,12 @@ async function fetchFullRecord(id) {
 export default function HomeworkPage() {
 
   const { user, profile } = useDecodedUser();
-  const schoolId  = user?.schoolId ? Number(user.schoolId) : 1;
+  const schoolId = user?.schoolId ? Number(user.schoolId) : 1;
   const isTeacher = user?.userType === "TEACHER";
   const teacherId = isTeacher ? profile?.id : null;
 
   // ── Teachers ──────────────────────────────────────────────────────────────
-  const [teachers,        setTeachers]        = useState([]);
+  const [teachers, setTeachers] = useState([]);
   const [teachersLoading, setTeachersLoading] = useState(false);
 
   useEffect(() => {
@@ -84,7 +84,7 @@ export default function HomeworkPage() {
       setTeachersLoading(true);
       try {
         const list = await getTeacherLookup();
-        const raw  = Array.isArray(list) ? list : [];
+        const raw = Array.isArray(list) ? list : [];
         console.log("[HomeworkPage] teachers loaded:", raw);
         setTeachers(raw.map(normTeacher));
       } catch (err) {
@@ -97,17 +97,17 @@ export default function HomeworkPage() {
   }, [isTeacher]);
 
   // ── Classes ───────────────────────────────────────────────────────────────
-  const [classes,        setClasses]        = useState([]);
+  const [classes, setClasses] = useState([]);
   const [classesLoading, setClassesLoading] = useState(false);
-  const [confirmCancel,  setConfirmCancel]  = useState(null);
+  const [confirmCancel, setConfirmCancel] = useState(null);
 
   useEffect(() => {
     const fetch_ = async () => {
       setClassesLoading(true);
       try {
-        const raw  = await getActiveClasses(schoolId);
+        const raw = await getActiveClasses(schoolId);
         const data = Array.isArray(raw) ? raw : Array.isArray(raw?.data) ? raw.data : [];
-        const map  = new Map();
+        const map = new Map();
         data.map(normClass).forEach((item) => { const k = item.id || item.label; if (!map.has(k)) map.set(k, item); });
         setClasses(Array.from(map.values()));
       } catch (err) { showError(err, "Failed to load classes"); }
@@ -117,24 +117,24 @@ export default function HomeworkPage() {
   }, [schoolId]);
 
   // ── Sections ──────────────────────────────────────────────────────────────
-  const [selectedClassId,   setSelectedClassId]   = useState("");
-  const [sections,          setSections]          = useState([]);
-  const [sectionsLoading,   setSectionsLoading]   = useState(false);
+  const [selectedClassId, setSelectedClassId] = useState("");
+  const [sections, setSections] = useState([]);
+  const [sectionsLoading, setSectionsLoading] = useState(false);
 
   useEffect(() => {
     setSections([]); setSelectedSectionId(""); setSubjects([]); setRows([]);
     if (!selectedClassId) return;
     setSectionsLoading(true);
     getSectionsByClass(selectedClassId)
-        .then((raw) => setSections((Array.isArray(raw) ? raw : raw?.data ?? []).map(normSection)))
-        .catch((err) => showError(err, "Failed to load sections"))
-        .finally(() => setSectionsLoading(false));
+      .then((raw) => setSections((Array.isArray(raw) ? raw : raw?.data ?? []).map(normSection)))
+      .catch((err) => showError(err, "Failed to load sections"))
+      .finally(() => setSectionsLoading(false));
   }, [selectedClassId]);
 
   // ── Subjects ──────────────────────────────────────────────────────────────
   const [selectedSectionId, setSelectedSectionId] = useState("");
-  const [subjects,          setSubjects]          = useState([]);
-  const [subjectsLoading,   setSubjectsLoading]   = useState(false);
+  const [subjects, setSubjects] = useState([]);
+  const [subjectsLoading, setSubjectsLoading] = useState(false);
 
   useEffect(() => {
     setSubjects([]); setFilters((f) => ({ ...f, subjectFilter: "" })); setRows([]);
@@ -155,9 +155,9 @@ export default function HomeworkPage() {
   const setFilter = (key) => (val) => setFilters((f) => ({ ...f, [key]: val }));
 
   // ── Homework list ─────────────────────────────────────────────────────────
-  const [rows,        setRows]        = useState([]);
+  const [rows, setRows] = useState([]);
   const [listLoading, setListLoading] = useState(false);
-  const [submitting,  setSubmitting]  = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const fetchHomework = useCallback(async (currentFilters) => {
     if (!selectedClassId || !selectedSectionId) {
@@ -169,9 +169,9 @@ export default function HomeworkPage() {
       const result = await getHomework({
         sectionId: selectedSectionId,
         subjectId: currentFilters.subjectFilter || undefined,
-        status:    currentFilters.statusFilter  || undefined,
-        dueAfter:  currentFilters.dateFrom      || undefined,
-        dueBefore: currentFilters.dateTo        || undefined,
+        status: currentFilters.statusFilter || undefined,
+        dueAfter: currentFilters.dateFrom || undefined,
+        dueBefore: currentFilters.dateTo || undefined,
       });
       const fresh = Array.isArray(result) ? result : [];
       setRows(fresh);
@@ -201,22 +201,22 @@ export default function HomeworkPage() {
     const q = filters.search.trim().toLowerCase();
     return rows.filter((hw) =>
       !q ||
-      (hw.title       ?? "").toLowerCase().includes(q) ||
+      (hw.title ?? "").toLowerCase().includes(q) ||
       (hw.description ?? hw.desc ?? "").toLowerCase().includes(q)
     );
   }, [rows, filters.search]);
 
   const stats = useMemo(() => ({
-    total:   rows.length,
-    active:  rows.filter((hw) => hw.status === "PUBLISHED").length,
+    total: rows.length,
+    active: rows.filter((hw) => hw.status === "PUBLISHED").length,
     overdue: rows.filter((hw) => hw.dueDate && new Date(hw.dueDate) < new Date() && hw.status !== "CANCELLED").length,
   }), [rows]);
 
   // ── Modals ────────────────────────────────────────────────────────────────
-  const [assignOpen,  setAssignOpen]  = useState(false);
-  const [viewHw,      setViewHw]      = useState(null);
+  const [assignOpen, setAssignOpen] = useState(false);
+  const [viewHw, setViewHw] = useState(null);
   const [viewLoading, setViewLoading] = useState(false);
-  const [editHw,      setEditHw]      = useState(null);
+  const [editHw, setEditHw] = useState(null);
 
   const closeAssign = () => { setAssignOpen(false); setEditHw(null); };
 
@@ -322,88 +322,90 @@ export default function HomeworkPage() {
   };
 
   return (
-      <div className="flex flex-col h-full">
+    <div className="flex flex-col min-h-0 h-full">
 
-        <div className="flex items-center gap-2 px-6 py-4 border-b border-gray-200 bg-white">
-          <BookOpen size={18} className="text-blue-700" />
-          <h1 className="text-sm font-bold text-gray-900">Homework Management</h1>
-        </div>
-
-        <div className="flex-1 overflow-hidden m-4 bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col">
-          <ControlBar
-              classes         = {classes}
-              classesLoading  = {classesLoading}
-              sections        = {sections}
-              sectionsLoading = {sectionsLoading}
-              subjects        = {subjects}
-              subjectsLoading = {subjectsLoading}
-              selectedClassId      = {selectedClassId}
-              setSelectedClassId   = {setSelectedClassId}
-              selectedSectionId    = {selectedSectionId}
-              setSelectedSectionId = {setSelectedSectionId}
-              total   = {stats.total}
-              active  = {stats.active}
-              overdue = {stats.overdue}
-              subjectFilter    = {filters.subjectFilter}
-              setSubjectFilter = {setFilter("subjectFilter")}
-              statusFilter     = {filters.statusFilter}
-              setStatusFilter  = {setFilter("statusFilter")}
-              dateFrom         = {filters.dateFrom}
-              setDateFrom      = {setFilter("dateFrom")}
-              dateTo           = {filters.dateTo}
-              setDateTo        = {setFilter("dateTo")}
-              search           = {filters.search}
-              setSearch        = {setFilter("search")}
-              onReset  = {handleReset}
-              onApply  = {handleApply}
-              onAssign = {() => setAssignOpen(true)}
-          />
-
-          <div className="flex-1 overflow-auto">
-            <HomeworkTable
-                rows       = {visibleRows}
-                loading    = {listLoading}
-                submitting = {submitting}
-                onView     = {handleView}
-                onEdit     = {openEdit}
-                onCancel   = {handleCancel}
-            />
-          </div>
-        </div>
-
-        {viewHw && (
-            <ViewModal
-                hw      = {viewHw}
-                loading = {viewLoading}
-                onClose = {() => { setViewHw(null); setViewLoading(false); }}
-                onEdit  = {openEdit}
-            />
-        )}
-
-        {assignOpen && (
-            <AssignModal
-                mode            = {editHw ? "edit" : "assign"}
-                hw              = {editHw}
-                subjects        = {subjects}
-                subjectsLoading = {subjectsLoading}
-                submitting      = {submitting}
-                onClose         = {closeAssign}
-                onSave          = {handleSave}
-                isTeacher       = {isTeacher}
-                teacherId       = {teacherId}
-                teacherName     = {profile?.fullName}
-                teachers        = {teachers}
-                teachersLoading = {teachersLoading}
-            />
-        )}
-
-        {confirmCancel && (
-            <ConfirmModal
-                message   = "Are you sure you want to cancel this homework? This action cannot be undone."
-                onConfirm = {handleConfirmCancel}
-                onClose   = {() => setConfirmCancel(null)}
-            />
-        )}
+      <div className="flex items-center gap-2 px-4 sm:px-6 py-4 border-b border-gray-200 bg-white shrink-0">
+        <BookOpen size={18} className="text-blue-700 shrink-0" />
+        <h1 className="text-sm font-bold text-gray-900">Homework Management</h1>
       </div>
+
+      {/* Main card: flex-col, overflow-auto on the table area only */}
+      <div className="flex-1 min-h-0 m-3 sm:m-4 bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col overflow-hidden">
+        <ControlBar
+          classes={classes}
+          classesLoading={classesLoading}
+          sections={sections}
+          sectionsLoading={sectionsLoading}
+          subjects={subjects}
+          subjectsLoading={subjectsLoading}
+          selectedClassId={selectedClassId}
+          setSelectedClassId={setSelectedClassId}
+          selectedSectionId={selectedSectionId}
+          setSelectedSectionId={setSelectedSectionId}
+          total={stats.total}
+          active={stats.active}
+          overdue={stats.overdue}
+          subjectFilter={filters.subjectFilter}
+          setSubjectFilter={setFilter("subjectFilter")}
+          statusFilter={filters.statusFilter}
+          setStatusFilter={setFilter("statusFilter")}
+          dateFrom={filters.dateFrom}
+          setDateFrom={setFilter("dateFrom")}
+          dateTo={filters.dateTo}
+          setDateTo={setFilter("dateTo")}
+          search={filters.search}
+          setSearch={setFilter("search")}
+          onReset={handleReset}
+          onApply={handleApply}
+          onAssign={() => setAssignOpen(true)}
+        />
+
+        {/* Scrollable table/card area */}
+        <div className="flex-1 min-h-0 overflow-auto">
+          <HomeworkTable
+            rows={visibleRows}
+            loading={listLoading}
+            submitting={submitting}
+            onView={handleView}
+            onEdit={openEdit}
+            onCancel={handleCancel}
+          />
+        </div>
+      </div>
+
+      {viewHw && (
+        <ViewModal
+          hw={viewHw}
+          loading={viewLoading}
+          onClose={() => { setViewHw(null); setViewLoading(false); }}
+          onEdit={openEdit}
+        />
+      )}
+
+      {assignOpen && (
+        <AssignModal
+          mode={editHw ? "edit" : "assign"}
+          hw={editHw}
+          subjects={subjects}
+          subjectsLoading={subjectsLoading}
+          submitting={submitting}
+          onClose={closeAssign}
+          onSave={handleSave}
+          isTeacher={isTeacher}
+          teacherId={teacherId}
+          teacherName={profile?.fullName}
+          teachers={teachers}
+          teachersLoading={teachersLoading}
+        />
+      )}
+
+      {confirmCancel && (
+        <ConfirmModal
+          message="Are you sure you want to cancel this homework? This action cannot be undone."
+          onConfirm={handleConfirmCancel}
+          onClose={() => setConfirmCancel(null)}
+        />
+      )}
+    </div>
   );
 }
