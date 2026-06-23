@@ -3,11 +3,11 @@ name: Dev Azure Static Web Apps CI/CD
 on:
   push:
     branches:
-      - main
+      - dev_development
   pull_request:
     types: [opened, synchronize, reopened, closed]
     branches:
-      - main
+      - dev_development
 
 jobs:
   build_and_deploy_job:
