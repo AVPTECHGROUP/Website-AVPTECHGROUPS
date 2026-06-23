@@ -1,5 +1,7 @@
 import { Eye, Pencil, Ban, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { DuePill, StatusBadge, AttachChip, SubjectLabel } from "./Badges";
+import { useAuth } from "../../hooks/useAuth";
+import { PERMISSIONS as P } from "../../Constants/Permission";
 
 const COLUMNS = ["#", "Subject", "Title / Description", "Assigned", "Due Date", "Attachment", "Status", "Actions"];
 
@@ -86,6 +88,7 @@ function ActionBtn({ onClick, disabled, title, icon: Icon, label, variant }) {
 function HwRow({ hw, index, submitting, onView, onEdit, onCancel }) {
   const cancelled = hw.status === "CANCELLED";
   const dueState  = getDueState(hw);
+  const { hasPermission } = useAuth();
 
   return (
     <tr className="border-b border-gray-100 last:border-0 hover:bg-blue-50/20 transition-colors">
@@ -128,23 +131,27 @@ function HwRow({ hw, index, submitting, onView, onEdit, onCancel }) {
             variant="view"
           />
 
-          <ActionBtn
-            onClick={() => !cancelled && onEdit(hw)}
-            disabled={cancelled || submitting}
-            title={cancelled ? "Cannot edit a cancelled homework" : "Edit homework"}
-            icon={Pencil}
-            label="Edit"
-            variant="edit"
-          />
+          {hasPermission(P.HOMEWORK_EDIT) && (
+            <ActionBtn
+              onClick={() => !cancelled && onEdit(hw)}
+              disabled={cancelled || submitting}
+              title={cancelled ? "Cannot edit a cancelled homework" : "Edit homework"}
+              icon={Pencil}
+              label="Edit"
+              variant="edit"
+            />
+          )}
 
-          <ActionBtn
-            onClick={() => !cancelled && !submitting && onCancel(hw.id)}
-            disabled={cancelled || submitting}
-            title={cancelled ? "Already cancelled" : "Cancel homework"}
-            icon={submitting ? Loader2 : Ban}
-            label={cancelled ? "Cancelled" : "Cancel"}
-            variant="cancel"
-          />
+          {hasPermission(P.HOMEWORK_DELETE) && (
+            <ActionBtn
+              onClick={() => !cancelled && !submitting && onCancel(hw.id)}
+              disabled={cancelled || submitting}
+              title={cancelled ? "Already cancelled" : "Cancel homework"}
+              icon={submitting ? Loader2 : Ban}
+              label={cancelled ? "Cancelled" : "Cancel"}
+              variant="cancel"
+            />
+          )}
         </div>
       </td>
     </tr>

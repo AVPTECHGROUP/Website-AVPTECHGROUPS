@@ -18,8 +18,11 @@ import { getAllSections } from '../../Api/TeachersAPI';
 import CardLoader from '../../Components/CommonComp/CardLoader';
 import ListLoader from '../../Components/CommonComp/ListLoader';
 import TooltipComponent from '../../Components/CommonComp/Tooltip_comp/TooltipComp';
+import { useAuth } from '../../hooks/useAuth';
+import { PERMISSIONS as P } from '../../Constants/Permission';
 
 const Student = () => {
+    const { hasPermission } = useAuth();
     const [error, setError] = useState(null);
     const [totalElements, setTotalElements] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
@@ -297,15 +300,17 @@ const Student = () => {
                 {/* ── Toolbar: Add + Search + Filters ── */}
                 <div className="bg-white flex flex-wrap items-center gap-2 px-3 py-2.5 rounded-xl border border-gray-200 shrink-0">
 
-                    {/* Add button */}
-                    <button
-                        onClick={() => navigate('/students/addStudents')}
-                        className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-lg font-medium text-xs
-                                   bg-blue-600 hover:bg-blue-700 active:scale-[0.97] text-white transition-all whitespace-nowrap"
-                    >
-                        <UserPlus className="w-4 h-4" />
-                        Add New Student
-                    </button>
+                    {/* Add button — requires STUDENT_CREATE */}
+                    {hasPermission(P.STUDENT_CREATE) && (
+                      <button
+                          onClick={() => navigate('/students/addStudents')}
+                          className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-lg font-medium text-xs
+                                     bg-blue-600 hover:bg-blue-700 active:scale-[0.97] text-white transition-all whitespace-nowrap"
+                      >
+                          <UserPlus className="w-4 h-4" />
+                          Add New Student
+                      </button>
+                    )}
 
                     {/* Search — grows */}
                     <div className="flex-1 min-w-[140px] flex items-center gap-2 border border-gray-200 rounded-lg bg-gray-100 px-2 py-2
@@ -435,12 +440,14 @@ const Student = () => {
                                     </div>
                                 </div>
                                 <div className="flex gap-2 mt-3 pt-3 border-t border-gray-100">
-                                    <button
-                                        onClick={() => navigate(`/students/editStudent/${student.id}`)}
-                                        className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium bg-blue-50 text-blue-600 hover:bg-blue-100"
-                                    >
-                                        <UserPenIcon className="w-3.5 h-3.5" /> Edit
-                                    </button>
+                                    {hasPermission(P.STUDENT_EDIT) && (
+                                      <button
+                                          onClick={() => navigate(`/students/editStudent/${student.id}`)}
+                                          className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium bg-blue-50 text-blue-600 hover:bg-blue-100"
+                                      >
+                                          <UserPenIcon className="w-3.5 h-3.5" /> Edit
+                                      </button>
+                                    )}
                                     <button
                                         onClick={() => navigate(`/students/${student.id}`)}
                                         className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium bg-orange-50 text-orange-600 hover:bg-orange-100"
@@ -558,13 +565,15 @@ const Student = () => {
                                             {/* Actions */}
                                             <td className="px-2 py-2.5 text-center">
                                                 <div className="flex items-center justify-center gap-1">
-                                                    <button
-                                                        onClick={() => navigate(`/students/editStudent/${student.id}`)}
-                                                        className="flex items-center gap-1 px-2 py-1.5 rounded-lg font-medium bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors whitespace-nowrap text-[10px]"
-                                                    >
-                                                        <UserPenIcon className="w-3 h-3" />
-                                                        Edit
-                                                    </button>
+                                                    {hasPermission(P.STUDENT_EDIT) && (
+                                                      <button
+                                                          onClick={() => navigate(`/students/editStudent/${student.id}`)}
+                                                          className="flex items-center gap-1 px-2 py-1.5 rounded-lg font-medium bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors whitespace-nowrap text-[10px]"
+                                                      >
+                                                          <UserPenIcon className="w-3 h-3" />
+                                                          Edit
+                                                      </button>
+                                                    )}
                                                     <button
                                                         onClick={() => navigate(`/students/${student.id}`)}
                                                         className="flex items-center gap-1 px-2 py-1.5 rounded-lg font-medium bg-orange-50 text-orange-600 hover:bg-orange-100 transition-colors whitespace-nowrap text-[10px]"
