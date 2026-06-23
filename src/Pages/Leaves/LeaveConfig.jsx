@@ -286,7 +286,7 @@ const LeaveConfigModal = ({ mode, initialData, activeTypes, leaveTypeOptions, on
     if (form.description && form.description.length > 500) e.description = 'Max 500 characters';
     if (form.carryForwardAllowed && Number(form.maxCarryForwardDays) < 0) e.maxCarryForwardDays = 'Must be ≥ 0';
     if (mode === 'add' && activeTypes.includes(form.leaveType))
-      e.leaveType = 'An active config for this leave type already exists — use Edit to update it';
+      e.leaveType = 'Leave type already exists.';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
