@@ -40,6 +40,8 @@ const EditSysUser = lazy(() => import('../Pages/SuperAdmin/EditSysUser'));
 const ManageAllUsers = lazy(() => import('../Pages/SuperAdmin/ManageAllUsers'));
 const ApplyLeaves = lazy(() => import('../Pages/Leaves/ApplyLeaves'));
 const MyLeaves = lazy(() => import('../Pages/Leaves/MyLeaves'));
+const LeaveConfig = lazy(() => import('../Pages/Leaves/LeaveConfig'));
+const HolidayManagement = lazy(() => import('../Pages/Leaves/Holiday/HolidayManagement'));
 const SuperAdminSchools = lazy(() => import('../Pages/SuperAdmin/SuperAdminSchools'));
 const UserView = lazy(() => import('../Pages/SuperAdmin/UserView'));
 
@@ -48,8 +50,6 @@ const Student = lazy(() => import('../Pages/Students/Students'));
 const AddNewStudent = lazy(() => import('../Pages/Students/AddNewStudent'));
 const EditStudentDetails = lazy(() => import('../Pages/Students/EditStudentDetails'));
 const StudentDetails = lazy(() => import('../Pages/Students/StudentDetails'));
-const HolidayManagment = lazy(() => import('../Pages/Leaves/Holiday/HolidayManagement'));
-const LeaveConfig = lazy(() => import('../Pages/Leaves/LeaveConfig'));
 
 // Stock Routes
 const Stock = lazy(() => import('../Pages/Stock/Stock'));
@@ -81,8 +81,7 @@ const Analytics = lazy(() => import('../Pages/Exams/Analytics'));
 const SchoolConfig = lazy(() => import('../Pages/Schools/SchoolConfig'));
 const HomeworkPage = lazy(() => import('../Pages/Homework/Homeworkpage'));
 
-// FeeManagement exports multiple named components from one module —
-// each lazy() call still only loads the chunk once (cached by vite)
+// FeeManagement
 const OverviewPage = lazy(() =>
   import('../Pages/FeeManagement/FeeManagement').then((m) => ({ default: m.OverviewPage }))
 );
@@ -128,7 +127,7 @@ const PageLoader = () => (
   </div>
 );
 
-// ─── Role groups — kept only for stock (unchanged) and school picker ───────────
+// ─── Role groups ──────────────────────────────────────────────────────────────
 const STOCK_ACCOUNTANT_ROLES = ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'STORE_ACCOUNTANT'];
 const STOCK_SELLER_ROLES = ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'STORE_ACCOUNTANT', 'STORE_SELLER'];
 const SCHOOL_PICKER_ROLES = SYSTEM_ROLES.SCHOOL_PICKER;
@@ -144,15 +143,15 @@ const RootRedirect = () => {
   if (role === 'STORE_SELLER') return <Navigate to="/stock/studentOrders" replace />;
   return <Navigate to="/dashboard" replace />;
 };
-// ──────────────────────────────────────────────────────────────────────────────
 
+// ──────────────────────────────────────────────────────────────────────────────
 const MainRoutes = () => {
   const isTokenExist = localStorage.getItem('token');
 
   return (
     <Suspense fallback={<PageLoader />}>
       <Routes>
-        {/* ── Public landing pages (redirect to app when logged-in) ── */}
+        {/* ── Public landing pages ── */}
         <Route path="/" element={isTokenExist ? <RootRedirect /> : <LandingApp />} />
         <Route path="/about" element={isTokenExist ? <RootRedirect /> : <LandingLayout><About /></LandingLayout>} />
         <Route path="/contact" element={isTokenExist ? <RootRedirect /> : <LandingLayout><Contact /></LandingLayout>} />
@@ -163,9 +162,9 @@ const MainRoutes = () => {
         <Route path="/login" element={isTokenExist ? <RootRedirect /> : <Login />} />
 
         {/* ── Protected (token required) ── */}
-        <Route element={<ProtectedRoutes />} >
+        <Route element={<ProtectedRoutes />}>
 
-          {/* School picker — role-locked by design, no AppLayout */}
+          {/* School picker */}
           <Route
             path="/superAdmin"
             element={
@@ -191,10 +190,10 @@ const MainRoutes = () => {
               }
             />
 
-            {/* Settings — no extra gate; any authenticated user */}
+            {/* Settings */}
             <Route path="/settings" element={<Settings />} />
 
-            {/* ── System screens — role-locked, never permission-gated ── */}
+            {/* ── System screens ── */}
             <Route element={<RoleProtectedRoute allowedRoles={SYSTEM_ROLES.ROLE_MANAGE} />}>
               <Route path="/rolesPermissions" element={<RolesPermissionsManagement />} />
             </Route>
@@ -394,14 +393,27 @@ const MainRoutes = () => {
               <Route path="/attendance/studentAttendance" element={<StudentAttendance />} />
             </Route>
 
-            {/* ADMIN, SUPER_ADMIN & GLOBAL_ADMIN */}
+            {/* ADMIN, SUPER_ADMIN & GLOBAL_ADMIN Layout Wrapper FIXED (Closed Properly Below) */}
             <Route element={<RoleProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'PRINCIPAL']} />}>
               <Route path="/manageUsers/addUser" element={<AddnewSystemUser />} />
               <Route path="/manageUsers/editUser/:id" element={<EditSysUser />} />
-              <Route path="/manageUsers/:id" element={<UserView/>} />
+              <Route path="/manageUsers/:id" element={<UserView />} />
               <Route path="/manageUsers" element={<ManageAllUsers />} />
+            </Route>
 
-            
+            {/* ── Leaves Module Routes Added Here ── */}
+            {/* Note: Change the permissions strings below if they differ from your actual Constants/Permission.js file */}
+            <Route element={<PermissionProtectedRoute allowedPermissions={[P.LEAVE_VIEW || 'LEAVE_VIEW']} />}>
+              <Route path="/leaves" element={<Leaves />} />
+              <Route path="/leaves/myLeaves" element={<MyLeaves />} />
+            </Route>
+            <Route element={<PermissionProtectedRoute allowedPermissions={[P.LEAVE_CREATE || 'LEAVE_CREATE']} />}>
+              <Route path="/leaves/apply" element={<ApplyLeaves />} />
+            </Route>
+            <Route element={<PermissionProtectedRoute allowedPermissions={[P.LEAVE_CONFIG_MANAGE || 'LEAVE_CONFIG_MANAGE']} />}>
+              <Route path="/leaves/config" element={<LeaveConfig />} />
+              <Route path="/leaves/holidays" element={<HolidayManagement />} />
+            </Route>
 
             {/* ── Transport ── */}
             <Route element={<PermissionProtectedRoute allowedPermissions={[P.TRANSPORT_VIEW]} />}>
@@ -499,7 +511,7 @@ const MainRoutes = () => {
               }
             />
 
-            {/* ── Stock / Store — UNCHANGED, still role-based ── */}
+            {/* ── Stock / Store ── */}
             <Route element={<RoleProtectedRoute allowedRoles={STOCK_ACCOUNTANT_ROLES} />}>
               <Route path="/stock" element={<Stock />} />
               <Route path="/stock/stores" element={<Store />} />
@@ -518,7 +530,6 @@ const MainRoutes = () => {
             <Route path="*" element={<RootRedirect />} />
 
           </Route>
-        </Route>
         </Route>
       </Routes>
     </Suspense>

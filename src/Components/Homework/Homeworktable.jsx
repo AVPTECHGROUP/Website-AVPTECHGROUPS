@@ -74,9 +74,9 @@ function getSubject(hw) {
 
 function ActionBtn({ onClick, disabled, title, icon: Icon, label, variant }) {
   const variants = {
-    view:   "border border-gray-300 text-gray-600 bg-white hover:bg-gray-50",
-    edit:   "border border-blue-400 text-blue-600 bg-white hover:bg-blue-50",
-    cancel: "border border-red-400 text-red-500 bg-white hover:bg-red-50",
+    view:   "border border-gray-300 cursor-pointer text-gray-600 bg-white hover:bg-gray-50",
+    edit:   "border border-blue-400 cursor-pointer text-blue-600 bg-white hover:bg-blue-50",
+    cancel: "border border-red-400 cursor-pointer text-red-500 bg-white hover:bg-red-50",
   };
 
   return (
