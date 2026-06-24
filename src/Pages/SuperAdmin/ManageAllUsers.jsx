@@ -59,7 +59,7 @@ const ManageAllUsers = () => {
 
     function compareAndGetLabel(data, compareValue) {
         const found = data.find(item => item.roleVal === compareValue);
-        return found ? <span className="text-xs font-medium text-gray-800 bg-gray-100 w-fit rounded-xs px-1 py-0.5"> {found.roleDisplay} </span> : "";
+        return found ? <span className="text-[10px] font-medium text-gray-800 bg-gray-100 w-fit rounded-xs px-1 py-0.1"> {found.roleDisplay} </span> : "";
     }
 
     useEffect(() => {
@@ -141,7 +141,7 @@ const ManageAllUsers = () => {
                     mobile: sys_user.mobile || 'N/A',
                     empCode: sys_user.employeeCode,
                     avatar: (sys_user.fullName || 'U')[0].toUpperCase(),
-                    image: sys_user.imageUrl || sys_user.profileImage || `https://ui-avatars.com/api/?name=${encodeURIComponent(sys_user.fullName)}&background=random`,
+                    image: sys_user.profileImageUrl || sys_user.profileImage || `https://ui-avatars.com/api/?name=${encodeURIComponent(sys_user.fullName)}&background=random`,
                     role: sys_user.roles || 'N/A',
                     department: sys_user.department,
                     designation: sys_user.designation,
@@ -482,8 +482,22 @@ const ManageAllUsers = () => {
                         ) : sysUsers.map((sys_user) => (
                             <div key={sys_user.id} className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
                                 <div className="flex items-center gap-3 mb-3">
-                                    <div className={`w-12 h-12 rounded-full ${getAvatarColor(sys_user.name)} flex items-center justify-center text-white font-semibold`}>
-                                        {sys_user.avatar}
+                                    <div
+                                        className={`w-12 h-12 rounded-full overflow-hidden ${!sys_user.image || !sys_user.image !== '' || !sys_user.image !== null || !sys_user.image !== undefined ? getAvatarColor(sys_user.name) : ""} flex items-center justify-center text-white font-semibold`}
+                                    >
+                                        {sys_user.image ? (
+                                            <img
+                                                src={sys_user.image}
+                                                alt={sys_user.name}
+                                                className="w-full h-full object-cover"
+                                                onError={(e) => {
+                                                    e.target.style.display = "none";
+                                                    e.target.parentNode.innerHTML = sys_user.avatar;
+                                                }}
+                                            />
+                                        ) : (
+                                            sys_user.avatar
+                                        )}
                                     </div>
                                     <div>
                                         <p className="font-medium text-gray-900">{sys_user.name}</p>
@@ -527,27 +541,27 @@ const ManageAllUsers = () => {
                             <table className="min-w-[900px] w-full">
                                 <thead className="border-b border-gray-200">
                                     <tr>
-                                        <th className="px-2 py-3 text-left text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-11">
+                                        <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-11">
                                             <button onClick={() => setSorting(prev => prev === 'firstName,asc' ? 'firstName,desc' : 'firstName,asc')}
                                                 className="flex items-center gap-1 hover:text-gray-700 cursor-pointer uppercase">
                                                 User Name {sorting === 'firstName,desc' ? <ArrowDown size={16} /> : <ArrowUp size={16} />}
                                             </button>
                                         </th>
-                                        <th className="px-2 py-3 text-left text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-50">
+                                        <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-50">
                                             <button onClick={() => setSorting(prev => prev === 'employeeCode,asc' ? 'employeeCode,desc' : 'employeeCode,asc')}
                                                 className="flex items-center gap-1 hover:text-gray-700 cursor-pointer uppercase">
                                                 Employee Id {sorting === 'employeeCode,desc' ? <ArrowDown size={16} /> : <ArrowUp size={16} />}
                                             </button>
                                         </th>
-                                        <th className="px-2 py-3 text-left text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-50">
+                                        <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-50">
                                             <button onClick={() => setSorting(prev => prev === 'email,asc' ? 'email,desc' : 'email,asc')}
                                                 className="flex items-center gap-1 hover:text-gray-700 cursor-pointer uppercase">
                                                 Email {sorting === 'email,desc' ? <ArrowDown size={16} /> : <ArrowUp size={16} />}
                                             </button>
                                         </th>
-                                        <th className="px-2 py-3 text-left text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-50">Mobile Number</th>
-                                        <th className="px-2 py-3 text-left text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-50">Status</th>
-                                        <th className="px-6 py-3 text-center text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-50">Actions</th>
+                                        <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-50">Mobile Number</th>
+                                        <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-50">Status</th>
+                                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-50">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody className="bg-white divide-y divide-gray-200 font-normal">
@@ -577,11 +591,25 @@ const ManageAllUsers = () => {
                                         <tr key={sys_user.id} onClick={() => console.log(user.userType)}>
                                             <td className={tabledataItemsStyle}>
                                                 <div className="flex items-center gap-3">
-                                                    <div className={`w-10 h-10 rounded-full ${getAvatarColor(sys_user.name)} flex items-center justify-center text-white font-semibold`}>
-                                                        {sys_user.avatar}
+                                                    <div
+                                                        className={`w-8 h-8 rounded-full overflow-hidden ${!sys_user.image || !sys_user.image !== '' || !sys_user.image !== null || !sys_user.image !== undefined ? getAvatarColor(sys_user.name) : ""} flex items-center justify-center text-white font-semibold`}
+                                                    >
+                                                        {sys_user.image ? (
+                                                            <img
+                                                                src={sys_user.image}
+                                                                alt={sys_user.name}
+                                                                className="w-full h-full object-cover"
+                                                                onError={(e) => {
+                                                                    e.target.style.display = "none";
+                                                                    e.target.parentNode.innerHTML = sys_user.avatar;
+                                                                }}
+                                                            />
+                                                        ) : (
+                                                            sys_user.avatar
+                                                        )}
                                                     </div>
                                                     <div>
-                                                        <p className="font-medium text-black">{sys_user.name}</p>
+                                                        <p className="font-medium text-black text-xs">{sys_user.name}</p>
                                                         <p>{compareAndGetLabel(roleOptions, sys_user.role[0])}</p>
                                                     </div>
                                                 </div>

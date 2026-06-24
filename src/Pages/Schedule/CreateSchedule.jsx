@@ -160,7 +160,7 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
     const [addSlotTarget, setAddSlotTarget] = useState(null);
     const [assignTeacherTarget, setAssignTeacherTarget] = useState(null);
     const [substitutionTarget, setSubstitutionTarget] = useState(null);
-    const [showPendingSubstitutions, setShowPendingSubstitutions] = useState(false); // ← NEW
+    const [showPendingSubstitutions, setShowPendingSubstitutions] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
     const [showSubstitution, setShowSubstitution] = useState(false);
     const [showPublishConfirm, setShowPublishConfirm] = useState(false);
@@ -560,11 +560,11 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
     );
 
     return (
-        <div className="min-h-screen bg-[#f0f4f9] flex flex-col relative overflow-x-hidden">
+        <div className="min-h-screen bg-[#f0f4f9] flex flex-col relative overflow-hidden">
 
             {/* Toast */}
             {toastMsg && (
-                <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-5 sm:max-w-sm z-100 bg-[#1e293b] text-white text-sm px-4 py-2.5 rounded-xl shadow-xl animate-fade-in">
+                <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-5 sm:max-w-sm z-[100] bg-[#1e293b] text-white text-sm px-4 py-2.5 rounded-xl shadow-xl animate-fade-in">
                     {toastMsg}
                 </div>
             )}
@@ -932,77 +932,79 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
                                         </div>
                                     </div>
 
-                                    {/* Desktop table view */}
-                                    <div className="hidden lg:block flex-1 overflow-auto">
-                                        <table className="w-full border-collapse min-w-[600px] xl:min-w-[750px]">
-                                            <thead>
-                                                <tr>
-                                                    <th className="bg-gray-50 border-b border-r border-gray-200 px-4 py-3 text-left text-xs font-semibold text-gray-500 w-36 sticky left-0 z-10">
-                                                        PERIOD / TIME
-                                                    </th>
-                                                    {workingDays.map(day => (
-                                                        <th key={day}
-                                                            className={`border-b border-r border-gray-200 px-3 py-3 text-center text-sm font-semibold min-w-32.5 ${day === 'Mon' ? 'bg-gray-600 text-white' : 'bg-gray-600 text-gray-200'}`}>
-                                                            {day === 'Mon' ? `• ${day}` : day}
+                                    {/* Desktop table view - 100% BULLETPROOF WRAPPER */}
+                                    <div className="hidden lg:block flex-1 relative w-full  bg-white">
+                                        <div className="absolute inset-0 overflow-x-auto">
+                                            <table className="w-full border-collapse min-w-max">
+                                                <thead>
+                                                    <tr>
+                                                        <th className="bg-gray-50 border-b border-r border-gray-200 px-4 py-3 text-left text-xs font-semibold text-gray-500 w-36 sticky left-0 top-0 z-20">
+                                                            PERIOD / TIME
                                                         </th>
-                                                    ))}
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {periods.map(period => {
-                                                    if (period.isBreak) {
-                                                        return (
-                                                            <tr key={period.id} className="bg-amber-50/60">
-                                                                <td className="border-b border-r border-gray-200 px-4 py-2 sticky left-0 bg-amber-50/80 z-10">
-                                                                    <div className="flex items-center gap-1.5">
-                                                                        <span>{period.emoji}</span>
-                                                                        <span className="text-xs font-semibold text-amber-800">{period.label}</span>
-                                                                    </div>
-                                                                    <p className="text-xs text-amber-600">{period.time}</p>
-                                                                </td>
-                                                                {workingDays.map(day => (
-                                                                    <td key={day} className="border-b border-r border-gray-200 px-3 py-2">
-                                                                        {day === workingDays[0] && (
-                                                                            <div className="flex items-center gap-2">
-                                                                                <span>{period.emoji}</span>
-                                                                                <span className="text-xs text-amber-700 font-medium">{period.time}</span>
-                                                                                <span className="bg-amber-200 text-amber-800 text-xs font-bold px-1.5 py-0.5 rounded">{period.duration}</span>
-                                                                            </div>
-                                                                        )}
+                                                        {workingDays.map(day => (
+                                                            <th key={day}
+                                                                className={`border-b border-r border-gray-200 px-3 py-3 text-center text-sm font-semibold min-w-[120px] sticky top-0 z-11 ${day === 'Mon' ? 'bg-gray-600 text-white' : 'bg-gray-600 text-gray-200'}`}>
+                                                                {day === 'Mon' ? `• ${day}` : day}
+                                                            </th>
+                                                        ))}
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {periods.map(period => {
+                                                        if (period.isBreak) {
+                                                            return (
+                                                                <tr key={period.id} className="bg-amber-50/60">
+                                                                    <td className="border-b border-r border-gray-200 px-4 py-2 sticky left-0 bg-amber-50 z-10">
+                                                                        <div className="flex items-center gap-1.5">
+                                                                            <span>{period.emoji}</span>
+                                                                            <span className="text-xs font-semibold text-amber-800">{period.label}</span>
+                                                                        </div>
+                                                                        <p className="text-xs text-amber-600">{period.time}</p>
                                                                     </td>
-                                                                ))}
+                                                                    {workingDays.map(day => (
+                                                                        <td key={day} className="border-b border-r border-gray-200 px-3 py-2">
+                                                                            {day === workingDays[0] && (
+                                                                                <div className="flex items-center gap-2">
+                                                                                    <span>{period.emoji}</span>
+                                                                                    <span className="text-xs text-amber-700 font-medium">{period.time}</span>
+                                                                                    <span className="bg-amber-200 text-amber-800 text-xs font-bold px-1.5 py-0.5 rounded">{period.duration}</span>
+                                                                                </div>
+                                                                            )}
+                                                                        </td>
+                                                                    ))}
+                                                                </tr>
+                                                            );
+                                                        }
+
+                                                        return (
+                                                            <tr key={period.id} className="hover:bg-gray-50/40 transition">
+                                                                <td className="border-b border-r border-gray-200 px-4 py-3 sticky left-0 bg-white z-11">
+                                                                    <p className="text-xs font-semibold text-gray-400">{period.id}</p>
+                                                                    <p className="text-sm font-medium text-gray-800">{period.label}</p>
+                                                                    <p className="text-xs text-gray-400">{period.time}</p>
+                                                                </td>
+                                                                {workingDays.map(day => {
+                                                                    const slot = getSlot(day, period.id);
+                                                                    const subjectMeta = slot
+                                                                        ? (subjectsList.find(s => s.code === slot.subject?.code || s.id === slot.subject?.id) || null)
+                                                                        : null;
+                                                                    const teacherColor = slot?.teacher?.name ? (TEACHER_COLORS[slot.teacher.name] || 'bg-gray-400') : '';
+                                                                    const isSelected = slot
+                                                                        ? selectedSlotKey === slotKey(slot)
+                                                                        : false;
+
+                                                                    return (
+                                                                        <td key={day} className="border-b border-r border-gray-200 p-1.5 align-top min-w-[120px]">
+                                                                            {renderSlotCard(day, period, slot, subjectMeta, teacherColor, isSelected)}
+                                                                        </td>
+                                                                    );
+                                                                })}
                                                             </tr>
                                                         );
-                                                    }
-
-                                                    return (
-                                                        <tr key={period.id} className="hover:bg-gray-50/40 transition">
-                                                            <td className="border-b border-r border-gray-200 px-4 py-3 sticky left-0 bg-white z-10">
-                                                                <p className="text-xs font-semibold text-gray-400">{period.id}</p>
-                                                                <p className="text-sm font-medium text-gray-800">{period.label}</p>
-                                                                <p className="text-xs text-gray-400">{period.time}</p>
-                                                            </td>
-                                                            {workingDays.map(day => {
-                                                                const slot = getSlot(day, period.id);
-                                                                const subjectMeta = slot
-                                                                    ? (subjectsList.find(s => s.code === slot.subject?.code || s.id === slot.subject?.id) || null)
-                                                                    : null;
-                                                                const teacherColor = slot?.teacher?.name ? (TEACHER_COLORS[slot.teacher.name] || 'bg-gray-400') : '';
-                                                                const isSelected = slot
-                                                                    ? selectedSlotKey === slotKey(slot)
-                                                                    : false;
-
-                                                                return (
-                                                                    <td key={day} className="border-b border-r border-gray-200 p-1.5 align-top min-w-[120px]">
-                                                                        {renderSlotCard(day, period, slot, subjectMeta, teacherColor, isSelected)}
-                                                                    </td>
-                                                                );
-                                                            })}
-                                                        </tr>
-                                                    );
-                                                })}
-                                            </tbody>
-                                        </table>
+                                                    })}
+                                                </tbody>
+                                            </table>
+                                        </div>
                                     </div>
                                 </>
                             )}
