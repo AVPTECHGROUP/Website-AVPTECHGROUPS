@@ -13,7 +13,6 @@ const Login = lazy(() => import('../Pages/Login_2'));
 const Dashboard = lazy(() => import('../Pages/Dashboard/Dashboard'));
 const Attendance = lazy(() => import('../Pages/Attendance/Attendance'));
 const Leaves = lazy(() => import('../Pages/Leaves/Leaves'));
-
 const Teachers = lazy(() => import('../Pages/Teachers/Teachers'));
 const Settings = lazy(() => import('../Pages/Settings'));
 
@@ -41,7 +40,6 @@ const ManageAllUsers = lazy(() => import('../Pages/SuperAdmin/ManageAllUsers'));
 const ApplyLeaves = lazy(() => import('../Pages/Leaves/ApplyLeaves'));
 const MyLeaves = lazy(() => import('../Pages/Leaves/MyLeaves'));
 const SuperAdminSchools = lazy(() => import('../Pages/SuperAdmin/SuperAdminSchools'));
-const UserView = lazy(() => import('../Pages/SuperAdmin/UserView'));
 
 // Students
 const Student = lazy(() => import('../Pages/Students/Students'));
@@ -163,7 +161,7 @@ const MainRoutes = () => {
         <Route path="/login" element={isTokenExist ? <RootRedirect /> : <Login />} />
 
         {/* ── Protected (token required) ── */}
-        <Route element={<ProtectedRoutes />} >
+        <Route element={<ProtectedRoutes />}>
 
           {/* School picker — role-locked by design, no AppLayout */}
           <Route
@@ -394,14 +392,51 @@ const MainRoutes = () => {
               <Route path="/attendance/studentAttendance" element={<StudentAttendance />} />
             </Route>
 
-            {/* ADMIN, SUPER_ADMIN & GLOBAL_ADMIN */}
-            <Route element={<RoleProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'PRINCIPAL']} />}>
-              <Route path="/manageUsers/addUser" element={<AddnewSystemUser />} />
-              <Route path="/manageUsers/editUser/:id" element={<EditSysUser />} />
-              <Route path="/manageUsers/:id" element={<UserView/>} />
-              <Route path="/manageUsers" element={<ManageAllUsers />} />
-
-            
+            {/* ── Leaves ── */}
+            <Route
+              path="/leaves/applyLeaves"
+              element={
+                <PermissionProtectedRoute allowedPermissions={[P.LEAVE_CREATE]}>
+                  <ApplyLeaves />
+                </PermissionProtectedRoute>
+              }
+            />
+            <Route
+              path="/leaves/myLeaves"
+              element={
+                <PermissionProtectedRoute allowedPermissions={[P.LEAVE_VIEW]}>
+                  <MyLeaves />
+                </PermissionProtectedRoute>
+              }
+            />
+            {/* Users with LEAVE_VIEW but not LEAVE_APPROVE land on /leaves/myLeaves */}
+            <Route
+              path="/leaves"
+              element={
+                <PermissionProtectedRoute
+                  allowedPermissions={[P.LEAVE_APPROVE]}
+                  fallback={<Navigate to="/leaves/myLeaves" replace />}
+                >
+                  <Leaves />
+                </PermissionProtectedRoute>
+              }
+            />
+            <Route
+              path="/leaves/manageHolidays"
+              element={
+                <PermissionProtectedRoute allowedPermissions={[P.HOLIDAY_MANAGE]}>
+                  <HolidayManagment />
+                </PermissionProtectedRoute>
+              }
+            />
+            <Route
+              path="/leaves/leaveConfig"
+              element={
+                <PermissionProtectedRoute allowedPermissions={[P.LEAVE_CONFIG_MANAGE]}>
+                  <LeaveConfig />
+                </PermissionProtectedRoute>
+              }
+            />
 
             {/* ── Transport ── */}
             <Route element={<PermissionProtectedRoute allowedPermissions={[P.TRANSPORT_VIEW]} />}>
@@ -518,7 +553,6 @@ const MainRoutes = () => {
             <Route path="*" element={<RootRedirect />} />
 
           </Route>
-        </Route>
         </Route>
       </Routes>
     </Suspense>

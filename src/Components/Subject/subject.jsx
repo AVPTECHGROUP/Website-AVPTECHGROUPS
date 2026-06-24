@@ -342,7 +342,7 @@ export default function SubjectsMaster() {
         </div>
 
         {/* ── SUBJECTS TAB ── */}
-        <div className={`${activeTab === "assignment" ? "hidden" : ""} px-3 sm:px-4 md:px-6 py-3 sm:py-4`}>
+        <div className={`${activeTab === "assignment" ? "hidden" : ""} px-3 bg-gradient-to-b from-sky-50 to-sky-100  sm:px-4 md:px-6 py-3 sm:py-4`}>
           <div className="w-full bg-white rounded-xl xl:rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
 
             <div className="px-4 py-4 border-b border-slate-100 space-y-4">

@@ -297,7 +297,7 @@ const Student = () => {
     };
 
     return (
-        <div className="flex flex-col min-h-screen lg:h-screen lg:overflow-hidden bg-gradient-to-b from-sky-50 to-sky-100">
+        <div className="flex flex-col min-h-screen lg:h-screen lg:overflow-hidden bg-linear-to-b from-sky-50 to-sky-100">
             <div className="flex flex-col flex-1 lg:overflow-hidden p-3 sm:p-4 gap-3">
 
                 {/* ── Page Title ── */}
@@ -336,12 +336,6 @@ const Student = () => {
                             />
                         ))}
                 </div>
-
-                {/* ── Toolbar ──────────────────────────────────────────────────────────────
-                    mobile (<sm)      : sab ek ke niche ek
-                    tablet (sm–lg)    : search full width, dropdowns+buttons side-by-side row
-                    desktop (lg+)     : single row — search flex-1, rest shrink-0
-                ──────────────────────────────────────────────────────────────────────── */}
                 <div className="bg-white flex flex-col lg:flex-row lg:items-center gap-2 px-3 py-2.5 rounded-xl border border-gray-200 shrink-0 w-full">
 
                     {/* 1. Search — flex-1 on lg so it takes all leftover space */}
@@ -528,7 +522,7 @@ const Student = () => {
                             <thead className="sticky top-0 z-10 bg-gray-50 border-b border-gray-100">
                                 <tr>
                                     {['Student Name', 'Mobile Number', 'Email', 'Class', 'Section', 'Status', 'Actions'].map((h) => (
-                                        <th key={h} className="px-3 py-2.5 text-center text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
+                                        <th key={h} className="px-3 py-2.5 text-left text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
                                             {h}
                                         </th>
                                     ))}
@@ -540,7 +534,7 @@ const Student = () => {
                                     <ListLoader />
                                 ) : error ? (
                                     <tr>
-                                        <td colSpan={7} className="py-12 text-center">
+                                        <td colSpan={7} className="py-12 text-left">
                                             <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
                                                 <UserRoundXIcon className="w-6 h-6 text-red-600" />
                                             </div>
@@ -551,7 +545,7 @@ const Student = () => {
                                     </tr>
                                 ) : noUserFound ? (
                                     <tr>
-                                        <td colSpan={7} className="py-12 text-center">
+                                        <td colSpan={7} className="py-12 text-left">
                                             <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-3">
                                                 <UserSearch className="w-6 h-6 text-blue-500" />
                                             </div>
@@ -571,38 +565,38 @@ const Student = () => {
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td className="px-3 py-2.5 text-center text-gray-600">{student.mobile}</td>
-                                            <td className="px-3 py-2.5 text-center text-gray-600 max-w-0">
+                                            <td className="px-3 py-2.5 text-left text-gray-600">{student.mobile}</td>
+                                            <td className="px-3 py-2.5 text-left text-gray-600 max-w-0">
                                                 <span className="block truncate">{student.email}</span>
                                             </td>
-                                            <td className="px-2 py-2.5 text-center">
+                                            <td className="px-2 py-2.5 text-left">
                                                 {student.className
-                                                    ? <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 font-medium text-[10px] leading-tight text-center">{student.className}</span>
+                                                    ? <span className="inline-flex py-0.5 rounded-md bg-blue-50 text-blue-700 font-medium text-[10px] leading-tight">{student.className}</span>
                                                     : <span className="text-gray-300">—</span>}
                                             </td>
-                                            <td className="px-2 py-2.5 text-center">
+                                            <td className="px-2 py-2.5 text-left">
                                                 {student.sectionName
-                                                    ? <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 font-medium text-[10px]">{student.sectionName}</span>
+                                                    ? <span className="inline-flex px-8 py-0.5 rounded-md bg-purple-50 text-purple-700 font-medium text-[10px] leading-tight">{student.sectionName}</span>
                                                     : <span className="text-gray-300">—</span>}
                                             </td>
-                                            <td className="px-2 py-2.5 text-center">
+                                            <td className="px-2 py-2.5 text-left">
                                                 <span className={`inline-flex items-center justify-center gap-1 px-2 py-0.5 rounded-full font-medium text-[10px]
                                                     ${student.status === 'ACTIVE' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
                                                     <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${student.status === 'ACTIVE' ? 'bg-green-500' : 'bg-red-500'}`} />
                                                     {student.status}
                                                 </span>
                                             </td>
-                                            <td className="px-2 py-2.5 text-center">
-                                                <div className="flex items-center justify-center gap-1">
+                                            <td className="px-2 py-2.5 text-">
+                                                <div className="flex gap-1 items-start">
                                                     <button
                                                         onClick={() => navigate(`/students/editStudent/${student.id}`)}
-                                                        className="flex items-center gap-1 px-2 py-1.5 rounded-lg font-medium bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors whitespace-nowrap text-[10px]"
+                                                        className="flex items-center gap-1 px-2 py-1.5 rounded-lg font-medium bg-blue-50 text-blue-600 hover:bg-blue-100 cursor-pointer transition-colors whitespace-nowrap text-[10px]"
                                                     >
                                                         <UserPenIcon className="w-3 h-3" /> Edit
                                                     </button>
                                                     <button
                                                         onClick={() => navigate(`/students/${student.id}`)}
-                                                        className="flex items-center gap-1 px-2 py-1.5 rounded-lg font-medium bg-orange-50 text-orange-600 hover:bg-orange-100 transition-colors whitespace-nowrap text-[10px]"
+                                                        className="flex items-center gap-1 cursor-pointer px-2 py-1.5 rounded-lg font-medium bg-orange-50 text-orange-600 hover:bg-orange-100 transition-colors whitespace-nowrap text-[10px]"
                                                     >
                                                         <Info className="w-3 h-3" /> View
                                                     </button>

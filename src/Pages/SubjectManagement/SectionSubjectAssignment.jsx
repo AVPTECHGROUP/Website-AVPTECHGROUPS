@@ -363,7 +363,7 @@ export default function SectionSubjectAssignment() {
   });
 
   return (
-    <div className="w-full flex flex-col h-full min-h-0 justify-between min-w-0 bg-[#f5f6fa]/40">
+    <div className="w-full flex flex-col h-full min-h-0 justify-between min-w-0 bg-gradient-to-b from-sky-50 to-sky-100">
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         * { font-family: 'Inter', sans-serif; }
