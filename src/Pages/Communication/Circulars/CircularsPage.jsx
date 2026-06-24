@@ -289,7 +289,7 @@ export default function CircularsPage() {
 
   // ── Render ───────────────────────────────────────────────────────────────────
   return (
-    <div className="p-3 sm:p-6 bg-gray-50 min-h-screen">
+    <div className="p-3 sm:p-6 bg-gray-50 min-h-screen bg-linear-to-b from-sky-50 to-sky-100">
 
       <ConfirmModal
         open={rejectModal.open}
@@ -318,9 +318,9 @@ export default function CircularsPage() {
       />
 
       {/* Page header */}
-      <div className="flex items-start justify-between mb-4 sm:mb-5 gap-3">
+      <div className="flex items-start justify-between mb-4 sm:mb-5 gap-3 ">
         <div className="min-w-0">
-          <h1 className="text-lg sm:text-xl font-extrabold text-gray-900 tracking-tight">Circulars</h1>
+          <h1 className="text-lg sm:text-2xl font-extrabold text-gray-900 tracking-tight">Circulars</h1>
           <p className="text-xs sm:text-sm text-gray-500 mt-0.5 hidden sm:block">
             Manage and publish school circulars for staff, parents and students.
           </p>
