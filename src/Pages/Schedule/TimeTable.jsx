@@ -22,7 +22,7 @@ import { toast } from 'react-toastify';
 const StatusBadge = ({ status }) => {
     const isDraft = status === 'Draft' || status === 'DRAFT';
     return (
-        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border
+        <span className={`inline-flex items-center text-nowrap gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border
       ${isDraft
                 ? 'bg-yellow-50 text-yellow-700 border-yellow-200'
                 : 'bg-green-50 text-green-700 border-green-200'}`}>

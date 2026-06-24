@@ -387,7 +387,7 @@ const Leaves = () => {
           </div>
 
           {/* ── Stats Cards ── */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+          <div className="grid sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 text-sm mt-4 mb-4">
             {statLoading
               ? cardsArray.map((_, i) => <CardLoader key={i} />)
               : cardsArray.map((card) => (

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext, useCallback, useRef } from 'rea
 import {
   X, FileDown, AlertCircle, Printer, Search, Plus,
   CheckCircle, CheckCircle2, AlertTriangle, Info,
-  ArrowRight, IndianRupee,
+  ArrowRight, IndianRupee, ChevronDown, Filter,
 } from 'lucide-react';
 import {
   getOutstandingFees,
@@ -11,18 +11,18 @@ import {
   createBulkFeeCollection,
   getFeeReceiptById,
 } from '../../Api/FeeCollection';
-import { getFeePeriods }    from '../../Api/FeePeriods';
+import { getFeePeriods } from '../../Api/FeePeriods';
 import { getFeeStructures } from '../../Api/FeeStructures';
 import { getStudentByClass } from '../../Api/StudentsApi';
-import { authFetch }        from '../../Authfetch/Authfetch';
-import { UserContext }      from '../../ContextAPI/UserContext';
-import FeeReceiptPrint      from '../../Components/FeeModal/FeeReciptPrint';
+import { authFetch } from '../../Authfetch/Authfetch';
+import { UserContext } from '../../ContextAPI/UserContext';
+import FeeReceiptPrint from '../../Components/FeeModal/FeeReciptPrint';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const SCHOOL_ID  = 1;
-const BASE_URL   = import.meta.env.VITE_API_BASE_V1;
-const PAGE_SIZE  = 10;
-const TODAY      = new Date().toISOString().split('T')[0];
+const SCHOOL_ID = 1;
+const BASE_URL = import.meta.env.VITE_API_BASE_V1;
+const PAGE_SIZE = 10;
+const TODAY = new Date().toISOString().split('T')[0];
 const ONE_MONTH_AGO = (() => {
   const d = new Date(); d.setMonth(d.getMonth() - 1); return d.toISOString().split('T')[0];
 })();
@@ -51,20 +51,20 @@ const ToastContainer = () => {
     return () => { _toastDispatch = null; };
   }, []);
   const icons = {
-    success: <CheckCircle2   size={15} className="flex-shrink-0 text-emerald-400" />,
-    error:   <AlertCircle    size={15} className="flex-shrink-0 text-orange-400" />,
-    warning: <AlertTriangle  size={15} className="flex-shrink-0 text-amber-400" />,
-    info:    <Info           size={15} className="flex-shrink-0 text-blue-400" />,
+    success: <CheckCircle2 size={15} className="flex-shrink-0 text-emerald-400" />,
+    error: <AlertCircle size={15} className="flex-shrink-0 text-orange-400" />,
+    warning: <AlertTriangle size={15} className="flex-shrink-0 text-amber-400" />,
+    info: <Info size={15} className="flex-shrink-0 text-blue-400" />,
   };
   return (
-    <div className="fixed top-5 right-5 z-[9999] flex flex-col gap-2 pointer-events-none">
+    <div className="fixed top-4 right-4 z-[9999] flex flex-col gap-2 pointer-events-none w-[calc(100vw-2rem)] max-w-sm">
       {toasts.map((t) => (
         <div key={t.id}
-          className="flex items-start gap-3 bg-gray-900 text-white px-4 py-3 rounded-xl shadow-2xl min-w-[280px] max-w-sm pointer-events-auto"
+          className="flex items-start gap-3 bg-gray-900 text-white px-4 py-3 rounded-xl shadow-2xl pointer-events-auto"
           style={{ animation: 'chToastIn .22s ease-out' }}>
           {icons[t.type] || icons.info}
           <div className="flex-1 min-w-0">
-            {t.title   && <div className="text-[13px] font-semibold">{t.title}</div>}
+            {t.title && <div className="text-[13px] font-semibold">{t.title}</div>}
             {t.message && <div className="text-[12px] text-white/70 mt-0.5">{t.message}</div>}
           </div>
           <button onClick={() => setToasts((p) => p.filter((x) => x.id !== t.id))}
@@ -78,9 +78,9 @@ const ToastContainer = () => {
 
 const toast = {
   success: (title, message, duration) => _toastDispatch?.({ type: 'success', title, message, duration }),
-  error:   (title, message, duration) => _toastDispatch?.({ type: 'error',   title, message, duration }),
+  error: (title, message, duration) => _toastDispatch?.({ type: 'error', title, message, duration }),
   warning: (title, message, duration) => _toastDispatch?.({ type: 'warning', title, message, duration }),
-  info:    (title, message, duration) => _toastDispatch?.({ type: 'info',    title, message, duration }),
+  info: (title, message, duration) => _toastDispatch?.({ type: 'info', title, message, duration }),
 };
 
 // ─── Shared primitives ────────────────────────────────────────────────────────
@@ -96,28 +96,22 @@ const Av = ({ name, status, size = 'md' }) => {
 
 const StatusPill = ({ status, label }) => {
   const map = {
-    PAID:      'bg-emerald-50 text-emerald-700 border-emerald-200',
-    PARTIAL:   'bg-amber-50 text-amber-700 border-amber-200',
-    OVERDUE:   'bg-orange-50 text-orange-700 border-orange-200',
-    PENDING:   'bg-gray-100 text-gray-500 border-gray-200',
-    UNPAID:    'bg-gray-100 text-gray-500 border-gray-200',
-    Pending:   'bg-gray-100 text-gray-500 border-gray-200',
+    PAID: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    PARTIAL: 'bg-amber-50 text-amber-700 border-amber-200',
+    OVERDUE: 'bg-orange-50 text-orange-700 border-orange-200',
+    PENDING: 'bg-gray-100 text-gray-500 border-gray-200',
+    UNPAID: 'bg-gray-100 text-gray-500 border-gray-200',
+    Pending: 'bg-gray-100 text-gray-500 border-gray-200',
     Completed: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    CASH:      'bg-gray-100 text-gray-600 border-gray-200',
-    ONLINE:    'bg-blue-50 text-blue-700 border-blue-200',
-    CHEQUE:    'bg-slate-50 text-slate-600 border-slate-200',
-    DD:        'bg-slate-50 text-slate-600 border-slate-200',
-  };
-  const dotMap = {
-    PAID: 'bg-emerald-500', PARTIAL: 'bg-amber-500', OVERDUE: 'bg-orange-500',
-    Completed: 'bg-emerald-500',
+    CASH: 'bg-gray-100 text-gray-600 border-gray-200',
+    ONLINE: 'bg-blue-50 text-blue-700 border-blue-200',
+    CHEQUE: 'bg-slate-50 text-slate-600 border-slate-200',
+    DD: 'bg-slate-50 text-slate-600 border-slate-200',
   };
   const cls = map[status] || 'bg-gray-100 text-gray-500 border-gray-200';
-  const dot = dotMap[status];
   const display = status === 'UNPAID' ? 'Pending' : (label || status);
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-[11px] font-semibold ${cls}`}>
-      {dot && <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${dot}`} />}
+    <span className={`inline-flex gap-1.5 px-2 py-0.5 rounded-full border text-[10px] font-semibold ${cls}`}>
       {display}
     </span>
   );
@@ -127,22 +121,22 @@ const StatusPill = ({ status, label }) => {
 const Modal = ({ open, onClose, title, subtitle, wide, children, footer }) => {
   if (!open) return null;
   return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-start justify-center p-6 overflow-y-auto backdrop-blur-sm"
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-start justify-center p-2 sm:p-4 md:p-6 overflow-y-auto backdrop-blur-sm"
       onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className={`bg-white rounded-2xl shadow-2xl w-full ${wide ? 'max-w-5xl' : 'max-w-lg'} my-4`}>
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <div>
-            <h2 className="text-[15px] font-bold text-gray-900">{title}</h2>
-            {subtitle && <p className="text-xs text-gray-400 mt-0.5">{subtitle}</p>}
+      <div className={`bg-white rounded-2xl shadow-2xl w-full ${wide ? 'max-w-5xl' : 'max-w-lg'} my-2 sm:my-4`}>
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-100">
+          <div className="min-w-0 flex-1 pr-2">
+            <h2 className="text-[14px] sm:text-[15px] font-bold text-gray-900 truncate">{title}</h2>
+            {subtitle && <p className="text-xs text-gray-400 mt-0.5 truncate">{subtitle}</p>}
           </div>
           <button onClick={onClose}
-            className="w-7 h-7 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-colors">
+            className="w-7 h-7 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-colors flex-shrink-0">
             <X size={14} />
           </button>
         </div>
-        <div className="px-6 py-5 max-h-[80vh] overflow-y-auto">{children}</div>
+        <div className="px-4 sm:px-6 py-4 sm:py-5 max-h-[75vh] md:max-h-[85vh] overflow-y-auto">{children}</div>
         {footer && (
-          <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
+          <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center sm:justify-end gap-2 px-4 sm:px-6 py-3 sm:py-4 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
             {footer}
           </div>
         )}
@@ -151,20 +145,19 @@ const Modal = ({ open, onClose, title, subtitle, wide, children, footer }) => {
   );
 };
 
-// Shared button — matches Overview
-const Btn = ({ children, variant = 'primary', size = 'md', onClick, disabled, type = 'button', className = '' }) => {
+const Btn = ({ children, variant = 'primary', size = 'md', onClick, disabled, type = 'button', className = 'cursor-pointer' }) => {
   const sz = { xs: 'px-2 py-1 text-[11px]', sm: 'px-3 py-1.5 text-xs', md: 'px-4 py-2 text-[12.5px]' }[size];
   const v = {
-    primary:   'bg-[#2563EB] text-white hover:bg-blue-700',
-    success:   'bg-emerald-600 text-white hover:bg-emerald-700',
-    danger:    'bg-red-600 text-white hover:bg-red-700',
+    primary: 'bg-[#2563EB] text-white hover:bg-blue-700',
+    success: 'bg-emerald-600 text-white hover:bg-emerald-700',
+    danger: 'bg-red-600 text-white hover:bg-red-700',
     secondary: 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50',
-    ghost:     'bg-blue-50 text-[#1E3A5F] border border-blue-200 hover:bg-blue-100',
-    navy:      'bg-[#1E3A5F] text-white hover:bg-[#162d4a]',
+    ghost: 'bg-blue-50 text-[#1E3A5F] border border-blue-200 hover:bg-blue-100',
+    navy: 'bg-[#1E3A5F] text-white hover:bg-[#162d4a]',
   }[variant];
   return (
     <button type={type} onClick={onClick} disabled={disabled}
-      className={`inline-flex items-center gap-1.5 font-semibold rounded-lg transition-all active:scale-[.98] disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap ${sz} ${v} ${className}`}>
+      className={`inline-flex items-center justify-center gap-1.5 font-semibold rounded-lg transition-all active:scale-[.98] disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap ${sz} ${v} ${className}`}>
       {children}
     </button>
   );
@@ -176,7 +169,7 @@ const Inp = ({ className = '', ...props }) => (
 
 const Sel = ({ options = [], placeholder, value, onChange, className = '', disabled }) => (
   <select value={value} onChange={(e) => onChange(e.target.value)} disabled={disabled}
-    className={`px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all bg-white disabled:bg-gray-50 disabled:text-gray-400 ${className}`}>
+    className={`px-3 py-2 cursor-pointer text-sm border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all bg-white disabled:bg-gray-50 disabled:text-gray-400 ${className}`}>
     {placeholder && <option value="">{placeholder}</option>}
     {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
   </select>
@@ -189,28 +182,25 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
     amountPaid: '', paymentMode: 'CASH', paymentDate: TODAY,
     referenceNo: '', discount: '', discountReason: '', lateFine: '', remarks: '',
   });
-  const [loading,         setLoading]         = useState(false);
+  const [loading, setLoading] = useState(false);
   const [periodStructures, setPeriodStructures] = useState([]);
-  const [periodClasses,   setPeriodClasses]   = useState([]);
-  const [classesLoading,  setClassesLoading]  = useState(false);
+  const [periodClasses, setPeriodClasses] = useState([]);
+  const [classesLoading, setClassesLoading] = useState(false);
   const [selectedClassId, setSelectedClassId] = useState('');
-  const [students,        setStudents]        = useState([]);
+  const [students, setStudents] = useState([]);
   const [studentsLoading, setStudentsLoading] = useState(false);
-  const [studentSearch,   setStudentSearch]   = useState('');
-  const [activeStudent,   setActiveStudent]   = useState(null);
+  const [studentSearch, setStudentSearch] = useState('');
+  const [activeStudent, setActiveStudent] = useState(null);
 
-  // Derived values
-  const balanceDue             = Number(activeStudent?.balance) || 0;
-  const isFullyPaid            = activeStudent !== null && balanceDue <= 0;
-  const amountNum              = parseFloat(form.amountPaid)  || 0;
-  const discountNum            = parseFloat(form.discount)    || 0;
-  const lateFineNum            = parseFloat(form.lateFine)    || 0;
-  // Net cash collected after discount — this is what we send to the API
-  const netAmount              = Math.max(0, amountNum - discountNum);
-  const netTotal               = netAmount + lateFineNum;
-  // Validate net (after discount) against balance — prevents the 400 error
-  const amountExceedsBalance   = netAmount > balanceDue && balanceDue > 0;
-  const discountExceedsAmount  = discountNum > amountNum;
+  const balanceDue = Number(activeStudent?.balance) || 0;
+  const isFullyPaid = activeStudent !== null && balanceDue <= 0;
+  const amountNum = parseFloat(form.amountPaid) || 0;
+  const discountNum = parseFloat(form.discount) || 0;
+  const lateFineNum = parseFloat(form.lateFine) || 0;
+  const netAmount = Math.max(0, amountNum - discountNum);
+  const netTotal = netAmount + lateFineNum;
+  const amountExceedsBalance = netAmount > balanceDue && balanceDue > 0;
+  const discountExceedsAmount = discountNum > amountNum;
 
   useEffect(() => {
     if (!open) return;
@@ -224,8 +214,8 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
         periodOptions[0];
       setSelectedPeriodId(matched ? String(matched.value) : '');
       setForm({
-        amountPaid:     initialStudent.balance > 0 ? String(initialStudent.balance) : '',
-        paymentMode:    'CASH', paymentDate: TODAY,
+        amountPaid: initialStudent.balance > 0 ? String(initialStudent.balance) : '',
+        paymentMode: 'CASH', paymentDate: TODAY,
         referenceNo: '', discount: '', discountReason: '', lateFine: '', remarks: '',
       });
     } else {
@@ -234,7 +224,6 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
     }
   }, [open, initialStudent, periodOptions]);
 
-  // Load classes for selected period
   useEffect(() => {
     if (!selectedPeriodId) {
       setPeriodStructures([]); setPeriodClasses([]); setSelectedClassId(''); setStudents([]); setActiveStudent(null);
@@ -258,13 +247,11 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
     load();
   }, [selectedPeriodId]);
 
-  // Load students for selected class
   useEffect(() => {
     if (!selectedClassId) { setStudents([]); return; }
     const load = async () => {
       setStudentsLoading(true);
       try {
-        // Try getStudentByClass first, fall back to authFetch
         let list = [];
         try {
           list = await getStudentByClass(selectedClassId);
@@ -277,7 +264,7 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
       } catch {
         toast.error('Load Failed', 'Could not fetch students for this class.');
         setStudents([]);
-      } finally { setStudentsLoading(false); }
+      } finally { studentsLoading(false); }
     };
     load();
   }, [selectedClassId]);
@@ -285,39 +272,39 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
   if (!open) return null;
 
   const isOverdue = activeStudent?.status === 'OVERDUE';
-  const MODES     = [['CASH', '💵', 'Cash'], ['ONLINE', '🌐', 'Online'], ['CHEQUE', '📝', 'Cheque'], ['DD', '🏦', 'DD']];
+  const MODES = [['CASH', '💵', 'Cash'], ['ONLINE', '🌐', 'Online'], ['CHEQUE', '📝', 'Cheque'], ['DD', '🏦', 'DD']];
 
   const filteredStudents = students.filter((s) => {
-    const q    = studentSearch.toLowerCase();
+    const q = studentSearch.toLowerCase();
     const name = `${s.firstName || ''} ${s.lastName || ''}`.toLowerCase();
     return !q || name.includes(q) || (s.admissionNumber || '').toLowerCase().includes(q);
   });
 
   const selectStudent = (s) => {
-    const fullName   = `${s.firstName || ''} ${s.lastName || ''}`.trim();
-    const classObj   = periodClasses.find((c) => String(c.id) === selectedClassId);
+    const fullName = `${s.firstName || ''} ${s.lastName || ''}`.trim();
+    const classObj = periodClasses.find((c) => String(c.id) === selectedClassId);
     const matchedStr = periodStructures.find((st) => (st.classes || []).some((c) => String(c.id) === selectedClassId));
     const feeStructureId = matchedStr?.id ?? s.feeStructureId ?? null;
     const studentBalance = s.balanceDue ?? s.balance ?? 0;
 
     setActiveStudent({
-      studentId:      s.id || s.studentId,
-      studentName:    fullName,
-      studentCode:    s.admissionNumber || s.studentCode,
-      class:          s.className || s.class || classObj?.name || '',
+      studentId: s.id || s.studentId,
+      studentName: fullName,
+      studentCode: s.admissionNumber || s.studentCode,
+      class: s.className || s.class || classObj?.name || '',
       feeStructureId,
-      feePeriodId:    selectedPeriodId,
-      balance:        studentBalance,
-      paidAmount:     s.paidAmount || 0,
-      totalFee:       s.totalFee   || 0,
-      dueDate:        s.dueDate,
-      daysLate:       s.overdueDays || 0,
+      feePeriodId: selectedPeriodId,
+      balance: studentBalance,
+      paidAmount: s.paidAmount || 0,
+      totalFee: s.totalFee || 0,
+      dueDate: s.dueDate,
+      daysLate: s.overdueDays || 0,
       status:
         s.overdueDays > 0 && studentBalance > 0 ? 'OVERDUE'
-        : s.paidAmount > 0 && studentBalance > 0 ? 'PARTIAL'
-        : studentBalance <= 0                    ? 'PAID'
-        : 'PENDING',
-      parentName:  s.parentName,
+          : s.paidAmount > 0 && studentBalance > 0 ? 'PARTIAL'
+            : studentBalance <= 0 ? 'PAID'
+              : 'PENDING',
+      parentName: s.parentName,
       parentPhone: s.parentPhone,
     });
 
@@ -330,28 +317,27 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
   };
 
   const handleSubmit = async () => {
-    if (!activeStudent)               { toast.warning('No Student Selected', 'Please select a student.'); return; }
-    if (isFullyPaid)                  { toast.info('No Balance Due', `${activeStudent.studentName} has no outstanding balance.`); return; }
+    if (!activeStudent) { toast.warning('No Student Selected', 'Please select a student.'); return; }
+    if (isFullyPaid) { toast.info('No Balance Due', `${activeStudent.studentName} has no outstanding balance.`); return; }
     if (!form.amountPaid || amountNum <= 0) { toast.warning('Invalid Amount', 'Please enter a valid amount.'); return; }
-    if (amountExceedsBalance)         { toast.warning('Amount Too High', `Amount cannot exceed ${fmt(balanceDue)}.`); return; }
-    if (discountExceedsAmount)        { toast.warning('Discount Too High', 'Discount cannot exceed the amount being collected.'); return; }
-    if (!selectedPeriodId)            { toast.warning('No Period Selected', 'Please select a fee period.'); return; }
-    if (!activeStudent.feeStructureId){ toast.error('Fee Structure Missing', 'No fee structure found for this class and period.'); return; }
+    if (amountExceedsBalance) { toast.warning('Amount Too High', `Amount cannot exceed ${fmt(balanceDue)}.`); return; }
+    if (discountExceedsAmount) { toast.warning('Discount Too High', 'Discount cannot exceed the amount being collected.'); return; }
+    if (!selectedPeriodId) { toast.warning('No Period Selected', 'Please select a fee period.'); return; }
+    if (!activeStudent.feeStructureId) { toast.error('Fee Structure Missing', 'No fee structure found for this class and period.'); return; }
 
     try {
       setLoading(true);
       const res = await createFeeCollection({
-        studentId:      activeStudent.studentId,
+        studentId: activeStudent.studentId,
         feeStructureId: activeStudent.feeStructureId,
-        // Send net amount (gross − discount) — the actual cash collected
-        amountPaid:     netAmount,
-        discount:       discountNum || 0,
+        amountPaid: netAmount,
+        discount: discountNum || 0,
         discountReason: form.discountReason || null,
-        lateFine:       lateFineNum || 0,
-        paymentMode:    form.paymentMode,
-        paymentDate:    form.paymentDate,
-        referenceNo:    form.referenceNo || null,
-        remarks:        form.remarks     || null,
+        lateFine: lateFineNum || 0,
+        paymentMode: form.paymentMode,
+        paymentDate: form.paymentDate,
+        referenceNo: form.referenceNo || null,
+        remarks: form.remarks || null,
       });
       toast.success('Payment Recorded', `Receipt generated for ${activeStudent.studentName}.`);
       onSuccess(res, activeStudent);
@@ -372,9 +358,9 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
       wide
       footer={
         <>
-          <Btn variant="secondary" onClick={onClose}>Cancel</Btn>
-          <div className="relative group">
-            <Btn variant="success" onClick={handleSubmit} disabled={submitDisabled}>
+          <Btn variant="secondary" onClick={onClose} className="w-full sm:w-auto">Cancel</Btn>
+          <div className="relative group w-full sm:w-auto">
+            <Btn variant="success" onClick={handleSubmit} disabled={submitDisabled} className="w-full sm:w-auto">
               {loading && <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />}
               {loading ? 'Recording…' : '✓ Record & Generate Receipt'}
             </Btn>
@@ -386,11 +372,10 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
           </div>
         </>
       }>
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
 
         {/* ── LEFT: Period → Class → Student ── */}
         <div className="space-y-4">
-          {/* Period */}
           <div>
             <label className="block text-xs font-semibold text-gray-700 mb-1.5">Fee Period <span className="text-gray-400">*</span></label>
             <select value={selectedPeriodId} onChange={(e) => setSelectedPeriodId(e.target.value)}
@@ -400,7 +385,6 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
             </select>
           </div>
 
-          {/* Class chips */}
           {selectedPeriodId && (
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1.5">
@@ -418,11 +402,10 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
                     : periodClasses.map((c) => (
                       <button key={c.id} type="button"
                         onClick={() => { setSelectedClassId(String(c.id)); setStudentSearch(''); setActiveStudent(null); }}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${
-                          selectedClassId === String(c.id)
-                            ? 'bg-[#1E3A5F] text-white border-[#1E3A5F]'
-                            : 'bg-white text-gray-700 border-gray-200 hover:border-[#1E3A5F]/50 hover:text-[#1E3A5F]'
-                        }`}>
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${selectedClassId === String(c.id)
+                            ? 'bg-blue-950 text-white border-blue-950'
+                            : 'bg-white text-gray-700 border-gray-200 hover:border-blue-950/50 hover:text-blue-950'
+                          }`}>
                         {c.name}
                       </button>
                     ))
@@ -432,7 +415,6 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
             </div>
           )}
 
-          {/* Student list */}
           {selectedClassId && (
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1.5">
@@ -456,17 +438,16 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
                     {studentSearch ? 'No students match your search' : 'No students found in this class'}
                   </div>
                 ) : filteredStudents.map((s) => {
-                  const fullName   = `${s.firstName || ''} ${s.lastName || ''}`.trim();
+                  const fullName = `${s.firstName || ''} ${s.lastName || ''}`.trim();
                   const isSelected = activeStudent?.studentId === (s.id || s.studentId);
-                  const sBalance   = s.balanceDue ?? s.balance ?? 0;
-                  const isPaid     = sBalance <= 0;
+                  const sBalance = s.balanceDue ?? s.balance ?? 0;
+                  const isPaid = sBalance <= 0;
                   return (
                     <div key={s.id || s.studentId} onClick={() => selectStudent(s)}
-                      className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-colors border-b border-gray-50 last:border-0 ${
-                        isSelected ? 'bg-blue-50 border-l-4 border-l-[#1E3A5F]'
-                        : isPaid    ? 'bg-emerald-50/50 hover:bg-emerald-50'
-                        : 'hover:bg-gray-50'
-                      }`}>
+                      className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-colors border-b border-gray-50 last:border-0 ${isSelected ? 'bg-blue-50 border-l-4 border-l-[#1E3A5F]'
+                          : isPaid ? 'bg-emerald-50/50 hover:bg-emerald-50'
+                            : 'hover:bg-gray-50'
+                        }`}>
                       <Av name={fullName} size="sm" />
                       <div className="flex-1 min-w-0">
                         <div className="font-semibold text-sm text-gray-900 truncate">{fullName}</div>
@@ -486,16 +467,13 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
             </div>
           )}
 
-          {/* Student card */}
           {activeStudent && (
-            <div className={`border rounded-xl p-3 flex items-center gap-3 ${
-              isFullyPaid ? 'bg-emerald-50 border-emerald-200' : 'bg-blue-50 border-blue-200'
-            }`}>
+            <div className={`border rounded-xl p-3 flex items-center gap-3 ${isFullyPaid ? 'bg-emerald-50 border-emerald-200' : 'bg-blue-50 border-blue-200'}`}>
               <Av name={activeStudent.studentName} status={activeStudent.status} size="lg" />
-              <div>
-                <div className="font-bold text-gray-900">{activeStudent.studentName}</div>
-                <div className="text-xs text-gray-600">{activeStudent.studentCode} · Class {activeStudent.class}</div>
-                {activeStudent.parentName && <div className="text-[11px] text-gray-500 mt-0.5">Parent: {activeStudent.parentName}</div>}
+              <div className="min-w-0 flex-1">
+                <div className="font-bold text-gray-900 truncate">{activeStudent.studentName}</div>
+                <div className="text-xs text-gray-600 truncate">{activeStudent.studentCode} · Class {activeStudent.class}</div>
+                {activeStudent.parentName && <div className="text-[11px] text-gray-500 mt-0.5 truncate">Parent: {activeStudent.parentName}</div>}
                 {isFullyPaid && (
                   <div className="flex items-center gap-1 mt-1">
                     <CheckCircle size={12} className="text-emerald-600" />
@@ -506,27 +484,23 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
             </div>
           )}
 
-          {/* Paid / Balance summary */}
           {activeStudent && (
             <div className="grid grid-cols-2 gap-2">
               <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2 text-center">
-                <div className="text-[10px] font-bold text-emerald-700 uppercase">Already Paid</div>
-                <div className="text-lg font-extrabold text-emerald-600">{fmt(activeStudent.paidAmount || 0)}</div>
+                <div className="text-[10px] font-bold text-emerald-700 uppercase truncate">Already Paid</div>
+                <div className="text-base sm:text-lg font-extrabold text-emerald-600 break-all">{fmt(activeStudent.paidAmount || 0)}</div>
               </div>
-              <div className={`border rounded-xl px-3 py-2 text-center ${
-                isFullyPaid ? 'bg-emerald-50 border-emerald-200' : 'bg-orange-50 border-orange-200'
-              }`}>
-                <div className={`text-[10px] font-bold uppercase ${isFullyPaid ? 'text-emerald-700' : 'text-orange-700'}`}>
+              <div className={`border border-gray-200 rounded-xl px-3 py-2 text-center ${isFullyPaid ? 'bg-emerald-50 border-emerald-200' : 'bg-orange-50 border-orange-200'}`}>
+                <div className={`text-[10px] font-bold uppercase truncate ${isFullyPaid ? 'text-emerald-700' : 'text-orange-700'}`}>
                   Balance Due
                 </div>
-                <div className={`text-lg font-extrabold ${isFullyPaid ? 'text-emerald-600' : 'text-orange-600'}`}>
+                <div className={`text-base sm:text-lg font-extrabold break-all ${isFullyPaid ? 'text-emerald-600' : 'text-orange-600'}`}>
                   {fmt(balanceDue)}
                 </div>
               </div>
             </div>
           )}
 
-          {/* Fully paid notice */}
           {isFullyPaid && (
             <div className="flex items-start gap-2 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2.5">
               <CheckCircle size={15} className="text-emerald-600 mt-0.5 flex-shrink-0" />
@@ -550,7 +524,6 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
             </div>
           )}
 
-          {/* Amount */}
           <div>
             <label className="block text-xs font-semibold text-gray-700 mb-1.5">
               Amount to Collect <span className="text-gray-400">*</span>
@@ -559,7 +532,7 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
               <Inp
                 type="number"
                 value={form.amountPaid}
-                className={`pr-28 ${amountExceedsBalance ? 'border-orange-400 bg-orange-50' : ''}`}
+                className={`pr-24 sm:pr-28 ${amountExceedsBalance ? 'border-orange-400 bg-orange-50' : ''}`}
                 onChange={(e) => setForm((p) => ({ ...p, amountPaid: e.target.value }))}
                 max={balanceDue} min={1}
                 placeholder={`Max ${fmt(balanceDue)}`}
@@ -567,7 +540,7 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
               {activeStudent && balanceDue > 0 && (
                 <button type="button"
                   onClick={() => setForm((p) => ({ ...p, amountPaid: String(balanceDue) }))}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-[11px] font-semibold text-[#1E3A5F] bg-blue-50 hover:bg-blue-100 border border-blue-200 px-2 py-1 rounded">
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] sm:text-[11px] font-semibold text-[#1E3A5F] bg-blue-50 hover:bg-blue-100 border border-blue-200 px-2 py-1 rounded">
                   Full {fmt(balanceDue)}
                 </button>
               )}
@@ -577,7 +550,6 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
                 <AlertCircle size={11} /> Net amount ({fmt(netAmount)}) exceeds balance due ({fmt(balanceDue)})
               </p>
             )}
-            {/* Partial indicator */}
             {activeStudent && !isFullyPaid && netAmount > 0 && netAmount < balanceDue && !amountExceedsBalance && (
               <p className="text-[11px] text-amber-600 font-medium mt-1 flex items-center gap-1">
                 <Info size={11} /> Partial payment — {fmt(balanceDue - netAmount)} will remain outstanding
@@ -585,28 +557,25 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
             )}
           </div>
 
-          {/* Payment mode */}
           <div>
             <label className="block text-xs font-semibold text-gray-700 mb-1.5">
               Payment Mode <span className="text-gray-400">*</span>
             </label>
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {MODES.map(([mode, icon, label]) => (
                 <button key={mode} type="button" onClick={() => setForm((p) => ({ ...p, paymentMode: mode }))}
-                  className={`flex flex-col items-center gap-1.5 px-2 py-2.5 rounded-xl border-2 transition-all ${
-                    form.paymentMode === mode
+                  className={`flex flex-col items-center gap-1 sm:gap-1.5 px-2 py-2 sm:py-2.5 rounded-xl border-2 transition-all ${form.paymentMode === mode
                       ? 'border-[#1E3A5F] bg-blue-50 text-[#1E3A5F]'
                       : 'border-gray-200 bg-white text-gray-600 hover:border-[#1E3A5F]/40'
-                  }`}>
-                  <span className="text-xl">{icon}</span>
-                  <span className="text-[10.5px] font-bold">{label}</span>
+                    }`}>
+                  <span className="text-lg sm:text-xl">{icon}</span>
+                  <span className="text-[10px] sm:text-[11px] font-bold">{label}</span>
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Date + Reference */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1.5">
                 Payment Date <span className="text-gray-400">*</span>
@@ -621,7 +590,6 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
             </div>
           </div>
 
-          {/* Discount */}
           <div>
             <label className="block text-xs font-semibold text-gray-700 mb-1.5">
               Discount <span className="text-gray-400 font-normal">(optional)</span>
@@ -647,7 +615,6 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
               className="w-full mt-2 px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 resize-none" />
           </div>
 
-          {/* Late fine (overdue only) */}
           {isOverdue && (
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
               <div className="flex items-start gap-2 mb-2">
@@ -664,7 +631,6 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
             </div>
           )}
 
-          {/* Remarks */}
           <div>
             <label className="block text-xs font-semibold text-gray-700 mb-1.5">Remarks</label>
             <textarea value={form.remarks} rows={2}
@@ -673,13 +639,12 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
               className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 resize-none" />
           </div>
 
-          {/* Net total bar */}
-          <div className="flex justify-between items-center bg-[#1E3A5F] rounded-xl px-4 py-3">
+          <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center bg-[#1E3A5F] rounded-xl px-4 py-3 gap-2">
             <div>
               <div className="text-[10px] text-white/50 uppercase tracking-wider">Receipt No.</div>
               <div className="text-white font-bold text-sm mt-0.5">Auto-generated</div>
             </div>
-            <div className="text-right">
+            <div className="text-left sm:text-right">
               <div className="text-[10px] text-white/50 uppercase tracking-wider">Net Collected</div>
               <div className={`font-extrabold text-xl ${netTotal > 0 ? 'text-white' : 'text-white/30'}`}>
                 {netTotal > 0 ? fmt(netTotal) : '—'}
@@ -701,8 +666,8 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
 const BulkCollectModal = ({ open, onClose, students, onSuccess }) => {
   const [commonMode, setCommonMode] = useState('CASH');
   const [commonDate, setCommonDate] = useState(TODAY);
-  const [rows,       setRows]       = useState([]);
-  const [loading,    setLoading]    = useState(false);
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (open && students.length > 0) {
@@ -718,10 +683,10 @@ const BulkCollectModal = ({ open, onClose, students, onSuccess }) => {
     }
   }, [open, students]);
 
-  const update     = (id, field, val) => setRows((p) => p.map((r) => r.id === id ? { ...r, [field]: val } : r));
-  const applyAll   = () => setRows((p) => p.map((r) => ({ ...r, paymentMode: commonMode, paymentDate: commonDate })));
+  const update = (id, field, val) => setRows((p) => p.map((r) => r.id === id ? { ...r, [field]: val } : r));
+  const applyAll = () => setRows((p) => p.map((r) => ({ ...r, paymentMode: commonMode, paymentDate: commonDate })));
   const grandTotal = rows.reduce((s, r) => s + (parseFloat(r.collectAmount) || 0), 0);
-  const MODES      = [{ value: 'CASH', label: 'Cash' }, { value: 'ONLINE', label: 'Online' }, { value: 'CHEQUE', label: 'Cheque' }, { value: 'DD', label: 'DD' }];
+  const MODES = [{ value: 'CASH', label: 'Cash' }, { value: 'ONLINE', label: 'Online' }, { value: 'CHEQUE', label: 'Cheque' }, { value: 'DD', label: 'DD' }];
 
   const handleSubmit = async () => {
     const bad = rows.find((r) => !r.collectAmount || parseFloat(r.collectAmount) <= 0);
@@ -754,8 +719,8 @@ const BulkCollectModal = ({ open, onClose, students, onSuccess }) => {
       wide
       footer={
         <>
-          <Btn variant="secondary" onClick={onClose}>Cancel</Btn>
-          <Btn variant="success" onClick={handleSubmit} disabled={loading}>
+          <Btn variant="secondary" onClick={onClose} className="w-full sm:w-auto">Cancel</Btn>
+          <Btn variant="success" onClick={handleSubmit} disabled={loading} className="w-full sm:w-auto">
             {loading && <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />}
             {loading ? 'Processing…' : `Process ${rows.length} Payments`}
           </Btn>
@@ -765,22 +730,22 @@ const BulkCollectModal = ({ open, onClose, students, onSuccess }) => {
         <CheckCircle2 size={15} className="text-emerald-600 mt-0.5 flex-shrink-0" />
         Payments will be recorded for all {students.length} selected students.
       </div>
-      <div className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 mb-4 flex items-end gap-4">
-        <div>
+      <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 mb-4 flex flex-col sm:flex-row sm:items-end gap-3">
+        <div className="w-full sm:w-auto">
           <label className="block text-xs font-semibold text-gray-700 mb-1.5">Common Payment Mode</label>
-          <Sel value={commonMode} onChange={setCommonMode} options={MODES} className="w-32" />
+          <Sel value={commonMode} onChange={setCommonMode} options={MODES} className="w-full sm:w-32" />
         </div>
-        <div>
+        <div className="w-full sm:w-auto">
           <label className="block text-xs font-semibold text-gray-700 mb-1.5">Payment Date</label>
-          <Inp type="date" value={commonDate} onChange={(e) => setCommonDate(e.target.value)} className="w-40" />
+          <Inp type="date" value={commonDate} onChange={(e) => setCommonDate(e.target.value)} className="w-full sm:w-40" />
         </div>
-        <Btn variant="ghost" size="sm" onClick={applyAll}>Apply to All Rows</Btn>
+        <Btn variant="ghost" size="sm" onClick={applyAll} className="w-full sm:w-auto mt-2 sm:mt-0">Apply to All Rows</Btn>
       </div>
       <div className="overflow-x-auto rounded-xl border border-gray-200">
-        <table className="w-full text-sm">
+        <table className="w-full text-sm min-w-[600px]">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-200">
-              {['Student', 'Class', 'Period', 'Balance Due', 'Collect Amount', 'Discount', 'Late Fine', 'Mode'].map((h) => (
+              {['Student', 'Balance Due', 'Collect Amount', 'Discount', 'Late Fine', 'Mode'].map((h) => (
                 <th key={h} className="px-3 py-2.5 text-left text-[10.5px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
               ))}
             </tr>
@@ -790,15 +755,11 @@ const BulkCollectModal = ({ open, onClose, students, onSuccess }) => {
               <tr key={row.id} className={row.daysLate > 0 ? 'bg-orange-50/60' : 'hover:bg-gray-50/60'}>
                 <td className="px-3 py-2.5">
                   <div className="font-semibold text-gray-900">{row.studentName}</div>
-                  <div className="text-xs text-gray-400">{row.studentCode}</div>
+                  <div className="text-xs text-gray-400">{row.studentCode} · {row.class}</div>
                 </td>
-                <td className="px-3 py-2.5">
-                  <span className="px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-100 text-xs font-semibold rounded-md">{row.class}</span>
-                </td>
-                <td className="px-3 py-2.5 text-xs text-gray-600">{row.period}</td>
                 <td className="px-3 py-2.5">
                   {row.daysLate > 0
-                    ? <span className="text-red-700 text-xs font-bold">{fmt(row.balanceDue)} · {row.daysLate}d late</span>
+                    ? <span className="text-red-700 text-xs font-bold">{fmt(row.balanceDue)}<br /><span className="text-[10px]">{row.daysLate}d late</span></span>
                     : <span className="font-semibold text-gray-800">{fmt(row.balanceDue)}</span>
                   }
                 </td>
@@ -815,8 +776,8 @@ const BulkCollectModal = ({ open, onClose, students, onSuccess }) => {
                 <td className="px-3 py-2.5">
                   {row.lateFine !== null
                     ? <input type="number" value={row.lateFine} placeholder="Fine"
-                        onChange={(e) => update(row.id, 'lateFine', e.target.value)}
-                        className="w-20 px-2 py-1 text-sm border border-amber-200 rounded-lg bg-amber-50" />
+                      onChange={(e) => update(row.id, 'lateFine', e.target.value)}
+                      className="w-20 px-2 py-1 text-sm border border-amber-200 rounded-lg bg-amber-50" />
                     : <span className="text-xs text-gray-300">N/A</span>
                   }
                 </td>
@@ -831,43 +792,126 @@ const BulkCollectModal = ({ open, onClose, students, onSuccess }) => {
           </tbody>
         </table>
       </div>
-      <div className="flex justify-between items-center bg-[#1E3A5F] rounded-xl px-4 py-3 mt-4">
-        <div className="text-sm text-white/60">{rows.length} receipts will be generated</div>
-        <div className="text-white font-extrabold text-base">Grand Total: {fmt(grandTotal)}</div>
+      <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center bg-[#1E3A5F] rounded-xl px-4 py-3 mt-4 gap-2">
+        <div className="text-sm text-white/60 text-center sm:text-left">{rows.length} receipts will be generated</div>
+        <div className="text-white font-extrabold text-base text-center sm:text-right">Grand Total: {fmt(grandTotal)}</div>
       </div>
     </Modal>
   );
 };
 
+// ─── Mobile Card for Outstanding ──────────────────────────────────────────────
+const OutstandingCard = ({ s, selected, onToggle, onCollect }) => {
+  const isSel = selected;
+  return (
+    <div className={`rounded-xl border p-3 transition-all ${isSel ? 'bg-blue-50 border-blue-300' : 'bg-white border-gray-200'}`}>
+      <div className="flex items-start gap-3">
+        <input type="checkbox"
+          className="w-3.5 h-3.5 cursor-pointer accent-[#2563EB] rounded mt-1 flex-shrink-0"
+          checked={isSel} onChange={onToggle} />
+        <Av name={s.studentName} status={s.status} size="md" />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0 flex-1">
+              <div className="font-semibold text-gray-900 text-sm truncate">{s.studentName}</div>
+              <div className="text-xs text-gray-500 truncate">{s.studentCode}</div>
+            </div>
+            <StatusPill status={s.status} />
+          </div>
+          <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2">
+            <div className="text-xs text-gray-500">
+              <span className="text-gray-400">Class: </span>
+              <span className="font-semibold text-blue-700">{s.class}</span>
+            </div>
+            <div className="text-xs text-gray-500">
+              <span className="text-gray-400">Period: </span>{s.period}
+            </div>
+            <div className="text-xs text-gray-500">
+              <span className="text-gray-400">Due: </span>{fmtDate(s.dueDate)}
+            </div>
+          </div>
+          <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100 gap-2">
+            <div className="flex gap-3 min-w-0">
+              <div className="min-w-0">
+                <div className="text-[10px] text-gray-400 uppercase truncate">Paid</div>
+                <div className={`text-sm font-semibold ${s.paidAmount > 0 ? 'text-emerald-600' : 'text-gray-400'}`}>
+                  {fmt(s.paidAmount)}
+                </div>
+              </div>
+              <div className="min-w-0">
+                <div className="text-[10px] text-gray-400 uppercase truncate">Balance</div>
+                <div className="text-sm font-bold text-gray-900">{fmt(s.balance)}</div>
+                {s.status === 'OVERDUE' && (
+                  <div className="text-[10px] text-orange-600 font-medium truncate">{s.daysLate}d overdue</div>
+                )}
+              </div>
+            </div>
+            <Btn variant="primary" size="xs" onClick={onCollect}>Collect</Btn>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ─── Mobile Card for History ──────────────────────────────────────────────────
+const HistoryCard = ({ h, onView }) => (
+  <div className="bg-white rounded-xl border border-gray-200 p-3">
+    <div className="flex items-start justify-between gap-2 mb-2">
+      <div className="min-w-0 flex-1">
+        <span className="text-[#2563EB] font-bold text-xs">{h.receiptNo}</span>
+        <div className="font-semibold text-gray-900 text-sm mt-0.5 truncate">{h.studentName}</div>
+        <div className="text-xs text-gray-400 truncate">{h.studentCode}</div>
+      </div>
+      <div className="text-right flex-shrink-0">
+        <div className="font-bold text-emerald-600 text-base">{fmt(h.amount)}</div>
+        <StatusPill status={h.mode} label={h.mode} />
+      </div>
+    </div>
+    <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500 mb-2">
+      <span><span className="text-gray-400">Date: </span>{fmtDate(h.date)}</span>
+      <span><span className="text-gray-400">Class: </span>{h.class}</span>
+      <span><span className="text-gray-400">Period: </span>{h.period}</span>
+      {h.discount > 0 && <span><span className="text-gray-400">Discount: </span>{fmt(h.discount)}</span>}
+      {h.lateFine > 0 && <span className="text-amber-700"><span className="text-gray-400">Fine: </span>{fmt(h.lateFine)}</span>}
+      {h.referenceNo && <span className="text-gray-400 truncate"><span className="text-gray-400">Ref: </span>{h.referenceNo}</span>}
+    </div>
+    <div className="flex justify-end pt-1 border-t border-gray-50">
+      <Btn variant="ghost" size="xs" onClick={onView}>View Receipt</Btn>
+    </div>
+  </div>
+);
+
 // ─── Main: CollectionsHistory ─────────────────────────────────────────────────
 const CollectionsHistory = () => {
   const { currentAcademicYear } = useContext(UserContext);
-  const academicYearId    = currentAcademicYear?.id    || null;
+  const academicYearId = currentAcademicYear?.id || null;
   const academicYearLabel = currentAcademicYear?.label || null;
 
-  const [tab,      setTab]      = useState('outstanding');
-  const [search,   setSearch]   = useState('');
-  const [classF,   setClassF]   = useState('');
-  const [periodF,  setPeriodF]  = useState('');
-  const [statusF,  setStatusF]  = useState('');
-  const [modeF,    setModeF]    = useState('');
-  const [page,     setPage]     = useState(1);
+  const [tab, setTab] = useState('outstanding');
+  const [search, setSearch] = useState('');
+  const [classF, setClassF] = useState('');
+  const [periodF, setPeriodF] = useState('');
+  const [statusF, setStatusF] = useState('');
+  const [modeF, setModeF] = useState('');
+  const [page, setPage] = useState(1);
   const [selected, setSelected] = useState([]);
+  const [showFilters, setShowFilters] = useState(false);
 
-  const [outstanding,    setOutstanding]    = useState([]);
-  const [history,        setHistory]        = useState([]);
-  const [loading,        setLoading]        = useState(false);
-  const [error,          setError]          = useState(null);
-  const [classOptions,   setClassOptions]   = useState([]);
-  const [periodOptions,  setPeriodOptions]  = useState([]);
+  const [outstanding, setOutstanding] = useState([]);
+  const [history, setHistory] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [classOptions, setClassOptions] = useState([]);
+  const [periodOptions, setPeriodOptions] = useState([]);
   const [optionsLoading, setOptionsLoading] = useState(true);
 
   const [collectModal, setCollectModal] = useState({ open: false, student: null });
-  const [bulkModal,    setBulkModal]    = useState({ open: false, students: [] });
+  const [bulkModal, setBulkModal] = useState({ open: false, students: [] });
   const [receiptModal, setReceiptModal] = useState({ open: false, receipt: null });
 
-  const [fromDate,   setFromDate]   = useState('');
-  const [toDate,     setToDate]     = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
   const [totalPages, setTotalPages] = useState(1);
 
   useEffect(() => {
@@ -875,7 +919,6 @@ const CollectionsHistory = () => {
     setToDate(TODAY);
   }, []);
 
-  // Load filter options
   useEffect(() => {
     if (!academicYearId) { setOptionsLoading(false); return; }
     const loadOptions = async () => {
@@ -900,61 +943,54 @@ const CollectionsHistory = () => {
     loadOptions();
   }, [academicYearId]);
 
- const fetchOutstanding = useCallback(async () => {
-  try {
-    setLoading(true); setError(null);
-    const params = {};
-    if (classF)  params.classId  = classF;
-    if (periodF) params.periodId = periodF;
-    const res = await getOutstandingFees(params);
-     console.log('Outstanding API response:', res);
-
-    // Handle all possible API response shapes
-    const raw = res?.content ?? res?.data?.content ?? res?.records ?? res ?? [];
-    const records = Array.isArray(raw) ? raw : [];
-    console.log('Records to render:', records.length);
-
-    setOutstanding(
-      records.map((r, i) => {
-        let status = 'PENDING';
-        if ((r.paidAmount || 0) > 0 && r.balanceDue > 0) status = 'PARTIAL';
-        if (r.balanceDue <= 0)                            status = 'PAID';
-        if (r.overdueDays > 0 && r.balanceDue > 0)       status = 'OVERDUE';
-        return {
-          id:             i + 1,
-          studentId:      r.studentId,
-          studentName:    r.studentName,
-          studentCode:    r.admissionNumber,
-          class:          r.className,
-          section:        r.sectionName,
-          period:         r.feePeriodName,
-          feePeriodId:    r.feePeriodId || r.periodId,
-          balance:        r.balanceDue,
-          totalFee:       r.totalFee,
-          paidAmount:     r.paidAmount,
-          daysLate:       r.overdueDays || 0,
-          feeStructureId: r.feeStructureId,
-          dueDate:        r.dueDate,
-          status,
-        };
-      })
-    );
-  } catch (e) {
-    console.error('fetchOutstanding error:', e);
-    setError(e.message || 'Failed to load outstanding fees.');
-    setOutstanding([]);
-  } finally { setLoading(false); }
-}, [classF, periodF]);
+  const fetchOutstanding = useCallback(async () => {
+    try {
+      setLoading(true); setError(null);
+      const params = {};
+      if (classF) params.classId = classF;
+      if (periodF) params.periodId = periodF;
+      const res = await getOutstandingFees(params);
+      const raw = res?.content ?? res?.data?.content ?? res?.records ?? res ?? [];
+      const records = Array.isArray(raw) ? raw : [];
+      setOutstanding(
+        records.map((r, i) => {
+          let status = 'PENDING';
+          if ((r.paidAmount || 0) > 0 && r.balanceDue > 0) status = 'PARTIAL';
+          if (r.balanceDue <= 0) status = 'PAID';
+          if (r.overdueDays > 0 && r.balanceDue > 0) status = 'OVERDUE';
+          return {
+            id: i + 1,
+            studentId: r.studentId,
+            studentName: r.studentName,
+            studentCode: r.admissionNumber,
+            class: r.className,
+            section: r.sectionName,
+            period: r.feePeriodName,
+            feePeriodId: r.feePeriodId || r.periodId,
+            balance: r.balanceDue,
+            totalFee: r.totalFee,
+            paidAmount: r.paidAmount,
+            daysLate: r.overdueDays || 0,
+            feeStructureId: r.feeStructureId,
+            dueDate: r.dueDate,
+            status,
+          };
+        })
+      );
+    } catch (e) {
+      setError(e.message || 'Failed to load outstanding fees.');
+      setOutstanding([]);
+    } finally { setLoading(false); }
+  }, [classF, periodF]);
 
   const fetchHistory = useCallback(async () => {
     try {
       setLoading(true); setError(null);
       const params = { fromDate, toDate, page: page - 1, size: PAGE_SIZE };
-      if (classF)  params.classId  = classF;
+      if (classF) params.classId = classF;
       if (periodF) params.periodId = periodF;
-      if (modeF)   params.mode     = modeF;
+      if (modeF) params.mode = modeF;
       const res = await getFeeCollectionHistory(params);
-      // FIX: Handle both API response formats
       const records = res.data?.content || res.records || [];
       setHistory(records.map((r) => ({
         id: r.id, receiptNo: r.receiptNo, date: r.paymentDate, studentName: r.studentName,
@@ -988,7 +1024,6 @@ const CollectionsHistory = () => {
     );
   }
 
-  // Filtering
   const filteredOut = outstanding.filter((s) => {
     const q = search.toLowerCase();
     return (
@@ -1001,18 +1036,18 @@ const CollectionsHistory = () => {
     return !q || h.studentName.toLowerCase().includes(q) || (h.receiptNo || '').toLowerCase().includes(q);
   });
 
-  const pagedOut      = filteredOut.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const pagedOut = filteredOut.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const totalOutPages = Math.max(1, Math.ceil(filteredOut.length / PAGE_SIZE));
-  const overdueCount  = outstanding.filter((s) => s.status === 'OVERDUE').length;
+  const overdueCount = outstanding.filter((s) => s.status === 'OVERDUE').length;
 
   const toggleRow = (id) => setSelected((p) => p.includes(id) ? p.filter((x) => x !== id) : [...p, id]);
   const toggleAll = () => {
-    const ids   = filteredOut.map((s) => s.id);
+    const ids = filteredOut.map((s) => s.id);
     const allSel = ids.every((id) => selected.includes(id));
     setSelected(allSel ? (p) => p.filter((id) => !ids.includes(id)) : (p) => [...new Set([...p, ...ids])]);
   };
   const selStudents = outstanding.filter((s) => selected.includes(s.id));
-  const selTotal    = selStudents.reduce((a, s) => a + s.balance, 0);
+  const selTotal = selStudents.reduce((a, s) => a + s.balance, 0);
 
   const handleCollectSuccess = (response, student) => {
     setCollectModal({ open: false, student: null });
@@ -1020,20 +1055,20 @@ const CollectionsHistory = () => {
     setReceiptModal({
       open: true,
       receipt: {
-        receiptNo:    data.receiptNo,
-        date:         data.paymentDate,
-        studentName:  data.studentName     || student.studentName,
-        studentCode:  data.admissionNumber || student.studentCode,
-        class:        data.className       || student.class,
-        period:       data.feePeriodName   || student.period,
-        components:   data.components      || [{ name: 'Fee Payment', amount: data.amountPaid }],
-        amountPaid:   data.amountPaid,
-        discount:     data.discount        || 0,
-        lateFine:     data.lateFine        || 0,
-        paymentMode:  data.paymentMode,
-        referenceNo:  data.referenceNo,
+        receiptNo: data.receiptNo,
+        date: data.paymentDate,
+        studentName: data.studentName || student.studentName,
+        studentCode: data.admissionNumber || student.studentCode,
+        class: data.className || student.class,
+        period: data.feePeriodName || student.period,
+        components: data.components || [{ name: 'Fee Payment', amount: data.amountPaid }],
+        amountPaid: data.amountPaid,
+        discount: data.discount || 0,
+        lateFine: data.lateFine || 0,
+        paymentMode: data.paymentMode,
+        referenceNo: data.referenceNo,
         balanceAfter: data.balanceAfter,
-        recordedBy:   data.collectedBy     || 'Admin',
+        recordedBy: data.collectedBy || 'Admin',
       },
     });
     fetchOutstanding(); setSelected([]);
@@ -1083,24 +1118,26 @@ const CollectionsHistory = () => {
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4 sm:space-y-5 px-2 sm:px-4 max-w-full overflow-hidden">
       <ToastContainer />
 
       {/* ── Header ── */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">Collections & History</h1>
-          <p className="text-sm text-gray-400 mt-0.5">
-            Academic Year {academicYearLabel} · Collect fee payments and view transaction history
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-gray-100 pb-3">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900 tracking-tight">Collections & History</h1>
+          <p className="text-xs sm:text-sm text-gray-400 mt-0.5 truncate">
+            Academic Year {academicYearLabel} · Fee payments and history
           </p>
         </div>
-        <div className="flex gap-2">
-          <button className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-            <FileDown size={14} /> Export
+        <div className="flex gap-2 w-full sm:w-auto flex-shrink-0">
+          <button className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 text-xs sm:text-sm font-semibold text-gray-700 bg-white border border-gray-200 cursor-pointer rounded-lg hover:bg-gray-50 transition-colors">
+            <FileDown size={13} />
+            <span>Export</span>
           </button>
           <button onClick={() => setCollectModal({ open: true, student: null })}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-[#2563EB] rounded-lg hover:bg-blue-700 transition-colors shadow-sm">
-            <Plus size={15} /> Collect Fee
+            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold text-white bg-[#2563EB] rounded-lg cursor-pointer hover:bg-blue-700 transition-colors shadow-sm">
+            <Plus size={13} />
+            <span>Collect Fee</span>
           </button>
         </div>
       </div>
@@ -1109,28 +1146,27 @@ const CollectionsHistory = () => {
       {error && (
         <div className="bg-orange-50 border border-orange-200 rounded-xl px-4 py-3 flex items-start gap-3">
           <AlertCircle size={16} className="text-orange-600 mt-0.5 flex-shrink-0" />
-          <div className="flex-1 text-sm text-orange-700">{error}</div>
+          <div className="flex-1 text-sm text-orange-700 min-w-0">{error}</div>
           <button
             onClick={() => { setError(null); tab === 'outstanding' ? fetchOutstanding() : fetchHistory(); }}
-            className="text-orange-600 hover:text-orange-800 font-semibold text-sm">
+            className="text-orange-600 hover:text-orange-800 font-semibold text-sm flex-shrink-0">
             Retry
           </button>
         </div>
       )}
 
       {/* ── Tabs ── */}
-      <div className="flex border-b border-gray-200">
+      <div className="flex border-b border-gray-200 ">
         {[
           { key: 'outstanding', label: 'Outstanding & Overdue', badge: overdueCount },
-          { key: 'history',     label: 'Payment History',       badge: 0 },
+          { key: 'history', label: 'Payment History', badge: 0 },
         ].map((t) => (
           <button key={t.key}
             onClick={() => { setTab(t.key); resetTab(); }}
-            className={`inline-flex items-center gap-2 px-4 py-3 text-[12.5px] font-semibold border-b-2 -mb-px transition-colors ${
-              tab === t.key
+            className={`inline-flex items-center gap-2 px-4 py-3 text-[12px] sm:text-[13px] font-semibold border-b-2 -mb-px transition-colors whitespace-nowrap flex-shrink-0 ${tab === t.key
                 ? 'text-[#2563EB] border-[#2563EB]'
                 : 'text-gray-500 border-transparent hover:text-gray-700 hover:border-gray-300'
-            }`}>
+              }`}>
             {t.label}
             {t.badge > 0 && (
               <span className="bg-orange-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">{t.badge}</span>
@@ -1143,52 +1179,93 @@ const CollectionsHistory = () => {
       {tab === 'outstanding' && (
         <>
           {/* Filters */}
-          <div className="flex flex-wrap gap-2">
-            <div className="relative flex-1 min-w-[200px]">
-              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                placeholder="Student name or ID…"
-                className="w-full pl-8 pr-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all" />
+          <div>
+            {/* Mobile filter toggle */}
+            <div className="flex gap-2 md:hidden mb-2">
+              <div className="relative flex-1">
+                <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                  placeholder="Student name or ID…"
+                  className="w-full pl-8 pr-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all bg-white" />
+              </div>
+              <button onClick={() => setShowFilters(!showFilters)}
+                className={`flex items-center gap-1.5 px-3 py-2 text-sm font-semibold rounded-lg border transition-colors flex-shrink-0 ${showFilters || classF || periodF || statusF
+                    ? 'bg-blue-50 text-[#1E3A5F] border-blue-200'
+                    : 'bg-white text-gray-700 border-gray-200'
+                  }`}>
+                <Filter size={13} />
+                <span>Filters</span>
+                {(classF || periodF || statusF) && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0" />
+                )}
+              </button>
             </div>
-            <Sel value={periodF} onChange={(v) => { setPeriodF(v); setPage(1); setSelected([]); }}
-              options={periodOptions} placeholder="All Periods" className="w-40" />
-            <Sel value={classF}  onChange={(v) => { setClassF(v);  setPage(1); setSelected([]); }}
-              options={classOptions}  placeholder="All Classes"  className="w-36" />
-            <Sel value={statusF} onChange={(v) => { setStatusF(v); setPage(1); }}
-              options={[
-                { value: 'OVERDUE', label: 'Overdue'  },
-                { value: 'PARTIAL', label: 'Partial'  },
-                { value: 'PENDING', label: 'Pending'  },
-              ]}
-              placeholder="All Status" className="w-36" />
+
+            {/* Mobile expanded filters */}
+            {showFilters && (
+              <div className="flex flex-col gap-2 mb-3 p-3 bg-gray-50 rounded-xl md:hidden border border-gray-100">
+                <Sel value={periodF} onChange={(v) => { setPeriodF(v); setPage(1); setSelected([]); }}
+                  options={periodOptions} placeholder="All Periods" className="w-full" />
+                <Sel value={classF} onChange={(v) => { setClassF(v); setPage(1); setSelected([]); }}
+                  options={classOptions} placeholder="All Classes" className="w-full" />
+                <Sel value={statusF} onChange={(v) => { setStatusF(v); setPage(1); }}
+                  options={[
+                    { value: 'OVERDUE', label: 'Overdue' },
+                    { value: 'PARTIAL', label: 'Partial' },
+                    { value: 'PENDING', label: 'Pending' },
+                  ]}
+                  placeholder="All Status" className="w-full" />
+              </div>
+            )}
+
+            {/* Desktop filters */}
+            <div className="hidden md:flex lg:flex-nowrap flex-wrap items-center gap-2 w-full">
+              <div className="relative flex-1 min-w-[150px] lg:min-w-[200px]">
+                <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                  placeholder="Student name or ID…"
+                  className="w-full pl-8 pr-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all bg-white" />
+              </div>
+              <Sel value={periodF} onChange={(v) => { setPeriodF(v); setPage(1); setSelected([]); }}
+                options={periodOptions} placeholder="All Periods" className="w-full md:w-40 flex-shrink-0" />
+              <Sel value={classF} onChange={(v) => { setClassF(v); setPage(1); setSelected([]); }}
+                options={classOptions} placeholder="All Classes" className="w-full md:w-36 flex-shrink-0" />
+              <Sel value={statusF} onChange={(v) => { setStatusF(v); setPage(1); }}
+                options={[
+                  { value: 'OVERDUE', label: 'Overdue' },
+                  { value: 'PARTIAL', label: 'Partial' },
+                  { value: 'PENDING', label: 'Pending' },
+                ]}
+                placeholder="All Status" className="w-full md:w-36 flex-shrink-0" />
+            </div>
           </div>
 
           {/* Bulk action bar */}
           {selected.length > 0 && (
-            <div className="bg-[#1E3A5F] rounded-xl px-5 py-3 flex items-center justify-between shadow-md">
-              <div className="flex items-center gap-6">
-                <div className="text-white font-bold text-sm">
-                  {selected.length} student{selected.length !== 1 ? 's' : ''} selected
+            <div className="bg-[#1E3A5F] rounded-xl px-4 py-3 flex flex-row items-center justify-between gap-3 shadow-md">
+              <div className="min-w-0">
+                <div className="text-white font-bold text-xs sm:text-sm">
+                  {selected.length} selected
                 </div>
-                <div className="text-white/60 text-sm">
+                <div className="text-white/60 text-xs truncate">
                   Total: <span className="font-bold text-white">{fmt(selTotal)}</span>
                 </div>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-1.5 flex-shrink-0">
                 <Btn variant="secondary" size="sm" onClick={() => setSelected([])}
-                  className="!bg-white/10 hover:!bg-white/20 !border-white/30 !text-white">
+                  className="!bg-white/10 hover:!bg-white/20 !border-white/30 !text-white text-xs px-2.5">
                   Clear
                 </Btn>
-                <Btn variant="success" size="sm"
+                <Btn variant="success" size="sm" className="text-xs px-3"
                   onClick={() => setBulkModal({ open: true, students: selStudents })}>
-                  Collect Selected ({selected.length})
+                  Collect ({selected.length})
                 </Btn>
               </div>
             </div>
           )}
 
-          {/* Table */}
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+          {/* ── Desktop Table (hidden on mobile) ── */}
+          <div className="hidden lg:block bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
@@ -1218,25 +1295,20 @@ const CollectionsHistory = () => {
                     const isSel = selected.includes(s.id);
                     return (
                       <tr key={s.id}
-                        className={`transition-colors ${
-                          isSel ? 'bg-blue-50 border-l-4 border-l-[#2563EB]' : 'hover:bg-gray-50/60'
-                        }`}>
+                        className={`transition-colors ${isSel ? 'bg-blue-50 border-l-4 border-l-[#2563EB]' : 'hover:bg-gray-50/60'}`}>
                         <td className="px-3 py-3">
                           <input type="checkbox"
                             className="w-3.5 h-3.5 cursor-pointer accent-[#2563EB] rounded"
                             checked={isSel} onChange={() => toggleRow(s.id)} />
                         </td>
                         <td className="px-3 py-3">
-                          <div className="flex items-center gap-2">
-                            <Av name={s.studentName} status={s.status} size="sm" />
-                            <div>
-                              <div className="font-semibold text-gray-900 text-sm">{s.studentName}</div>
-                              <div className="text-xs text-gray-500">{s.studentCode}</div>
-                            </div>
+                          <div>
+                            <div className="font-semibold text-gray-900 text-sm">{s.studentName}</div>
+                            <div className="text-xs text-gray-500">{s.studentCode}</div>
                           </div>
                         </td>
                         <td className="px-3 py-3">
-                          <span className="px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-100 text-xs font-semibold rounded-md">{s.class}</span>
+                          <span className="px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-100 text-xs font-semibold rounded-md ">{s.class}</span>
                         </td>
                         <td className="px-3 py-3 text-xs text-gray-600">{s.period}</td>
                         <td className="px-3 py-3 text-sm text-gray-700">{fmt(s.totalFee)}</td>
@@ -1249,7 +1321,7 @@ const CollectionsHistory = () => {
                             <div className="text-[10.5px] text-orange-600 mt-0.5 font-medium">{s.daysLate}d overdue</div>
                           )}
                         </td>
-                        <td className="px-3 py-3 text-xs text-gray-600">{fmtDate(s.dueDate)}</td>
+                        <td className="px-3 py-3 text-xs text-left text-gray-600">{fmtDate(s.dueDate)}</td>
                         <td className="px-3 py-3">
                           <StatusPill status={s.status} />
                         </td>
@@ -1282,38 +1354,132 @@ const CollectionsHistory = () => {
               </div>
             </div>
           </div>
+
+          {/* ── Tablet/Mobile Cards (hidden on lg+) ── */}
+          <div className="lg:hidden space-y-3">
+            {/* Select all bar */}
+            {filteredOut.length > 0 && (
+              <div className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-xl px-3 py-2">
+                <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-gray-700">
+                  <input type="checkbox"
+                    className="w-3.5 h-3.5 cursor-pointer accent-[#2563EB] rounded"
+                    checked={filteredOut.length > 0 && filteredOut.every((s) => selected.includes(s.id))}
+                    onChange={toggleAll} />
+                  Select All ({filteredOut.length})
+                </label>
+                <span className="text-xs text-gray-400">
+                  Total: {filteredOut.length}
+                </span>
+              </div>
+            )}
+
+            {loading ? (
+              <div className="text-center py-14">
+                <span className="w-7 h-7 border-2 border-[#2563EB] border-t-transparent rounded-full animate-spin inline-block mb-2" />
+                <div className="text-sm text-gray-400">Loading outstanding fees…</div>
+              </div>
+            ) : pagedOut.length === 0 ? (
+              <div className="text-center py-14 text-sm text-gray-400">No records found</div>
+            ) : pagedOut.map((s) => (
+              <OutstandingCard
+                key={s.id}
+                s={s}
+                selected={selected.includes(s.id)}
+                onToggle={() => toggleRow(s.id)}
+                onCollect={() => setCollectModal({ open: true, student: s })}
+              />
+            ))}
+
+            {/* Mobile Pagination */}
+            {filteredOut.length > PAGE_SIZE && (
+              <div className="flex items-center justify-between pt-2">
+                <Btn variant="secondary" size="sm"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>
+                  ← Prev
+                </Btn>
+                <span className="text-xs text-gray-500">Page {page} of {totalOutPages}</span>
+                <Btn variant="primary" size="sm"
+                  onClick={() => setPage((p) => Math.min(totalOutPages, p + 1))} disabled={page >= totalOutPages}>
+                  Next →
+                </Btn>
+              </div>
+            )}
+          </div>
         </>
       )}
 
       {/* ══ HISTORY TAB ══ */}
       {tab === 'history' && (
         <>
-          {/* Filters */}
-          <div className="flex flex-wrap gap-2">
-            <div className="relative flex-1 min-w-[200px]">
+          {/* Mobile filter toggle */}
+          <div className="flex gap-2 md:hidden mb-2">
+            <div className="relative flex-1">
               <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
               <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                 placeholder="Receipt no. or student…"
-                className="w-full pl-8 pr-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all" />
+                className="w-full pl-8 pr-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all bg-white" />
             </div>
-            <Inp type="date" value={fromDate} onChange={(e) => { setFromDate(e.target.value); setPage(1); }} className="w-40" />
-            <Inp type="date" value={toDate}   onChange={(e) => { setToDate(e.target.value);   setPage(1); }} className="w-40" />
-            <Sel value={periodF} onChange={(v) => { setPeriodF(v); setPage(1); }}
-              options={periodOptions} placeholder="All Periods" className="w-40" />
-            <Sel value={classF}  onChange={(v) => { setClassF(v);  setPage(1); }}
-              options={classOptions}  placeholder="All Classes"  className="w-32" />
-            <Sel value={modeF}   onChange={(v) => { setModeF(v);   setPage(1); }}
-              options={[
-                { value: 'CASH',   label: 'Cash'   },
-                { value: 'ONLINE', label: 'Online' },
-                { value: 'CHEQUE', label: 'Cheque' },
-                { value: 'DD',     label: 'DD'     },
-              ]}
-              placeholder="All Modes" className="w-32" />
+            <button onClick={() => setShowFilters(!showFilters)}
+              className={`flex items-center gap-1.5 px-3 py-2 text-sm font-semibold rounded-lg border transition-colors flex-shrink-0 ${showFilters || classF || periodF || modeF
+                  ? 'bg-blue-50 text-[#1E3A5F] border-blue-200'
+                  : 'bg-white text-gray-700 border-gray-200'
+                }`}>
+              <Filter size={13} />
+              <span>Filters</span>
+            </button>
           </div>
 
-          {/* Table */}
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+          {showFilters && (
+            <div className="flex flex-col gap-2 mb-3 p-3 bg-gray-50 rounded-xl md:hidden border border-gray-100">
+              <div className="grid grid-cols-2 gap-2">
+                <Inp type="date" value={fromDate} onChange={(e) => { setFromDate(e.target.value); setPage(1); }} className="w-full" />
+                <Inp type="date" value={toDate} onChange={(e) => { setToDate(e.target.value); setPage(1); }} className="w-full" />
+              </div>
+              <Sel value={periodF} onChange={(v) => { setPeriodF(v); setPage(1); }}
+                options={periodOptions} placeholder="All Periods" className="w-full" />
+              <Sel value={classF} onChange={(v) => { setClassF(v); setPage(1); }}
+                options={classOptions} placeholder="All Classes" className="w-full" />
+              <Sel value={modeF} onChange={(v) => { setModeF(v); setPage(1); }}
+                options={[
+                  { value: 'CASH', label: 'Cash' },
+                  { value: 'ONLINE', label: 'Online' },
+                  { value: 'CHEQUE', label: 'Cheque' },
+                  { value: 'DD', label: 'DD' },
+                ]}
+                placeholder="All Modes" className="w-full" />
+            </div>
+          )}
+
+          {/* Desktop Filters — FIXED FOR ONE LINE DISPLAY AS IN image_cc175f.png */}
+          <div className="hidden md:flex  flex-wrap items-center gap-2 w-full">
+            <div className="relative flex-1 min-w-[150px] lg:min-w-[200px]">
+              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                placeholder="Receipt no. or student…"
+                className="w-full pl-8 pr-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all bg-white" />
+            </div>
+            <div className="w-full md:w-36 lg:w-40 flex-shrink-0">
+              <Inp type="date" value={fromDate} onChange={(e) => { setFromDate(e.target.value); setPage(1); }} />
+            </div>
+            <div className="w-full md:w-36 lg:w-40 flex-shrink-0">
+              <Inp type="date" value={toDate} onChange={(e) => { setToDate(e.target.value); setPage(1); }} />
+            </div>
+            <Sel value={periodF} onChange={(v) => { setPeriodF(v); setPage(1); }}
+              options={periodOptions} placeholder="All Periods" className="w-full md:w-36 lg:w-40 flex-shrink-0" />
+            <Sel value={classF} onChange={(v) => { setClassF(v); setPage(1); }}
+              options={classOptions} placeholder="All Classes" className="w-full md:w-32 flex-shrink-0" />
+            <Sel value={modeF} onChange={(v) => { setModeF(v); setPage(1); }}
+              options={[
+                { value: 'CASH', label: 'Cash' },
+                { value: 'ONLINE', label: 'Online' },
+                { value: 'CHEQUE', label: 'Cheque' },
+                { value: 'DD', label: 'DD' },
+              ]}
+              placeholder="All Modes" className="w-full md:w-32 flex-shrink-0" />
+          </div>
+
+          {/* ── Desktop Table ── */}
+          <div className="hidden xl:block bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
@@ -1348,11 +1514,11 @@ const CollectionsHistory = () => {
                       </td>
                       <td className="px-3 py-3 text-xs text-gray-600">{h.period}</td>
                       <td className="px-3 py-3 font-bold text-emerald-600 text-sm">{fmt(h.amount)}</td>
-                      <td className="px-3 py-3 text-xs text-gray-500">{h.discount  > 0 ? fmt(h.discount)  : '—'}</td>
+                      <td className="px-3 py-3 text-xs text-gray-500">{h.discount > 0 ? fmt(h.discount) : '—'}</td>
                       <td className="px-3 py-3 text-xs text-amber-700">{h.lateFine > 0 ? fmt(h.lateFine) : '—'}</td>
                       <td className="px-3 py-3"><StatusPill status={h.mode} label={h.mode} /></td>
                       <td className="px-3 py-3 text-xs text-gray-500">{h.referenceNo || '—'}</td>
-                      <td className="px-3 py-3 text-xs text-gray-500">{h.recordedBy  || '—'}</td>
+                      <td className="px-3 py-3 text-xs text-gray-500">{h.recordedBy || '—'}</td>
                       <td className="px-3 py-3">
                         <Btn variant="ghost" size="xs" onClick={() => handleViewReceipt(h)}>
                           Receipt
@@ -1363,7 +1529,6 @@ const CollectionsHistory = () => {
                 </tbody>
               </table>
             </div>
-            {/* Pagination */}
             <div className="flex items-center justify-between px-4 py-3 bg-gray-50/80 border-t border-gray-100">
               <span className="text-xs text-gray-500">Showing {filteredHist.length} transactions</span>
               <div className="flex gap-2">
@@ -1377,6 +1542,34 @@ const CollectionsHistory = () => {
                 </Btn>
               </div>
             </div>
+          </div>
+
+          {/* ── Mobile/Tablet Cards ── */}
+          <div className="xl:hidden space-y-3">
+            {loading ? (
+              <div className="text-center py-14">
+                <span className="w-7 h-7 border-2 border-[#2563EB] border-t-transparent rounded-full animate-spin inline-block mb-2" />
+                <div className="text-sm text-gray-400">Loading history…</div>
+              </div>
+            ) : filteredHist.length === 0 ? (
+              <div className="text-center py-14 text-sm text-gray-400">No payment records found</div>
+            ) : filteredHist.map((h) => (
+              <HistoryCard key={h.id} h={h} onView={() => handleViewReceipt(h)} />
+            ))}
+
+            {filteredHist.length >= PAGE_SIZE && (
+              <div className="flex items-center justify-between pt-2">
+                <Btn variant="secondary" size="sm"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>
+                  ← Prev
+                </Btn>
+                <span className="text-xs text-gray-500">Page {page}</span>
+                <Btn variant="primary" size="sm"
+                  onClick={() => setPage((p) => p + 1)} disabled={filteredHist.length < PAGE_SIZE}>
+                  Next →
+                </Btn>
+              </div>
+            )}
           </div>
         </>
       )}

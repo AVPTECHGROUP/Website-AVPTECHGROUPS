@@ -16,7 +16,7 @@ export default function CardComponent({ IconName, keyName, val, iconTxColor, ico
         <div className={`${iconTxColor} flex flex-col h-full`}>
 
             {/* Card Body */}
-            <div className="flex items-center justify-between px-4 py-3">
+            <div className="flex items-center justify-between px-2 py-3">
 
                 {/* Left: Icon + Labels */}
                 <div className="flex items-center gap-2">
@@ -24,11 +24,11 @@ export default function CardComponent({ IconName, keyName, val, iconTxColor, ico
                         <IconName className="w-5 h-5" />
                     </div>
                     <div>
-                        <p className="text-[12px] font-medium text-gray-600 leading-snug">
+                        <p className="text-[12px] font-medium text-gray-600 text-nowrap leading-snug">
                             {toProperCase(keyName)}
                         </p>
                         {/* <p className="text-[12px] text-gray-400">This Month</p> */}
-                <p className="text-xl font-semibold">{val}</p>
+                <p className="text-lg font-semibold">{val}</p>
                     </div>
                 </div>
 

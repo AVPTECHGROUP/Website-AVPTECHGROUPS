@@ -16,22 +16,22 @@ import { PERMISSIONS as P } from '../../../Constants/Permission';
 // ── Static helpers ─────────────────────────────────────────────────────────────
 
 const STATUS_STYLE = {
-  PUBLISHED:        { label: 'Published',        bg: '#f0fdf4', color: '#16a34a', border: '#bbf7d0', dot: '#16a34a' },
+  PUBLISHED: { label: 'Published', bg: '#f0fdf4', color: '#16a34a', border: '#bbf7d0', dot: '#16a34a' },
   PENDING_APPROVAL: { label: 'Pending Approval', bg: '#fffbeb', color: '#d97706', border: '#fde68a', dot: '#d97706' },
-  DRAFT:            { label: 'Draft',            bg: '#f9fafb', color: '#6b7280', border: '#e5e7eb', dot: '#9ca3af' },
-  REJECTED:         { label: 'Rejected',         bg: '#fef2f2', color: '#dc2626', border: '#fecaca', dot: '#dc2626' },
+  DRAFT: { label: 'Draft', bg: '#f9fafb', color: '#6b7280', border: '#e5e7eb', dot: '#9ca3af' },
+  REJECTED: { label: 'Rejected', bg: '#fef2f2', color: '#dc2626', border: '#fecaca', dot: '#dc2626' },
 };
 
 const TARGET_STYLE = {
-  ALL_PARENTS:  { bg: '#eff6ff', color: '#2563eb', border: '#dbeafe' },
-  ALL_STAFF:    { bg: '#f5f3ff', color: '#7c3aed', border: '#ddd6fe' },
+  ALL_PARENTS: { bg: '#eff6ff', color: '#2563eb', border: '#dbeafe' },
+  ALL_STAFF: { bg: '#f5f3ff', color: '#7c3aed', border: '#ddd6fe' },
   ALL_TEACHERS: { bg: '#fff7ed', color: '#c2410c', border: '#fed7aa' },
-  DEFAULT:      { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0' },
+  DEFAULT: { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0' },
 };
 
 const TARGET_LABEL = {
-  ALL_PARENTS:  'All Parents',
-  ALL_STAFF:    'All Staff',
+  ALL_PARENTS: 'All Parents',
+  ALL_STAFF: 'All Staff',
   ALL_TEACHERS: 'All Teachers',
 };
 
@@ -145,7 +145,7 @@ function MobileCircularCard({ c, actionId, canApprove, onApprove, onReject, onDe
         {canApprove && c.status?.toUpperCase() === 'PENDING_APPROVAL' && (
           <>
             <IconBtn icon={Check} title="Approve" color="#16a34a" hoverBg="#f0fdf4" onClick={() => onApprove(c.id)} />
-            <IconBtn icon={X}     title="Reject"  color="#dc2626" hoverBg="#fef2f2" onClick={() => onReject(c.id)} />
+            <IconBtn icon={X} title="Reject" color="#dc2626" hoverBg="#fef2f2" onClick={() => onReject(c.id)} />
           </>
         )}
         <IconBtn icon={Eye} title="View" color="#2563eb" hoverBg="#eff6ff" onClick={() => onView(c.id)} />
@@ -164,7 +164,7 @@ export default function CircularsPage() {
 
   const { hasPermission } = useAuth();
   const canApprove = hasPermission(P.CIRCULAR_APPROVE);
-  const canCreate  = hasPermission(P.CIRCULAR_CREATE);
+  const canCreate = hasPermission(P.CIRCULAR_CREATE);
 
   // ── State ──
   const [circulars, setCirculars] = useState([]);
@@ -221,9 +221,9 @@ export default function CircularsPage() {
       setTotalPages(pagination.totalPages ?? 1);
 
       setStats({
-        total:        pagination.totalElements ?? list.length,
-        published:    list.filter((c) => c.status?.toUpperCase() === 'PUBLISHED').length,
-        pending:      list.filter((c) => c.status?.toUpperCase() === 'PENDING_APPROVAL').length,
+        total: pagination.totalElements ?? list.length,
+        published: list.filter((c) => c.status?.toUpperCase() === 'PUBLISHED').length,
+        pending: list.filter((c) => c.status?.toUpperCase() === 'PENDING_APPROVAL').length,
         draftRejected: list.filter((c) => ['DRAFT', 'REJECTED'].includes(c.status?.toUpperCase())).length,
       });
     }
@@ -264,10 +264,10 @@ export default function CircularsPage() {
 
   // ── Cards config ─────────────────────────────────────────────────────────────
   const cardsArray = [
-    { keyName: 'Total Circulars',  val: stats.total,        IconName: ScrollText,   iconTxColor: 'text-blue-600',  iconBgColor: 'bg-blue-50'  },
-    { keyName: 'Published',        val: stats.published,    IconName: CheckCircle2, iconTxColor: 'text-green-600', iconBgColor: 'bg-green-50' },
-    { keyName: 'Pending Approval', val: stats.pending,      IconName: Clock,        iconTxColor: 'text-amber-600', iconBgColor: 'bg-amber-50' },
-    { keyName: 'Draft / Rejected', val: stats.draftRejected, IconName: XCircle,     iconTxColor: 'text-red-500',   iconBgColor: 'bg-red-50'   },
+    { keyName: 'Total Circulars', val: stats.total, IconName: ScrollText, iconTxColor: 'text-blue-600', iconBgColor: 'bg-blue-50' },
+    { keyName: 'Published', val: stats.published, IconName: CheckCircle2, iconTxColor: 'text-green-600', iconBgColor: 'bg-green-50' },
+    { keyName: 'Pending Approval', val: stats.pending, IconName: Clock, iconTxColor: 'text-amber-600', iconBgColor: 'bg-amber-50' },
+    { keyName: 'Draft / Rejected', val: stats.draftRejected, IconName: XCircle, iconTxColor: 'text-red-500', iconBgColor: 'bg-red-50' },
   ];
 
   // ── Render ───────────────────────────────────────────────────────────────────
@@ -514,7 +514,7 @@ export default function CircularsPage() {
                   {canApprove && c.status?.toUpperCase() === 'PENDING_APPROVAL' && (
                     <>
                       <IconBtn icon={Check} title="Approve" color="#16a34a" hoverBg="#f0fdf4" onClick={() => handleApprove(c.id)} />
-                      <IconBtn icon={X}     title="Reject"  color="#dc2626" hoverBg="#fef2f2" onClick={() => handleReject(c.id)} />
+                      <IconBtn icon={X} title="Reject" color="#dc2626" hoverBg="#fef2f2" onClick={() => handleReject(c.id)} />
                     </>
                   )}
                   <IconBtn icon={Eye} title="View" color="#2563eb" hoverBg="#eff6ff" onClick={() => setSelectedCircularId(c.id)} />
