@@ -1,17 +1,11 @@
 name: Dev Azure Static Web Apps CI/CD
 
 on:
-  push:
-    branches:
-      - dev_development
-  pull_request:
-    types: [opened, synchronize, reopened, closed]
-    branches:
-      - dev_development
+  workflow_dispatch:
 
 jobs:
   build_and_deploy_job:
-    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     name: Build and Deploy Job
     steps:
@@ -19,6 +13,7 @@ jobs:
         with:
           submodules: true
           lfs: false
+          
       - name: Generate FCM service worker (UAT)
         run: node scripts/generate-fcm-sw.mjs dev
         env:
