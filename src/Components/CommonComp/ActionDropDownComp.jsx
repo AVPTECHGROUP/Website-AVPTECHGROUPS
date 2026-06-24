@@ -14,8 +14,8 @@ export default function ActionDropDownComp({ onAction, actionOptions }) {
               if (!item.disabled) onAction(item.value);
             }}
             className={`
-              flex items-center justify-center gap-1 px-2.5 py-1.5 lg:px-2 lg:py-1 rounded-lg 
-              text-[11px] sm:text-xs font-semibold transition-all duration-150 cursor-pointer 
+              flex items-center justify-center gap-1 px-1.5 py-1 lg:px-1.5 lg:py-0.5 rounded-lg 
+              text-[9px] sm:text-xs font-semibold transition-all duration-150 cursor-pointer 
               flex-1 lg:flex-initial min-w-[75px] lg:min-w-0 text-center whitespace-nowrap
               ${item.bg} ${item.text} ${item.hover}
               disabled:cursor-not-allowed disabled:opacity-50
