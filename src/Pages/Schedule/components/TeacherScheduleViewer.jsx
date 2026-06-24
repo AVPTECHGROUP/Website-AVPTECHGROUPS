@@ -308,7 +308,7 @@ export default function TeacherScheduleViewer({ onClose }) {
                                                 </span>
                                                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-semibold border border-emerald-200">
                                                     <CheckCircle2 size={11} />
-                                                    Working day
+                                                     {`Working day : ${scheduleData.dayOfWeek}`}
                                                 </span>
                                                 {scheduleData.teacherName && (
                                                     <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs font-semibold border border-indigo-200">
@@ -332,7 +332,7 @@ export default function TeacherScheduleViewer({ onClose }) {
                                                             <div className="flex flex-col items-center gap-1 flex-shrink-0">
                                                                 <div className="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center">
                                                                     <span className={`text-xs font-bold ${color.icon}`}>
-                                                                        {period.periodNumber ?? idx + 1}
+                                                                        P-{period.periodNumber ?? idx + 1}
                                                                     </span>
                                                                 </div>
                                                                 {idx < periods.length - 1 && (

@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { UserPlusIcon, Plus, KeyIcon } from 'lucide-react';
+import { UserPlusIcon, Plus, KeyIcon,Upload } from 'lucide-react';
+import { useAuth } from '../../../hooks/useAuth';
+import { PERMISSIONS as P } from '../../../Constants/Permission';
 
-const QuickActions = ({ teacherId, onResetPassword }) => {
+const QuickActions = ({ teacherId, onResetPassword, onExportCSV }) => {
   const navigate = useNavigate();
   const [disablebtn, setDisablebtn] = useState(null);
+  const { hasPermission } = useAuth();
 
   useEffect(() => {
     setDisablebtn(teacherId);
@@ -26,39 +29,51 @@ const QuickActions = ({ teacherId, onResetPassword }) => {
           className="px-4 sm:px-5 py-2.5 w-full sm:w-fit rounded-lg font-medium flex items-center justify-center gap-2 transition-all bg-blue-600 text-white hover:bg-blue-700 cursor-pointer"
         >
           <UserPlusIcon className="w-5 h-5" />
-          <span className="text-sm sm:text-base">Add Teacher</span>
+          <span className="text-sm md:text-sm sm:text-base">Add Teacher</span>
         </button>
 
-        {/* Assign Subjects*/}
+        {/* Assign Subjects — requires TEACHER_EDIT */}
+        {hasPermission(P.TEACHER_EDIT) && (
+          <button
+            disabled={!hasSelection}
+            title={!hasSelection ? 'Select one teacher' : ''}
+            onClick={() => navigate(`/teachers/classAssignment/${teacherId}`)}
+            className={`flex px-4 sm:px-5 py-2.5 rounded-lg w-full sm:w-fit flex-row gap-2 text-[13px] sm:text-[14px] font-bold justify-center transition-all
+              ${hasSelection
+                ? 'bg-blue-600 text-white cursor-pointer hover:bg-blue-700'
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-60'
+              }`}
+          >
+            <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+            <span>Assign Subjects</span>
+          </button>
+        )}
+
+        {/* Reset Password — requires USER_EDIT */}
+        {hasPermission(P.USER_EDIT) && (
+          <button
+            disabled={!hasSelection}
+            title={!hasSelection ? 'Select a teacher row first' : 'Reset password for selected teacher'}
+            onClick={() => hasSelection && onResetPassword?.()}
+            className={`flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-lg w-full sm:w-fit text-[13px] sm:text-[14px] font-bold justify-center transition-all
+              ${hasSelection
+                ? 'bg-blue-600 text-white cursor-pointer hover:bg-blue-700'
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-60'
+              }`}
+          >
+            <KeyIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+            <span>Reset Password</span>
+          </button>
+        )}
+
+        {/* Export CSV Button (FIXED: Triggers current active page sync export handler) */}
         <button
-          disabled={!hasSelection}
-          title={!hasSelection ? 'Select one teacher' : ''}
-          onClick={() => navigate(`/teachers/classAssignment/${teacherId}`)}
-          className={`flex px-4 sm:px-5 py-2.5 rounded-lg w-full sm:w-fit flex-row gap-2 text-[13px] sm:text-[14px] font-bold justify-center transition-all
-            ${hasSelection
-              ? 'bg-blue-600 text-white cursor-pointer hover:bg-blue-700'
-              : 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-60'
-            }`}
+          onClick={onExportCSV}
+          className="px-4 sm:px-5 py-2.5 w-full sm:w-fit rounded-lg font-semibold flex items-center justify-center gap-2 transition-all bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 cursor-pointer active:scale-95 shadow-2xs"
         >
-          <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
-          <span>Assign Subjects</span>
+          <Upload className="w-5 h-5 text-gray-500" />
+          <span className="text-sm sm:text-base">Export CSV</span>
         </button>
-
-        {/* Reset Password*/}
-        <button
-          disabled={!hasSelection}
-          title={!hasSelection ? 'Select a teacher row first' : 'Reset password for selected teacher'}
-          onClick={() => hasSelection && onResetPassword?.()}
-          className={`flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-lg w-full sm:w-fit text-[13px] sm:text-[14px] font-bold justify-center transition-all
-            ${hasSelection
-              ? 'bg-blue-600 text-white cursor-pointer hover:bg-blue-700'
-              : 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-60'
-            }`}
-        >
-          <KeyIcon className="w-4 h-4 sm:w-5 sm:h-5" />
-          <span>Reset Password</span>
-        </button>
-
       </div>
     </div>
   );

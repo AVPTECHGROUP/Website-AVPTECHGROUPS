@@ -27,6 +27,8 @@ import {
 import { getActiveClasses } from "../../Api/TeachersAPI";
 import { getAcademicYears, getCurrentAcademicYear } from "../../Api/AcademicYear";
 import { useDecodedUser } from "../../ContextAPI/UserContext";
+import { useAuth } from "../../hooks/useAuth";
+import { PERMISSIONS as P } from "../../Constants/Permission";
 
 // ─── helpers ──────────────────────────────────────────────────────────────
 function fmtRange(s, e) {
@@ -184,6 +186,7 @@ const ROW_GRID_COLS = "xl:grid-cols-[200px_minmax(160px,1fr)_120px_minmax(260px,
 function ClassRow({ event, exam, sections, onAction, onRemove }) {
     const status = rowStatus(exam);
     const meta = ROW_META[status];
+    const { hasPermission } = useAuth();
 
     return (
         <div className={`px-3 sm:px-4 py-3.5 border-b border-gray-100 last:border-0 ${meta.rowBg}`}>
@@ -228,40 +231,57 @@ function ClassRow({ event, exam, sections, onAction, onRemove }) {
 
                 {/* COLUMN 4: ACTION BUTTONS */}
                 <div className="flex flex-wrap items-center gap-2 min-w-0 xl:justify-end">
-                    {/* FIXED: Removed 'Marks' action button if status is declared */}
                     {status === "declared" && (
                         <>
                             <ActionBtn Icon={FileText} label="Reports" tone="primary" onClick={() => onAction(exam, "reports")} />
-                            <ActionBtn Icon={BookOpen} label="Subjects" tone="neutral" onClick={() => onAction(exam, "subjects")} />
+                            {hasPermission(P.EXAM_EDIT) && (
+                              <ActionBtn Icon={BookOpen} label="Subjects" tone="neutral" onClick={() => onAction(exam, "subjects")} />
+                            )}
                         </>
                     )}
                     {status === "ready" && (
                         <>
-                            <ActionBtn Icon={LogIn} label="Marks" tone="neutral" onClick={() => onAction(exam, "enter_marks")} />
-                            <ActionBtn Icon={CheckCircle} label="Declare" tone="success" onClick={() => onAction(exam, "declare")} />
-                            <ActionBtn Icon={BookOpen} label="Subjects" tone="neutral" onClick={() => onAction(exam, "subjects")} />
+                            {hasPermission(P.EXAM_MARKS_ENTER) && (
+                              <ActionBtn Icon={LogIn} label="Marks" tone="neutral" onClick={() => onAction(exam, "enter_marks")} />
+                            )}
+                            {hasPermission(P.EXAM_APPROVE) && (
+                              <ActionBtn Icon={CheckCircle} label="Declare" tone="success" onClick={() => onAction(exam, "declare")} />
+                            )}
+                            {hasPermission(P.EXAM_EDIT) && (
+                              <ActionBtn Icon={BookOpen} label="Subjects" tone="neutral" onClick={() => onAction(exam, "subjects")} />
+                            )}
                         </>
                     )}
                     {status === "partial" && (
                         <>
-                            <ActionBtn Icon={LogIn} label="Enter Marks" tone="primary" onClick={() => onAction(exam, "enter_marks")} />
-                            <ActionBtn Icon={BookOpen} label="Subjects" tone="neutral" onClick={() => onAction(exam, "subjects")} />
+                            {hasPermission(P.EXAM_MARKS_ENTER) && (
+                              <ActionBtn Icon={LogIn} label="Enter Marks" tone="primary" onClick={() => onAction(exam, "enter_marks")} />
+                            )}
+                            {hasPermission(P.EXAM_EDIT) && (
+                              <ActionBtn Icon={BookOpen} label="Subjects" tone="neutral" onClick={() => onAction(exam, "subjects")} />
+                            )}
                         </>
                     )}
                     {status === "not_started" && (
                         <>
-                            <ActionBtn Icon={LogIn} label="Enter Marks" tone="warning" onClick={() => onAction(exam, "enter_marks")} />
-                            <ActionBtn Icon={BookOpen} label="Subjects" tone="neutral" onClick={() => onAction(exam, "subjects")} />
+                            {hasPermission(P.EXAM_MARKS_ENTER) && (
+                              <ActionBtn Icon={LogIn} label="Enter Marks" tone="warning" onClick={() => onAction(exam, "enter_marks")} />
+                            )}
+                            {hasPermission(P.EXAM_EDIT) && (
+                              <ActionBtn Icon={BookOpen} label="Subjects" tone="neutral" onClick={() => onAction(exam, "subjects")} />
+                            )}
                         </>
                     )}
 
-                    <ActionBtn
-                        Icon={Trash2}
-                        label="Remove"
-                        tone="danger"
-                        disabled={exam.resultDeclared}
-                        onClick={() => onRemove(exam)}
-                    />
+                    {hasPermission(P.EXAM_DELETE) && (
+                      <ActionBtn
+                          Icon={Trash2}
+                          label="Remove"
+                          tone="danger"
+                          disabled={exam.resultDeclared}
+                          onClick={() => onRemove(exam)}
+                      />
+                    )}
                 </div>
             </div>
         </div>
@@ -276,6 +296,7 @@ function EventItem({ event, expanded, onToggle, sectionsCache, onLoadSections, o
     const status = eventStatus(event);
     const meta = EVENT_STATUS_META[status];
     const pct = total ? Math.round((declared / total) * 100) : 0;
+    const { hasPermission } = useAuth();
 
     useEffect(() => {
         if (expanded) onLoadSections(event);
@@ -305,8 +326,12 @@ function EventItem({ event, expanded, onToggle, sectionsCache, onLoadSections, o
                             <div className={`h-full ${meta.bar}`} style={{ width: `${pct}%` }} />
                         </div>
                     </div>
-                    <ActionBtn Icon={Edit2} label="Edit" tone="neutral" compact onClick={() => onEdit(event)} />
-                    <ActionBtn Icon={Copy} label="Copy" tone="neutral" compact onClick={() => onCopy(event)} />
+                    {hasPermission(P.EXAM_EDIT) && (
+                      <ActionBtn Icon={Edit2} label="Edit" tone="neutral" compact onClick={() => onEdit(event)} />
+                    )}
+                    {hasPermission(P.EXAM_CREATE) && (
+                      <ActionBtn Icon={Copy} label="Copy" tone="neutral" compact onClick={() => onCopy(event)} />
+                    )}
                 </div>
             </div>
 
@@ -332,7 +357,9 @@ function EventItem({ event, expanded, onToggle, sectionsCache, onLoadSections, o
                     ))}
                     <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-t border-gray-100 gap-2">
                         <span className="text-xs font-medium text-gray-400">{total} class{total !== 1 ? "es" : ""} in this event</span>
-                        <ActionBtn Icon={Plus} label="Add Class to Event" tone="neutral" onClick={() => onAddClass(event)} />
+                        {hasPermission(P.EXAM_EDIT) && (
+                          <ActionBtn Icon={Plus} label="Add Class to Event" tone="neutral" onClick={() => onAddClass(event)} />
+                        )}
                     </div>
                 </div>
             )}
@@ -593,6 +620,7 @@ function SubjectsModal({ event, exam, onClose, onChanged }) {
 export default function ExamEvents() {
     const navigate = useNavigate();
     const { currentAcademicYear } = useDecodedUser();
+    const { hasPermission } = useAuth();
 
     // meta states
     const [classes, setClasses] = useState([]);
@@ -650,25 +678,84 @@ export default function ExamEvents() {
 
     // Fetch Events list data matching filters
     const fetchEvents = useCallback(async () => {
-        setLoadingEvents(true); setErrorEvents(null);
+        setLoadingEvents(true);
+        setErrorEvents(null);
+
         try {
+
             const f = {};
-            if (yearId) f.academicYearId = yearId;
-            if (typeId) f.examTypeId = typeId;
-            if (status) f.status = status;
 
-            let list = await getExamEvents(f);
-            list = Array.isArray(list) ? list : [];
-
-            if (classId) {
-                list = list
-                    .map(ev => ({ ...ev, exams: (ev.exams || []).filter(e => String(e.schoolClassId) === String(classId)) }))
-                    .filter(ev => ev.exams.length > 0);
+            if (yearId) {
+                f.academicYearId = yearId;
             }
 
+            // REMOVE status and examType from API params
+            // frontend will handle these
+
+
+            let list = await getExamEvents(f);
+
+            list = Array.isArray(list) ? list : [];
+
+
+            // Exam Type Filter
+            if (typeId) {
+
+                list = list.filter(ev =>
+                    String(ev.examTypeId) === String(typeId)
+                );
+
+            }
+
+
+            // Class Filter
+            if (classId) {
+
+                list = list
+                    .map(ev => ({
+                        ...ev,
+                        exams: (ev.exams || []).filter(
+                            e => String(e.schoolClassId) === String(classId)
+                        )
+                    }))
+                    .filter(ev => ev.exams.length > 0);
+
+            }
+
+
+
+            // Status Filter
+            if (status) {
+
+                list = list.filter(ev => {
+
+                    const currentStatus = eventStatus(ev);
+
+                    return currentStatus === status;
+
+                });
+
+            }
+
+
             setEvents(list);
-        } catch { setErrorEvents("Failed to load exam events."); setEvents([]); }
-        finally { setLoadingEvents(false); }
+
+
+        } catch (err) {
+
+            console.log(err);
+
+            setErrorEvents("Failed to load exam events.");
+            setEvents([]);
+
+        }
+        finally {
+
+            setLoadingEvents(false);
+
+        }
+
+
     }, [yearId, typeId, status, classId]);
 
     useEffect(() => { if (!loadingMeta) fetchEvents(); }, [fetchEvents, loadingMeta]);
@@ -806,7 +893,7 @@ export default function ExamEvents() {
     return (
         <div className="min-h-screen bg-[#f3f6fb] overflow-x-hidden">
             <div className="p-2 md:p-3 lg:p-4 xl:p-6 space-y-2 md:space-y-3 lg:space-y-4 max-w-[1700px] mx-auto">
-                
+
                 {/* ── PAGE HEADER ─────────────────────────────────── */}
                 <div className="flex items-center justify-between">
                     <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">
@@ -863,18 +950,20 @@ export default function ExamEvents() {
                         <button
                             onClick={handleExportSchedule}
                             disabled={loadingEvents || events.length === 0}
-                            className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-white border border-gray-200 text-gray-700 text-xs sm:text-sm font-semibold rounded-lg transition-all hover:bg-gray-50 active:scale-95 disabled:opacity-50 whitespace-nowrap"
+                            className="flex items-center cursor-pointer justify-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-white border border-gray-200 text-gray-700 text-xs sm:text-sm font-semibold rounded-lg transition-all hover:bg-gray-50 active:scale-95 disabled:opacity-50 whitespace-nowrap"
                         >
                             <Download className="w-4 h-4 shrink-0" /> <span className="hidden sm:inline">Export Schedule</span><span className="sm:hidden">Export</span>
                         </button>
 
-                        <button
-                            onClick={() => setShowWizard(true)}
-                            disabled={loadingMeta}
-                            className="flex items-center justify-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold rounded-lg transition-all shadow-sm active:scale-95 disabled:opacity-60 whitespace-nowrap"
-                        >
-                            <Plus className="w-4 h-4 shrink-0" /> <span className="hidden sm:inline">New Exam Event</span><span className="sm:hidden">New</span>
-                        </button>
+                        {hasPermission(P.EXAM_CREATE) && (
+                          <button
+                              onClick={() => setShowWizard(true)}
+                              disabled={loadingMeta}
+                              className="flex items-center justify-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold rounded-lg transition-all shadow-sm active:scale-95 disabled:opacity-60 whitespace-nowrap"
+                          >
+                              <Plus className="w-4 h-4 shrink-0" /> <span className="hidden sm:inline">New Exam Event</span><span className="sm:hidden">New</span>
+                          </button>
+                        )}
                     </div>
                 </div>
 

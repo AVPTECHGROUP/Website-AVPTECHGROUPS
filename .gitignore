@@ -18,6 +18,7 @@ dist-ssr
 
 # dev fcm
 firebase-messaging-sw-dev.js
+firebase-messaging-sw-prod.js
 
 # Editor directories and files
 .vscode/*

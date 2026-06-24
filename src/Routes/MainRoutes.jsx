@@ -10,10 +10,9 @@ import { PERMISSIONS as P, SYSTEM_ROLES } from '../Constants/Permission';
 
 // ─── Lazy-loaded Pages (code-split, fetched only when route is hit) ───────────
 const Login = lazy(() => import('../Pages/Login_2'));
-const Dashboard = lazy(() => import('../Pages/Dashboard'));
+const Dashboard = lazy(() => import('../Pages/Dashboard/Dashboard'));
 const Attendance = lazy(() => import('../Pages/Attendance/Attendance'));
 const Leaves = lazy(() => import('../Pages/Leaves/Leaves'));
-const Payroll = lazy(() => import('../Pages/Payroll'));
 const Teachers = lazy(() => import('../Pages/Teachers/Teachers'));
 const Settings = lazy(() => import('../Pages/Settings'));
 
@@ -435,16 +434,6 @@ const MainRoutes = () => {
               element={
                 <PermissionProtectedRoute allowedPermissions={[P.LEAVE_CONFIG_MANAGE]}>
                   <LeaveConfig />
-                </PermissionProtectedRoute>
-              }
-            />
-
-            {/* ── Payroll ── */}
-            <Route
-              path="/payroll"
-              element={
-                <PermissionProtectedRoute allowedPermissions={[P.PAYROLL_VIEW]}>
-                  <Payroll />
                 </PermissionProtectedRoute>
               }
             />

@@ -11,15 +11,20 @@ import {
     UserPlus,
     Info,
     ChevronDown,
+    Upload,
 } from 'lucide-react';
+import { toast } from 'react-toastify';
 import CardComponent from '../../Components/CommonComp/CardComponent';
 import { getStudents, searchStudents } from '../../Api/StudentsApi';
 import { getAllSections } from '../../Api/TeachersAPI';
 import CardLoader from '../../Components/CommonComp/CardLoader';
 import ListLoader from '../../Components/CommonComp/ListLoader';
 import TooltipComponent from '../../Components/CommonComp/Tooltip_comp/TooltipComp';
+import { useAuth } from '../../hooks/useAuth';
+import { PERMISSIONS as P } from '../../Constants/Permission';
 
 const Student = () => {
+    const { hasPermission } = useAuth();
     const [error, setError] = useState(null);
     const [totalElements, setTotalElements] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
@@ -136,6 +141,7 @@ const Student = () => {
                             image:
                                 stu.profileImageUrl ||
                                 stu.imageUrl ||
+                                stu.profileImage ||
                                 `https://ui-avatars.com/api/?name=${encodeURIComponent(stu.fullName)}&background=random`,
                             name: stu.fullName || `${stu.firstName} ${stu.lastName}`,
                             admissionNumber: stu.admissionNumber,
@@ -228,14 +234,13 @@ const Student = () => {
         appearance-none cursor-pointer
         pl-3 pr-7 py-2
         rounded-lg border border-gray-200 bg-gray-100
-        text-xs text-gray-600 font-normal
+        text-xs text-gray-600 font-medium
         focus:outline-none focus:ring-2 focus:ring-blue-300
         hover:border-gray-300 transition-all
         disabled:opacity-50 disabled:cursor-not-allowed
         w-full
     `;
 
-    /* ── Avatar helper (handles image error fallback) ── */
     const AvatarCell = ({ student, size = 'md' }) => {
         const [imgError, setImgError] = useState(false);
         const dim = size === 'sm' ? 'w-7 h-7 text-xs' : 'w-9 h-9 text-sm';
@@ -253,8 +258,46 @@ const Student = () => {
         );
     };
 
+    // ── CSV EXPORT ──────────────────────────────────────────────────────────────
+    const csvCell = (val) => {
+        const str = val == null ? '' : String(val).trim();
+        if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+            return `"${str.replace(/"/g, '""')}"`;
+        }
+        return str;
+    };
+
+    const handleExportStudentsCSV = () => {
+        if (students.length === 0) {
+            toast.info('No students on this page to export.');
+            return;
+        }
+        const HEADERS = ['Student Name', 'Admission Number', 'Mobile Number', 'Email', 'Class', 'Section', 'Status'];
+        const dataRows = students.map((s) => [
+            csvCell(s.name || 'Unknown'),
+            csvCell(s.admissionNumber || 'N/A'),
+            csvCell(s.mobile || 'N/A'),
+            csvCell(s.email || 'N/A'),
+            csvCell(s.className || 'N/A'),
+            csvCell(s.sectionName || 'N/A'),
+            csvCell(s.status || 'N/A'),
+        ].join(','));
+        const csvString = [HEADERS.join(','), ...dataRows].join('\n');
+        const blob = new Blob(['\uFEFF' + csvString], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        const date = new Date().toISOString().slice(0, 10);
+        anchor.href = url;
+        anchor.download = `students_page${page}of${totalPages}_${rowsPerPage}rows_${date}.csv`;
+        document.body.appendChild(anchor);
+        anchor.click();
+        document.body.removeChild(anchor);
+        URL.revokeObjectURL(url);
+        toast.success(`✓ Exported ${students.length} student${students.length !== 1 ? 's' : ''} — CSV ${page} of ${totalPages}`);
+    };
+
     return (
-        <div className="flex flex-col min-h-screen lg:h-screen lg:overflow-hidden bg-gradient-to-b from-sky-50 to-sky-100">
+        <div className="flex flex-col min-h-screen lg:h-screen lg:overflow-hidden bg-linear-to-b from-sky-50 to-sky-100">
             <div className="flex flex-col flex-1 lg:overflow-hidden p-3 sm:p-4 gap-3">
 
                 {/* ── Page Title ── */}
@@ -293,24 +336,11 @@ const Student = () => {
                             />
                         ))}
                 </div>
+                <div className="bg-white flex flex-col lg:flex-row lg:items-center gap-2 px-3 py-2.5 rounded-xl border border-gray-200 shrink-0 w-full">
 
-                {/* ── Toolbar: Add + Search + Filters ── */}
-                <div className="bg-white flex flex-wrap items-center gap-2 px-3 py-2.5 rounded-xl border border-gray-200 shrink-0">
-
-                    {/* Add button */}
-                    <button
-                        onClick={() => navigate('/students/addStudents')}
-                        className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-lg font-medium text-xs
-                                   bg-blue-600 hover:bg-blue-700 active:scale-[0.97] text-white transition-all whitespace-nowrap"
-                    >
-                        <UserPlus className="w-4 h-4" />
-                        Add New Student
-                    </button>
-
-                    {/* Search — grows */}
-                    <div className="flex-1 min-w-[140px] flex items-center gap-2 border border-gray-200 rounded-lg bg-gray-100 px-2 py-2
-                                    focus-within:ring-2 focus-within:ring-blue-200 transition-all">
-                        <SearchIcon className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                    {/* 1. Search — flex-1 on lg so it takes all leftover space */}
+                    <div className="w-full lg:flex-1 lg:min-w-0 flex items-center gap-2 border border-gray-200 rounded-lg bg-gray-100 px-3 py-2.5 focus-within:ring-2 focus-within:ring-blue-200 transition-all">
+                        <SearchIcon className="w-4 h-4 text-gray-400 shrink-0" />
                         <input
                             value={searchInput}
                             onChange={handleSearchChange}
@@ -330,46 +360,66 @@ const Student = () => {
                         )}
                     </div>
 
-                    {/* Class/Section dropdown */}
-                    <div className="relative shrink-0 w-[calc(50%-4px)] sm:w-36 lg:w-40">
-                        <select
-                            value={selectedSectionId}
-                            onChange={handleSectionChange}
-                            disabled={sectionsLoading}
-                            className={dropdownClass}
-                        >
-                            <option value="">All Classes</option>
-                            {groupedSections.map((grp) => (
-                                <optgroup key={grp.classId} label={grp.className}>
-                                    {grp.sections.map((sec) => (
-                                        <option key={sec.id} value={sec.id}>
-                                            {grp.className} – {sec.name}
-                                        </option>
-                                    ))}
-                                </optgroup>
-                            ))}
-                        </select>
-                        <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400" />
+                    {/* 2. Dropdowns — side-by-side on all screens, shrink-0 on lg */}
+                    <div className="flex items-center gap-2 w-full lg:w-auto lg:shrink-0">
+                        {/* Class/Section Dropdown */}
+                        <div className="relative flex-1 lg:w-36">
+                            <select
+                                value={selectedSectionId}
+                                onChange={handleSectionChange}
+                                disabled={sectionsLoading}
+                                className={dropdownClass}
+                            >
+                                <option value="">All Classes</option>
+                                {groupedSections.map((grp) => (
+                                    <optgroup key={grp.classId} label={grp.className}>
+                                        {grp.sections.map((sec) => (
+                                            <option key={sec.id} value={sec.id}>
+                                                {grp.className} – {sec.name}
+                                            </option>
+                                        ))}
+                                    </optgroup>
+                                ))}
+                            </select>
+                            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                        </div>
+
+                        {/* Status Dropdown */}
+                        <div className="relative flex-1 lg:w-28">
+                            <select
+                                value={statusFilter}
+                                onChange={handleStatusChange}
+                                className={dropdownClass}
+                            >
+                                <option value="">All Status</option>
+                                <option value="ACTIVE">Active</option>
+                                <option value="INACTIVE">Inactive</option>
+                            </select>
+                            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                        </div>
                     </div>
 
-                    {/* Status dropdown */}
-                    <div className="relative shrink-0 w-[calc(50%-4px)] sm:w-28 lg:w-32">
-                        <select
-                            value={statusFilter}
-                            onChange={handleStatusChange}
-                            className={dropdownClass}
+                    {/* 3. Action Buttons — side-by-side on all screens, shrink-0 on lg */}
+                    <div className="flex items-center gap-2 w-full lg:w-auto lg:shrink-0">
+                        <button
+                            onClick={() => navigate('/students/addStudents')}
+                            className="flex-1 lg:flex-none flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg font-semibold text-xs bg-blue-600 hover:bg-blue-700 active:scale-[0.97] text-white transition-all whitespace-nowrap cursor-pointer"
                         >
-                            <option value="">All Status</option>
-                            <option value="ACTIVE">Active</option>
-                            <option value="INACTIVE">Inactive</option>
-                        </select>
-                        <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400" />
+                            <UserPlus className="w-4 h-4" />
+                            Add Student
+                        </button>
+
+                        <button
+                            onClick={handleExportStudentsCSV}
+                            className="flex-1 lg:flex-none flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg font-semibold text-xs bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 active:scale-[0.97] transition-all whitespace-nowrap cursor-pointer"
+                        >
+                            <Upload className="w-4 h-4 text-gray-500" />
+                            Export CSV
+                        </button>
                     </div>
                 </div>
 
-                {/* ══════════════════════════════════════════
-                    MOBILE / TABLET CARDS  (hidden on lg+)
-                ══════════════════════════════════════════ */}
+                {/* ── MOBILE / TABLET CARDS ── */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:hidden overflow-y-auto pb-2">
                     {loading ? (
                         <div className="col-span-full flex flex-col items-center justify-center py-10 gap-3">
@@ -435,12 +485,14 @@ const Student = () => {
                                     </div>
                                 </div>
                                 <div className="flex gap-2 mt-3 pt-3 border-t border-gray-100">
-                                    <button
-                                        onClick={() => navigate(`/students/editStudent/${student.id}`)}
-                                        className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium bg-blue-50 text-blue-600 hover:bg-blue-100"
-                                    >
-                                        <UserPenIcon className="w-3.5 h-3.5" /> Edit
-                                    </button>
+                                    {hasPermission(P.STUDENT_EDIT) && (
+                                      <button
+                                          onClick={() => navigate(`/students/editStudent/${student.id}`)}
+                                          className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium bg-blue-50 text-blue-600 hover:bg-blue-100"
+                                      >
+                                          <UserPenIcon className="w-3.5 h-3.5" /> Edit
+                                      </button>
+                                    )}
                                     <button
                                         onClick={() => navigate(`/students/${student.id}`)}
                                         className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium bg-orange-50 text-orange-600 hover:bg-orange-100"
@@ -453,18 +505,10 @@ const Student = () => {
                     )}
                 </div>
 
-                {/* ══════════════════════════════════════════
-                    DESKTOP TABLE  (lg+)
-                ══════════════════════════════════════════ */}
+                {/* ── DESKTOP TABLE ── */}
                 <div className="hidden lg:flex lg:flex-col flex-1 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden min-h-0">
-
-                    {/* scrollable table area */}
                     <div className="flex-1 overflow-auto">
                         <table className="w-full table-fixed text-xs">
-                            {/*
-                                Columns: Name(24%) | Mobile(13%) | Email(20%) | Class(10%) | Section(9%) | Status(10%) | Actions(14%)
-                                Total = 100%. Adjust freely — just keep sum = 100.
-                            */}
                             <colgroup>
                                 <col style={{ width: '24%' }} />
                                 <col style={{ width: '13%' }} />
@@ -478,7 +522,7 @@ const Student = () => {
                             <thead className="sticky top-0 z-10 bg-gray-50 border-b border-gray-100">
                                 <tr>
                                     {['Student Name', 'Mobile Number', 'Email', 'Class', 'Section', 'Status', 'Actions'].map((h) => (
-                                        <th key={h} className="px-3 py-2.5 text-center text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
+                                        <th key={h} className="px-3 py-2.5 text-left text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
                                             {h}
                                         </th>
                                     ))}
@@ -490,7 +534,7 @@ const Student = () => {
                                     <ListLoader />
                                 ) : error ? (
                                     <tr>
-                                        <td colSpan={7} className="py-12 text-center">
+                                        <td colSpan={7} className="py-12 text-left">
                                             <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
                                                 <UserRoundXIcon className="w-6 h-6 text-red-600" />
                                             </div>
@@ -512,8 +556,6 @@ const Student = () => {
                                 ) : (
                                     students.map((student) => (
                                         <tr key={student.id} className="hover:bg-gray-50 transition-colors">
-
-                                            {/* Name + Avatar */}
                                             <td className="px-3 py-2.5">
                                                 <div className="flex items-center gap-2 min-w-0">
                                                     <AvatarCell student={student} size="sm" />
@@ -523,54 +565,40 @@ const Student = () => {
                                                     </div>
                                                 </div>
                                             </td>
-
-                                            {/* Mobile */}
-                                            <td className="px-3 py-2.5 text-center text-gray-600">{student.mobile}</td>
-
-                                            {/* Email */}
-                                            <td className="px-3 py-2.5 text-center text-gray-600 max-w-0">
+                                            <td className="px-3 py-2.5 text-left text-gray-600">{student.mobile}</td>
+                                            <td className="px-3 py-2.5 text-left text-gray-600 max-w-0">
                                                 <span className="block truncate">{student.email}</span>
                                             </td>
-
-                                            {/* Class */}
-                                            <td className="px-2 py-2.5 text-center">
+                                            <td className="px-2 py-2.5 text-left">
                                                 {student.className
-                                                    ? <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 font-medium text-[10px] leading-tight text-center">{student.className}</span>
+                                                    ? <span className="inline-flex py-0.5 rounded-md bg-blue-50 text-blue-700 font-medium text-[10px] leading-tight">{student.className}</span>
                                                     : <span className="text-gray-300">—</span>}
                                             </td>
-
-                                            {/* Section */}
-                                            <td className="px-2 py-2.5 text-center">
+                                            <td className="px-2 py-2.5 text-left">
                                                 {student.sectionName
-                                                    ? <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 font-medium text-[10px]">{student.sectionName}</span>
+                                                    ? <span className="inline-flex px-8 py-0.5 rounded-md bg-purple-50 text-purple-700 font-medium text-[10px] leading-tight">{student.sectionName}</span>
                                                     : <span className="text-gray-300">—</span>}
                                             </td>
-
-                                            {/* Status */}
-                                            <td className="px-2 py-2.5 text-center">
+                                            <td className="px-2 py-2.5 text-left">
                                                 <span className={`inline-flex items-center justify-center gap-1 px-2 py-0.5 rounded-full font-medium text-[10px]
                                                     ${student.status === 'ACTIVE' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
                                                     <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${student.status === 'ACTIVE' ? 'bg-green-500' : 'bg-red-500'}`} />
                                                     {student.status}
                                                 </span>
                                             </td>
-
-                                            {/* Actions */}
-                                            <td className="px-2 py-2.5 text-center">
-                                                <div className="flex items-center justify-center gap-1">
+                                            <td className="px-2 py-2.5 text-">
+                                                <div className="flex gap-1 items-start">
                                                     <button
                                                         onClick={() => navigate(`/students/editStudent/${student.id}`)}
-                                                        className="flex items-center gap-1 px-2 py-1.5 rounded-lg font-medium bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors whitespace-nowrap text-[10px]"
+                                                        className="flex items-center gap-1 px-2 py-1.5 rounded-lg font-medium bg-blue-50 text-blue-600 hover:bg-blue-100 cursor-pointer transition-colors whitespace-nowrap text-[10px]"
                                                     >
-                                                        <UserPenIcon className="w-3 h-3" />
-                                                        Edit
+                                                        <UserPenIcon className="w-3 h-3" /> Edit
                                                     </button>
                                                     <button
                                                         onClick={() => navigate(`/students/${student.id}`)}
-                                                        className="flex items-center gap-1 px-2 py-1.5 rounded-lg font-medium bg-orange-50 text-orange-600 hover:bg-orange-100 transition-colors whitespace-nowrap text-[10px]"
+                                                        className="flex items-center gap-1 cursor-pointer px-2 py-1.5 rounded-lg font-medium bg-orange-50 text-orange-600 hover:bg-orange-100 transition-colors whitespace-nowrap text-[10px]"
                                                     >
-                                                        <Info className="w-3 h-3" />
-                                                        View
+                                                        <Info className="w-3 h-3" /> View
                                                     </button>
                                                 </div>
                                             </td>
@@ -581,7 +609,7 @@ const Student = () => {
                         </table>
                     </div>
 
-                    {/* ── Pagination footer ── */}
+                    {/* Pagination Footer */}
                     <div className="shrink-0 px-4 py-2.5 border-t border-gray-100 bg-white flex flex-wrap items-center justify-between gap-2">
                         <div className="flex items-center gap-3">
                             <span className="text-xs text-gray-500">
@@ -613,7 +641,7 @@ const Student = () => {
                     </div>
                 </div>
 
-                {/* ── Mobile pagination ── */}
+                {/* ── Mobile Pagination Footer ── */}
                 <div className="lg:hidden bg-white rounded-xl border border-gray-200 p-3 shrink-0">
                     <div className="flex flex-col gap-2">
                         <div className="text-center text-xs text-gray-500">

@@ -15,18 +15,8 @@ import {
 } from '../../../Api/CircularApi.js';
 import EventDetailModal from '../../../Components/CircularDetailsPopup/EventDetailsModel.jsx';
 import { useNavigate } from "react-router-dom";
-import { useDecodedUser } from '../../../ContextAPI/UserContext';
-
-// ── Role guard ─────────────────────────────────────────────────────────────────
-// Only these roles may approve or reject events.
-// TEACHER (and any other unlisted role) cannot.
-const APPROVER_ROLES = ['PRINCIPAL', 'ADMIN', 'SUPER_ADMIN','GLOBAL_ADMIN', 'VICE_PRINCIPAL', 'HOD'];
-
-function useCanApprove() {
-  const { user } = useDecodedUser();
-  const role = (user?.userType ?? '').toUpperCase();
-  return APPROVER_ROLES.includes(role);
-}
+import { useAuth } from '../../../hooks/useAuth';
+import { PERMISSIONS as P } from '../../../Constants/Permission';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 function typeLabel(t) {
@@ -511,8 +501,9 @@ function EventRow({ ev, onApprove, onCancel, onView, approving, cancelling, canA
 
 // ── Main Events Page ───────────────────────────────────────────────────────────
 export default function EventsPage() {
-  // ── Role check ──────────────────────────────────────────────────────────────
-  const canApprove = useCanApprove();
+  const { hasPermission } = useAuth();
+  const canApprove = hasPermission(P.EVENT_APPROVE);
+  const canCreate  = hasPermission(P.EVENT_CREATE);
 
   const [view,            setView]            = useState("events");
   const [events,          setEvents]          = useState([]);
@@ -642,12 +633,14 @@ export default function EventsPage() {
             {showCalendar ? <EyeOff size={14} /> : <CalendarDays size={14} />}
             <span className="hidden sm:inline">{showCalendar ? "Hide" : "Show"} Calendar</span>
           </button>
-          <button
-            onClick={() => setView("create")}
-            className="flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl bg-blue-600 text-white text-xs sm:text-sm font-bold hover:bg-blue-700 cursor-pointer transition-colors shadow-sm whitespace-nowrap"
-          >
-            <Plus size={15} /> <span className="hidden sm:inline">Create</span> Event
-          </button>
+          {canCreate && (
+            <button
+              onClick={() => setView("create")}
+              className="flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl bg-blue-600 text-white text-xs sm:text-sm font-bold hover:bg-blue-700 cursor-pointer transition-colors shadow-sm whitespace-nowrap"
+            >
+              <Plus size={15} /> <span className="hidden sm:inline">Create</span> Event
+            </button>
+          )}
         </div>
       </div>
 

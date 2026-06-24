@@ -270,17 +270,17 @@ function ApplyLeaves() {
   }
 
   return (
-    <div className='p-4 md:p-12 bg-gray-50 h-screen pb-0 mb-0'>
+    <div className='p-4 bg-gray-50 h-screen pb-0 mb-0 bg-linear-to-b from-sky-50 to-sky-100'>
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
+      <div className="mb-3">
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
           New Leave Request
         </h1>
         <p className="text-sm sm:text-base text-gray-500">
           Submit your application for review.
         </p>
       </div>
-      <div className="space-y-6 bg-white px-4 py-4 lg:p-8 rounded-xl shadow-sm ">
+      <div className="space-y-4 bg-white px-2 py-2 lg:p-4 rounded-xl shadow-sm ">
         {/* Personal Details Section */}
         <div>
           <form onSubmit={handleSubmitLeaveReq}>
@@ -294,7 +294,7 @@ function ApplyLeaves() {
                   value={currentUser.fullName}
                   name="name"
                   placeholder='eg. Sah Jenkins'
-                  className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                  className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-1 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
                   disabled
                 />
               </div>
@@ -309,7 +309,7 @@ function ApplyLeaves() {
                   name="leaveType"
                   value={formData.leaveType}
                   onChange={handleInputChange}
-                  className={`px-4 py-2 border rounded-lg focus:outline-none focus:shadow-sm focus:shadow-blue-200 text-sm w-full ${errors.leaveType
+                  className={`px-4 py-1 border rounded-lg focus:outline-none focus:shadow-sm focus:shadow-blue-200 text-sm w-full ${errors.leaveType
                     ? 'border-red-500 bg-red-50'
                     : 'border-gray-200 bg-gray-100'
                     }`}>
@@ -332,7 +332,7 @@ function ApplyLeaves() {
                     type="date"
                     name="fromDate"
                     onChange={handleInputChange}
-                    className={`font-normal text-gray-800 border p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.fromDate
+                    className={`font-normal text-gray-800 border p-1 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.fromDate
                       ? 'border-red-500 bg-red-50'
                       : 'border-gray-300 bg-gray-100'
                       }`}
@@ -351,7 +351,7 @@ function ApplyLeaves() {
                     type="date"
                     name="toDate"
                     onChange={handleInputChange}
-                    className={`font-normal text-gray-800 border p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.toDate
+                    className={`font-normal text-gray-800 border p-1 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.toDate
                       ? 'border-red-500 bg-red-50'
                       : 'border-gray-300 bg-gray-100'
                       }`}
@@ -372,7 +372,7 @@ function ApplyLeaves() {
                   name="mobile"
                   onChange={handleInputChange}
                   placeholder='Enter mobile number during leave'
-                  className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500' />
+                  className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-1 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500' />
               </div>
 
               <div>
@@ -381,7 +381,7 @@ function ApplyLeaves() {
                 </label>
 
                 <div
-                  className={`flex items-center justify-between p-3 rounded-lg border ${isSingleDayLeave
+                  className={`flex items-center justify-between p-2 rounded-lg border ${isSingleDayLeave
                     ? 'bg-gray-100 border-gray-300'
                     : 'bg-gray-50 border-gray-200 opacity-60'
                     }`}
@@ -420,7 +420,7 @@ function ApplyLeaves() {
                 <textarea
                   value={formData.reason}
                   required
-                  rows={4}
+                  rows={3}
                   name="reason"
                   onChange={handleInputChange}
                   placeholder='Please describe the reason for your absence...'
@@ -435,18 +435,18 @@ function ApplyLeaves() {
             </div>
 
             {/* Footer Buttons */}
-            <div className="px-4 sm:px-6 lg:px-8 py-4 ">
+            <div className="px-4 sm:px-6 lg:px-8  pt-2 ">
               <div className="flex flex-col sm:flex-row justify-end gap-3">
                 <button
                   type="button"
                   onClick={() => handleDiscardButton()}
-                  className="px-6 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                  className="px-2 text-sm cursor-pointer font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
                   Discard Changes
                 </button>
                 <button
                   type="submit"
                   disabled={loading}
-                  className={`flex gap-2 justify-center px-6 py-2.5 text-sm font-medium rounded-lg transition-all ${loading
+                  className={`flex gap-2 cursor-pointer justify-center px-2  py-1 text-sm font-medium rounded-lg transition-all ${loading
                     ? 'bg-blue-400 cursor-not-allowed'
                     : 'bg-blue-600 hover:bg-blue-700'
                     } text-white`}>

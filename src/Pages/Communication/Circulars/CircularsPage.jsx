@@ -5,43 +5,36 @@ import {
   Search, Eye,
   Archive, Check, X, ChevronLeft, ChevronRight,
   AlertCircle, RefreshCw, SlidersHorizontal,
+  Delete,
+  Trash,
 } from 'lucide-react';
 import CardComponent from '../../../Components/CommonComp/CardComponent';
 import ListLoader from '../../../Components/CommonComp/ListLoader';
 import { fetchCirculars, approveCircular, rejectCircular, deleteCircular } from '../../../Api/CircularApi.js';
 import CircularDetailModal from '../../../Components/CircularDetailsPopup/CircularDetailModel.jsx';
-import { useDecodedUser } from '../../../ContextAPI/UserContext';
-
-// ── Role guard ─────────────────────────────────────────────────────────────────
-// Only these roles may approve or reject circulars.
-// TEACHER (and any other unlisted role) cannot.
-const APPROVER_ROLES = ['PRINCIPAL', 'ADMIN', 'SUPER_ADMIN','GLOBAL_ADMIN', 'VICE_PRINCIPAL', 'HOD'];
-
-function useCanApprove() {
-  const { user } = useDecodedUser();
-  const role = (user?.userType ?? '').toUpperCase();
-  return APPROVER_ROLES.includes(role);
-}
+import { useAuth } from '../../../hooks/useAuth';
+import { PERMISSIONS as P } from '../../../Constants/Permission';
+import ConfirmModal from '../../../Components/CircularDetailsPopup/ConfirmModal.jsx';
 
 // ── Static helpers ─────────────────────────────────────────────────────────────
 
 const STATUS_STYLE = {
-  PUBLISHED:        { label: 'Published',        bg: '#f0fdf4', color: '#16a34a', border: '#bbf7d0', dot: '#16a34a' },
+  PUBLISHED: { label: 'Published', bg: '#f0fdf4', color: '#16a34a', border: '#bbf7d0', dot: '#16a34a' },
   PENDING_APPROVAL: { label: 'Pending Approval', bg: '#fffbeb', color: '#d97706', border: '#fde68a', dot: '#d97706' },
-  DRAFT:            { label: 'Draft',            bg: '#f9fafb', color: '#6b7280', border: '#e5e7eb', dot: '#9ca3af' },
-  REJECTED:         { label: 'Rejected',         bg: '#fef2f2', color: '#dc2626', border: '#fecaca', dot: '#dc2626' },
+  DRAFT: { label: 'Draft', bg: '#f9fafb', color: '#6b7280', border: '#e5e7eb', dot: '#9ca3af' },
+  REJECTED: { label: 'Rejected', bg: '#fef2f2', color: '#dc2626', border: '#fecaca', dot: '#dc2626' },
 };
 
 const TARGET_STYLE = {
-  ALL_PARENTS:  { bg: '#eff6ff', color: '#2563eb', border: '#dbeafe' },
-  ALL_STAFF:    { bg: '#f5f3ff', color: '#7c3aed', border: '#ddd6fe' },
+  ALL_PARENTS: { bg: '#eff6ff', color: '#2563eb', border: '#dbeafe' },
+  ALL_STAFF: { bg: '#f5f3ff', color: '#7c3aed', border: '#ddd6fe' },
   ALL_TEACHERS: { bg: '#fff7ed', color: '#c2410c', border: '#fed7aa' },
-  DEFAULT:      { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0' },
+  DEFAULT: { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0' },
 };
 
 const TARGET_LABEL = {
-  ALL_PARENTS:  'All Parents',
-  ALL_STAFF:    'All Staff',
+  ALL_PARENTS: 'All Parents',
+  ALL_STAFF: 'All Staff',
   ALL_TEACHERS: 'All Teachers',
 };
 
@@ -155,7 +148,7 @@ function MobileCircularCard({ c, actionId, canApprove, onApprove, onReject, onDe
         {canApprove && c.status?.toUpperCase() === 'PENDING_APPROVAL' && (
           <>
             <IconBtn icon={Check} title="Approve" color="#16a34a" hoverBg="#f0fdf4" onClick={() => onApprove(c.id)} />
-            <IconBtn icon={X}     title="Reject"  color="#dc2626" hoverBg="#fef2f2" onClick={() => onReject(c.id)} />
+            <IconBtn icon={X} title="Reject" color="#dc2626" hoverBg="#fef2f2" onClick={() => onReject(c.id)} />
           </>
         )}
         <IconBtn icon={Eye} title="View" color="#2563eb" hoverBg="#eff6ff" onClick={() => onView(c.id)} />
@@ -172,8 +165,9 @@ function MobileCircularCard({ c, actionId, canApprove, onApprove, onReject, onDe
 export default function CircularsPage() {
   const navigate = useNavigate();
 
-  // ── Role check ──────────────────────────────────────────────────────────────
-  const canApprove = useCanApprove();
+  const { hasPermission } = useAuth();
+  const canApprove = hasPermission(P.CIRCULAR_APPROVE);
+  const canCreate = hasPermission(P.CIRCULAR_CREATE);
 
   // ── State ──
   const [circulars, setCirculars] = useState([]);
@@ -193,6 +187,9 @@ export default function CircularsPage() {
   const [stats, setStats] = useState({ total: 0, published: 0, pending: 0, draftRejected: 0 });
   const [selectedCircularId, setSelectedCircularId] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
+
+  const [rejectModal, setRejectModal] = useState({ open: false, id: null, reason: "" });
+  const [deleteModal, setDeleteModal] = useState({ open: false, id: null });
 
   // ── 700ms debounce on search ────────────────────────────────────────────────
   const debounceTimer = useRef(null);
@@ -230,9 +227,9 @@ export default function CircularsPage() {
       setTotalPages(pagination.totalPages ?? 1);
 
       setStats({
-        total:        pagination.totalElements ?? list.length,
-        published:    list.filter((c) => c.status?.toUpperCase() === 'PUBLISHED').length,
-        pending:      list.filter((c) => c.status?.toUpperCase() === 'PENDING_APPROVAL').length,
+        total: pagination.totalElements ?? list.length,
+        published: list.filter((c) => c.status?.toUpperCase() === 'PUBLISHED').length,
+        pending: list.filter((c) => c.status?.toUpperCase() === 'PENDING_APPROVAL').length,
         draftRejected: list.filter((c) => ['DRAFT', 'REJECTED'].includes(c.status?.toUpperCase())).length,
       });
     }
@@ -243,6 +240,7 @@ export default function CircularsPage() {
 
   useEffect(() => { load(); }, [load]);
 
+
   // ── Actions ─────────────────────────────────────────────────────────────────
   const handleApprove = async (id) => {
     setActionId(id);
@@ -252,9 +250,13 @@ export default function CircularsPage() {
     setActionId(null);
   };
 
-  const handleReject = async (id) => {
-    const reason = window.prompt('Reason for rejection:');
-    if (reason === null) return;
+  const handleReject = (id) => {
+    setRejectModal({ open: true, id, reason: "" });
+  };
+
+  const confirmReject = async () => {
+    const { id, reason } = rejectModal;
+    setRejectModal((s) => ({ ...s, open: false }));
     setActionId(id);
     const { error: err } = await rejectCircular(id, reason);
     if (!err) load();
@@ -262,8 +264,13 @@ export default function CircularsPage() {
     setActionId(null);
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Archive this circular?')) return;
+  const handleDelete = (id) => {
+    setDeleteModal({ open: true, id });
+  };
+
+  const confirmDelete = async () => {
+    const { id } = deleteModal;
+    setDeleteModal({ open: false, id: null });
     setActionId(id);
     const { error: err } = await deleteCircular(id);
     if (!err) load();
@@ -271,32 +278,61 @@ export default function CircularsPage() {
     setActionId(null);
   };
 
+
   // ── Cards config ─────────────────────────────────────────────────────────────
   const cardsArray = [
-    { keyName: 'Total Circulars',  val: stats.total,        IconName: ScrollText,   iconTxColor: 'text-blue-600',  iconBgColor: 'bg-blue-50'  },
-    { keyName: 'Published',        val: stats.published,    IconName: CheckCircle2, iconTxColor: 'text-green-600', iconBgColor: 'bg-green-50' },
-    { keyName: 'Pending Approval', val: stats.pending,      IconName: Clock,        iconTxColor: 'text-amber-600', iconBgColor: 'bg-amber-50' },
-    { keyName: 'Draft / Rejected', val: stats.draftRejected, IconName: XCircle,     iconTxColor: 'text-red-500',   iconBgColor: 'bg-red-50'   },
+    { keyName: 'Total Circulars', val: stats.total, IconName: ScrollText, iconTxColor: 'text-blue-600', iconBgColor: 'bg-blue-50' },
+    { keyName: 'Published', val: stats.published, IconName: CheckCircle2, iconTxColor: 'text-green-600', iconBgColor: 'bg-green-50' },
+    { keyName: 'Pending Approval', val: stats.pending, IconName: Clock, iconTxColor: 'text-amber-600', iconBgColor: 'bg-amber-50' },
+    { keyName: 'Draft / Rejected', val: stats.draftRejected, IconName: XCircle, iconTxColor: 'text-red-500', iconBgColor: 'bg-red-50' },
   ];
 
   // ── Render ───────────────────────────────────────────────────────────────────
   return (
-    <div className="p-3 sm:p-6 bg-gray-50 min-h-screen">
+    <div className="p-3 sm:p-6 bg-gray-50 min-h-screen bg-linear-to-b from-sky-50 to-sky-100">
+
+      <ConfirmModal
+        open={rejectModal.open}
+        title="Reject circular"
+        message="Please provide a reason for rejection. This will be shared with the sender."
+        withInput
+        inputLabel="Reason for rejection"
+        inputValue={rejectModal.reason}
+        onInputChange={(val) => setRejectModal((s) => ({ ...s, reason: val }))}
+        confirmLabel="Reject circular"
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={confirmReject}
+        onCancel={() => setRejectModal({ open: false, id: null, reason: "" })}
+      />
+
+      <ConfirmModal
+        open={deleteModal.open}
+        title="Delete circular"
+        message="Are you sure you want to permanently delete this circular? This action cannot be undone."
+        confirmLabel="Delete circular"
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteModal({ open: false, id: null })}
+      />
 
       {/* Page header */}
-      <div className="flex items-start justify-between mb-4 sm:mb-5 gap-3">
+      <div className="flex items-start justify-between mb-4 sm:mb-5 gap-3 ">
         <div className="min-w-0">
-          <h1 className="text-lg sm:text-xl font-extrabold text-gray-900 tracking-tight">Circulars</h1>
+          <h1 className="text-lg sm:text-2xl font-extrabold text-gray-900 tracking-tight">Circulars</h1>
           <p className="text-xs sm:text-sm text-gray-500 mt-0.5 hidden sm:block">
             Manage and publish school circulars for staff, parents and students.
           </p>
         </div>
-        <button
-          onClick={() => navigate('/communication/circulars/create')}
-          className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold rounded-lg transition-colors whitespace-nowrap flex-shrink-0"
-        >
-          + <span className="hidden sm:inline">New</span> Circular
-        </button>
+        {canCreate && (
+          <button
+            onClick={() => navigate('/communication/circulars/create')}
+            className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold rounded-lg transition-colors whitespace-nowrap flex-shrink-0"
+          >
+            + <span className="hidden sm:inline">New</span> Circular
+          </button>
+        )}
       </div>
 
       {/* Stat cards */}
@@ -521,12 +557,12 @@ export default function CircularsPage() {
                   {canApprove && c.status?.toUpperCase() === 'PENDING_APPROVAL' && (
                     <>
                       <IconBtn icon={Check} title="Approve" color="#16a34a" hoverBg="#f0fdf4" onClick={() => handleApprove(c.id)} />
-                      <IconBtn icon={X}     title="Reject"  color="#dc2626" hoverBg="#fef2f2" onClick={() => handleReject(c.id)} />
+                      <IconBtn icon={X} title="Reject" color="#dc2626" hoverBg="#fef2f2" onClick={() => handleReject(c.id)} />
                     </>
                   )}
                   <IconBtn icon={Eye} title="View" color="#2563eb" hoverBg="#eff6ff" onClick={() => setSelectedCircularId(c.id)} />
                   {c.status?.toUpperCase() === 'PUBLISHED' && (
-                    <IconBtn icon={Archive} title="Archive" color="#6b7280" hoverBg="#f3f4f6" onClick={() => handleDelete(c.id)} />
+                    <IconBtn icon={Trash} title="Archive" color="#eff6ff" hoverBg="#dc262675"  onClick={() => handleDelete(c.id)} />
                   )}
                 </div>
               </div>
