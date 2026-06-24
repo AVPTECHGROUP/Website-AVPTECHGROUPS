@@ -12,6 +12,7 @@ import {
   getTeacherById
 } from "../../Api/TeachersAPI";
 import { useDecodedUser } from "../../ContextAPI/UserContext";
+import ConfirmModal from '../../Components/CircularDetailsPopup/ConfirmModal';
 
 function ClassAssignment() {
   const navigate = useNavigate();
@@ -55,6 +56,7 @@ function ClassAssignment() {
 
   const { teacherId } = useParams();
   const sectionToggleTimeoutRef = useRef({});
+  const [deleteAssignmentModal, setDeleteAssignmentModal] = useState({ open: false, id: null });
 
   // ==================== DERIVED STATE ====================
 
@@ -342,7 +344,7 @@ function ClassAssignment() {
     e.preventDefault();
     if (!formData.teacherId) { setError("Teacher missing"); return; }
     if (!currentAcademicYear?.id) { setError("Academic Year context missing. Please reload."); return; }
-    
+
     const assignmentsArray = [];
     formData.classAssignments.forEach(ca => {
       ca.sections.forEach(sectionId => {
@@ -361,7 +363,7 @@ function ClassAssignment() {
         }
       });
     });
-    
+
     if (assignmentsArray.length === 0) { setError("Please select subjects"); return; }
     try {
       setLoading(true);
@@ -402,7 +404,7 @@ function ClassAssignment() {
     e.preventDefault();
     if (!editingAssignment || formData.classAssignments.length === 0) return;
     if (!currentAcademicYear?.id) { setError("Academic Year context missing."); return; }
-    
+
     const ca = formData.classAssignments[0];
     if (!ca.sections?.length) {
       setError("Please select at least one section");
@@ -421,10 +423,10 @@ function ClassAssignment() {
       setLoading(true);
       setError(null);
       const payload = {
-        classId: Number(ca.gradeId), 
-        sectionId: Number(sectionId), 
+        classId: Number(ca.gradeId),
+        sectionId: Number(sectionId),
         subjectId: Number(sel.subjectId),
-        isClassTeacher: formData.isClassTeacher, 
+        isClassTeacher: formData.isClassTeacher,
         weeklyPeriods: 5,
         academicYear: Number(currentAcademicYear.id), // ── CHANGED: Dynamic Context ID instead of String ──
         status: "ACTIVE"
@@ -450,12 +452,17 @@ function ClassAssignment() {
     }
   };
 
-  const handleDeleteAssignment = async (assignmentId) => {
-    if (!window.confirm('Are you sure you want to delete this assignment?')) return;
+  const handleDeleteAssignment = (assignmentId) => {
+    setDeleteAssignmentModal({ open: true, id: assignmentId });
+  };
+
+  const confirmDeleteAssignment = async () => {
+    const { id } = deleteAssignmentModal;
+    setDeleteAssignmentModal({ open: false, id: null });
     try {
       setLoading(true);
-      await deleteTeacherAssignment(assignmentId);
-      setCreatedAssignments(prev => prev.filter(a => a.id !== assignmentId));
+      await deleteTeacherAssignment(id);
+      setCreatedAssignments(prev => prev.filter(a => a.id !== id));
       setSuccessMessage("Assignment deleted successfully!");
       setTimeout(() => setSuccessMessage(""), 1000);
     } catch (err) {
@@ -583,9 +590,8 @@ function ClassAssignment() {
                   ) : null}
 
                   <span
-                    className={`w-14 h-14 rounded-full bg-linear-to-br from-blue-800 to-indigo-600 items-center justify-center text-white text-xl font-bold shadow-sm ${
-                      formData?.image ? "hidden" : "flex"
-                    }`}
+                    className={`w-14 h-14 rounded-full bg-linear-to-br from-blue-800 to-indigo-600 items-center justify-center text-white text-xl font-bold shadow-sm ${formData?.image ? "hidden" : "flex"
+                      }`}
                   >
                     {getInitials(formData.teacherName)}
                   </span>
@@ -647,13 +653,12 @@ function ClassAssignment() {
                         type="button"
                         onClick={() => toggleClassSelection(String(cls.id))}
                         disabled={isAdded}
-                        className={`px-4 py-2 rounded-lg font-medium text-sm transition-all ${
-                          isAdded
+                        className={`px-4 py-2 rounded-lg font-medium text-sm transition-all ${isAdded
                             ? 'bg-blue-600 text-white opacity-60 cursor-not-allowed'
                             : isSelected
                               ? 'bg-blue-50 text-blue-700 border-2 border-blue-500 ring-2 ring-blue-100 shadow-sm'
                               : 'bg-gray-100 text-gray-700 border border-gray-200 hover:bg-gray-200'
-                        }`}
+                          }`}
                       >
                         {isSelected && !isAdded && <span className="mr-1 text-blue-500 font-bold">✓</span>}
                         {cls.name || cls.className}
@@ -971,9 +976,8 @@ function ClassAssignment() {
                       <div className="flex items-center gap-2">
                         <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Class Teacher:</p>
                         <span
-                          className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                            a.isClassTeacher ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
-                          }`}
+                          className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${a.isClassTeacher ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+                            }`}
                         >
                           {a.isClassTeacher ? 'Yes' : 'No'}
                         </span>
@@ -1028,9 +1032,8 @@ function ClassAssignment() {
                           <td className="px-5 py-4 text-gray-700 whitespace-nowrap">{a.subjectName || 'N/A'}</td>
                           <td className="px-5 py-4">
                             <span
-                              className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
-                                a.isClassTeacher ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
-                              }`}
+                              className={`px-2.5 py-1 rounded-full text-xs font-semibold ${a.isClassTeacher ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+                                }`}
                             >
                               {a.isClassTeacher ? 'Yes' : 'No'}
                             </span>
@@ -1083,6 +1086,16 @@ function ClassAssignment() {
           ) : null}
         </div>
       </div>
+      <ConfirmModal
+        open={deleteAssignmentModal.open}
+        title="Delete assignment"
+        message="Are you sure you want to permanently delete this assignment? This action cannot be undone."
+        confirmLabel="Delete assignment"
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={confirmDeleteAssignment}
+        onCancel={() => setDeleteAssignmentModal({ open: false, id: null })}
+      />
     </div>
   );
 }
