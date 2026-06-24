@@ -35,7 +35,6 @@ function getRowBg(marks, max, absent) {
 }
 
 // ─── Helper: extract examSubjectConfigId from subject config object ────────────
-// Tries every field name variant APIs commonly use — expand this list if needed
 function extractConfigId(obj) {
     if (!obj) return null;
     return (
@@ -56,7 +55,7 @@ function Select({ value, onChange, options = [], placeholder, disabled, classNam
                 value={value ?? ""}
                 onChange={(e) => onChange(e.target.value)}
                 disabled={disabled}
-                className="appearance-none w-full bg-white border border-gray-200 rounded-lg pl-3 pr-8 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                className="appearance-none w-full bg-white border border-gray-200 rounded-lg pl-3 pr-8 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
             >
                 {placeholder && <option value="" disabled>{placeholder}</option>}
                 {options.map((o) => (
@@ -155,7 +154,6 @@ export default function MarksEntry() {
     const maxPractical = selectedSubjectConfig?.maxPracticalMarks ?? 0;
     const passingMarks = selectedSubjectConfig?.passingMarks ?? 33;
 
-    // ── examSubjectConfigId: try subject config first, then fall back to rows ─
     const examSubjectConfigId =
         extractConfigId(selectedSubjectConfig) ??
         localRows[0]?.examSubjectConfigId ??
@@ -183,10 +181,6 @@ export default function MarksEntry() {
                     setSelectedClassId(String(cls[0].id));
                 }
 
-                if (secArr.length > 0) {
-                    setSelectedSectionId(String(secArr[0].id));
-                }
-
             } catch (err) {
                 console.error("MarksEntry meta load error:", err);
             } finally {
@@ -197,6 +191,22 @@ export default function MarksEntry() {
         load();
     }, []);
 
+    // Section Auto-Sync Effect cuando cambia la clase
+    useEffect(() => {
+        if (!selectedClassId || sections.length === 0) return;
+
+        const classSections = sections.filter(
+            (s) => String(s.classId) === String(selectedClassId) || String(s.schoolClassId) === String(selectedClassId)
+        );
+
+        const isCurrentSectionValid = classSections.some((s) => String(s.id) === String(selectedSectionId));
+
+        if (!isCurrentSectionValid && classSections.length > 0) {
+            setSelectedSectionId(String(classSections[0].id));
+        }
+    }, [selectedClassId, sections, selectedSectionId]);
+
+    // ── 2. Route Resolve Effect ───────────────────────────────────────────────
     useEffect(() => {
         if (!paramExamId || !classes.length) return;
 
@@ -226,7 +236,7 @@ export default function MarksEntry() {
         resolveRouteExamClass();
     }, [paramExamId, classes]);
 
-    // ── 2. Load exams when class changes ──────────────────────────────────────
+    // ── 3. Load exams when class changes ──────────────────────────────────────
     useEffect(() => {
         if (!selectedClassId) return;
         const load = async () => {
@@ -258,7 +268,7 @@ export default function MarksEntry() {
         load();
     }, [selectedClassId, paramExamId]);
 
-    // ── 3. Load subject configs when exam + section changes ───────────────────
+    // ── 4. Load subject configs when exam + section changes ───────────────────
     useEffect(() => {
         if (!selectedExamId || !selectedSectionId) return;
         const load = async () => {
@@ -270,11 +280,6 @@ export default function MarksEntry() {
             setSavedRows([]);
             try {
                 const data = await getExamSubjects(Number(selectedExamId), Number(selectedSectionId));
-                // ── Log subject config shape so you can see which field has the config ID
-                if (data.length > 0) {
-                    console.log("📋 Subject config keys:", Object.keys(data[0]));
-                    console.log("📋 Subject config[0]:", data[0]);
-                }
                 setSubjects(data);
                 if (data.length > 0) setSelectedSectionSubjectId(String(data[0].sectionSubjectId));
             } catch (err) {
@@ -286,7 +291,7 @@ export default function MarksEntry() {
         load();
     }, [selectedExamId, selectedSectionId]);
 
-    // ── 4. Load marks sheet ───────────────────────────────────────────────────
+    // ── 5. Marks Sheet Fetch Callback ─────────────────────────────────────────
     const loadSheet = useCallback(async () => {
         if (!selectedExamId || !selectedSectionSubjectId) return;
         setLoadingSheet(true);
@@ -301,16 +306,8 @@ export default function MarksEntry() {
                 Number(selectedSectionSubjectId)
             );
 
-            // ── Log marks sheet shape ─────────────────────────────────────────
-            if (data.length > 0) {
-                console.log("📋 Marks sheet row keys:", Object.keys(data[0]));
-                console.log("📋 Marks sheet row[0]:", data[0]);
-            }
-
             const rows = data.map((s) => ({
-                // marksId = the saved record's PK (null if not yet saved)
                 marksId: s.id ?? null,
-                // examSubjectConfigId from the sheet row itself (most reliable fallback)
                 examSubjectConfigId: s.examSubjectConfigId ?? s.configId ?? s.examSubjectId ?? null,
                 studentId: s.studentId,
                 studentName: s.studentName,
@@ -332,11 +329,18 @@ export default function MarksEntry() {
             setHasChanges(false);
         } catch (err) {
             console.error("loadSheet error:", err);
-            setSheetError("Failed to load marks sheet. Please try again.");
+            setSheetError("Failed to load marks sheet automaticamente.");
         } finally {
             setLoadingSheet(false);
         }
     }, [selectedExamId, selectedSectionSubjectId]);
+
+    // FIX FEATURE: सब्जेक्ट सिलेक्ट होते ही ऑटोमैटिकली शीट लोड करने का नया Effect हुक
+    useEffect(() => {
+        if (selectedExamId && selectedSectionSubjectId) {
+            loadSheet();
+        }
+    }, [selectedExamId, selectedSectionSubjectId, loadSheet]);
 
     // ── Row update helpers ────────────────────────────────────────────────────
     const updateRow = (studentId, field, val) => {
@@ -375,27 +379,9 @@ export default function MarksEntry() {
             return;
         }
 
-        // Resolve config ID: subject dropdown → first row → give up
         const resolvedConfigId = examSubjectConfigId;
-
-        // ── Diagnostic log — check browser console to find the correct field ─
-        console.log("💾 Save attempt:", {
-            resolvedConfigId,
-            selectedSubjectConfigKeys: selectedSubjectConfig ? Object.keys(selectedSubjectConfig) : null,
-            selectedSubjectConfig,
-            firstRowExamSubjectConfigId: localRows[0]?.examSubjectConfigId,
-        });
-
         if (!resolvedConfigId) {
-            // ── Tell the developer exactly what fields ARE available ──────────
-            const availableKeys = selectedSubjectConfig
-                ? `Available keys on subject config: ${Object.keys(selectedSubjectConfig).join(", ")}`
-                : "selectedSubjectConfig is null/undefined";
-            console.error("❌ Cannot resolve examSubjectConfigId.", availableKeys);
-            setSaveError(
-                `Subject config ID not found. Open browser console (F12) and look for ` +
-                `"Subject config keys:" log to find the correct field name.`
-            );
+            setSaveError("Subject config ID not found.");
             return;
         }
 
@@ -407,7 +393,6 @@ export default function MarksEntry() {
             const examId = Number(selectedExamId);
 
             if (anyAlreadySaved) {
-                // ── UPDATE: PUT only changed rows ─────────────────────────────
                 const changedRows = localRows.filter((row) => {
                     const saved = savedRows.find((s) => s.studentId === row.studentId);
                     if (!saved) return true;
@@ -430,7 +415,7 @@ export default function MarksEntry() {
                 await Promise.all(
                     changedRows.map((row) => {
                         if (!row.marksId) {
-                            throw new Error(`Student "${row.studentName}" has no marksId. Cannot update.`);
+                            throw new Error(`Student "${row.studentName}" has no marksId.`);
                         }
                         return updateMarks(examId, row.marksId, {
                             examSubjectConfigId: row.examSubjectConfigId ?? resolvedConfigId,
@@ -444,7 +429,6 @@ export default function MarksEntry() {
                     })
                 );
             } else {
-                // ── BULK SAVE: POST /marks/bulk ───────────────────────────────
                 const payload = {
                     examSubjectConfigId: resolvedConfigId,
                     marks: localRows.map((row) => ({
@@ -457,22 +441,19 @@ export default function MarksEntry() {
                         remarks: row.remarks,
                     })),
                 };
-                console.log("📤 bulkEnterMarks payload:", payload);
                 await bulkEnterMarks(examId, payload);
             }
 
-            // Reload to get fresh marksIds + server grades
             await loadSheet();
             setSaveSuccess(true);
         } catch (err) {
             console.error("handleSave error:", err);
-            setSaveError(err.message ?? "Failed to save marks. Please try again.");
+            setSaveError(err.message ?? "Failed to save marks.");
         } finally {
             setSaving(false);
         }
     };
 
-    // ─────────────────────────────────────────────────────────────────────────
     return (
         <div className="min-h-screen bg-[#f3f6fb] p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6">
 
@@ -484,9 +465,9 @@ export default function MarksEntry() {
                 </h2>
             </div>
 
-            {/* ── Filter Bar ── */}
+            {/* ── Fixed Filter Bar (4 Equal Columns without manual button) ── */}
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm px-4 sm:px-5 py-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-[1fr_1.2fr_1.4fr_1fr_auto] gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
 
                     <Select
                         value={selectedClassId}
@@ -500,10 +481,12 @@ export default function MarksEntry() {
                     <Select
                         value={selectedSectionId}
                         onChange={(v) => { setSelectedSectionId(v); setSheetLoaded(false); setLocalRows([]); setSavedRows([]); setHasChanges(false); }}
-                        options={sections.map((s) => ({ value: String(s.id), label: sectionLabel(s) }))}
+                        options={sections
+                            .filter((s) => String(s.classId) === String(selectedClassId) || String(s.schoolClassId) === String(selectedClassId))
+                            .map((s) => ({ value: String(s.id), label: sectionLabel(s) }))}
                         placeholder={loadingMeta ? "Loading..." : "Select Section"}
-                        disabled={loadingMeta}
-                        className="w-full "
+                        disabled={loadingMeta || !selectedClassId}
+                        className="w-full"
                     />
 
                     <Select
@@ -523,22 +506,21 @@ export default function MarksEntry() {
                             label: s.subjectName + (s.subjectCode ? ` (${s.subjectCode})` : ""),
                         }))}
                         placeholder={loadingSubjects ? "Loading subjects..." : "Select Subject"}
-                        disabled={loadingSubjects || !selectedExamId}
+                        disabled={loadingSubjects || !selectedExamId || !selectedSectionId}
                         className="w-full"
                     />
-
-                    <button
-                        onClick={loadSheet}
-                        disabled={!selectedExamId || !selectedSectionSubjectId || loadingSheet}
-                        className="flex items-center justify-center gap-2 w-full xl:w-auto px-5 py-2 text-sm font-semibold text-gray-800 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
-                    >
-                        {loadingSheet && <Loader2 className="w-4 h-4 animate-spin" />}
-                        {loadingSheet ? "Loading..." : "Load Sheet"}
-                    </button>
                 </div>
             </div>
 
-            {sheetLoaded && (
+            {/* Loading Indicator for automated fetches */}
+            {loadingSheet && (
+                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-12 flex flex-col items-center justify-center gap-3">
+                    <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+                    <p className="text-sm text-gray-500 font-medium">Fetching student marks sheet automatically...</p>
+                </div>
+            )}
+
+            {sheetLoaded && !loadingSheet && (
                 <MarksSheet
                     rows={localRows}
                     hasTheoryPractical={hasTheoryPractical}
@@ -565,8 +547,7 @@ export default function MarksEntry() {
             {!sheetLoaded && !loadingSheet && !sheetError && (
                 <div className="bg-white rounded-2xl border border-gray-200 shadow-sm px-6 py-16 text-center">
                     <p className="text-sm text-gray-400">
-                        Select class, section, exam and subject, then click{" "}
-                        <strong>Load Sheet</strong> to begin entering marks.
+                        Select a Class, Section, Exam and Subject. The sheet will load automatically.
                     </p>
                 </div>
             )}

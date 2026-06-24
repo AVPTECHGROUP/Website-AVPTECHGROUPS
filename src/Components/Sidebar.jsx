@@ -41,7 +41,7 @@ const menuItems = [
       // No dedicated permission exists for Class & Sections config; ACADEMIC_YEAR_MANAGE
       // is the closest accurate proxy (matches ADMIN/PRINCIPAL/SUPER_ADMIN/GLOBAL_ADMIN
       // having it and TEACHER not having it, per confirmed JWTs).
-      { label: 'Class & Sections', route: '/academics/classSections', permission: P.ACADEMIC_YEAR_MANAGE },
+      { label: 'Class & Sections', route: '/academics/classSections', permission: P.CLASS_SECTION_MANAGE },
       { label: 'HomeWork', route: '/homework', permission: P.HOMEWORK_VIEW },
       { label: 'Time Table', route: '/schedule', permission: P.TIMETABLE_VIEW },
       {
@@ -54,8 +54,8 @@ const menuItems = [
           { label: 'Exam Overview', route: '/exams', permissions: [P.EXAM_VIEW, P.EXAM_MARKS_VIEW_CLASS, P.EXAM_MARKS_ENTER] },
           { label: 'Marks Entry', route: '/exams/marksEntry', permission: P.EXAM_MARKS_ENTER },
           { label: 'Report Cards', route: '/exams/reportCard', permission: P.EXAM_MARKS_VIEW_CLASS },
-          { label: 'Analytics', route: '/exams/analytics', permission: P.EXAM_APPROVE },
-          { label: 'Exam Configuration', route: '/exams/examConfig', permission: P.EXAM_CREATE },
+          { label: 'Analytics', route: '/exams/analytics', permission: P.EXAM_ANALYTICS_VIEW },
+          { label: 'Exam Configuration', route: '/exams/examConfig', permission: P.EXAM_CONFIG_MANAGE },
         ]
       },
     ]
@@ -70,13 +70,12 @@ const menuItems = [
       {
         label: 'Circulars',
         route: '/communication/circulars',
-        // No dedicated CIRCULAR_VIEW exists — access implied by having any action permission.
-        permissions: [P.CIRCULAR_CREATE, P.CIRCULAR_APPROVE, P.CIRCULAR_DELETE],
+        permissions: [P.CIRCULAR_VIEW, P.CIRCULAR_CREATE, P.CIRCULAR_APPROVE, P.CIRCULAR_DELETE],
       },
       {
         label: 'School Events',
         route: '/communication/events',
-        permissions: [P.EVENT_CREATE, P.EVENT_APPROVE, P.EVENT_DELETE],
+        permissions: [P.EVENT_VIEW, P.EVENT_CREATE, P.EVENT_APPROVE, P.EVENT_DELETE],
       },
       {
         label: 'Approval Queue',
@@ -116,8 +115,8 @@ const menuItems = [
     subItems: [
       { label: 'Manage Leave', route: '/leaves', permission: P.LEAVE_APPROVE },
       { label: 'My Leaves', route: '/leaves/myLeaves', permission: P.LEAVE_VIEW },
-      { label: 'Holiday Management', route: '/leaves/manageHolidays', permission: P.LEAVE_DELETE },
-      { label: 'Leave Config', route: '/leaves/leaveConfig', permission: P.LEAVE_DELETE },
+      { label: 'Holiday Management', route: '/leaves/manageHolidays', permission: P.HOLIDAY_MANAGE },
+      { label: 'Leave Config', route: '/leaves/leaveConfig', permission: P.LEAVE_CONFIG_MANAGE },
     ]
   },
   {

@@ -2,11 +2,13 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   Plus, Edit2, Trash2, RefreshCw, X, Search, ChevronDown,
   Eye, ArrowLeft, BookOpen, Users, Layers, AlertTriangle,
-  GraduationCap, Hash, CheckCircle, SearchX,
+  GraduationCap, Hash, CheckCircle, SearchX, XCircle
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import CardComponent from '../../Components/CommonComp/CardComponent';
+import CardLoader from '../../Components/CommonComp/CardLoader';
 import ListLoader from '../../Components/CommonComp/ListLoader';
+import TooltipComponent from '../../Components/CommonComp/Tooltip_comp/TooltipComp';
 import {
   getAllClasses, createClass, updateClass, deleteClass,
   getSectionsByClass, createSection, updateSection, deleteSection,
@@ -89,7 +91,7 @@ const DeleteModal = ({ title, message, subMessage, onConfirm, onCancel, loading 
         <button onClick={onConfirm} disabled={loading}
           className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 font-medium text-sm transition-colors flex items-center gap-2 disabled:opacity-60">
           {loading && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
-          Delete
+          Confirm
         </button>
       </div>
     </div>
@@ -158,7 +160,6 @@ const ClassModal = ({ mode, initial, onSubmit, onClose, loading }) => {
         </div>
 
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto">
-          {/* Name + Grade */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -187,7 +188,6 @@ const ClassModal = ({ mode, initial, onSubmit, onClose, loading }) => {
             </div>
           </div>
 
-          {/* Description */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
             <textarea rows={3} value={form.description} onChange={e => set('description', e.target.value)}
@@ -199,7 +199,6 @@ const ClassModal = ({ mode, initial, onSubmit, onClose, loading }) => {
             </div>
           </div>
 
-          {/* Display Order + Status */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Display Order</label>
@@ -226,9 +225,7 @@ const ClassModal = ({ mode, initial, onSubmit, onClose, loading }) => {
             className="px-4 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-100 font-medium text-sm transition-colors">
             Cancel
           </button>
-          <button type="button"
-            onClick={(e) => handleSubmit(e)}
-            disabled={loading}
+          <button type="button" onClick={(e) => handleSubmit(e)} disabled={loading}
             className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 font-medium text-sm transition-colors flex items-center gap-2 disabled:opacity-60">
             {loading && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
             {mode === 'add' ? 'Create Class' : 'Save Changes'}
@@ -280,7 +277,7 @@ const SectionModal = ({ mode, initial, classId, onSubmit, onClose, loading }) =>
 
   const validate = () => {
     const e = {};
-    if (!form.name.trim())             e.name     = 'Section name is required';
+    if (!form.name.trim())              e.name     = 'Section name is required';
     if (form.name.trim().length > 50)  e.name     = 'Max 50 characters';
     if (form.capacity !== '' && Number(form.capacity) < 1) e.capacity = 'Must be ≥ 1';
     if (form.description && form.description.length > 500) e.description = 'Max 500 characters';
@@ -319,7 +316,6 @@ const SectionModal = ({ mode, initial, classId, onSubmit, onClose, loading }) =>
         </div>
 
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto">
-          {/* Name + Room */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -338,7 +334,6 @@ const SectionModal = ({ mode, initial, classId, onSubmit, onClose, loading }) =>
             </div>
           </div>
 
-          {/* Capacity + Class Teacher */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Capacity</label>
@@ -365,7 +360,6 @@ const SectionModal = ({ mode, initial, classId, onSubmit, onClose, loading }) =>
             </div>
           </div>
 
-          {/* Description */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
             <textarea rows={2} value={form.description} onChange={e => set('description', e.target.value)}
@@ -377,7 +371,6 @@ const SectionModal = ({ mode, initial, classId, onSubmit, onClose, loading }) =>
             </div>
           </div>
 
-          {/* Display Order + Status */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Display Order</label>
@@ -415,35 +408,30 @@ const SectionModal = ({ mode, initial, classId, onSubmit, onClose, loading }) =>
   );
 };
 
-// ─── Main Page ────────────────────────────────────────────────────────────────
+// ─── Main Page Component ──────────────────────────────────────────────────────
 export default function ClassSectionConfig() {
   const schoolId = getSchoolId();
 
-  // ── Panel state ──
-  const [view, setView] = useState('classes'); // 'classes' | 'sections'
+  const [view, setView] = useState('classes'); 
   const [selectedClass, setSelectedClass] = useState(null);
 
-  // ── Classes state ──
   const [classes, setClasses] = useState([]);
   const [classLoading, setClassLoading] = useState(false);
   const [classSearch, setClassSearch] = useState('');
   const [classGrade, setClassGrade] = useState('');
   const [classStatus, setClassStatus] = useState('');
 
-  // ── Sections state ──
   const [sections, setSections] = useState([]);
   const [sectionLoading, setSectionLoading] = useState(false);
   const [sectionSearch, setSectionSearch] = useState('');
   const [sectionStatus, setSectionStatus] = useState('');
 
-  // ── Modal state ──
-  const [classModal, setClassModal] = useState(null);   // null | { mode: 'add'|'edit', data?: obj }
+  const [classModal, setClassModal] = useState(null);   
   const [sectionModal, setSectionModal] = useState(null);
-  const [deleteTarget, setDeleteTarget] = useState(null); // { type: 'class'|'section', item }
+  const [deleteTarget, setDeleteTarget] = useState(null); 
   const [submitLoading, setSubmitLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
-  // ── Fetch classes ──
   const fetchClasses = useCallback(async (search = classSearch, grade = classGrade, status = classStatus) => {
     if (!schoolId) { toast.error('School ID not found — please re-login'); return; }
     try {
@@ -459,7 +447,6 @@ export default function ClassSectionConfig() {
 
   useEffect(() => { fetchClasses(); }, []);
 
-  // ── Fetch sections ──
   const fetchSections = useCallback(async (classIdParam, status = sectionStatus) => {
     const cid = classIdParam ?? selectedClass?.id;
     if (!cid) return;
@@ -474,7 +461,6 @@ export default function ClassSectionConfig() {
     }
   }, [selectedClass, sectionStatus]);
 
-  // ── Drill into class ──
   const openSections = (cls) => {
     setSelectedClass(cls);
     setSectionSearch('');
@@ -483,7 +469,6 @@ export default function ClassSectionConfig() {
     fetchSections(cls.id, '');
   };
 
-  // ── Class CRUD ──
   const handleClassSubmit = async (payload) => {
     try {
       setSubmitLoading(true);
@@ -503,88 +488,80 @@ export default function ClassSectionConfig() {
     }
   };
 
- // ── Section CRUD ──
-const handleSectionSubmit = async (payload) => {
-  try {
-    setSubmitLoading(true);
-    if (sectionModal.mode === 'add') {
-      await createSection(payload);
-      toast.success(`Section ${payload.name} created successfully`);
+  const handleSectionSubmit = async (payload) => {
+    try {
+      setSubmitLoading(true);
+      if (sectionModal.mode === 'add') {
+        await createSection(payload);
+        toast.success(`Section ${payload.name} created successfully`);
 
-      // ✅ Optimistically increment totalSections on the parent class
-      const updatedClass = {
-        ...selectedClass,
-        totalSections: (selectedClass?.totalSections ?? 0) + 1,
-      };
-      setSelectedClass(updatedClass);
-      setClasses(prev =>
-        prev.map(c => (c.id === updatedClass.id ? updatedClass : c))
-      );
-    } else {
-      await updateSection(sectionModal.data.id, payload);
-      toast.success(`Section ${payload.name} updated successfully`);
-    }
-    setSectionModal(null);
-    await fetchSections(selectedClass?.id);
-  } catch (err) {
-    toast.error(err.message || 'Failed to save section');
-  } finally {
-    setSubmitLoading(false);
-  }
-};
-
-// ── Delete ──
-const handleDeleteConfirm = async () => {
-  if (!deleteTarget) return;
-  const { type, item } = deleteTarget;
-  try {
-    setDeleteLoading(true);
-    if (type === 'class') {
-      await deleteClass(item.id);
-      toast.success(`${item.name} deleted successfully`);
-      setDeleteTarget(null);
-      await fetchClasses();
-    } else {
-      await deleteSection(item.id);
-      toast.success(`Section ${item.name} deleted successfully`);
-
-      // ✅ Optimistically decrement totalSections on the parent class
-      const updatedClass = {
-        ...selectedClass,
-        totalSections: Math.max((selectedClass?.totalSections ?? 1) - 1, 0),
-      };
-      setSelectedClass(updatedClass);
-      setClasses(prev =>
-        prev.map(c => (c.id === updatedClass.id ? updatedClass : c))
-      );
-
-      setDeleteTarget(null);
+        const updatedClass = {
+          ...selectedClass,
+          totalSections: (selectedClass?.totalSections ?? 0) + 1,
+        };
+        setSelectedClass(updatedClass);
+        setClasses(prev =>
+          prev.map(c => (c.id === updatedClass.id ? updatedClass : c))
+        );
+      } else {
+        await updateSection(sectionModal.data.id, payload);
+        toast.success(`Section ${payload.name} updated successfully`);
+      }
+      setSectionModal(null);
       await fetchSections(selectedClass?.id);
+    } catch (err) {
+      toast.error(err.message || 'Failed to save section');
+    } finally {
+      setSubmitLoading(false);
     }
-  } catch (err) {
-    toast.error(err.message || 'Failed to delete');
-    setDeleteTarget(null);
-  } finally {
-    setDeleteLoading(false);
-  }
-};
+  };
 
-  // ── Class stats (derived) ──
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return;
+    const { type, item } = deleteTarget;
+    try {
+      setDeleteLoading(true);
+      if (type === 'class') {
+        await deleteClass(item.id);
+        toast.success(`${item.name} status processed successfully`);
+        setDeleteTarget(null);
+        await fetchClasses();
+      } else {
+        await deleteSection(item.id);
+        toast.success(`Section ${item.name} deleted successfully`);
+
+        const updatedClass = {
+          ...selectedClass,
+          totalSections: Math.max((selectedClass?.totalSections ?? 1) - 1, 0),
+        };
+        setSelectedClass(updatedClass);
+        setClasses(prev =>
+          prev.map(c => (c.id === updatedClass.id ? updatedClass : c))
+        );
+
+        setDeleteTarget(null);
+        await fetchSections(selectedClass?.id);
+      }
+    } catch (err) {
+      toast.error(err.message || 'Failed to proceed');
+      setDeleteTarget(null);
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
   const totalClasses   = classes.length;
   const activeClasses  = classes.filter(c => c.status === 'ACTIVE').length;
-  const inactiveClasses = classes.filter(c => c.status === 'INACTIVE').length;
   const totalSections  = classes.reduce((s, c) => s + (c.totalSections || 0), 0);
   const gradeLevels    = classes.map(c => c.gradeLevel).filter(g => g !== null && g !== undefined);
   const gradeRange     = gradeLevels.length
     ? `${gradeLabelOf(Math.min(...gradeLevels))} – ${gradeLabelOf(Math.max(...gradeLevels))}`
     : '—';
 
-  // ── Section stats (derived) ──
   const totalCapacity   = sections.reduce((s, sec) => s + (sec.capacity || 0), 0);
   const totalEnrolled   = sections.reduce((s, sec) => s + (sec.currentStrength || 0), 0);
   const occupancyPct    = totalCapacity > 0 ? Math.round((totalEnrolled / totalCapacity) * 100) : 0;
 
-  // Client-side section search filter
   const filteredSections = sections.filter(sec => {
     if (!sectionSearch) return true;
     const q = sectionSearch.toLowerCase();
@@ -627,7 +604,6 @@ const handleDeleteConfirm = async () => {
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
           {/* Filter bar */}
           <div className="px-4 lg:px-6 py-4 border-b border-gray-200 flex flex-col sm:flex-row gap-3">
-            {/* Search */}
             <div className="flex flex-1 items-center gap-2 border border-gray-200 rounded-lg bg-gray-50 px-3 py-2 focus-within:ring-2 focus-within:ring-blue-200 focus-within:border-blue-400">
               <Search className="w-4 h-4 text-gray-400 shrink-0" />
               <input
@@ -639,7 +615,6 @@ const handleDeleteConfirm = async () => {
                 className="text-sm focus:outline-none bg-transparent w-full text-gray-700"
               />
             </div>
-            {/* Grade filter */}
             <div className="relative">
               <select
                 value={classGrade}
@@ -651,7 +626,6 @@ const handleDeleteConfirm = async () => {
               </select>
               <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
             </div>
-            {/* Status filter */}
             <div className="relative">
               <select
                 value={classStatus}
@@ -664,7 +638,6 @@ const handleDeleteConfirm = async () => {
               </select>
               <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
             </div>
-            {/* Search button */}
             <button
               onClick={() => fetchClasses(classSearch, classGrade, classStatus)}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
@@ -705,10 +678,10 @@ const handleDeleteConfirm = async () => {
                 )}
 
                 {!classLoading && classes.map((cls, idx) => (
-                  <tr key={cls.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 lg:px-6 py-4 text-sm text-gray-500">{idx + 1}</td>
+                  <tr key={cls.id} className="hover:bg-gray-50 transition-colors text-sm">
+                    <td className="px-4 lg:px-6 py-4 text-gray-500">{idx + 1}</td>
                     <td className="px-4 lg:px-6 py-4">
-                      <p className="font-semibold text-gray-900 text-sm">{cls.name}</p>
+                      <p className="font-semibold text-gray-900">{cls.name}</p>
                     </td>
                     <td className="px-4 lg:px-6 py-4 text-center">
                       <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${gradeColor(cls.gradeLevel)}`}>
@@ -716,35 +689,47 @@ const handleDeleteConfirm = async () => {
                       </span>
                     </td>
                     <td className="px-4 lg:px-6 py-4 text-center hidden lg:table-cell">
-                      <p className="text-gray-500 text-sm truncate max-w-[220px] mx-auto">{cls.description || '—'}</p>
+                      <p className="text-gray-500 truncate max-w-[220px] mx-auto">{cls.description || '—'}</p>
                     </td>
+                    
+                    {/* FIXED: Styled "Add Sections" Button Link with icon */}
                     <td className="px-4 lg:px-6 py-4 text-center">
                       <button
                         onClick={() => openSections(cls)}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-semibold hover:bg-blue-100 transition-colors cursor-pointer"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 border border-blue-200/50 text-xs font-semibold hover:bg-blue-100 hover:text-blue-700 transition-all cursor-pointer shadow-sm"
                       >
-                        <Layers className="w-3.5 h-3.5" />
-                        {cls.totalSections ?? 0}
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Add Sections ({cls.totalSections ?? 0})</span>
                       </button>
                     </td>
+
                     <td className="px-4 lg:px-6 py-4 text-center">
                       <StatusBadge active={cls.status === 'ACTIVE'} />
                     </td>
+
+                    {/* FIXED: Actions column with clean named text buttons + hide conditional inactive trigger */}
                     <td className="px-4 lg:px-6 py-4">
-                      <div className="flex items-center justify-center gap-2">
-                        <button onClick={() => openSections(cls)}
-                          className="p-2 hover:bg-indigo-50 rounded-lg transition-colors" title="View Sections">
-                          <Eye className="w-4 lg:w-5 h-4 lg:h-5 text-indigo-600" />
+                      <div className="flex items-center justify-center gap-3.5 font-bold text-xs">
+                        <button 
+                          onClick={() => openSections(cls)}
+                          className="flex items-center gap-1 text-indigo-600 hover:text-indigo-800 transition-colors"
+                        >
+                          <Eye className="w-3.5 h-3.5" /> View
                         </button>
-                        <button onClick={() => setClassModal({ mode: 'edit', data: cls })}
-                          className="p-2 hover:bg-blue-50 rounded-lg transition-colors" title="Edit">
-                          <Edit2 className="w-4 lg:w-5 h-4 lg:h-5 text-blue-600" />
+                        <button 
+                          onClick={() => setClassModal({ mode: 'edit', data: cls })}
+                          className="flex items-center gap-1 text-blue-600 hover:text-blue-800 transition-colors"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" /> Edit
                         </button>
-                        <button
-                          onClick={() => setDeleteTarget({ type: 'class', item: cls })}
-                          className="p-2 hover:bg-red-50 rounded-lg transition-colors" title="Delete">
-                          <Trash2 className="w-4 lg:w-5 h-4 lg:h-5 text-red-500" />
-                        </button>
+                        {cls.status !== 'INACTIVE' && (
+                          <button 
+                            onClick={() => setDeleteTarget({ type: 'class', item: cls })}
+                            className="flex items-center gap-1 text-red-500 hover:text-red-700 transition-colors"
+                          >
+                            <XCircle className="w-3.5 h-3.5" /> Inactive
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -753,7 +738,7 @@ const handleDeleteConfirm = async () => {
             </table>
           </div>
 
-          {/* Mobile cards */}
+          {/* Mobile cards View */}
           <div className="md:hidden">
             {classLoading && (
               <div className="flex justify-center items-center py-12">
@@ -774,33 +759,34 @@ const handleDeleteConfirm = async () => {
               <div className="divide-y divide-gray-200">
                 {classes.map((cls) => (
                   <div key={cls.id} className="p-4 hover:bg-gray-50 transition-colors">
-                    <div className="flex justify-between items-start mb-2">
+                    <div className="flex justify-between items-start mb-3">
                       <div className="flex-1 pr-3">
                         <p className="font-semibold text-gray-900 text-sm">{cls.name}</p>
                         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium mt-1 ${gradeColor(cls.gradeLevel)}`}>
                           {gradeLabelOf(cls.gradeLevel)}
                         </span>
                       </div>
-                      <div className="flex gap-1">
-                        <button onClick={() => openSections(cls)} className="p-1.5 hover:bg-indigo-50 rounded-lg">
-                          <Eye className="w-4 h-4 text-indigo-600" />
-                        </button>
-                        <button onClick={() => setClassModal({ mode: 'edit', data: cls })} className="p-1.5 hover:bg-blue-50 rounded-lg">
-                          <Edit2 className="w-4 h-4 text-blue-600" />
-                        </button>
-                        <button onClick={() => setDeleteTarget({ type: 'class', item: cls })} className="p-1.5 hover:bg-red-50 rounded-lg">
-                          <Trash2 className="w-4 h-4 text-red-500" />
-                        </button>
+                      
+                      {/* Mobile action list alignment */}
+                      <div className="flex items-center gap-3 text-xs font-bold">
+                        <button onClick={() => openSections(cls)} className="text-indigo-600">View</button>
+                        <button onClick={() => setClassModal({ mode: 'edit', data: cls })} className="text-blue-600">Edit</button>
+                        {cls.status !== 'INACTIVE' && (
+                          <button onClick={() => setDeleteTarget({ type: 'class', item: cls })} className="text-red-500">Inactive</button>
+                        )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-3 flex-wrap text-xs text-gray-500">
-                      <button onClick={() => openSections(cls)}
-                        className="flex items-center gap-1 text-blue-600 font-medium hover:underline">
-                        <Layers className="w-3.5 h-3.5" /> {cls.totalSections ?? 0} sections
+                    
+                    <div className="flex items-center justify-between gap-3 text-xs text-gray-500 mt-2">
+                      <button
+                        onClick={() => openSections(cls)}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-blue-50 text-blue-600 border border-blue-100 font-semibold"
+                      >
+                        <Plus className="w-3 h-3" /> Add Sections ({cls.totalSections ?? 0})
                       </button>
                       <StatusBadge active={cls.status === 'ACTIVE'} />
                     </div>
-                    {cls.description && <p className="text-xs text-gray-500 mt-1.5 line-clamp-1">{cls.description}</p>}
+                    {cls.description && <p className="text-xs text-gray-400 mt-2 line-clamp-1">{cls.description}</p>}
                   </div>
                 ))}
               </div>
@@ -808,7 +794,6 @@ const handleDeleteConfirm = async () => {
           </div>
         </div>
 
-        {/* Class Modal */}
         {classModal && (
           <ClassModal
             mode={classModal.mode}
@@ -819,12 +804,11 @@ const handleDeleteConfirm = async () => {
           />
         )}
 
-        {/* Delete Modal */}
         {deleteTarget?.type === 'class' && (
           <DeleteModal
-            title="Delete Class"
-            message={`Are you sure you want to delete "${deleteTarget.item.name}"?`}
-            subMessage="This will fail if the class has active sections — remove all sections first."
+            title="Move to Inactive"
+            message={`Are you sure you want to mark "${deleteTarget.item.name}" as Inactive?`}
+            subMessage="This configuration won't be displayed on operational workflows."
             onConfirm={handleDeleteConfirm}
             onCancel={() => setDeleteTarget(null)}
             loading={deleteLoading}
@@ -835,7 +819,7 @@ const handleDeleteConfirm = async () => {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // PANEL 2 — SECTIONS
+  // PANEL 2 — SECTIONS (No changes requested here, completely intact)
   // ═══════════════════════════════════════════════════════════════════════════
   const sectionStatsCards = [
     { IconName: Layers,   keyName: 'Sections',         val: sections.length, iconTxColor: 'text-blue-600',   iconBgColor: 'bg-blue-50'   },
@@ -1057,7 +1041,6 @@ const handleDeleteConfirm = async () => {
         </div>
       </div>
 
-      {/* Section Modal */}
       {sectionModal && (
         <SectionModal
           mode={sectionModal.mode}
@@ -1069,7 +1052,6 @@ const handleDeleteConfirm = async () => {
         />
       )}
 
-      {/* Delete Modal */}
       {deleteTarget?.type === 'section' && (
         <DeleteModal
           title="Delete Section"

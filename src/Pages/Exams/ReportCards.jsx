@@ -212,7 +212,6 @@ export default function ReportCards() {
     const failed = students.filter((s) => !s.isPassed && !s.isAbsent).length;
     const absent = students.filter((s) => s.isAbsent).length;
 
-
     const STATS = [
         { key: "Total Students", val: students.length, icon: Users, iconBgColor: "bg-blue-50", iconTxColor: "text-blue-600" },
         { key: "Passed", val: students.length ? `${passed} — ${((passed / students.length) * 100).toFixed(1)}%` : "0", icon: CheckSquare, iconBgColor: "bg-green-50", iconTxColor: "text-green-600" },
@@ -239,12 +238,9 @@ export default function ReportCards() {
 
     // ── 1. Load active classes + sections on mount ─────────────────────────
     useEffect(() => {
-
         let mounted = true;
-
         const load = async () => {
             setLoadingMeta(true);
-
             try {
                 const [cls, secsRaw] = await Promise.all([
                     getActiveClasses(),
@@ -252,7 +248,6 @@ export default function ReportCards() {
                 ]);
 
                 if (!mounted) return;
-
                 setClasses(cls);
 
                 const secArr = Array.isArray(secsRaw)
@@ -264,24 +259,17 @@ export default function ReportCards() {
                 if (!paramExamId && cls.length > 0) {
                     setSelectedClassId(String(cls[0].id));
                 }
-
             } catch (err) {
                 console.error("ReportCards meta load error:", err);
             } finally {
-                if (mounted) {
-                    setLoadingMeta(false);
-                }
+                if (mounted) setLoadingMeta(false);
             }
         };
-
         load();
-
-        return () => {
-            mounted = false;
-        };
-
+        return () => { mounted = false; };
     }, []);
 
+    // Route Exam Resolve
     useEffect(() => {
         if (!paramExamId || !classes.length) return;
 
@@ -307,32 +295,26 @@ export default function ReportCards() {
                 console.error("ReportCards route exam resolve error:", err);
             }
         };
-
         resolveRouteExamClass();
     }, [paramExamId, classes]);
 
+    // Section Selector Alignment
     useEffect(() => {
-
         if (filteredSections.length === 0) {
             setSelectedSectionId("");
             return;
         }
-
         const hasCurrent = filteredSections.some(
             (s) => String(s.id) === String(selectedSectionId)
         );
-
         if (!hasCurrent) {
             setSelectedSectionId(String(filteredSections[0].id));
         }
-
     }, [selectedClassId, sections, filteredSections, selectedSectionId]);
 
     // ── 2. Load exams when class changes ──────────────────────────────────────
     useEffect(() => {
-
         let mounted = true;
-
         const load = async () => {
             setLoadingExams(true);
             setExams([]);
@@ -344,49 +326,35 @@ export default function ReportCards() {
 
             try {
                 const data = await getExams({ classId: selectedClassId });
-
                 const allExams = Array.isArray(data) ? data : [];
 
                 if (!mounted) return;
-
                 setExams(allExams);
 
-                // ── AUTO SELECT ROUTE EXAM ──
                 if (paramExamId) {
                     const matchedExam = allExams.find(
                         (e) => String(e.id) === String(paramExamId)
                     );
-
                     if (matchedExam) {
                         setSelectedExamId(String(matchedExam.id));
                         return;
                     }
                 }
 
-                // fallback
                 const declared = allExams.filter((e) => e.resultDeclared);
-
                 if (declared.length > 0) {
                     setSelectedExamId(String(declared[0].id));
                 } else if (allExams.length > 0) {
                     setSelectedExamId(String(allExams[0].id));
                 }
-
             } catch (err) {
                 console.error("Load exams error:", err);
             } finally {
-                if (mounted) {
-                    setLoadingExams(false);
-                }
+                if (mounted) setLoadingExams(false);
             }
         };
-
         load();
-
-        return () => {
-            mounted = false;
-        };
-
+        return () => { mounted = false; };
     }, [selectedClassId, paramExamId]);
 
     // ── 3. Load report cards ──────────────────────────────────────────────────
@@ -423,7 +391,7 @@ export default function ReportCards() {
             setCardsLoaded(false);
             setCardsError(null);
         }
-    }, [loadReportCards]);
+    }, [loadReportCards, selectedExamId]);
 
     // ── Generate All ──────────────────────────────────────────────────────────
     const handleGenerate = async () => {
@@ -486,7 +454,6 @@ export default function ReportCards() {
     const selectedSectionObj = filteredSections.find((s) => String(s.id) === selectedSectionId);
     const selectedExamObj = exams.find((e) => String(e.id) === selectedExamId);
 
-    // ─────────────────────────────────────────────────────────────────────────
     return (
         <div className="min-h-screen bg-[#f3f6fb] p-2 sm:p-3 lg:p-6 space-y-3 sm:space-y-4 lg:space-y-6">
 
@@ -499,16 +466,29 @@ export default function ReportCards() {
                 </h2>
             </div>
 
-            {/* ── Top Filter Bar ── */}
-            <div className="bg-white rounded-xl sm:rounded-2xl border border-gray-200 shadow-sm px-3 sm:px-4 lg:px-5 py-3 sm:py-4">
+            {/* ── 1. Stats Cards (MOVED TO FIRST) ── */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+                {loadingCards || loadingMeta
+                    ? Array(4).fill(0).map((_, i) => <CardLoader key={i} />)
+                    : STATS.map((s) => (
+                        <CardComponent
+                            key={s.key}
+                            IconName={s.icon}
+                            keyName={s.key}
+                            val={s.val}
+                            iconBgColor={s.iconBgColor}
+                            iconTxColor={s.iconTxColor}
+                        />
+                    ))}
+            </div>
 
-                {/* FIX: Two-row layout at lg (1024px), single row only at xl+ */}
-                <div className="flex flex-col gap-2 sm:gap-3">
-
-                    {/* Row 1: Selects + Reload */}
-                    <div className="flex flex-col xs:flex-row flex-wrap xl:flex-nowrap items-stretch xl:items-center gap-2 sm:gap-3">
-
-                        {/* Class */}
+            {/* ── 2. Top Filter Bar (MOVED TO SECOND) ── */}
+            <div className="bg-white rounded-xl sm:rounded-2xl border border-gray-200 shadow-sm px-3 sm:px-4 lg:px-5 py-3.5">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                    
+                    {/* Left side: Inputs + Icon Only Reload */}
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-1 min-w-0">
+                        {/* Class Select */}
                         <Select
                             value={selectedClassId}
                             onChange={(v) => { setSelectedClassId(v); setCardsLoaded(false); }}
@@ -517,10 +497,10 @@ export default function ReportCards() {
                                 ...classes.map((c) => ({ value: String(c.id), label: c.name }))
                             ]}
                             disabled={loadingMeta}
-                            className="w-full xs:w-32 shrink-0"
+                            className="w-full sm:w-36 shrink-0"
                         />
 
-                        {/* Section */}
+                        {/* Section Select */}
                         <Select
                             value={selectedSectionId}
                             onChange={(v) => { setSelectedSectionId(v); }}
@@ -529,10 +509,10 @@ export default function ReportCards() {
                                 ...filteredSections.map((s) => ({ value: String(s.id), label: sectionLabel(s) }))
                             ]}
                             disabled={loadingMeta}
-                            className="w-full xs:w-44 shrink-0"
+                            className="w-full sm:w-44 shrink-0"
                         />
 
-                        {/* Exam — grows to fill remaining space */}
+                        {/* Exam Select */}
                         <Select
                             value={selectedExamId}
                             onChange={(v) => setSelectedExamId(v)}
@@ -544,51 +524,51 @@ export default function ReportCards() {
                                 }))
                             ]}
                             disabled={loadingExams || !selectedClassId}
-                            className="w-full xl:flex-1 xl:min-w-0"
+                            className="w-full sm:flex-1 sm:min-w-0"
                         />
 
-                        {/* Reload button */}
+                        {/* Icon-only Reload Button */}
                         <button
                             onClick={loadReportCards}
                             disabled={!selectedExamId || loadingCards}
-                            className="flex items-center justify-center gap-2 w-full xs:w-auto px-3 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-all disabled:opacity-60 shrink-0"
+                            title="Reload Data"
+                            className="flex items-center justify-center h-[38px] w-[38px] text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 active:scale-95 transition-all disabled:opacity-60 shrink-0"
                         >
-                            {loadingCards
-                                ? <Loader2 className="w-4 h-4 animate-spin" />
-                                : <RefreshCw className="w-4 h-4" />}
-                            <span>Reload</span>
+                            {loadingCards ? (
+                                <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+                            ) : (
+                                <RefreshCw className="w-4 h-4" />
+                            )}
                         </button>
                     </div>
 
-                    {/* Row 2: Action buttons — always visible, aligned right on larger screens */}
-                    <div className="flex flex-col xs:flex-row items-stretch xs:items-center gap-2 sm:gap-3 xl:justify-end">
-
+                    {/* Right side: Action Buttons */}
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
                         {/* Generate All */}
                         <button
                             onClick={handleGenerate}
                             disabled={!selectedExamId || generating}
-                            className="flex items-center justify-center gap-2 w-full xs:w-auto px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700 rounded-lg transition-all shadow-sm active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed shrink-0"
+                            className="flex items-center justify-center gap-2 px-4 h-[38px] text-sm font-semibold text-white bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700 rounded-lg transition-all shadow-sm active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed whitespace-nowrap"
                         >
-                            {generating
-                                ? <Loader2 className="w-4 h-4 animate-spin" />
-                                : <Sparkles className="w-4 h-4" />}
+                            {generating ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                                <Sparkles className="w-4 h-4" />
+                            )}
                             <span>{generating ? "Generating..." : "Generate All"}</span>
                         </button>
 
                         {/* Export CSV */}
                         <button
                             onClick={handleExport}
-                            disabled={
-                                loadingCards ||
-                                !cardsLoaded ||
-                                students.length === 0
-                            }
-                            className="flex items-center justify-center gap-2 w-full xs:w-auto px-4 py-2 text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                            disabled={loadingCards || !cardsLoaded || students.length === 0}
+                            className="flex items-center justify-center gap-2 px-4 h-[38px] text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-all shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
                         >
                             <Download className="w-4 h-4" />
                             <span>Export CSV</span>
                         </button>
                     </div>
+
                 </div>
 
                 {generateMsg && (
@@ -605,23 +585,6 @@ export default function ReportCards() {
                 )}
             </div>
 
-            {/* ── Stats ── */}
-            {/* FIX: Always 4 columns at lg, 2 below */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
-                {loadingCards || loadingMeta
-                    ? Array(4).fill(0).map((_, i) => <CardLoader key={i} />)
-                    : STATS.map((s) => (
-                        <CardComponent
-                            key={s.key}
-                            IconName={s.icon}
-                            keyName={s.key}
-                            val={s.val}
-                            iconBgColor={s.iconBgColor}
-                            iconTxColor={s.iconTxColor}
-                        />
-                    ))}
-            </div>
-
             {studentCardError && (
                 <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 flex items-center gap-3 text-sm text-red-600">
                     <AlertCircle className="w-4 h-4 shrink-0" />
@@ -636,7 +599,7 @@ export default function ReportCards() {
                 </div>
             )}
 
-            {/* ── Class Rank Table ── */}
+            {/* ── 3. Class Rank Table ── */}
             <div className="bg-white rounded-xl sm:rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
                 <div className="px-3 sm:px-4 lg:px-5 py-3 sm:py-4 border-b border-gray-100 flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 min-w-0">
@@ -665,7 +628,7 @@ export default function ReportCards() {
                     </div>
                 )}
 
-                {/* Mobile & Tablet: shown below lg (1024px) */}
+                {/* Mobile & Tablet Table */}
                 <div className="block lg:hidden">
                     {loadingCards ? (
                         <div className="p-4 space-y-3">
@@ -678,14 +641,15 @@ export default function ReportCards() {
                             {cardsLoaded ? "No report cards found." : "Select an exam and click Generate All or Reload."}
                         </p>
                     ) : (
-                        students.map((student) => (
-                            <StudentCard key={student.studentId} student={student} onView={handleViewStudent} />
-                        ))
+                        <div className="divide-y divide-gray-100">
+                            {students.map((student) => (
+                                <StudentCard key={student.studentId} student={student} onView={handleViewStudent} />
+                            ))}
+                        </div>
                     )}
                 </div>
 
-                {/* Desktop: shown at lg (1024px) and above */}
-                {/* FIX: min-w on table + tighter padding at lg, normal at xl */}
+                {/* Desktop Table */}
                 <div className="hidden lg:block overflow-x-auto">
                     <table className="w-full min-w-[720px] text-sm">
                         <thead>

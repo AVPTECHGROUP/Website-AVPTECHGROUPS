@@ -1,27 +1,13 @@
-import { Navigate, Outlet } from 'react-router-dom'
-import { useContext } from 'react';
-import { UserContext } from '../ContextAPI/UserContext';
+import { Navigate, Outlet } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
 
 const RoleProtectedRoute = ({ allowedRoles, fallback, children }) => {
-  const { user: ctxUser } = useContext(UserContext);
+  const { role } = useAuth();
 
-  // fallback to localStorage in case UserContext hasn't hydrated yet
-  const storedUser = (() => {
-    try { return JSON.parse(localStorage.getItem('user')) || null } catch { return null }
-  })();
+  if (!role) return <Navigate to="/login" replace />;
+  if (!allowedRoles.includes(role)) return fallback ?? <Navigate to="/dashboard" replace />;
 
-  const user = ctxUser || storedUser;
+  return children ?? <Outlet />;
+};
 
-  // if still no user, redirect to login
-  if (!user) return <Navigate to="/login" replace />;
-
-  const userType = user.userType || (Array.isArray(user.roles) ? user.roles[0] : null);
-
-  if (!allowedRoles.includes(userType)) {
-    return fallback ? fallback : <Navigate to="/dashboard" replace />
-  }
-
-  return children ? children : <Outlet />
-}
-
-export default RoleProtectedRoute
+export default RoleProtectedRoute;

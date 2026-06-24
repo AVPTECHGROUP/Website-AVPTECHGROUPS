@@ -1,374 +1,572 @@
-// src/Routes/MainRoutes.jsx
+import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 
-// Layout & Protection
+// Layout & Protection — kept eager since they're needed on every route
 import AppLayout from '../Layout/AppLayout';
 import ProtectedRoutes from '../utils/Protectedroutes';
-import PermissionProtectedRoute from '../utils/PermissionProtectedRoute';
 import RoleProtectedRoute from '../utils/RoleProtectedRoute';
+import PermissionProtectedRoute from '../utils/PermissionProtectedRoute';
 import { PERMISSIONS as P, SYSTEM_ROLES } from '../Constants/Permission';
 
-// Auth / Landing
-import Login from '../Pages/Login_2';
-import SuperAdminSchools from '../Pages/SuperAdmin/SuperAdminSchools';
-
-// Dashboard
-import Dashboard from '../Pages/Dashboard';
-
-// Users
-import ManageAllUsers from '../Pages/SuperAdmin/ManageAllUsers';
-import AddnewSystemUser from '../Pages/SuperAdmin/AddnewSystemUser';
-import EditSysUser from '../Pages/SuperAdmin/EditSysUser';
-
-// Teachers
-import Teachers from '../Pages/Teachers/Teachers';
-import AddNewTeacher from '../Pages/Teachers/AddNewTeacher';
-import EditTeachersDetaills from '../Pages/Teachers/EditTeachersDetaills';
-import ClassAssignment from '../Pages/Teachers/ClassAssignment';
-import DetailsView from '../Pages/Teachers/DetailsView';
-
-// Students
-import Student from '../Pages/Students/Students';
-import AddNewStudent from '../Pages/Students/AddNewStudent';
-import StudentDetails from '../Pages/Students/StudentDetails';
-import EditStudentDetails from '../Pages/Students/EditStudentDetails';
-
-// Academics
-// import SubjectsMaster from '../Pages/Academics/SubjectsMaster';
-import ClassSectionConfig from '../Pages/Academics/ClassSectionConfig';
-import SectionSubjectAssignment from '../Pages/SubjectManagement/SectionSubjectAssignment';
-import HomeworkPage from '../Pages/Homework/Homeworkpage';
-import TimeTable from '../Pages/Schedule/TimeTable'
-import CreateSchedule from '../Pages/Schedule/CreateSchedule';
-import AcademicYear from '../Pages/Attendance/AcademicYear/AcademicYear';
-
-// Exams
-import Exams from '../Pages/Exams/Exams';
-import MarksEntry from '../Pages/Exams/MarksEntry';
-import ReportCards from '../Pages/Exams/ReportCards';
-import Analytics from '../Pages/Exams/Analytics';
-import ExamConfiguration from '../Pages/Exams/ExamConfiguration';
-
-// Communication
-import CircularsPage from '../Pages/Communication/Circulars/CircularsPage'
-import CreateCircularPage from '../Pages/Communication/Circulars/CreateCircularPage';
-import EventsPage from '../Pages/Communication/Events/EventsPage';
-import CreateEventPage from '../Pages/Communication/Events/CreateEventPage';
-import ApprovalQueuePage from '../Pages/Communication/ApprovalQueue/ApprovalQueuePage';
-import NotificationsPage from '../Pages/Communication/Notifications/NotificationsPage';
+// ─── Lazy-loaded Pages (code-split, fetched only when route is hit) ───────────
+const Login = lazy(() => import('../Pages/Login_2'));
+const Dashboard = lazy(() => import('../Pages/Dashboard'));
+const Attendance = lazy(() => import('../Pages/Attendance/Attendance'));
+const Leaves = lazy(() => import('../Pages/Leaves/Leaves'));
+const Payroll = lazy(() => import('../Pages/Payroll'));
+const Teachers = lazy(() => import('../Pages/Teachers/Teachers'));
+const Settings = lazy(() => import('../Pages/Settings'));
 
 // Attendance
-import Attendance from '../Pages/Attendance/Attendance';
-import StaffAttendanceRegistration from '../Pages/Attendance/StaffAttendanceRegistration';
-import StudentAttendanceRegistration from '../Pages/Attendance/StudentAttendanceRegistration';
-import UsersAttendance from '../Pages/Attendance/UsersAttendance';
-import WarningVerificationFailed from '../Components/UserAttendance/WarningVerificationFailed';
-import ManualAttendance from '../Components/UserAttendance/ManualAttendanceRequest';
-import StudentAttendance from '../Pages/Attendance/StudentAttendance/StudentAttendance';
+const UsersAttendance = lazy(() => import('../Pages/Attendance/UsersAttendance'));
+const MarkUserAttendance = lazy(() => import('../Pages/Attendance/MarkUserAttendance'));
+const WarningVerificationFailed = lazy(() => import('../Components/UserAttendance/WarningVerificationFailed'));
+const ManualAttendance = lazy(() => import('../Components/UserAttendance/ManualAttendanceRequest'));
+const ExamConfiguration = lazy(() => import('../Pages/Exams/ExamConfiguration'));
+const ClassSectionConfig = lazy(() => import('../Pages/Academics/ClassSectionConfig'));
+const StudentAttendance = lazy(() => import('../Pages/Attendance/StudentAttendance/StudentAttendance'));
+const StaffAttendanceRegistration = lazy(() => import('../Pages/Attendance/StaffAttendanceRegistration'));
+const StudentAttendanceRegistration = lazy(() => import('../Pages/Attendance/StudentAttendanceRegistration'));
 
+// Teachers
+const DetailsView = lazy(() => import('../Pages/Teachers/DetailsView'));
+const AddNewTeacher = lazy(() => import('../Pages/Teachers/AddNewTeacher'));
+const EditTeachersDetails = lazy(() => import('../Pages/Teachers/EditTeachersDetaills'));
+const ClassAssignment = lazy(() => import('../Pages/Teachers/ClassAssignment'));
 
-// Leaves
-import Leaves from '../Pages/Leaves/Leaves';
-import MyLeaves from '../Pages/Leaves/MyLeaves';
-import HolidayManagment from '../Pages/Leaves/Holiday/HolidayManagement';
-import LeaveConfig from '../Pages/Leaves/LeaveConfig';
+// Super Admin / Global Admin
+const AddnewSystemUser = lazy(() => import('../Pages/SuperAdmin/AddnewSystemUser'));
+const EditSysUser = lazy(() => import('../Pages/SuperAdmin/EditSysUser'));
+const ManageAllUsers = lazy(() => import('../Pages/SuperAdmin/ManageAllUsers'));
+const ApplyLeaves = lazy(() => import('../Pages/Leaves/ApplyLeaves'));
+const MyLeaves = lazy(() => import('../Pages/Leaves/MyLeaves'));
+const SuperAdminSchools = lazy(() => import('../Pages/SuperAdmin/SuperAdminSchools'));
 
-// Stock
-import Stock from '../Pages/Stock/Stock';
-// ⚠️ TODO: Stores page not yet built — route below is commented out until it exists
-// import StoreComp from '../Pages/Stock/Store';
-import Items from '../Pages/Stock/Items';
-import ClassConfig from '../Pages/Stock/ClassConfig/ClassConfig';
-import Transactions from '../Pages/Stock/Transactions';
-import Movement from '../Pages/Stock/Movement';
-import StudentOrders from '../Pages/Stock/StudentOrders/StudentOrders';
-import CreateStudentOrder from '../Pages/Stock/StudentOrders/CreateStudentOrder';
-import EditStudentOrder from '../Pages/Stock/StudentOrders/EditStudentOrder';
+// Students
+const Student = lazy(() => import('../Pages/Students/Students'));
+const AddNewStudent = lazy(() => import('../Pages/Students/AddNewStudent'));
+const EditStudentDetails = lazy(() => import('../Pages/Students/EditStudentDetails'));
+const StudentDetails = lazy(() => import('../Pages/Students/StudentDetails'));
+const HolidayManagment = lazy(() => import('../Pages/Leaves/Holiday/HolidayManagement'));
+const LeaveConfig = lazy(() => import('../Pages/Leaves/LeaveConfig'));
 
-// Transport
-import Transport_Management from '../Pages/Transport/Transport_Management';
-import Vehicles from '../Pages/Transport/Vehicles';
-import Driver_Attendants from '../Pages/Transport/Driver_Attendants';
-import Routes_Manage from '../Pages/Transport/Routes_Manage';
-import Student_Allocations from '../Pages/Transport/Student_Allocation/Student_Allocations';
-import Fee_Plans from '../Pages/Transport/Fee_Plans/Fee_Plans';
-import TransportReports from '../Pages/Transport/Reports/Reports';
+// Stock Routes
+const Stock = lazy(() => import('../Pages/Stock/Stock'));
+const Store = lazy(() => import('../Pages/Stock/Stores'));
+const Items = lazy(() => import('../Pages/Stock/Items'));
+const Transactions = lazy(() => import('../Pages/Stock/Transactions'));
+const Movement = lazy(() => import('../Pages/Stock/Movement'));
+const ClassConfig = lazy(() => import('../Pages/Stock/ClassConfig/ClassConfig'));
+const StudentOrders = lazy(() => import('../Pages/Stock/StudentOrders/StudentOrders'));
+const CreateStudentOrder = lazy(() => import('../Pages/Stock/StudentOrders/CreateStudentOrder'));
+const EditStudentOrder = lazy(() => import('../Pages/Stock/StudentOrders/EditStudentOrder'));
 
-// Fee Management
-import OverviewPage from '../Pages/FeeManagement/Overview';
-import FeeSynthesisPage from '../Pages/FeeManagement/FeeManagement';
-import FeePeriods from '../Pages/FeeManagement/FeePeriods';
-import FeeStructures from '../Pages/FeeManagement/Feestructures.';
-import CollectionsPage from '../Pages/FeeManagement/Collectionhistory';
+// Transport Routes
+const Transport_Management = lazy(() => import('../Pages/Transport/Transport_Management'));
+const Vehicles = lazy(() => import('../Pages/Transport/Vehicles'));
+const Fee_Plans = lazy(() => import('../Pages/Transport/Fee_Plans/Fee_Plans'));
+const Driver_Attendants = lazy(() => import('../Pages/Transport/Driver_Attendants'));
+const Reports = lazy(() => import('../Pages/Transport/Reports/Reports'));
+const Student_Allocations = lazy(() => import('../Pages/Transport/Student_Allocation/Student_Allocations'));
+const Routes_Manage = lazy(() => import('../Pages/Transport/Routes_Manage'));
 
-// Payroll
-import Payroll from '../Pages/Payroll';
+const SubjectsMaster = lazy(() => import('../Components/Subject/subject'));
+const RolesPermissionsManagement = lazy(() => import('../Pages/RoleBasedPermission/PermissionManagement'));
+const SectionSubjectAssignment = lazy(() => import('../Pages/SubjectManagement/SectionSubjectAssignment'));
+const Exams = lazy(() => import('../Pages/Exams/Exams'));
+const MarksEntry = lazy(() => import('../Pages/Exams/MarksEntry'));
+const ReportCards = lazy(() => import('../Pages/Exams/ReportCards'));
+const Analytics = lazy(() => import('../Pages/Exams/Analytics'));
+const SchoolConfig = lazy(() => import('../Pages/Schools/SchoolConfig'));
+const HomeworkPage = lazy(() => import('../Pages/Homework/Homeworkpage'));
 
-// System (role-locked)
-import RolesPermissionsManagement from '../Pages/RoleBasedPermission/PermissionManagement';
-import SchoolConfig from '../Pages/Schools/SchoolConfig';
+// FeeManagement exports multiple named components from one module —
+// each lazy() call still only loads the chunk once (cached by vite)
+const OverviewPage = lazy(() =>
+  import('../Pages/FeeManagement/FeeManagement').then((m) => ({ default: m.OverviewPage }))
+);
+const FeeSynthesisPage = lazy(() =>
+  import('../Pages/FeeManagement/FeeManagement').then((m) => ({ default: m.FeeSynthesisPage }))
+);
+const CollectionsPage = lazy(() =>
+  import('../Pages/FeeManagement/FeeManagement').then((m) => ({ default: m.CollectionsPage }))
+);
+
+const AcademicYear = lazy(() => import('../Pages/Attendance/AcademicYear/AcademicYear'));
+const TimeTable = lazy(() => import('../Pages/Schedule/TimeTable'));
+const CreateSchedule = lazy(() => import('../Pages/Schedule/CreateSchedule'));
+const FeePeriods = lazy(() => import('../Pages/FeeManagement/FeePeriods'));
+const FeeStructures = lazy(() => import('../Pages/FeeManagement/Feestructures.'));
+
+// Public landing pages
+const LandingApp = lazy(() => import('../Pages/SchoolSpineWeb/pages/Landing'));
+const About = lazy(() => import('../Pages/SchoolSpineWeb/pages/About'));
+const Contact = lazy(() => import('../Pages/SchoolSpineWeb/pages/Contact'));
+const PrivacyPolicy = lazy(() => import('../Pages/SchoolSpineWeb/pages/Privacy_Policy'));
+const LandingLayout = lazy(() => import('../Pages/SchoolSpineWeb/pages/LandingLayout'));
+const Terms_Of_Service = lazy(() => import('../Pages/SchoolSpineWeb/pages/Terms'));
+const Cookie_Policy = lazy(() => import('../Pages/SchoolSpineWeb/pages/CookiePolicy'));
+const FaqListing = lazy(() => import('../Components/Homes/Faq/FaqLisitng'));
+
+// Circulars and Events
+const CircularsPage = lazy(() => import('../Pages/Communication/Circulars/CircularsPage'));
+const CreateCircularPage = lazy(() => import('../Pages/Communication/Circulars/CreateCircularPage'));
+const EventsPage = lazy(() => import('../Pages/Communication/Events/EventsPage'));
+const CreateEventPage = lazy(() => import('../Pages/Communication/Events/CreateEventPage'));
+const ApprovalQueuePage = lazy(() => import('../Pages/Communication/ApprovalQueue/ApprovalQueuePage'));
+const NotificationsPage = lazy(() => import('../Pages/Communication/Notifications/NotificationsPage'));
+
+// ─── Suspense fallback ─────────────────────────────────────────────────────────
+const PageLoader = () => (
+  <div className="fixed inset-0 flex flex-col items-center justify-center gap-4 sm:gap-5 bg-white px-4">
+    <div className="relative h-12 w-12 sm:h-16 sm:w-16">
+      <div className="absolute inset-0 rounded-full border-4 border-blue-100" />
+      <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-blue-600 border-r-blue-600 animate-spin" />
+    </div>
+    <p className="text-base sm:text-lg font-semibold text-gray-700 text-center">Loading SchoolSpine...</p>
+  </div>
+);
+
+// ─── Role groups — kept only for stock (unchanged) and school picker ───────────
+const STOCK_ACCOUNTANT_ROLES = ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'STORE_ACCOUNTANT'];
+const STOCK_SELLER_ROLES = ['ADMIN', 'SUPER_ADMIN', 'GLOBAL_ADMIN', 'STORE_ACCOUNTANT', 'STORE_SELLER'];
+const SCHOOL_PICKER_ROLES = SYSTEM_ROLES.SCHOOL_PICKER;
+
+// ─── Smart root redirect based on role ────────────────────────────────────────
+const RootRedirect = () => {
+  const storedUser = (() => {
+    try { return JSON.parse(localStorage.getItem('user')) } catch { return null }
+  })();
+  const role = storedUser?.userType
+    || (Array.isArray(storedUser?.roles) ? storedUser.roles[0] : null);
+
+  if (role === 'STORE_SELLER') return <Navigate to="/stock/studentOrders" replace />;
+  return <Navigate to="/dashboard" replace />;
+};
+// ──────────────────────────────────────────────────────────────────────────────
 
 const MainRoutes = () => {
+  const isTokenExist = localStorage.getItem('token');
+
   return (
-    <Routes>
-      {/* ── Public / Auth ─────────────────────────────────────────────── */}
-      <Route path="/login" element={<Login />} />
-      <Route
-        path="/superAdmin"
-        element={
-          <RoleProtectedRoute allowedRoles={SYSTEM_ROLES.SCHOOL_PICKER}>
-            <SuperAdminSchools />
-          </RoleProtectedRoute>
-        }
-      />
+    <Suspense fallback={<PageLoader />}>
+      <Routes>
+        {/* ── Public landing pages (redirect to app when logged-in) ── */}
+        <Route path="/" element={isTokenExist ? <RootRedirect /> : <LandingApp />} />
+        <Route path="/about" element={isTokenExist ? <RootRedirect /> : <LandingLayout><About /></LandingLayout>} />
+        <Route path="/contact" element={isTokenExist ? <RootRedirect /> : <LandingLayout><Contact /></LandingLayout>} />
+        <Route path="/privacy-policy" element={isTokenExist ? <RootRedirect /> : <LandingLayout><PrivacyPolicy /></LandingLayout>} />
+        <Route path="/terms" element={isTokenExist ? <RootRedirect /> : <LandingLayout><Terms_Of_Service /></LandingLayout>} />
+        <Route path="/cookies" element={isTokenExist ? <RootRedirect /> : <LandingLayout><Cookie_Policy /></LandingLayout>} />
+        <Route path="/faqs" element={isTokenExist ? <RootRedirect /> : <LandingLayout><FaqListing /></LandingLayout>} />
+        <Route path="/login" element={isTokenExist ? <RootRedirect /> : <Login />} />
 
-      {/* ── Authenticated app shell ──────────────────────────────────── */}
-      <Route element={<ProtectedRoutes />}>
-        <Route element={<AppLayout />}>
+        {/* ── Protected (token required) ── */}
+        <Route element={<ProtectedRoutes />}>
 
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-
-          {/* Dashboard */}
+          {/* School picker — role-locked by design, no AppLayout */}
           <Route
-            path="/dashboard"
+            path="/superAdmin"
             element={
-              <PermissionProtectedRoute
-                allowedPermissions={[P.DASHBOARD_VIEW]}
-                fallback={<Navigate to="/stock/studentOrders" replace />}
-              >
-                <Dashboard />
-              </PermissionProtectedRoute>
+              <RoleProtectedRoute allowedRoles={SCHOOL_PICKER_ROLES}>
+                <SuperAdminSchools />
+              </RoleProtectedRoute>
             }
           />
 
-          {/* Manage Users */}
-          <Route element={<PermissionProtectedRoute allowedPermissions={[P.USER_VIEW]} />}>
-            <Route path="/manageUsers" element={<ManageAllUsers />} />
-            <Route path="/manageUsers/adduser" element={<AddnewSystemUser />} />
-            <Route path="/manageUsers/editUser/:id" element={<EditSysUser />} />
-          </Route>
+          {/* All app routes inside AppLayout (Sidebar) */}
+          <Route element={<AppLayout />}>
 
-          {/* Teachers */}
-          <Route element={<PermissionProtectedRoute allowedPermissions={[P.TEACHER_VIEW]} />}>
-            <Route path="/teachers" element={<Teachers />} />
-            <Route path="/teachers/addTeacher" element={<AddNewTeacher />} />
-            <Route path="/teachers/editTeacher/:id" element={<EditTeachersDetaills />} />
-            <Route path="/teachers/classAssignment/:teacherId" element={<ClassAssignment />} />
-            <Route path="/teachers/:id" element={<DetailsView />} />
-          </Route>
+            {/* ── Dashboard ── */}
+            <Route
+              path="/dashboard"
+              element={
+                <PermissionProtectedRoute
+                  allowedPermissions={[P.DASHBOARD_VIEW]}
+                  fallback={<Navigate to="/stock/studentOrders" replace />}
+                >
+                  <Dashboard />
+                </PermissionProtectedRoute>
+              }
+            />
 
-          {/* Students */}
-          <Route element={<PermissionProtectedRoute allowedPermissions={[P.STUDENT_VIEW]} />}>
-            <Route path="/students" element={<Student />} />
-            <Route path="/students/addStudents" element={<AddNewStudent />} />
-            <Route path="/students/:id" element={<StudentDetails />} />
-            <Route path="/students/editStudent/:id" element={<EditStudentDetails />} />
-          </Route>
+            {/* Settings — no extra gate; any authenticated user */}
+            <Route path="/settings" element={<Settings />} />
 
-          {/* Academics */}
-          {/* <Route element={<PermissionProtectedRoute allowedPermissions={[P.ACADEMIC_VIEW]} />}>
-            <Route path="/subjectsmaster" element={<SubjectsMaster />} />
-          </Route> */}
+            {/* ── System screens — role-locked, never permission-gated ── */}
+            <Route element={<RoleProtectedRoute allowedRoles={SYSTEM_ROLES.ROLE_MANAGE} />}>
+              <Route path="/rolesPermissions" element={<RolesPermissionsManagement />} />
+            </Route>
+            <Route element={<RoleProtectedRoute allowedRoles={SYSTEM_ROLES.SCHOOL_CONFIG_MANAGE} />}>
+              <Route path="/schoolConfig" element={<SchoolConfig />} />
+            </Route>
 
-          <Route element={<PermissionProtectedRoute allowedPermissions={[P.ACADEMIC_YEAR_MANAGE]} />}>
-            <Route path="/academics/classSections" element={<ClassSectionConfig />} />
-            <Route path="/sectionSubjectAssignment" element={<SectionSubjectAssignment />} />
-            <Route path="/academicYear" element={<AcademicYear />} />
-          </Route>
+            {/* ── Academic Year ── */}
+            <Route
+              path="/academicYear"
+              element={
+                <PermissionProtectedRoute allowedPermissions={[P.ACADEMIC_YEAR_MANAGE]}>
+                  <AcademicYear />
+                </PermissionProtectedRoute>
+              }
+            />
 
-          <Route element={<PermissionProtectedRoute allowedPermissions={[P.HOMEWORK_VIEW]} />}>
-            <Route path="/homework" element={<HomeworkPage />} />
-          </Route>
+            {/* ── Manage Users ── */}
+            <Route element={<PermissionProtectedRoute allowedPermissions={[P.USER_VIEW]} />}>
+              <Route path="/manageUsers" element={<ManageAllUsers />} />
+            </Route>
+            <Route
+              path="/manageUsers/addUser"
+              element={
+                <PermissionProtectedRoute allowedPermissions={[P.USER_CREATE]}>
+                  <AddnewSystemUser />
+                </PermissionProtectedRoute>
+              }
+            />
+            <Route
+              path="/manageUsers/editUser/:id"
+              element={
+                <PermissionProtectedRoute allowedPermissions={[P.USER_EDIT]}>
+                  <EditSysUser />
+                </PermissionProtectedRoute>
+              }
+            />
 
-          <Route element={<PermissionProtectedRoute allowedPermissions={[P.TIMETABLE_VIEW]} />}>
-            <Route path="/schedule" element={<TimeTable />} />
-          </Route>
-          <Route element={<PermissionProtectedRoute allowedPermissions={[P.TIMETABLE_MANAGE]} />}>
-            <Route path="/schedule/create" element={<CreateSchedule />} />
-          </Route>
+            {/* ── Teachers ── */}
+            <Route element={<PermissionProtectedRoute allowedPermissions={[P.TEACHER_VIEW]} />}>
+              <Route path="/teachers" element={<Teachers />} />
+              <Route path="/teachers/:id" element={<DetailsView />} />
+            </Route>
+            <Route
+              path="/teachers/addTeacher"
+              element={
+                <PermissionProtectedRoute allowedPermissions={[P.TEACHER_CREATE]}>
+                  <AddNewTeacher />
+                </PermissionProtectedRoute>
+              }
+            />
+            <Route
+              path="/teachers/editTeacher/:id"
+              element={
+                <PermissionProtectedRoute allowedPermissions={[P.TEACHER_EDIT]}>
+                  <EditTeachersDetails />
+                </PermissionProtectedRoute>
+              }
+            />
+            <Route
+              path="/teachers/classAssignment/:teacherId"
+              element={
+                <PermissionProtectedRoute allowedPermissions={[P.TEACHER_EDIT]}>
+                  <ClassAssignment />
+                </PermissionProtectedRoute>
+              }
+            />
 
-          {/* Exams — Overview matches Sidebar's any-of gate for TEACHER */}
-          <Route
-            element={
-              <PermissionProtectedRoute
-                allowedPermissions={[P.EXAM_VIEW, P.EXAM_MARKS_VIEW_CLASS, P.EXAM_MARKS_ENTER]}
-              />
-            }
-          >
-            <Route path="/exams" element={<Exams />} />
-          </Route>
-          <Route element={<PermissionProtectedRoute allowedPermissions={[P.EXAM_MARKS_ENTER]} />}>
-            <Route path="/exams/marksEntry/:examId?" element={<MarksEntry />} />
-          </Route>
-          <Route element={<PermissionProtectedRoute allowedPermissions={[P.EXAM_MARKS_VIEW_CLASS]} />}>
-            <Route path="/exams/reportCard/:examId?" element={<ReportCards />} />
-          </Route>
-          <Route element={<PermissionProtectedRoute allowedPermissions={[P.EXAM_APPROVE]} />}>
-            <Route path="/exams/analytics" element={<Analytics />} />
-          </Route>
-          <Route element={<PermissionProtectedRoute allowedPermissions={[P.EXAM_CREATE]} />}>
-            <Route path="/exams/examConfig" element={<ExamConfiguration />} />
-          </Route>
+            {/* ── Students ── */}
+            <Route element={<PermissionProtectedRoute allowedPermissions={[P.STUDENT_VIEW]} />}>
+              <Route path="/students" element={<Student />} />
+              <Route path="/students/:id" element={<StudentDetails />} />
+            </Route>
+            <Route
+              path="/students/addStudents"
+              element={
+                <PermissionProtectedRoute allowedPermissions={[P.STUDENT_CREATE]}>
+                  <AddNewStudent />
+                </PermissionProtectedRoute>
+              }
+            />
+            <Route
+              path="/students/editStudent/:id"
+              element={
+                <PermissionProtectedRoute allowedPermissions={[P.STUDENT_EDIT]}>
+                  <EditStudentDetails />
+                </PermissionProtectedRoute>
+              }
+            />
 
-          {/* Communication */}
-          <Route
-            element={
-              <PermissionProtectedRoute
-                allowedPermissions={[P.CIRCULAR_CREATE, P.CIRCULAR_APPROVE, P.CIRCULAR_DELETE]}
-              />
-            }
-          >
-            <Route path="/communication/circulars" element={<CircularsPage />} />
-            <Route path="/communication/circulars/:id" element={<CircularsPage />} />
-          </Route>
-          <Route element={<PermissionProtectedRoute allowedPermissions={[P.CIRCULAR_CREATE]} />}>
-            <Route path="/communication/circulars/create" element={<CreateCircularPage />} />
-          </Route>
+            {/* ── Academics ── */}
+            <Route
+              path="/subjectsmaster"
+              element={
+                <PermissionProtectedRoute allowedPermissions={[P.ACADEMIC_VIEW]}>
+                  <SubjectsMaster />
+                </PermissionProtectedRoute>
+              }
+            />
+            <Route
+              path="/sectionSubjectAssignment"
+              element={
+                <PermissionProtectedRoute allowedPermissions={[P.ACADEMIC_VIEW, P.ACADEMIC_EDIT]}>
+                  <SectionSubjectAssignment />
+                </PermissionProtectedRoute>
+              }
+            />
+            <Route
+              path="/academics/classSections"
+              element={
+                <PermissionProtectedRoute allowedPermissions={[P.CLASS_SECTION_MANAGE]}>
+                  <ClassSectionConfig />
+                </PermissionProtectedRoute>
+              }
+            />
 
-          <Route
-            element={
-              <PermissionProtectedRoute
-                allowedPermissions={[P.EVENT_CREATE, P.EVENT_APPROVE, P.EVENT_DELETE]}
-              />
-            }
-          >
-            <Route path="/communication/events" element={<EventsPage />} />
-          </Route>
-          <Route element={<PermissionProtectedRoute allowedPermissions={[P.EVENT_CREATE]} />}>
-            <Route path="/communication/events/create" element={<CreateEventPage />} />
-          </Route>
+            {/* ── Timetable / Schedule ── */}
+            <Route
+              path="/schedule"
+              element={
+                <PermissionProtectedRoute allowedPermissions={[P.TIMETABLE_VIEW]}>
+                  <TimeTable />
+                </PermissionProtectedRoute>
+              }
+            />
+            <Route
+              path="/schedule/create"
+              element={
+                <PermissionProtectedRoute allowedPermissions={[P.TIMETABLE_MANAGE]}>
+                  <CreateSchedule />
+                </PermissionProtectedRoute>
+              }
+            />
 
-          <Route
-            element={
-              <PermissionProtectedRoute allowedPermissions={[P.CIRCULAR_APPROVE, P.EVENT_APPROVE]} />
-            }
-          >
-            <Route path="/communication/approval" element={<ApprovalQueuePage />} />
-          </Route>
+            {/* ── Homework ── */}
+            <Route
+              path="/homework"
+              element={
+                <PermissionProtectedRoute allowedPermissions={[P.HOMEWORK_VIEW]}>
+                  <HomeworkPage />
+                </PermissionProtectedRoute>
+              }
+            />
 
-          <Route element={<PermissionProtectedRoute allowedPermissions={[P.NOTICE_VIEW]} />}>
-            <Route path="/communication/notifications" element={<NotificationsPage />} />
-          </Route>
+            {/* ── Exams ── */}
+            <Route element={<PermissionProtectedRoute allowedPermissions={[P.EXAM_VIEW, P.EXAM_MARKS_VIEW_CLASS, P.EXAM_MARKS_ENTER]} />}>
+              <Route path="/exams" element={<Exams />} />
+            </Route>
+            <Route
+              path="/exams/marksEntry/:examId?"
+              element={
+                <PermissionProtectedRoute allowedPermissions={[P.EXAM_MARKS_ENTER]}>
+                  <MarksEntry />
+                </PermissionProtectedRoute>
+              }
+            />
+            <Route
+              path="/exams/reportCard/:examId?"
+              element={
+                <PermissionProtectedRoute allowedPermissions={[P.EXAM_MARKS_VIEW_CLASS]}>
+                  <ReportCards />
+                </PermissionProtectedRoute>
+              }
+            />
+            <Route
+              path="/exams/analytics"
+              element={
+                <PermissionProtectedRoute allowedPermissions={[P.EXAM_ANALYTICS_VIEW]}>
+                  <Analytics />
+                </PermissionProtectedRoute>
+              }
+            />
+            <Route
+              path="/exams/examConfig"
+              element={
+                <PermissionProtectedRoute allowedPermissions={[P.EXAM_CONFIG_MANAGE]}>
+                  <ExamConfiguration />
+                </PermissionProtectedRoute>
+              }
+            />
 
-          {/* Attendance — matches Sidebar's any-of gate for TEACHER (no ATTENDANCE_VIEW) */}
-          <Route
-            element={
-              <PermissionProtectedRoute
-                allowedPermissions={[P.ATTENDANCE_VIEW, P.ATTENDANCE_CREATE, P.ATTENDANCE_EDIT]}
-              />
-            }
-          >
-            <Route path="/attendance" element={<Attendance />} />
-          </Route>
-          <Route element={<PermissionProtectedRoute allowedPermissions={[P.ATTENDANCE_APPROVE]} />}>
-            <Route path="/attendance/staffImgReg" element={<StaffAttendanceRegistration />} />
-            <Route path="/attendance/studentImgReg" element={<StudentAttendanceRegistration />} />
-          </Route>
-          <Route element={<PermissionProtectedRoute allowedPermissions={[P.ATTENDANCE_CREATE]} />}>
-            <Route path="/attendance/markUserAttendance" element={<UsersAttendance />} />
-            <Route path="/attendance/studentAttendance" element={<StudentAttendance />} />
-            <Route path="/attendance/usersAttendance" element={<UsersAttendance />} />
-            <Route path="/attendance/usersAttendance/warning" element={<WarningVerificationFailed />} />
-            <Route path="/attendance/usersAttendance/manual" element={<ManualAttendance />} />
-          </Route>
+            {/* ── Attendance ── */}
+            <Route element={<PermissionProtectedRoute allowedPermissions={[P.ATTENDANCE_VIEW, P.ATTENDANCE_CREATE, P.ATTENDANCE_EDIT]} />}>
+              <Route path="/attendance" element={<Attendance />} />
+            </Route>
+            <Route element={<PermissionProtectedRoute allowedPermissions={[P.ATTENDANCE_APPROVE]} />}>
+              <Route path="/attendance/staffImgReg" element={<StaffAttendanceRegistration />} />
+              <Route path="/attendance/studentImgReg" element={<StudentAttendanceRegistration />} />
+            </Route>
+            <Route element={<PermissionProtectedRoute allowedPermissions={[P.ATTENDANCE_VIEW]} />}>
+              <Route path="/attendance/usersAttendance" element={<UsersAttendance />} />
+              <Route path="/attendance/usersAttendance/warning" element={<WarningVerificationFailed />} />
+            </Route>
+            <Route element={<PermissionProtectedRoute allowedPermissions={[P.ATTENDANCE_CREATE]} />}>
+              <Route path="/attendance/markUserAttendance" element={<MarkUserAttendance />} />
+              <Route path="/attendance/usersAttendance/manual" element={<ManualAttendance />} />
+              <Route path="/attendance/studentAttendance" element={<StudentAttendance />} />
+            </Route>
 
-          {/* Leaves */}
-          <Route element={<PermissionProtectedRoute allowedPermissions={[P.LEAVE_VIEW]} />}>
-            <Route path="/leaves/applyLeaves" element={<Navigate to="/leaves/myLeaves" replace />} />
-            <Route path="/leaves/myLeaves" element={<MyLeaves />} />
-          </Route>
-          <Route element={<PermissionProtectedRoute allowedPermissions={[P.LEAVE_APPROVE]} />}>
-            <Route path="/leaves" element={<Leaves />} />
-          </Route>
-          {/* Proxy gate — see LEAVE_DELETE note in permissions.js */}
-          <Route element={<PermissionProtectedRoute allowedPermissions={[P.LEAVE_DELETE]} />}>
-            <Route path="/leaves/manageHolidays" element={<HolidayManagment />} />
-            <Route path="/leaves/leaveConfig" element={<LeaveConfig />} />
-          </Route>
+            {/* ── Leaves ── */}
+            <Route
+              path="/leaves/applyLeaves"
+              element={
+                <PermissionProtectedRoute allowedPermissions={[P.LEAVE_CREATE]}>
+                  <ApplyLeaves />
+                </PermissionProtectedRoute>
+              }
+            />
+            <Route
+              path="/leaves/myLeaves"
+              element={
+                <PermissionProtectedRoute allowedPermissions={[P.LEAVE_VIEW]}>
+                  <MyLeaves />
+                </PermissionProtectedRoute>
+              }
+            />
+            {/* Users with LEAVE_VIEW but not LEAVE_APPROVE land on /leaves/myLeaves */}
+            <Route
+              path="/leaves"
+              element={
+                <PermissionProtectedRoute
+                  allowedPermissions={[P.LEAVE_APPROVE]}
+                  fallback={<Navigate to="/leaves/myLeaves" replace />}
+                >
+                  <Leaves />
+                </PermissionProtectedRoute>
+              }
+            />
+            <Route
+              path="/leaves/manageHolidays"
+              element={
+                <PermissionProtectedRoute allowedPermissions={[P.HOLIDAY_MANAGE]}>
+                  <HolidayManagment />
+                </PermissionProtectedRoute>
+              }
+            />
+            <Route
+              path="/leaves/leaveConfig"
+              element={
+                <PermissionProtectedRoute allowedPermissions={[P.LEAVE_CONFIG_MANAGE]}>
+                  <LeaveConfig />
+                </PermissionProtectedRoute>
+              }
+            />
 
-          {/* Stock */}
-          <Route element={<PermissionProtectedRoute allowedPermissions={[P.STOCK_OVERVIEW]} />}>
-            <Route path="/stock" element={<Stock />} />
-          </Route>
-          {/* ⚠️ TODO: Stores page not yet built — uncomment once Pages/Stock/Store.jsx exists
-          <Route element={<PermissionProtectedRoute allowedPermissions={[P.STORE_VIEW]} />}>
-            <Route path="/stock/stores" element={<StoreComp />} />
-          </Route>
-          */}
-          <Route element={<PermissionProtectedRoute allowedPermissions={[P.STOCK_ITEM_VIEW]} />}>
-            <Route path="/stock/items" element={<Items />} />
-          </Route>
-          <Route
-            element={
-              <PermissionProtectedRoute
-                allowedPermissions={[P.STOCK_INWARD, P.STOCK_OUTWARD, P.STOCK_TRANSFER]}
-              />
-            }
-          >
-            <Route path="/stock/transactions" element={<Transactions />} />
-          </Route>
-          <Route element={<PermissionProtectedRoute allowedPermissions={[P.CLASS_ITEM_CONFIG_VIEW]} />}>
-            <Route path="/stock/classConfig" element={<ClassConfig />} />
-          </Route>
-          <Route element={<PermissionProtectedRoute allowedPermissions={[P.STOCK_MOVEMENT_VIEW]} />}>
-            <Route path="/stock/movementHistory" element={<Movement />} />
-          </Route>
+            {/* ── Payroll ── */}
+            <Route
+              path="/payroll"
+              element={
+                <PermissionProtectedRoute allowedPermissions={[P.PAYROLL_VIEW]}>
+                  <Payroll />
+                </PermissionProtectedRoute>
+              }
+            />
 
-          {/* Student Orders — same permission whether reached via Stock or the
-              standalone Sidebar entry for STORE_SELLER-type roles */}
-          <Route element={<PermissionProtectedRoute allowedPermissions={[P.STUDENT_ORDER_VIEW]} />}>
-            <Route path="/stock/studentOrders" element={<StudentOrders />} />
-            <Route path="/stock/studentOrders/addOrder" element={<CreateStudentOrder />} />
-            <Route path="/stock/studentOrders/editOrder" element={<EditStudentOrder />} />
-          </Route>
+            {/* ── Transport ── */}
+            <Route element={<PermissionProtectedRoute allowedPermissions={[P.TRANSPORT_VIEW]} />}>
+              <Route path="/route" element={<Transport_Management />} />
+              <Route path="/route/vehicles" element={<Vehicles />} />
+              <Route path="/route/Driver&Attendants" element={<Driver_Attendants />} />
+              <Route path="/route/routes_management" element={<Routes_Manage />} />
+              <Route path="/route/reports" element={<Reports />} />
+            </Route>
+            <Route element={<PermissionProtectedRoute allowedPermissions={[P.TRANSPORT_EDIT]} />}>
+              <Route path="/route/studentAllocations" element={<Student_Allocations />} />
+              <Route path="/route/feePlans" element={<Fee_Plans />} />
+            </Route>
 
-          {/* Transport */}
-          <Route element={<PermissionProtectedRoute allowedPermissions={[P.TRANSPORT_VIEW]} />}>
-            <Route path="/route" element={<Transport_Management />} />
-            <Route path="/route/vehicles" element={<Vehicles />} />
-            <Route path="/route/Driver&Attendants" element={<Driver_Attendants />} />
-            <Route path="/route/routes_management" element={<Routes_Manage />} />
-            <Route path="/route/reports" element={<TransportReports />} />
-          </Route>
-          <Route element={<PermissionProtectedRoute allowedPermissions={[P.TRANSPORT_EDIT]} />}>
-            <Route path="/route/studentAllocations" element={<Student_Allocations />} />
-            <Route path="/route/feePlans" element={<Fee_Plans />} />
-          </Route>
+            {/* ── Fee Management ── */}
+            <Route
+              path="/feemanagement"
+              element={
+                <PermissionProtectedRoute allowedPermissions={[P.FEE_VIEW]}>
+                  <OverviewPage />
+                </PermissionProtectedRoute>
+              }
+            />
+            <Route
+              path="/feemanagement/config"
+              element={
+                <PermissionProtectedRoute allowedPermissions={[P.FEE_STRUCTURE_MANAGE]}>
+                  <FeeSynthesisPage />
+                </PermissionProtectedRoute>
+              }
+            />
+            <Route
+              path="/feemanagement/period"
+              element={
+                <PermissionProtectedRoute allowedPermissions={[P.FEE_PERIOD_VIEW]}>
+                  <FeePeriods />
+                </PermissionProtectedRoute>
+              }
+            />
+            <Route
+              path="/feemanagement/structures"
+              element={
+                <PermissionProtectedRoute allowedPermissions={[P.FEE_STRUCTURE_VIEW]}>
+                  <FeeStructures />
+                </PermissionProtectedRoute>
+              }
+            />
+            <Route
+              path="/feemanagement/collections"
+              element={
+                <PermissionProtectedRoute allowedPermissions={[P.FEE_COLLECT]}>
+                  <CollectionsPage />
+                </PermissionProtectedRoute>
+              }
+            />
 
-          {/* Fee Management */}
-          <Route element={<PermissionProtectedRoute allowedPermissions={[P.FEE_VIEW]} />}>
-            <Route path="/feemanagement" element={<OverviewPage />} />
-            <Route path="/feemanagement/period" element={<FeePeriods />} />
-            <Route path="/feemanagement/structures" element={<FeeStructures />} />
-          </Route>
-          <Route element={<PermissionProtectedRoute allowedPermissions={[P.FEE_STRUCTURE_MANAGE]} />}>
-            <Route path="/feemanagement/config" element={<FeeSynthesisPage />} />
-          </Route>
-          <Route element={<PermissionProtectedRoute allowedPermissions={[P.FEE_COLLECT]} />}>
-            <Route path="/feemanagement/collections" element={<CollectionsPage />} />
-          </Route>
+            {/* ── Communication ── */}
+            <Route element={<PermissionProtectedRoute allowedPermissions={[P.CIRCULAR_VIEW, P.CIRCULAR_CREATE, P.CIRCULAR_APPROVE, P.CIRCULAR_DELETE]} />}>
+              <Route path="/communication/circulars" element={<CircularsPage />} />
+              <Route path="/communication/circulars/:id" element={<CircularsPage />} />
+            </Route>
+            <Route
+              path="/communication/circulars/create"
+              element={
+                <PermissionProtectedRoute allowedPermissions={[P.CIRCULAR_CREATE]}>
+                  <CreateCircularPage />
+                </PermissionProtectedRoute>
+              }
+            />
+            <Route element={<PermissionProtectedRoute allowedPermissions={[P.EVENT_VIEW, P.EVENT_CREATE, P.EVENT_APPROVE, P.EVENT_DELETE]} />}>
+              <Route path="/communication/events" element={<EventsPage />} />
+            </Route>
+            <Route
+              path="/communication/events/create"
+              element={
+                <PermissionProtectedRoute allowedPermissions={[P.EVENT_CREATE]}>
+                  <CreateEventPage />
+                </PermissionProtectedRoute>
+              }
+            />
+            <Route
+              path="/communication/approval"
+              element={
+                <PermissionProtectedRoute allowedPermissions={[P.CIRCULAR_APPROVE, P.EVENT_APPROVE]}>
+                  <ApprovalQueuePage />
+                </PermissionProtectedRoute>
+              }
+            />
+            <Route
+              path="/communication/notifications"
+              element={
+                <PermissionProtectedRoute allowedPermissions={[P.NOTICE_VIEW]}>
+                  <NotificationsPage />
+                </PermissionProtectedRoute>
+              }
+            />
 
-          {/* Payroll */}
-          <Route element={<PermissionProtectedRoute allowedPermissions={[P.PAYROLL_VIEW]} />}>
-            <Route path="/payroll" element={<Payroll />} />
-          </Route>
+            {/* ── Stock / Store — UNCHANGED, still role-based ── */}
+            <Route element={<RoleProtectedRoute allowedRoles={STOCK_ACCOUNTANT_ROLES} />}>
+              <Route path="/stock" element={<Stock />} />
+              <Route path="/stock/stores" element={<Store />} />
+              <Route path="/stock/items" element={<Items />} />
+              <Route path="/stock/classConfig" element={<ClassConfig />} />
+              <Route path="/stock/transactions" element={<Transactions />} />
+              <Route path="/stock/movementHistory" element={<Movement />} />
+            </Route>
+            <Route element={<RoleProtectedRoute allowedRoles={STOCK_SELLER_ROLES} />}>
+              <Route path="/stock/studentOrders" element={<StudentOrders />} />
+              <Route path="/stock/studentOrders/addOrder" element={<CreateStudentOrder />} />
+              <Route path="/stock/studentOrders/editOrder" element={<EditStudentOrder />} />
+            </Route>
 
-          {/* ── System screens — ROLE-locked, never permission-gated ────── */}
-          <Route element={<RoleProtectedRoute allowedRoles={SYSTEM_ROLES.ROLE_MANAGE} />}>
-            <Route path="/rolesPermissions" element={<RolesPermissionsManagement />} />
-          </Route>
-          <Route element={<RoleProtectedRoute allowedRoles={SYSTEM_ROLES.SCHOOL_CONFIG_MANAGE} />}>
-            <Route path="/schoolConfig" element={<SchoolConfig />} />
-          </Route>
+            {/* Fallback */}
+            <Route path="*" element={<RootRedirect />} />
 
-          {/* Catch-all inside the app shell */}
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          </Route>
         </Route>
-      </Route>
-
-      {/* Catch-all outside the app shell (not logged in) */}
-      <Route path="*" element={<Navigate to="/login" replace />} />
-    </Routes>
+      </Routes>
+    </Suspense>
   );
 };
 
