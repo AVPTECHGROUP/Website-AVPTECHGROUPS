@@ -5,6 +5,8 @@ import {
   Search, Eye,
   Archive, Check, X, ChevronLeft, ChevronRight,
   AlertCircle, RefreshCw, SlidersHorizontal,
+  Delete,
+  Trash,
 } from 'lucide-react';
 import CardComponent from '../../../Components/CommonComp/CardComponent';
 import ListLoader from '../../../Components/CommonComp/ListLoader';
@@ -12,6 +14,7 @@ import { fetchCirculars, approveCircular, rejectCircular, deleteCircular } from 
 import CircularDetailModal from '../../../Components/CircularDetailsPopup/CircularDetailModel.jsx';
 import { useAuth } from '../../../hooks/useAuth';
 import { PERMISSIONS as P } from '../../../Constants/Permission';
+import ConfirmModal from '../../../Components/CircularDetailsPopup/ConfirmModal.jsx';
 
 // ── Static helpers ─────────────────────────────────────────────────────────────
 
@@ -185,6 +188,9 @@ export default function CircularsPage() {
   const [selectedCircularId, setSelectedCircularId] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
 
+  const [rejectModal, setRejectModal] = useState({ open: false, id: null, reason: "" });
+  const [deleteModal, setDeleteModal] = useState({ open: false, id: null });
+
   // ── 700ms debounce on search ────────────────────────────────────────────────
   const debounceTimer = useRef(null);
   useEffect(() => {
@@ -234,6 +240,7 @@ export default function CircularsPage() {
 
   useEffect(() => { load(); }, [load]);
 
+
   // ── Actions ─────────────────────────────────────────────────────────────────
   const handleApprove = async (id) => {
     setActionId(id);
@@ -243,9 +250,13 @@ export default function CircularsPage() {
     setActionId(null);
   };
 
-  const handleReject = async (id) => {
-    const reason = window.prompt('Reason for rejection:');
-    if (reason === null) return;
+  const handleReject = (id) => {
+    setRejectModal({ open: true, id, reason: "" });
+  };
+
+  const confirmReject = async () => {
+    const { id, reason } = rejectModal;
+    setRejectModal((s) => ({ ...s, open: false }));
     setActionId(id);
     const { error: err } = await rejectCircular(id, reason);
     if (!err) load();
@@ -253,14 +264,20 @@ export default function CircularsPage() {
     setActionId(null);
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Archive this circular?')) return;
+  const handleDelete = (id) => {
+    setDeleteModal({ open: true, id });
+  };
+
+  const confirmDelete = async () => {
+    const { id } = deleteModal;
+    setDeleteModal({ open: false, id: null });
     setActionId(id);
     const { error: err } = await deleteCircular(id);
     if (!err) load();
     else alert(err);
     setActionId(null);
   };
+
 
   // ── Cards config ─────────────────────────────────────────────────────────────
   const cardsArray = [
@@ -273,6 +290,32 @@ export default function CircularsPage() {
   // ── Render ───────────────────────────────────────────────────────────────────
   return (
     <div className="p-3 sm:p-6 bg-gray-50 min-h-screen">
+
+      <ConfirmModal
+        open={rejectModal.open}
+        title="Reject circular"
+        message="Please provide a reason for rejection. This will be shared with the sender."
+        withInput
+        inputLabel="Reason for rejection"
+        inputValue={rejectModal.reason}
+        onInputChange={(val) => setRejectModal((s) => ({ ...s, reason: val }))}
+        confirmLabel="Reject circular"
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={confirmReject}
+        onCancel={() => setRejectModal({ open: false, id: null, reason: "" })}
+      />
+
+      <ConfirmModal
+        open={deleteModal.open}
+        title="Delete circular"
+        message="Are you sure you want to permanently delete this circular? This action cannot be undone."
+        confirmLabel="Delete circular"
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteModal({ open: false, id: null })}
+      />
 
       {/* Page header */}
       <div className="flex items-start justify-between mb-4 sm:mb-5 gap-3">
@@ -519,7 +562,7 @@ export default function CircularsPage() {
                   )}
                   <IconBtn icon={Eye} title="View" color="#2563eb" hoverBg="#eff6ff" onClick={() => setSelectedCircularId(c.id)} />
                   {c.status?.toUpperCase() === 'PUBLISHED' && (
-                    <IconBtn icon={Archive} title="Archive" color="#6b7280" hoverBg="#f3f4f6" onClick={() => handleDelete(c.id)} />
+                    <IconBtn icon={Trash} title="Archive" color="#eff6ff" hoverBg="#dc262675"  onClick={() => handleDelete(c.id)} />
                   )}
                 </div>
               </div>
