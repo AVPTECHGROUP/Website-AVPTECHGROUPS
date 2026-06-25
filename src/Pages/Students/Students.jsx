@@ -545,7 +545,7 @@ const Student = () => {
                                     </tr>
                                 ) : noUserFound ? (
                                     <tr>
-                                        <td colSpan={7} className="py-12 text-left">
+                                        <td colSpan={7} className="py-12 text-center">
                                             <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-3">
                                                 <UserSearch className="w-6 h-6 text-blue-500" />
                                             </div>

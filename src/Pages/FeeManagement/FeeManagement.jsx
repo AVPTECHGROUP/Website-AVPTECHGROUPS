@@ -130,9 +130,6 @@ export const CollectionsPage = () => {
                     <div className="font-bold text-lg text-gray-900 leading-tight">Collections &amp; History</div>
                     <AySubtitle label={currentAcademicYear?.label} schoolName={schoolInfo?.schoolName} />
                 </div>
-                <div className="flex items-center gap-3">
-                    <BackButton />
-                </div>
             </header>
             <main className="flex-1 p-6 max-w-[1600px] mx-auto w-full">
                 <CollectionsHistory />
