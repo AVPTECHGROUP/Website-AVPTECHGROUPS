@@ -11,7 +11,7 @@ import {
   getTransportStaff,
   activateTransportStaff,
   deactivateTransportStaff,
-} from "../../Api/TransportAPI";
+} from "../../Api/Transport/TransportAPI";
 
 const ROLE_OPTIONS = [
   { value: "", label: "All Roles" },

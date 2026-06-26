@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { X, Bus, Save, Loader2, Pencil } from "lucide-react";
-import { addVehicle, updateVehicle } from "../../Api/TransportAPI";
+import { addVehicle, updateVehicle } from "../../Api/Transport/TransportAPI";
 
 const EMPTY_FORM = {
   vehicleNumber:     "",

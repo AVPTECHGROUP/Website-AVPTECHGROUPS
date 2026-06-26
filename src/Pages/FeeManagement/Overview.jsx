@@ -18,14 +18,14 @@ import {
   getOverdueAlerts,
   getRecentPayments,
   getFeeDashboardStats,
-} from '../../Api/FeeDashboard';
-import { getFeePeriods }     from '../../Api/FeePeriods';
-import { getFeeStructures }  from '../../Api/FeeStructures';
-import { getStudentByClass } from '../../Api/StudentsApi';
+} from '../../Api/FeeManagement/FeeDashboard';
+import { getFeePeriods }     from '../../Api/FeeManagement/FeePeriods';
+import { getFeeStructures }  from '../../Api/FeeManagement/FeeStructures';
+import { getStudentByClass } from '../../Api/Students/StudentsApi';
 import {
   getOutstandingFees, createFeeCollection,
   createBulkFeeCollection, getFeeCollectionHistory,
-} from '../../Api/FeeCollection';
+} from '../../Api/FeeManagement/FeeCollection';
 import { UserContext } from '../../ContextAPI/UserContext';
 
 // ─── Constants ────────────────────────────────────────────────────────────────

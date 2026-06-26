@@ -6,7 +6,7 @@ import {
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { pendingApprovals, approveManualAttendance, attendanceStatistics } from '../../Api/AttendanceApi';
+import { pendingApprovals, approveManualAttendance, attendanceStatistics } from '../../Api/Attendance/AttendanceApi';
 import CardLoader from '../../Components/CommonComp/CardLoader';
 
 const TODAY = new Date().toISOString().split('T')[0];

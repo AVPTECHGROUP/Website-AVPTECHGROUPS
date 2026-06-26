@@ -7,10 +7,10 @@ import {
   Mail, User, Hash, Calendar, Shield, Zap,
   Info, Wifi, WifiOff, Loader2, AlertCircle,
 } from "lucide-react";
-import { getSchoolById, updateSchool, uploadSchoolLogo } from "../../Api/SchoolConfig";
-import { getAttendanceConfig, updateAttendanceConfig } from "../../Api/SchoolConfig";
+import { getSchoolById, updateSchool, uploadSchoolLogo } from "../../Api/SchoolConfiguration/schoolconfig";
+import { getAttendanceConfig, updateAttendanceConfig } from "../../Api/SchoolConfiguration/schoolconfig";
 import { toast } from "react-toastify";
-import { getListOfValues } from "../../Api/ListOfValues";
+import { getListOfValues } from "../../Api/Lov/ListOfValues";
 
 const TABS = [
   { id: "school", label: "School Info", icon: Settings },

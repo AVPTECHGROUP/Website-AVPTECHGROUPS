@@ -10,7 +10,7 @@ import {
   createFeePeriod,
   updateFeePeriod,
   deleteFeePeriod,
-} from '../../Api/FeePeriods';
+} from '../../Api/FeeManagement/FeePeriods';
 import { UserContext } from '../../ContextAPI/UserContext';
 
 // ─── Toast (self-contained, matches FeeStructures) ────────────────────────────

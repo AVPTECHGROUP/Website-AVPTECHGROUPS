@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { KeyIcon } from 'lucide-react';
 import { toast } from 'react-toastify';
-import { getTeachers, getTeacherStatistics, searchTeachers } from '../../Api/TeachersAPI';
-import { getClasses } from '../../Api/TeachersAPI';
+import { getTeachers, getTeacherStatistics, searchTeachers } from '../../Api/Teachers/TeachersAPI';
+import { getClasses } from '../../Api/Teachers/TeachersAPI';
 import TeachersHeader from '../../Components/Teacher/ManagementComponents/TeachersHeader';
 import QuickActions from '../../Components/Teacher/ManagementComponents/QuickActions';
 import TeachersFilters from '../../Components/Teacher/ManagementComponents/TeachersFilters';
 import TeachersTable from '../../Components/Teacher/ManagementComponents/TeachersTable';
 import PasswordResetModal from '../../Components/PopupResetPassword/ResetPasswordComponent';
-import { resetUserPassword } from '../../Api/userManagementAPI';
+import { resetUserPassword } from '../../Api/StaffManagement/UserManagementAPI';
 
 const Teachers = () => {
   // Search and Filters

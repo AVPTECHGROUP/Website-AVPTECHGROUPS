@@ -16,9 +16,9 @@ import {
     getExamEventSummary,
     getClassPerformanceTrend,
     getExamEvents, // Imported to resolve event mapping fallbacks dynamically
-} from "../../Api/Exams";
-import { getActiveClasses, getSectionsByClass } from "../../Api/TeachersAPI";
-import { getAcademicYears } from "../../Api/AcademicYear";
+} from "../../Api/Academics/Exams";
+import { getActiveClasses, getSectionsByClass } from "../../Api/Teachers/TeachersAPI";
+import { getAcademicYears } from "../../Api/AcademicYears/AcademicYear";
 import { useDecodedUser } from "../../ContextAPI/UserContext";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -729,7 +729,7 @@ export default function Analytics() {
                     getAcademicYears(),
                     getActiveClasses(),
                 ]);
-                const yearsList = yearsRes?.years || [];
+                const yearsList = yearsRes || [];
                 setAcademicYears(yearsList);
                 setClasses(Array.isArray(cls) ? cls : []);
 

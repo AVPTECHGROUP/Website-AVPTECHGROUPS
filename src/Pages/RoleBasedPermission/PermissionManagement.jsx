@@ -14,7 +14,7 @@ import {
   updateRole,
   updateRolePermissions,
   deleteRole,
-} from "../../Api/AccessPermission";
+} from "../../Api/Permissions/AccessPermission";
 import ShowWarningDialog from "../../Components/CommonComp/WarningShowDialog/ShowWarningDialog";
 
 // ─────────────────────────────────────────────────────────────────────────────

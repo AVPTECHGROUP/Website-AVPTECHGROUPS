@@ -9,8 +9,8 @@ import {
     updateMarks,
     getExams,
     getExamSubjects,
-} from "../../Api/Exams";
-import { getActiveClasses, getAllSections } from "../../Api/TeachersAPI";
+} from "../../Api/Academics/Exams";
+import { getActiveClasses, getAllSections } from "../../Api/Teachers/TeachersAPI";
 
 // ─── Grade colour helper ──────────────────────────────────────────────────────
 function getGrade(marks, max, absent) {

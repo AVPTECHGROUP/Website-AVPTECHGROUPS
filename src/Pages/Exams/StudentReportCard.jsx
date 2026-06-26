@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { X, Printer, Medal, CheckCircle, XCircle, Award, BookOpen, Star, Loader2 } from "lucide-react";
-import { updateReportCardRemarks } from "../../Api/Exams";
+import { updateReportCardRemarks } from "../../Api/Academics/Exams";
 
 // ─── Grade helper ─────────────────────────────────────────────────────────────
 function getGrade(pct) {

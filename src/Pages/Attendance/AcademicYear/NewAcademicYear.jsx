@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { X, Calendar, Tag, Star } from "lucide-react";
-import { createAcademicYear } from "../../../Api/AcademicYear"; 
+import { createAcademicYear } from "../../../Api/AcademicYears/AcademicYear"; 
 
 const NewAcademicYear = ({ isOpen, onClose, onSuccess }) => {
     const [form, setForm] = useState({

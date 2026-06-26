@@ -2,7 +2,7 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Camera, Sun, Frame, ShieldOff, User } from 'lucide-react';
 import { toast } from 'react-toastify';
 import Webcam from 'react-webcam';
-import { markAttendanceByStafffFace } from '../../Api/AttendanceApi';
+import { markAttendanceByStafffFace } from '../../Api/Attendance/AttendanceApi';
 import { useNavigate } from 'react-router-dom';
 import { getSchoolLocation } from "../../utils/getSchoolLocation";
 

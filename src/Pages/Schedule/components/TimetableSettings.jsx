@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X, Settings } from 'lucide-react';
-import { getTimetableById, updateTimetable } from '../../../Api/ScheduleApi';
+import { getTimetableById, updateTimetable } from '../../../Api/Academics/ScheduleApi';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 

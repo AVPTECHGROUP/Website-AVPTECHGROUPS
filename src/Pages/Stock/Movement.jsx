@@ -16,7 +16,8 @@ import {
 import CardComponent from "../../Components/CommonComp/CardComponent";
 import CardLoader from "../../Components/CommonComp/CardLoader";
 import ListLoader from "../../Components/CommonComp/ListLoader";
-import { getStockMovementHistory, getStockMovementStats, getActiveStores } from "../../Api/StockApi";
+import { getStockMovementHistory, getStockMovementStats } from "../../Api/Stock/StockApi";
+import { getActiveStores } from "../../Api/Stock/StoreApi";
 
 const ROWS_PER_PAGE_OPTIONS = [10, 20, 50];
 const SEARCH_DEBOUNCE_MS = 400;

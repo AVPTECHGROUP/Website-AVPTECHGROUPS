@@ -8,7 +8,7 @@ import {
 import { Chart, ArcElement, Tooltip, Legend } from "chart.js";
 import { Doughnut } from "react-chartjs-2";
 import CardLoader from "../../Components/CommonComp/CardLoader";
-import { getDashboardAnalytics, getUpcomingHolidays } from "../../Api/DashboardApi";
+import { getDashboardAnalytics, getUpcomingHolidays } from "../../Api/Dashboard/DashboardApi";
 import { useNavigate } from "react-router-dom";
 
 Chart.register(ArcElement, Tooltip, Legend);

@@ -3,14 +3,14 @@ import { Eye, EyeOff, LockKeyhole, Mail, ShieldCheck } from 'lucide-react'
 import React, { useContext, useState } from 'react'
 import Worker_3 from '../assets/Images/Worker_3.jpeg'
 import { Link, useNavigate } from 'react-router-dom'
-import { loginAPI } from '../Api/AuthApi'
+import { loginAPI } from '../Api/Authentication/AuthApi'
 import { UserContext } from '../ContextAPI/UserContext'
 import SS_logo from "../assets/Images/ss_logo.png"
 import cstech from "../assets/Images/cstech.png"
 import { motion } from 'framer-motion'
 import SS_logo_3 from "../assets/Images/loginimageschool.png"
-import { getSchoolById } from '../Api/SchoolConfig'
-import { getCurrentAcademicYear } from '../Api/AcademicYear' 
+import { getSchoolById } from '../Api/SchoolConfiguration/SchoolConfig'
+import { getCurrentAcademicYear } from '../Api/AcademicYears/AcademicYear' 
 
 // ─── School Floating SVGs ─────────────────────────────────────────────────────
 const SchoolSVGs = {

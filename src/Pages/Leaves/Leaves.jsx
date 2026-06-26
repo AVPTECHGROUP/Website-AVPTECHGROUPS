@@ -19,9 +19,9 @@ import {
   approoveRejLeaveReq,
   getAllLeaveRequest,
   getALLLeavesStatistics,
-} from '../../Api/LeavesManagementAPI';
+} from '../../Api/Leaves/LeavesManagementAPI';
 import { toast } from 'react-toastify';
-import { getListOfValues } from '../../Api/ListOfValues';
+import { getListOfValues } from '../../Api/Lov/ListOfValues';
 import ListLoader from '../../Components/CommonComp/ListLoader';
 import { useDecodedUser } from '../../ContextAPI/UserContext';
 

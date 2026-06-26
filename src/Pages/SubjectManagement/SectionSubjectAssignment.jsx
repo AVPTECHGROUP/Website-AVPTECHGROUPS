@@ -3,7 +3,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useState, useEffect, useCallback } from "react";
-import SectionSubjectService from "../../Api/SectionSubjectService";
+import SectionSubjectService from "../../Api/Academics/SectionSubjectService";
 import { Edit, MinusCircle, BookOpen, Filter, Search, Plus } from "lucide-react";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────

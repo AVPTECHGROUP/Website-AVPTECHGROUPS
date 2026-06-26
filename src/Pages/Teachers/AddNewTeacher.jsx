@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, IndianRupee, User, Camera, X } from 'lucide-react';
 import { toast } from 'react-toastify';
-import { createTeachers, upsertTeacherSalary } from '../../Api/TeachersAPI';
+import { createTeachers, upsertTeacherSalary } from '../../Api/Teachers/TeachersAPI';
 import PersonalDetailsTab from '../../Components/Teacher/AddTabComponents/AddPersonalInfo';
 import SalaryDetailsTab from '../../Components/Teacher/AddTabComponents/AddSalaryDetails';
 

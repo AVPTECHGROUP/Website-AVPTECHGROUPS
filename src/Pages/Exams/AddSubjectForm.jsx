@@ -3,8 +3,8 @@ import {
     X, BookOpen, Loader2, CheckCircle2, AlertCircle,
     FlaskConical, ChevronDown, ChevronUp, Save
 } from "lucide-react";
-import { addExamSubject, bulkAddExamSubjects, updateExamSubject } from "../../Api/Exams";
-import { getSectionSubjectsByClass } from "../../Api/TeachersAPI";
+import { addExamSubject, bulkAddExamSubjects, updateExamSubject } from "../../Api/Academics/Exams";
+import { getSectionSubjectsByClass } from "../../Api/Teachers/TeachersAPI";
 
 // ─── Per-subject row state factory ────────────────────────────────────────────
 function makeRowState(subject, editData = null, alreadyAdded = false) {

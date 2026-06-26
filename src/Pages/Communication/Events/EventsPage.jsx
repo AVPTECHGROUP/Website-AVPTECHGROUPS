@@ -12,7 +12,7 @@ import ListLoader from '../../../Components/CommonComp/ListLoader';
 import {
   fetchEvents, fetchPendingEvents,
   approveEvent, cancelEvent, createEvent,
-} from '../../../Api/CircularApi.js';
+} from '../../../Api/Communication/CircularApi.js';
 import EventDetailModal from '../../../Components/CircularDetailsPopup/EventDetailsModel.jsx';
 import { useNavigate } from "react-router-dom";
 import { useAuth } from '../../../hooks/useAuth';

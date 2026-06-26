@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { BarChart2, Users, Grid, Target } from 'lucide-react';
-import { getTimetableById, getTimetableSlots, getTimetableConfig } from '../../../Api/ScheduleApi';
-import { getSubjectsBySection } from '../../../Api/TeachersAPI';
+import { getTimetableById, getTimetableSlots, getTimetableConfig } from '../../../Api/Academics/ScheduleApi';
+import SectionSubjectService from '../../../Api/Academics/SectionSubjectService';
 
 const AVATAR_COLORS = [
     'bg-pink-500', 'bg-blue-500', 'bg-orange-500', 'bg-green-500',

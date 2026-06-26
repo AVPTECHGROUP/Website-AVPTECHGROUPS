@@ -3,7 +3,7 @@ import { X, ArrowLeftRight, Clock } from 'lucide-react';
 import {
     getSubstitutions,
     updateSubstitutionStatus,
-} from '../../../Api/ScheduleApi';
+} from '../../../Api/Academics/ScheduleApi';
 
 export default function PendingSubstitutionsModal({ timetableId, onClose }) {
     const [substitutions, setSubstitutions] = useState([]);

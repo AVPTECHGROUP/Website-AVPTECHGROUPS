@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { X, Loader2, Search, ChevronRight, AlertCircle } from 'lucide-react';
 import { toast } from 'react-toastify';
-import { getAvailableTeachersForSlot } from '../../../Api/ScheduleApi';
-import { getSubjectsBySection } from '../../../Api/TeachersAPI';
+import { getAvailableTeachersForSlot } from '../../../Api/Academics/ScheduleApi';
+import SectionSubjectService from "../../../Api/Academics/SectionSubjectService";
 
 /* ─── subject colour map ─────────────────────────────────────── */
 const SUBJECT_COLOR_MAP = {
@@ -201,7 +201,7 @@ export default function AddSlotModal({
         try {
             setLoadingSubjects(true);
             setSubjectError('');
-            const data = await getSubjectsBySection(sectionId);
+            const data = await SectionSubjectService.getSubjectsBySection(sectionId);
             const enriched = (data || []).map((s, i) => ({
                 id: s.id,
                 code: s.code || s.subjectCode || '',

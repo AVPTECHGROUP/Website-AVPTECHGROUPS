@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, Calendar } from 'lucide-react';
-import { getClasses, getSectionsByClass } from '../../../Api/TeachersAPI';
-import { getAcademicYears } from '../../../Api/AcademicYear';
+import { getClasses, getSectionsByClass } from '../../../Api/Teachers/TeachersAPI';
+import { getAcademicYears } from '../../../Api/AcademicYears/AcademicYear';
 import { useDecodedUser } from '../../../ContextAPI/UserContext';
 
 export default function AddTimetableModal({ onClose, onSubmit, existingTimetables = [] }) {
@@ -64,7 +64,7 @@ export default function AddTimetableModal({ onClose, onSubmit, existingTimetable
 
                 setClasses(classData || []);
                 // getAcademicYears returns { years: [...] }
-                const yearsList = (yearResp && (yearResp.years || yearResp)) || [];
+                const yearsList = (yearResp && (yearResp || yearResp.years)) || [];
                 setAcademicYears(Array.isArray(yearsList) ? yearsList : []);
 
                 // Note: we intentionally do not force-select a default here —

@@ -14,9 +14,9 @@ import {
     createTimetable,
     deleteTimetable,
     publishTimetable,
-} from '../../Api/ScheduleApi';
-import { getListOfValues } from '../../Api/ListOfValues';
-import { getActiveClasses } from '../../Api/TeachersAPI';
+} from '../../Api/Academics/ScheduleApi';
+import { getListOfValues } from '../../Api/Lov/ListOfValues';
+import { getActiveClasses } from '../../Api/Teachers/TeachersAPI';
 import { toast } from 'react-toastify';
 
 const StatusBadge = ({ status }) => {

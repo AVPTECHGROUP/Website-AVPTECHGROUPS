@@ -1,8 +1,8 @@
 import { useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { CheckCircle, ArrowRight, X, Loader2 } from "lucide-react";
-import { switchSchool } from "../../Api/Schools";
-import { getCurrentAcademicYear } from "../../Api/AcademicYear";
+import { switchSchool } from "../../Api/SchoolConfiguration/Schools";
+import { getCurrentAcademicYear } from "../../Api/AcademicYears/AcademicYear";
 import { UserContext } from "../../ContextAPI/UserContext";
 
 export default function SchoolSelectedCard({ school, onClose }) {

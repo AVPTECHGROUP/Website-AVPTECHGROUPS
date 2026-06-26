@@ -1,10 +1,10 @@
 import { SendHorizonal } from 'lucide-react'
 import React, { useEffect, useState } from 'react'
-import { createLeaveRequest } from '../../Api/LeavesManagementAPI';
+import { createLeaveRequest } from '../../Api/Leaves/LeavesManagementAPI';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
-import { getListOfValues } from '../../Api/ListOfValues';
-import { getAllLeaveConfigs } from '../../Api/LeaveConfigAPI';
+import { getListOfValues } from '../../Api/Lov/ListOfValues';
+import { getAllLeaveConfigs } from '../../Api/Leaves/LeaveConfigAPI';
 
 function ApplyLeaves() {
   const [loading, setLoading] = useState(false);

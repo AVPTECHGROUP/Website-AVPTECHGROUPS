@@ -13,10 +13,10 @@ import {
     getClassItemConfigStats,
     getClassItemConfigs,
     deleteClassItemConfig,
-} from "../../../Api/StudentStoreApi";
-import { getClasses } from "../../../Api/TeachersAPI";
+} from "../../../Api/Stock/StudentStoreApi";
+import { getClasses } from "../../../Api/Teachers/TeachersAPI";
 import { toast } from "react-toastify";
-import { saveClassItemConfigsBulk } from "../../../Api/StudentOrder";
+import { saveClassItemConfigsBulk } from "../../../Api/Stock/StudentOrder";
 
 const categoryColors = {
     BOOKS:      "bg-blue-100 text-blue-700",

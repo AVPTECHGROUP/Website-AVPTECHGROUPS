@@ -7,10 +7,10 @@ import {
   deleteTeacherAssignment,
   getClasses,
   getSectionsByClass,
-  getSubjectsBySection,
   getTeachersActiveAssignments,
   getTeacherById
-} from "../../Api/TeachersAPI";
+} from "../../Api/Teachers/TeachersAPI";
+import SectionSubjectService from "../../Api/Academics/SectionSubjectService";
 import { useDecodedUser } from "../../ContextAPI/UserContext";
 import ConfirmModal from '../../Components/CircularDetailsPopup/ConfirmModal';
 
@@ -216,7 +216,7 @@ function ClassAssignment() {
         ...prev,
         subjectsBySectionId: { ...prev.subjectsBySectionId, [uniqueKey]: true }
       }));
-      const list = await getSubjectsBySection(sectionId);
+      const list = await SectionSubjectService.getSubjectsBySection(sectionId);
       setSectionSubjectsMap(prev => ({ ...prev, [uniqueKey]: list }));
     } catch (err) {
       setError(`Failed to fetch subjects for section ${sectionId}`);
@@ -654,10 +654,10 @@ function ClassAssignment() {
                         onClick={() => toggleClassSelection(String(cls.id))}
                         disabled={isAdded}
                         className={`px-4 py-2 rounded-lg font-medium text-sm transition-all ${isAdded
-                            ? 'bg-blue-600 text-white opacity-60 cursor-not-allowed'
-                            : isSelected
-                              ? 'bg-blue-50 text-blue-700 border-2 border-blue-500 ring-2 ring-blue-100 shadow-sm'
-                              : 'bg-gray-100 text-gray-700 border border-gray-200 hover:bg-gray-200'
+                          ? 'bg-blue-600 text-white opacity-60 cursor-not-allowed'
+                          : isSelected
+                            ? 'bg-blue-50 text-blue-700 border-2 border-blue-500 ring-2 ring-blue-100 shadow-sm'
+                            : 'bg-gray-100 text-gray-700 border border-gray-200 hover:bg-gray-200'
                           }`}
                       >
                         {isSelected && !isAdded && <span className="mr-1 text-blue-500 font-bold">✓</span>}

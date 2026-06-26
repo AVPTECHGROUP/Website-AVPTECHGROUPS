@@ -7,12 +7,12 @@ import {
 } from "lucide-react";
 import UnmarkModal from "./UnmarkModel";
 import ManualMarkModal from "./ManualMarkModel";
-import { getClasses, getSectionsByClass } from "../../../Api/TeachersAPI";
+import { getClasses, getSectionsByClass } from "../../../Api/Teachers/TeachersAPI";
 import {
     getAttendanceRoster,
     manualMarkAttendance,
     unmarkAttendance,
-} from "../../../Api/AttendanceApi";
+} from "../../../Api/Attendance/AttendanceApi";
 import CardComponent from "../../../Components/CommonComp/CardComponent";
 import IndividualFaceScanView from "./IndividualFaceScanView";
 import GroupPhotoView from "./GroupPhotoView";

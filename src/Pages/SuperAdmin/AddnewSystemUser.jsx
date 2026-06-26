@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, User, Camera, X } from 'lucide-react';
 import { toast } from 'react-toastify';
 import AddPersonalDetails from '../../Components/SuperAdmin/AddTabComponents/AddPersionslDetails';
-import { createUser, updateUserById, getAllUserRoles } from '../../Api/userManagementAPI';
+import { createUser, updateUserById, getAllUserRoles } from '../../Api/StaffManagement/UserManagementAPI';
 // ─── Constants ────────────────────────────────────────────────────────────────
 const VALID_GENDERS = ['MALE', 'FEMALE', 'OTHER'];
 

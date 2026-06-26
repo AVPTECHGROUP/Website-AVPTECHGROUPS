@@ -13,8 +13,8 @@ import ViewItem from "../../Components/Stock/ViewItem";
 import {
     getStockItems, getStockItemsStats,
     activateItem, deactivateItem, createItem, updateItem,
-} from "../../Api/StockApi";
-import { getListOfValues } from "../../Api/ListOfValues";
+} from "../../Api/Stock/StockApi";
+import { getListOfValues } from "../../Api/Lov/ListOfValues";
 import { toast } from "react-toastify";
 
 // ── Constants ────────────────────────────────────────────────────

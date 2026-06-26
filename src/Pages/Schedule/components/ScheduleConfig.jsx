@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, Settings, CheckCircle, AlertCircle } from 'lucide-react';
-import { getTimetableConfig, saveTimetableConfig } from '../../../Api/ScheduleApi';
-import { getAcademicYears, getCurrentAcademicYear } from '../../../Api/AcademicYear';
+import { getTimetableConfig, saveTimetableConfig } from '../../../Api/Academics/ScheduleApi';
+import { getAcademicYears, getCurrentAcademicYear } from '../../../Api/AcademicYears/AcademicYear';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -107,7 +107,7 @@ export default function ScheduleConfig({ onClose }) {
                 ]);
 
                 const yearsList =
-                    yearsResult.status === 'fulfilled' ? (yearsResult.value?.years ?? []) : [];
+                    yearsResult.status === 'fulfilled' ? (yearsResult ?? []) : [];
                 setAcademicYears(yearsList);
 
                 // Store the current year id so we can show the flag in the dropdown

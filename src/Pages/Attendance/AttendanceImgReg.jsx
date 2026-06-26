@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { Upload, CheckCircle, X, ChevronDown } from "lucide-react";
 import { toast } from 'react-toastify';
-import { attendanceEnroll } from "../../Api/AttendanceApi";
-import { getAllUserRoles , filterUserByRole } from "../../Api/userManagementAPI";
+import { attendanceEnroll } from "../../Api/Attendance/AttendanceApi";
+import { getAllUserRoles , filterUserByRole } from "../../Api/StaffManagement/UserManagementAPI";
 const AttendanceImgReg = () => {
   const [images, setImages] = useState([]);
   const [error, setError] = useState("");

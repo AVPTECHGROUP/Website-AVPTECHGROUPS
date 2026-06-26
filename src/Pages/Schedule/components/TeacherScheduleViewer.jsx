@@ -4,8 +4,8 @@ import {
     Home, Coffee, CalendarDays, AlertCircle,
     WifiOff, CheckCircle2, Hash
 } from 'lucide-react';
-import { getTeachers } from '../../../Api/TeachersAPI';
-import { getTeacherSchedule } from '../../../Api/ScheduleApi';
+import { getTeachers } from '../../../Api/Teachers/TeachersAPI';
+import { getTeacherSchedule } from '../../../Api/Academics/ScheduleApi';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

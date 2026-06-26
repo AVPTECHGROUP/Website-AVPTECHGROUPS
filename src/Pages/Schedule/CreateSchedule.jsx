@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
     ChevronLeft, LayoutGrid, BarChart2, Wand2, ArrowLeftRight,
     Settings, Send, Printer, Trash2, Undo2, Redo2, Plus,
@@ -22,8 +22,8 @@ import {
     deleteSlot,
     saveSlot,
     getTimetableConfig,
-} from '../../Api/ScheduleApi';
-import { getSubjectsBySection } from '../../Api/TeachersAPI';
+} from '../../Api/Academics/ScheduleApi';
+import SectionSubjectService from '../../Api/Academics/SectionSubjectService';
 
 // ── Helper: generate periods + breaks from config ──
 const generatePeriodsFromConfig = (config) => {
@@ -225,7 +225,7 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
     const loadSubjects = async (secId) => {
         if (!secId || subjectsList.length > 0) return;
         try {
-            const data = await getSubjectsBySection(secId);
+            const data = await SectionSubjectService.getSubjectsBySection(secId);
             const enriched = (data || []).map((s, i) => ({
                 id: s.id,
                 code: s.code || s.subjectCode || '',

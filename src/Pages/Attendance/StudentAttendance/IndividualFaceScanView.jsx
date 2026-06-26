@@ -5,7 +5,7 @@ import {
     ArrowLeft, Upload, Trash2, Loader2, VideoOff, Clock,
     RefreshCw, ShieldAlert, BadgeCheck,
 } from "lucide-react";
-import { markAttendanceByFace, unmarkAttendance } from "../../../Api/AttendanceApi";
+import { markAttendanceByFace, unmarkAttendance } from "../../../Api/Attendance/AttendanceApi";
 import { getSchoolLocation } from "../../../utils/getSchoolLocation";
 
 const getInitials = (fullName = "") => {

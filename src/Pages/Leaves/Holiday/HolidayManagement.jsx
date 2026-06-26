@@ -26,7 +26,7 @@ import {
   updateHoliday,
   getCurrentAcademicYear,
   getAcademicYearsLov,
-} from '../../../Api/HolidayManagementAPI';
+} from '../../../Api/Leaves/HolidayManagementAPI';
 import HolidayComponentCard from '../../../Components/Holiday/HolidayComponentCard';
 import { toast } from 'react-toastify';
 import CardLoader from '../../../Components/CommonComp/CardLoader';

@@ -4,8 +4,8 @@
 // - Shows toast on success/error
 
 import React, { useEffect, useState } from 'react';
-import { createFeeCollection } from '../../Api/FeeCollectionApi';
-import { getOutstandingFees } from '../../Api/FeeCollectionApi';
+import { createFeeCollection } from '../../Api/FeeManagement/FeeCollectionApi';
+import { getOutstandingFees } from '../../Api/FeeManagement/FeeCollectionApi';
 import { useToast } from '../Toast/Toast';
 
 const PAYMENT_MODES = [

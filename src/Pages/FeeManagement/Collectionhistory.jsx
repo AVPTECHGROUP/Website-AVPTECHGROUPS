@@ -10,10 +10,10 @@ import {
   createFeeCollection,
   createBulkFeeCollection,
   getFeeReceiptById,
-} from '../../Api/FeeCollection';
-import { getFeePeriods } from '../../Api/FeePeriods';
-import { getFeeStructures } from '../../Api/FeeStructures';
-import { getStudentByClass } from '../../Api/StudentsApi';
+} from '../../Api/FeeManagement/FeeCollection';
+import { getFeePeriods } from '../../Api/FeeManagement/FeePeriods';
+import { getFeeStructures } from '../../Api/FeeManagement/FeeStructures';
+import { getStudentByClass } from '../../Api/Students/StudentsApi';
 import { authFetch } from '../../Authfetch/Authfetch';
 import { UserContext } from '../../ContextAPI/UserContext';
 import FeeReceiptPrint from '../../Components/FeeModal/FeeReciptPrint';

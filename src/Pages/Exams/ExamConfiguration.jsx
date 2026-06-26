@@ -21,7 +21,7 @@ import {
   createGradeConfig,
   updateGradeConfig,
   deleteGradeConfig,
-} from "../../Api/Exams";
+} from "../../Api/Academics/Exams";
 
 import {
   getExamTypes,
@@ -29,7 +29,7 @@ import {
   updateExamType,
   activateExamType,
   deactivateExamType,
-} from "../../Api/Exams";
+} from "../../Api/Academics/Exams";
 import { toast } from "react-toastify";
 
 // ─── Grade colour helper ──────────────────────────────────────────────────────

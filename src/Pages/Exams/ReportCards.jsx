@@ -17,9 +17,9 @@ import {
     getReportCards,
     getStudentReportCard,
     updateReportCardRemarks,
-} from "../../Api/Exams";
-import { getExams } from "../../Api/Exams";
-import { getActiveClasses, getAllSections } from "../../Api/TeachersAPI";
+} from "../../Api/Academics/Exams";
+import { getExams } from "../../Api/Academics/Exams";
+import { getActiveClasses, getAllSections } from "../../Api/Teachers/TeachersAPI";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function getGrade(pct, absent) {

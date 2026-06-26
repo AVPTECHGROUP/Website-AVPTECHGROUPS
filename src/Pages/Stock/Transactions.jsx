@@ -19,8 +19,9 @@ import { toast } from "react-toastify";
 import ListLoader from "../../Components/CommonComp/ListLoader";
 import StockManagementCard from "../../Components/Stock/StockManagementCard";
 import TransferStock from "../../Components/Stock/TransferStock";
-import { getActiveStores, getStockOverview } from "../../Api/StockApi";
-import { getListOfValues } from "../../Api/ListOfValues";
+import { getStockOverview } from "../../Api/Stock/StockApi";
+import {getActiveStores } from "../../Api/Stock/StoreApi";
+import { getListOfValues } from "../../Api/Lov/ListOfValues";
 
 const SEARCH_DEBOUNCE_MS = 400;
 const ALL_STORES_ID = "";

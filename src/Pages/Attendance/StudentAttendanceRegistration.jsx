@@ -7,9 +7,9 @@ import {
 } from "lucide-react";
 import CardComponent from "../../Components/CommonComp/CardComponent";
 import CardLoader from "../../Components/CommonComp/CardLoader";
-import { getEnrollmentStats, getStudentEnrollment, getSectionEnrollmentStats, enrollUserFaces, removeEnrollment, } from "../../Api/AttendanceApi";
-import { getClasses, getSectionsByClass } from "../../Api/TeachersAPI";
-import { getStudentsBySection } from "../../Api/StudentsApi";
+import { getEnrollmentStats, getStudentEnrollment, getSectionEnrollmentStats, enrollUserFaces, removeEnrollment, } from "../../Api/Attendance/AttendanceApi";
+import { getClasses, getSectionsByClass } from "../../Api/Teachers/TeachersAPI";
+import { getStudentsBySection } from "../../Api/Students/StudentsApi";
 
 const AVATAR_BG = [
     "bg-blue-500", "bg-rose-500", "bg-emerald-500",

@@ -6,7 +6,7 @@ import {
   School, TrendingUp, AlertTriangle, ServerCrash,
 } from "lucide-react";
 import SchoolSelectedCard from "../../Components/SuperAdmin/SchoolSelectedCard";
-import { getMySchools, getMySchoolStats } from "../../Api/Schools";
+import { getMySchools, getMySchoolStats } from "../../Api/SchoolConfiguration/Schools";
 import dpis from "../../assets/Images/dpis.jpg";
 
 const borderAccents = [

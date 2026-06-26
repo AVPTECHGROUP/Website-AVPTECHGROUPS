@@ -1,7 +1,7 @@
 import { User, Mail, Phone, ChevronLeft, GraduationCap, DollarSign, UserCheck, Briefcase, LogIn, Clock } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import { getTeacherById } from '../../Api/TeachersAPI';
+import { getTeacherById } from '../../Api/Teachers/TeachersAPI';
 
 const DetailsView = () => {
 

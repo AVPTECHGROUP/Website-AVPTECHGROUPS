@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getAcademicYears, getCurrentAcademicYear } from "../../Api/AcademicYear";
+import { getAcademicYears, getCurrentAcademicYear } from "../../Api/AcademicYears/AcademicYear";
 
 const AddStudentPersonalDetails = ({ formData, setFormData, handleInputChange, sections = [], sectionsLoading = false }) => {
 

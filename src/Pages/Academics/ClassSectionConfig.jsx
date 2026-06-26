@@ -14,7 +14,7 @@ import {
   getAllClasses, createClass, updateClass, deleteClass,
   getSectionsByClass, createSection, updateSection, deleteSection,
   getTeachersDropdown,
-} from '../../Api/ClassSectionAPI';
+} from '../../Api/Academics/ClassSectionAPI';
 import { getCurrUserDetails } from '../../utils/GetCurrUserDetails';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

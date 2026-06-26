@@ -5,7 +5,7 @@ import {
     createSubstitution,
     updateSubstitutionStatus,
     getAvailableTeachersForSlot,
-} from '../../../Api/ScheduleApi';
+} from '../../../Api/Academics/ScheduleApi';
 
 const REASONS = [
     'Medical Leave',

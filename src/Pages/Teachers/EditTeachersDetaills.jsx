@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, IndianRupee, User, Camera, X } from 'lucide-react';
-import { getTeacherById, updateTeacher, upsertTeacherSalary } from '../../Api/TeachersAPI';
+import { getTeacherById, updateTeacher, upsertTeacherSalary } from '../../Api/Teachers/TeachersAPI';
 import PersonalDetailsTab from '../../Components/Teacher/EditTabComponents/PersonalDetailsTab';
 import SalaryStructureTab from '../../Components/Teacher/EditTabComponents/SalaryStructureTab';
 import { toast } from 'react-toastify';

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Download, ChevronDown } from "lucide-react";
 import { toast } from "react-toastify";
-import { getTransportFeeReport, getActiveRoutes } from "../../../Api/TransportAPI";
+import { getTransportFeeReport, getActiveRoutes } from "../../../Api/Transport/TransportAPI";
 import ListLoader from "../../../Components/CommonComp/ListLoader";
 
 const typeColors = {

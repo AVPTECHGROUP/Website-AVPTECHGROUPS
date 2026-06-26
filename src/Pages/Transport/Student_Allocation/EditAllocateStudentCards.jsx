@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { X, Pencil, Save, Loader2, Info, ChevronDown, Search, X as XIcon } from "lucide-react";
-import { updateTransportAllocation, getActiveRoutes, getTransportFeePlans } from "../../../Api/TransportAPI";
+import { updateTransportAllocation, getActiveRoutes, getTransportFeePlans } from "../../../Api/Transport/TransportAPI";
 
 // ─── Constants ────────────────────────────────────────────────────
 const PICKUP_TYPES = [

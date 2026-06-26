@@ -2,8 +2,8 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ChevronLeft, User, Camera, X } from 'lucide-react';
 import { toast } from 'react-toastify';
-import { getStudentById, updateStudent } from '../../Api/StudentsApi';
-import { getAllSections } from '../../Api/TeachersAPI';
+import { getStudentById, updateStudent } from '../../Api/Students/StudentsApi';
+import { getAllSections } from '../../Api/Teachers/TeachersAPI';
 
 
 function EditStudentDetails() {

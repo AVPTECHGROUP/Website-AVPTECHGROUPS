@@ -12,8 +12,8 @@ import {
   updateLeaveConfig,
   deleteLeaveConfig,
   seedLeaveConfigs,
-} from '../../Api/LeaveConfigAPI';
-import { getListOfValues } from '../../Api/ListOfValues';
+} from '../../Api/Leaves/LeaveConfigAPI';
+import { getListOfValues } from '../../Api/Lov/ListOfValues';
 import { toast } from 'react-toastify';
 
 // ─── Leave Type Colors (keyed by value string) ────────────────────────────────

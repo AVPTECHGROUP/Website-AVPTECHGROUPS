@@ -3,7 +3,7 @@ import {
     X, BookOpen, Loader2, CheckCircle2, AlertCircle,
     FlaskConical, Save, RefreshCw,
 } from "lucide-react";
-import { bulkUpdateExamSubjects } from "../../Api/Exams";
+import { bulkUpdateExamSubjects } from "../../Api/Academics/Exams";
 
 function makeRowFromConfig(subject) {
     return {

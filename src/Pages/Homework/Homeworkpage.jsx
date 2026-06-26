@@ -19,9 +19,9 @@ import {
   getHomeworkById,
   getActiveSubjectsBySection,
   getTeacherLookup,
-} from "../../Api/Homework";
+} from "../../Api/Academics/Homework";
 
-import { getActiveClasses, getSectionsByClass } from "../../Api/ClassSectionAPI";
+import { getActiveClasses, getSectionsByClass } from "../../Api/Academics/ClassSectionAPI";
 
 const showError = (err, fallback = "Something went wrong") =>
   toast.error(typeof err?.message === "string" ? err.message : fallback);

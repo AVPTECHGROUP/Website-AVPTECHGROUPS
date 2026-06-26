@@ -1,6 +1,6 @@
 import { User, Mail, Phone, ChevronLeft, Calendar, Users, Home, Bus, BookOpen, Hash } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { getStudentById } from '../../Api/StudentsApi';
+import { getStudentById } from '../../Api/Students/StudentsApi';
 import { useEffect, useState } from 'react';
 
 const StudentDetails = () => {

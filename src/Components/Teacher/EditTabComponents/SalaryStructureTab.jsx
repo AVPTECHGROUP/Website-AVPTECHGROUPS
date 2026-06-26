@@ -7,7 +7,7 @@ import {
     RotateCcw,
     IndianRupee
 } from 'lucide-react';
-import { getTeacherSalary } from '../../../Api/TeachersAPI';
+import { getTeacherSalary } from '../../../Api/Teachers/TeachersAPI';
 
 const SalaryStructureTab = ({ formData, setFormData, handleInputChange, teacherId }) => {
 

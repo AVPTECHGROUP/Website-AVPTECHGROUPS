@@ -23,9 +23,9 @@ import {
     deleteEventSubject,
     declareEventExamResult,
     getExamTypes
-} from "../../Api/Exams";
-import { getActiveClasses } from "../../Api/TeachersAPI";
-import { getAcademicYears, getCurrentAcademicYear } from "../../Api/AcademicYear";
+} from "../../Api/Academics/Exams";
+import { getActiveClasses } from "../../Api/Teachers/TeachersAPI";
+import { getAcademicYears, getCurrentAcademicYear } from "../../Api/AcademicYears/AcademicYear";
 import { useDecodedUser } from "../../ContextAPI/UserContext";
 import { useAuth } from "../../hooks/useAuth";
 import { PERMISSIONS as P } from "../../Constants/Permission";
@@ -664,7 +664,7 @@ export default function ExamEvents() {
             try {
                 const [cls, types] = await Promise.all([getActiveClasses(), getExamTypes()]);
                 const yearsResponse = await getAcademicYears();
-                const yearsList = yearsResponse.years || [];
+                const yearsList = yearsResponse || [];
 
                 if (currentAcademicYear?.id) setYearId(currentAcademicYear.id);
 

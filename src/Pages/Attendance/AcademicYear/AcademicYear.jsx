@@ -4,8 +4,8 @@ import {
     getAcademicYears,
     setCurrentAcademicYear,
     closeAcademicYear,
-} from "../../../Api/AcademicYear";
-import NewAcademicYear from "./NewAcademicYear"; 
+} from "../../../Api/AcademicYears/AcademicYear";
+import NewAcademicYear from "./NewAcademicYear";
 
 // ─── Action Dropdown Component ──────────────────────────────────────────────
 const ActionDropDown = ({ year, onSetCurrent, onClose }) => {
@@ -182,7 +182,7 @@ const MobileCard = ({ year, onSetCurrent, onClose }) => (
 const ROWS_OPTIONS = [5, 10, 20];
 
 const AcademicYear = () => {
-    const [years, setYears] = useState([]);
+    const [years, setYears] = useState([]); // Initialized as array
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [showAdd, setShowAdd] = useState(false);
@@ -201,10 +201,12 @@ const AcademicYear = () => {
         try {
             setLoading(true);
             setError("");
-            const { years: data } = await getAcademicYears();
-            setYears(data);
+            const response = await getAcademicYears();
+            // Ensure we handle response structure safely
+            setYears(response || []);
         } catch (err) {
             setError("Failed to load academic years. Please try again.");
+            setYears([]); // Reset on error
         } finally {
             setLoading(false);
         }
@@ -243,9 +245,10 @@ const AcademicYear = () => {
         }
     };
 
-    // Pagination
-    const totalPages = Math.ceil(years.length / rowsPerPage);
-    const paginated = years.slice((page - 1) * rowsPerPage, page * rowsPerPage);
+    // Pagination logic with safety defaults
+    const safeYears = years || [];
+    const totalPages = Math.max(1, Math.ceil(safeYears.length / rowsPerPage));
+    const paginated = safeYears.slice((page - 1) * rowsPerPage, page * rowsPerPage);
 
     const handleRowsChange = (e) => {
         setRowsPerPage(Number(e.target.value));
@@ -258,8 +261,8 @@ const AcademicYear = () => {
             {toast && (
                 <div
                     className={`fixed top-4 right-4 z-50 px-5 py-3 rounded-xl shadow-lg text-sm font-medium transition-all ${toast.type === "error"
-                            ? "bg-red-600 text-white"
-                            : "bg-green-600 text-white"
+                        ? "bg-red-600 text-white"
+                        : "bg-green-600 text-white"
                         }`}
                 >
                     {toast.msg}
@@ -294,7 +297,7 @@ const AcademicYear = () => {
                                 Manage Academic Years
                             </h1>
                             <p className="text-sm text-gray-500">
-                                {years.length} year{years.length !== 1 ? "s" : ""} configured
+                                {safeYears?.length || 0} year{safeYears?.length !== 1 ? "s" : ""} configured
                             </p>
                         </div>
                     </div>
@@ -443,8 +446,8 @@ const AcademicYear = () => {
                                             key={i}
                                             onClick={() => setPage(i + 1)}
                                             className={`w-8 h-8 flex items-center justify-center rounded-lg text-sm font-medium transition-colors ${page === i + 1
-                                                    ? "bg-blue-600 text-white"
-                                                    : "border border-gray-200 text-gray-600 hover:bg-gray-100"
+                                                ? "bg-blue-600 text-white"
+                                                : "border border-gray-200 text-gray-600 hover:bg-gray-100"
                                                 }`}
                                         >
                                             {i + 1}

@@ -15,8 +15,8 @@ import ListLoader from "../../../Components/CommonComp/ListLoader";
 import ActionDropDownComp from "../../../Components/CommonComp/ActionDropDownComp";
 import ViewStudentOrder from "./ViewOrder";
 import { useDecodedUser } from "../../../ContextAPI/UserContext";
-import { getOrderStats, getStudentOrders, cancelStudentOrder } from "../../../Api/StudentOrder";
-import { getClasses } from "../../../Api/TeachersAPI";
+import { getOrderStats, getStudentOrders, cancelStudentOrder } from "../../../Api/Stock/StudentOrder";
+import { getClasses } from "../../../Api/Teachers/TeachersAPI";
 
 import { toast } from "react-toastify";
 

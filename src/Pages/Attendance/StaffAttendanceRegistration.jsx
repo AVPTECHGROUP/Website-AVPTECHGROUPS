@@ -26,7 +26,7 @@ import {
     getStaffEnrollment,
     enrollUserFaces,
     removeEnrollment,
-} from "../../Api/AttendanceApi";
+} from "../../Api/Attendance/AttendanceApi";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const AVATAR_COLORS = [

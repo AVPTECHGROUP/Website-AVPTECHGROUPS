@@ -4,7 +4,7 @@ import { ChevronLeft, User, Camera, X } from 'lucide-react';
 import { toast } from 'react-toastify';
 import UserPersonalDetailsTab from '../../Components/SuperAdmin/EditTabComponents/UserPersonalDetailsTab';
 import ParentPersonalDetailsTab from '../../Components/SuperAdmin/EditTabComponents/ParentPersonalDetailsTab';
-import { getUserById, updateUserById } from '../../Api/userManagementAPI';
+import { getUserById, updateUserById } from '../../Api/StaffManagement/UserManagementAPI';
 
 const VALID_GENDERS = ['MALE', 'FEMALE', 'OTHER'];
 const VALID_ROLES = ['SUPER_ADMIN','ADMIN','PRINCIPAL','TEACHER','ACCOUNTANT','PARENT','RECEPTIONIST','STORE_ACCOUNTANT','STORE_SELLER'];

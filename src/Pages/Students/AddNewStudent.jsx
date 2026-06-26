@@ -4,8 +4,8 @@ import { ChevronLeft, User, Users, Camera, X } from 'lucide-react';
 import { toast } from 'react-toastify';
 import AddStudentPersonalDetails from '../../Components/Students/AddStudentPersonalDetails';
 import AddStudentFamilyDetails from '../../Components/Students/AddStudentFamilyDetails';
-import { createStudents } from '../../Api/StudentsApi';
-import { getAllSections } from '../../Api/TeachersAPI';
+import { createStudents } from '../../Api/Students/StudentsApi';
+import { getAllSections } from '../../Api/Teachers/TeachersAPI';
 
 function AddNewStudent() {
     const navigate = useNavigate();

@@ -5,7 +5,7 @@ import {
     Clock, ChevronRight, VideoOff, Loader2, Trash2, RefreshCw,
     Users,
 } from "lucide-react";
-import { groupMarkAttendance, unmarkAttendance } from "../../../Api/AttendanceApi";
+import { groupMarkAttendance, unmarkAttendance } from "../../../Api/Attendance/AttendanceApi";
 import { getSchoolLocation } from "../../../utils/getSchoolLocation";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

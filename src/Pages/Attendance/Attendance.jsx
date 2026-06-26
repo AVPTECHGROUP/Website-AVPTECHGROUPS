@@ -13,9 +13,9 @@ import ManualStaffAttendance from './ManualStaffAttendance';
 import {
   allAttendanceDetails,
   attendanceStatistics,
-} from '../../Api/AttendanceApi';
+} from '../../Api/Attendance/AttendanceApi';
 
-import { getRolesSummary } from '../../Api/userManagementAPI';
+import { getRolesSummary } from '../../Api/StaffManagement/UserManagementAPI';
 // ─────────────────────────────────────────────────────────────────────────────
 
 const TODAY = new Date().toISOString().split('T')[0];

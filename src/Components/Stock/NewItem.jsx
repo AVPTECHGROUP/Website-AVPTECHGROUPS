@@ -3,7 +3,7 @@ import {
     X, Package, Hash, Layers, Ruler, BarChart2,
     ToggleLeft, AlignLeft, Save, Loader2, IndianRupee,
 } from "lucide-react";
-import { getListOfValues } from "../../Api/ListOfValues";
+import { getListOfValues } from "../../Api/Lov/ListOfValues";
 
 // ─── Fallback values ────────────────────────────────────────────────
 const FALLBACK_CATEGORIES = ["Books", "Uniform", "Lab", "Stationery", "Sports", "Furniture", "Electronics", "Cleaning", "Other"];

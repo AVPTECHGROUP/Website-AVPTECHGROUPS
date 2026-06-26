@@ -3,8 +3,8 @@ import {
   X, ClipboardList, Loader2, Check, ChevronRight, ChevronLeft,
   AlertCircle, Sparkles, Rocket
 } from "lucide-react";
-import { createExamEvent } from "../../Api/Exams";
-import { getSectionSubjectsByClass, getSectionsByClass } from "../../Api/TeachersAPI";
+import { createExamEvent } from "../../Api/Academics/Exams";
+import { getSectionSubjectsByClass, getSectionsByClass } from "../../Api/Teachers/TeachersAPI";
 
 // Builds [{ sectionId, sectionName, subjects:[{sectionSubjectId, subjectId, subjectName, subjectCode}] }]
 // for one class, straight from your existing TeachersAPI endpoints:

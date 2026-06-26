@@ -17,11 +17,11 @@ import {
   CancelUserlLeaveReq,
   getUserLeaveRequest,
   getUsersLeaveBalance,
-} from '../../Api/LeavesManagementAPI';
+} from '../../Api/Leaves/LeavesManagementAPI';
 
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { getListOfValues } from '../../Api/ListOfValues';
+import { getListOfValues } from '../../Api/Lov/ListOfValues';
 import ListLoader from '../../Components/CommonComp/ListLoader';
 import { UserContext } from '../../ContextAPI/UserContext';
 import CardComponent from '../../Components/CommonComp/CardComponent';

@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { X, ClipboardEdit, FileText, Search, ChevronDown, Loader2 } from 'lucide-react';
 import { toast } from 'react-toastify';
-import { getUsersSummary } from '../../Api/userManagementAPI';
-import { requestManualAttendance } from '../../Api/AttendanceApi';
+import { getUsersSummary } from '../../Api/StaffManagement/UserManagementAPI';
+import { requestManualAttendance } from '../../Api/Attendance/AttendanceApi';
 import { getSchoolLocation } from "../../utils/getSchoolLocation";
 
 const TODAY = new Date().toISOString().split('T')[0];

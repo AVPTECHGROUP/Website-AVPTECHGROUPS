@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { User, Mail, Phone, ChevronLeft, GraduationCap, DollarSign, UserCheck, LogIn, Clock } from 'lucide-react';
-import { getUserById } from '../../Api/userManagementAPI';
+import { getUserById } from '../../Api/StaffManagement/UserManagementAPI';
 
 const UserView = () => {
     const { id } = useParams();

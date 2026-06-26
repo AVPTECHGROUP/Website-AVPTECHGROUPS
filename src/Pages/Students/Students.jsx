@@ -15,8 +15,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import CardComponent from '../../Components/CommonComp/CardComponent';
-import { getStudents, searchStudents } from '../../Api/StudentsApi';
-import { getAllSections } from '../../Api/TeachersAPI';
+import { getStudents, searchStudents } from '../../Api/Students/StudentsApi';
+import { getAllSections } from '../../Api/Teachers/TeachersAPI';
 import CardLoader from '../../Components/CommonComp/CardLoader';
 import ListLoader from '../../Components/CommonComp/ListLoader';
 import TooltipComponent from '../../Components/CommonComp/Tooltip_comp/TooltipComp';
