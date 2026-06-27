@@ -10,7 +10,8 @@ import cstech from "../assets/Images/cstech.png"
 import { motion } from 'framer-motion'
 import SS_logo_3 from "../assets/Images/loginimageschool.png"
 import { getSchoolById } from '../Api/SchoolConfiguration/SchoolConfig'
-import { getCurrentAcademicYear } from '../Api/AcademicYears/AcademicYear' 
+import { getCurrentAcademicYear } from '../Api/AcademicYears/AcademicYear'
+import LOGIN_CONSTANTS from '../Constants/StringConstants/LoginConstants'
 
 // ─── School Floating SVGs ─────────────────────────────────────────────────────
 const SchoolSVGs = {
@@ -77,12 +78,12 @@ const SchoolSVGs = {
 }
 
 const floatingItems = [
-  { key: 'book',   top: '10%', left: '87%', size: 54, delay: 1.2, duration: 8   },
-  { key: 'pencil', top: '70%', left: '4%',  size: 50, delay: 0.6, duration: 9   },
-  { key: 'atom',   top: '78%', left: '83%', size: 58, delay: 1.8, duration: 7.5 },
-  { key: 'chart',  top: '40%', left: '91%', size: 46, delay: 0.3, duration: 8.5 },
-  { key: 'bell',   top: '52%', left: '1%',  size: 44, delay: 2,   duration: 6.5 },
-  { key: 'ruler',  top: '25%', left: '93%', size: 40, delay: 0.9, duration: 10  },
+  { key: 'book', top: '10%', left: '87%', size: 54, delay: 1.2, duration: 8 },
+  { key: 'pencil', top: '70%', left: '4%', size: 50, delay: 0.6, duration: 9 },
+  { key: 'atom', top: '78%', left: '83%', size: 58, delay: 1.8, duration: 7.5 },
+  { key: 'chart', top: '40%', left: '91%', size: 46, delay: 0.3, duration: 8.5 },
+  { key: 'bell', top: '52%', left: '1%', size: 44, delay: 2, duration: 6.5 },
+  { key: 'ruler', top: '25%', left: '93%', size: 40, delay: 0.9, duration: 10 },
 ]
 
 function FloatingSchoolBg() {
@@ -146,7 +147,7 @@ function ShinyButton({ children, disabled, isLoading }) {
         {isLoading ? (
           <span className="flex items-center justify-center gap-2">
             <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            Verifying...
+            {LOGIN_CONSTANTS.LOGIN_BUTTON_LOADER}
           </span>
         ) : children}
       </button>
@@ -156,12 +157,12 @@ function ShinyButton({ children, disabled, isLoading }) {
 
 // ─── Main Login Component ─────────────────────────────────────────────────────
 const Login_2 = ({ onLoginSuccess }) => {
-  const [email,        setemail]        = useState('')
-  const [password,     setpassword]     = useState('')
+  const [email, setemail] = useState('')
+  const [password, setpassword] = useState('')
   const [showPassword, setshowPassword] = useState(false)
-  const [errors,       seterrors]       = useState({})
-  const [isLoading,    setIsLoading]    = useState(false)
-  const [loginError,   setLoginError]   = useState('')
+  const [errors, seterrors] = useState({})
+  const [isLoading, setIsLoading] = useState(false)
+  const [loginError, setLoginError] = useState('')
   const navigate = useNavigate()
 
   // ── Pull saveToken + saveCurrentAcademicYear in addition to existing context values ──
@@ -170,14 +171,14 @@ const Login_2 = ({ onLoginSuccess }) => {
   const validateForm = () => {
     const allErrors = {}
     if (!email) {
-      allErrors.email = 'Email is required'
+      allErrors.email = LOGIN_CONSTANTS.EMAIL_REQUIRED
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      allErrors.email = 'Please enter a valid email address'
+      allErrors.email = LOGIN_CONSTANTS.EMAIL_INVALID
     }
     if (!password) {
-      allErrors.password = 'Password is required'
+      allErrors.password = LOGIN_CONSTANTS.PASSWORD_REQUIRED
     } else if (password.length < 6) {
-      allErrors.password = 'Password must be at least 6 characters'
+      allErrors.password = LOGIN_CONSTANTS.PASSWORD_MIN_LENGTH
     }
     seterrors(allErrors)
     return Object.keys(allErrors).length === 0
@@ -191,11 +192,11 @@ const Login_2 = ({ onLoginSuccess }) => {
     try {
       const res = await loginAPI({ email, password })
       const token = res.data?.token || res.token
-      const user  = res.data?.user  || res.user
+      const user = res.data?.user || res.user
       const requiresSchoolSelection =
         res.data?.requiresSchoolSelection ?? res.requiresSchoolSelection ?? false
 
-      if (!token) throw new Error('Invalid response from server. Please try again.')
+      if (!token) throw new Error(LOGIN_CONSTANTS.SERVER_ERROR)
 
       // ── 1. Save token via saveToken (not localStorage directly) ──────────
       //    saveToken does localStorage.setItem + setToken(token) which
@@ -208,11 +209,11 @@ const Login_2 = ({ onLoginSuccess }) => {
       if (user) {
         localStorage.setItem('user', JSON.stringify(user))
         setUser({
-          id:          user.id,
-          userType:    user.roles?.[0],
-          email:       user.email,
+          id: user.id,
+          userType: user.roles?.[0],
+          email: user.email,
           permissions: user.permissions,
-          schoolId:    user.schoolId ?? null,
+          schoolId: user.schoolId ?? null,
         })
         if (user.profile) saveProfile(user.profile)
       }
@@ -234,14 +235,14 @@ const Login_2 = ({ onLoginSuccess }) => {
             const s = schoolRes?.data
             if (s) {
               saveSchool({
-                id:         s.id,
-                schoolId:   s.id,
-                schoolName: s.name    || '',
-                schoolCode: s.code    || '',
-                logoUrl:    s.logoUrl || null,
-                board:      s.board   || '',
-                city:       s.city    || '',
-                status:     s.status  || '',
+                id: s.id,
+                schoolId: s.id,
+                schoolName: s.name || '',
+                schoolCode: s.code || '',
+                logoUrl: s.logoUrl || null,
+                board: s.board || '',
+                city: s.city || '',
+                status: s.status || '',
               })
             }
           } catch (schoolErr) {
@@ -263,15 +264,15 @@ const Login_2 = ({ onLoginSuccess }) => {
       }
 
     } catch (err) {
-      setLoginError(err.message || 'Invalid email or password. Please try again.')
+      setLoginError(err.message || LOGIN_CONSTANTS.LOGIN_INVALID)
     } finally {
       setIsLoading(false)
     }
   }
 
-  const inputBase   = 'w-full pl-10 pr-4 py-2.5 sm:py-3 rounded-xl text-sm text-black placeholder-[#8A9BB0] outline-none transition-all duration-200 focus:ring-2'
+  const inputBase = 'w-full pl-10 pr-4 py-2.5 sm:py-3 rounded-xl text-sm text-black placeholder-[#8A9BB0] outline-none transition-all duration-200 focus:ring-2'
   const inputNormal = 'bg-blue-50 border border-blue-200 focus:ring-blue-400/40 focus:border-blue-400'
-  const inputError  = 'bg-red-500/5 border-2 border-red-400/60 focus:ring-red-400/30'
+  const inputError = 'bg-red-500/5 border-2 border-red-400/60 focus:ring-red-400/30'
 
   return (
     <div className="relative min-h-screen flex flex-col items-center justify-center p-3 sm:p-5 md:p-6 overflow-hidden bg-gradient-to-br from-blue-100 to-blue-200">
@@ -304,7 +305,7 @@ const Login_2 = ({ onLoginSuccess }) => {
         className="relative z-10 hidden sm:flex flex-col items-center mb-5 md:mb-6 gap-2"
       >
         <h1 className="text-center font-bold text-gray-800 text-lg md:text-xl lg:text-3xl tracking-wide">
-          SCHOOL MANAGEMENT PORTAL
+             {LOGIN_CONSTANTS.PORTAL_TITLE}
         </h1>
       </motion.div>
 
@@ -345,11 +346,11 @@ const Login_2 = ({ onLoginSuccess }) => {
           <div className="mb-5 sm:mb-6">
             <h2 className="font-bold text-gray-800 text-xl sm:text-2xl mb-1"
               style={{ fontFamily: '"Syne", sans-serif' }}>
-              System Login
+              {LOGIN_CONSTANTS.LOGIN_TITLE}
             </h2>
             <p className="text-xs sm:text-sm text-gray-500"
               style={{ fontFamily: '"DM Sans", sans-serif' }}>
-              Sign in to access your portal
+              {LOGIN_CONSTANTS.LOGIN_SUBTITLE}
             </p>
             <div className="mt-2.5 h-0.5 w-10 rounded-full bg-blue-400" />
           </div>
@@ -377,7 +378,7 @@ const Login_2 = ({ onLoginSuccess }) => {
                 className="block text-[10.5px] sm:text-xs font-semibold mb-1.5 tracking-widest uppercase text-gray-500"
                 style={{ fontFamily: '"DM Sans", sans-serif' }}
               >
-                Email Address
+                {LOGIN_CONSTANTS.EMAIL_LABEL}
               </label>
               <div className="relative">
                 <Mail size={15} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-blue-400" />
@@ -386,7 +387,7 @@ const Login_2 = ({ onLoginSuccess }) => {
                   value={email}
                   onChange={(e) => { setemail(e.target.value); setLoginError('') }}
                   type="email"
-                  placeholder="Enter your email"
+                  placeholder={LOGIN_CONSTANTS.EMAIL_PLACEHOLDER}
                   className={`${inputBase} ${errors.email ? inputError : inputNormal}`}
                   style={{ fontFamily: '"DM Sans", sans-serif' }}
                 />
@@ -403,7 +404,7 @@ const Login_2 = ({ onLoginSuccess }) => {
                 className="block text-[10.5px] sm:text-xs font-semibold mb-1.5 tracking-widest uppercase text-gray-500"
                 style={{ fontFamily: '"DM Sans", sans-serif' }}
               >
-                Password
+                {LOGIN_CONSTANTS.PASSWORD_LABEL}
               </label>
               <div className="relative">
                 <LockKeyhole size={15} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-blue-400" />
@@ -412,7 +413,7 @@ const Login_2 = ({ onLoginSuccess }) => {
                   value={password}
                   onChange={(e) => { setpassword(e.target.value); setLoginError('') }}
                   type={showPassword ? 'text' : 'password'}
-                  placeholder="Enter your password"
+                  placeholder={LOGIN_CONSTANTS.PASSWORD_PLACEHOLDER}
                   className={`${inputBase} pr-10 ${errors.password ? inputError : inputNormal}`}
                   style={{ fontFamily: '"DM Sans", sans-serif' }}
                 />
@@ -433,7 +434,7 @@ const Login_2 = ({ onLoginSuccess }) => {
 
             <div className="pt-1">
               <ShinyButton disabled={isLoading} isLoading={isLoading}>
-                Login →
+                {LOGIN_CONSTANTS.LOGIN_BUTTON}
               </ShinyButton>
             </div>
 
@@ -446,11 +447,11 @@ const Login_2 = ({ onLoginSuccess }) => {
             <div className="text-center space-y-1">
               <p className="text-[11px] sm:text-xs font-medium text-gray-500"
                 style={{ fontFamily: '"DM Sans", sans-serif' }}>
-                Authorized access only
+                {LOGIN_CONSTANTS.AUTHORIZED_ACCESS}
               </p>
               <p className="text-[10px] sm:text-[11px] text-gray-400"
                 style={{ fontFamily: '"DM Sans", sans-serif' }}>
-                Contact your system administrator for access credentials.
+                {LOGIN_CONSTANTS.CONTACT_ADMIN}
               </p>
             </div>
 

@@ -11,19 +11,20 @@ import { getSchoolById, updateSchool, uploadSchoolLogo } from "../../Api/SchoolC
 import { getAttendanceConfig, updateAttendanceConfig } from "../../Api/SchoolConfiguration/schoolconfig";
 import { toast } from "react-toastify";
 import { getListOfValues } from "../../Api/Lov/ListOfValues";
+import SCHOOL_CONFIG_CONST from '../../Constants/StringConstants/SchoolConfigConstants'
 
 const TABS = [
-  { id: "school", label: "School Info", icon: Settings },
-  { id: "attendance", label: "Attendance", icon: CalendarClock },
-  { id: "logo", label: "Logo", icon: ImageIcon },
+  { id: "school", label: SCHOOL_CONFIG_CONST.TAB_SCHOOL_INFO, icon: Settings },
+  { id: "attendance", label: SCHOOL_CONFIG_CONST.TAB_ATTENDANCE, icon: CalendarClock },
+  { id: "logo", label: SCHOOL_CONFIG_CONST.TAB_LOGO, icon: ImageIcon },
 ];
 
 const BOARDS = ["CBSE", "ICSE", "State Board", "IB", "IGCSE"];
-const STATUSES = ["Active", "Inactive", "Suspended"];
+const STATUSES = [SCHOOL_CONFIG_CONST.STATUS_ACTIVE, SCHOOL_CONFIG_CONST.STATUS_INACTIVE, SCHOOL_CONFIG_CONST.STATUS_SUSPENDED];
 
 const EMPTY_SCHOOL = {
   name: "", code: "", board: "CBSE",
-  establishedYear: "", status: "Active",
+  establishedYear: "", status: SCHOOL_CONFIG_CONST.STATUS_ACTIVE,
   phone: "", email: "",
   website: "", principalName: "",
   address: "", city: "",
@@ -44,43 +45,43 @@ const EMPTY_ATTENDANCE = {
 // ── Validation helpers ────────────────────────────────────────────────────────
 const VALIDATORS = {
   name: (v) => {
-    if (!v?.trim()) return "School name is required";
-    if (v.trim().length < 3) return "Name must be at least 3 characters";
-    if (v.trim().length > 100) return "Name must be under 100 characters";
+    if (!v?.trim()) return SCHOOL_CONFIG_CONST.ERR_SCHOOL_NAME_REQUIRED;
+    if (v.trim().length < 3) return SCHOOL_CONFIG_CONST.ERR_SCHOOL_NAME_LENGTH;
+    if (v.trim().length > 100) return SCHOOL_CONFIG_CONST.ERR_SCHOOL_NAME_MAX;
     return null;
   },
   code: (v) => {
-    if (!v?.trim()) return "School code is required";
-    if (!/^[A-Za-z0-9_-]{2,20}$/.test(v.trim())) return "Code: 2–20 chars, letters/numbers/_ only";
+    if (!v?.trim()) return SCHOOL_CONFIG_CONST.ERR_SCHOOL_CODE_REQUIRED;
+    if (!/^[A-Za-z0-9_-]{2,20}$/.test(v.trim())) return SCHOOL_CONFIG_CONST.ERR_SCHOOL_CODE_FORMAT;
     return null;
   },
   phone: (v) => {
     if (!v) return null;
     const cleaned = v.replace(/[\s\-().+]/g, "");
-    if (!/^\d{7,15}$/.test(cleaned)) return "Enter a valid phone number (7–15 digits)";
+    if (!/^\d{7,15}$/.test(cleaned)) return SCHOOL_CONFIG_CONST.ERR_PHONE_INVALID;
     return null;
   },
   email: (v) => {
     if (!v) return null;
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.trim())) return "Enter a valid email address";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.trim())) return SCHOOL_CONFIG_CONST.ERR_EMAIL_INVALID;
     return null;
   },
-
   establishedYear: (v) => {
     if (!v) return null;
     const yr = parseInt(v);
-    if (isNaN(yr) || yr < 1800 || yr > new Date().getFullYear())
-      return `Year must be between 1800 and ${new Date().getFullYear()}`;
+    const currentYear = new Date().getFullYear();
+    if (isNaN(yr) || yr < 1800 || yr > currentYear)
+      return SCHOOL_CONFIG_CONST.ERR_YEAR_RANGE(1800, currentYear);
     return null;
   },
   pincode: (v) => {
     if (!v) return null;
-    if (!/^\d{6}$/.test(v.trim())) return "Pincode must be exactly 6 digits";
+    if (!/^\d{6}$/.test(v.trim())) return SCHOOL_CONFIG_CONST.ERR_PINCODE_LENGTH;
     return null;
   },
   affiliationNumber: (v) => {
     if (!v) return null;
-    if (v.trim().length > 50) return "Affiliation number too long";
+    if (v.trim().length > 50) return SCHOOL_CONFIG_CONST.ERR_AFFILIATION_LONG;
     return null;
   },
 };
@@ -96,22 +97,20 @@ function validateSchool(data) {
 
 function validateAttendance(data) {
   const errors = {};
-  if (!data.workStartTime) errors.workStartTime = "Start time is required";
+  if (!data.workStartTime) errors.workStartTime = SCHOOL_CONFIG_CONST.ERR_START_TIME_REQUIRED;
   if (data.gracePeriodMinutes < 0 || data.gracePeriodMinutes > 120)
-    errors.gracePeriodMinutes = "Grace period must be 0–120 minutes";
+    errors.gracePeriodMinutes = SCHOOL_CONFIG_CONST.ERR_GRACE_PERIOD_RANGE;
   if (data.faceConfidenceThreshold < 0 || data.faceConfidenceThreshold > 100)
-    errors.faceConfidenceThreshold = "Threshold must be 0–100%";
+    errors.faceConfidenceThreshold = SCHOOL_CONFIG_CONST.ERR_THRESHOLD_RANGE;
   if (data.gpsCheckEnabled) {
     if (data.schoolLatitude === null || data.schoolLatitude === "")
-      errors.schoolLatitude = "Latitude is required when GPS is enabled";
+      errors.schoolLatitude = SCHOOL_CONFIG_CONST.ERR_LATITUDE_REQUIRED;
     else if (isNaN(data.schoolLatitude) || data.schoolLatitude < -90 || data.schoolLatitude > 90)
-      errors.schoolLatitude = "Latitude must be between -90 and 90";
+      errors.schoolLatitude = SCHOOL_CONFIG_CONST.ERR_LATITUDE_RANGE;
     if (data.schoolLongitude === null || data.schoolLongitude === "")
-      errors.schoolLongitude = "Longitude is required when GPS is enabled";
+      errors.schoolLongitude = SCHOOL_CONFIG_CONST.ERR_LONGITUDE_REQUIRED;
     else if (isNaN(data.schoolLongitude) || data.schoolLongitude < -180 || data.schoolLongitude > 180)
-      errors.schoolLongitude = "Longitude must be between -180 and 180";
-    // if (data.allowedRadiusMeters > 10000)
-    //   errors.allowedRadiusMeters = "Radius cannot exceed 10,000 metres";
+      errors.schoolLongitude = SCHOOL_CONFIG_CONST.ERR_LONGITUDE_RANGE;
   }
   return errors;
 }
@@ -285,7 +284,7 @@ export default function SchoolConfig() {
           establishedYear: s.establishedYear ? String(s.establishedYear) : "",
           status: s.status
             ? s.status.charAt(0).toUpperCase() + s.status.slice(1).toLowerCase()
-            : "Active",
+            : SCHOOL_CONFIG_CONST.STATUS_ACTIVE,
           phone: s.phone || "",
           email: s.email || "",
           website: s.website || "",
@@ -427,7 +426,7 @@ export default function SchoolConfig() {
         establishedYear: s.establishedYear ? String(s.establishedYear) : "",
         status: s.status
           ? s.status.charAt(0).toUpperCase() + s.status.slice(1).toLowerCase()
-          : "Active",
+          : SCHOOL_CONFIG_CONST.STATUS_ACTIVE,
         phone: s.phone || "",
         email: s.email || "",
         website: s.website || "",
@@ -509,7 +508,7 @@ export default function SchoolConfig() {
     if (!schoolId) return;
     setLogoError(null);
     if (!logoFile) { setLogoError("Please select a logo file first"); return; }
-    if (logoFile.size > MAX_FILE_SIZE) { setLogoError("File size exceeds 5 MB limit"); return; }
+    if (logoFile.size > MAX_FILE_SIZE) { setLogoError(SCHOOL_CONFIG_CONST.ERR_FILE_SIZE_LIMIT); return; }
 
     setLogoSaveState("saving");
     try {
@@ -558,7 +557,7 @@ export default function SchoolConfig() {
   };
 
   const handleFileDrop = (e) => {
-    e.preventDefault(); setDragOver(false);
+    e.preventDefault(); setDragOver(false); 
     const file = e.dataTransfer.files[0];
     if (file) processFile(file);
   };
@@ -566,9 +565,9 @@ export default function SchoolConfig() {
   const processFile = (file) => {
     setLogoError(null);
     if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
-      setLogoError("Only JPG, PNG, or WEBP files are accepted"); return;
+      setLogoError(SCHOOL_CONFIG_CONST.ERR_FILE_TYPE); return;
     }
-    if (file.size > MAX_FILE_SIZE) { setLogoError("File size exceeds 5 MB limit"); return; }
+    if (file.size > MAX_FILE_SIZE) { setLogoError(SCHOOL_CONFIG_CONST.ERR_FILE_SIZE_LIMIT); return; }
     setLogoFile(file);
     const reader = new FileReader();
     reader.onload = (e) => setLogoPreview(e.target.result);
@@ -581,7 +580,7 @@ export default function SchoolConfig() {
       <div className="min-h-screen bg-slate-100 flex items-center justify-center">
         <div className="flex flex-col items-center gap-3 text-slate-500">
           <Loader2 className="w-10 h-10 animate-spin text-blue-500" />
-          <p className="text-sm font-medium">Loading school details…</p>
+          <p className="text-sm font-medium">{SCHOOL_CONFIG_CONST.LOADING_SCHOOL_DETAILS}</p>
         </div>
       </div>
     );
@@ -594,7 +593,7 @@ export default function SchoolConfig() {
           <div className="w-14 h-14 rounded-2xl bg-red-50 flex items-center justify-center mx-auto mb-4">
             <AlertCircle className="w-7 h-7 text-red-500" />
           </div>
-          <h2 className="text-base font-bold text-slate-800 mb-2">Failed to Load School</h2>
+          <h2 className="text-base font-bold text-slate-800 mb-2">{SCHOOL_CONFIG_CONST.FAILED_TO_LOAD_SCHOOLS}</h2>
           <p className="text-sm text-slate-500">{fetchError}</p>
         </div>
       </div>
@@ -602,8 +601,8 @@ export default function SchoolConfig() {
   }
 
   const statusColor =
-    schoolData.status === "Active" ? "bg-emerald-100 text-emerald-700" :
-      schoolData.status === "Inactive" ? "bg-amber-100 text-amber-700" :
+    schoolData.status === SCHOOL_CONFIG_CONST.STATUS_ACTIVE ? "bg-emerald-100 text-emerald-700" :
+      schoolData.status === SCHOOL_CONFIG_CONST.STATUS_INACTIVE ? "bg-amber-100 text-amber-700" :
         "bg-red-100 text-red-600";
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -613,10 +612,10 @@ export default function SchoolConfig() {
       {/* ══ PAGE HEADER ══ */}
       <div className="px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8 pb-0">
         <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">
-          School Configuration
+          {SCHOOL_CONFIG_CONST.SchoolConfig}
         </h1>
         <p className="text-gray-500 text-xs sm:text-sm mt-1">
-          Manage school profile, attendance rules &amp; branding
+          {SCHOOL_CONFIG_CONST.SCHOOL_CONFIG_SUBTITLE}
         </p>
       </div>
 
@@ -753,9 +752,9 @@ export default function SchoolConfig() {
           <>
             {/* Basic Information */}
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-              <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-slate-100 bg-slate-50/60">
+              <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-sBASIC_INFORMAlate-100 bg-slate-50/60">
                 <Building2 className="w-4 h-4 text-blue-600" />
-                <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500">Basic Information</h3>
+                <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500">{SCHOOL_CONFIG_CONST.BASIC_INFORMATION_LABEL}</h3>
               </div>
               <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* School Name */}
@@ -948,7 +947,7 @@ export default function SchoolConfig() {
                   <AlertCircle className="w-5 h-5 text-red-500" />
                 </div>
                 <div className="flex-1">
-                  <p className="font-bold text-slate-800 text-sm">Failed to Load Attendance Config</p>
+                  <p className="font-bold text-slate-800 text-sm">{SCHOOL_CONFIG_CONST.ERR_LOAD_CONFIG}</p>
                   <p className="text-xs text-slate-500 mt-1">{attFetchError}</p>
                 </div>
                 <button
@@ -1020,7 +1019,7 @@ export default function SchoolConfig() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-semibold text-slate-800 text-sm">Saturday Working</p>
-                        <p className="text-xs text-slate-500 mt-0.5">Mark Saturday as a working day for attendance.</p>
+                        <p className="text-xs text-slate-500 mt-0.5">{SCHOOL_CONFIG_CONST.SATURDAY_WORKING_REMARK}</p>
                       </div>
                       <button
                         onClick={() => handleAttendanceChange("saturdayWorking", !attendanceData.saturdayWorking)}
@@ -1050,7 +1049,7 @@ export default function SchoolConfig() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-semibold text-slate-800 text-sm">Sunday Working</p>
-                        <p className="text-xs text-slate-500 mt-0.5">Mark Sunday as a working day for attendance.</p>
+                        <p className="text-xs text-slate-500 mt-0.5">{SCHOOL_CONFIG_CONST.SUNDAY_WORKING_REMARK}</p>
                       </div>
                       <button
                         onClick={() => handleAttendanceChange("sundayWorking", !attendanceData.sundayWorking)}
@@ -1153,7 +1152,7 @@ export default function SchoolConfig() {
                       <div className="flex-1 min-w-0">
                         <p className="font-semibold text-slate-800 text-sm">Enable GPS Check</p>
                         <p className="text-xs text-slate-500 mt-0.5 hidden sm:block">
-                          Require staff &amp; students to be within radius when marking attendance.
+                          {SCHOOL_CONFIG_CONST.ATTENDANCE_RADIUS_REMARK}
                         </p>
                       </div>
                       <button
@@ -1182,7 +1181,7 @@ export default function SchoolConfig() {
                       <div className="border border-blue-200 rounded-xl p-4 bg-blue-50/40 space-y-3">
                         <div className="flex items-center gap-2">
                           <Info className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-                          <p className="text-xs text-blue-600 font-medium">Set school coordinates to define the attendance zone.</p>
+                          <p className="text-xs text-blue-600 font-medium">{SCHOOL_CONFIG_CONST.DEFINE_ZONE_ATTENDANCE_CORD}</p>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                           <div>
@@ -1270,7 +1269,7 @@ export default function SchoolConfig() {
             <div className="flex items-start justify-between gap-2">
               <div>
                 <h2 className="text-base font-bold text-slate-800">School Logo</h2>
-                <p className="text-xs text-slate-500 mt-0.5">Upload JPG, PNG, or WEBP · Max 5 MB</p>
+                <p className="text-xs text-slate-500 mt-0.5">{SCHOOL_CONFIG_CONST.UPLOAD_INSTRUCTION}</p>
               </div>
             </div>
 
