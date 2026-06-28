@@ -1,4 +1,4 @@
-import { Funnel, SearchIcon } from 'lucide-react';
+import { SearchIcon } from 'lucide-react';
 
 const TeachersFilters = ({
   search,
@@ -12,6 +12,7 @@ const TeachersFilters = ({
   setPage,
   classes = []
 }) => {
+
   const classOptions = [
     { label: 'All Classes', value: 'All Classes' },
     ...classes.map((c) => ({
@@ -19,11 +20,39 @@ const TeachersFilters = ({
       value: c.id,
     })),
   ];
-  return (
-    <div className="bg-white grid lg:grid-cols-3 gap-2 px-4 py-2 rounded-xl border border-gray-200 mb-4">
 
-      <div className="flex col-span-2 items-center gap-2 border rounded-lg border-gray-200 bg-gray-100 px-2 py-1 focus-within:shadow-sm focus-within:shadow-blue-200">
-        <SearchIcon className="w-5 h-5 text-gray-500" />
+  return (
+    <div className="
+        bg-white
+        grid
+        grid-cols-1
+        md:grid-cols-2
+        lg:grid-cols-5
+        gap-3
+        px-4
+        py-3
+        rounded-xl
+        border
+        border-gray-200
+        mb-4
+    ">
+
+      {/* Search */}
+      <div className="
+          lg:col-span-2
+          flex
+          items-center
+          gap-2
+          border
+          rounded-lg
+          border-gray-200
+          bg-gray-100
+          px-3
+          py-2
+          min-w-0
+      ">
+        <SearchIcon className="w-5 h-5 text-gray-500 shrink-0" />
+
         <input
           value={search}
           onChange={(e) => {
@@ -31,57 +60,92 @@ const TeachersFilters = ({
             setPage(1);
           }}
           placeholder="Search by name, employee code or contact..."
-          className="text-base sm:text-sm font-normal focus:outline-none appearance-none text-gray-600 w-full bg-transparent"
+          className="
+              w-full
+              min-w-0
+              text-sm
+              focus:outline-none
+              bg-transparent
+              text-gray-600
+          "
         />
       </div>
 
-      {/* FILTER DROPDOWNS - Takes 1 column on large screens */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
 
-        {/* Status Filter */}
-        <select
-          value={statusFilter}
-          onChange={(e) => {
-            setStatusFilter(e.target.value);
-            setPage(1);
-          }}
-          className="px-4 py-2 border border-gray-200 bg-gray-100 rounded-lg focus:outline-none focus:shadow-sm focus:shadow-blue-200 text-sm"
-        >
-          <option value="All Status">All Status</option>
-          <option value="Active">Active</option>
-          <option value="Inactive">Inactive</option>
-        </select>
+      {/* Status */}
+      <select
+        value={statusFilter}
+        onChange={(e) => {
+          setStatusFilter(e.target.value);
+          setPage(1);
+        }}
+        className="
+          px-3
+          py-2
+          border
+          border-gray-200
+          bg-gray-100
+          rounded-lg
+          text-sm
+          focus:outline-none
+        "
+      >
+        <option value="All Status">All Status</option>
+        <option value="Active">Active</option>
+        <option value="Inactive">Inactive</option>
+      </select>
 
-        {/* Class Filter */}
-        <select
-          value={classFilter}
-          onChange={(e) => {
-            setClassFilter(e.target.value);
-            setPage(1);
-          }}
-          className="px-4 py-2 border border-gray-200 bg-gray-100 rounded-lg focus:outline-none focus:shadow-sm focus:shadow-blue-200 text-sm"
-        >
-          {classOptions.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
 
-        {/* Salary Type Filter */}
-        <select
-          value={salaryFilter}
-          onChange={(e) => {
-            setSalaryFilter(e.target.value);
-            setPage(1);
-          }}
-          className="px-4 py-2 border border-gray-200 bg-gray-100 rounded-lg focus:outline-none focus:shadow-sm focus:shadow-blue-200 text-sm"
-        >
-          <option value="All Salary Types">All Salary</option>
-          <option value="Monthly">Monthly</option>
-          <option value="Per Day">Per Day</option>
-        </select>
-      </div>
+      {/* Class */}
+      <select
+        value={classFilter}
+        onChange={(e) => {
+          setClassFilter(e.target.value);
+          setPage(1);
+        }}
+        className="
+          px-3
+          py-2
+          border
+          border-gray-200
+          bg-gray-100
+          rounded-lg
+          text-sm
+          focus:outline-none
+        "
+      >
+        {classOptions.map((opt) => (
+          <option key={opt.value} value={opt.value}>
+            {opt.label}
+          </option>
+        ))}
+      </select>
+
+
+      {/* Salary */}
+      <select
+        value={salaryFilter}
+        onChange={(e) => {
+          setSalaryFilter(e.target.value);
+          setPage(1);
+        }}
+        className="
+          px-3
+          py-2
+          border
+          border-gray-200
+          bg-gray-100
+          rounded-lg
+          text-sm
+          focus:outline-none
+        "
+      >
+        <option value="All Salary Types">All Salary</option>
+        <option value="Monthly">Monthly</option>
+        <option value="Per Day">Per Day</option>
+      </select>
+
+
     </div>
   );
 };

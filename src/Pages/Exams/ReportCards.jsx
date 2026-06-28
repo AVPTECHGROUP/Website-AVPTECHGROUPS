@@ -455,7 +455,8 @@ export default function ReportCards() {
     const selectedExamObj = exams.find((e) => String(e.id) === selectedExamId);
 
     return (
-        <div className="min-h-screen bg-[#f3f6fb] p-2 sm:p-3 lg:p-6 space-y-3 sm:space-y-4 lg:space-y-6">
+        // FIX 1: Root container — overflow-x-hidden prevents any child from blowing out the page width
+        <div className="min-h-screen bg-[#f3f6fb] p-2 sm:p-3 lg:p-6 space-y-3 sm:space-y-4 lg:space-y-6 w-full max-w-full overflow-x-hidden">
 
             {/* Page Title */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -466,28 +467,46 @@ export default function ReportCards() {
                 </h2>
             </div>
 
-            {/* ── 1. Stats Cards (MOVED TO FIRST) ── */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+            {/* ── 1. Stats Cards ── */}
+            {/*
+                FIX 2: Stats cards grid
+                - was: grid-cols-2 lg:grid-cols-4  → at 1024px (lg) all 4 cards squeezed into a row that's too narrow
+                - now: grid-cols-1 sm:grid-cols-2 xl:grid-cols-4
+                  · mobile  (< 640px)  → 1 column   — full width, no squeezing
+                  · tablet  (640–1279px) → 2 columns — comfortable on 768 and 1024px
+                  · desktop (≥ 1280px) → 4 columns  — original look on large screens
+                  Each card also gets min-w-0 so text truncates instead of blowing out the cell.
+            */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2 sm:gap-3">
                 {loadingCards || loadingMeta
                     ? Array(4).fill(0).map((_, i) => <CardLoader key={i} />)
                     : STATS.map((s) => (
-                        <CardComponent
-                            key={s.key}
-                            IconName={s.icon}
-                            keyName={s.key}
-                            val={s.val}
-                            iconBgColor={s.iconBgColor}
-                            iconTxColor={s.iconTxColor}
-                        />
+                        <div key={s.key} className="min-w-0">
+                            <CardComponent
+                                IconName={s.icon}
+                                keyName={s.key}
+                                val={s.val}
+                                iconBgColor={s.iconBgColor}
+                                iconTxColor={s.iconTxColor}
+                            />
+                        </div>
                     ))}
             </div>
 
-            {/* ── 2. Top Filter Bar (MOVED TO SECOND) ── */}
+            {/* ── 2. Top Filter Bar ── */}
+            {/*
+                FIX 3: Filter bar layout
+                - was: flex-col lg:flex-row  → at 1024px (lg) it goes single-row but all selects + buttons
+                  crammed horizontally, causing the exam select and action buttons to overflow.
+                - now: flex-col xl:flex-row  → stays stacked until 1280px, comfortable at 1024px.
+                  Left side inputs stay flex-col sm:flex-row (they wrap nicely on tablet).
+                  Action buttons stay flex-row with shrink-0 so they never collapse.
+            */}
             <div className="bg-white rounded-xl sm:rounded-2xl border border-gray-200 shadow-sm px-3 sm:px-4 lg:px-5 py-3.5">
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-                    
-                    {/* Left side: Inputs + Icon Only Reload */}
-                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-1 min-w-0">
+                <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3">
+
+                    {/* Left side: Inputs + Icon-only Reload */}
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 flex-1 min-w-0">
                         {/* Class Select */}
                         <Select
                             value={selectedClassId}
@@ -497,7 +516,7 @@ export default function ReportCards() {
                                 ...classes.map((c) => ({ value: String(c.id), label: c.name }))
                             ]}
                             disabled={loadingMeta}
-                            className="w-full sm:w-36 shrink-0"
+                            className="w-full sm:w-32 lg:w-36 shrink-0"
                         />
 
                         {/* Section Select */}
@@ -509,10 +528,10 @@ export default function ReportCards() {
                                 ...filteredSections.map((s) => ({ value: String(s.id), label: sectionLabel(s) }))
                             ]}
                             disabled={loadingMeta}
-                            className="w-full sm:w-44 shrink-0"
+                            className="w-full sm:w-40 lg:w-44 shrink-0"
                         />
 
-                        {/* Exam Select */}
+                        {/* Exam Select — flex-1 so it takes remaining space but never overflows */}
                         <Select
                             value={selectedExamId}
                             onChange={(v) => setSelectedExamId(v)}
@@ -532,7 +551,7 @@ export default function ReportCards() {
                             onClick={loadReportCards}
                             disabled={!selectedExamId || loadingCards}
                             title="Reload Data"
-                            className="flex items-center justify-center h-[38px] w-[38px] text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 active:scale-95 transition-all disabled:opacity-60 shrink-0"
+                            className="flex items-center justify-center h-[38px] w-full sm:w-[38px] text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 active:scale-95 transition-all disabled:opacity-60 shrink-0"
                         >
                             {loadingCards ? (
                                 <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
@@ -543,17 +562,24 @@ export default function ReportCards() {
                     </div>
 
                     {/* Right side: Action Buttons */}
-                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
+                    {/*
+                        FIX 4: Action buttons
+                        - was: flex-col sm:flex-row  — at 1024px these stacked under selects when
+                          the parent was still in flex-col mode, then overflowed when parent went flex-row.
+                        - now: always flex-row with shrink-0 on each button so they never collapse.
+                          On mobile they stretch full-width via w-full; on sm+ they auto-size.
+                    */}
+                    <div className="flex flex-row items-stretch gap-2 sm:gap-3 shrink-0">
                         {/* Generate All */}
                         <button
                             onClick={handleGenerate}
                             disabled={!selectedExamId || generating}
-                            className="flex items-center justify-center gap-2 px-4 h-[38px] text-sm font-semibold text-white bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700 rounded-lg transition-all shadow-sm active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed whitespace-nowrap"
+                            className="flex flex-1 sm:flex-none items-center justify-center gap-2 px-3 lg:px-4 h-[38px] text-sm font-semibold text-white bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700 rounded-lg transition-all shadow-sm active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed whitespace-nowrap"
                         >
                             {generating ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
+                                <Loader2 className="w-4 h-4 animate-spin shrink-0" />
                             ) : (
-                                <Sparkles className="w-4 h-4" />
+                                <Sparkles className="w-4 h-4 shrink-0" />
                             )}
                             <span>{generating ? "Generating..." : "Generate All"}</span>
                         </button>
@@ -562,9 +588,9 @@ export default function ReportCards() {
                         <button
                             onClick={handleExport}
                             disabled={loadingCards || !cardsLoaded || students.length === 0}
-                            className="flex items-center justify-center gap-2 px-4 h-[38px] text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-all shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                            className="flex flex-1 sm:flex-none items-center justify-center gap-2 px-3 lg:px-4 h-[38px] text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-all shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
                         >
-                            <Download className="w-4 h-4" />
+                            <Download className="w-4 h-4 shrink-0" />
                             <span>Export CSV</span>
                         </button>
                     </div>
@@ -628,8 +654,13 @@ export default function ReportCards() {
                     </div>
                 )}
 
-                {/* Mobile & Tablet Table */}
-                <div className="block lg:hidden">
+                {/*
+                    FIX 5: Mobile/tablet card list breakpoint
+                    - was: block lg:hidden  → card list hidden at 1024px, desktop table shown instead (but overflows)
+                    - now: block xl:hidden  → card list shown up to 1279px (covers 768 and 1024px safely),
+                      desktop table only kicks in at 1280px where there's enough room.
+                */}
+                <div className="block xl:hidden">
                     {loadingCards ? (
                         <div className="p-4 space-y-3">
                             {Array.from({ length: 5 }).map((_, i) => (
@@ -649,75 +680,83 @@ export default function ReportCards() {
                     )}
                 </div>
 
-                {/* Desktop Table */}
-                <div className="hidden lg:block overflow-x-auto">
-                    <table className="w-full min-w-[720px] text-sm">
-                        <thead>
-                            <tr className="bg-gray-50 border-b border-gray-100">
-                                {["Rank", "Student Name", "Roll No.", "Adm. No.", "Section",
-                                    "Total", "%", "Grade", "Status", "Action"].map((h) => (
-                                        <th key={h} className="text-left px-2 xl:px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                                            {h}
-                                        </th>
-                                    ))}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {loadingCards ? (
-                                <ListLoader rows={5} avatar={false} colSpanSet={10} />
-                            ) : students.length === 0 ? (
-                                <tr>
-                                    <td colSpan={10} className="text-center text-sm text-gray-400 py-12">
-                                        {cardsLoaded
-                                            ? "No report cards found for this selection."
-                                            : "Select an exam and click Generate All or Reload."}
-                                    </td>
+                {/*
+                    FIX 6: Desktop table breakpoint + scroll containment
+                    - was: hidden lg:block overflow-x-auto  → shown at 1024px, table min-w-[720px] overflowed the page
+                    - now: hidden xl:block                  → only shown at ≥ 1280px
+                      Inner wrapper gets overflow-x-auto + w-full so the scroll stays inside the card,
+                      not the whole page. min-w raised to 800px to give columns enough room.
+                */}
+                <div className="hidden xl:block">
+                    <div className="overflow-x-auto w-full">
+                        <table className="w-full min-w-[800px] text-sm">
+                            <thead>
+                                <tr className="bg-gray-50 border-b border-gray-100">
+                                    {["Rank", "Student Name", "Roll No.", "Adm. No.", "Section",
+                                        "Total", "%", "Grade", "Status", "Action"].map((h) => (
+                                            <th key={h} className="text-left px-2 xl:px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                                                {h}
+                                            </th>
+                                        ))}
                                 </tr>
-                            ) : students.map((student) => {
-                                const pct = student.percentage ?? 0;
-                                const grade = getGrade(pct, student.isAbsent);
-                                const status = getStatus(student);
-                                const rowBg = getRowBg(student);
-                                return (
-                                    <tr
-                                        key={student.studentId}
-                                        className={`border-b border-gray-50 transition-colors hover:bg-blue-50/40 ${rowBg}`}
-                                    >
-                                        <td className="px-2 xl:px-4 py-3">{getRankDisplay(student.classRank)}</td>
-                                        <td className="px-2 xl:px-4 py-3 font-semibold text-gray-800 whitespace-nowrap">{student.studentName}</td>
-                                        <td className="px-2 xl:px-4 py-3 text-gray-500">{student.rollNumber || "—"}</td>
-                                        <td className="px-2 xl:px-4 py-3 text-gray-500 whitespace-nowrap">{student.admissionNumber || "—"}</td>
-                                        <td className="px-2 xl:px-4 py-3 text-gray-500 whitespace-nowrap">{student.sectionName || "—"}</td>
-                                        <td className="px-2 xl:px-4 py-3 font-medium text-gray-700 whitespace-nowrap">
-                                            {student.totalMarksObtained} / {student.totalMaxMarks}
-                                        </td>
-                                        <td className={`px-2 xl:px-4 py-3 font-bold whitespace-nowrap ${student.isAbsent ? "text-gray-300" : "text-gray-800"}`}>
-                                            {student.isAbsent ? "—" : `${pct.toFixed(1)}%`}
-                                        </td>
-                                        <td className="px-2 xl:px-4 py-3">
-                                            <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold ${grade.bg}`}>
-                                                {student.overallGrade || grade.label}
-                                            </span>
-                                        </td>
-                                        <td className="px-2 xl:px-4 py-3">
-                                            <span className={`px-2 py-1 rounded-full text-xs font-bold border whitespace-nowrap ${status.cls}`}>
-                                                {status.label}
-                                            </span>
-                                        </td>
-                                        <td className="px-2 xl:px-4 py-3">
-                                            <button
-                                                onClick={() => handleViewStudent(student)}
-                                                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 transition-all whitespace-nowrap"
-                                            >
-                                                <Eye className="w-3.5 h-3.5" />
-                                                View
-                                            </button>
+                            </thead>
+                            <tbody>
+                                {loadingCards ? (
+                                    <ListLoader rows={5} avatar={false} colSpanSet={10} />
+                                ) : students.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={10} className="text-center text-sm text-gray-400 py-12">
+                                            {cardsLoaded
+                                                ? "No report cards found for this selection."
+                                                : "Select an exam and click Generate All or Reload."}
                                         </td>
                                     </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
+                                ) : students.map((student) => {
+                                    const pct = student.percentage ?? 0;
+                                    const grade = getGrade(pct, student.isAbsent);
+                                    const status = getStatus(student);
+                                    const rowBg = getRowBg(student);
+                                    return (
+                                        <tr
+                                            key={student.studentId}
+                                            className={`border-b border-gray-50 transition-colors hover:bg-blue-50/40 ${rowBg}`}
+                                        >
+                                            <td className="px-2 xl:px-4 py-3">{getRankDisplay(student.classRank)}</td>
+                                            <td className="px-2 xl:px-4 py-3 font-semibold text-gray-800 whitespace-nowrap">{student.studentName}</td>
+                                            <td className="px-2 xl:px-4 py-3 text-gray-500">{student.rollNumber || "—"}</td>
+                                            <td className="px-2 xl:px-4 py-3 text-gray-500 whitespace-nowrap">{student.admissionNumber || "—"}</td>
+                                            <td className="px-2 xl:px-4 py-3 text-gray-500 whitespace-nowrap">{student.sectionName || "—"}</td>
+                                            <td className="px-2 xl:px-4 py-3 font-medium text-gray-700 whitespace-nowrap">
+                                                {student.totalMarksObtained} / {student.totalMaxMarks}
+                                            </td>
+                                            <td className={`px-2 xl:px-4 py-3 font-bold whitespace-nowrap ${student.isAbsent ? "text-gray-300" : "text-gray-800"}`}>
+                                                {student.isAbsent ? "—" : `${pct.toFixed(1)}%`}
+                                            </td>
+                                            <td className="px-2 xl:px-4 py-3">
+                                                <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold ${grade.bg}`}>
+                                                    {student.overallGrade || grade.label}
+                                                </span>
+                                            </td>
+                                            <td className="px-2 xl:px-4 py-3">
+                                                <span className={`px-2 py-1 rounded-full text-xs font-bold border whitespace-nowrap ${status.cls}`}>
+                                                    {status.label}
+                                                </span>
+                                            </td>
+                                            <td className="px-2 xl:px-4 py-3">
+                                                <button
+                                                    onClick={() => handleViewStudent(student)}
+                                                    className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 transition-all whitespace-nowrap"
+                                                >
+                                                    <Eye className="w-3.5 h-3.5" />
+                                                    View
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 

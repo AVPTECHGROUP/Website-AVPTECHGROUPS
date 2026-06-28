@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 
-const PersonalDetailsTab = ({ formData, setFormData, handleInputChange }) => {
+const PersonalDetailsTab = ({ formData, setFormData, handleInputChange, onSave, onSaveAndNext, isSaving }) => {
     const [enabled, setEnabled] = useState(formData.accountStatus);
-
 
     return (
         <div>
@@ -297,6 +296,41 @@ const PersonalDetailsTab = ({ formData, setFormData, handleInputChange }) => {
                         </div>
                     </div>
                 </div>
+            </div>
+
+            {/* ── Action Buttons ── */}
+            <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-gray-200">
+                <button
+                    type="button"
+                    onClick={onSave}
+                    disabled={isSaving}
+                    className="px-5 py-2.5 text-sm font-medium border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    {isSaving ? 'Saving...' : 'Save'}
+                </button>
+                <button
+                    type="button"
+                    onClick={onSaveAndNext}
+                    disabled={isSaving}
+                    className="px-5 py-2.5 text-sm font-medium bg-[#1e293b] text-white rounded-lg hover:bg-[#0f172a] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                    {isSaving ? (
+                        <>
+                            <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                            </svg>
+                            Saving...
+                        </>
+                    ) : (
+                        <>
+                            Save & Next
+                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                        </>
+                    )}
+                </button>
             </div>
         </div>
     );

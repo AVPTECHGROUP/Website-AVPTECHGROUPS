@@ -1,28 +1,24 @@
 // ─────────────────────────────────────────────────────────────────────────────
-//  SectionSubjectAssignment.jsx  — fully responsive (mobile → desktop)
+//  SectionSubjectAssignment.jsx — Responsive up to Desktop (xl breakpoint)
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useState, useEffect, useCallback } from "react";
 import SectionSubjectService from "../../Api/SectionSubjectService";
-import { Edit, MinusCircle } from "lucide-react";
+import { Edit, MinusCircle, BookOpen, Filter, Search, Plus } from "lucide-react";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const INPUT_CLS =
-  "border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 bg-white " +
-  "focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-300 transition w-full";
+  "border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-700 bg-white " +
+  "focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition w-full shadow-2xs";
 
 const BTN_PRIMARY =
-  "flex items-center justify-center gap-1.5 px-4 py-2 text-sm rounded-xl bg-blue-600 text-white " +
-  "hover:bg-blue-700 active:scale-95 transition font-medium shadow-sm " +
+  "flex items-center justify-center gap-1.5 px-3.5 py-1.5 text-xs rounded-lg bg-blue-600 text-white " +
+  "hover:bg-blue-700 active:scale-95 transition font-medium shadow-xs " +
   "disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100";
 
 const BTN_GHOST =
-  "flex items-center justify-center gap-1.5 px-4 py-2 text-sm rounded-xl border border-slate-200 " +
+  "flex items-center justify-center gap-1.5 px-3.5 py-1.5 text-xs rounded-lg border border-slate-200 " +
   "text-slate-600 hover:bg-slate-50 active:scale-95 transition";
-
-const BTN_DANGER =
-  "flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs rounded-xl border border-rose-200 " +
-  "text-rose-500 hover:bg-rose-50 active:scale-95 transition font-medium";
 
 // ─── Primitives ───────────────────────────────────────────────────────────────
 
@@ -38,40 +34,31 @@ const Badge = ({ children, variant = "default" }) => {
     count:     "bg-blue-100 text-blue-700 font-semibold",
   };
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-xs font-medium ${cls[variant]}`}>
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium ${cls[variant]}`}>
       {children}
     </span>
   );
 };
 
-const IconBtn = ({ onClick, title, variant = "red" }) => {
+const ActionButton = ({ onClick, variant = "blue", label, icon: Icon }) => {
   const cls = {
-    red:  "text-slate-300 hover:text-rose-500 hover:bg-rose-50",
-    blue: "text-slate-300 hover:text-blue-500 hover:bg-blue-50",
+    blue: "border border-blue-200 text-blue-600 bg-blue-50/40 hover:bg-blue-100/70",
+    red:  "border border-rose-200 text-rose-600 bg-rose-50/40 hover:bg-rose-100/70",
   };
   return (
-    <button onClick={onClick} title={title}
-      className={`p-2 rounded-lg transition-all active:scale-90 touch-manipulation ${cls[variant]}`}>
-      <div className="flex items-center gap-1">
-        {variant === "blue" ? (
-          <div className="flex cursor-pointer text-xs items-center gap-1 border border-blue-300 text-blue-500 px-1.5 py-0.5 rounded-md">
-            <Edit size={14} />
-            <span>Edit</span>
-          </div>
-        ) : (
-          <div className="flex cursor-pointer text-xs items-center gap-1 border border-red-300 text-rose-500 px-1.5 py-0.5 rounded-md">
-            <MinusCircle size={14} />
-            <span>Remove</span>
-          </div>
-        )}
-      </div>
+    <button
+      onClick={onClick}
+      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold 
+        transition-all cursor-pointer select-none touch-manipulation active:scale-95 ${cls[variant]}`}
+    >
+      <Icon size={12} strokeWidth={2.2} className="shrink-0" />
+      <span>{label}</span>
     </button>
   );
 };
 
-// Select with chevron / spinner — full width on mobile
 const Select = ({ value, onChange, children, className = "", loading = false, disabled = false }) => (
-  <div className="relative w-full">
+  <div className="relative w-full min-w-0">
     <select
       value={value}
       onChange={onChange}
@@ -80,91 +67,27 @@ const Select = ({ value, onChange, children, className = "", loading = false, di
     >
       {loading ? <option value="">Loading…</option> : children}
     </select>
-    <span className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none">
-      {loading ? <SpinnerIcon /> : <ChevronIcon />}
+    <span className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 text-xs">
+      {loading ? "..." : "▾"}
     </span>
   </div>
 );
 
-// Skeleton loader rows
-const SkeletonRow = ({ cols = 6 }) => (
-  <tr>
-    {[...Array(cols)].map((_, i) => (
-      <td key={i} className="px-4 py-4">
-        <div className="h-3 bg-slate-100 rounded-full animate-pulse" style={{ width: `${40 + (i * 13) % 40}%` }} />
+const SkeletonRow = () => (
+  <tr className="border-b border-slate-100">
+    {[...Array(6)].map((_, i) => (
+      <td key={i} className="px-6 py-3">
+        <div className="h-2.5 bg-slate-100 rounded-full animate-pulse w-4/5" />
       </td>
     ))}
   </tr>
 );
 
-// Empty / no-data state
-const EmptyState = ({ cols = 6, message }) => (
-  <tr>
-    <td colSpan={cols}>
-      <div className="flex flex-col items-center justify-center py-12 gap-3">
-        <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-2xl">📚</div>
-        <p className="text-sm text-slate-400 text-center px-4">{message}</p>
-      </div>
-    </td>
-  </tr>
-);
-
-// Mobile subject card — replaces table rows on small screens
-const SubjectCard = ({ row, onEdit, onRemove }) => (
-  <div className="p-4 border-b border-slate-50 last:border-0 fade-row">
-    <div className="flex items-start justify-between gap-2">
-      <div className="min-w-0">
-        <p className="font-semibold text-slate-800 text-sm truncate">{row.subjectName}</p>
-        <div className="flex flex-wrap gap-1.5 mt-1.5">
-          <Badge variant="code">{row.subjectCode}</Badge>
-          <Badge variant="hours">{row.weeklyHours} hrs</Badge>
-          <Badge variant={row.isMandatory ? "mandatory" : "optional"}>
-            {row.isMandatory ? "Mandatory" : "Optional"}
-          </Badge>
-          <Badge variant={row.status === "ACTIVE" ? "active" : "inactive"}>
-            {row.status === "ACTIVE" ? "Active" : "Inactive"}
-          </Badge>
-        </div>
-      </div>
-      <div className="flex items-center gap-0.5 shrink-0">
-        <IconBtn variant="blue" title="Edit" onClick={() => onEdit(row)} />Edit
-        <IconBtn variant="red" title="Remove" onClick={() => onRemove(row)} />Remove
-      </div>
-    </div>
+const EmptyState = ({ message }) => (
+  <div className="flex flex-col items-center justify-center py-12 gap-2 text-center w-full">
+    <div className="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center text-xl shadow-xs">📚</div>
+    <p className="text-xs text-slate-400 max-w-xs px-4">{message}</p>
   </div>
-);
-
-// ─── Icons ────────────────────────────────────────────────────────────────────
-const PencilIcon = () => (
-  <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-    <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-  </svg>
-);
-const TrashIcon = () => (
-  <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-    <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
-  </svg>
-);
-const PlusIcon = () => (
-  <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-    <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
-  </svg>
-);
-const SearchIcon = () => (
-  <svg className="h-3.5 w-3.5 text-slate-400" viewBox="0 0 20 20" fill="currentColor">
-    <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
-  </svg>
-);
-const ChevronIcon = () => (
-  <svg className="h-3.5 w-3.5 text-slate-400" viewBox="0 0 20 20" fill="currentColor">
-    <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-  </svg>
-);
-const SpinnerIcon = () => (
-  <svg className="h-3.5 w-3.5 text-slate-400 animate-spin" viewBox="0 0 24 24" fill="none">
-    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-  </svg>
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -195,108 +118,61 @@ const AssignModal = ({ sectionId, allSubjects, assignedSubjectIds, onClose, onAs
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-0 sm:p-4">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-xs p-0 sm:p-4">
       <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-xl overflow-hidden animate-slideUp">
-
-        {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-blue-500 px-5 py-4 flex items-center justify-between">
+        <div className="bg-gradient-to-r from-blue-600 to-blue-500 px-5 py-3.5 flex items-center justify-between">
           <div>
-            <p className="text-blue-200 text-xs font-medium uppercase tracking-widest">Section Subjects</p>
-            <h3 className="text-white font-semibold text-base mt-0.5">Assign Subjects</h3>
+            <p className="text-blue-200 text-[10px] font-medium uppercase tracking-widest">Section Subjects</p>
+            <h3 className="text-white font-semibold text-sm mt-0.5">Assign Subjects</h3>
           </div>
-          <button onClick={onClose}
-            className="text-blue-200 hover:text-white transition text-xl w-9 h-9 flex items-center justify-center rounded-lg hover:bg-white/10 touch-manipulation">
-            ✕
-          </button>
+          <button onClick={onClose} className="text-blue-200 hover:text-white text-sm w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/10">✕</button>
         </div>
 
-        {/* Rows */}
-        <div className="p-4 space-y-3 max-h-[55vh] overflow-y-auto">
+        <div className="p-4 space-y-3 max-h-[50vh] overflow-y-auto">
           {rows.map((row, i) => (
-            <div key={i} className="p-3 rounded-xl border border-slate-100 bg-slate-50/60 space-y-3">
-
-              {/* Subject picker — full width */}
-              <div className="space-y-1">
-                <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Subject</label>
+            <div key={i} className="p-3 rounded-xl border border-slate-100 bg-slate-50/50 flex flex-col gap-2.5">
+              <div className="w-full">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide block mb-1">Subject</label>
                 <Select value={row.subjectId} onChange={e => setRow(i, "subjectId", e.target.value)}>
-                  <option value="">— Select —</option>
+                  <option value="">— Select Subject —</option>
                   {available.map(s => (
-                    <option key={s.id} value={s.id}
-                      disabled={rows.some((r, ri) => ri !== i && r.subjectId === String(s.id))}>
+                    <option key={s.id} value={s.id} disabled={rows.some((r, ri) => ri !== i && r.subjectId === String(s.id))}>
                       {s.name} ({s.code})
                     </option>
                   ))}
                 </Select>
               </div>
 
-              {/* Hours + toggles row */}
-              <div className="flex flex-wrap items-center gap-2">
-                <div className="flex flex-wrap items-end gap-2">
-                  <div className="flex items-end gap-2">
-                    {/* Weekly hours */}
-                    <div className="space-y-1 w-24">
-                      <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">
-                        Hrs/wk
-                      </label>
-                      <input
-                        type="number"
-                        min={1}
-                        max={40}
-                        value={row.weeklyHours}
-                        onChange={e => setRow(i, "weeklyHours", Number(e.target.value))}
-                        className="h-10 border border-slate-200 rounded-xl px-3 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-300 w-full"
-                      />
-                    </div>
-
-                    {/* Mandatory */}
-                    <button
-                      type="button"
-                      onClick={() => setRow(i, "isMandatory", !row.isMandatory)}
-                      className={`h-10 px-4 rounded-xl border text-xs font-medium ${
-                        row.isMandatory
-                          ? "bg-violet-50 border-violet-200 text-violet-700"
-                          : "bg-white border-slate-200 text-slate-400"
-                      }`}
-                    >
-                      {row.isMandatory ? "Mandatory" : "Optional"}
-                    </button>
-
-                    {/* Status */}
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setRow(i, "status", row.status === "ACTIVE" ? "INACTIVE" : "ACTIVE")
-                      }
-                      className={`h-10 px-4 rounded-xl border text-xs font-medium ${
-                        row.status === "ACTIVE"
-                          ? "bg-emerald-50 border-emerald-200 text-emerald-700"
-                          : "bg-white border-slate-200 text-slate-400"
-                      }`}
-                    >
-                      {row.status === "ACTIVE" ? "Active" : "Inactive"}
-                    </button>
+              <div className="flex items-center justify-between gap-2 border-t border-slate-100 pt-2.5">
+                <div className="flex items-center gap-2">
+                  <div className="w-16">
+                    <input
+                      type="number" min={1} max={40} value={row.weeklyHours}
+                      onChange={e => setRow(i, "weeklyHours", Number(e.target.value))}
+                      className="h-7 border border-slate-200 rounded-md px-2 text-xs text-slate-700 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 w-full"
+                    />
                   </div>
-                </div>
-
-                {/* Remove row */}
-                {rows.length > 1 && (
-                  <button onClick={() => removeRow(i)}
-                    className="ml-auto p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition touch-manipulation">
-                    <TrashIcon />
+                  <button type="button" onClick={() => setRow(i, "isMandatory", !row.isMandatory)}
+                    className={`h-7 px-2.5 rounded-md border text-[11px] font-medium ${row.isMandatory ? "bg-violet-50 border-violet-200 text-violet-700" : "bg-white border-slate-200 text-slate-400"}`}>
+                    {row.isMandatory ? "Mandatory" : "Optional"}
                   </button>
+                  <button type="button" onClick={() => setRow(i, "status", row.status === "ACTIVE" ? "INACTIVE" : "ACTIVE")}
+                    className={`h-7 px-2.5 rounded-md border text-[11px] font-medium ${row.status === "ACTIVE" ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-white border-slate-200 text-slate-400"}`}>
+                    {row.status === "ACTIVE" ? "Active" : "Inactive"}
+                  </button>
+                </div>
+                {rows.length > 1 && (
+                  <button onClick={() => removeRow(i)} className="text-slate-400 hover:text-rose-500 p-1.5 rounded-md hover:bg-rose-50 transition">✕</button>
                 )}
               </div>
             </div>
           ))}
-
-          <button onClick={addRow}
-            className="w-full py-2.5 rounded-xl border border-dashed border-slate-200 text-sm text-slate-400 hover:border-blue-300 hover:text-blue-500 transition flex items-center justify-center gap-1.5 touch-manipulation">
-            <PlusIcon /> Add another subject
+          <button onClick={addRow} className="w-full py-2 rounded-xl border border-dashed border-slate-200 text-xs text-slate-400 hover:border-blue-300 hover:text-blue-500 transition flex items-center justify-center gap-1">
+            + Add Another Subject
           </button>
         </div>
 
-        {/* Footer */}
-        <div className="px-4 pb-4 pt-2 flex gap-2 border-t border-slate-100">
+        <div className="px-4 py-3 flex gap-2 border-t border-slate-100 bg-slate-50/50">
           <button onClick={onClose} className={`${BTN_GHOST} flex-1`}>Cancel</button>
           <button onClick={handleSave} disabled={saving || rows.every(r => !r.subjectId)} className={`${BTN_PRIMARY} flex-1`}>
             {saving ? "Saving…" : "Assign Subjects"}
@@ -321,51 +197,40 @@ const EditModal = ({ row, onClose, onSave }) => {
   const set = (key, value) => setForm(prev => ({ ...prev, [key]: value }));
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-0 sm:p-4">
-      <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md overflow-hidden animate-slideUp">
-
-        <div className="bg-gradient-to-r from-blue-600 to-blue-500 px-5 py-4 flex items-center justify-between">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-xs p-0 sm:p-4">
+      <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-sm overflow-hidden animate-slideUp">
+        <div className="bg-gradient-to-r from-blue-600 to-blue-500 px-5 py-3.5 flex items-center justify-between">
           <div>
-            <p className="text-blue-200 text-xs font-medium uppercase tracking-widest">Edit Assignment</p>
-            <h3 className="text-white font-semibold text-base mt-0.5 truncate max-w-[220px]">{row.subjectName}</h3>
+            <p className="text-blue-200 text-[10px] font-medium uppercase tracking-widest">Edit Assignment</p>
+            <h3 className="text-white font-semibold text-sm mt-0.5 truncate max-w-[240px]">{row.subjectName}</h3>
           </div>
-          <button onClick={onClose}
-            className="text-blue-200 hover:text-white transition text-xl w-9 h-9 flex items-center justify-center rounded-lg hover:bg-white/10 touch-manipulation">
-            ✕
-          </button>
+          <button onClick={onClose} className="text-blue-200 hover:text-white text-sm w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/10">✕</button>
         </div>
 
-        <div className="p-5 space-y-4">
-          <div className="space-y-1.5">
+        <div className="p-4 space-y-4">
+          <div className="space-y-1">
             <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Weekly Hours</label>
             <input type="number" min={1} max={40} value={form.weeklyHours}
               onChange={e => set("weeklyHours", Number(e.target.value))}
-              className="border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-300 w-full" />
+              className="border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-700 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 w-full" />
           </div>
 
-          <div className="flex gap-3">
+          <div className="flex gap-2">
             <button type="button" onClick={() => set("isMandatory", !form.isMandatory)}
-              className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-medium transition-all touch-manipulation ${
-                form.isMandatory
-                  ? "bg-blue-50 border-blue-200 text-blue-700"
-                  : "bg-slate-50 border-slate-200 text-slate-400"
+              className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-medium transition-all ${
+                form.isMandatory ? "bg-blue-50 border-blue-200 text-blue-700" : "bg-slate-50 border-slate-200 text-slate-400"
               }`}>
-              <span className={`w-2 h-2 rounded-full shrink-0 ${form.isMandatory ? "bg-blue-500" : "bg-slate-300"}`} />
               Mandatory
             </button>
-
             <button type="button" onClick={() => set("status", form.status === "ACTIVE" ? "INACTIVE" : "ACTIVE")}
-              className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-medium transition-all touch-manipulation ${
-                form.status === "ACTIVE"
-                  ? "bg-emerald-50 border-emerald-200 text-emerald-700"
-                  : "bg-slate-50 border-slate-200 text-slate-400"
+              className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-medium transition-all ${
+                form.status === "ACTIVE" ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-slate-50 border-slate-200 text-slate-400"
               }`}>
-              <span className={`w-2 h-2 rounded-full shrink-0 ${form.status === "ACTIVE" ? "bg-emerald-500" : "bg-slate-300"}`} />
               {form.status === "ACTIVE" ? "Active" : "Inactive"}
             </button>
           </div>
 
-          <div className="flex gap-2 pt-1">
+          <div className="flex gap-2 pt-1 border-t border-slate-100 pt-3">
             <button onClick={onClose} className={`${BTN_GHOST} flex-1`}>Cancel</button>
             <button onClick={() => onSave(form)} className={`${BTN_PRIMARY} flex-1`}>Save Changes</button>
           </div>
@@ -377,60 +242,25 @@ const EditModal = ({ row, onClose, onSave }) => {
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  Confirm Dialog
-//  FIX: Added `busy` state so the Confirm button is disabled immediately after
-//  the first click. This prevents multiple API calls when the user double/
-//  triple-clicks the button before the async operation completes.
 // ─────────────────────────────────────────────────────────────────────────────
 const ConfirmDialog = ({ message, onConfirm, onCancel }) => {
-  // `busy` is set to true the instant the button is clicked, disabling it for
-  // all subsequent clicks while the async onConfirm() is running.
   const [busy, setBusy] = useState(false);
 
   const handleConfirm = async () => {
-    if (busy) return;          // extra guard — belt-and-suspenders
+    if (busy) return;
     setBusy(true);
-    try {
-      await onConfirm();       // onConfirm already calls setConfirmDg(null) on success
-    } catch {
-      // If the API call fails, re-enable the button so the user can retry
-      setBusy(false);
-    }
+    try { await onConfirm(); } 
+    catch { setBusy(false); }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-0 sm:p-4">
-      <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-sm p-5 space-y-4 animate-slideUp">
-        <div className="flex items-start gap-3">
-          <div className="w-9 h-9 rounded-xl bg-rose-50 flex items-center justify-center text-rose-500 shrink-0">
-            <TrashIcon />
-          </div>
-          <p className="text-sm text-slate-700 pt-1.5 leading-relaxed">{message}</p>
-        </div>
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-xs p-0 sm:p-4">
+      <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-sm p-4 space-y-4 animate-slideUp">
+        <p className="text-xs text-slate-700 leading-relaxed font-medium">{message}</p>
         <div className="flex gap-2">
-          {/* Cancel is also disabled while busy to prevent closing mid-flight */}
-          <button
-            onClick={onCancel}
-            disabled={busy}
-            className={`${BTN_GHOST} flex-1 disabled:opacity-50 disabled:cursor-not-allowed`}
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleConfirm}
-            disabled={busy}
-            className="flex-1 px-4 py-2 text-sm rounded-xl bg-rose-500 text-white hover:bg-rose-600 active:scale-95 transition font-medium touch-manipulation disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100 flex items-center justify-center gap-2"
-          >
-            {busy ? (
-              <>
-                <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-                </svg>
-                Removing…
-              </>
-            ) : (
-              "Confirm"
-            )}
+          <button onClick={onCancel} disabled={busy} className={`${BTN_GHOST} flex-1`}>Cancel</button>
+          <button onClick={handleConfirm} disabled={busy} className="flex-1 px-4 py-1.5 text-xs rounded-lg bg-rose-500 text-white hover:bg-rose-600 font-medium disabled:opacity-50">
+            {busy ? "Removing…" : "Confirm"}
           </button>
         </div>
       </div>
@@ -439,10 +269,9 @@ const ConfirmDialog = ({ message, onConfirm, onCancel }) => {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  Main Component
+//  Main Component Layout Block
 // ─────────────────────────────────────────────────────────────────────────────
 export default function SectionSubjectAssignment() {
-
   const [classes,   setClasses]   = useState([]);
   const [sections,  setSections]  = useState([]);
   const [subjects,  setSubjects]  = useState([]);
@@ -461,8 +290,6 @@ export default function SectionSubjectAssignment() {
   const [editRow,    setEditRow]    = useState(null);
   const [showAssign, setShowAssign] = useState(false);
   const [confirmDg,  setConfirmDg]  = useState(null);
-
-  // ─── Loaders ──────────────────────────────────────────────────────────────
 
   const loadClasses = useCallback(async () => {
     setClassesLoading(true);
@@ -492,8 +319,6 @@ export default function SectionSubjectAssignment() {
     setTableLoading(false);
   }, [filterStatus]);
 
-  // ─── Effects ──────────────────────────────────────────────────────────────
-
   useEffect(() => {
     loadClasses();
     SectionSubjectService.getAllSubjects().then(setAllSubjects);
@@ -507,8 +332,6 @@ export default function SectionSubjectAssignment() {
     if (selectedSectionId) loadSubjects(selectedSectionId);
   }, [selectedSectionId, filterStatus]);
 
-  // ─── Handlers ─────────────────────────────────────────────────────────────
-
   const handleSaveEdit = async (form) => {
     const res = await SectionSubjectService.updateAssignment(editRow.id, form);
     if (res) setSubjects(prev => prev.map(s => s.id === editRow.id ? { ...s, ...form } : s));
@@ -520,8 +343,6 @@ export default function SectionSubjectAssignment() {
     if (selectedSectionId) loadSubjects(selectedSectionId);
   };
 
-  // FIX: onConfirm is now an async function. ConfirmDialog awaits it, keeping
-  // the button in "Removing…" / disabled state until the API call resolves.
   const handleRemove = (row) => setConfirmDg({
     message: `Remove "${row.subjectName}" from this section?`,
     onConfirm: async () => {
@@ -530,17 +351,6 @@ export default function SectionSubjectAssignment() {
       setConfirmDg(null);
     },
   });
-
-  const handleRemoveAll = () => setConfirmDg({
-    message: "Remove ALL subjects from this section? This cannot be undone.",
-    onConfirm: async () => {
-      const res = await SectionSubjectService.removeAllSubjects(selectedSectionId);
-      if (res) setSubjects([]);
-      setConfirmDg(null);
-    },
-  });
-
-  // ─── Derived ──────────────────────────────────────────────────────────────
 
   const selectedClassName   = classes.find(c => String(c.id) === selectedClassId)?.name ?? "";
   const selectedSectionName = sections.find(s => String(s.id) === selectedSectionId)?.name ?? "";
@@ -552,169 +362,134 @@ export default function SectionSubjectAssignment() {
     return s.subjectName?.toLowerCase().includes(q) || s.subjectCode?.toLowerCase().includes(q);
   });
 
-  // ─────────────────────────────────────────────────────────────────────────
-  //  Render
-  // ─────────────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-[#f5f6fa]">
+    <div className="w-full flex flex-col h-full min-h-0 justify-between min-w-0 bg-gradient-to-b from-sky-50 to-sky-100">
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         * { font-family: 'Inter', sans-serif; }
-        .fade-row { animation: fadeRow .18s ease; }
-        @keyframes fadeRow { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:none; } }
-        .row-hover:hover td { background: #f8f9ff; }
-        @keyframes slideUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:none; } }
-        .animate-slideUp { animation: slideUp .22s ease; }
+        .fade-row { animation: fadeRow .12s ease-out; }
+        @keyframes fadeRow { from { opacity:0; transform:translateY(1px); } to { opacity:1; transform:none; } }
+        .animate-slideUp { animation: slideUp .15s ease-out; }
+        @keyframes slideUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
       `}</style>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-5 sm:pb-8 space-y-4 sm:space-y-5">
+      {/* Class & Section Selection Header Card Block */}
+      <div className="bg-white rounded-xl border border-slate-200 shadow-xs p-3 m-2 sm:m-4 shrink-0">
+        <div className="flex flex-col sm:flex-row items-center gap-3 w-full min-w-0">
+          <div className="flex items-center gap-2 w-full sm:w-[180px] min-w-0">
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider w-11 shrink-0">Class</span>
+            <Select value={selectedClassId} onChange={e => setSelectedClassId(e.target.value)} loading={classesLoading} className="flex-1">
+              {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </Select>
+          </div>
 
-        {/* ── Class & Section selector ─────────────────────────────────────── */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5">
-          <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-3">
-            Select Class &amp; Section
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-slate-500">Class</label>
-              <Select
-                value={selectedClassId}
-                onChange={e => setSelectedClassId(e.target.value)}
-                loading={classesLoading}
-              >
-                {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-slate-500">Section</label>
-              <Select
-                value={selectedSectionId}
-                onChange={e => setSelectedSectionId(e.target.value)}
-                loading={sectionsLoading}
-                disabled={!selectedClassId}
-              >
-                {sections.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-              </Select>
-            </div>
+          <div className="flex items-center gap-2 w-full sm:w-[180px] min-w-0">
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider w-13 shrink-0">Section</span>
+            <Select value={selectedSectionId} onChange={e => setSelectedSectionId(e.target.value)} loading={sectionsLoading} disabled={!selectedClassId} className="flex-1">
+              {sections.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </Select>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Subjects Render Area Wrapper Block Container */}
+      <div className="bg-white rounded-xl border border-slate-200 shadow-xs mx-2 sm:mx-4 mb-4 flex flex-col overflow-hidden flex-1 min-h-0">
+        
+        {/* Compact Dynamic Card Subheader Layout Block */}
+        <div className="flex items-center justify-between gap-3 px-4 py-2 bg-slate-50/50 border-b border-slate-100 shrink-0">
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 min-w-0">
+            <Filter size={12} className="text-slate-400 stroke-[2.5]" />
+            <span className="truncate">{selectedClassName || "—"} / {selectedSectionName || "—"}</span>
+            <Badge variant="count">{filteredSubjects.length}</Badge>
+          </div>
+          <button onClick={() => setShowAssign(true)} disabled={!selectedSectionId} className={BTN_PRIMARY}>
+            <Plus size={12} /> <span>Assign Subjects</span>
+          </button>
+        </div>
+
+        {/* Dense Inputs Searching Controls Block Frame */}
+        <div className="flex flex-row items-center gap-2 px-4 py-1.5 border-b border-slate-100 bg-white shrink-0">
+          <Select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="w-[115px] sm:w-[125px]">
+            <option value="all">All Status</option>
+            <option value="active">Active Only</option>
+          </Select>
+
+          <div className="relative flex-1 max-w-[260px]">
+            <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+            <input
+              value={search} onChange={e => setSearch(e.target.value)} placeholder="Search subject code..."
+              className="w-full pl-7 pr-2.5 py-1 text-xs border border-gray-200 rounded-lg bg-white outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-100"
+            />
           </div>
         </div>
 
-        {/* ── Subjects card ────────────────────────────────────────────────── */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-
-          {/* Card header */}
-          <div className="flex items-center justify-between gap-2 px-4 sm:px-6 py-4 border-b border-slate-100">
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <p className="text-xs text-slate-400 font-medium hidden sm:block">
-                  Assigned Subjects
-                </p>
-                <Badge variant="count">
-                  {filteredSubjects.length}
-                </Badge>
-              </div>
-              <h2 className="text-sm sm:text-base font-semibold text-slate-800 truncate">
-                {selectedClassName || "—"} / {selectedSectionName || "—"}
-              </h2>
+        {/* ── HIGH DENSITY COMPACT MOBLLE, TABLET & LAPTOP CARDS SCREEN (< 1280px) ── */}
+        <div className="xl:hidden flex-1 overflow-y-auto bg-slate-50/20 p-2 space-y-2 custom-scrollbar min-h-0">
+          {tableLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="w-5 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
             </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <button onClick={() => setShowAssign(true)} disabled={!selectedSectionId}
-                className={BTN_PRIMARY}>
-                <PlusIcon />
-                <span className="hidden sm:inline">Assign Subjects</span>
-                <span className="sm:hidden">Assign</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Filter bar */}
-          <div className="flex items-center gap-2 px-4 sm:px-6 py-2.5 bg-slate-50/60 border-b border-slate-100">
-            <div className="w-32 sm:w-36 shrink-0">
-              <Select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
-                <option value="all">All Status</option>
-                <option value="active">Active Only</option>
-              </Select>
-            </div>
-            <div className="relative flex-1">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2"><SearchIcon /></span>
-              <input
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                placeholder="Search…"
-                className="pl-8 pr-3 py-2 text-xs border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-300 w-full"
-              />
-            </div>
-          </div>
-
-          {/* ── Mobile: card list (hidden on md+) ──────────────────────────── */}
-          <div className="md:hidden">
-            {tableLoading
-              ? <div className="py-12 flex flex-col items-center gap-2">
-                  <SpinnerIcon />
-                  <p className="text-xs text-slate-400">Loading subjects…</p>
-                </div>
-              : filteredSubjects.length === 0
-                ? <div className="flex flex-col items-center justify-center gap-3">
-                    <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-2xl">📚</div>
-                    <p className="text-sm text-slate-400 text-center py-5">
-                      {!selectedSectionId
-                        ? "Select a section to view subjects."
-                        : subjects.length === 0
-                          ? "No subjects assigned to this section."
-                          : "No results match your search."}
-                    </p>
+          ) : filteredSubjects.length === 0 ? (
+            <EmptyState message={!selectedSectionId ? "Select section to load details." : "No matching subject details located."} />
+          ) : (
+            filteredSubjects.map((row) => (
+              <div key={row.id} className="bg-white rounded-xl border border-slate-100 p-2.5 shadow-xs flex flex-row items-center justify-between gap-3 h-auto fade-row">
+                <div className="min-w-0 flex-1">
+                  <h4 className="text-xs font-bold text-slate-800 truncate leading-tight">{row.subjectName}</h4>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    <Badge variant="code">{row.subjectCode}</Badge>
+                    <Badge variant="hours">{row.weeklyHours} hrs</Badge>
+                    <Badge variant={row.isMandatory ? "mandatory" : "optional"}>{row.isMandatory ? "Mandatory" : "Optional"}</Badge>
+                    <Badge variant={row.status === "ACTIVE" ? "active" : "inactive"}>{row.status === "ACTIVE" ? "Active" : "Inactive"}</Badge>
                   </div>
-                : filteredSubjects.map(row => (
-                    <SubjectCard key={row.id} row={row}
-                      onEdit={setEditRow}
-                      onRemove={handleRemove}
-                    />
-                  ))
-            }
-          </div>
+                </div>
+                
+                <div className="flex flex-col sm:flex-row gap-1 shrink-0 justify-center">
+                  <ActionButton label="Edit" icon={Edit} variant="blue" onClick={() => setEditRow(row)} />
+                  <ActionButton label="Remove" icon={MinusCircle} variant="red" onClick={() => handleRemove(row)} />
+                </div>
+              </div>
+            ))
+          )}
+        </div>
 
-          {/* ── Desktop: table (hidden on mobile) ──────────────────────────── */}
-          <div className="hidden md:block overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-100 bg-slate-50/40">
+        {/* ── LARGE SCREEN DESKTOP ONLY SYSTEM (≥ 1280px / xl Breakpoint) ─── */}
+        <div className="hidden xl:block flex-1 overflow-hidden relative flex flex-col min-h-0 w-full">
+          <div className="overflow-x-auto overflow-y-auto block align-middle flex-1 custom-scrollbar min-h-0">
+            <table className="w-full border-collapse">
+              <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10 select-none">
+                <tr>
                   {["Subject", "Code", "Weekly Hours", "Mandatory", "Status", "Actions"].map(h => (
-                    <th key={h} className="px-6 py-3 text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider whitespace-nowrap">
+                    <th key={h} className="px-6 py-2 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">
                       {h}
                     </th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50">
+              <tbody className="bg-white divide-y divide-slate-100">
                 {tableLoading
-                  ? [...Array(4)].map((_, i) => <SkeletonRow key={i} cols={6} />)
+                  ? [...Array(4)].map((_, i) => <SkeletonRow key={i} />)
                   : filteredSubjects.length === 0
-                    ? <EmptyState cols={6} message={
-                        !selectedSectionId
-                          ? "Select a section to view subjects."
-                          : subjects.length === 0
-                            ? "No subjects assigned to this section."
-                            : "No results match your search."
-                      } />
+                    ? <tr>
+                        <td colSpan={6} className="py-6">
+                          <EmptyState message={!selectedSectionId ? "Select a section to view assignments." : "No records match search selection parameters."} />
+                        </td>
+                      </tr>
                     : filteredSubjects.map(row => (
-                        <tr key={row.id} className="row-hover transition-colors fade-row">
-                          <td className="px-6 py-3.5 font-semibold text-slate-800 whitespace-nowrap">{row.subjectName}</td>
-                          <td className="px-6 py-3.5"><Badge variant="code">{row.subjectCode}</Badge></td>
-                          <td className="px-6 py-3.5"><Badge variant="hours">{row.weeklyHours} hrs</Badge></td>
-                          <td className="px-6 py-3.5">
-                            <Badge variant={row.isMandatory ? "mandatory" : "optional"}>
-                              {row.isMandatory ? "Mandatory" : "Optional"}
-                            </Badge>
+                        <tr key={row.id} className="hover:bg-slate-50/40 transition-colors fade-row">
+                          <td className="px-6 py-1.5 text-xs font-semibold text-slate-800 whitespace-nowrap">{row.subjectName}</td>
+                          <td className="px-6 py-1.5 whitespace-nowrap"><Badge variant="code">{row.subjectCode}</Badge></td>
+                          <td className="px-6 py-1.5 whitespace-nowrap"><Badge variant="hours">{row.weeklyHours} hrs</Badge></td>
+                          <td className="px-6 py-1.5 whitespace-nowrap">
+                            <Badge variant={row.isMandatory ? "mandatory" : "optional"}>{row.isMandatory ? "Mandatory" : "Optional"}</Badge>
                           </td>
-                          <td className="px-6 py-3.5">
-                            <Badge variant={row.status === "ACTIVE" ? "active" : "inactive"}>
-                              {row.status === "ACTIVE" ? "Active" : "Inactive"}
-                            </Badge>
+                          <td className="px-6 py-1.5 whitespace-nowrap">
+                            <Badge variant={row.status === "ACTIVE" ? "active" : "inactive"}>{row.status === "ACTIVE" ? "Active" : "Inactive"}</Badge>
                           </td>
-                          <td className="px-6 py-3.5">
-                            <div className="flex items-center gap-0.5">
-                              <IconBtn variant="blue" title="Edit"   onClick={() => setEditRow(row)} />
-                              <IconBtn variant="red"  title="Remove" onClick={() => handleRemove(row)} />
+                          <td className="px-6 py-1.5 whitespace-nowrap">
+                            <div className="flex items-center gap-1.5">
+                              <ActionButton label="Edit" icon={Edit} variant="blue" onClick={() => setEditRow(row)} />
+                              <ActionButton label="Remove" icon={MinusCircle} variant="red" onClick={() => handleRemove(row)} />
                             </div>
                           </td>
                         </tr>
@@ -724,9 +499,10 @@ export default function SectionSubjectAssignment() {
             </table>
           </div>
         </div>
+
       </div>
 
-      {/* ── Modals ──────────────────────────────────────────────────────────── */}
+      {/* Modals Handling */}
       {showAssign && (
         <AssignModal
           sectionId={selectedSectionId}

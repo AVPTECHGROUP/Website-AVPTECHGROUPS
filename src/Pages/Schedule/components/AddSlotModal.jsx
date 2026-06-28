@@ -1,23 +1,24 @@
-import { useState, useEffect, useRef } from 'react';
-import { X, Loader2, Search, ChevronRight } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { X, Loader2, Search, ChevronRight, AlertCircle } from 'lucide-react';
+import { toast } from 'react-toastify';
 import { getAvailableTeachersForSlot } from '../../../Api/ScheduleApi';
 import { getSubjectsBySection } from '../../../Api/TeachersAPI';
 
 /* ─── subject colour map ─────────────────────────────────────── */
 const SUBJECT_COLOR_MAP = {
     MATH: { color: '#2563eb', bg: '#eff6ff', dot: '#3b82f6' },
-    ENG:  { color: '#16a34a', bg: '#f0fdf4', dot: '#22c55e' },
-    SCI:  { color: '#ca8a04', bg: '#fefce8', dot: '#eab308' },
-    HIN:  { color: '#7c3aed', bg: '#f5f3ff', dot: '#8b5cf6' },
-    SST:  { color: '#ea580c', bg: '#fff7ed', dot: '#f97316' },
+    ENG: { color: '#16a34a', bg: '#f0fdf4', dot: '#22c55e' },
+    SCI: { color: '#ca8a04', bg: '#fefce8', dot: '#eab308' },
+    HIN: { color: '#7c3aed', bg: '#f5f3ff', dot: '#8b5cf6' },
+    SST: { color: '#ea580c', bg: '#fff7ed', dot: '#f97316' },
     COMP: { color: '#0d9488', bg: '#f0fdfa', dot: '#14b8a6' },
-    CS:   { color: '#0d9488', bg: '#f0fdfa', dot: '#14b8a6' },
-    PE:   { color: '#dc2626', bg: '#fef2f2', dot: '#ef4444' },
+    CS: { color: '#0d9488', bg: '#f0fdfa', dot: '#14b8a6' },
+    PE: { color: '#dc2626', bg: '#fef2f2', dot: '#ef4444' },
     DRAW: { color: '#4f46e5', bg: '#eef2ff', dot: '#6366f1' },
-    BIO:  { color: '#059669', bg: '#ecfdf5', dot: '#10b981' },
+    BIO: { color: '#059669', bg: '#ecfdf5', dot: '#10b981' },
     CHEM: { color: '#db2777', bg: '#fdf2f8', dot: '#ec4899' },
-    PHY:  { color: '#0284c7', bg: '#f0f9ff', dot: '#0ea5e9' },
-    GEO:  { color: '#65a30d', bg: '#f7fee7', dot: '#84cc16' },
+    PHY: { color: '#0284c7', bg: '#f0f9ff', dot: '#0ea5e9' },
+    GEO: { color: '#65a30d', bg: '#f7fee7', dot: '#84cc16' },
     HIST: { color: '#b45309', bg: '#fffbeb', dot: '#f59e0b' },
 };
 const COLOR_POOL = [
@@ -57,7 +58,7 @@ const AVATAR_COLORS = [
 ];
 const avatarColor = (id) => AVATAR_COLORS[(id || 0) % AVATAR_COLORS.length];
 
-/* ─── SearchBar (reusable) ───────────────────────────────────── */
+/* ─── SearchBar ──────────────────────────────────────────────── */
 function SearchBar({ value, onChange, placeholder, disabled }) {
     return (
         <div className={`flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2
@@ -81,21 +82,26 @@ function SearchBar({ value, onChange, placeholder, disabled }) {
 }
 
 /* ─── TeacherRow ─────────────────────────────────────────────── */
-function TeacherRow({ t, selected, onSelect, barColor = '#22c55e', faded = false }) {
+/**
+ * readOnly=true → busy/conflict teachers: no radio, no click, conflict badge shown
+ */
+function TeacherRow({ t, selected, onSelect, barColor = '#22c55e', readOnly = false }) {
     const ac = avatarColor(t.id);
     const pct = t.currentLoad != null ? Math.min((t.currentLoad / 35) * 100, 100) : null;
-    return (
-        <button
-            onClick={() => onSelect(selected ? null : t.id)}
-            className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors
-                ${selected ? 'bg-slate-50' : 'hover:bg-gray-50'}
-                ${faded ? 'opacity-50' : ''}`}
-        >
-            {/* radio indicator */}
-            <span className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0
-                ${selected ? 'border-slate-800' : 'border-gray-300'}`}>
-                {selected && <span className="w-2 h-2 rounded-full bg-slate-800 block" />}
-            </span>
+
+    const content = (
+        <>
+            {/* indicator: radio for selectable, conflict icon for busy */}
+            {readOnly ? (
+                <span className="w-4 h-4 shrink-0 flex items-center justify-center">
+                    <AlertCircle size={12} className="text-red-400" />
+                </span>
+            ) : (
+                <span className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0
+                    ${selected ? 'border-slate-800' : 'border-gray-300'}`}>
+                    {selected && <span className="w-2 h-2 rounded-full bg-slate-800 block" />}
+                </span>
+            )}
 
             {/* avatar */}
             <span
@@ -119,8 +125,35 @@ function TeacherRow({ t, selected, onSelect, barColor = '#22c55e', faded = false
                 )}
             </div>
 
-            {selected && <ChevronRight size={14} className="text-slate-500 shrink-0" />}
+            {!readOnly && selected && <ChevronRight size={14} className="text-slate-500 shrink-0" />}
+        </>
+    );
+
+    if (readOnly) {
+        return (
+            <div className="w-full flex items-center gap-3 px-4 py-2.5 opacity-50 cursor-not-allowed select-none">
+                {content}
+            </div>
+        );
+    }
+
+    return (
+        <button
+            onClick={() => onSelect(selected ? null : t.id)}
+            className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors
+                ${selected ? 'bg-slate-50' : 'hover:bg-gray-50'}`}
+        >
+            {content}
         </button>
+    );
+}
+
+/* ─── section label ──────────────────────────────────────────── */
+function SectionLabel({ children, className = '' }) {
+    return (
+        <p className={`text-[10px] font-semibold uppercase tracking-wider px-4 pt-3 pb-1 ${className}`}>
+            {children}
+        </p>
     );
 }
 
@@ -137,20 +170,26 @@ export default function AddSlotModal({
 }) {
     const isEdit = !!editSlot;
 
-    const [subjects, setSubjects]               = useState([]);
+    const [subjects, setSubjects] = useState([]);
     const [loadingSubjects, setLoadingSubjects] = useState(false);
-    const [subjectError, setSubjectError]       = useState('');
+    const [subjectError, setSubjectError] = useState('');
 
-    const [teachers, setTeachers]               = useState({ bestMatch: [], others: [], busy: [] });
+    const [teachers, setTeachers] = useState({ bestMatch: [], others: [], busy: [] });
     const [loadingTeachers, setLoadingTeachers] = useState(false);
 
-    const [selectedSubject, setSelectedSubject] = useState(editSlot?.subject || prefillSubject || null);
-    const [selectedTeacher, setSelectedTeacher] = useState(editSlot?.teacher?.id || null);
-    const [selectedRoom, setSelectedRoom]       = useState(editSlot?.room || '101');
-    const [subjectSearch, setSubjectSearch]     = useState('');
-    const [teacherSearch, setTeacherSearch]     = useState('');
-    const [formError, setFormError]             = useState('');
-    const [saving, setSaving]                   = useState(false);
+    // ── FIX: initialise selectedSubject safely from editSlot or prefill ──
+    const [selectedSubject, setSelectedSubject] = useState(
+        editSlot?.subject ?? prefillSubject ?? null
+    );
+    // ── FIX: initialise teacher id — guard both possible shapes ──────────
+    const [selectedTeacher, setSelectedTeacher] = useState(
+        editSlot?.teacherId ?? editSlot?.teacher?.id ?? null
+    );
+    const [selectedRoom, setSelectedRoom] = useState(editSlot?.room || '101');
+    const [subjectSearch, setSubjectSearch] = useState('');
+    const [teacherSearch, setTeacherSearch] = useState('');
+    const [formError, setFormError] = useState('');
+    const [saving, setSaving] = useState(false);
 
     /* load subjects on mount */
     useEffect(() => {
@@ -171,12 +210,11 @@ export default function AddSlotModal({
             }));
             setSubjects(enriched);
 
-            if (isEdit && editSlot?.subject?.id) {
-                const matched = enriched.find(s => s.id === editSlot.subject.id);
+            // Resolve and upgrade the currently selected subject to its enriched version
+            const currentId = editSlot?.subject?.id ?? prefillSubject?.id;
+            if (currentId) {
+                const matched = enriched.find(s => s.id === currentId);
                 if (matched) setSelectedSubject(matched);
-            } else if (prefillSubject?.id) {
-                const matched = enriched.find(s => s.id === prefillSubject.id);
-                setSelectedSubject(matched || prefillSubject);
             }
         } catch {
             setSubjectError('Failed to load subjects.');
@@ -185,7 +223,7 @@ export default function AddSlotModal({
         }
     };
 
-    /* load teachers when subject changes */
+    /* load teachers whenever subject changes */
     useEffect(() => {
         if (!selectedSubject?.id || !timetableId || !period?.id) return;
         const periodNumber = parseInt(period.id.replace('P', ''));
@@ -200,8 +238,8 @@ export default function AddSlotModal({
             const res = await getAvailableTeachersForSlot(timetableId, day, periodNumber, subjectId);
             setTeachers({
                 bestMatch: (res?.bestMatch || []).map(normalizeTeacher),
-                others:    (res?.others    || []).map(normalizeTeacher),
-                busy:      (res?.busy      || []).map(normalizeTeacher),
+                others: (res?.others || []).map(normalizeTeacher),
+                busy: (res?.busy || []).map(normalizeTeacher),
             });
         } catch {
             setTeachers({ bestMatch: [], others: [], busy: [] });
@@ -213,8 +251,7 @@ export default function AddSlotModal({
     /* filtered subjects */
     const filteredSubjects = subjects.filter(s => {
         const q = subjectSearch.trim().toLowerCase();
-        if (!q) return true;
-        return s.label.toLowerCase().includes(q) || s.code.toLowerCase().includes(q);
+        return !q || s.label.toLowerCase().includes(q) || s.code.toLowerCase().includes(q);
     });
 
     /* filtered teachers */
@@ -226,27 +263,44 @@ export default function AddSlotModal({
             (t.initials || '').toLowerCase().includes(q)
         );
     };
-    const filteredBest   = filterTeachers(teachers.bestMatch);
+    const filteredBest = filterTeachers(teachers.bestMatch);
     const filteredOthers = filterTeachers(teachers.others);
-    const filteredBusy   = filterTeachers(teachers.busy);
-    const totalFiltered  = filteredBest.length + filteredOthers.length + filteredBusy.length;
-    const hasAny         = teachers.bestMatch.length + teachers.others.length + teachers.busy.length > 0;
+    const filteredBusy = filterTeachers(teachers.busy);
+    const totalFiltered = filteredBest.length + filteredOthers.length + filteredBusy.length;
+    const hasAny = teachers.bestMatch.length + teachers.others.length + teachers.busy.length > 0;
 
+    /* ── FIX: handleSave — no longer falls back to editSlot.teacher ─────
+       When selectedTeacher is null, teacher is intentionally unassigned.
+    ──────────────────────────────────────────────────────────────────── */
     const handleSave = async () => {
         if (!selectedSubject) { setFormError('Please select a subject.'); return; }
         try {
             setSaving(true);
             const allTeachers = [...teachers.bestMatch, ...teachers.others, ...teachers.busy];
-            const teacher = allTeachers.find(t => t.id === selectedTeacher) || editSlot?.teacher || null;
+
+            // If selectedTeacher is null → deliberately unassigned; do NOT fall back.
+            const teacher = selectedTeacher !== null
+                ? (allTeachers.find(t => t.id === selectedTeacher) ?? null)
+                : null;
+
             await onSave({
-                subject:   { id: selectedSubject.id, code: selectedSubject.code, label: selectedSubject.label },
+                subject: { id: selectedSubject.id, code: selectedSubject.code, label: selectedSubject.label },
                 subjectId: selectedSubject.id,
                 teacher,
                 teacherId: selectedTeacher,
-                room:      selectedRoom,
+                room: selectedRoom,
                 day,
                 period,
             });
+
+            // Toast on success
+            if (teacher) {
+                toast.success(`Assigned to ${teacher.name}`, { position: 'top-right' });
+            } else {
+                toast.success('Teacher unassigned', { position: 'top-right' });
+            }
+        } catch {
+            toast.error('Failed to save. Please try again.', { position: 'top-right' });
         } finally {
             setSaving(false);
         }
@@ -262,7 +316,6 @@ export default function AddSlotModal({
                         <h2 className="text-base font-semibold text-gray-900">
                             {isEdit ? 'Edit Slot' : 'Add Slot'}
                         </h2>
-                        {/* period pill */}
                         <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1">
                             <span className="bg-slate-800 text-white text-[10px] font-semibold px-1.5 py-0.5 rounded">
                                 {day}
@@ -282,12 +335,9 @@ export default function AddSlotModal({
                 {/* ── body: two columns ── */}
                 <div className="flex flex-1 overflow-hidden divide-x divide-gray-100 min-h-0">
 
-                    {/* ════════════════════════════════════════
-                        LEFT — Subject + Room
-                    ════════════════════════════════════════ */}
+                    {/* ════ LEFT — Subject + Room ════ */}
                     <div className="w-[44%] flex flex-col overflow-hidden">
 
-                        {/* subject header */}
                         <div className="px-5 pt-4 pb-2 flex items-center justify-between shrink-0">
                             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
                                 Subject <span className="text-red-400 normal-case">*</span>
@@ -297,7 +347,6 @@ export default function AddSlotModal({
                             )}
                         </div>
 
-                        {/* subject search */}
                         <div className="px-4 pb-2 shrink-0">
                             <SearchBar
                                 value={subjectSearch}
@@ -307,7 +356,6 @@ export default function AddSlotModal({
                             />
                         </div>
 
-                        {/* subject list */}
                         <div className="flex-1 overflow-y-auto px-4 min-h-0">
                             {loadingSubjects ? (
                                 <div className="flex items-center justify-center gap-2 text-sm text-gray-400 py-12">
@@ -352,7 +400,7 @@ export default function AddSlotModal({
                             )}
                         </div>
 
-                        {/* ── room section (bottom of left panel) ── */}
+                        {/* room picker */}
                         <div className="px-4 py-4 border-t border-gray-100 shrink-0">
                             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
                                 Room / Venue
@@ -378,17 +426,13 @@ export default function AddSlotModal({
                         </div>
                     </div>
 
-                    {/* ════════════════════════════════════════
-                        RIGHT — Teacher (full height)
-                    ════════════════════════════════════════ */}
+                    {/* ════ RIGHT — Teacher ════ */}
                     <div className="flex-1 flex flex-col overflow-hidden min-h-0">
 
-                        {/* teacher header */}
                         <div className="px-5 pt-4 pb-2 shrink-0">
                             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Teacher</p>
                         </div>
 
-                        {/* teacher search */}
                         <div className="px-4 pb-2 shrink-0">
                             <SearchBar
                                 value={teacherSearch}
@@ -398,23 +442,22 @@ export default function AddSlotModal({
                             />
                         </div>
 
-                        {/* teacher list — takes all remaining height */}
                         <div className="flex-1 overflow-y-auto border border-gray-100 rounded-xl mx-4 mb-4 min-h-0">
 
-                            {/* unassigned row */}
+                            {/* ── Not Assigned row ── */}
                             <button
                                 onClick={() => setSelectedTeacher(null)}
                                 className={`w-full flex items-center gap-3 px-4 py-2.5 border-b border-gray-100 text-left transition
-                                    ${!selectedTeacher ? 'bg-slate-50' : 'hover:bg-gray-50'}`}
+                                    ${selectedTeacher === null ? 'bg-slate-50' : 'hover:bg-gray-50'}`}
                             >
                                 <span className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0
-                                    ${!selectedTeacher ? 'border-slate-800' : 'border-gray-300'}`}>
-                                    {!selectedTeacher && <span className="w-2 h-2 rounded-full bg-slate-800 block" />}
+                                    ${selectedTeacher === null ? 'border-slate-800' : 'border-gray-300'}`}>
+                                    {selectedTeacher === null && <span className="w-2 h-2 rounded-full bg-slate-800 block" />}
                                 </span>
-                                <span className="text-sm text-gray-400 italic">— Unassigned —</span>
+                                <span className="text-sm text-gray-400 italic">Not Assigned</span>
                             </button>
 
-                            {/* states */}
+                            {/* ── states ── */}
                             {!selectedSubject ? (
                                 <p className="text-xs text-gray-400 text-center py-10 italic">Select a subject first</p>
                             ) : loadingTeachers ? (
@@ -429,9 +472,7 @@ export default function AddSlotModal({
                                 <>
                                     {filteredBest.length > 0 && (
                                         <>
-                                            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-4 pt-3 pb-1">
-                                                ★ Best match
-                                            </p>
+                                            <SectionLabel className="text-emerald-600">Best Match</SectionLabel>
                                             {filteredBest.map(t => (
                                                 <TeacherRow key={t.id} t={t}
                                                     selected={selectedTeacher === t.id}
@@ -442,9 +483,7 @@ export default function AddSlotModal({
                                     )}
                                     {filteredOthers.length > 0 && (
                                         <>
-                                            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-4 pt-3 pb-1">
-                                                Others
-                                            </p>
+                                            <SectionLabel className="text-gray-400">Others</SectionLabel>
                                             {filteredOthers.map(t => (
                                                 <TeacherRow key={t.id} t={t}
                                                     selected={selectedTeacher === t.id}
@@ -453,16 +492,16 @@ export default function AddSlotModal({
                                             ))}
                                         </>
                                     )}
+                                    {/* ── FIX: Busy teachers are READ-ONLY — no radio, no selection ── */}
                                     {filteredBusy.length > 0 && (
                                         <>
-                                            <p className="text-[10px] font-semibold text-red-400 uppercase tracking-wider px-4 pt-3 pb-1">
-                                                ● Busy — conflict
-                                            </p>
+                                            <SectionLabel className="text-red-400">Busy / Conflict</SectionLabel>
                                             {filteredBusy.map(t => (
                                                 <TeacherRow key={t.id} t={t}
-                                                    selected={selectedTeacher === t.id}
-                                                    onSelect={setSelectedTeacher}
-                                                    barColor="#f87171" faded />
+                                                    selected={false}
+                                                    onSelect={() => { }}
+                                                    barColor="#f87171"
+                                                    readOnly />
                                             ))}
                                         </>
                                     )}
