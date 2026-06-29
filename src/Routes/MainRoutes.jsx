@@ -5,6 +5,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import AppLayout from '../Layout/AppLayout';
 import ProtectedRoutes from '../utils/Protectedroutes';
 import RoleProtectedRoute from '../utils/RoleProtectedRoute';
+import ScrollToTop from '../Components/CommonComp/ScrollToTop';
 
 // ─── Lazy-loaded Pages (code-split, fetched only when route is hit) ───────────
 const Login = lazy(() => import('../Pages/Login_2'));
@@ -148,6 +149,7 @@ const MainRoutes = () => {
   const isTokenExist = localStorage.getItem('token');
   return (
     <Suspense fallback={<PageLoader />}>
+      <ScrollToTop />
       <Routes>
         {/* Public landing pages (redirect to app when logged-in) */}
         <Route path="/" element={isTokenExist ? <RootRedirect /> : <LandingApp />} />

@@ -695,3 +695,41 @@ export const getUserTodayAttendance = async ({ userId, userType }) => {
     throw error
   }
 }
+
+// ===============================
+// 👨‍🎓 Bulk Manual Mark Attendance
+// ===============================
+export const bulkManualMarkAttendance = async (payload) => {
+  try {
+    if (!payload.classId || !payload.sectionId || !payload.students?.length) {
+      throw new Error(
+        "classId, sectionId and students are required"
+      );
+    }
+
+    const res = await authFetch(
+      `${BASE_URL}/attendance/students/manual-mark/bulk`,
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }
+    );
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(
+        data?.message || "Failed to bulk mark attendance"
+      );
+    }
+
+    return data;
+
+  } catch (error) {
+    console.error(
+      "bulkManualMarkAttendance error:",
+      error.message
+    );
+    throw error;
+  }
+};

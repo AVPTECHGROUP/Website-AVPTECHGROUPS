@@ -12,13 +12,14 @@ import {
     getAttendanceRoster,
     manualMarkAttendance,
     unmarkAttendance,
+    bulkManualMarkAttendance,
 } from "../../../Api/AttendanceApi";
+
 import CardComponent from "../../../Components/CommonComp/CardComponent";
 import IndividualFaceScanView from "./IndividualFaceScanView";
 import GroupPhotoView from "./GroupPhotoView";
 
-// ─── Constants ────────────────────────────────────────────────────────────────
-const PAGES_PER_VIEW = 6;
+const PAGES_PER_VIEW = 10;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const getInitials = (fullName = "") => {
@@ -34,6 +35,7 @@ const mapStatus = (apiStatus) => {
     if (s === "PRESENT") return "Present";
     if (s === "LATE") return "Late";
     if (s === "PRESENT_MANUAL" || s === "MANUAL") return "Present (Manual)";
+    if (s === "ABSENT") return "Absent";
     return "Not Marked";
 };
 
@@ -55,6 +57,7 @@ const shapeRosterStudent = (st) => {
         confidence,
         attendanceId: st.attendanceId || null,
         enrolled: true,
+        remarks: st.remarks || "", // Added to bridge historical backend entries
     };
 };
 
@@ -64,15 +67,19 @@ const statusColor = (s) => {
     if (s.includes("Present (Manual)")) return "bg-orange-100 text-orange-700";
     if (s.includes("Present")) return "bg-green-100 text-green-700";
     if (s === "Late") return "bg-yellow-100 text-yellow-700";
+    if (s === "Absent") return "bg-red-100 text-red-600";
     return "bg-gray-100 text-gray-600";
 };
+
 const statusIcon = (s) => {
     if (!s || s === "Not Marked") return <BookOpen className="w-3.5 h-3.5" />;
     if (s.includes("Present (Manual)")) return <PenLine className="w-3.5 h-3.5" />;
     if (s.includes("Present")) return <CheckCircle2 className="w-3.5 h-3.5" />;
     if (s === "Late") return <Clock className="w-3.5 h-3.5" />;
+    if (s === "Absent") return <XCircle className="w-3.5 h-3.5" />;
     return null;
 };
+
 const confidenceColor = (c) => {
     if (!c) return "bg-gray-200";
     if (c >= 80) return "bg-green-500";
@@ -390,11 +397,25 @@ function RosterView({
 
 // ─── Summary View ─────────────────────────────────────────────────────────────
 function SummaryView({ rosterMeta, students, loadingSummary, date, selectedClassName, selectedSectionName }) {
-    const totalStudents = rosterMeta?.totalStudents ?? students.length;
-    const presentCount = rosterMeta?.totalPresent ?? students.filter((s) => s.status.includes("Present")).length;
-    const lateCount = rosterMeta?.totalLate ?? students.filter((s) => s.status === "Late").length;
-    const absentCount = rosterMeta?.totalNotMarked ?? students.filter((s) => s.status === "Not Marked").length;
-    const markedCount = presentCount + lateCount;
+    const totalStudents = students.length;
+
+    const presentCount = students.filter(
+        s => s.status.includes("Present")
+    ).length;
+
+    const lateCount = students.filter(
+        s => s.status === "Late"
+    ).length;
+
+    const absentCount = students.filter(
+        s =>
+            s.status === "Absent" ||
+            s.status === "Not Marked"
+    ).length;
+    const markedCount =
+        students.filter(
+            s => s.status !== "Not Marked"
+        ).length;
     const todayRate = totalStudents > 0 ? ((markedCount / totalStudents) * 100).toFixed(1) : "0.0";
     const presentPct = totalStudents > 0 ? ((presentCount / totalStudents) * 100).toFixed(1) : 0;
     const latePct = totalStudents > 0 ? ((lateCount / totalStudents) * 100).toFixed(1) : 0;
@@ -644,10 +665,12 @@ export default function StudentAttendance() {
     }, [selectedClass, selectedSection, date]);
 
     const stats = {
-        total: rosterMeta?.totalStudents ?? mergedStudents.length,
-        present: rosterMeta?.totalPresent ?? mergedStudents.filter((s) => s.status.includes("Present")).length,
-        late: rosterMeta?.totalLate ?? mergedStudents.filter((s) => s.status === "Late").length,
-        absent: rosterMeta?.totalNotMarked ?? mergedStudents.filter((s) => s.status === "Not Marked").length,
+        total: mergedStudents.length,
+        present: mergedStudents.filter((s) => s.status.includes("Present")).length,
+        late: mergedStudents.filter((s) => s.status === "Late").length,
+        absent: mergedStudents.filter(
+            (s) => s.status === "Absent" || s.status === "Not Marked"
+        ).length,
         enrolled: mergedStudents.filter((s) => s.enrolled).length,
     };
 
@@ -682,30 +705,11 @@ export default function StudentAttendance() {
         finally { setActionLoadingId(null); }
     };
 
-    const handleManualMark = async (data) => {
-        setActionLoadingId(data.studentId);
-        try {
-            await manualMarkAttendance({
-                classId: selectedClass?.id,
-                sectionId: selectedSection?.id,
-                attendanceDate: date, // already state me hai
-                checkInTime: data.time,
-                remarks: data.remarks || "",
-                students: [
-                    {
-                        studentId: parseInt(data.studentId),
-                        status: data.status?.toUpperCase() || "PRESENT",
-                        checkInTime: data.time,
-                        remarks: data.remarks || "",
-                    }
-                ]
-            });
-            setShowManualMark(false);
-            setSelectedStudent(null);
-            await refreshRoster();
-        } catch (err) { alert(err.message || "Failed to mark attendance"); }
-        finally { setActionLoadingId(null); }
+    const handleManualMark = async (payload) => {
+        const result = await bulkManualMarkAttendance(payload);
+        await refreshRoster();
     };
+
 
     const handleExportCSV = () => {
         if (mergedStudents.length === 0) {
@@ -876,11 +880,14 @@ export default function StudentAttendance() {
             {showManualMark && (
                 <ManualMarkModal
                     students={mergedStudents}
-                    selectedStudent={selectedStudent}
+                    selectedClass={selectedClass}
+                    selectedSection={selectedSection}
+                    date={date}
                     onClose={() => { setShowManualMark(false); setSelectedStudent(null); }}
                     onConfirm={handleManualMark}
                 />
             )}
+
             {unmarkTarget && (
                 <UnmarkModal
                     student={unmarkTarget}

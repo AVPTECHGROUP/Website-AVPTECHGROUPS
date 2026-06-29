@@ -19,7 +19,7 @@ import {
     updateReportCardRemarks,
 } from "../../Api/Exams";
 import { getExams } from "../../Api/Exams";
-import { getActiveClasses, getAllSections } from "../../Api/TeachersAPI";
+import { getActiveClasses, getActiveSectionsByClass } from "../../Api/TeachersAPI";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function getGrade(pct, absent) {
@@ -219,15 +219,7 @@ export default function ReportCards() {
         { key: "Absent (All)", val: absent, icon: UserMinus, iconBgColor: "bg-gray-100", iconTxColor: "text-gray-500" },
     ];
 
-    const filteredSections = selectedClassId
-        ? sections.filter((s) => {
-            return (
-                String(s.classId) === String(selectedClassId) ||
-                String(s.schoolClassId) === String(selectedClassId) ||
-                String(s.class_id) === String(selectedClassId)
-            );
-        })
-        : sections;
+    const filteredSections = sections;
 
     const sectionLabel = (s) => {
         if (!s) return "—";
@@ -236,26 +228,16 @@ export default function ReportCards() {
         return s.name ?? "—";
     };
 
-    // ── 1. Load active classes + sections on mount ─────────────────────────
+
+    // ── 1. Load active classes on mount ──────────────────────────────────────────
     useEffect(() => {
         let mounted = true;
         const load = async () => {
             setLoadingMeta(true);
             try {
-                const [cls, secsRaw] = await Promise.all([
-                    getActiveClasses(),
-                    getAllSections()
-                ]);
-
+                const cls = await getActiveClasses();
                 if (!mounted) return;
                 setClasses(cls);
-
-                const secArr = Array.isArray(secsRaw)
-                    ? secsRaw
-                    : secsRaw?.data ?? [];
-
-                setSections(secArr);
-
                 if (!paramExamId && cls.length > 0) {
                     setSelectedClassId(String(cls[0].id));
                 }
@@ -268,6 +250,34 @@ export default function ReportCards() {
         load();
         return () => { mounted = false; };
     }, []);
+    // ── 1b. Load active sections when class changes ───────────────────────────────
+    useEffect(() => {
+        if (!selectedClassId) {
+            setSections([]);
+            setSelectedSectionId("");
+            return;
+        }
+        let mounted = true;
+        const loadSections = async () => {
+            try {
+                const activeSecs = await getActiveSectionsByClass(selectedClassId);
+                if (!mounted) return;
+                setSections(activeSecs);
+
+                // Auto-select first section
+                if (activeSecs.length > 0) {
+                    setSelectedSectionId(String(activeSecs[0].id));
+                } else {
+                    setSelectedSectionId("");
+                }
+            } catch (err) {
+                console.error("Load active sections error:", err);
+                if (mounted) setSections([]);
+            }
+        };
+        loadSections();
+        return () => { mounted = false; };
+    }, [selectedClassId]);
 
     // Route Exam Resolve
     useEffect(() => {
@@ -298,19 +308,6 @@ export default function ReportCards() {
         resolveRouteExamClass();
     }, [paramExamId, classes]);
 
-    // Section Selector Alignment
-    useEffect(() => {
-        if (filteredSections.length === 0) {
-            setSelectedSectionId("");
-            return;
-        }
-        const hasCurrent = filteredSections.some(
-            (s) => String(s.id) === String(selectedSectionId)
-        );
-        if (!hasCurrent) {
-            setSelectedSectionId(String(filteredSections[0].id));
-        }
-    }, [selectedClassId, sections, filteredSections, selectedSectionId]);
 
     // ── 2. Load exams when class changes ──────────────────────────────────────
     useEffect(() => {
