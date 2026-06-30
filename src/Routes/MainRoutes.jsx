@@ -5,7 +5,9 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import AppLayout from '../Layout/AppLayout';
 import ProtectedRoutes from '../utils/Protectedroutes';
 
-// ─── Modular Route Modules ───────────
+import { ROLE_GROUPS, ROUTE_PATHS, ROUTES_UI_STRINGS } from '../Constants/RoutesConstants/RoutesConst';
+
+// ───  Route Modules ───────────
 import AcademicsRoutes from './Academics/Academic/AcademicsRoutes';
 import AttendanceRoutes from './Attendance/AttendanceRoutes';
 import CommunicationRoutes from './Communication/CommunicationRoutes';
@@ -36,7 +38,7 @@ const PageLoader = () => (
       <div className="absolute inset-0 rounded-full border-4 border-blue-100" />
       <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-blue-600 border-r-blue-600 animate-spin" />
     </div>
-    <p className="text-base sm:text-lg font-semibold text-gray-700 text-center">Loading SchoolSpine...</p>
+    <p className="text-base sm:text-lg font-semibold text-gray-700 text-center">{ROUTES_UI_STRINGS.LOADING_APP}</p>
   </div>
 );
 
@@ -48,8 +50,8 @@ const RootRedirect = () => {
   const role =
     storedUser?.userType ||
     (Array.isArray(storedUser?.roles) ? storedUser.roles[0] : null);
-  if (role === 'STORE_SELLER') return <Navigate to="/stock/studentOrders" replace />;
-  return <Navigate to="/dashboard" replace />;
+  if (role === 'STORE_SELLER') return <Navigate to={ROUTE_PATHS.STOCK_STUDENT_ORDERS_REDIRECT} replace />;
+  return <Navigate to={ROUTE_PATHS.DASHBOARD} replace />;
 };
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -63,7 +65,7 @@ const MainRoutes = () => {
         {SchoolSpineWebRoutes({ RootRedirect, isLoggedIn })}
 
         {/* ── Auth ── */}
-        <Route path="/login" element={isLoggedIn ? <RootRedirect /> : <Login />} />
+        <Route path={ROUTE_PATHS.LOGIN} element={isLoggedIn ? <RootRedirect /> : <Login />} />
 
         {/* ── Protected ── */}
         <Route element={<ProtectedRoutes />}>
@@ -73,7 +75,7 @@ const MainRoutes = () => {
           {/* All app routes — inside AppLayout (sidebar) */}
           <Route element={<AppLayout />}>
             {DashboardRoutes()}
-            <Route path="/settings" element={<Settings />} />
+            <Route path={ROUTE_PATHS.SETTINGS} element={<Settings />} />
 
             {AttendanceRoutes()}
             {AcademicsRoutes()}

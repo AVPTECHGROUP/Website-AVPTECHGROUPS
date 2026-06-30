@@ -5,8 +5,10 @@ import { getTeacherById, updateTeacher, upsertTeacherSalary } from '../../Api/Te
 import PersonalDetailsTab from '../../Components/Teacher/EditTabComponents/PersonalDetailsTab';
 import SalaryStructureTab from '../../Components/Teacher/EditTabComponents/SalaryStructureTab';
 import { toast } from 'react-toastify';
+import TEACHER_MODULE_STRINGS from '../../Constants/StringConstants/TeacherConstants';
 
 function EditTeachersDetails() {
+    const strings = TEACHER_MODULE_STRINGS;
     const { id } = useParams();
     const navigate = useNavigate();
     const [teacher, setTeacher] = useState(null);
@@ -116,9 +118,9 @@ function EditTeachersDetails() {
         try {
             await updateTeacher(id, buildTeacherPayload(), profileImage);
             toast.dismiss(loadingToast);
-            toast.success('Personal details saved ✅');
+            toast.success(strings.EDIT_TEACHER.PERSONAL_SAVE_SUCCESS);
             if (profileImage) {
-                toast.info('Profile photo may take a few seconds to reflect.', { autoClose: 4000 });
+                toast.info(strings.EDIT_TEACHER.PHOTO_REFRESH_NOTICE, { autoClose: 4000 });
             }
         } catch (err) {
             console.error(err);
@@ -149,12 +151,12 @@ function EditTeachersDetails() {
     // ── Salary: Save (footer button) ─────────────────────────────────────────
     const handleSaveSalary = async () => {
         if (!formData.salaryType || !formData.baseSalary) {
-            toast.warning('Please set a salary type and base salary before saving.');
+            toast.warning(strings.EDIT_TEACHER.SALARY_WARNING);
             return;
         }
 
         setIsLoading(true);
-        const loadingToast = toast.loading('Saving salary structure...');
+        const loadingToast = toast.loading(strings.EDIT_TEACHER.SALARY_SAVE_LOADING);
         try {
             const baseSalary     = Number(formData.baseSalary) || 0;
             const hra            = Number(formData.houseRentAllowance) || 0;
@@ -221,12 +223,12 @@ function EditTeachersDetails() {
             }
 
             toast.dismiss(loadingToast);
-            toast.success('Salary structure saved ✅');
+            toast.success(strings.EDIT_TEACHER.SALARY_SAVE_SUCCESS);
             navigate('/teachers');
         } catch (err) {
             console.error(err);
             toast.dismiss(loadingToast);
-            toast.error('Failed to save salary. Please try again.');
+            toast.error(strings.EDIT_TEACHER.SALARY_SAVE_ERROR);
         } finally {
             setIsLoading(false);
         }
@@ -239,11 +241,11 @@ function EditTeachersDetails() {
         if (!file) return;
         const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
         if (!validTypes.includes(file.type)) {
-            toast.error('Only JPEG or PNG images are allowed!');
+            toast.error(strings.ADD_TEACHER.ERRORS.IMG_TYPE);
             return;
         }
         if (file.size > 10 * 1024 * 1024) {
-            toast.error('Image must be smaller than 10 MB!');
+            toast.error(strings.ADD_TEACHER.ERRORS.IMG_SIZE);
             return;
         }
         setProfileImage(file);
@@ -274,7 +276,7 @@ function EditTeachersDetails() {
                 <div className="flex items-center justify-center py-8 relative">
                     <div className="flex flex-col items-center justify-center absolute lg:top-75">
                         <div className="w-7 h-7 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                        <p className="text-gray-600 lg:text-xl font-medium">Loading teacher...</p>
+                        <p className="text-gray-600 lg:text-xl font-medium">{strings.EDIT_TEACHER.LOADING}</p>
                     </div>
                 </div>
             </div>
@@ -296,10 +298,10 @@ function EditTeachersDetails() {
                 {/* Header */}
                 <div className="mb-6">
                     <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
-                        Edit Teacher: {formData.name}
+                        {strings.ADD_TEACHER.PAGE_TITLE}: {formData.name}
                     </h1>
                     <p className="text-sm sm:text-base text-gray-500">
-                        Manage personal information and employment status for faculty members.
+                        {strings.ADD_TEACHER.SUBTITLE}
                     </p>
                 </div>
 
@@ -317,8 +319,8 @@ function EditTeachersDetails() {
                                 }`}
                             >
                                 <User size={20} />
-                                <span className="hidden sm:inline">Personal Details</span>
-                                <span className="sm:hidden">Personal</span>
+                                <span className="hidden sm:inline">{strings.ADD_TEACHER.TABS.PERSONAL}</span>
+                                <span className="sm:hidden">{strings.ADD_TEACHER.LABELS.PERSONAL}</span>
                             </button>
                             <button
                                 type="button"
@@ -330,7 +332,7 @@ function EditTeachersDetails() {
                                 }`}
                             >
                                 <IndianRupee size={18} />
-                                <span className="hidden sm:inline">Salary Structure</span>
+                                <span className="hidden sm:inline">{strings.ADD_TEACHER.TABS.SALARY}</span>
                                 <span className="sm:hidden">Salary</span>
                             </button>
                         </nav>
@@ -343,8 +345,8 @@ function EditTeachersDetails() {
                                 {/* Profile Photo */}
                                 <div className="mb-6">
                                     <label className="block font-semibold text-gray-600 text-sm mb-3">
-                                        Profile Photo{' '}
-                                        <span className="text-gray-400 text-xs font-normal ml-1">(optional)</span>
+                                        {strings.EDIT_TEACHER.UPLOAD.LABEL}{' '}
+                                        <span className="text-gray-400 text-xs font-normal ml-1">{strings.EDIT_TEACHER.UPLOAD.HELP}</span>
                                     </label>
                                     <div className="flex items-center gap-5">
                                         <div className="relative shrink-0">
@@ -377,8 +379,8 @@ function EditTeachersDetails() {
                                                     className="w-full border-2 border-dashed border-blue-300 hover:border-blue-500 bg-blue-50 hover:bg-blue-100 rounded-lg p-4 text-center transition-colors cursor-pointer"
                                                 >
                                                     <Camera className="w-5 h-5 text-blue-400 mx-auto mb-1" />
-                                                    <p className="text-sm font-medium text-blue-600">Click to upload photo</p>
-                                                    <p className="text-xs text-gray-400 mt-0.5">JPEG or PNG, max 10 MB</p>
+                                                    <p className="text-sm font-medium text-blue-600">{strings.EDIT_TEACHER.UPLOAD.CTA}</p>
+                                                    <p className="text-xs text-gray-400 mt-0.5">{strings.EDIT_TEACHER.UPLOAD.FORMAT_HELP}</p>
                                                 </button>
                                             ) : (
                                                 <div className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-lg">
@@ -392,8 +394,8 @@ function EditTeachersDetails() {
                                                             </>
                                                         ) : (
                                                             <>
-                                                                <p className="text-sm font-medium text-green-700">Current profile photo</p>
-                                                                <p className="text-xs text-green-500 mt-0.5">Click "Change" to replace</p>
+                                                                <p className="text-sm font-medium text-green-700">{strings.EDIT_TEACHER.UPLOAD.CURRENT}</p>
+                                                                <p className="text-xs text-green-500 mt-0.5">{strings.EDIT_TEACHER.UPLOAD.REPLACE}</p>
                                                             </>
                                                         )}
                                                     </div>
@@ -403,7 +405,7 @@ function EditTeachersDetails() {
                                                             onClick={() => fileInputRef.current?.click()}
                                                             className="text-xs px-2.5 py-1 bg-white border border-green-300 text-green-700 rounded-md hover:bg-green-50 transition-colors"
                                                         >
-                                                            Change
+                                                            {strings.EDIT_TEACHER.UPLOAD.CHANGE}
                                                         </button>
                                                         <button
                                                             type="button"
@@ -457,7 +459,7 @@ function EditTeachersDetails() {
                                     onClick={handleDiscard}
                                     className="px-6 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                                 >
-                                    Discard Changes
+                                    {strings.COMMON.DISCARD_CHANGES}
                                 </button>
                                 <button
                                     type="button"

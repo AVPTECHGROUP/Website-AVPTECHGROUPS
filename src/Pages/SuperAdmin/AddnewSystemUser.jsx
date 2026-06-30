@@ -4,6 +4,7 @@ import { ChevronLeft, User, Camera, X } from 'lucide-react';
 import { toast } from 'react-toastify';
 import AddPersonalDetails from '../../Components/SuperAdmin/AddTabComponents/AddPersionslDetails';
 import { createUser, updateUserById, getAllUserRoles } from '../../Api/StaffManagement/UserManagementAPI';
+import USER_MANAGEMENT_STRINGS from '../../Constants/StringConstants/UserManagemetConstant';
 // ─── Constants ────────────────────────────────────────────────────────────────
 const VALID_GENDERS = ['MALE', 'FEMALE', 'OTHER'];
 
@@ -111,6 +112,8 @@ const validateFormData = (formData, validRoles = []) => {
 };
 
 function AddnewSystemUser() {
+    const strings = USER_MANAGEMENT_STRINGS.ADD_USER;
+    const commonStrings = USER_MANAGEMENT_STRINGS.COMMON;
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('personal');
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -292,13 +295,13 @@ function AddnewSystemUser() {
                     className="flex items-center cursor-pointer bg-gray-600 p-2 rounded-xl text-white gap-2 hover:bg-gray-900 transition-colors mb-4"
                 >
                     <ChevronLeft className="w-5 h-5" />
-                    <span className="hidden sm:inline">Back to List</span>
+                    <span className="hidden sm:inline">{strings.BACK_TO_LIST}</span>
                 </button>
 
                 <div className="mb-6">
-                    <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Add New User</h1>
+                    <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">{strings.PAGE_TITLE}</h1>
                     <p className="text-sm sm:text-base text-gray-500">
-                        Enter the details below to onboard a new user into the system.
+                        {strings.PAGE_SUBTITLE}
                     </p>
                 </div>
 
@@ -315,8 +318,8 @@ function AddnewSystemUser() {
                                         }`}
                                 >
                                     <User size={20} />
-                                    <span className="hidden sm:inline">Personal Details</span>
-                                    <span className="sm:hidden">Personal</span>
+                                    <span className="hidden sm:inline">{strings.PERSONAL_DETAILS}</span>
+                                    <span className="sm:hidden">{strings.PERSONAL_SHORT}</span>
                                 </button>
                             </nav>
                         </div>
@@ -326,8 +329,8 @@ function AddnewSystemUser() {
                                 <>
                                     <div className="mb-6">
                                         <label className="block font-semibold text-gray-600 text-sm mb-3">
-                                            Profile Photo{' '}
-                                            <span className="text-gray-400 text-xs font-normal ml-1">(optional)</span>
+                                            {strings.PROFILE_PHOTO}{' '}
+                                            <span className="text-gray-400 text-xs font-normal ml-1">{strings.PROFILE_PHOTO_HELP}</span>
                                         </label>
                                         <div className="flex items-center gap-5">
                                             <div className="relative shrink-0">
@@ -354,8 +357,8 @@ function AddnewSystemUser() {
                                                         className="w-full border-2 border-dashed border-blue-300 hover:border-blue-500 bg-blue-50 hover:bg-blue-100 rounded-lg p-4 text-center transition-colors cursor-pointer"
                                                     >
                                                         <Camera className="w-5 h-5 text-blue-400 mx-auto mb-1" />
-                                                        <p className="text-sm font-medium text-blue-600">Click to upload photo</p>
-                                                        <p className="text-xs text-gray-400 mt-0.5">JPEG or PNG, max 10 MB</p>
+                                                        <p className="text-sm font-medium text-blue-600">{strings.CLICK_TO_UPLOAD}</p>
+                                                        <p className="text-xs text-gray-400 mt-0.5">{strings.UPLOAD_HELP}</p>
                                                     </button>
                                                 ) : (
                                                     <div className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-lg">
@@ -414,7 +417,7 @@ function AddnewSystemUser() {
                                     onClick={() => navigate('/manageUsers')}
                                     className="px-6 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                                 >
-                                    Discard
+                                    {commonStrings.DISCARD}
                                 </button>
                                 <button
                                     disabled={isSubmitting}
@@ -427,9 +430,9 @@ function AddnewSystemUser() {
                                     {isSubmitting ? (
                                         <span className="flex items-center justify-center gap-2">
                                             <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                            Adding...
+                                            {commonStrings.ADDING}
                                         </span>
-                                    ) : 'Save Details'}
+                                    ) : commonStrings.SAVE_DETAILS}
                                 </button>
                             </div>
                         </div>

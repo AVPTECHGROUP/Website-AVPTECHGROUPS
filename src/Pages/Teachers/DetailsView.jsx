@@ -2,9 +2,10 @@ import { User, Mail, Phone, ChevronLeft, GraduationCap, DollarSign, UserCheck, B
 import { useNavigate, useParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { getTeacherById } from '../../Api/Teachers/TeachersAPI';
+import TEACHER_MODULE_STRINGS from '../../Constants/StringConstants/TeacherConstants';
 
 const DetailsView = () => {
-
+  const strings = TEACHER_MODULE_STRINGS;
   const { id } = useParams();
 
   const [teacher, setTeacher] = useState(null);
@@ -87,7 +88,7 @@ const DetailsView = () => {
         <div className="flex items-center justify-center py-8 relative">
           <div className="flex flex-col items-center justify-center absolute lg:top-75">
             <div className="w-7 h-7 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-gray-600 lg:text-xl font-medium">Loading teachers...</p>
+            <p className="text-gray-600 lg:text-xl font-medium">{strings.COMMON.LOADING}</p>
           </div>
         </div>
       </div>
@@ -99,10 +100,10 @@ const DetailsView = () => {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Teacher Profile</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">{strings.DETAILS.PROFILE}</h1>
           <button onClick={() => navigate(-1)} className="flex items-center cursor-pointer bg-gray-600 p-2 rounded-xl text-white gap-2 hover:bg-gray-900 transition-colors">
             <ChevronLeft className="w-5 h-5" />
-            <span className="hidden sm:inline">Back to List</span>
+            <span className="hidden sm:inline">{strings.COMMON.BACK_TO_LIST}</span>
           </button>
         </div>
 
@@ -140,23 +141,23 @@ const DetailsView = () => {
           <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
             <div className="flex items-center gap-2 mb-4 sm:mb-6">
               <User className="w-5 h-5 text-blue-600" />
-              <h3 className="text-lg font-bold text-gray-900">Personal Details</h3>
+              <h3 className="text-lg font-bold text-gray-900">{strings.DETAILS.PERSONAL_TAB}</h3>
             </div>
             <div className="space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-2 gap-1 sm:gap-4">
-                <span className="text-sm text-gray-600 font-medium">Email Address</span>
+                <span className="text-sm text-gray-600 font-medium">{strings.DETAILS.FIELDS.EMAIL}</span>
                 <span className="text-sm text-gray-900 font-semibold text-left sm:text-right">{teacher.email}</span>
               </div>
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-2 gap-1 sm:gap-4">
-                <span className="text-sm text-gray-600 font-medium">Phone Number</span>
+                <span className="text-sm text-gray-600 font-medium">{strings.DETAILS.FIELDS.PHONE}</span>
                 <span className="text-sm text-gray-900 font-semibold text-left sm:text-right">{teacher.mobile}</span>
               </div>
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-2 gap-1 sm:gap-4">
-                <span className="text-sm text-gray-600 font-medium">Residential Address</span>
+                <span className="text-sm text-gray-600 font-medium">{strings.DETAILS.FIELDS.ADDRESS}</span>
                 <span className="text-sm text-gray-900 font-semibold text-left sm:text-right">{teacher.address}</span>
               </div>
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-2 gap-1 sm:gap-4">
-                <span className="text-sm text-gray-600 font-medium">Date of Birth</span>
+                <span className="text-sm text-gray-600 font-medium">{strings.DETAILS.FIELDS.DOB}</span>
                 <span className="text-sm text-gray-900 font-semibold text-left sm:text-right">{teacher.dob}</span>
               </div>
             </div>
@@ -166,23 +167,23 @@ const DetailsView = () => {
           <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
             <div className="flex items-center gap-2 mb-4 sm:mb-6">
               <GraduationCap className="w-5 h-5 text-blue-600" />
-              <h3 className="text-lg font-bold text-gray-900">Professional Details</h3>
+              <h3 className="text-lg font-bold text-gray-900">{strings.DETAILS.PROFESSIONAL_TAB}</h3>
             </div>
             <div className="space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-2 gap-1 sm:gap-4">
-                <span className="text-sm text-gray-600 font-medium">Highest Qualification</span>
+                <span className="text-sm text-gray-600 font-medium">{strings.DETAILS.FIELDS.QUALIFICATION}</span>
                 <span className="text-sm text-gray-900 font-semibold text-left sm:text-right">{teacher.highestQualification}</span>
               </div>
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-2 gap-1 sm:gap-4">
-                <span className="text-sm text-gray-600 font-medium">Years of Experience</span>
+                <span className="text-sm text-gray-600 font-medium">{strings.DETAILS.FIELDS.EXPERIENCE}</span>
                 <span className="text-sm text-gray-900 font-semibold text-left sm:text-right">{teacher.experience}</span>
               </div>
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-2 gap-1 sm:gap-4">
-                <span className="text-sm text-gray-600 font-medium">Salary Type</span>
+                <span className="text-sm text-gray-600 font-medium">{strings.DETAILS.FIELDS.SALARY_TYPE}</span>
                 <span className="text-sm text-gray-900 font-semibold text-left sm:text-right">{teacher.salaryType}</span>
               </div>
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-2 gap-1 sm:gap-4">
-                <span className="text-sm text-gray-600 font-medium">Joined Date</span>
+                <span className="text-sm text-gray-600 font-medium">{strings.DETAILS.FIELDS.JOINED}</span>
                 <span className="text-sm text-gray-900 font-semibold text-left sm:text-right">{teacher.joiningDate}</span>
               </div>
             </div>
@@ -192,21 +193,21 @@ const DetailsView = () => {
           <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
             <div className="flex items-center gap-2 mb-4 sm:mb-6">
               <DollarSign className="w-5 h-5 text-blue-600" />
-              <h3 className="text-lg font-bold text-gray-900">Salary & Payroll</h3>
+              <h3 className="text-lg font-bold text-gray-900">{strings.DETAILS.SALARY_TAB}</h3>
             </div>
             <div className="space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-2 gap-1 sm:gap-4">
-                <span className="text-sm text-gray-600 font-medium">Basic Salary</span>
+                <span className="text-sm text-gray-600 font-medium">{strings.DETAILS.FIELDS.BASIC_SALARY}</span>
                 <span className="text-sm text-gray-900 font-semibold text-left sm:text-right">
                   ₹{teacher.baseSalary?.toLocaleString()}
                 </span>
               </div>
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-2 gap-1 sm:gap-4">
-                <span className="text-sm text-gray-600 font-medium">Total Allowances</span>
+                <span className="text-sm text-gray-600 font-medium">{strings.DETAILS.FIELDS.TOTAL_ALLOWANCES}</span>
                 <span className="text-sm text-gray-900 font-semibold text-left sm:text-right">{teacher.totalAllowances}</span>
               </div>
               <div className="flex items-center justify-between py-2">
-                <span className="text-sm text-gray-600">Payroll Status</span>
+                <span className="text-sm text-gray-600">{strings.DETAILS.FIELDS.PAYROLL_STATUS}</span>
                 <span className="inline-flex items-center px-3 py-1 rounded-md text-xs font-semibold bg-blue-100 text-blue-700">
                   {teacher.payroll}
                 </span>
@@ -218,7 +219,7 @@ const DetailsView = () => {
           <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
             <div className="flex items-center gap-2 mb-4 sm:mb-6">
               <UserCheck className="w-5 h-5 text-blue-600" />
-              <h3 className="text-lg font-bold text-gray-900">System Eligibility</h3>
+              <h3 className="text-lg font-bold text-gray-900">{strings.DETAILS.SYSTEM_TAB}</h3>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Login Access Card */}
@@ -228,8 +229,8 @@ const DetailsView = () => {
                     <LogIn className="w-6 h-6 text-blue-600" />
                   </div>
                   <div>
-                    <h4 className="text-sm font-bold text-gray-900">Login Access</h4>
-                    <p className="text-xs text-gray-600 mt-1">Authorized for web dashboard</p>
+                    <h4 className="text-sm font-bold text-gray-900">{strings.DETAILS.LABELS.LOGIN_ACCESS_TITLE}</h4>
+                    <p className="text-xs text-gray-600 mt-1">{strings.DETAILS.LABELS.AUTHORIZED_WEB_TITLE}</p>
                   </div>
                 </div>
                 {teacher.loginAccess && (
@@ -248,8 +249,8 @@ const DetailsView = () => {
                     <Clock className="w-6 h-6 text-blue-600" />
                   </div>
                   <div>
-                    <h4 className="text-sm font-bold text-gray-900">Attendance Access</h4>
-                    <p className="text-xs text-gray-600 mt-1">Enabled for mobile check-in</p>
+                    <h4 className="text-sm font-bold text-gray-900">{strings.DETAILS.LABELS.ATTENDANCE_ACCESS}</h4>
+                    <p className="text-xs text-gray-600 mt-1">{strings.DETAILS.LABELS.MOBILE_CHECK_IN_TITLE}</p>
                   </div>
                 </div>
                 {teacher.attendanceAccess && (
@@ -267,12 +268,12 @@ const DetailsView = () => {
           <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6 lg:col-span-2">
             <div className="flex items-center gap-2 mb-4 sm:mb-6">
               <Briefcase className="w-5 h-5 text-blue-600" />
-              <h3 className="text-lg font-bold text-gray-900">Academic Assignment</h3>
+              <h3 className="text-lg font-bold text-gray-900">{strings.DETAILS.ACADEMIC_TAB}</h3>
             </div>
 
             <div className="space-y-4">
               <div>
-                <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Assigned Classes</h4>
+                <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">{strings.DETAILS.LABELS.ASSIGNED_CLASSES}</h4>
                 <div className="flex flex-wrap gap-2">
                   {teacher.classes.map((cls, index) => (
                     <span
@@ -293,23 +294,6 @@ const DetailsView = () => {
                   ))}
                 </div>
               </div>
-
-              {/* <div>
-                <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Subjects Specialized</h4>
-                <div className="flex flex-wrap gap-2">
-                  {teacher.subjects.map((subject, index) => (
-                    <span
-                      key={index}
-                      className="px-4 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-100 transition-colors flex items-center gap-2"
-                    >
-                      {subject === 'Mathematics' && ''}
-                      {subject === 'Physics' && ''}
-                      {subject === 'Logic' && ''}
-                      {subject}
-                    </span>
-                  ))}
-                </div>
-              </div> */}
             </div>
           </div>
         </div>

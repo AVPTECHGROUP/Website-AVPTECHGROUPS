@@ -1,6 +1,7 @@
 import { lazy } from 'react';
 import { Route } from 'react-router-dom';
 import RoleProtectedRoute from '../../utils/RoleProtectedRoute';
+import { ROLE_GROUPS, ROUTE_PATHS } from '../../Constants/RoutesConstants/RoutesConst';
 
 const CircularsPage = lazy(() => import('../../Pages/Communication/Circulars/CircularsPage'));
 const CreateCircularPage = lazy(() => import('../../Pages/Communication/Circulars/CreateCircularPage'));
@@ -9,76 +10,72 @@ const CreateEventPage = lazy(() => import('../../Pages/Communication/Events/Crea
 const ApprovalQueuePage = lazy(() => import('../../Pages/Communication/ApprovalQueue/ApprovalQueuePage'));
 const NotificationsPage = lazy(() => import('../../Pages/Communication/Notifications/NotificationsPage'));
 
-const COMM_ROLES = ['ADMIN', 'PRINCIPAL', 'TEACHER', 'GLOBAL_ADMIN', 'SUPER_ADMIN'];
-const APPROVAL_ROLES = ['ADMIN', 'PRINCIPAL', 'GLOBAL_ADMIN', 'SUPER_ADMIN'];
-
 export default function CommunicationRoutes() {
   return (
-  <>
-    {/* Circulars */}
-    <Route
-      path="/communication/circulars"
-      element={
-        <RoleProtectedRoute allowedRoles={COMM_ROLES}>
-          <CircularsPage />
-        </RoleProtectedRoute>
-      }
-    />
-    <Route
-      path="/communication/circulars/:id"
-      element={
-        <RoleProtectedRoute allowedRoles={COMM_ROLES}>
-          <CircularsPage />
-        </RoleProtectedRoute>
-      }
-    />
-    <Route
-      path="/communication/circulars/create"
-      element={
-        <RoleProtectedRoute allowedRoles={COMM_ROLES}>
-          <CreateCircularPage />
-        </RoleProtectedRoute>
-      }
-    />
+    <>
+      {/* Circulars */}
+      <Route
+        path={ROUTE_PATHS.COMM_CIRCULARS}
+        element={
+          <RoleProtectedRoute allowedRoles={ROLE_GROUPS.COMM_ROLES}>
+            <CircularsPage />
+          </RoleProtectedRoute>
+        }
+      />
+      <Route
+        path={ROUTE_PATHS.COMM_CIRCULARS_DETAIL}
+        element={
+          <RoleProtectedRoute allowedRoles={ROLE_GROUPS.COMM_ROLES}>
+            <CircularsPage />
+          </RoleProtectedRoute>
+        }
+      />
+      <Route
+        path={ROUTE_PATHS.COMM_CIRCULARS_CREATE}
+        element={
+          <RoleProtectedRoute allowedRoles={ROLE_GROUPS.COMM_ROLES}>
+            <CreateCircularPage />
+          </RoleProtectedRoute>
+        }
+      />
 
-    {/* Events */}
-    <Route
-      path="/communication/events"
-      element={
-        <RoleProtectedRoute allowedRoles={COMM_ROLES}>
-          <EventsPage />
-        </RoleProtectedRoute>
-      }
-    />
-    <Route
-      path="/communication/events/create"
-      element={
-        <RoleProtectedRoute allowedRoles={COMM_ROLES}>
-          <CreateEventPage />
-        </RoleProtectedRoute>
-      }
-    />
+      {/* Events */}
+      <Route
+        path={ROUTE_PATHS.COMM_EVENTS}
+        element={
+          <RoleProtectedRoute allowedRoles={ROLE_GROUPS.COMM_ROLES}>
+            <EventsPage />
+          </RoleProtectedRoute>
+        }
+      />
+      <Route
+        path={ROUTE_PATHS.COMM_EVENTS_CREATE}
+        element={
+          <RoleProtectedRoute allowedRoles={ROLE_GROUPS.COMM_ROLES}>
+            <CreateEventPage />
+          </RoleProtectedRoute>
+        }
+      />
 
-    {/* Approval Queue */}
-    <Route
-      path="/communication/approval"
-      element={
-        <RoleProtectedRoute allowedRoles={APPROVAL_ROLES}>
-          <ApprovalQueuePage />
-        </RoleProtectedRoute>
-      }
-    />
+      {/* Approval Queue */}
+      <Route
+        path={ROUTE_PATHS.COMM_APPROVAL}
+        element={
+          <RoleProtectedRoute allowedRoles={ROLE_GROUPS.APPROVAL_ROLES}>
+            <ApprovalQueuePage />
+          </RoleProtectedRoute>
+        }
+      />
 
-    {/* Notifications */}
-    <Route
-      path="/communication/notifications"
-      element={
-        <RoleProtectedRoute allowedRoles={COMM_ROLES}>
-          <NotificationsPage />
-        </RoleProtectedRoute>
-      }
-    />
-  </>
+      {/* Notifications */}
+      <Route
+        path={ROUTE_PATHS.COMM_NOTIFICATIONS}
+        element={
+          <RoleProtectedRoute allowedRoles={ROLE_GROUPS.COMM_ROLES}>
+            <NotificationsPage />
+          </RoleProtectedRoute>
+        }
+      />
+    </>
   );
 }
-
