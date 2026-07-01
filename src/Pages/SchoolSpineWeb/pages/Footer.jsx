@@ -5,12 +5,39 @@ import Logo from '../../../assets/Images/SS_logo_3.png'
 import cst from '../../../assets/Images/cst.png'
 
 const footerLinks = {
-    Product: ['Features', 'Pricing', 'Integrations', 'Security', 'Updates'],
-    Company: ['About', 'Careers', 'Press', 'Partners', 'Contact'],
+    Product: [
+        'Features',
+        'Pricing',
+        'Integrations',
+        'Security',
+        'Updates'
+    ],
+
+    Company: [
+        { name: 'About Us', path: '/about' },
+        { name: 'Our Clients', path: '/clients' },
+        { name: 'Contact Us', path: '/contact' },
+        { name: 'Help & support', path: '/support' },
+        { name: 'Blog', path: '/blog' },
+        { name: 'FAQ', path: '/faqs' }
+    ],
+
     Legal: [
-        { name: 'Privacy Policy', path: '/privacy-policy' },
-        { name: 'Terms of Service', path: '/terms' },
-        { name: 'Cookie Policy', path: '/cookies' }
+        {
+            name: 'Privacy Policy',
+            path: '/privacy-policy',
+            external: true
+        },
+        {
+            name: 'Terms of Service',
+            path: '/terms',
+            external: true
+        },
+        {
+            name: 'Cookie Policy',
+            path: '/cookies',
+            external: true
+        }
     ],
 }
 
@@ -45,9 +72,7 @@ const Footer = () => {
 
                         {/* Tagline */}
                         <p className="text-gray-400 text-sm leading-7">
-                            The modern school management platform that helps schools
-                            streamline operations, improve communication, and focus more
-                            on quality education.
+                            SchoolSpine is redefining school management with a secure, intelligent, and future-ready platform that connects administrators, teachers, parents, and students—all in one place.
                         </p>
 
                         {/* Contact Card */}
@@ -110,7 +135,7 @@ const Footer = () => {
                                 className="flex-1 h-12 px-5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 outline-none focus:border-teal-500/50 transition-all text-sm"
                                 required
                             />
-                            <button 
+                            <button
                                 type="submit"
                                 className="h-12 px-6 rounded-xl font-semibold text-white bg-gradient-to-r from-[#00C9B1] to-[#F5A623] hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 shadow-lg shadow-teal-500/10 cursor-pointer whitespace-nowrap"
                             >
@@ -130,15 +155,19 @@ const Footer = () => {
                                 <ul className="flex flex-col gap-3">
                                     {links.map((link, idx) => {
                                         const isObject = typeof link === 'object';
+
                                         const label = isObject ? link.name : link;
+
                                         const path = isObject ? link.path : '#';
-                                        
+
+                                        const openNewTab = isObject && link.external;
+
                                         return (
                                             <li key={idx}>
                                                 <a
                                                     href={path}
-                                                    target={isObject ? "_blank" : "_self"}
-                                                    rel={isObject ? "noopener noreferrer" : undefined}
+                                                    target={openNewTab ? "_blank" : "_self"}
+                                                    rel={openNewTab ? "noopener noreferrer" : undefined}
                                                     className="text-gray-400 text-sm hover:text-teal-400 transition-all duration-200 hover:translate-x-1 inline-block cursor-pointer"
                                                 >
                                                     {label}

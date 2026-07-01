@@ -55,7 +55,7 @@ const DetailsStrip = () => {
     return (
         <div
             ref={stripRef}
-            className="w-full bg-[linear-gradient(to_right,#101D2C,#0E323D,#1E282C)] px-4 sm:px-8 lg:px-20 py-10 sm:py-16 md:py-20"
+            className="w-full bg-[linear-gradient(to_right,#101D2C,#0E323D,#1E282C)] px-4 sm:px-8 lg:px-20 py-12 sm:py-20"
         >
             {/* Responsive Grid Container */}
             <div className="grid grid-cols-2 md:grid-cols-4 max-w-5xl mx-auto items-stretch">

@@ -106,7 +106,8 @@ const LandingLayout = lazy(() => import('../Pages/SchoolSpineWeb/pages/LandingLa
 const Terms_Of_Service = lazy(() => import('../Pages/SchoolSpineWeb/pages/Terms'));
 const Cookie_Policy = lazy(() => import('../Pages/SchoolSpineWeb/pages/CookiePolicy'));
 const FaqListing = lazy(() => import('../Components/Homes/Faq/FaqLisitng'));
-
+const FeatureDetails = lazy(() => import('../Components/Homes/Details/Features/FeatureDetails'));
+const Blog = lazy(() => import('../Pages/SchoolSpineWeb/pages/Blog'));
 // Circulars and Events
 const CircularsPage = lazy(() => import('../Pages/Communication/Circulars/CircularsPage'));
 const CreateCircularPage = lazy(() => import('../Pages/Communication/Circulars/CreateCircularPage'));
@@ -159,6 +160,8 @@ const MainRoutes = () => {
         <Route path="/terms" element={isTokenExist ? <RootRedirect /> : <LandingLayout><Terms_Of_Service /></LandingLayout>} />
         <Route path="/cookies" element={isTokenExist ? <RootRedirect /> : <LandingLayout><Cookie_Policy /></LandingLayout>} />
         <Route path="/faqs" element={isTokenExist ? <RootRedirect /> : <LandingLayout><FaqListing /></LandingLayout>} />
+        <Route path="/blog" element={isTokenExist ? <RootRedirect /> : <LandingLayout><Blog /></LandingLayout>} />
+        <Route path="/features/:slug" element={isTokenExist ? <RootRedirect /> : <LandingLayout><FeatureDetails /></LandingLayout>} />
         {/* PUBLIC */}
         {/* Redirect ogged-in users away from login */}
         <Route path="/login" element={isTokenExist ? <RootRedirect /> : <Login />} />

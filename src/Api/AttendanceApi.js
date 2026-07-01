@@ -733,3 +733,41 @@ export const bulkManualMarkAttendance = async (payload) => {
     throw error;
   }
 };
+//  Bulk Manual Staff Attendance
+export const bulkManualStaffAttendance = async (payload) => {
+  try {
+    if (
+      !payload.attendanceDate ||
+      !payload.staff?.length
+    ) {
+      throw new Error(
+        "attendanceDate and staff array are required"
+      );
+    }
+
+    const res = await authFetch(
+      `${BASE_URL}/attendance/manual-review/bulk`,
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }
+    );
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(
+        data?.message || "Failed to bulk mark staff attendance"
+      );
+    }
+
+    return data;
+
+  } catch (error) {
+    console.error(
+      "bulkManualStaffAttendance error:",
+      error.message
+    );
+    throw error;
+  }
+};

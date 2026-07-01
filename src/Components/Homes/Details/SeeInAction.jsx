@@ -392,7 +392,7 @@ const S = {
     WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
   },
   sub: {
-    fontSize: 'clamp(0.88rem,1.5vw,1.02rem)', color: '#64748b',
+    fontSize: 'clamp(0.88rem,1.5vw,1.02rem)', color: '#94a3b8',
     margin: '0.85rem auto 0', maxWidth: 480, lineHeight: 1.68,
   },
   pill: {
@@ -420,7 +420,7 @@ const S = {
     transition: 'color 0.22s', whiteSpace: 'nowrap',
   },
   hint: {
-    fontSize: '0.73rem', color: '#334155',
+    fontSize: '0.73rem', color: '#94a3b8',
     letterSpacing: '0.04em', margin: 0, textAlign: 'center',
     position: 'relative', zIndex: 1,
   },

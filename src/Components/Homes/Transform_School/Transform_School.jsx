@@ -250,7 +250,7 @@ export default function TransformSchool() {
                             </motion.button>
 
                             <motion.a
-                                href="https://wa.me/919876543210?text=Hi%2C%20I%20want%20to%20know%20more%20about%20SchoolSpine"
+                                href="https://wa.me/919511117450?text=Hi%2C%20I%20want%20to%20know%20more%20about%20SchoolSpine"
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 whileHover={{ backgroundColor: 'rgba(255,255,255,0.08)', scale: 1.03 }}
