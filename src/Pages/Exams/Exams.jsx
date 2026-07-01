@@ -188,21 +188,24 @@ function ClassRow({ event, exam, sections, onAction, onRemove }) {
     const meta = ROW_META[status];
     const { hasPermission } = useAuth();
 
+    // Uniform styling class matching your original theme accents
+    const activeChipStyle = exam.isActive
+        ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+        : "bg-gray-100 text-gray-500 border border-gray-200";
+
     return (
         <div className={`px-3 sm:px-4 py-3.5 border-b border-gray-100 last:border-0 ${meta.rowBg}`}>
             <div className={`flex flex-col gap-3 xl:grid ${ROW_GRID_COLS} xl:gap-3 xl:items-center`}>
 
                 {/* COLUMN 1: CLASS INFO */}
-                <div className="min-w-0 flex items-center justify-between xl:block">
+                <div className="min-w-0 flex items-center justify-betwee xl:block">
                     <div>
                         <p className="text-sm font-bold text-gray-800">{exam.schoolClassName}</p>
-                        <span className={`inline-block mt-1 px-2 py-0.5 rounded-md text-[10px] font-bold tracking-wide uppercase ${exam.isActive ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-gray-100 text-gray-500"}`}>
-                            {exam.isActive ? "Active" : "Inactive"}
-                        </span>
                     </div>
-                    <span className={`xl:hidden inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold tracking-wide uppercase shrink-0 ${meta.chip}`}>
-                        <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                        {meta.label}
+                    {/* Responsive badge for smaller viewports */}
+                    <span className={`xl:hidden inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold tracking-wide uppercase shrink-0 ${activeChipStyle}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${exam.isActive ? "bg-emerald-500" : "bg-gray-400"}`} />
+                        {exam.isActive ? "Active" : "Inactive"}
                     </span>
                 </div>
 
@@ -221,11 +224,11 @@ function ClassRow({ event, exam, sections, onAction, onRemove }) {
                     )}
                 </div>
 
-                {/* COLUMN 3: STATUS CHIP */}
+                {/* COLUMN 3: STATUS CHIP (Single Unified Active Badge) */}
                 <div className="hidden xl:flex items-center min-w-0">
-                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold tracking-wide uppercase ${meta.chip}`}>
-                        <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                        {meta.label}
+                    <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-bold tracking-wide uppercase ${activeChipStyle}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${exam.isActive ? "bg-emerald-500" : "bg-gray-400"}`} />
+                        {exam.isActive ? "Active" : "Inactive"}
                     </span>
                 </div>
 
@@ -235,52 +238,52 @@ function ClassRow({ event, exam, sections, onAction, onRemove }) {
                         <>
                             <ActionBtn Icon={FileText} label="Reports" tone="primary" onClick={() => onAction(exam, "reports")} />
                             {hasPermission(P.EXAM_EDIT) && (
-                              <ActionBtn Icon={BookOpen} label="Subjects" tone="neutral" onClick={() => onAction(exam, "subjects")} />
+                                <ActionBtn Icon={BookOpen} label="Subjects" tone="neutral" onClick={() => onAction(exam, "subjects")} />
                             )}
                         </>
                     )}
                     {status === "ready" && (
                         <>
                             {hasPermission(P.EXAM_MARKS_ENTER) && (
-                              <ActionBtn Icon={LogIn} label="Marks" tone="neutral" onClick={() => onAction(exam, "enter_marks")} />
+                                <ActionBtn Icon={LogIn} label="Marks" tone="neutral" onClick={() => onAction(exam, "enter_marks")} />
                             )}
                             {hasPermission(P.EXAM_APPROVE) && (
-                              <ActionBtn Icon={CheckCircle} label="Declare" tone="success" onClick={() => onAction(exam, "declare")} />
+                                <ActionBtn Icon={CheckCircle} label="Declare" tone="success" onClick={() => onAction(exam, "declare")} />
                             )}
                             {hasPermission(P.EXAM_EDIT) && (
-                              <ActionBtn Icon={BookOpen} label="Subjects" tone="neutral" onClick={() => onAction(exam, "subjects")} />
+                                <ActionBtn Icon={BookOpen} label="Subjects" tone="neutral" onClick={() => onAction(exam, "subjects")} />
                             )}
                         </>
                     )}
                     {status === "partial" && (
                         <>
                             {hasPermission(P.EXAM_MARKS_ENTER) && (
-                              <ActionBtn Icon={LogIn} label="Enter Marks" tone="primary" onClick={() => onAction(exam, "enter_marks")} />
+                                <ActionBtn Icon={LogIn} label="Enter Marks" tone="primary" onClick={() => onAction(exam, "enter_marks")} />
                             )}
                             {hasPermission(P.EXAM_EDIT) && (
-                              <ActionBtn Icon={BookOpen} label="Subjects" tone="neutral" onClick={() => onAction(exam, "subjects")} />
+                                <ActionBtn Icon={BookOpen} label="Subjects" tone="neutral" onClick={() => onAction(exam, "subjects")} />
                             )}
                         </>
                     )}
                     {status === "not_started" && (
                         <>
                             {hasPermission(P.EXAM_MARKS_ENTER) && (
-                              <ActionBtn Icon={LogIn} label="Enter Marks" tone="warning" onClick={() => onAction(exam, "enter_marks")} />
+                                <ActionBtn Icon={LogIn} label="Enter Marks" tone="warning" onClick={() => onAction(exam, "enter_marks")} />
                             )}
                             {hasPermission(P.EXAM_EDIT) && (
-                              <ActionBtn Icon={BookOpen} label="Subjects" tone="neutral" onClick={() => onAction(exam, "subjects")} />
+                                <ActionBtn Icon={BookOpen} label="Subjects" tone="neutral" onClick={() => onAction(exam, "subjects")} />
                             )}
                         </>
                     )}
 
                     {hasPermission(P.EXAM_DELETE) && (
-                      <ActionBtn
-                          Icon={Trash2}
-                          label="Remove"
-                          tone="danger"
-                          disabled={exam.resultDeclared}
-                          onClick={() => onRemove(exam)}
-                      />
+                        <ActionBtn
+                            Icon={Trash2}
+                            label="Remove"
+                            tone="danger"
+                            disabled={exam.resultDeclared}
+                            onClick={() => onRemove(exam)}
+                        />
                     )}
                 </div>
             </div>
@@ -327,10 +330,10 @@ function EventItem({ event, expanded, onToggle, sectionsCache, onLoadSections, o
                         </div>
                     </div>
                     {hasPermission(P.EXAM_EDIT) && (
-                      <ActionBtn Icon={Edit2} label="Edit" tone="neutral" compact onClick={() => onEdit(event)} />
+                        <ActionBtn Icon={Edit2} label="Edit" tone="neutral" compact onClick={() => onEdit(event)} />
                     )}
                     {hasPermission(P.EXAM_CREATE) && (
-                      <ActionBtn Icon={Copy} label="Copy" tone="neutral" compact onClick={() => onCopy(event)} />
+                        <ActionBtn Icon={Copy} label="Copy" tone="neutral" compact onClick={() => onCopy(event)} />
                     )}
                 </div>
             </div>
@@ -339,9 +342,9 @@ function EventItem({ event, expanded, onToggle, sectionsCache, onLoadSections, o
                 <div className="border-t border-gray-100">
                     <div className={`hidden xl:grid ${ROW_GRID_COLS} xl:gap-3 px-4 py-3 bg-gray-50 text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-gray-200/60`}>
                         <span>Class</span>
-                        <span>Sections (marks)</span>
+                        <span>Sections</span>
                         <span>Status</span>
-                        <span className="text-right">Actions</span>
+                        <span className="text-center">Actions</span>
                     </div>
                     {exams.length === 0 ? (
                         <p className="text-sm text-gray-400 text-center py-8">No classes in this event yet.</p>
@@ -358,7 +361,7 @@ function EventItem({ event, expanded, onToggle, sectionsCache, onLoadSections, o
                     <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-t border-gray-100 gap-2">
                         <span className="text-xs font-medium text-gray-400">{total} class{total !== 1 ? "es" : ""} in this event</span>
                         {hasPermission(P.EXAM_EDIT) && (
-                          <ActionBtn Icon={Plus} label="Add Class to Event" tone="neutral" onClick={() => onAddClass(event)} />
+                            <ActionBtn Icon={Plus} label="Add Class to Event" tone="neutral" onClick={() => onAddClass(event)} />
                         )}
                     </div>
                 </div>
@@ -388,6 +391,7 @@ function ModalShell({ title, icon: Icon, onClose, children, maxW = "max-w-md" })
     );
 }
 
+// (Rest of the wizard models remain unaltered)
 function DeclareModal({ examName, onConfirm, onCancel, loading }) {
     return (
         <ModalShell title="Declare Result" icon={AlertCircle} onClose={onCancel}>
@@ -580,13 +584,20 @@ function SubjectsModal({ event, exam, onClose, onChanged }) {
 
     const handleDelete = async (configId) => {
         setBusyId(configId);
+
         try {
             await deleteEventSubject(event.eventId, exam.schoolClassId, configId);
             await load();
             onChanged?.();
-        } catch {
-            setError("Failed to remove subject.");
-        } finally { setBusyId(null); }
+        } catch (err) {
+            setError(
+                err?.response?.data?.message ||
+                err?.message ||
+                "Failed to remove subject."
+            );
+        } finally {
+            setBusyId(null);
+        }
     };
 
     return (
@@ -680,37 +691,24 @@ export default function ExamEvents() {
     const fetchEvents = useCallback(async () => {
         setLoadingEvents(true);
         setErrorEvents(null);
-
         try {
-
             const f = {};
-
             if (yearId) {
                 f.academicYearId = yearId;
             }
 
-            // REMOVE status and examType from API params
-            // frontend will handle these
-
-
             let list = await getExamEvents(f);
-
             list = Array.isArray(list) ? list : [];
-
 
             // Exam Type Filter
             if (typeId) {
-
                 list = list.filter(ev =>
                     String(ev.examTypeId) === String(typeId)
                 );
-
             }
-
 
             // Class Filter
             if (classId) {
-
                 list = list
                     .map(ev => ({
                         ...ev,
@@ -719,43 +717,24 @@ export default function ExamEvents() {
                         )
                     }))
                     .filter(ev => ev.exams.length > 0);
-
             }
-
-
 
             // Status Filter
             if (status) {
-
                 list = list.filter(ev => {
-
                     const currentStatus = eventStatus(ev);
-
                     return currentStatus === status;
-
                 });
-
             }
 
-
             setEvents(list);
-
-
         } catch (err) {
-
             console.log(err);
-
             setErrorEvents("Failed to load exam events.");
             setEvents([]);
-
-        }
-        finally {
-
+        } finally {
             setLoadingEvents(false);
-
         }
-
-
     }, [yearId, typeId, status, classId]);
 
     useEffect(() => { if (!loadingMeta) fetchEvents(); }, [fetchEvents, loadingMeta]);
@@ -956,13 +935,13 @@ export default function ExamEvents() {
                         </button>
 
                         {hasPermission(P.EXAM_CREATE) && (
-                          <button
-                              onClick={() => setShowWizard(true)}
-                              disabled={loadingMeta}
-                              className="flex items-center justify-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold rounded-lg transition-all shadow-sm active:scale-95 disabled:opacity-60 whitespace-nowrap"
-                          >
-                              <Plus className="w-4 h-4 shrink-0" /> <span className="hidden sm:inline">New Exam Event</span><span className="sm:hidden">New</span>
-                          </button>
+                            <button
+                                onClick={() => setShowWizard(true)}
+                                disabled={loadingMeta}
+                                className="flex items-center justify-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold rounded-lg transition-all shadow-sm active:scale-95 disabled:opacity-60 whitespace-nowrap"
+                            >
+                                <Plus className="w-4 h-4 shrink-0" /> <span className="hidden sm:inline">New Exam Event</span><span className="sm:hidden">New</span>
+                            </button>
                         )}
                     </div>
                 </div>

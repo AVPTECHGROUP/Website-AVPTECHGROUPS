@@ -14,12 +14,13 @@ import {
 import { getFeePeriods } from '../../Api/FeePeriods';
 import { getFeeStructures } from '../../Api/FeeStructures';
 import { getStudentByClass } from '../../Api/StudentsApi';
+import { getActiveClasses } from '../../Api/ClassSectionAPI'; // ← NEW: replaces raw authFetch call for classes
 import { authFetch } from '../../Authfetch/Authfetch';
 import { UserContext } from '../../ContextAPI/UserContext';
 import FeeReceiptPrint from '../../Components/FeeModal/FeeReciptPrint';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const SCHOOL_ID = 1;
+// SCHOOL_ID hardcoded constant REMOVED — schoolId now comes from UserContext (JWT / school switcher)
 const BASE_URL = import.meta.env.VITE_API_BASE_V1;
 const PAGE_SIZE = 10;
 const TODAY = new Date().toISOString().split('T')[0];
@@ -176,6 +177,8 @@ const Sel = ({ options = [], placeholder, value, onChange, className = '', disab
 );
 
 // ─── Collect Fee Modal ────────────────────────────────────────────────────────
+// NOTE: this component is unchanged here — you said you'll share it separately.
+// It's included as-is so this file stays complete and drop-in runnable.
 const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions, onSuccess }) => {
   const [selectedPeriodId, setSelectedPeriodId] = useState('');
   const [form, setForm] = useState({
@@ -264,7 +267,7 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
       } catch {
         toast.error('Load Failed', 'Could not fetch students for this class.');
         setStudents([]);
-      } finally { studentsLoading(false); }
+      } finally { setStudentsLoading(false); }
     };
     load();
   }, [selectedClassId]);
@@ -884,7 +887,8 @@ const HistoryCard = ({ h, onView }) => (
 
 // ─── Main: CollectionsHistory ─────────────────────────────────────────────────
 const CollectionsHistory = () => {
-  const { currentAcademicYear } = useContext(UserContext);
+  // CHANGED: pull schoolId out of context alongside currentAcademicYear
+  const { currentAcademicYear, schoolId } = useContext(UserContext);
   const academicYearId = currentAcademicYear?.id || null;
   const academicYearLabel = currentAcademicYear?.label || null;
 
@@ -919,20 +923,19 @@ const CollectionsHistory = () => {
     setToDate(TODAY);
   }, []);
 
+  // CHANGED: gate on schoolId too, use getActiveClasses(schoolId) instead of raw authFetch + hardcoded SCHOOL_ID
   useEffect(() => {
-    if (!academicYearId) { setOptionsLoading(false); return; }
+    if (!academicYearId || !schoolId) { setOptionsLoading(false); return; }
     const loadOptions = async () => {
       setOptionsLoading(true);
       try {
-        const [classesRes, periodsData] = await Promise.all([
-          authFetch(`${BASE_URL}/classes/school/${SCHOOL_ID}/active`).catch(() => null),
+        const [classesData, periodsData] = await Promise.all([
+          getActiveClasses(schoolId).catch(() => []),
           getFeePeriods(academicYearId).catch(() => []),
         ]);
-        if (classesRes?.ok) {
-          const classesData = await classesRes.json();
-          const records = Array.isArray(classesData) ? classesData : (classesData.data || []);
-          setClassOptions(records.map((c) => ({ value: String(c.id), label: c.name || c.className })));
-        }
+        const records = Array.isArray(classesData) ? classesData : (classesData?.data || []);
+        setClassOptions(records.map((c) => ({ value: String(c.id), label: c.name || c.className })));
+
         if (Array.isArray(periodsData)) {
           setPeriodOptions(periodsData.map((p) => ({ value: String(p.id), label: p.periodName || p.name })));
         }
@@ -941,7 +944,7 @@ const CollectionsHistory = () => {
       } finally { setOptionsLoading(false); }
     };
     loadOptions();
-  }, [academicYearId]);
+  }, [academicYearId, schoolId]);
 
   const fetchOutstanding = useCallback(async () => {
     try {
@@ -1013,12 +1016,13 @@ const CollectionsHistory = () => {
     else if (fromDate && toDate) fetchHistory();
   }, [tab, fromDate, toDate, classF, periodF, modeF, page, optionsLoading, fetchOutstanding, fetchHistory]);
 
-  if (!academicYearId || optionsLoading) {
+  // CHANGED: also wait for schoolId before rendering the main UI
+  if (!academicYearId || !schoolId || optionsLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-3">
         <span className="w-6 h-6 border-2 border-[#2563EB] border-t-transparent rounded-full animate-spin" />
         <div className="text-sm text-gray-500">
-          {!academicYearId ? '⏳ Waiting for academic year…' : 'Loading fee periods and classes…'}
+          {!academicYearId || !schoolId ? '⏳ Waiting for school/academic year…' : 'Loading fee periods and classes…'}
         </div>
       </div>
     );
@@ -1450,7 +1454,7 @@ const CollectionsHistory = () => {
             </div>
           )}
 
-          {/* Desktop Filters — FIXED FOR ONE LINE DISPLAY AS IN image_cc175f.png */}
+          {/* Desktop Filters */}
           <div className="hidden md:flex  flex-wrap items-center gap-2 w-full">
             <div className="relative flex-1 min-w-[150px] lg:min-w-[200px]">
               <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />

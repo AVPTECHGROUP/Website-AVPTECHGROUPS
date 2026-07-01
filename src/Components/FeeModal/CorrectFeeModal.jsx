@@ -3,7 +3,7 @@
 // - On submit: calls createFeeCollection API, returns receipt data via onSubmit
 // - Shows toast on success/error
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createFeeCollection } from '../../Api/FeeCollectionApi';
 import { getOutstandingFees } from '../../Api/FeeCollectionApi';
 import { useToast } from '../Toast/Toast';
@@ -17,6 +17,7 @@ const PAYMENT_MODES = [
 
 const fmtINR = (n) => n == null ? '—' : `₹${Number(n).toLocaleString('en-IN')}`;
 const today  = () => new Date().toISOString().split('T')[0];
+const SEARCH_DEBOUNCE_MS = 300;
 
 const CollectFeeModal = ({ isOpen, onClose, student: initialStudent, onSubmit }) => {
   const { show: toast } = useToast();
@@ -37,6 +38,10 @@ const CollectFeeModal = ({ isOpen, onClose, student: initialStudent, onSubmit })
   const [remarks,      setRemarks]      = useState('');
 
   const [submitting, setSubmitting] = useState(false);
+
+  // Debounce + race-condition guards for search
+  const debounceRef = useRef(null);
+  const searchSeqRef = useRef(0);
 
   // ── Pre-fill when student prop changes ────────────────────────────────────
   useEffect(() => {
@@ -59,26 +64,58 @@ const CollectFeeModal = ({ isOpen, onClose, student: initialStudent, onSubmit })
     setRemarks('');
   }, [isOpen, initialStudent]);
 
-  // ── Student search (outstanding fees without student pre-selected) ────────
-  const handleSearch = async (q) => {
-    setSearchQuery(q);
-    if (q.trim().length < 2) { setSearchResults([]); return; }
+  // Clear any pending debounce timer when modal closes/unmounts
+  useEffect(() => {
+    if (!isOpen && debounceRef.current) {
+      clearTimeout(debounceRef.current);
+      debounceRef.current = null;
+    }
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [isOpen]);
+
+  // ── Student search (debounced, race-safe) ──────────────────────────────────
+  const runSearch = async (q) => {
+    const mySeq = ++searchSeqRef.current;
     setSearching(true);
     try {
       // Outstanding fees endpoint returns all — client-side filter by name/code
       const res = await getOutstandingFees({});
-      const filtered = (res.records || []).filter(r => {
+      // Ignore this result if a newer search has started since this one fired
+      if (mySeq !== searchSeqRef.current) return;
+
+      const records = res?.records || res?.data?.content || res?.content || [];
+      const qLow = q.toLowerCase();
+      const filtered = records.filter((r) => {
         const name = (r.studentName || '').toLowerCase();
         const code = (r.studentCode || '').toLowerCase();
-        const qLow = q.toLowerCase();
         return name.includes(qLow) || code.includes(qLow);
       }).slice(0, 8);
+
       setSearchResults(filtered);
     } catch (err) {
-      toast('Search failed: ' + err.message, 'error');
+      if (mySeq === searchSeqRef.current) {
+        toast('Search failed: ' + err.message, 'error');
+      }
     } finally {
-      setSearching(false);
+      if (mySeq === searchSeqRef.current) setSearching(false);
     }
+  };
+
+  const handleSearch = (q) => {
+    setSearchQuery(q);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    if (q.trim().length < 2) {
+      setSearchResults([]);
+      setSearching(false);
+      // Bump sequence so any in-flight search response gets ignored
+      searchSeqRef.current++;
+      return;
+    }
+
+    debounceRef.current = setTimeout(() => runSearch(q), SEARCH_DEBOUNCE_MS);
   };
 
   const selectStudent = (s) => {
@@ -87,6 +124,7 @@ const CollectFeeModal = ({ isOpen, onClose, student: initialStudent, onSubmit })
     setLateFine(String(s.lateFine || ''));
     setSearchResults([]);
     setSearchQuery('');
+    searchSeqRef.current++; // invalidate any pending search
   };
 
   // ── Derived values ─────────────────────────────────────────────────────────
@@ -95,15 +133,18 @@ const CollectFeeModal = ({ isOpen, onClose, student: initialStudent, onSubmit })
   const paid          = parseFloat(amountPaid)  || 0;
   const discountVal   = parseFloat(discount)    || 0;
   const lateFineVal   = parseFloat(lateFine)    || 0;
-  const netPayable    = Math.max(0, totalDue - discountVal + lateFineVal);
-  const balanceAfter  = Math.max(0, totalDue - paid - discountVal);
+
+  // Total amount the student actually owes for this period, after discount, plus any late fine
+  const totalObligation = Math.max(0, totalDue - discountVal + lateFineVal);
+  // What remains after this payment is applied
+  const balanceAfter    = Math.max(0, totalObligation - paid);
 
   // ── Validate ───────────────────────────────────────────────────────────────
   const validate = () => {
     if (!student)       { toast('Please select a student', 'warning');     return false; }
     if (!paid || paid <= 0) { toast('Enter a valid amount', 'warning');    return false; }
-    if (paid > netPayable + 0.01) {
-      toast(`Amount cannot exceed balance ₹${netPayable.toLocaleString('en-IN')}`, 'warning');
+    if (paid > totalObligation + 0.01) {
+      toast(`Amount cannot exceed balance ₹${totalObligation.toLocaleString('en-IN')}`, 'warning');
       return false;
     }
     if (!paymentDate)   { toast('Select a payment date', 'warning');       return false; }
@@ -133,24 +174,27 @@ const CollectFeeModal = ({ isOpen, onClose, student: initialStudent, onSubmit })
     };
 
     try {
-      const data = await createFeeCollection(payload);
-      toast(`Fee collected successfully! Receipt: ${data?.data?.receiptNo || ''}`, 'success');
+      const res = await createFeeCollection(payload);
+      // Defensive: handle both { data: {...} } and unwrapped {...} response shapes
+      const data = res?.data || res || {};
+
+      toast(`Fee collected successfully! Receipt: ${data.receiptNo || ''}`, 'success');
       // Pass receipt data up to parent for ReceiptModal
       onSubmit?.({
-        receiptNo:    data?.data?.receiptNo,
+        receiptNo:    data.receiptNo,
         paymentDate,
         studentName:  student.studentName,
         studentCode:  student.studentCode,
         class:        student.className || student.class,
         period:       student.periodName || student.period,
-        components:   data?.data?.components || student.components || [],
+        components:   data.components || student.components || [],
         amountPaid:   paid,
         discount:     discountVal,
         lateFine:     lateFineVal,
         paymentMode,
-        balanceAfter: data?.data?.balanceAfter ?? balanceAfter,
+        balanceAfter: data.balanceAfter ?? balanceAfter,
         referenceNo:  referenceNo || '',
-        recordedBy:   data?.data?.recordedBy || '',
+        recordedBy:   data.recordedBy || '',
       });
     } catch (err) {
       toast(`Payment failed: ${err.message}`, 'error');
@@ -362,7 +406,7 @@ const CollectFeeModal = ({ isOpen, onClose, student: initialStudent, onSubmit })
                   </span>
                 </div>
                 <div className="text-white font-extrabold text-[15px]">
-                  Net Payable: {fmtINR(paid)}
+                  Net Payable: {fmtINR(totalObligation)}
                 </div>
               </div>
             </>

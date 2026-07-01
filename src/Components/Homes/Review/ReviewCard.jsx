@@ -47,12 +47,10 @@ function Avatar({ name, initials }) {
 export function ReviewCard({ quote, name, role, rating = 5, initials }) {
   return (
     <div
-      className="relative flex flex-col justify-between rounded-2xl p-6 h-full"
+      className="relative flex flex-col justify-between rounded-2xl p-6 h-full border border-theme-border bg-theme-card"
       style={{
-        background: "#FFFFFF",
         boxShadow:
-          "0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,201,177,0.08)",
-        border: "1px solid #E8F4F3",
+          "0 1px 3px rgba(0,0,0,0.02), 0 4px 16px rgba(0,201,177,0.05)",
       }}
     >
       {/* Quote icon */}
@@ -65,7 +63,7 @@ export function ReviewCard({ quote, name, role, rating = 5, initials }) {
  
       {/* Testimonial text */}
       <p
-        className="flex-1 text-base text-gray-700 leading-relaxed italic"
+        className="flex-1 text-base text-theme-subtext leading-relaxed italic"
         style={{ fontFamily: "var(--font-body, DM Sans, sans-serif)" }}
       >
         {quote}
@@ -76,14 +74,12 @@ export function ReviewCard({ quote, name, role, rating = 5, initials }) {
         <Avatar name={name} initials={initials} />
         <div className="min-w-0">
           <p
-            className="font-semibold text-sm truncate"
-            style={{ color: "#0D1B2A" }}
+            className="font-semibold text-sm truncate text-theme-text"
           >
             {name}
           </p>
           <p
-            className="text-xs truncate"
-            style={{ color: "#8A9BB0" }}
+            className="text-xs truncate text-theme-subtext"
           >
             {role}
           </p>

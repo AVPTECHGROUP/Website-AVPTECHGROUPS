@@ -168,7 +168,7 @@ const StudentDetails = () => {
               <div className="flex flex-wrap gap-2 sm:gap-4 text-sm text-gray-600">
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 text-blue-700 rounded-lg font-medium text-xs">
                   <BookOpen className="w-3.5 h-3.5" />
-                  Class {student.className} — {student.sectionName}
+                  {student.className} — {student.sectionName}
                 </span>
 
                 {student.email !== 'N/A' && (

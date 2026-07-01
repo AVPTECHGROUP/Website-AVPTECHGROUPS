@@ -111,6 +111,27 @@ export const UserProvider = ({ children }) => {
     setCurrentAcademicYear(null);
   }, [deleteCurrentToken]);
 
+  // ── Theme Switcher ──
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem("theme") || "dark";
+  });
+
+  useEffect(() => {
+    const root = window.document.documentElement;
+    if (theme === "dark") {
+      root.classList.add("dark");
+      root.classList.remove("light");
+    } else {
+      root.classList.add("light");
+      root.classList.remove("dark");
+    }
+    localStorage.setItem("theme", theme);
+  }, [theme]);
+
+  const toggleTheme = useCallback(() => {
+    setTheme((prev) => (prev === "dark" ? "light" : "dark"));
+  }, []);
+
   const value = useMemo(() => ({
     user, setUser,
     token, saveToken,
@@ -118,8 +139,9 @@ export const UserProvider = ({ children }) => {
     schoolInfo, saveSchool,
     profile, saveProfile,
     currentAcademicYear, saveCurrentAcademicYear,
+    theme, toggleTheme,
   }), [
-    user, token, schoolInfo, profile, currentAcademicYear,
+    user, token, schoolInfo, profile, currentAcademicYear, theme, toggleTheme,
     saveToken, logout, saveSchool, saveProfile, saveCurrentAcademicYear,
   ]);
 

@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useContext } from 'react'
 import { GraduationCap, IndianRupee, CalendarCheck, Users, BookOpen, UserCheck, Package } from 'lucide-react'
+import { UserContext } from "../../ContextAPI/UserContext"
 
 const roles = [
     { text: "School Management Software", icon: GraduationCap },
@@ -12,6 +13,9 @@ const roles = [
 ]
 
 const Text_animate = () => {
+
+    const { theme } = useContext(UserContext)
+
     const [currentIndex, setCurrentIndex] = useState(0)
     const [displayed, setDisplayed] = useState('')
     const [isDeleting, setIsDeleting] = useState(false)
@@ -23,31 +27,60 @@ const Text_animate = () => {
 
         const timeout = setTimeout(() => {
             if (!isDeleting) {
+
                 const next = fullText.slice(0, displayed.length + 1)
                 setDisplayed(next)
+
                 if (next === fullText) {
                     setTimeout(() => setIsDeleting(true), 1500)
                 }
+
             } else {
+
                 const next = fullText.slice(0, displayed.length - 1)
                 setDisplayed(next)
+
                 if (next === '') {
                     setIsDeleting(false)
                     setCurrentIndex((prev) => (prev + 1) % roles.length)
                 }
             }
+
         }, isDeleting ? 40 : 80)
 
         return () => clearTimeout(timeout)
+
     }, [displayed, isDeleting, currentIndex])
 
-    // har word alag span me — naya word bada aake normal hoga
+
     const words = displayed.split(' ')
+
 
     return (
         <div className="flex items-center gap-2 mt-3 h-8">
-            <CurrentIcon size={20} className="text-white/80 shrink-0" />
-            <p className="font-mono text-16px font-semibold flex gap-1.5 flex-wrap text-white/90 drop-shadow-[0_2px_10px_rgba(255,255,255,0.25)]">
+
+            <CurrentIcon
+                size={20}
+                className={
+                    theme === "light"
+                        ? "text-black/80 shrink-0"
+                        : "text-white/80 shrink-0"
+                }
+            />
+
+            <p
+                className={`
+                    font-mono text-[16px] font-semibold 
+                    flex gap-1.5 flex-wrap
+                    drop-shadow-[0_2px_10px_rgba(255,255,255,0.25)]
+                    ${
+                        theme === "light"
+                        ? "text-black/90"
+                        : "text-white/90"
+                    }
+                `}
+            >
+
                 {words.map((word, i) => (
                     <span
                         key={i}
@@ -59,7 +92,9 @@ const Text_animate = () => {
                         {word}
                     </span>
                 ))}
+
             </p>
+
         </div>
     )
 }

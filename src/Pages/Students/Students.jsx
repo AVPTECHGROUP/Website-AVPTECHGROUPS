@@ -178,27 +178,24 @@ const Student = () => {
         const base = 'min-w-[28px] h-7 px-1.5 rounded text-xs transition-all font-medium';
         const active = 'bg-blue-500 text-white';
         const inactive = 'text-gray-600 hover:bg-gray-100';
-        const dots = (key) => (
-            <span key={key} className="min-w-[28px] h-7 flex items-center justify-center text-gray-400 text-xs select-none">…</span>
-        );
         const btn = (num) => (
             <button key={num} onClick={() => setPage(num)} className={`${base} ${page === num ? active : inactive}`}>
                 {num}
             </button>
         );
+        const dots = (key) => (
+            <span key={key} className="min-w-[28px] h-7 flex items-center justify-center text-gray-400 text-xs select-none">…</span>
+        );
         if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => btn(i + 1));
-        const items = [];
-        items.push(btn(1));
-        const left = page - 1;
-        const right = page + 1;
-        if (left > 2) items.push(dots('dl'));
-        else if (left === 2) items.push(btn(2));
-        for (let i = Math.max(2, left); i <= Math.min(totalPages - 1, right); i++) items.push(btn(i));
-        if (right < totalPages - 1) items.push(dots('dr'));
-        else if (right === totalPages - 1) items.push(btn(totalPages - 1));
-        items.push(btn(totalPages));
-        return items;
-    };
+        const pages = new Set([1, 2, totalPages - 1, totalPages]);
+        for (let i = Math.max(1, page - 1); i <= Math.min(totalPages, page + 1); i++) pages.add(i);
+        const sorted = Array.from(pages).sort((a, b) => a - b);
+        return sorted.reduce((acc, num, idx) => {
+            if (idx > 0 && num - sorted[idx - 1] > 1) acc.push(dots(`d${idx}`));
+            acc.push(btn(num));
+            return acc;
+        }, []);
+    };  
 
     const PrevBtn = () => (
         <button
@@ -298,7 +295,7 @@ const Student = () => {
 
     return (
         <div className="flex flex-col min-h-screen lg:h-screen lg:overflow-hidden bg-linear-to-b from-sky-50 to-sky-100">
-            <div className="flex flex-col flex-1 lg:overflow-hidden p-3 sm:p-4 gap-3">
+            <div className="flex flex-col flex-1 lg:overflow-hidden p-3 sm:p-4 gap-3 min-h-0">
 
                 {/* ── Page Title ── */}
                 <div>
@@ -344,7 +341,7 @@ const Student = () => {
                         <input
                             value={searchInput}
                             onChange={handleSearchChange}
-                            placeholder="Search name, email or admission no…"
+                            placeholder="Search name, admission no…"
                             className="text-xs focus:outline-none text-gray-600 w-full bg-transparent placeholder:text-gray-400"
                         />
                         {searchInput && searchInput !== debouncedSearch && (
@@ -486,12 +483,12 @@ const Student = () => {
                                 </div>
                                 <div className="flex gap-2 mt-3 pt-3 border-t border-gray-100">
                                     {hasPermission(P.STUDENT_EDIT) && (
-                                      <button
-                                          onClick={() => navigate(`/students/editStudent/${student.id}`)}
-                                          className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium bg-blue-50 text-blue-600 hover:bg-blue-100"
-                                      >
-                                          <UserPenIcon className="w-3.5 h-3.5" /> Edit
-                                      </button>
+                                        <button
+                                            onClick={() => navigate(`/students/editStudent/${student.id}`)}
+                                            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium bg-blue-50 text-blue-600 hover:bg-blue-100"
+                                        >
+                                            <UserPenIcon className="w-3.5 h-3.5" /> Edit
+                                        </button>
                                     )}
                                     <button
                                         onClick={() => navigate(`/students/${student.id}`)}

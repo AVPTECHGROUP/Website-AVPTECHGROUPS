@@ -16,8 +16,6 @@ import {
 } from '../../Api/AttendanceApi';
 
 import { getRolesSummary } from '../../Api/userManagementAPI';
-// ─────────────────────────────────────────────────────────────────────────────
-
 const TODAY = new Date().toISOString().split('T')[0];
 
 const TABS = [
@@ -33,7 +31,6 @@ const STATUS_OPTIONS = [
   { value: 'HALF_DAY', label: 'Half Day' },
   { value: 'ON_LEAVE', label: 'On Leave' },
   { value: 'HOLIDAY', label: 'Holiday' },
-  { value: 'PENDING', label: 'Pending' },
   { value: 'PENDING_MANUAL_REVIEW', label: 'Pending Review' },
   { value: 'REJECTED', label: 'Rejected' },
 ];

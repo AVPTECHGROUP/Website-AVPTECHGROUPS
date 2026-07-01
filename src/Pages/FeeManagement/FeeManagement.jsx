@@ -16,7 +16,7 @@ import { useNavigate } from 'react-router-dom';
 import { useDecodedUser, UserContext } from '../../ContextAPI/UserContext';
 import Overview from './Overview';
 import FeePeriods from './FeePeriods';
-import FeeStructures from './Feestructures.';
+import FeeStructures from './Feestructures';
 import CollectionsHistory from './Collectionhistory';
 import Button from '../../Components/FeeModal/Button';
 
@@ -50,15 +50,15 @@ const BackButton = () => {
 
 // ─── Fee Synthesis Page ───────────────────────────────────────────────────────
 export const FeeSynthesisPage = () => {
-    const [tab, setTab]                       = React.useState('periods');
+    const [tab, setTab] = React.useState('periods');
     // Stores the periodId to pre-filter FeeStructures when navigating from FeePeriods
     const [initialPeriodId, setInitialPeriodId] = React.useState(null);
 
-    const { profile, user }                   = useDecodedUser();
+    const { profile, user } = useDecodedUser();
     const { currentAcademicYear, schoolInfo } = useContext(UserContext);
 
     const TABS = [
-        { key: 'periods',    label: 'Fee Periods'    },
+        { key: 'periods', label: 'Fee Periods' },
         { key: 'structures', label: 'Fee Structures' },
     ];
 
@@ -93,11 +93,10 @@ export const FeeSynthesisPage = () => {
                     <button
                         key={t.key}
                         onClick={() => handleTabClick(t.key)}
-                        className={`inline-flex items-center gap-2 px-4 py-3 text-[12.5px] font-semibold border-b-2 -mb-px transition-colors whitespace-nowrap ${
-                            tab === t.key
+                        className={`inline-flex items-center gap-2 px-4 py-3 text-[12.5px] font-semibold border-b-2 -mb-px transition-colors whitespace-nowrap ${tab === t.key
                                 ? 'text-[#1A3A5C] border-[#1A3A5C]'
                                 : 'text-gray-500 border-transparent hover:text-gray-700 hover:border-gray-300'
-                        }`}
+                            }`}
                     >
                         {t.label}
                     </button>
@@ -110,7 +109,7 @@ export const FeeSynthesisPage = () => {
                   instead of doing a route navigation.
                   FeeStructures receives initialPeriodId to pre-filter on load.
                 */}
-                {tab === 'periods'    && <FeePeriods onGoToStructures={goToStructures} />}
+                {tab === 'periods' && <FeePeriods onGoToStructures={goToStructures} />}
                 {tab === 'structures' && <FeeStructures initialPeriodId={initialPeriodId} />}
             </main>
         </div>
@@ -120,7 +119,7 @@ export const FeeSynthesisPage = () => {
 
 // ─── Collections Page ─────────────────────────────────────────────────────────
 export const CollectionsPage = () => {
-    const { profile, user }                   = useDecodedUser();
+    const { profile, user } = useDecodedUser();
     const { currentAcademicYear, schoolInfo } = useContext(UserContext);
 
     return (
@@ -140,7 +139,7 @@ export const CollectionsPage = () => {
 
 // ─── Overview / Dashboard Page ────────────────────────────────────────────────
 export const OverviewPage = () => {
-    const { profile, user }                   = useDecodedUser();
+    const { profile, user } = useDecodedUser();
     const { currentAcademicYear, schoolInfo } = useContext(UserContext);
 
     return (
@@ -155,7 +154,7 @@ export const OverviewPage = () => {
                 </div>
             </header>
             <main className="flex-1 p-6 max-w-[1600px] mx-auto w-full">
-                <Overview onNavigate={() => {}} />
+                <Overview onNavigate={() => { }} />
             </main>
         </div>
     );
@@ -179,7 +178,7 @@ const FeeManagement = ({ page = 'overview' }) => {
         );
     }
 
-    if (page === 'synthesis')   return <FeeSynthesisPage />;
+    if (page === 'synthesis') return <FeeSynthesisPage />;
     if (page === 'collections') return <CollectionsPage />;
     return <OverviewPage />;
 };

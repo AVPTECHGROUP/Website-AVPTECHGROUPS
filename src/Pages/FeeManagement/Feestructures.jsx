@@ -33,9 +33,9 @@ const ToastContainer = () => {
 
   const icons = {
     success: <CheckCircle2 size={15} className="flex-shrink-0 text-emerald-400" />,
-    error:   <AlertCircle  size={15} className="flex-shrink-0 text-red-400" />,
+    error: <AlertCircle size={15} className="flex-shrink-0 text-red-400" />,
     warning: <AlertTriangle size={15} className="flex-shrink-0 text-amber-400" />,
-    info:    <Info          size={15} className="flex-shrink-0 text-blue-400" />,
+    info: <Info size={15} className="flex-shrink-0 text-blue-400" />,
   };
 
   return (
@@ -46,7 +46,7 @@ const ToastContainer = () => {
           style={{ animation: 'fsToastIn .22s ease-out' }}>
           {icons[t.type] || icons.info}
           <div className="flex-1 min-w-0">
-            {t.title   && <div className="text-[13px] font-semibold">{t.title}</div>}
+            {t.title && <div className="text-[13px] font-semibold">{t.title}</div>}
             {t.message && <div className="text-[12px] text-white/70 mt-0.5">{t.message}</div>}
           </div>
           <button onClick={() => setToasts((p) => p.filter((x) => x.id !== t.id))}
@@ -62,9 +62,9 @@ const ToastContainer = () => {
 
 const toast = {
   success: (title, message) => _dispatch?.({ type: 'success', title, message }),
-  error:   (title, message) => _dispatch?.({ type: 'error',   title, message }),
+  error: (title, message) => _dispatch?.({ type: 'error', title, message }),
   warning: (title, message) => _dispatch?.({ type: 'warning', title, message }),
-  info:    (title, message) => _dispatch?.({ type: 'info',    title, message }),
+  info: (title, message) => _dispatch?.({ type: 'info', title, message }),
 };
 
 // ─── Delete Confirm Modal ─────────────────────────────────────────────────────
@@ -106,27 +106,27 @@ const DeleteConfirmModal = ({ open, onClose, onConfirm, loading, structureName }
 const formatCurrency = (amount) => {
   if (!amount || amount === 0) return '₹0';
   if (amount >= 10000000) return '₹' + (amount / 10000000).toFixed(1) + 'Cr';
-  if (amount >= 100000)   return '₹' + (amount / 100000).toFixed(1) + 'L';
-  if (amount >= 1000)     return '₹' + (amount / 1000).toFixed(1) + 'K';
+  if (amount >= 100000) return '₹' + (amount / 100000).toFixed(1) + 'L';
+  if (amount >= 1000) return '₹' + (amount / 1000).toFixed(1) + 'K';
   return '₹' + amount.toLocaleString('en-IN');
 };
 
 const STATUS_PILL = {
-  ACTIVE: { label: 'Active',  bg: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-  DRAFT:  { label: 'Draft',   bg: 'bg-amber-50   text-amber-700   border-amber-200'   },
-  LOCKED: { label: 'Locked',  bg: 'bg-gray-100   text-gray-500    border-gray-200'    },
+  ACTIVE: { label: 'Active', bg: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+  DRAFT: { label: 'Draft', bg: 'bg-amber-50   text-amber-700   border-amber-200' },
+  LOCKED: { label: 'Locked', bg: 'bg-gray-100   text-gray-500    border-gray-200' },
 };
 
 const COMPONENT_TYPE_OPTIONS = [
-  { value: 'TUITION_FEE',   label: 'Tuition Fee'   },
-  { value: 'TRANSPORT_FEE', label: 'Transport Fee'  },
-  { value: 'LAB_FEE',       label: 'Lab Fee'        },
-  { value: 'LIBRARY_FEE',   label: 'Library Fee'    },
-  { value: 'ACTIVITY_FEE',  label: 'Activity Fee'   },
-  { value: 'SPORTS_FEE',    label: 'Sports Fee'     },
-  { value: 'EXAM_FEE',      label: 'Exam Fee'       },
-  { value: 'MISC',      label: 'Misc Fee'       },
-  { value: 'OTHER',     label: 'Other Fee'      },
+  { value: 'TUITION_FEE', label: 'Tuition Fee' },
+  { value: 'TRANSPORT_FEE', label: 'Transport Fee' },
+  { value: 'LAB_FEE', label: 'Lab Fee' },
+  { value: 'LIBRARY_FEE', label: 'Library Fee' },
+  { value: 'ACTIVITY_FEE', label: 'Activity Fee' },
+  { value: 'SPORTS_FEE', label: 'Sports Fee' },
+  { value: 'EXAM_FEE', label: 'Exam Fee' },
+  { value: 'MISC', label: 'Misc Fee' },
+  { value: 'OTHER', label: 'Other Fee' },
 ];
 
 const REQUIRES_CUSTOM_NAME = ['MISC', 'OTHER'];
@@ -136,9 +136,8 @@ const StatusPill = ({ status }) => {
   const s = STATUS_PILL[status?.toUpperCase()] || STATUS_PILL.DRAFT;
   return (
     <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-[11.5px] font-semibold ${s.bg}`}>
-      <span className={`w-1.5 h-1.5 rounded-full ${
-        status === 'ACTIVE' ? 'bg-emerald-500' : status === 'DRAFT' ? 'bg-amber-500' : 'bg-gray-400'
-      }`} />
+      <span className={`w-1.5 h-1.5 rounded-full ${status === 'ACTIVE' ? 'bg-emerald-500' : status === 'DRAFT' ? 'bg-amber-500' : 'bg-gray-400'
+        }`} />
       {s.label}
     </span>
   );
@@ -160,9 +159,9 @@ function ViewDetailsModal({ isOpen, onClose, structure }) {
         <div className="px-6 py-5 space-y-5">
           <div className="grid grid-cols-2 gap-3">
             {[
-              ['Period',   structure.feePeriod?.name || '—'],
-              ['Classes',  structure.classes?.map((c) => c.name).join(', ') || '—'],
-              ['Status',   null],
+              ['Period', structure.feePeriod?.name || '—'],
+              ['Classes', structure.classes?.map((c) => c.name).join(', ') || '—'],
+              ['Status', null],
               ['Students', structure.studentCount || '—'],
             ].map(([label, val]) => (
               <div key={label} className="bg-gray-50 rounded-xl px-4 py-3 border border-gray-100">
@@ -216,12 +215,12 @@ function StructureModal({ isOpen, onClose, structure, periods, classes, onSucces
     if (structure) {
       setForm({
         feePeriodId: structure.feePeriodId?.toString() || '',
-        classIds:    structure.classes?.map((c) => c.id) || [],
-        components:  structure.components?.map((comp, idx) => ({
+        classIds: structure.classes?.map((c) => c.id) || [],
+        components: structure.components?.map((comp, idx) => ({
           componentType: comp.componentType || 'TUITION_FEE',
-          customName:    comp.customName    || '',
-          amount:        comp.amount?.toString() || '',
-          displayOrder:  comp.displayOrder ?? idx,
+          customName: comp.customName || '',
+          amount: comp.amount?.toString() || '',
+          displayOrder: comp.displayOrder ?? idx,
         })) || [{ componentType: 'TUITION_FEE', customName: '', amount: '', displayOrder: 0 }],
       });
     } else {
@@ -253,19 +252,19 @@ function StructureModal({ isOpen, onClose, structure, periods, classes, onSucces
       }),
     }));
 
-  const totalAmount   = form.components.reduce((s, c) => s + (parseFloat(c.amount) || 0), 0);
+  const totalAmount = form.components.reduce((s, c) => s + (parseFloat(c.amount) || 0), 0);
   const selectedClasses = classes.filter((c) => form.classIds.includes(c.id));
   const totalStudents = selectedClasses.reduce((s, c) => s + (c.studentCount || 0), 0);
 
   const handleSubmit = async (saveAsDraft) => {
-    if (!form.feePeriodId)            { toast.error('Validation', 'Please select a fee period');            return; }
-    if (form.classIds.length === 0)   { toast.error('Validation', 'Please select at least one class');      return; }
+    if (!form.feePeriodId) { toast.error('Validation', 'Please select a fee period'); return; }
+    if (form.classIds.length === 0) { toast.error('Validation', 'Please select at least one class'); return; }
     if (form.components.length === 0) { toast.error('Validation', 'Please add at least one fee component'); return; }
 
     for (let i = 0; i < form.components.length; i++) {
       const comp = form.components[i];
       const rowLabel = `row ${i + 1}`;
-      if (!comp.componentType)                   { toast.error('Validation', `Select component type for ${rowLabel}`); return; }
+      if (!comp.componentType) { toast.error('Validation', `Select component type for ${rowLabel}`); return; }
       if (!comp.amount || parseFloat(comp.amount) <= 0) { toast.error('Validation', `Enter valid amount for ${rowLabel}`); return; }
       if (REQUIRES_CUSTOM_NAME.includes(comp.componentType) && !comp.customName?.trim()) {
         const label = comp.componentType === 'MISC_FEE' ? 'Misc Fee' : 'Other Fee';
@@ -278,12 +277,12 @@ function StructureModal({ isOpen, onClose, structure, periods, classes, onSucces
     try {
       const payload = {
         feePeriodId: parseInt(form.feePeriodId),
-        classIds:    form.classIds,
-        components:  form.components.map((c, idx) => ({
+        classIds: form.classIds,
+        components: form.components.map((c, idx) => ({
           componentType: c.componentType,
-          customName:    REQUIRES_CUSTOM_NAME.includes(c.componentType) ? c.customName.trim() : (c.customName.trim() || null),
-          amount:        parseFloat(c.amount),
-          displayOrder:  idx,
+          customName: REQUIRES_CUSTOM_NAME.includes(c.componentType) ? c.customName.trim() : (c.customName.trim() || null),
+          amount: parseFloat(c.amount),
+          displayOrder: idx,
         })),
         saveAsDraft,
       };
@@ -351,11 +350,10 @@ function StructureModal({ isOpen, onClose, structure, periods, classes, onSucces
             <div className="flex flex-wrap gap-2 p-3 bg-white rounded-lg border border-gray-200 max-h-44 overflow-y-auto">
               {classes.map((cls) => (
                 <label key={cls.id}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border cursor-pointer transition-all text-xs font-semibold select-none ${
-                    form.classIds.includes(cls.id)
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border cursor-pointer transition-all text-xs font-semibold select-none ${form.classIds.includes(cls.id)
                       ? 'bg-[#1E3A5F] text-white border-[#1E3A5F]'
                       : 'bg-white text-gray-600 border-gray-200 hover:border-[#1E3A5F]/50 hover:text-[#1E3A5F]'
-                  }`}>
+                    }`}>
                   <input type="checkbox" className="sr-only" checked={form.classIds.includes(cls.id)} onChange={() => toggleClass(cls.id)} />
                   {cls.name}
                   {cls.studentCount > 0 && <span className="text-[10px] opacity-60">({cls.studentCount})</span>}
@@ -465,17 +463,17 @@ function StructureModal({ isOpen, onClose, structure, periods, classes, onSucces
 
 // ─── Fee Structure Card ───────────────────────────────────────────────────────
 const FeeStructureCard = ({ s, periods, onView, onEdit, onDelete }) => {
-  const statusKey  = s.status?.toUpperCase() || 'DRAFT';
+  const statusKey = s.status?.toUpperCase() || 'DRAFT';
   const periodName = s.feePeriod?.name || periods.find((p) => p.id === s.feePeriodId)?.name || '—';
-  const compCount  = s.components?.length || 0;
+  const compCount = s.components?.length || 0;
   const compPreview = s.components?.slice(0, 3).map((c) => c.customName || c.componentType?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())).join(', ') || '—';
-  const canDelete  = statusKey === 'DRAFT' || (statusKey === 'ACTIVE' && !s.studentCount);
+  const canDelete = statusKey === 'DRAFT' || (statusKey === 'ACTIVE' && !s.studentCount);
 
   // Status accent color for card top border
   const accentColor =
     statusKey === 'ACTIVE' ? 'from-emerald-400 to-teal-500' :
-    statusKey === 'LOCKED' ? 'from-gray-300 to-gray-400' :
-                             'from-amber-400 to-orange-400';
+      statusKey === 'LOCKED' ? 'from-gray-300 to-gray-400' :
+        'from-amber-400 to-orange-400';
 
   return (
     <div className="bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden group flex flex-col">
@@ -591,17 +589,17 @@ const FeeStructureCard = ({ s, periods, onView, onEdit, onDelete }) => {
 // ─── FeeStructures ─────────────────────────────────────────────────────────────
 const FeeStructures = ({ initialPeriodId: initialPeriodIdProp }) => {
   const { currentAcademicYear } = useContext(UserContext);
-  const academicYearId    = currentAcademicYear?.id;
+  const academicYearId = currentAcademicYear?.id;
   const academicYearLabel = currentAcademicYear?.label;
   const location = useLocation();
 
-  const [periodFilter,      setPeriodFilter]      = useState('');
-  const [modal,             setModal]             = useState(null);
-  const [activeStructure,   setActiveStructure]   = useState(null);
-  const [structures,        setStructures]        = useState([]);
-  const [periods,           setPeriods]           = useState([]);
-  const [classes,           setClasses]           = useState([]);
-  const [loading,           setLoading]           = useState(true);
+  const [periodFilter, setPeriodFilter] = useState('');
+  const [modal, setModal] = useState(null);
+  const [activeStructure, setActiveStructure] = useState(null);
+  const [structures, setStructures] = useState([]);
+  const [periods, setPeriods] = useState([]);
+  const [classes, setClasses] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [structuresLoading, setStructuresLoading] = useState(false);
 
   const [deleteModal, setDeleteModal] = useState({ open: false, structure: null, loading: false });
@@ -635,12 +633,12 @@ const FeeStructures = ({ initialPeriodId: initialPeriodIdProp }) => {
 
   const fetchClasses = useCallback(async () => {
     try {
-      const schoolId    = getSchoolId();
+      const schoolId = getSchoolId();
       const classesData = await getActiveClasses(schoolId);
-      const normalized  =
-        Array.isArray(classesData)         ? classesData       :
-        Array.isArray(classesData?.data)   ? classesData.data  :
-        Array.isArray(classesData?.result) ? classesData.result : [];
+      const normalized =
+        Array.isArray(classesData) ? classesData :
+          Array.isArray(classesData?.data) ? classesData.data :
+            Array.isArray(classesData?.result) ? classesData.result : [];
       setClasses(normalized);
     } catch {
       toast.error('Fetch Failed', 'Could not load classes.');
@@ -686,7 +684,7 @@ const FeeStructures = ({ initialPeriodId: initialPeriodIdProp }) => {
     }
   };
 
-  const close         = () => { setModal(null); setActiveStructure(null); };
+  const close = () => { setModal(null); setActiveStructure(null); };
   const handleSuccess = () => fetchStructures(periodFilter ? parseInt(periodFilter) : null);
 
   const promptDelete = (s) => setDeleteModal({ open: true, structure: s, loading: false });

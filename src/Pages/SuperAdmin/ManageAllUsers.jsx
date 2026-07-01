@@ -197,32 +197,75 @@ const ManageAllUsers = () => {
         }
     };
 
-    // ── Smart Pagination ────────────────────────────────────────────────────
     const renderPageButtons = () => {
         if (totalPages <= 1) return null;
-        const base = 'min-w-[32px] h-8 px-2 rounded text-sm transition-all font-medium';
+
+        const base =
+            'min-w-[32px] h-8 px-2 rounded text-sm transition-all font-medium';
+
         const active = 'bg-blue-500 text-white';
         const inactive = 'text-gray-600 hover:bg-gray-100';
-        const dots = (key) => (
-            <span key={key} className="min-w-8 h-8 flex items-center justify-center text-gray-400 text-sm select-none">…</span>
-        );
+
         const btn = (num) => (
-            <button key={num} onClick={() => setpage(num)} className={`${base} ${page === num ? active : inactive}`}>
+            <button
+                key={num}
+                onClick={() => setpage(num)}
+                className={`${base} ${page === num ? active : inactive
+                    }`}
+            >
                 {num}
             </button>
         );
-        if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => btn(i + 1));
-        const items = [];
-        items.push(btn(1));
-        const left = page - 1;
-        const right = page + 1;
-        if (left > 2) items.push(dots('dl'));
-        else if (left === 2) items.push(btn(2));
-        for (let i = Math.max(2, left); i <= Math.min(totalPages - 1, right); i++) items.push(btn(i));
-        if (right < totalPages - 1) items.push(dots('dr'));
-        else if (right === totalPages - 1) items.push(btn(totalPages - 1));
-        items.push(btn(totalPages));
-        return items;
+
+        const dots = (key) => (
+            <span
+                key={key}
+                className="min-w-[32px] h-8 flex items-center justify-center text-gray-400 text-sm select-none"
+            >
+                …
+            </span>
+        );
+
+        if (totalPages <= 7) {
+            return Array.from(
+                { length: totalPages },
+                (_, i) => btn(i + 1)
+            );
+        }
+
+        const pages = new Set([
+            1,
+            2,
+            totalPages - 1,
+            totalPages,
+        ]);
+
+        for (
+            let i = Math.max(1, page - 1);
+            i <= Math.min(totalPages, page + 1);
+            i++
+        ) {
+            pages.add(i);
+        }
+
+        const sorted = Array.from(pages).sort(
+            (a, b) => a - b
+        );
+
+        return sorted.reduce((acc, num, idx) => {
+
+            if (
+                idx > 0 &&
+                num - sorted[idx - 1] > 1
+            ) {
+                acc.push(dots(`d${idx}`));
+            }
+
+            acc.push(btn(num));
+
+            return acc;
+
+        }, []);
     };
 
     const PrevBtn = ({ mobile = false }) => (

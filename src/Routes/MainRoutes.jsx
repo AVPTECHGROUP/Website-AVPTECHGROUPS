@@ -5,6 +5,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import AppLayout from '../Layout/AppLayout';
 import ProtectedRoutes from '../utils/Protectedroutes';
 import RoleProtectedRoute from '../utils/RoleProtectedRoute';
+import ScrollToTop from '../Components/CommonComp/ScrollToTop';
 
 // ─── Lazy-loaded Pages (code-split, fetched only when route is hit) ───────────
 const Login = lazy(() => import('../Pages/Login_2'));
@@ -94,7 +95,7 @@ const AcademicYear = lazy(() => import('../Pages/Attendance/AcademicYear/Academi
 const TimeTable = lazy(() => import('../Pages/Schedule/TimeTable'));
 const CreateSchedule = lazy(() => import('../Pages/Schedule/CreateSchedule'));
 const FeePeriods = lazy(() => import('../Pages/FeeManagement/FeePeriods'));
-const FeeStructures = lazy(() => import('../Pages/FeeManagement/Feestructures.'));
+const FeeStructures = lazy(() => import('../Pages/FeeManagement/Feestructures'));
 
 // Public landing pages
 const LandingApp = lazy(() => import('../Pages/SchoolSpineWeb/pages/Landing'));
@@ -105,7 +106,9 @@ const LandingLayout = lazy(() => import('../Pages/SchoolSpineWeb/pages/LandingLa
 const Terms_Of_Service = lazy(() => import('../Pages/SchoolSpineWeb/pages/Terms'));
 const Cookie_Policy = lazy(() => import('../Pages/SchoolSpineWeb/pages/CookiePolicy'));
 const FaqListing = lazy(() => import('../Components/Homes/Faq/FaqLisitng'));
-
+const FeatureDetails = lazy(() => import('../Components/Homes/Details/Features/FeatureDetails'));
+const Blog = lazy(() => import('../Pages/SchoolSpineWeb/pages/Blog'));
+const Support = lazy(() => import('../Pages/SchoolSpineWeb/pages/Help_Support'));
 // Circulars and Events
 const CircularsPage = lazy(() => import('../Pages/Communication/Circulars/CircularsPage'));
 const CreateCircularPage = lazy(() => import('../Pages/Communication/Circulars/CreateCircularPage'));
@@ -148,6 +151,7 @@ const MainRoutes = () => {
   const isTokenExist = localStorage.getItem('token');
   return (
     <Suspense fallback={<PageLoader />}>
+      <ScrollToTop />
       <Routes>
         {/* Public landing pages (redirect to app when logged-in) */}
         <Route path="/" element={isTokenExist ? <RootRedirect /> : <LandingApp />} />
@@ -157,6 +161,9 @@ const MainRoutes = () => {
         <Route path="/terms" element={isTokenExist ? <RootRedirect /> : <LandingLayout><Terms_Of_Service /></LandingLayout>} />
         <Route path="/cookies" element={isTokenExist ? <RootRedirect /> : <LandingLayout><Cookie_Policy /></LandingLayout>} />
         <Route path="/faqs" element={isTokenExist ? <RootRedirect /> : <LandingLayout><FaqListing /></LandingLayout>} />
+        <Route path="/blog" element={isTokenExist ? <RootRedirect /> : <LandingLayout><Blog /></LandingLayout>} />
+        <Route path="/features/:slug" element={isTokenExist ? <RootRedirect /> : <LandingLayout><FeatureDetails /></LandingLayout>} />
+        <Route path="/support" element={isTokenExist ? <RootRedirect /> : <LandingLayout><Support /></LandingLayout>} />
         {/* PUBLIC */}
         {/* Redirect ogged-in users away from login */}
         <Route path="/login" element={isTokenExist ? <RootRedirect /> : <Login />} />

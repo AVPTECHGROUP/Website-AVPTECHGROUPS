@@ -610,7 +610,7 @@ export default function StaffAttendanceRegistration() {
                             <CardComponent IconName={Shield} keyName="Total Staff Registered" val={`${stats?.totalStaff ?? 0}`} iconTxColor="text-blue-600" iconBgColor="bg-blue-100" />
                             <CardComponent IconName={UserCheck} keyName="Staff Enrolled" val={`${stats?.staffEnrolled ?? 0} / ${stats?.totalStaff ?? 0}`} iconTxColor="text-emerald-600" iconBgColor="bg-emerald-100" />
                             <CardComponent IconName={UserX} keyName="Not Enrolled" val={`${(stats?.totalStaff ?? 0) - (stats?.staffEnrolled ?? 0)}`} iconTxColor="text-red-500" iconBgColor="bg-red-100" />
-                            <CardComponent IconName={Users} keyName="Enrollment Completed" val={`${stats?.enrollmentPercentage ?? 0}%`} iconTxColor="text-purple-600" iconBgColor="bg-purple-100" />
+                            <CardComponent IconName={Users} keyName="Enrollment Completed" val={`${stats?.staffEnrollmentPercentage ?? 0}%`} iconTxColor="text-purple-600" iconBgColor="bg-purple-100" />
                         </>
                     )}
                 </div>

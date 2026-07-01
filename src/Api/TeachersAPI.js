@@ -522,3 +522,19 @@ export const getTeacherLookup = async () => {
     throw error;
   }
 };
+
+// Active sections for a specific class — uses dedicated backend endpoint
+export const getActiveSectionsByClass = async (classId) => {
+    try {
+        if (!classId) return [];
+        const res = await authFetch(`${BASE_URL}/sections/class/${classId}/active`, {
+            method: "GET",
+        });
+        if (!res.ok) throw new Error((await res.text()) || "Failed to fetch active sections");
+        const data = await res.json();
+        return Array.isArray(data?.data) ? data.data : [];
+    } catch (error) {
+        console.error("getActiveSectionsByClass error:", error.message);
+        throw error;
+    }
+};
