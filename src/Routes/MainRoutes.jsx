@@ -95,7 +95,7 @@ const AcademicYear = lazy(() => import('../Pages/Attendance/AcademicYear/Academi
 const TimeTable = lazy(() => import('../Pages/Schedule/TimeTable'));
 const CreateSchedule = lazy(() => import('../Pages/Schedule/CreateSchedule'));
 const FeePeriods = lazy(() => import('../Pages/FeeManagement/FeePeriods'));
-const FeeStructures = lazy(() => import('../Pages/FeeManagement/Feestructures.'));
+const FeeStructures = lazy(() => import('../Pages/FeeManagement/Feestructures'));
 
 // Public landing pages
 const LandingApp = lazy(() => import('../Pages/SchoolSpineWeb/pages/Landing'));
@@ -108,6 +108,7 @@ const Cookie_Policy = lazy(() => import('../Pages/SchoolSpineWeb/pages/CookiePol
 const FaqListing = lazy(() => import('../Components/Homes/Faq/FaqLisitng'));
 const FeatureDetails = lazy(() => import('../Components/Homes/Details/Features/FeatureDetails'));
 const Blog = lazy(() => import('../Pages/SchoolSpineWeb/pages/Blog'));
+const Support = lazy(() => import('../Pages/SchoolSpineWeb/pages/Help_Support'));
 // Circulars and Events
 const CircularsPage = lazy(() => import('../Pages/Communication/Circulars/CircularsPage'));
 const CreateCircularPage = lazy(() => import('../Pages/Communication/Circulars/CreateCircularPage'));
@@ -162,6 +163,7 @@ const MainRoutes = () => {
         <Route path="/faqs" element={isTokenExist ? <RootRedirect /> : <LandingLayout><FaqListing /></LandingLayout>} />
         <Route path="/blog" element={isTokenExist ? <RootRedirect /> : <LandingLayout><Blog /></LandingLayout>} />
         <Route path="/features/:slug" element={isTokenExist ? <RootRedirect /> : <LandingLayout><FeatureDetails /></LandingLayout>} />
+        <Route path="/support" element={isTokenExist ? <RootRedirect /> : <LandingLayout><Support /></LandingLayout>} />
         {/* PUBLIC */}
         {/* Redirect ogged-in users away from login */}
         <Route path="/login" element={isTokenExist ? <RootRedirect /> : <Login />} />

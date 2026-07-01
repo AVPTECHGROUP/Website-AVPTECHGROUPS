@@ -6,19 +6,32 @@ const BASE_URL = import.meta.env.VITE_API_BASE_V1;
  * Get Fee Structures by Period (or all if no periodId provided)
  * GET /v1/fee/structures?periodId={id}
  */
-export const getFeeStructures = async (periodId) => {
+export const getFeeStructures = async (academicYearId, periodId) => {
   try {
-    // ✅ Only add periodId query param if it has a valid value
-    const url = periodId 
-      ? `${BASE_URL}/fee/structures?periodId=${periodId}`
-      : `${BASE_URL}/fee/structures`;
-    
+    const params = new URLSearchParams();
+
+    // 1. Most backends strictly require the academic year scope
+    if (academicYearId) {
+      params.append('academicYearId', academicYearId);
+    }
+
+    // 2. Add the period filter if navigating directly from a card
+    if (periodId) {
+      params.append('periodId', periodId);
+    }
+
+    // Build the clean URL string
+    const queryString = params.toString();
+    const url = queryString ? `${BASE_URL}/fee/structures?${queryString}` : `${BASE_URL}/fee/structures`;
+
     console.log('🌐 Fetching fee structures:', url);
 
     const res = await authFetch(url, {
       method: "GET",
     });
 
+    // If authFetch returns a 401, it redirects before this block runs.
+    // If it's a 400 or 500, this block catches it gracefully without logging out.
     if (!res.ok) {
       const errorText = await res.text();
       console.error('❌ getFeeStructures failed:', errorText);

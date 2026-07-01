@@ -73,7 +73,6 @@ const Review = () => {
   function goNext() {
     const next = current >= maxIndex ? 0 : current + 1;
     if (current >= maxIndex) {
-      // jump to start instantly, then slide
       if (trackRef.current) {
         trackRef.current.style.transition = 'none';
         trackRef.current.style.transform = `translateX(0px)`;
@@ -96,7 +95,6 @@ const Review = () => {
     goTo(current <= 0 ? 0 : current - 1);
   }
 
-  // Keep track width in sync when perPage changes
   useEffect(() => {
     if (trackRef.current) {
       trackRef.current.style.transition = 'none';
@@ -113,12 +111,11 @@ const Review = () => {
   }, [current, perPage]);
 
   const dots = Array.from({ length: maxIndex + 1 }, (_, i) => i);
-
-  // card width as percent of container
   const cardWidthPct = 100 / perPage;
 
   return (
-    <div className="w-full bg-theme-bg text-theme-text relative py-12 overflow-hidden transition-colors duration-300">
+    // ─── ADDED: id="reviews-section" HERE ───
+    <div id="reviews-section" className="w-full bg-theme-bg text-theme-text relative py-12 overflow-hidden transition-colors duration-300">
 
       {/* Heading */}
       <div className="flex flex-col items-center justify-center gap-5 px-4 mb-10">
@@ -138,7 +135,6 @@ const Review = () => {
       >
         {/* Overflow clip */}
         <div className="overflow-hidden rounded-2xl">
-          {/* Sliding track — all 6 cards in a row */}
           <div
             ref={trackRef}
             className="flex"

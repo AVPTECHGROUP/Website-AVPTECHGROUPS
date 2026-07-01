@@ -1,47 +1,40 @@
-import React from 'react'
+import React, { useEffect } from 'react';
 import StatCard from "../../Common/StatCard";
 import SeeInAction from "./SeeInAction";
 import DesignCard from './DesignCard';
 import { Briefcase, Building2, Bus, CalendarCheck, ClipboardList, Dock, FileBarChartIcon, GraduationCap, Smartphone, Store, Users } from 'lucide-react';
 import DetailsStrip from './DetailsStrip';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 const statsData = [
     {
         icon: <GraduationCap />, title: "Student Management", slug: "student-management",
         description: "Manage admissions, student records, academic history, attendance, and performance reports from one centralized dashboard."
     },
-
     {
         icon: <CalendarCheck />, title: "Geo Attendance", slug: "geo-attendance",
         description: "Smart attendance system with face recognition, biometric verification, GPS tracking, and secure check-in/check-out monitoring."
     },
-
     {
         icon: <Dock />, title: "Fees & Billing", slug: "fee-billing",
-        description: "Automate fee collection, payment reminders, invoices, receipts, and financial reporting with ease."
+        description: "Automated fee collection with smart payment reminders, instant digital invoices, receipts, and effortless real-time financial reporting."
     },
-
     {
         icon: <FileBarChartIcon />, title: "Exam Management", slug: "exam-management",
-        description: "Create exams, manage schedules, enter marks, generate report cards, and publish results seamlessly."
+        description: "Seamless exam scheduling, effortless marks entry, automated grading matrix, custom report card generation, and instant result publishing."
     },
-
     {
         icon: <Bus />, title: "Transport Management", slug: "transport-management",
         description: "Track vehicles, manage routes, monitor student pickups, and streamline transport operations efficiently."
     },
-
     {
         icon: <Users />, title: "Staff Management", slug: "staff-management",
         description: "Handle staff attendance, payroll, leave requests, department records, and workforce management efficiently."
     },
-
     {
         icon: <Smartphone />, title: "Parent App", slug: "parent-app",
         description: "Keep parents updated with real-time notifications, attendance alerts, results, homework, and announcements."
     },
-
     {
         icon: <Store />, title: "Store Management", slug: "store-management",
         description: "Manage inventory, suppliers, purchases, stock movement, and store operations without manual hassle."
@@ -61,16 +54,9 @@ const Designcards = [
         title: "Admin",
         description: "Complete control over school operations",
         features: [
-            "Full dashboard access",
-            "Student management",
-            "Staff management",
-            "Fee & finance management",
-            "Admission management",
-            "Exam & result management",
-            "Transport monitoring",
-            "Reports & analytics",
-            "User role & permissions",
-            "System settings & configuration"
+            "Full dashboard access", "Student management", "Staff management", "Fee & finance management",
+            "Admission management", "Exam & result management", "Transport monitoring", "Reports & analytics",
+            "User role & permissions", "System settings & configuration"
         ],
         accentColor: "teal"
     },
@@ -79,16 +65,9 @@ const Designcards = [
         title: "Teacher",
         description: "Tools for effective classroom management",
         features: [
-            "Mark attendance",
-            "Enter grades & report cards",
-            "Create homework & assignments",
-            "View class timetable",
-            "Upload study materials",
-            "Conduct online assessments",
-            "Track student performance",
-            "Communicate with parents",
-            "Manage classroom activities",
-            "Generate academic reports"
+            "Mark attendance", "Enter grades & report cards", "Create homework & assignments", "View class timetable",
+            "Upload study materials", "Conduct online assessments", "Track student performance",
+            "Communicate with parents", "Manage classroom activities", "Generate academic reports"
         ],
         accentColor: "amber"
     },
@@ -97,16 +76,9 @@ const Designcards = [
         title: "Parent",
         description: "Stay connected with your child's progress",
         features: [
-            "Track attendance",
-            "Pay fees online",
-            "Direct messaging",
-            "View homework",
-            "Download report cards",
-            "Receive school notices",
-            "Monitor exam schedules",
-            "Track academic performance",
-            "View transport updates",
-            "Apply leave requests"
+            "Track attendance", "Pay fees online", "Direct messaging", "View homework",
+            "Download report cards", "Receive school notices", "Monitor exam schedules",
+            "Track academic performance", "View transport updates", "Apply leave requests"
         ],
         accentColor: "slate"
     },
@@ -115,16 +87,9 @@ const Designcards = [
         title: "Staff",
         description: "Manage daily staff operations efficiently",
         features: [
-            "Check-in / Check-out tracking",
-            "Leave management",
-            "Payroll access",
-            "Attendance history",
-            "Download salary slips",
-            "View work schedules",
-            "Receive announcements",
-            "Update personal profile",
-            "Submit requests online",
-            "Access important documents"
+            "Check-in / Check-out tracking", "Leave management", "Payroll access", "Attendance history",
+            "Download salary slips", "View work schedules", "Receive announcements", "Update personal profile",
+            "Submit requests online", "Access important documents"
         ],
         accentColor: "amber"
     },
@@ -132,9 +97,24 @@ const Designcards = [
 
 const Details = () => {
     const navigate = useNavigate();
+    const { hash } = useLocation();
+
+    // Handles sliding into view if navigated from an external route with a hash
+    useEffect(() => {
+        if (hash === '#features-section') {
+            const element = document.getElementById('features-section');
+            if (element) {
+                setTimeout(() => {
+                    element.scrollIntoView({ behavior: 'smooth' });
+                }, 100); // Small timeout ensures elements are drawn in DOM
+            }
+        }
+    }, [hash]);
+
     return (
         <>
-            <div className="relative min-h-screen overflow-x-hidden font-body bg-theme-bg text-theme-text transition-colors duration-300">
+            {/* Added the ID here so our components know where to target */}
+            <div id="features-section" className="relative min-h-screen overflow-x-hidden font-body bg-theme-bg text-theme-text transition-colors duration-300">
 
                 {/* ── Intro ── */}
                 <div className='flex flex-col justify-center items-center gap-3 sm:gap-4 px-4 pt-8 sm:pt-10'>
@@ -217,4 +197,4 @@ const Details = () => {
     )
 }
 
-export default Details
+export default Details;

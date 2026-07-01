@@ -5,7 +5,7 @@ const monthlyPlans = [
     {
         name: "Basic",
         tagline: "Perfect for small schools",
-        price: "4,999",
+        price: "3,999",
         period: "per school/month",
         features: [
             "Up to 500 students",
@@ -20,10 +20,10 @@ const monthlyPlans = [
     {
         name: "Pro",
         tagline: "For growing institutions",
-        price: "9,999",
+        price: "8,999",
         period: "per school/month",
         features: [
-            "Up to 2,000 students",
+            "Up to 1,200 students",
             "Everything in Basic",
             "Fee management",
             "Exam module",
@@ -37,10 +37,10 @@ const monthlyPlans = [
     {
         name: "Enterprise",
         tagline: "For large school groups",
-        price: "19,999",
+        price: "Custom Quote",
         period: "per school/month",
         features: [
-            "Unlimited students",
+            "1,200 + students",
             "Everything in Pro",
             "Multi-branch support",
             "Custom integrations",
@@ -220,12 +220,14 @@ const LightCard = ({ plan }) => {
 
             {/* Price — inline, no wrapping */}
             <div className="flex items-baseline gap-2 mb-6">
-                <span className="text-4xl font-heading font-extrabold text-theme-text flex items-center justify-center leading-none whitespace-nowrap">
+                <span className="text-2xl font-heading font-extrabold text-theme-text flex items-center justify-center leading-none whitespace-nowrap">
                     <IndianRupee size={22} className="text-[#00C9B1] mr-0.5" />{price}
                 </span>
-                <span className="text-xs font-body text-theme-subtext leading-snug whitespace-nowrap">
-                    / {period.includes('month') ? 'month' : 'year'}
-                </span>
+                {price !== "Custom Quote" && (
+                    <span className="text-xs font-body text-theme-subtext leading-snug whitespace-nowrap">
+                        / {period.includes('month') ? 'month' : 'year'}
+                    </span>
+                )}
             </div>
 
             {/* Divider */}

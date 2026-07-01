@@ -1,11 +1,26 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 import Pricing_List from './Pricing_List'
 
 const Pricing = () => {
     const [activeTab, setActiveTab] = useState('Monthly')
+    const { hash } = useLocation()
+
+    // Agar doosre page se direct pricing link par click kiya ho, to smooth scroll karega
+    useEffect(() => {
+        if (hash === '#pricing-section') {
+            const element = document.getElementById('pricing-section');
+            if (element) {
+                setTimeout(() => {
+                    element.scrollIntoView({ behavior: 'smooth' });
+                }, 100);
+            }
+        }
+    }, [hash]);
 
     return (
-        <div className="w-full bg-theme-bg text-theme-text relative py-16 sm:py-24 overflow-hidden transition-colors duration-300">
+        /* Added id="pricing-section" here */
+        <div id="pricing-section" className="w-full bg-theme-bg text-theme-text relative py-16 sm:py-24 overflow-hidden transition-colors duration-300">
             {/* Top Gradient Divider */}
             <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-[#00C9B1]/30 via-[#F5A623]/20 to-transparent z-10" />
             {/* Bottom Gradient Divider */}
