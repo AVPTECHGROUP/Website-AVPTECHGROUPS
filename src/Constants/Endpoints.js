@@ -48,6 +48,8 @@ export const API_ENDPOINTS = {
   ATTENDANCE_ENROLL_STUDENTS: `${BASE_URL}/attendance/enrollment/students`,
   ATTENDANCE_ALL: `${BASE_URL}/attendance/admin/all`,
   ATTENDANCE_EXPORT_CSV: `${BASE_URL}/attendance/admin/export-csv`,
+  ATTENDANCE_MANUAL_MARK_BULK: `${BASE_URL}/attendance/students/manual-mark/bulk`,
+  ATTENDANCE_MANUAL_REVIEW_BULK: `${BASE_URL}/attendance/manual-review/bulk`,
 
   attendanceApprove: (id) => `${BASE_URL}/attendance/${id}/approve`,
   attendanceUnmark: (id) => `${BASE_URL}/attendance/students/${id}/unmark`,

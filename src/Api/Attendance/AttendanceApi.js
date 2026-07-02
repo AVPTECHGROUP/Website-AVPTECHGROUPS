@@ -1,5 +1,5 @@
 import { authFetch } from "../../Authfetch/Authfetch";
-import {API_ENDPOINTS} from "../../Constants/Endpoints";
+import { API_ENDPOINTS } from "../../Constants/Endpoints";
 
 /** Enroll user face with 5 images */
 export const enrollUserFaces = async ({ userId, userType, classId, sectionId, images }) => {
@@ -58,13 +58,18 @@ export const markAttendanceByFace = async ({ imageFile, user_type, class_id, sec
 };
 
 /** Request manual attendance review */
-export const requestManualAttendance = async (payload) => {
+/** Request manual attendance review */
+export const requestManualAttendance = async ({
+  gpsLatitude = 28.6139,
+  gpsLongitude = 77.209,
+  ...payload
+}) => {
   if (!payload.userId || !payload.userType || !payload.userName) throw new Error("User details required");
   if (!payload.remarks) throw new Error("Remarks are required");
 
   const res = await authFetch(API_ENDPOINTS.ATTENDANCE_MANUAL_REVIEW, {
     method: "POST",
-    body: JSON.stringify(payload),
+    body: JSON.stringify({ ...payload, gpsLatitude, gpsLongitude }),
   });
 
   const data = await res.json();
@@ -187,14 +192,31 @@ export const getStudentEnrollment = async (sectionId) => {
 };
 
 /** Retrieve comprehensive attendance details */
-export const allAttendanceDetails = async (filters = {}) => {
+export const allAttendanceDetails = async ({
+  attendanceDate,
+  role,
+  status,
+  userName,
+  userId,
+  employeeCode,
+  isManualReview,
+  page = 0,
+  size = 10,
+  sort = 'id',
+} = {}) => {
   const params = new URLSearchParams();
-  Object.entries(filters).forEach(([key, value]) => {
-    if (value !== undefined && value !== 'ALL') {
-      const paramKey = key.replace(/([A-Z])/g, "_$1").toLowerCase();
-      params.append(paramKey, value);
-    }
-  });
+
+  if (attendanceDate) params.append('attendance_date', attendanceDate);
+  if (role && role !== 'ALL') params.append('user_type', role);
+  if (status && status !== 'ALL') params.append('status', status);
+  if (userName) params.append('user_name', userName);
+  if (userId) params.append('user_id', userId);
+  if (employeeCode) params.append('employee_code', employeeCode);
+  if (isManualReview !== undefined) params.append('is_manual_review', isManualReview);
+
+  params.append('page', page);
+  params.append('size', size);
+  params.append('sort', sort);
 
   const res = await authFetch(`${API_ENDPOINTS.ATTENDANCE_ALL}?${params.toString()}`, { method: 'GET' });
   if (!res.ok) throw new Error('Failed to load attendance details');
@@ -258,4 +280,36 @@ export const getUserTodayAttendance = async ({ userId, userType }) => {
 
   if (!res.ok) throw new Error("Failed to fetch today's attendance");
   return (await res.json()).data;
+};
+
+/** Bulk manual mark attendance for students */
+export const bulkManualMarkAttendance = async (payload) => {
+  if (!payload.classId || !payload.sectionId || !payload.students?.length) {
+    throw new Error("classId, sectionId and students are required");
+  }
+
+  const res = await authFetch(API_ENDPOINTS.ATTENDANCE_MANUAL_MARK_BULK, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+
+  const data = await res.json();
+  if (!res.ok) throw new Error(data?.message || "Failed to bulk mark attendance");
+  return data;
+};
+
+/** Bulk manual staff attendance */
+export const bulkManualStaffAttendance = async (payload) => {
+  if (!payload.attendanceDate || !payload.staff?.length) {
+    throw new Error("attendanceDate and staff array are required");
+  }
+
+  const res = await authFetch(API_ENDPOINTS.ATTENDANCE_MANUAL_REVIEW_BULK, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+
+  const data = await res.json();
+  if (!res.ok) throw new Error(data?.message || "Failed to bulk mark staff attendance");
+  return data;
 };
