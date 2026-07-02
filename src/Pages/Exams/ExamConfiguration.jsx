@@ -7,7 +7,6 @@ import {
   BookOpen,
   ClipboardList,
   AlertTriangle,
-  CheckCircle2,
   Loader2,
   ToggleLeft,
   ToggleRight,
@@ -31,6 +30,7 @@ import {
   deactivateExamType,
 } from "../../Api/Academics/Exams";
 import { toast } from "react-toastify";
+import { EXAM_CONSTS } from "../../Constants/StringConstants/AcademicsConstants";
 
 // ─── Grade colour helper ──────────────────────────────────────────────────────
 const gradeStyle = (g = "") => {
@@ -45,6 +45,7 @@ const gradeStyle = (g = "") => {
   };
   return map[g] || "bg-gray-100 text-gray-700";
 };
+
 const Field = ({
   label,
   type = "text",
@@ -82,19 +83,20 @@ const Field = ({
     {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
   </div>
 );
+
 // ─── Confirm Delete Modal ─────────────────────────────────────────────────────
 const ConfirmModal = ({ onConfirm, onCancel, loading }) => (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
       <div className="flex items-center gap-3 mb-3">
         <div className="bg-red-100 p-2 rounded-full"><AlertTriangle className="h-5 w-5 text-red-600" /></div>
-        <h3 className="text-base font-semibold text-gray-800">Confirm Delete</h3>
+        <h3 className="text-base font-semibold text-gray-800">{EXAM_CONSTS.CONFIG.CONFIRM_DEL_TITLE}</h3>
       </div>
-      <p className="text-sm text-gray-500 mb-6">Are you sure you want to delete this record? This action cannot be undone.</p>
+      <p className="text-sm text-gray-500 mb-6">{EXAM_CONSTS.CONFIG.CONFIRM_DEL_MSG}</p>
       <div className="flex gap-3 justify-end">
-        <button onClick={onCancel} className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 cursor-pointer transition">Cancel</button>
+        <button onClick={onCancel} className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 cursor-pointer transition">{EXAM_CONSTS.CONFIG.CANCEL}</button>
         <button onClick={onConfirm} disabled={loading} className="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 cursor-pointer transition flex items-center gap-2 disabled:opacity-60">
-          {loading && <Loader2 className="h-4 w-4 animate-spin" />} Delete
+          {loading && <Loader2 className="h-4 w-4 animate-spin" />} {EXAM_CONSTS.CONFIG.DELETE}
         </button>
       </div>
     </div>
@@ -120,7 +122,7 @@ const GradeConfigTab = () => {
   const fetchGrades = useCallback(async () => {
     setLoading(true);
     try { setGrades(await getGradeConfigs()); }
-    catch { toast.error("Failed to load grade configs"); }
+    catch { toast.error(EXAM_CONSTS.CONFIG.ERR_LOAD_GRADES); }
     finally { setLoading(false); }
   }, []);
 
@@ -132,10 +134,10 @@ const GradeConfigTab = () => {
 
   const validate = () => {
     const e = {};
-    if (!form.gradeName.trim()) e.gradeName = "Grade name is required";
-    if (form.minPercentage === "" || form.minPercentage < 0 || form.minPercentage > 100) e.minPercentage = "Enter valid min % (0-100)";
-    if (form.maxPercentage === "" || form.maxPercentage < 0 || form.maxPercentage > 100) e.maxPercentage = "Enter valid max % (0-100)";
-    if (!form.description.trim()) e.description = "Description is required";
+    if (!form.gradeName.trim()) e.gradeName = EXAM_CONSTS.CONFIG.ERR_GRADE_REQ;
+    if (form.minPercentage === "" || form.minPercentage < 0 || form.minPercentage > 100) e.minPercentage = EXAM_CONSTS.CONFIG.ERR_MIN_PCT;
+    if (form.maxPercentage === "" || form.maxPercentage < 0 || form.maxPercentage > 100) e.maxPercentage = EXAM_CONSTS.CONFIG.ERR_MAX_PCT;
+    if (!form.description.trim()) e.description = EXAM_CONSTS.CONFIG.ERR_DESC_REQ;
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -149,22 +151,19 @@ const GradeConfigTab = () => {
       else await createGradeConfig(payload);
       toast.success(
         editItem
-          ? "Grade updated successfully!"
-          : "Grade created successfully!"
+          ? EXAM_CONSTS.CONFIG.SUCC_GRADE_UPD
+          : EXAM_CONSTS.CONFIG.SUCC_GRADE_CRE
       );
       closeModal();
       fetchGrades();
-    } catch (error) {
-      const errMsg = error?.message || "Operation failed. Please try again.";
-      toast.error(errMsg);
-    }
+    } catch { toast.error(EXAM_CONSTS.CONFIG.ERR_OP_FAIL); }
     finally { setSaving(false); }
   };
 
   const handleDelete = async () => {
     setDeleting(true);
-    try { await deleteGradeConfig(deleteTarget.id); toast.success("Grade deleted successfully!"); setDeleteTarget(null); fetchGrades(); }
-    catch { toast.error("Delete failed. Please try again."); }
+    try { await deleteGradeConfig(deleteTarget.id); toast.success(EXAM_CONSTS.CONFIG.SUCC_GRADE_DEL); setDeleteTarget(null); fetchGrades(); }
+    catch { toast.error(EXAM_CONSTS.CONFIG.ERR_DEL_FAIL); }
     finally { setDeleting(false); }
   };
 
@@ -172,9 +171,9 @@ const GradeConfigTab = () => {
     <div>
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
-        <h2 className="text-base font-semibold text-gray-700">Grading Scale Configuration</h2>
+        <h2 className="text-base font-semibold text-gray-700">{EXAM_CONSTS.CONFIG.GRADE_SCALE_CONF}</h2>
         <button onClick={openAdd} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-xl hover:bg-indigo-700 transition cursor-pointer shadow-sm self-start sm:self-auto">
-          <Plus className="h-4 w-4" /> Add Grade Band
+          <Plus className="h-4 w-4" /> {EXAM_CONSTS.CONFIG.ADD_GRADE_BAND}
         </button>
       </div>
 
@@ -183,19 +182,19 @@ const GradeConfigTab = () => {
         <table className="min-w-full text-sm">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-100">
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Grade</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Min %</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Max %</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide hidden md:table-cell">Description</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
-              <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wide">Actions</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{EXAM_CONSTS.CONFIG.TH_GRADE}</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{EXAM_CONSTS.CONFIG.TH_MIN_PCT}</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{EXAM_CONSTS.CONFIG.TH_MAX_PCT}</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide hidden md:table-cell">{EXAM_CONSTS.CONFIG.TH_DESC}</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{EXAM_CONSTS.CONFIG.TH_STATUS}</th>
+              <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wide">{EXAM_CONSTS.CONFIG.TH_ACTIONS}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
             {loading ? (
               <ListLoader rows={4} avatar={true} colSpanSet={6} />
             ) : grades.length === 0 ? (
-              <tr><td colSpan={6} className="text-center py-12 text-gray-400 text-sm">No grade bands configured yet.</td></tr>
+              <tr><td colSpan={6} className="text-center py-12 text-gray-400 text-sm">{EXAM_CONSTS.CONFIG.NO_GRADES}</td></tr>
             ) : (
               grades.map((g) => (
                 <tr key={g.id} className="hover:bg-gray-50/60 transition-colors">
@@ -209,15 +208,15 @@ const GradeConfigTab = () => {
                   <td className="px-4 py-3 text-gray-500 hidden md:table-cell">{g.description}</td>
                   <td className="px-4 py-3">
                     <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${g.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
-                      {g.isActive ? "Active" : "Inactive"}
+                      {g.isActive ? EXAM_CONSTS.CONFIG.ACTIVE : EXAM_CONSTS.CONFIG.INACTIVE}
                     </span>
                   </td>
                   <td className="px-4 py-3">
                     <ActionDropDownComp
                       onAction={(val) => { if (val === "edit") openEdit(g); if (val === "delete") setDeleteTarget(g); }}
                       actionOptions={[
-                        { label: "Delete", value: "delete", icon: Trash2, bg: "bg-red-50", text: "text-red-600", hover: "hover:bg-red-100" },
-                        { label: "Edit", value: "edit", icon: Pencil, bg: "bg-blue-50", text: "text-blue-600", hover: "hover:bg-blue-100" },
+                        { label: EXAM_CONSTS.CONFIG.DELETE, value: "delete", icon: Trash2, bg: "bg-red-50", text: "text-red-600", hover: "hover:bg-red-100" },
+                        { label: EXAM_CONSTS.CONFIG.EDIT, value: "edit", icon: Pencil, bg: "bg-blue-50", text: "text-blue-600", hover: "hover:bg-blue-100" },
                       ]}
                     />
                   </td>
@@ -234,21 +233,21 @@ const GradeConfigTab = () => {
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
             {/* Modal Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-              <h3 className="text-base font-semibold text-gray-800">{editItem ? "Edit Grade Band" : "Add Grade Band"}</h3>
+              <h3 className="text-base font-semibold text-gray-800">{editItem ? EXAM_CONSTS.CONFIG.EDIT_GRADE_BAND : EXAM_CONSTS.CONFIG.ADD_GRADE_BAND}</h3>
               <button onClick={closeModal} className="text-gray-400 hover:text-gray-600 cursor-pointer transition"><X className="h-5 w-5" /></button>
             </div>
             {/* Modal Body */}
             <div className="px-6 py-5 space-y-4">
               <Field
-                label="Grade Name"
-                placeholder="Enter grade name"
+                label={EXAM_CONSTS.CONFIG.GRADE_NAME}
+                placeholder={EXAM_CONSTS.CONFIG.PH_GRADE_NAME}
                 value={form.gradeName}
                 onChange={(e) => setForm(p => ({ ...p, gradeName: e.target.value }))}
                 error={errors.gradeName}
               />
               <div className="grid grid-cols-2 gap-4">
                 <Field
-                  label="Min Percentage"
+                  label={EXAM_CONSTS.CONFIG.MIN_PCT}
                   type="number"
                   placeholder='0'
                   value={form.minPercentage}
@@ -256,7 +255,7 @@ const GradeConfigTab = () => {
                   error={errors.minPercentage}
                 />
                 <Field
-                  label="Max Percentage"
+                  label={EXAM_CONSTS.CONFIG.MAX_PCT}
                   type="number"
                   placeholder='100'
                   value={form.maxPercentage}
@@ -265,8 +264,8 @@ const GradeConfigTab = () => {
                 />
               </div>
               <Field
-                label="Description"
-                placeholder="Enter grade description"
+                label={EXAM_CONSTS.CONFIG.TH_DESC}
+                placeholder={EXAM_CONSTS.CONFIG.PH_EXAM_DESC}
                 value={form.description}
                 onChange={(e) => setForm(p => ({ ...p, description: e.target.value }))}
                 error={errors.description}
@@ -274,10 +273,10 @@ const GradeConfigTab = () => {
             </div>
             {/* Modal Footer */}
             <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-100">
-              <button onClick={closeModal} className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 cursor-pointer transition">Cancel</button>
+              <button onClick={closeModal} className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 cursor-pointer transition">{EXAM_CONSTS.CONFIG.CANCEL}</button>
               <button onClick={handleSave} disabled={saving} className="px-5 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 cursor-pointer transition flex items-center gap-2 disabled:opacity-60">
                 {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-                {editItem ? "Update" : "Add Grade Band"}
+                {editItem ? EXAM_CONSTS.CONFIG.UPDATE : EXAM_CONSTS.CONFIG.ADD_GRADE_BAND}
               </button>
             </div>
           </div>
@@ -307,11 +306,10 @@ const ExamTypeTab = () => {
 
   const [errors, setErrors] = useState({});
 
-
   const fetchTypes = useCallback(async () => {
     setLoading(true);
     try { setExamTypes(await getExamTypes()); }
-    catch { toast.error("Failed to load exam types"); }
+    catch { toast.error(EXAM_CONSTS.CONFIG.ERR_LOAD_TYPES); }
     finally { setLoading(false); }
   }, []);
 
@@ -323,8 +321,8 @@ const ExamTypeTab = () => {
 
   const validate = () => {
     const e = {};
-    if (!form.name.trim()) e.name = "Exam type name is required";
-    if (!form.description.trim()) e.description = "Description is required";
+    if (!form.name.trim()) e.name = EXAM_CONSTS.CONFIG.ERR_TYPE_REQ;
+    if (!form.description.trim()) e.description = EXAM_CONSTS.CONFIG.ERR_DESC_REQ;
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -337,15 +335,12 @@ const ExamTypeTab = () => {
       else await createExamType(form);
       toast.success(
         editItem
-          ? "Exam type updated!"
-          : "Exam type created!"
+          ? EXAM_CONSTS.CONFIG.SUCC_TYPE_UPD
+          : EXAM_CONSTS.CONFIG.SUCC_TYPE_CRE
       );
       closeModal();
       fetchTypes();
-    } catch (error) { 
-      const errMsg = error?.message || "Operation failed. Please try again.";
-      toast.error(errMsg); 
-    }
+    } catch { toast.error(EXAM_CONSTS.CONFIG.ERR_OP_FAIL); }
     finally { setSaving(false); }
   };
 
@@ -355,19 +350,20 @@ const ExamTypeTab = () => {
       if (t.isActive) await deactivateExamType(t.id);
       else await activateExamType(t.id);
       toast.success(
-        `Exam type ${t.isActive ? "deactivated" : "activated"} successfully!`
+        EXAM_CONSTS.CONFIG.SUCC_TYPE_STAT(!t.isActive)
       );
       fetchTypes();
-    } catch { toast.error("Status update failed."); }
+    } catch { toast.error(EXAM_CONSTS.CONFIG.ERR_STAT_UPD); }
     finally { setToggling(null); }
   };
+
   return (
     <div>
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
-        <h2 className="text-base font-semibold text-gray-700">Exam Types Master</h2>
+        <h2 className="text-base font-semibold text-gray-700">{EXAM_CONSTS.CONFIG.EXAM_TYPE_MASTER}</h2>
         <button onClick={openAdd} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-xl hover:bg-indigo-700 transition cursor-pointer shadow-sm self-start sm:self-auto">
-          <Plus className="h-4 w-4" /> Add Exam Type
+          <Plus className="h-4 w-4" /> {EXAM_CONSTS.CONFIG.ADD_EXAM_TYPE}
         </button>
       </div>
 
@@ -376,18 +372,18 @@ const ExamTypeTab = () => {
         <table className="min-w-full text-sm">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-100">
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide w-12">#</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Name</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide hidden md:table-cell">Description</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
-              <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wide">Actions</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide w-12">{EXAM_CONSTS.CONFIG.TH_NO}</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{EXAM_CONSTS.CONFIG.TH_NAME}</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide hidden md:table-cell">{EXAM_CONSTS.CONFIG.TH_DESC}</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{EXAM_CONSTS.CONFIG.TH_STATUS}</th>
+              <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wide">{EXAM_CONSTS.CONFIG.TH_ACTIONS}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
             {loading ? (
               <ListLoader rows={4} avatar={false} colSpanSet={5} />
             ) : examTypes.length === 0 ? (
-              <tr><td colSpan={5} className="text-center py-12 text-gray-400 text-sm">No exam types configured yet.</td></tr>
+              <tr><td colSpan={5} className="text-center py-12 text-gray-400 text-sm">{EXAM_CONSTS.CONFIG.NO_EXAM_TYPES}</td></tr>
             ) : (
               examTypes.map((t, idx) => (
                 <tr key={t.id} className="hover:bg-gray-50/60 transition-colors">
@@ -396,7 +392,7 @@ const ExamTypeTab = () => {
                   <td className="px-4 py-3 text-gray-500 hidden md:table-cell">{t.description}</td>
                   <td className="px-4 py-3">
                     <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${t.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
-                      {t.isActive ? "Active" : "Inactive"}
+                      {t.isActive ? EXAM_CONSTS.CONFIG.ACTIVE : EXAM_CONSTS.CONFIG.INACTIVE}
                     </span>
                   </td>
                   <td className="px-4 py-3">
@@ -407,7 +403,7 @@ const ExamTypeTab = () => {
                       }}
                       actionOptions={[
                         {
-                          label: toggling === t.id ? "..." : (t.isActive ? "Deactivate" : "Activate"),
+                          label: toggling === t.id ? "..." : (t.isActive ? EXAM_CONSTS.CONFIG.DEACTIVATE : EXAM_CONSTS.CONFIG.ACTIVATE),
                           value: "toggle",
                           icon: t.isActive ? ToggleRight : ToggleLeft,
                           bg: t.isActive ? "bg-orange-50" : "bg-green-50",
@@ -415,7 +411,7 @@ const ExamTypeTab = () => {
                           hover: t.isActive ? "hover:bg-orange-100" : "hover:bg-green-100",
                           disabled: toggling === t.id,
                         },
-                        { label: "Edit", value: "edit", icon: Pencil, bg: "bg-blue-50", text: "text-blue-600", hover: "hover:bg-blue-100" },
+                        { label: EXAM_CONSTS.CONFIG.EDIT, value: "edit", icon: Pencil, bg: "bg-blue-50", text: "text-blue-600", hover: "hover:bg-blue-100" },
                       ]}
                     />
                   </td>
@@ -431,32 +427,32 @@ const ExamTypeTab = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-              <h3 className="text-base font-semibold text-gray-800">{editItem ? "Edit Exam Type" : "Add Exam Type"}</h3>
+              <h3 className="text-base font-semibold text-gray-800">{editItem ? EXAM_CONSTS.CONFIG.EDIT_EXAM_TYPE : EXAM_CONSTS.CONFIG.ADD_EXAM_TYPE}</h3>
               <button onClick={closeModal} className="text-gray-400 hover:text-gray-600 cursor-pointer transition"><X className="h-5 w-5" /></button>
             </div>
             <div className="px-6 py-5 space-y-4">
               <Field
-                label="Exam Type Name"
+                label={EXAM_CONSTS.CONFIG.EXAM_TYPE_NAME}
                 value={form.name}
-                placeholder={"Enter Exam Name..."}
+                placeholder={EXAM_CONSTS.CONFIG.PH_EXAM_NAME}
                 onChange={(e) => setForm(p => ({ ...p, name: e.target.value }))}
                 error={errors.name}
               />
 
               <Field
-                label="Description"
+                label={EXAM_CONSTS.CONFIG.TH_DESC}
                 multiline
                 value={form.description}
-                placeholder={"Enter Exam Description..."}
+                placeholder={EXAM_CONSTS.CONFIG.PH_EXAM_DESC}
                 onChange={(e) => setForm(p => ({ ...p, description: e.target.value }))}
                 error={errors.description}
               />
             </div>
             <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-100">
-              <button onClick={closeModal} className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 cursor-pointer transition">Cancel</button>
+              <button onClick={closeModal} className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 cursor-pointer transition">{EXAM_CONSTS.CONFIG.CANCEL}</button>
               <button onClick={handleSave} disabled={saving} className="px-5 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 cursor-pointer transition flex items-center gap-2 disabled:opacity-60">
                 {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-                {editItem ? "Update" : "Add Exam Type"}
+                {editItem ? EXAM_CONSTS.CONFIG.UPDATE : EXAM_CONSTS.CONFIG.ADD_EXAM_TYPE}
               </button>
             </div>
           </div>
@@ -467,8 +463,8 @@ const ExamTypeTab = () => {
 };
 
 const TABS = [
-  { key: "grade", label: "Grade Config", icon: BookOpen },
-  { key: "exam", label: "Exam Type", icon: ClipboardList },
+  { key: "grade", label: EXAM_CONSTS.CONFIG.TAB_GRADE, icon: BookOpen },
+  { key: "exam", label: EXAM_CONSTS.CONFIG.TAB_EXAM, icon: ClipboardList },
 ];
 
 export default function ExamConfiguration() {
@@ -480,8 +476,8 @@ export default function ExamConfiguration() {
 
         {/* Page Header */}
         <div className="mb-6">
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Exam Configuration</h1>
-          <p className="text-sm text-gray-400 mt-1">Manage grading scales and exam type definitions</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{EXAM_CONSTS.CONFIG.TITLE}</h1>
+          <p className="text-sm text-gray-400 mt-1">{EXAM_CONSTS.CONFIG.SUBTITLE}</p>
         </div>
 
         {/* Tab Switcher */}

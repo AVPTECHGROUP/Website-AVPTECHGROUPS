@@ -18,17 +18,16 @@ import {
     addClassesToExamEvent,
     removeClassFromExamEvent,
     getEventClassSubjects,
-    addEventSubject,
-    updateEventSubject,
     deleteEventSubject,
     declareEventExamResult,
     getExamTypes
 } from "../../Api/Academics/Exams";
 import { getActiveClasses } from "../../Api/Teachers/TeachersAPI";
-import { getAcademicYears, getCurrentAcademicYear } from "../../Api/AcademicYears/AcademicYear";
+import { getAcademicYears } from "../../Api/AcademicYears/AcademicYear";
 import { useDecodedUser } from "../../ContextAPI/UserContext";
 import { useAuth } from "../../hooks/useAuth";
 import { PERMISSIONS as P } from "../../Constants/Permission";
+import { EXAM_CONSTS } from "../../Constants/StringConstants/AcademicsConstants";
 
 // ─── helpers ──────────────────────────────────────────────────────────────
 function fmtRange(s, e) {
@@ -50,7 +49,6 @@ function examTypeBg(name = "") {
     return m[name] ?? "bg-gray-100 text-gray-700";
 }
 
-// Status of a whole event, derived from its class-exams.
 function eventStatus(ev) {
     const exams = ev.exams || [];
     const total = exams.length;
@@ -64,12 +62,11 @@ function eventStatus(ev) {
 }
 
 const EVENT_STATUS_META = {
-    declared: { label: "Declared", badge: "bg-green-100 text-green-700", bar: "bg-green-500" },
-    partial: { label: "Partial", badge: "bg-amber-100 text-amber-700", bar: "bg-amber-400" },
-    scheduled: { label: "Scheduled", badge: "bg-blue-100 text-blue-700", bar: "bg-blue-300" },
+    declared: { label: EXAM_CONSTS.EXAMS.STATUS.DECLARED, badge: "bg-green-100 text-green-700", bar: "bg-green-500" },
+    partial: { label: EXAM_CONSTS.EXAMS.STATUS.PARTIAL, badge: "bg-amber-100 text-amber-700", bar: "bg-amber-400" },
+    scheduled: { label: EXAM_CONSTS.EXAMS.STATUS.SCHEDULED, badge: "bg-blue-100 text-blue-700", bar: "bg-blue-300" },
 };
 
-// Per-class-exam row status.
 function rowStatus(exam) {
     if (exam.resultDeclared) return "declared";
     if (typeof exam.marksEnteredPercent === "number") {
@@ -82,10 +79,10 @@ function rowStatus(exam) {
 }
 
 const ROW_META = {
-    declared: { rowBg: "", chip: "bg-green-100 text-green-700", label: "Declared" },
-    ready: { rowBg: "bg-green-50/60", chip: "bg-green-100 text-green-700", label: "Ready" },
-    partial: { rowBg: "bg-amber-50/70", chip: "bg-amber-100 text-amber-700", label: "Pending" },
-    not_started: { rowBg: "bg-orange-50/60", chip: "bg-orange-100 text-orange-700", label: "Not started" },
+    declared: { rowBg: "", chip: "bg-green-100 text-green-700", label: EXAM_CONSTS.EXAMS.STATUS.DECLARED },
+    ready: { rowBg: "bg-green-50/60", chip: "bg-green-100 text-green-700", label: EXAM_CONSTS.EXAMS.STATUS.READY },
+    partial: { rowBg: "bg-amber-50/70", chip: "bg-amber-100 text-amber-700", label: EXAM_CONSTS.EXAMS.STATUS.PENDING },
+    not_started: { rowBg: "bg-orange-50/60", chip: "bg-orange-100 text-orange-700", label: EXAM_CONSTS.EXAMS.STATUS.NOT_STARTED },
 };
 
 function buildStats(events) {
@@ -96,10 +93,10 @@ function buildStats(events) {
     const classes = new Set(allExams.map(e => e.schoolClassName).filter(Boolean));
 
     return [
-        { label: "Total Events", count: totalEvents, sub: "Scheduled", Icon: ClipboardList, bg: "bg-blue-50", ic: "text-blue-500", num: "text-blue-700" },
-        { label: "Fully Declared", count: fullyDeclared, sub: "All results in", Icon: CheckSquare, bg: "bg-green-50", ic: "text-green-500", num: "text-green-700" },
-        { label: "Pending", count: pendingEvents, sub: pendingEvents ? "Awaiting" : "All clear", Icon: Clock, bg: "bg-amber-50", ic: "text-amber-500", num: "text-amber-600" },
-        { label: "Classes Covered", count: classes.size, sub: classes.size ? [...classes].join(", ") : "None yet", Icon: School, bg: "bg-indigo-50", ic: "text-indigo-500", num: "text-indigo-700" },
+        { label: EXAM_CONSTS.EXAMS.STATS.EVENTS, count: totalEvents, sub: EXAM_CONSTS.EXAMS.STATS.EVENTS_SUB, Icon: ClipboardList, bg: "bg-blue-50", ic: "text-blue-500", num: "text-blue-700" },
+        { label: EXAM_CONSTS.EXAMS.STATS.DECLARED, count: fullyDeclared, sub: EXAM_CONSTS.EXAMS.STATS.DECLARED_SUB, Icon: CheckSquare, bg: "bg-green-50", ic: "text-green-500", num: "text-green-700" },
+        { label: EXAM_CONSTS.EXAMS.STATS.PENDING, count: pendingEvents, sub: pendingEvents ? EXAM_CONSTS.EXAMS.STATS.PENDING_SUB : EXAM_CONSTS.EXAMS.STATS.ALL_CLEAR, Icon: Clock, bg: "bg-amber-50", ic: "text-amber-500", num: "text-amber-600" },
+        { label: EXAM_CONSTS.EXAMS.STATS.CLASSES, count: classes.size, sub: classes.size ? [...classes].join(", ") : EXAM_CONSTS.EXAMS.STATS.NONE_YET, Icon: School, bg: "bg-indigo-50", ic: "text-indigo-500", num: "text-indigo-700" },
     ];
 }
 
@@ -236,42 +233,42 @@ function ClassRow({ event, exam, sections, onAction, onRemove }) {
                 <div className="flex flex-wrap items-center gap-2 min-w-0 xl:justify-end">
                     {status === "declared" && (
                         <>
-                            <ActionBtn Icon={FileText} label="Reports" tone="primary" onClick={() => onAction(exam, "reports")} />
+                            <ActionBtn Icon={FileText} label={EXAM_CONSTS.EXAMS.ACTIONS.REPORTS} tone="primary" onClick={() => onAction(exam, "reports")} />
                             {hasPermission(P.EXAM_EDIT) && (
-                                <ActionBtn Icon={BookOpen} label="Subjects" tone="neutral" onClick={() => onAction(exam, "subjects")} />
+                                <ActionBtn Icon={BookOpen} label={EXAM_CONSTS.EXAMS.ACTIONS.SUBJECTS} tone="neutral" onClick={() => onAction(exam, "subjects")} />
                             )}
                         </>
                     )}
                     {status === "ready" && (
                         <>
                             {hasPermission(P.EXAM_MARKS_ENTER) && (
-                                <ActionBtn Icon={LogIn} label="Marks" tone="neutral" onClick={() => onAction(exam, "enter_marks")} />
+                                <ActionBtn Icon={LogIn} label={EXAM_CONSTS.EXAMS.ACTIONS.MARKS} tone="neutral" onClick={() => onAction(exam, "enter_marks")} />
                             )}
                             {hasPermission(P.EXAM_APPROVE) && (
-                                <ActionBtn Icon={CheckCircle} label="Declare" tone="success" onClick={() => onAction(exam, "declare")} />
+                                <ActionBtn Icon={CheckCircle} label={EXAM_CONSTS.EXAMS.ACTIONS.DECLARE} tone="success" onClick={() => onAction(exam, "declare")} />
                             )}
                             {hasPermission(P.EXAM_EDIT) && (
-                                <ActionBtn Icon={BookOpen} label="Subjects" tone="neutral" onClick={() => onAction(exam, "subjects")} />
+                                <ActionBtn Icon={BookOpen} label={EXAM_CONSTS.EXAMS.ACTIONS.SUBJECTS} tone="neutral" onClick={() => onAction(exam, "subjects")} />
                             )}
                         </>
                     )}
                     {status === "partial" && (
                         <>
                             {hasPermission(P.EXAM_MARKS_ENTER) && (
-                                <ActionBtn Icon={LogIn} label="Enter Marks" tone="primary" onClick={() => onAction(exam, "enter_marks")} />
+                                <ActionBtn Icon={LogIn} label={EXAM_CONSTS.EXAMS.ACTIONS.ENTER_MARKS} tone="primary" onClick={() => onAction(exam, "enter_marks")} />
                             )}
                             {hasPermission(P.EXAM_EDIT) && (
-                                <ActionBtn Icon={BookOpen} label="Subjects" tone="neutral" onClick={() => onAction(exam, "subjects")} />
+                                <ActionBtn Icon={BookOpen} label={EXAM_CONSTS.EXAMS.ACTIONS.SUBJECTS} tone="neutral" onClick={() => onAction(exam, "subjects")} />
                             )}
                         </>
                     )}
                     {status === "not_started" && (
                         <>
                             {hasPermission(P.EXAM_MARKS_ENTER) && (
-                                <ActionBtn Icon={LogIn} label="Enter Marks" tone="warning" onClick={() => onAction(exam, "enter_marks")} />
+                                <ActionBtn Icon={LogIn} label={EXAM_CONSTS.EXAMS.ACTIONS.ENTER_MARKS} tone="warning" onClick={() => onAction(exam, "enter_marks")} />
                             )}
                             {hasPermission(P.EXAM_EDIT) && (
-                                <ActionBtn Icon={BookOpen} label="Subjects" tone="neutral" onClick={() => onAction(exam, "subjects")} />
+                                <ActionBtn Icon={BookOpen} label={EXAM_CONSTS.EXAMS.ACTIONS.SUBJECTS} tone="neutral" onClick={() => onAction(exam, "subjects")} />
                             )}
                         </>
                     )}
@@ -279,7 +276,7 @@ function ClassRow({ event, exam, sections, onAction, onRemove }) {
                     {hasPermission(P.EXAM_DELETE) && (
                         <ActionBtn
                             Icon={Trash2}
-                            label="Remove"
+                            label={EXAM_CONSTS.EXAMS.ACTIONS.REMOVE}
                             tone="danger"
                             disabled={exam.resultDeclared}
                             onClick={() => onRemove(exam)}
@@ -330,10 +327,10 @@ function EventItem({ event, expanded, onToggle, sectionsCache, onLoadSections, o
                         </div>
                     </div>
                     {hasPermission(P.EXAM_EDIT) && (
-                        <ActionBtn Icon={Edit2} label="Edit" tone="neutral" compact onClick={() => onEdit(event)} />
+                        <ActionBtn Icon={Edit2} label={EXAM_CONSTS.EXAMS.ACTIONS.EDIT} tone="neutral" compact onClick={() => onEdit(event)} />
                     )}
                     {hasPermission(P.EXAM_CREATE) && (
-                        <ActionBtn Icon={Copy} label="Copy" tone="neutral" compact onClick={() => onCopy(event)} />
+                        <ActionBtn Icon={Copy} label={EXAM_CONSTS.EXAMS.ACTIONS.COPY} tone="neutral" compact onClick={() => onCopy(event)} />
                     )}
                 </div>
             </div>
@@ -361,7 +358,7 @@ function EventItem({ event, expanded, onToggle, sectionsCache, onLoadSections, o
                     <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-t border-gray-100 gap-2">
                         <span className="text-xs font-medium text-gray-400">{total} class{total !== 1 ? "es" : ""} in this event</span>
                         {hasPermission(P.EXAM_EDIT) && (
-                            <ActionBtn Icon={Plus} label="Add Class to Event" tone="neutral" onClick={() => onAddClass(event)} />
+                            <ActionBtn Icon={Plus} label={EXAM_CONSTS.EXAMS.ACTIONS.ADD_CLASS} tone="neutral" onClick={() => onAddClass(event)} />
                         )}
                     </div>
                 </div>
@@ -394,17 +391,17 @@ function ModalShell({ title, icon: Icon, onClose, children, maxW = "max-w-md" })
 // (Rest of the wizard models remain unaltered)
 function DeclareModal({ examName, onConfirm, onCancel, loading }) {
     return (
-        <ModalShell title="Declare Result" icon={AlertCircle} onClose={onCancel}>
-            <p className="text-sm text-gray-600 mb-1">Declaring result for:</p>
+        <ModalShell title={EXAM_CONSTS.EXAMS.MODALS.DECLARE_TITLE} icon={AlertCircle} onClose={onCancel}>
+            <p className="text-sm text-gray-600 mb-1">{EXAM_CONSTS.EXAMS.MODALS.DECLARE_MSG1}</p>
             <p className="text-sm font-semibold text-gray-800 mb-3">{examName}</p>
             <p className="text-xs text-red-500 bg-red-50 border border-red-100 rounded-lg px-3 py-2 mb-5">
-                This will <strong>permanently lock all marks</strong> and cannot be undone.
+                {EXAM_CONSTS.EXAMS.MODALS.DECLARE_MSG2}
             </p>
             <div className="flex gap-3 justify-end">
-                <button onClick={onCancel} disabled={loading} className="px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-60">Cancel</button>
+                <button onClick={onCancel} disabled={loading} className="px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-60">{EXAM_CONSTS.EXAMS.MODALS.CANCEL}</button>
                 <button onClick={onConfirm} disabled={loading} className="px-4 py-2 text-sm font-semibold text-white bg-orange-500 rounded-lg hover:bg-orange-600 disabled:opacity-60 flex items-center gap-2">
                     {loading && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
-                    {loading ? "Declaring…" : "Yes, Declare"}
+                    {loading ? EXAM_CONSTS.EXAMS.MODALS.BTN_DECLARING : EXAM_CONSTS.EXAMS.MODALS.BTN_DECLARE}
                 </button>
             </div>
         </ModalShell>
@@ -413,13 +410,13 @@ function DeclareModal({ examName, onConfirm, onCancel, loading }) {
 
 function RemoveClassModal({ exam, onConfirm, onCancel, loading }) {
     return (
-        <ModalShell title="Remove Class" icon={AlertCircle} onClose={onCancel}>
-            <p className="text-sm text-gray-600 mb-5">Remove <strong>{exam.schoolClassName}</strong> from this exam event? This deletes its subject configs too.</p>
+        <ModalShell title={EXAM_CONSTS.EXAMS.MODALS.REMOVE_TITLE} icon={AlertCircle} onClose={onCancel}>
+            <p className="text-sm text-gray-600 mb-5">{EXAM_CONSTS.EXAMS.MODALS.BTN_REMOVE} <strong>{exam.schoolClassName}</strong> {EXAM_CONSTS.EXAMS.MODALS.REMOVE_MSG}</p>
             <div className="flex gap-3 justify-end">
-                <button onClick={onCancel} disabled={loading} className="px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-60">Cancel</button>
+                <button onClick={onCancel} disabled={loading} className="px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-60">{EXAM_CONSTS.EXAMS.MODALS.CANCEL}</button>
                 <button onClick={onConfirm} disabled={loading} className="px-4 py-2 text-sm font-semibold text-white bg-red-500 rounded-lg hover:bg-red-600 disabled:opacity-60 flex items-center gap-2">
                     {loading && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
-                    {loading ? "Removing…" : "Remove"}
+                    {loading ? EXAM_CONSTS.EXAMS.MODALS.BTN_REMOVING : EXAM_CONSTS.EXAMS.MODALS.BTN_REMOVE}
                 </button>
             </div>
         </ModalShell>
@@ -434,36 +431,36 @@ function EditEventModal({ event, onSave, onCancel, loading }) {
         description: event.description || "",
     });
     return (
-        <ModalShell title="Edit Exam Event" icon={Edit2} onClose={onCancel}>
+        <ModalShell title={EXAM_CONSTS.EXAMS.MODALS.EDIT_TITLE} icon={Edit2} onClose={onCancel}>
             <div className="space-y-3">
                 <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Event Name</label>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">{EXAM_CONSTS.EXAMS.MODALS.EVENT_NAME}</label>
                     <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
                         className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                     <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">Start Date</label>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">{EXAM_CONSTS.EXAMS.MODALS.START_DATE}</label>
                         <input type="date" value={form.startDate} onChange={e => setForm(f => ({ ...f, startDate: e.target.value }))}
                             className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                     </div>
                     <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">End Date</label>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">{EXAM_CONSTS.EXAMS.MODALS.END_DATE}</label>
                         <input type="date" value={form.endDate} min={form.startDate} onChange={e => setForm(f => ({ ...f, endDate: e.target.value }))}
                             className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                     </div>
                 </div>
                 <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Description</label>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">{EXAM_CONSTS.EXAMS.MODALS.DESC}</label>
                     <textarea rows={3} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
                         className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
             </div>
             <div className="flex gap-3 justify-end mt-5">
-                <button onClick={onCancel} disabled={loading} className="px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-60">Cancel</button>
+                <button onClick={onCancel} disabled={loading} className="px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-60">{EXAM_CONSTS.EXAMS.MODALS.CANCEL}</button>
                 <button onClick={() => onSave(form)} disabled={loading} className="px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-60 flex items-center gap-2">
                     {loading && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
-                    {loading ? "Saving…" : "Save Changes"}
+                    {loading ? EXAM_CONSTS.EXAMS.MODALS.BTN_SAVING : EXAM_CONSTS.EXAMS.MODALS.BTN_SAVE}
                 </button>
             </div>
         </ModalShell>
@@ -480,19 +477,19 @@ function CopyEventModal({ event, examTypes, academicYears, onSave, onCancel, loa
         description: "",
     });
     return (
-        <ModalShell title="Copy Exam Event" icon={Copy} onClose={onCancel}>
-            <p className="text-xs text-gray-500 mb-4">Copies classes & subject configs from <strong>{event.name}</strong>.</p>
+        <ModalShell title={EXAM_CONSTS.EXAMS.MODALS.COPY_TITLE} icon={Copy} onClose={onCancel}>
+            <p className="text-xs text-gray-500 mb-4">{EXAM_CONSTS.EXAMS.MODALS.COPY_MSG1} <strong>{event.name}</strong>.</p>
             <div className="space-y-3">
                 <div className="grid grid-cols-2 gap-3">
                     <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">Exam Type</label>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">{EXAM_CONSTS.EXAMS.MODALS.EXAM_TYPE}</label>
                         <select value={form.examTypeId} onChange={e => setForm(f => ({ ...f, examTypeId: e.target.value }))}
                             className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                             {examTypes.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                         </select>
                     </div>
                     <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">Academic Year</label>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">{EXAM_CONSTS.EXAMS.MODALS.ACADEMIC_YEAR}</label>
                         <select value={form.academicYearId} onChange={e => setForm(f => ({ ...f, academicYearId: e.target.value }))}
                             className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                             {academicYears.map(y => <option key={y.id} value={y.id}>{y.label ?? y.name}</option>)}
@@ -500,28 +497,28 @@ function CopyEventModal({ event, examTypes, academicYears, onSave, onCancel, loa
                     </div>
                 </div>
                 <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">New Event Name</label>
-                    <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Auto-generated if blank"
+                    <label className="block text-xs font-medium text-gray-700 mb-1">{EXAM_CONSTS.EXAMS.MODALS.NEW_EVENT_NAME}</label>
+                    <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder={EXAM_CONSTS.EXAMS.MODALS.PH_AUTO_GEN}
                         className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                     <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">Start Date</label>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">{EXAM_CONSTS.EXAMS.MODALS.START_DATE}</label>
                         <input type="date" value={form.startDate} onChange={e => setForm(f => ({ ...f, startDate: e.target.value }))}
                             className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                     </div>
                     <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">End Date</label>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">{EXAM_CONSTS.EXAMS.MODALS.END_DATE}</label>
                         <input type="date" value={form.endDate} min={form.startDate} onChange={e => setForm(f => ({ ...f, endDate: e.target.value }))}
                             className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                     </div>
                 </div>
             </div>
             <div className="flex gap-3 justify-end mt-5">
-                <button onClick={onCancel} disabled={loading} className="px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-60">Cancel</button>
+                <button onClick={onCancel} disabled={loading} className="px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-60">{EXAM_CONSTS.EXAMS.MODALS.CANCEL}</button>
                 <button onClick={() => onSave(form)} disabled={loading || !form.startDate || !form.endDate} className="px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-60 flex items-center gap-2">
                     {loading && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
-                    {loading ? "Copying…" : "Create Copy"}
+                    {loading ? EXAM_CONSTS.EXAMS.MODALS.BTN_COPYING : EXAM_CONSTS.EXAMS.MODALS.BTN_COPY}
                 </button>
             </div>
         </ModalShell>
@@ -536,9 +533,9 @@ function AddClassModal({ event, allClasses, onSave, onCancel, loading }) {
     const toggle = (id) => setPicked(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id]);
 
     return (
-        <ModalShell title="Add Class to Event" icon={Plus} onClose={onCancel}>
+        <ModalShell title={EXAM_CONSTS.EXAMS.MODALS.ADD_TITLE} icon={Plus} onClose={onCancel}>
             {available.length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-6">All classes are already part of this event.</p>
+                <p className="text-sm text-gray-400 text-center py-6">{EXAM_CONSTS.EXAMS.MODALS.ADD_MSG_NO_CLASS}</p>
             ) : (
                 <div className="grid grid-cols-3 gap-2">
                     {available.map(c => {
@@ -554,10 +551,10 @@ function AddClassModal({ event, allClasses, onSave, onCancel, loading }) {
                 </div>
             )}
             <div className="flex gap-3 justify-end mt-5">
-                <button onClick={onCancel} disabled={loading} className="px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-60">Cancel</button>
+                <button onClick={onCancel} disabled={loading} className="px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-60">{EXAM_CONSTS.EXAMS.MODALS.CANCEL}</button>
                 <button onClick={() => onSave(picked)} disabled={loading || picked.length === 0} className="px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-60 flex items-center gap-2">
                     {loading && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
-                    {loading ? "Adding…" : `Add ${picked.length || ""} Class${picked.length === 1 ? "" : "es"}`}
+                    {loading ? EXAM_CONSTS.EXAMS.MODALS.BTN_ADDING : EXAM_CONSTS.EXAMS.MODALS.BTN_ADD(picked.length)}
                 </button>
             </div>
         </ModalShell>
@@ -576,7 +573,7 @@ function SubjectsModal({ event, exam, onClose, onChanged }) {
             const d = await getEventClassSubjects(event.eventId, exam.schoolClassId);
             setSubjects(Array.isArray(d) ? d : []);
         } catch {
-            setError("Failed to load subjects.");
+            setError(EXAM_CONSTS.EXAMS.ERRORS.LOAD_SUB);
         } finally { setLoading(false); }
     }, [event.eventId, exam.schoolClassId]);
 
@@ -589,31 +586,25 @@ function SubjectsModal({ event, exam, onClose, onChanged }) {
             await deleteEventSubject(event.eventId, exam.schoolClassId, configId);
             await load();
             onChanged?.();
-        } catch (err) {
-            setError(
-                err?.response?.data?.message ||
-                err?.message ||
-                "Failed to remove subject."
-            );
-        } finally {
-            setBusyId(null);
-        }
+        } catch {
+            setError(EXAM_CONSTS.EXAMS.ERRORS.REMOVE_SUB);
+        } finally { setBusyId(null); }
     };
 
     return (
-        <ModalShell title={`Subjects — ${exam.schoolClassName}`} icon={BookOpen} onClose={onClose} maxW="max-w-lg">
+        <ModalShell title={EXAM_CONSTS.EXAMS.MODALS.SUB_TITLE(exam.schoolClassName)} icon={BookOpen} onClose={onClose} maxW="max-w-lg">
             {error && <div className="mb-3 text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{error}</div>}
             {loading ? (
                 <div className="py-8 flex justify-center"><Loader2 className="w-5 h-5 animate-spin text-blue-500" /></div>
             ) : subjects.length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-8">No subjects configured for this class.</p>
+                <p className="text-sm text-gray-400 text-center py-8">{EXAM_CONSTS.EXAMS.MODALS.SUB_NO_SUB}</p>
             ) : (
                 <div className="space-y-2">
                     {subjects.map(s => (
                         <div key={s.id} className="flex items-center justify-between gap-2 px-3 py-2 border border-gray-100 rounded-lg">
                             <div className="min-w-0">
                                 <p className="text-sm font-medium text-gray-800 truncate">{s.subjectName} <span className="text-xs text-gray-400">({s.sectionName})</span></p>
-                                <p className="text-xs text-gray-500">Max {s.maxMarks} · Pass {s.passingMarks}{s.hasTheoryPractical ? ` · T:${s.maxTheoryMarks} P:${s.maxPracticalMarks}` : ""}</p>
+                                <p className="text-xs text-gray-500">{EXAM_CONSTS.EXAMS.MODALS.MAX} {s.maxMarks} · {EXAM_CONSTS.EXAMS.MODALS.PASS} {s.passingMarks}{s.hasTheoryPractical ? ` · T:${s.maxTheoryMarks} P:${s.maxPracticalMarks}` : ""}</p>
                             </div>
                             <button onClick={() => handleDelete(s.id)} disabled={busyId === s.id}
                                 className="shrink-0 p-1.5 text-red-500 hover:bg-red-50 rounded-lg disabled:opacity-50">
@@ -682,7 +673,7 @@ export default function ExamEvents() {
                 setClasses(Array.isArray(cls) ? cls : []);
                 setAcademicYears(Array.isArray(yearsList) ? yearsList : []);
                 setExamTypes(Array.isArray(types) ? types : []);
-            } catch { setErrorMeta("Failed to load filters. Please refresh."); }
+            } catch { setErrorMeta(EXAM_CONSTS.EXAMS.ERR_FILTERS); }
             finally { setLoadingMeta(false); }
         })();
     }, [currentAcademicYear]);
@@ -728,11 +719,13 @@ export default function ExamEvents() {
             }
 
             setEvents(list);
+
         } catch (err) {
             console.log(err);
-            setErrorEvents("Failed to load exam events.");
+            setErrorEvents(EXAM_CONSTS.EXAMS.ERR_LOAD_EVENTS);
             setEvents([]);
-        } finally {
+        }
+        finally {
             setLoadingEvents(false);
         }
     }, [yearId, typeId, status, classId]);
@@ -785,7 +778,7 @@ export default function ExamEvents() {
             await fetchEvents();
             setDeclareTarget(null);
         } catch (err) {
-            setToastError(err?.message || "Failed to declare result.");
+            setToastError(err?.message || EXAM_CONSTS.EXAMS.ERRORS.DECLARE);
         } finally { setDeclaringExam(false); }
     };
 
@@ -798,7 +791,7 @@ export default function ExamEvents() {
             await fetchEvents();
             setRemoveClassTarget(null);
         } catch (err) {
-            setToastError(err?.message || "Failed to remove class.");
+            setToastError(err?.message || EXAM_CONSTS.EXAMS.ERRORS.REMOVE_CLASS);
         } finally { setRemoveClassSaving(false); }
     };
 
@@ -810,7 +803,7 @@ export default function ExamEvents() {
             await fetchEvents();
             setAddClassTarget(null);
         } catch (err) {
-            setToastError(err?.message || "Failed to add classes.");
+            setToastError(err?.message || EXAM_CONSTS.EXAMS.ERRORS.ADD_CLASS);
         } finally { setAddClassSaving(false); }
     };
 
@@ -827,7 +820,7 @@ export default function ExamEvents() {
             await fetchEvents();
             setEditTarget(null);
         } catch (err) {
-            setToastError(err?.message || "Failed to update event.");
+            setToastError(err?.message || EXAM_CONSTS.EXAMS.ERRORS.UPDATE_EVENT);
         } finally { setEditSaving(false); }
     };
 
@@ -846,7 +839,7 @@ export default function ExamEvents() {
             await fetchEvents();
             setCopyTarget(null);
         } catch (err) {
-            setToastError(err?.message || "Failed to copy event.");
+            setToastError(err?.message || EXAM_CONSTS.EXAMS.ERRORS.COPY_EVENT);
         } finally { setCopySaving(false); }
     };
 
@@ -876,8 +869,8 @@ export default function ExamEvents() {
                 {/* ── PAGE HEADER ─────────────────────────────────── */}
                 <div className="flex items-center justify-between">
                     <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">
-                        <TooltipComponent message="Manage school-wide exam events across classes." direction="right" color="nocolor">
-                            Exam Events
+                        <TooltipComponent message={EXAM_CONSTS.EXAMS.TOOLTIP} direction="right" color="nocolor">
+                            {EXAM_CONSTS.EXAMS.TITLE}
                         </TooltipComponent>
                     </h1>
                 </div>
@@ -902,7 +895,7 @@ export default function ExamEvents() {
                 <div className="bg-white rounded-2xl border border-gray-200 shadow-sm px-2 md:px-3 lg:px-4 py-2 md:py-3 lg:py-4">
                     <div className="grid grid-cols-2 md:grid-cols-4 2xl:grid-cols-[1fr_1fr_1fr_1fr_auto_auto] gap-1.5 md:gap-2 lg:gap-3">
                         <FilterSelect value={yearId} onChange={e => setYearId(e.target.value)} disabled={loadingMeta}>
-                            <option value="">All Years</option>
+                            <option value="">{EXAM_CONSTS.EXAMS.ALL_YEARS}</option>
                             {academicYears.map(y => {
                                 const isCurrent = currentAcademicYear?.id === y.id;
                                 return <option key={y.id} value={y.id}>{isCurrent ? "🟢 " : ""}{y.label ?? y.name}{isCurrent ? " (Current)" : ""}</option>;
@@ -910,20 +903,20 @@ export default function ExamEvents() {
                         </FilterSelect>
 
                         <FilterSelect value={typeId} onChange={e => setTypeId(e.target.value)} disabled={loadingMeta}>
-                            <option value="">All Exam Types</option>
+                            <option value="">{EXAM_CONSTS.EXAMS.ALL_TYPES}</option>
                             {examTypes.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                         </FilterSelect>
 
                         <FilterSelect value={classId} onChange={e => setClassId(e.target.value)} disabled={loadingMeta}>
-                            <option value="">All Classes</option>
+                            <option value="">{EXAM_CONSTS.EXAMS.ALL_CLASSES}</option>
                             {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                         </FilterSelect>
 
                         <FilterSelect value={status} onChange={e => setStatus(e.target.value)} disabled={loadingMeta}>
-                            <option value="">All Statuses</option>
-                            <option value="declared">Declared</option>
-                            <option value="partial">Partial</option>
-                            <option value="scheduled">Scheduled</option>
+                            <option value="">{EXAM_CONSTS.EXAMS.ALL_STATUSES}</option>
+                            <option value="declared">{EXAM_CONSTS.EXAMS.STATUS.DECLARED}</option>
+                            <option value="partial">{EXAM_CONSTS.EXAMS.STATUS.PARTIAL}</option>
+                            <option value="scheduled">{EXAM_CONSTS.EXAMS.STATUS.SCHEDULED}</option>
                         </FilterSelect>
 
                         <button
@@ -931,7 +924,7 @@ export default function ExamEvents() {
                             disabled={loadingEvents || events.length === 0}
                             className="flex items-center cursor-pointer justify-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-white border border-gray-200 text-gray-700 text-xs sm:text-sm font-semibold rounded-lg transition-all hover:bg-gray-50 active:scale-95 disabled:opacity-50 whitespace-nowrap"
                         >
-                            <Download className="w-4 h-4 shrink-0" /> <span className="hidden sm:inline">Export Schedule</span><span className="sm:hidden">Export</span>
+                            <Download className="w-4 h-4 shrink-0" /> <span className="hidden sm:inline">{EXAM_CONSTS.EXAMS.BTN_EXPORT}</span><span className="sm:hidden">{EXAM_CONSTS.EXAMS.BTN_EXPORT_MOB}</span>
                         </button>
 
                         {hasPermission(P.EXAM_CREATE) && (
@@ -940,7 +933,7 @@ export default function ExamEvents() {
                                 disabled={loadingMeta}
                                 className="flex items-center justify-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold rounded-lg transition-all shadow-sm active:scale-95 disabled:opacity-60 whitespace-nowrap"
                             >
-                                <Plus className="w-4 h-4 shrink-0" /> <span className="hidden sm:inline">New Exam Event</span><span className="sm:hidden">New</span>
+                                <Plus className="w-4 h-4 shrink-0" /> <span className="hidden sm:inline">{EXAM_CONSTS.EXAMS.BTN_NEW}</span><span className="sm:hidden">{EXAM_CONSTS.EXAMS.BTN_NEW_MOB}</span>
                             </button>
                         )}
                     </div>
@@ -967,7 +960,7 @@ export default function ExamEvents() {
                         </div>
                     ) : events.length === 0 ? (
                         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-12 text-center text-sm text-gray-400">
-                            No exam events found. Create one to get started.
+                            {EXAM_CONSTS.EXAMS.NO_EVENTS}
                         </div>
                     ) : (
                         events.map(ev => (

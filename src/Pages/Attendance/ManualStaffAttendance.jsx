@@ -2,8 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { X, ClipboardEdit, FileText, Search, Loader2, Check } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { getUsersSummary } from '../../Api/StaffManagement/UserManagementAPI';
-import { requestManualAttendance } from '../../Api/Attendance/AttendanceApi';
-import { getSchoolLocation } from "../../utils/getSchoolLocation";
+
 
 const TODAY = new Date().toISOString().split('T')[0];
 const REMARKS_MAX = 200;

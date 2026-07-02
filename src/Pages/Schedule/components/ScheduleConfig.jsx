@@ -2,15 +2,16 @@ import { useState, useEffect } from 'react';
 import { X, Settings, CheckCircle, AlertCircle } from 'lucide-react';
 import { getTimetableConfig, saveTimetableConfig } from '../../../Api/Academics/ScheduleApi';
 import { getAcademicYears, getCurrentAcademicYear } from '../../../Api/AcademicYears/AcademicYear';
+import { TIMETABLE_CONSTS }  from '../../../Constants/StringConstants/TimetableConstants';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-const MAX_PERIODS       = 10;
-const MIN_PERIODS       = 1;
-const MAX_PERIOD_MINS   = 59;
-const MIN_PERIOD_MINS   = 20;
-const MAX_BREAK_MINS    = 59;
-const MIN_BREAK_MINS    = 5;
+const MAX_PERIODS = 10;
+const MIN_PERIODS = 1;
+const MAX_PERIOD_MINS = 59;
+const MIN_PERIOD_MINS = 20;
+const MAX_BREAK_MINS = 59;
+const MIN_BREAK_MINS = 5;
 
 // ─── Schedule preview generator ───────────────────────────────────────────────
 function generateSchedule({ startTime, periodsPerDay, duration, breaks }) {
@@ -64,30 +65,30 @@ const FieldError = ({ msg }) =>
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function ScheduleConfig({ onClose }) {
     // ── State ──────────────────────────────────────────────────────────────────
-    const [workingDays,   setWorkingDays]   = useState(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']);
-    const [startTime,     setStartTime]     = useState('08:00');
+    const [workingDays, setWorkingDays] = useState(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']);
+    const [startTime, setStartTime] = useState('08:00');
     const [periodsPerDay, setPeriodsPerDay] = useState(8);
-    const [duration,      setDuration]      = useState(45);
-    const [academicYears,   setAcademicYears]   = useState([]);
-    const [selectedYearId,  setSelectedYearId]  = useState('');
-    const [currentYearId,   setCurrentYearId]   = useState(''); // ← tracks which year is "current"
-    const [yearsLoading,    setYearsLoading]    = useState(true);
+    const [duration, setDuration] = useState(45);
+    const [academicYears, setAcademicYears] = useState([]);
+    const [selectedYearId, setSelectedYearId] = useState('');
+    const [currentYearId, setCurrentYearId] = useState('');
+    const [yearsLoading, setYearsLoading] = useState(true);
     const [breaks, setBreaks] = useState([
-        { label: '🍎 Recess',       afterPeriod: 4, duration: 20 },
-        { label: '🥗 Lunch Break',  afterPeriod: 6, duration: 40 },
+        { label: '🍎 Recess', afterPeriod: 4, duration: 20 },
+        { label: '🥗 Lunch Break', afterPeriod: 6, duration: 40 },
     ]);
 
-    const [preview,     setPreview]     = useState([]);
-    const [loading,     setLoading]     = useState(false);
-    const [saving,      setSaving]      = useState(false);
-    const [toast,       setToast]       = useState(null);
+    const [preview, setPreview] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const [toast, setToast] = useState(null);
     const [fieldErrors, setFieldErrors] = useState({});
 
     // ── Live preview ──────────────────────────────────────────────────────────
     useEffect(() => {
-        const safePeriods  = Math.min(Math.max(periodsPerDay  || MIN_PERIODS,  MIN_PERIODS),  MAX_PERIODS);
-        const safeDuration = Math.min(Math.max(duration       || MIN_PERIOD_MINS, MIN_PERIOD_MINS), MAX_PERIOD_MINS);
-        const safeBreaks   = breaks.map((b) => ({
+        const safePeriods = Math.min(Math.max(periodsPerDay || MIN_PERIODS, MIN_PERIODS), MAX_PERIODS);
+        const safeDuration = Math.min(Math.max(duration || MIN_PERIOD_MINS, MIN_PERIOD_MINS), MAX_PERIOD_MINS);
+        const safeBreaks = breaks.map((b) => ({
             ...b,
             duration: Math.min(Math.max(b.duration || MIN_BREAK_MINS, MIN_BREAK_MINS), MAX_BREAK_MINS),
         }));
@@ -110,7 +111,6 @@ export default function ScheduleConfig({ onClose }) {
                     yearsResult.status === 'fulfilled' ? (yearsResult ?? []) : [];
                 setAcademicYears(yearsList);
 
-                // Store the current year id so we can show the flag in the dropdown
                 if (currentYear.status === 'fulfilled' && currentYear.value?.id) {
                     const cid = String(currentYear.value.id);
                     setCurrentYearId(cid);
@@ -121,11 +121,11 @@ export default function ScheduleConfig({ onClose }) {
 
                 const config = await getTimetableConfig();
                 if (!config) return;
-                if (config.workingDays)           setWorkingDays(config.workingDays);
-                if (config.startTime)             setStartTime(config.startTime);
-                if (config.periodsPerDay)         setPeriodsPerDay(Math.min(config.periodsPerDay, MAX_PERIODS));
+                if (config.workingDays) setWorkingDays(config.workingDays);
+                if (config.startTime) setStartTime(config.startTime);
+                if (config.periodsPerDay) setPeriodsPerDay(Math.min(config.periodsPerDay, MAX_PERIODS));
                 if (config.periodDurationMinutes) setDuration(Math.min(config.periodDurationMinutes, MAX_PERIOD_MINS));
-                if (config.academicYearId)        setSelectedYearId(String(config.academicYearId));
+                if (config.academicYearId) setSelectedYearId(String(config.academicYearId));
                 if (Array.isArray(config.breaks) && config.breaks.length > 0) {
                     setBreaks(
                         config.breaks.map((b) => ({
@@ -149,20 +149,20 @@ export default function ScheduleConfig({ onClose }) {
         const errs = {};
 
         if (periodsPerDay < MIN_PERIODS || periodsPerDay > MAX_PERIODS) {
-            errs.periodsPerDay = `Must be between ${MIN_PERIODS} and ${MAX_PERIODS} periods.`;
+            errs.periodsPerDay = TIMETABLE_CONSTS.CONFIG.ERR_PERIOD_RANGE(MIN_PERIODS, MAX_PERIODS);
         }
         if (duration < MIN_PERIOD_MINS || duration > MAX_PERIOD_MINS) {
-            errs.duration = `Period duration must be between ${MIN_PERIOD_MINS} and ${MAX_PERIOD_MINS} minutes.`;
+            errs.duration = TIMETABLE_CONSTS.CONFIG.ERR_DUR_RANGE(MIN_PERIOD_MINS, MAX_PERIOD_MINS);
         }
         breaks.forEach((b, i) => {
             if (!b.duration || b.duration < MIN_BREAK_MINS) {
-                errs[`break_${i}`] = `Min ${MIN_BREAK_MINS} min.`;
+                errs[`break_${i}`] = TIMETABLE_CONSTS.CONFIG.ERR_MIN_MIN(MIN_BREAK_MINS);
             } else if (b.duration > MAX_BREAK_MINS) {
-                errs[`break_${i}`] = `Max ${MAX_BREAK_MINS} min.`;
+                errs[`break_${i}`] = TIMETABLE_CONSTS.CONFIG.ERR_MAX_MIN(MAX_BREAK_MINS);
             }
         });
         if (workingDays.length === 0) {
-            errs.workingDays = 'Select at least one working day.';
+            errs.workingDays = TIMETABLE_CONSTS.CONFIG.ERR_REQ_DAY;
         }
 
         setFieldErrors(errs);
@@ -175,23 +175,22 @@ export default function ScheduleConfig({ onClose }) {
         try {
             setSaving(true);
             await saveTimetableConfig({
-                academicYearId:         selectedYearId,
+                academicYearId: selectedYearId,
                 workingDays,
                 periodsPerDay,
-                periodDurationMinutes:  duration,
+                periodDurationMinutes: duration,
                 startTime,
                 breaks,
             });
-            showToast('success', 'Configuration saved successfully.');
+            showToast('success', TIMETABLE_CONSTS.CONFIG.SUCC_SAVE);
             setTimeout(onClose, 1800);
         } catch (err) {
-            showToast('error', err.message || 'Failed to save configuration.');
+            showToast('error', err.message || TIMETABLE_CONSTS.CONFIG.ERR_SAVE);
         } finally {
             setSaving(false);
         }
     };
 
-    // ── Toast helpers ─────────────────────────────────────────────────────────
     const showToast = (type, message) => {
         setToast({ type, message });
         setTimeout(() => setToast(null), 3500);
@@ -201,7 +200,7 @@ export default function ScheduleConfig({ onClose }) {
     const handlePeriodsChange = (val) => {
         if (val === '') {
             setPeriodsPerDay('');
-            setFieldErrors((p) => ({ ...p, periodsPerDay: `Required. Enter ${MIN_PERIODS}–${MAX_PERIODS}.` }));
+            setFieldErrors((p) => ({ ...p, periodsPerDay: TIMETABLE_CONSTS.CONFIG.ERR_REQ_ENTER(MIN_PERIODS, MAX_PERIODS) }));
             return;
         }
         const n = parseInt(val, 10);
@@ -209,7 +208,7 @@ export default function ScheduleConfig({ onClose }) {
         if (n > MAX_PERIODS) return;
         setPeriodsPerDay(n);
         if (n < MIN_PERIODS) {
-            setFieldErrors((p) => ({ ...p, periodsPerDay: `Minimum is ${MIN_PERIODS} period.` }));
+            setFieldErrors((p) => ({ ...p, periodsPerDay: TIMETABLE_CONSTS.CONFIG.ERR_MIN_PERIOD(MIN_PERIODS) }));
         } else {
             setFieldErrors((p) => { const e = { ...p }; delete e.periodsPerDay; return e; });
         }
@@ -219,7 +218,7 @@ export default function ScheduleConfig({ onClose }) {
     const handleDurationChange = (val) => {
         if (val === '') {
             setDuration('');
-            setFieldErrors((p) => ({ ...p, duration: `Required. Enter ${MIN_PERIOD_MINS}–${MAX_PERIOD_MINS} min.` }));
+            setFieldErrors((p) => ({ ...p, duration: TIMETABLE_CONSTS.CONFIG.ERR_REQ_ENTER_MIN(MIN_PERIOD_MINS, MAX_PERIOD_MINS) }));
             return;
         }
         const n = parseInt(val, 10);
@@ -227,19 +226,18 @@ export default function ScheduleConfig({ onClose }) {
         if (n > MAX_PERIOD_MINS) return;
         setDuration(n);
         if (n < MIN_PERIOD_MINS) {
-            setFieldErrors((p) => ({ ...p, duration: `Min period duration is ${MIN_PERIOD_MINS} minutes.` }));
+            setFieldErrors((p) => ({ ...p, duration: TIMETABLE_CONSTS.CONFIG.ERR_MIN_DUR(MIN_PERIOD_MINS) }));
         } else {
             setFieldErrors((p) => { const e = { ...p }; delete e.duration; return e; });
         }
     };
 
-    // ── Break duration — hard block at MAX, parseInt removes leading zeros ─────
     const handleBreakDuration = (idx, val) => {
         if (val === '') {
             const updated = [...breaks];
             updated[idx] = { ...updated[idx], duration: '' };
             setBreaks(updated);
-            setFieldErrors((p) => ({ ...p, [`break_${idx}`]: `Min ${MIN_BREAK_MINS} min.` }));
+            setFieldErrors((p) => ({ ...p, [`break_${idx}`]: TIMETABLE_CONSTS.CONFIG.ERR_MIN_MIN(MIN_BREAK_MINS) }));
             return;
         }
         const n = parseInt(val, 10);
@@ -249,16 +247,14 @@ export default function ScheduleConfig({ onClose }) {
         updated[idx] = { ...updated[idx], duration: n };
         setBreaks(updated);
         if (n < MIN_BREAK_MINS) {
-            setFieldErrors((p) => ({ ...p, [`break_${idx}`]: `Min ${MIN_BREAK_MINS} min.` }));
+            setFieldErrors((p) => ({ ...p, [`break_${idx}`]: TIMETABLE_CONSTS.CONFIG.ERR_MIN_MIN(MIN_BREAK_MINS) }));
         } else {
             setFieldErrors((p) => { const e = { ...p }; delete e[`break_${idx}`]; return e; });
         }
     };
 
-    // ── After Period — clamped to [1, periodsPerDay], no leading zeros ─────────
     const handleAfterPeriodChange = (idx, val) => {
         if (val === '') {
-            // Allow clearing while typing
             const updated = [...breaks];
             updated[idx] = { ...updated[idx], afterPeriod: '' };
             setBreaks(updated);
@@ -267,10 +263,9 @@ export default function ScheduleConfig({ onClose }) {
         const n = parseInt(val, 10);
         if (isNaN(n)) return;
         const safePeriods = periodsPerDay || MAX_PERIODS;
-        // Hard block: cannot exceed current periodsPerDay (max 10)
         if (n > safePeriods) return;
         const updated = [...breaks];
-        updated[idx] = { ...updated[idx], afterPeriod: n }; // store number → no leading zeros
+        updated[idx] = { ...updated[idx], afterPeriod: n };
         setBreaks(updated);
     };
 
@@ -302,7 +297,7 @@ export default function ScheduleConfig({ onClose }) {
                     <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-100 shrink-0">
                         <div className="flex items-center gap-2 min-w-0">
                             <Settings size={20} className="text-gray-600 shrink-0" />
-                            <h2 className="text-base sm:text-lg font-semibold text-gray-900 truncate">School Time Configuration</h2>
+                            <h2 className="text-base sm:text-lg font-semibold text-gray-900 truncate">{TIMETABLE_CONSTS.CONFIG.TITLE}</h2>
                         </div>
                         <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 transition">
                             <X size={18} className="text-gray-500" />
@@ -311,7 +306,7 @@ export default function ScheduleConfig({ onClose }) {
 
                     {loading ? (
                         <div className="flex-1 flex items-center justify-center text-gray-400 text-sm">
-                            Loading configuration…
+                            {TIMETABLE_CONSTS.CONFIG.LOADING}
                         </div>
                     ) : (
                         <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
@@ -321,7 +316,7 @@ export default function ScheduleConfig({ onClose }) {
 
                                 {/* Academic Year */}
                                 <div>
-                                    <p className="text-xs font-semibold text-gray-500 tracking-widest mb-3">ACADEMIC YEAR</p>
+                                    <p className="text-xs font-semibold text-gray-500 tracking-widest mb-3">{TIMETABLE_CONSTS.CONFIG.LBL_YEAR}</p>
                                     <div className="relative">
                                         <select
                                             value={selectedYearId}
@@ -330,23 +325,22 @@ export default function ScheduleConfig({ onClose }) {
                                             className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 bg-white disabled:bg-gray-50 disabled:text-gray-400 appearance-none pr-28"
                                         >
                                             {yearsLoading ? (
-                                                <option value="">Loading…</option>
+                                                <option value="">{TIMETABLE_CONSTS.CONFIG.PH_LOAD_YEAR}</option>
                                             ) : academicYears.length === 0 ? (
-                                                <option value="">No academic years found</option>
+                                                <option value="">{TIMETABLE_CONSTS.CONFIG.PH_NO_YEAR}</option>
                                             ) : (
                                                 academicYears.map((yr) => (
                                                     <option key={yr.id} value={String(yr.id)}>
                                                         {yr.label || yr.name || yr.year}
-                                                        {String(yr.id) === currentYearId ? ' (Current)' : ''}
+                                                        {String(yr.id) === currentYearId ? TIMETABLE_CONSTS.CONFIG.LBL_CUR_YEAR : ''}
                                                     </option>
                                                 ))
                                             )}
                                         </select>
-                                        {/* Visual "Current" badge shown when selected year IS the current year */}
                                         {!yearsLoading && selectedYearId === currentYearId && currentYearId !== '' && (
                                             <span className="pointer-events-none absolute right-8 top-1/2 -translate-y-1/2 flex items-center gap-1 bg-emerald-100 text-emerald-700 text-[10px] font-semibold px-2 py-0.5 rounded-full border border-emerald-200">
                                                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
-                                                Current
+                                                {TIMETABLE_CONSTS.CONFIG.BADGE_CUR_YEAR}
                                             </span>
                                         )}
                                     </div>
@@ -354,7 +348,7 @@ export default function ScheduleConfig({ onClose }) {
 
                                 {/* Working Days */}
                                 <div>
-                                    <p className="text-xs font-semibold text-gray-500 tracking-widest mb-3">WORKING DAYS</p>
+                                    <p className="text-xs font-semibold text-gray-500 tracking-widest mb-3">{TIMETABLE_CONSTS.CONFIG.LBL_DAYS}</p>
                                     <div className="flex flex-wrap gap-2">
                                         {DAYS.map((day) => (
                                             <button
@@ -375,12 +369,12 @@ export default function ScheduleConfig({ onClose }) {
 
                                 {/* Period Settings */}
                                 <div>
-                                    <p className="text-xs font-semibold text-gray-500 tracking-widest mb-3">PERIOD SETTINGS</p>
+                                    <p className="text-xs font-semibold text-gray-500 tracking-widest mb-3">{TIMETABLE_CONSTS.CONFIG.LBL_PERIODS}</p>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
                                         {/* Start Time */}
                                         <div>
-                                            <label className="text-sm text-gray-600 mb-1 block">Start Time</label>
+                                            <label className="text-sm text-gray-600 mb-1 block">{TIMETABLE_CONSTS.CONFIG.LBL_START_TIME}</label>
                                             <input
                                                 type="time"
                                                 value={startTime}
@@ -392,8 +386,8 @@ export default function ScheduleConfig({ onClose }) {
                                         {/* Periods per day */}
                                         <div>
                                             <label className="text-sm text-gray-600 mb-1 block">
-                                                Periods / Day
-                                                <span className="text-gray-400 font-normal ml-1">(max {MAX_PERIODS})</span>
+                                                {TIMETABLE_CONSTS.CONFIG.LBL_PERIOD_DAY}
+                                                <span className="text-gray-400 font-normal ml-1">{TIMETABLE_CONSTS.CONFIG.LBL_MAX_PAREN(MAX_PERIODS)}</span>
                                             </label>
                                             <input
                                                 type="number"
@@ -416,8 +410,8 @@ export default function ScheduleConfig({ onClose }) {
                                         {/* Duration */}
                                         <div className="col-span-2">
                                             <label className="text-sm text-gray-600 mb-1 block">
-                                                Period Duration (min)
-                                                <span className="text-gray-400 font-normal ml-1">({MIN_PERIOD_MINS}–{MAX_PERIOD_MINS} min)</span>
+                                                {TIMETABLE_CONSTS.CONFIG.LBL_DUR}
+                                                <span className="text-gray-400 font-normal ml-1">{TIMETABLE_CONSTS.CONFIG.LBL_DUR_PAREN(MIN_PERIOD_MINS, MAX_PERIOD_MINS)}</span>
                                             </label>
                                             <input
                                                 type="number"
@@ -441,7 +435,7 @@ export default function ScheduleConfig({ onClose }) {
 
                                 {/* Breaks */}
                                 <div>
-                                    <p className="text-xs font-semibold text-gray-500 tracking-widest mb-3">BREAKS</p>
+                                    <p className="text-xs font-semibold text-gray-500 tracking-widest mb-3">{TIMETABLE_CONSTS.CONFIG.LBL_BREAKS}</p>
                                     <div className="space-y-3">
                                         {breaks.map((brk, i) => (
                                             <div key={i} className="bg-gray-50 rounded-lg p-3 space-y-2">
@@ -469,8 +463,8 @@ export default function ScheduleConfig({ onClose }) {
                                                     {/* After Period */}
                                                     <div className="flex items-center gap-2 shrink-0">
                                                         <label className="text-xs text-gray-500 whitespace-nowrap">
-                                                            After Period
-                                                            <span className="text-gray-400 ml-1">(1–{periodsPerDay || MAX_PERIODS})</span>
+                                                            {TIMETABLE_CONSTS.CONFIG.LBL_AFTER_PERIOD}
+                                                            <span className="text-gray-400 ml-1">{TIMETABLE_CONSTS.CONFIG.LBL_AFTER_PAREN(periodsPerDay || MAX_PERIODS)}</span>
                                                         </label>
                                                         <input
                                                             type="number"
@@ -489,7 +483,7 @@ export default function ScheduleConfig({ onClose }) {
                                                     {/* Break Duration */}
                                                     <div className="flex items-center gap-2 shrink-0">
                                                         <label className="text-xs text-gray-500 whitespace-nowrap">
-                                                            Duration (min)
+                                                            {TIMETABLE_CONSTS.CONFIG.LBL_DUR_MIN}
                                                         </label>
                                                         <input
                                                             type="number"
@@ -521,12 +515,12 @@ export default function ScheduleConfig({ onClose }) {
                                             onClick={() =>
                                                 setBreaks([
                                                     ...breaks,
-                                                    { label: '☕ Break', afterPeriod: periodsPerDay || 1, duration: MIN_BREAK_MINS },
+                                                    { label: TIMETABLE_CONSTS.CONFIG.DEF_BREAK_LABEL, afterPeriod: periodsPerDay || 1, duration: MIN_BREAK_MINS },
                                                 ])
                                             }
                                             className="text-sm text-blue-600 hover:underline font-medium"
                                         >
-                                            + Add Break
+                                            {TIMETABLE_CONSTS.CONFIG.BTN_ADD_BREAK}
                                         </button>
                                     </div>
                                 </div>
@@ -534,7 +528,7 @@ export default function ScheduleConfig({ onClose }) {
 
                             {/* ── RIGHT — Live preview ──────────────────────────────────── */}
                             <div className="w-full md:w-64 border-t md:border-t-0 md:border-l border-gray-100 overflow-y-auto bg-gray-50 p-4">
-                                <p className="text-xs font-semibold text-gray-500 tracking-widest mb-3">LIVE SCHEDULE PREVIEW</p>
+                                <p className="text-xs font-semibold text-gray-500 tracking-widest mb-3">{TIMETABLE_CONSTS.CONFIG.LBL_PREVIEW}</p>
                                 <div className="space-y-2">
                                     {preview.map((slot, i) => (
                                         <div
@@ -577,7 +571,7 @@ export default function ScheduleConfig({ onClose }) {
                             onClick={onClose}
                             className="w-full sm:w-auto px-5 py-2.5 sm:py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition"
                         >
-                            Cancel
+                            {TIMETABLE_CONSTS.CONFIG.BTN_CANCEL}
                         </button>
                         <button
                             type="button"
@@ -585,7 +579,7 @@ export default function ScheduleConfig({ onClose }) {
                             disabled={saving || loading}
                             className="w-full sm:w-auto px-5 py-2.5 sm:py-2 bg-[#1e293b] text-white rounded-lg text-sm font-medium hover:bg-[#334155] disabled:opacity-50 transition"
                         >
-                            {saving ? 'Saving…' : 'Save Configuration'}
+                            {saving ? TIMETABLE_CONSTS.CONFIG.BTN_SAVING : TIMETABLE_CONSTS.CONFIG.BTN_SAVE}
                         </button>
                     </div>
                 </div>

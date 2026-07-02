@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { BookOpen } from "lucide-react";
 import { toast } from "react-toastify";
 import ConfirmModal from "../../Components/Homework/confirmmodal";
@@ -22,8 +22,9 @@ import {
 } from "../../Api/Academics/Homework";
 
 import { getActiveClasses, getSectionsByClass } from "../../Api/Academics/ClassSectionAPI";
+import { HOMEWORK_CONSTS, COMMON_STATUS } from "../../Constants/StringConstants/AcademicsConstants";
 
-const showError = (err, fallback = "Something went wrong") =>
+const showError = (err, fallback = HOMEWORK_CONSTS.ERRORS.FALLBACK) =>
   toast.error(typeof err?.message === "string" ? err.message : fallback);
 
 const getDefaultDates = () => {
@@ -41,7 +42,7 @@ const EMPTY_FILTERS = {
   ...getDefaultDates(),
 };
 
-const normClass   = (item) => ({ id: item.id ?? item.classId ?? "",   label: item.name ?? item.className ?? item.label ?? "" });
+const normClass = (item) => ({ id: item.id ?? item.classId ?? "", label: item.name ?? item.className ?? item.label ?? "" });
 const normSection = (item) => ({ id: item.id ?? item.sectionId ?? "", label: item.name ?? item.sectionName ?? item.label ?? "" });
 const normSubject = (item) => ({ id: item.subjectId ?? item.id ?? "", label: item.subjectName ?? item.name ?? item.label ?? "" });
 
@@ -65,12 +66,12 @@ async function fetchFullRecord(id) {
 export default function HomeworkPage() {
 
   const { user, profile } = useDecodedUser();
-  const schoolId  = user?.schoolId ? Number(user.schoolId) : 1;
+  const schoolId = user?.schoolId ? Number(user.schoolId) : 1;
   const isTeacher = user?.userType === "TEACHER";
   const teacherId = isTeacher ? profile?.id : null;
 
   // ── Teachers ──────────────────────────────────────────────────────────────
-  const [teachers,        setTeachers]        = useState([]);
+  const [teachers, setTeachers] = useState([]);
   const [teachersLoading, setTeachersLoading] = useState(false);
 
   useEffect(() => {
@@ -80,39 +81,39 @@ export default function HomeworkPage() {
       try {
         const list = await getTeacherLookup();
         setTeachers((Array.isArray(list) ? list : []).map(normTeacher));
-      } catch (err) { showError(err, "Failed to load teachers"); }
+      } catch (err) { showError(err, HOMEWORK_CONSTS.ERRORS.LOAD_TEACHERS); }
       finally { setTeachersLoading(false); }
     };
     fetch_();
   }, [isTeacher]);
 
   // ── Classes ───────────────────────────────────────────────────────────────
-  const [classes,        setClasses]        = useState([]);
+  const [classes, setClasses] = useState([]);
   const [classesLoading, setClassesLoading] = useState(false);
-  const [confirmCancel,  setConfirmCancel]  = useState(null);
+  const [confirmCancel, setConfirmCancel] = useState(null);
 
   useEffect(() => {
     const fetch_ = async () => {
       setClassesLoading(true);
       try {
-        const raw  = await getActiveClasses(schoolId);
+        const raw = await getActiveClasses(schoolId);
         const data = Array.isArray(raw) ? raw : Array.isArray(raw?.data) ? raw.data : [];
-        const map  = new Map();
+        const map = new Map();
         data.map(normClass).forEach((item) => {
           const k = item.id || item.label;
           if (!map.has(k)) map.set(k, item);
         });
         setClasses(Array.from(map.values()));
-      } catch (err) { showError(err, "Failed to load classes"); }
+      } catch (err) { showError(err, HOMEWORK_CONSTS.ERRORS.LOAD_CLASSES); }
       finally { setClassesLoading(false); }
     };
     fetch_();
   }, [schoolId]);
 
   // ── Sections ──────────────────────────────────────────────────────────────
-  const [selectedClassId,  setSelectedClassId]  = useState("");
-  const [sections,         setSections]         = useState([]);
-  const [sectionsLoading,  setSectionsLoading]  = useState(false);
+  const [selectedClassId, setSelectedClassId] = useState("");
+  const [sections, setSections] = useState([]);
+  const [sectionsLoading, setSectionsLoading] = useState(false);
 
   useEffect(() => {
     setSections([]);
@@ -123,14 +124,14 @@ export default function HomeworkPage() {
     setSectionsLoading(true);
     getSectionsByClass(selectedClassId)
       .then((raw) => setSections((Array.isArray(raw) ? raw : raw?.data ?? []).map(normSection)))
-      .catch((err) => showError(err, "Failed to load sections"))
+      .catch((err) => showError(err, HOMEWORK_CONSTS.ERRORS.LOAD_SECTIONS))
       .finally(() => setSectionsLoading(false));
   }, [selectedClassId]);
 
   // ── Subjects ──────────────────────────────────────────────────────────────
   const [selectedSectionId, setSelectedSectionId] = useState("");
-  const [subjects,          setSubjects]           = useState([]);
-  const [subjectsLoading,   setSubjectsLoading]    = useState(false);
+  const [subjects, setSubjects] = useState([]);
+  const [subjectsLoading, setSubjectsLoading] = useState(false);
 
   useEffect(() => {
     setSubjects([]);
@@ -142,7 +143,7 @@ export default function HomeworkPage() {
       try {
         const list = await getActiveSubjectsBySection(selectedSectionId);
         setSubjects((Array.isArray(list) ? list : []).map(normSubject));
-      } catch (err) { showError(err, "Failed to load subjects"); }
+      } catch (err) { showError(err, HOMEWORK_CONSTS.ERRORS.LOAD_SUBJECTS); }
       finally { setSubjectsLoading(false); }
     };
     fetch_();
@@ -153,13 +154,10 @@ export default function HomeworkPage() {
   const setFilter = (key) => (val) => setFilters((f) => ({ ...f, [key]: val }));
 
   // ── Homework list ─────────────────────────────────────────────────────────
-  const [rows,        setRows]        = useState([]);
+  const [rows, setRows] = useState([]);
   const [listLoading, setListLoading] = useState(false);
-  const [submitting,  setSubmitting]  = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // doFetch — receives sectionId + filters as arguments directly.
-  // No useCallback / useRef needed — zero stale closure risk.
   // ─────────────────────────────────────────────────────────────────────────
   const doFetch = async (sectionId, currentFilters) => {
     if (!sectionId) return;
@@ -168,39 +166,34 @@ export default function HomeworkPage() {
       const result = await getHomework({
         sectionId,
         subjectId: currentFilters.subjectFilter || undefined,
-        status:    currentFilters.statusFilter  || undefined,
-        dueAfter:  currentFilters.dateFrom      || undefined,
-        dueBefore: currentFilters.dateTo        || undefined,
+        status: currentFilters.statusFilter || undefined,
+        dueAfter: currentFilters.dateFrom || undefined,
+        dueBefore: currentFilters.dateTo || undefined,
       });
       setRows(Array.isArray(result) ? result : []);
     } catch (err) {
-      showError(err, "Failed to load homework");
+      showError(err, HOMEWORK_CONSTS.ERRORS.LOAD_HOMEWORK);
     } finally {
       setListLoading(false);
     }
   };
 
-  // ── Auto-fetch on section select (initial load) ───────────────────────────
   useEffect(() => {
     if (!selectedSectionId) return;
     doFetch(selectedSectionId, filters);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedSectionId]);
 
-  // ── Apply button — manual trigger with latest filters ─────────────────────
   const handleApply = () => {
     if (!selectedSectionId) {
-      toast.warn("Please select a class and section first.");
+      toast.warn(HOMEWORK_CONSTS.WARNINGS.SELECT_FIRST);
       return;
     }
     doFetch(selectedSectionId, filters);
   };
 
-  // ── Clear Filters — reset state then re-fetch with defaults ───────────────
   const handleReset = () => {
     const def = { ...EMPTY_FILTERS };
     setFilters(def);
-    // Call doFetch directly with reset values — don't wait for state update
     doFetch(selectedSectionId, def);
   };
 
@@ -215,16 +208,16 @@ export default function HomeworkPage() {
   }, [rows, filters.search]);
 
   const stats = useMemo(() => ({
-    total:   rows.length,
-    active:  rows.filter((hw) => hw.status === "PUBLISHED").length,
-    overdue: rows.filter((hw) => hw.dueDate && new Date(hw.dueDate) < new Date() && hw.status !== "CANCELLED").length,
+    total: rows.length,
+    active: rows.filter((hw) => hw.status === COMMON_STATUS.PUBLISHED).length,
+    overdue: rows.filter((hw) => hw.dueDate && new Date(hw.dueDate) < new Date() && hw.status !== COMMON_STATUS.CANCELLED).length,
   }), [rows]);
 
   // ── Modals ────────────────────────────────────────────────────────────────
-  const [assignOpen,  setAssignOpen]  = useState(false);
-  const [viewHw,      setViewHw]      = useState(null);
+  const [assignOpen, setAssignOpen] = useState(false);
+  const [viewHw, setViewHw] = useState(null);
   const [viewLoading, setViewLoading] = useState(false);
-  const [editHw,      setEditHw]      = useState(null);
+  const [editHw, setEditHw] = useState(null);
 
   const closeAssign = () => { setAssignOpen(false); setEditHw(null); };
 
@@ -270,13 +263,13 @@ export default function HomeworkPage() {
       }
       const savedId = saved?.id ?? saved?.data?.id ?? saved?.data?.homeworkId;
       if (file && savedId) await uploadHomeworkAttachment(savedId, file);
-      toast.success(editHw ? "Homework updated!" : "Homework published!");
+      toast.success(editHw ? HOMEWORK_CONSTS.SUCCESS.UPDATED : HOMEWORK_CONSTS.SUCCESS.PUBLISHED);
       setAssignOpen(false);
       setEditHw(null);
       setViewHw(null);
       await doFetch(selectedSectionId, filters);
     } catch (err) {
-      showError(err, "Failed to save homework");
+      showError(err, HOMEWORK_CONSTS.ERRORS.SAVE_HOMEWORK);
     } finally {
       setSubmitting(false);
     }
@@ -291,9 +284,9 @@ export default function HomeworkPage() {
     setSubmitting(true);
     try {
       await cancelHomework(hwId);
-      toast.success("Homework cancelled");
+      toast.success(HOMEWORK_CONSTS.SUCCESS.CANCELLED);
       await doFetch(selectedSectionId, filters);
-    } catch (err) { showError(err, "Failed to cancel homework"); }
+    } catch (err) { showError(err, HOMEWORK_CONSTS.ERRORS.CANCEL_HOMEWORK); }
     finally { setSubmitting(false); }
   };
 
@@ -302,7 +295,7 @@ export default function HomeworkPage() {
 
       <div className="flex items-center gap-2 px-4 sm:px-6 py-4 border-b border-gray-200 bg-white shrink-0">
         <BookOpen size={18} className="text-blue-700 shrink-0" />
-        <h1 className="text-sm font-bold text-gray-900">Homework Management</h1>
+        <h1 className="text-sm font-bold text-gray-900">{HOMEWORK_CONSTS.PAGE_TITLE}</h1>
       </div>
 
       <div className="flex-1 min-h-0 m-3 sm:m-4 bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col overflow-hidden">
@@ -375,7 +368,7 @@ export default function HomeworkPage() {
 
       {confirmCancel && (
         <ConfirmModal
-          message="Are you sure you want to cancel this homework? This action cannot be undone."
+          message={HOMEWORK_CONSTS.CONFIRM.CANCEL_MSG}
           onConfirm={handleConfirmCancel}
           onClose={() => setConfirmCancel(null)}
         />

@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
 import { CheckCircle2, X, Loader2, ExternalLink } from "lucide-react";
+import { STORAGE_KEYS, CONFIG, ROUTES, STYLES, UI_TEXT } from "../../Constants/StringConstants/SelectSchoolConstants";
 
 // ── Persist selected school SYNCHRONOUSLY before opening new tab ──────────────
 function saveSchoolToStorage(school) {
   try {
-    localStorage.setItem("school",     JSON.stringify(school));
-    localStorage.setItem("schoolId",   String(school.id));
-    localStorage.setItem("schoolCode", school.code  || "");
-    localStorage.setItem("schoolName", school.name  || "");
+    localStorage.setItem(STORAGE_KEYS.SCHOOL, JSON.stringify(school));
+    localStorage.setItem(STORAGE_KEYS.SCHOOL_ID, String(school.id));
+    localStorage.setItem(STORAGE_KEYS.SCHOOL_CODE, school.code || "");
+    localStorage.setItem(STORAGE_KEYS.SCHOOL_NAME, school.name || "");
   } catch (e) {
     console.error("SchoolSelectedCard: failed to persist school", e);
   }
@@ -18,26 +19,21 @@ export default function SchoolSelectedCard({ school, onClose }) {
 
   // Close on Escape
   useEffect(() => {
-    const handler = (e) => { if (e.key === "Escape") onClose?.(); };
+    const handler = (e) => { if (e.key === CONFIG.KEY_ESCAPE) onClose?.(); };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
   }, [onClose]);
 
   const handleEnterDashboard = () => {
     // Step 1: Write to localStorage FIRST (synchronous, blocking)
-    // The new tab reads localStorage on mount — if we open the tab before
-    // saving, the new tab sees no schoolId and redirects to /superAdmin.
     saveSchoolToStorage(school);
 
     // Step 2: Open new tab immediately (MUST be synchronous in click handler)
-    // Browsers only allow window.open without popup-blocker when called
-    // directly inside a user-gesture handler — any await/setTimeout before
-    // this call causes browsers to block it as a programmatic popup.
-    const newTab = window.open("/dashboard", "_blank", "noopener,noreferrer");
+    const newTab = window.open(ROUTES.DASHBOARD, CONFIG.WINDOW_TARGET, CONFIG.WINDOW_FEATURES);
 
     if (!newTab || newTab.closed) {
       // Popup was blocked — fall back to same-tab navigation
-      window.location.href = "/dashboard";
+      window.location.href = ROUTES.DASHBOARD;
       return;
     }
 
@@ -46,7 +42,7 @@ export default function SchoolSelectedCard({ school, onClose }) {
     setTimeout(() => {
       setConfirming(false);
       onClose?.();
-    }, 700);
+    }, CONFIG.TIMEOUT_DELAY);
   };
 
   if (!school) return null;
@@ -54,7 +50,7 @@ export default function SchoolSelectedCard({ school, onClose }) {
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ backgroundColor: "rgba(0,0,0,0.45)", backdropFilter: "blur(4px)" }}
+      style={{ backgroundColor: STYLES.MODAL_BG, backdropFilter: STYLES.MODAL_BACKDROP }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose?.(); }}
     >
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-auto overflow-hidden">
@@ -73,9 +69,9 @@ export default function SchoolSelectedCard({ school, onClose }) {
           <div className="w-16 h-16 rounded-2xl bg-emerald-500 flex items-center justify-center mb-4 shadow-lg shadow-emerald-200">
             <CheckCircle2 size={32} className="text-white" />
           </div>
-          <h2 className="text-xl font-bold text-gray-900">School Selected!</h2>
+          <h2 className="text-xl font-bold text-gray-900">{UI_TEXT.MODAL_TITLE}</h2>
           <p className="text-blue-600 font-semibold text-base mt-1">{school.name}</p>
-          <p className="text-sm text-gray-500 mt-1">Workspace successfully updated.</p>
+          <p className="text-sm text-gray-500 mt-1">{UI_TEXT.WORKSPACE_UPDATED}</p>
         </div>
 
         {/* Access validated row */}
@@ -84,9 +80,9 @@ export default function SchoolSelectedCard({ school, onClose }) {
             <CheckCircle2 size={16} className="text-emerald-600" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-gray-800">Access validated</p>
+            <p className="text-sm font-semibold text-gray-800">{UI_TEXT.ACCESS_VALIDATED}</p>
             {school.board && (
-              <p className="text-xs text-gray-400 mt-0.5">{school.board} · {school.city || "—"}</p>
+              <p className="text-xs text-gray-400 mt-0.5">{school.board} · {school.city || UI_TEXT.FALLBACK_DASH}</p>
             )}
           </div>
         </div>
@@ -101,17 +97,17 @@ export default function SchoolSelectedCard({ school, onClose }) {
             {confirming ? (
               <>
                 <Loader2 size={16} className="animate-spin" />
-                Opening...
+                {UI_TEXT.OPENING}
               </>
             ) : (
               <>
-                Enter Dashboard
+                {UI_TEXT.ENTER_DASHBOARD}
                 <ExternalLink size={15} />
               </>
             )}
           </button>
           <p className="text-center text-xs text-gray-400 mt-2.5">
-            Opens in a new tab · open multiple schools side by side
+            {UI_TEXT.MODAL_FOOTER}
           </p>
         </div>
 

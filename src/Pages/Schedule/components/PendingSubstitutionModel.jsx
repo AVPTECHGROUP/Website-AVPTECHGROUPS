@@ -4,6 +4,7 @@ import {
     getSubstitutions,
     updateSubstitutionStatus,
 } from '../../../Api/Academics/ScheduleApi';
+import { TIMETABLE_CONSTS }  from '../../../Constants/StringConstants/TimetableConstants';
 
 export default function PendingSubstitutionsModal({ timetableId, onClose }) {
     const [substitutions, setSubstitutions] = useState([]);
@@ -43,7 +44,7 @@ export default function PendingSubstitutionsModal({ timetableId, onClose }) {
                     <div className="flex items-center gap-2">
                         <Clock size={17} className="text-amber-500" />
                         <h2 className="text-base sm:text-lg font-semibold text-gray-900">
-                            Pending Substitutions
+                            {TIMETABLE_CONSTS.PENDING_SUB.TITLE}
                         </h2>
                         {substitutions.length > 0 && (
                             <span className="text-xs font-bold bg-amber-100 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full">
@@ -60,13 +61,13 @@ export default function PendingSubstitutionsModal({ timetableId, onClose }) {
                 <div className="max-h-[55vh] sm:max-h-[60vh] overflow-y-auto">
                     {loading ? (
                         <div className="flex items-center justify-center py-12 text-gray-400 text-sm">
-                            Loading substitutions…
+                            {TIMETABLE_CONSTS.PENDING_SUB.LOADING}
                         </div>
                     ) : substitutions.length === 0 ? (
                         <div className="text-center py-12 sm:py-14 text-gray-400 text-sm">
                             <ArrowLeftRight size={28} className="mx-auto mb-2 opacity-20" />
-                            <p className="font-medium text-gray-500">No substitutions yet</p>
-                            <p className="text-xs mt-1 text-gray-400">Arranged substitutions appear here</p>
+                            <p className="font-medium text-gray-500">{TIMETABLE_CONSTS.PENDING_SUB.NO_SUB}</p>
+                            <p className="text-xs mt-1 text-gray-400">{TIMETABLE_CONSTS.PENDING_SUB.NO_SUB_DESC}</p>
                         </div>
                     ) : (
                         <div className="divide-y divide-gray-100">
@@ -93,26 +94,26 @@ export default function PendingSubstitutionsModal({ timetableId, onClose }) {
                                                 </p>
                                             )}
                                             <span className={`inline-block mt-1.5 text-xs px-2 py-0.5 rounded-full font-semibold
-                                                ${sub.status === 'CONFIRMED'
+                                                ${sub.status === TIMETABLE_CONSTS.STATUS.CONFIRMED
                                                     ? 'bg-green-100 text-green-700'
-                                                    : sub.status === 'CANCELLED'
+                                                    : sub.status === TIMETABLE_CONSTS.STATUS.CANCELLED
                                                         ? 'bg-red-100 text-red-600'
                                                         : 'bg-amber-100 text-amber-700'}`}>
-                                                {sub.status || 'PENDING'}
+                                                {sub.status || TIMETABLE_CONSTS.STATUS.PENDING}
                                             </span>
                                         </div>
 
-                                        {(!sub.status || sub.status === 'PENDING') && (
+                                        {(!sub.status || sub.status === TIMETABLE_CONSTS.STATUS.PENDING) && (
                                             <div className="flex flex-col sm:flex-row gap-1 shrink-0 mt-0.5">
                                                 <button
-                                                    onClick={() => handleUpdateStatus(sub.id, 'CONFIRMED')}
+                                                    onClick={() => handleUpdateStatus(sub.id, TIMETABLE_CONSTS.STATUS.CONFIRMED)}
                                                     className="px-2.5 py-1.5 text-xs bg-green-600 text-white rounded-lg hover:bg-green-700 cursor-pointer transition font-medium whitespace-nowrap">
-                                                    Confirm
+                                                    {TIMETABLE_CONSTS.PENDING_SUB.BTN_CONFIRM}
                                                 </button>
                                                 <button
-                                                    onClick={() => handleUpdateStatus(sub.id, 'CANCELLED')}
+                                                    onClick={() => handleUpdateStatus(sub.id, TIMETABLE_CONSTS.STATUS.CANCELLED)}
                                                     className="px-2.5 py-1.5 text-xs border border-red-200 text-red-500 rounded-lg hover:bg-red-50 cursor-pointer transition font-medium whitespace-nowrap">
-                                                    Cancel
+                                                    {TIMETABLE_CONSTS.PENDING_SUB.BTN_CANCEL}
                                                 </button>
                                             </div>
                                         )}
@@ -128,7 +129,7 @@ export default function PendingSubstitutionsModal({ timetableId, onClose }) {
                     <button
                         onClick={onClose}
                         className="w-full py-2.5 sm:py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 cursor-pointer transition">
-                        Close
+                        {TIMETABLE_CONSTS.PENDING_SUB.BTN_CLOSE}
                     </button>
                 </div>
             </div>
