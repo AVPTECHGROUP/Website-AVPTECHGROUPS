@@ -17,10 +17,16 @@ import CardComponent from "../../../Components/CommonComp/CardComponent";
 import IndividualFaceScanView from "./IndividualFaceScanView";
 import GroupPhotoView from "./GroupPhotoView";
 
-// ─── Constants ────────────────────────────────────────────────────────────────
-const PAGES_PER_VIEW = 6;
+import {
+    PAGES_PER_VIEW,
+    STATUS_NOT_MARKED, STATUS_PRESENT, STATUS_LATE, STATUS_PRESENT_MANUAL,
+    SOURCE_MAP, SOURCE_MANUAL_LABEL,
+    DASH_PLACEHOLDER,
+    STATUS_COLOR_MAP, CONFIDENCE_COLOR_MAP,
+    CONFIDENCE_HIGH_THRESHOLD, CONFIDENCE_MEDIUM_THRESHOLD,
+    AVATAR_INITIALS_COLORS, FILTER_OPTIONS, FILTER_ALL_STUDENTS, UI_STRINGS
+} from "../../../Constants/StringConstants/AttendanceConstants";
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 const getInitials = (fullName = "") => {
     const parts = fullName.trim().split(" ").filter(Boolean);
     if (parts.length === 0) return "??";
@@ -29,26 +35,25 @@ const getInitials = (fullName = "") => {
 };
 
 const mapStatus = (apiStatus) => {
-    if (!apiStatus) return "Not Marked";
+    if (!apiStatus) return STATUS_NOT_MARKED;
     const s = apiStatus.toUpperCase();
-    if (s === "PRESENT") return "Present";
-    if (s === "LATE") return "Late";
-    if (s === "PRESENT_MANUAL" || s === "MANUAL") return "Present (Manual)";
-    return "Not Marked";
+    if (s === "PRESENT") return STATUS_PRESENT;
+    if (s === "LATE") return STATUS_LATE;
+    if (s === "PRESENT_MANUAL" || s === "MANUAL") return STATUS_PRESENT_MANUAL;
+    return STATUS_NOT_MARKED;
 };
 
 const shapeRosterStudent = (st) => {
-    const name = st.studentName || "Unknown";
+    const name = st.studentName || UI_STRINGS.COMMON.UNKNOWN;
     const confidence = st.confidenceScore ? Math.round(st.confidenceScore) : null;
-    const sourceMap = { GROUP_PHOTO: "Group Photo", FACE_SCAN: "Face Scan", MANUAL: "Manual" };
     const source = st.status
-        ? st.isManual ? "Manual" : (sourceMap[st.attendanceSource] || st.attendanceSource || null)
+        ? st.isManual ? SOURCE_MANUAL_LABEL : (SOURCE_MAP[st.attendanceSource] || st.attendanceSource || null)
         : null;
     return {
         id: st.studentId,
         name,
         initials: getInitials(name),
-        rollNo: st.rollNumber || st.admissionNumber || "—",
+        rollNo: st.rollNumber || st.admissionNumber || DASH_PLACEHOLDER,
         status: mapStatus(st.status),
         checkIn: st.checkInTime ? st.checkInTime.slice(0, 5) : null,
         source,
@@ -58,33 +63,30 @@ const shapeRosterStudent = (st) => {
     };
 };
 
-// ─── Style helpers ────────────────────────────────────────────────────────────
 const statusColor = (s) => {
-    if (!s || s === "Not Marked") return "bg-purple-100 text-purple-700";
-    if (s.includes("Present (Manual)")) return "bg-orange-100 text-orange-700";
-    if (s.includes("Present")) return "bg-green-100 text-green-700";
-    if (s === "Late") return "bg-yellow-100 text-yellow-700";
-    return "bg-gray-100 text-gray-600";
+    if (!s || s === STATUS_NOT_MARKED) return STATUS_COLOR_MAP.NOT_MARKED;
+    if (s.includes(STATUS_PRESENT_MANUAL)) return STATUS_COLOR_MAP.PRESENT_MANUAL;
+    if (s.includes(STATUS_PRESENT)) return STATUS_COLOR_MAP.PRESENT;
+    if (s === STATUS_LATE) return STATUS_COLOR_MAP.LATE;
+    return STATUS_COLOR_MAP.DEFAULT;
 };
 const statusIcon = (s) => {
-    if (!s || s === "Not Marked") return <BookOpen className="w-3.5 h-3.5" />;
-    if (s.includes("Present (Manual)")) return <PenLine className="w-3.5 h-3.5" />;
-    if (s.includes("Present")) return <CheckCircle2 className="w-3.5 h-3.5" />;
-    if (s === "Late") return <Clock className="w-3.5 h-3.5" />;
+    if (!s || s === STATUS_NOT_MARKED) return <BookOpen className="w-3.5 h-3.5" />;
+    if (s.includes(STATUS_PRESENT_MANUAL)) return <PenLine className="w-3.5 h-3.5" />;
+    if (s.includes(STATUS_PRESENT)) return <CheckCircle2 className="w-3.5 h-3.5" />;
+    if (s === STATUS_LATE) return <Clock className="w-3.5 h-3.5" />;
     return null;
 };
 const confidenceColor = (c) => {
-    if (!c) return "bg-gray-200";
-    if (c >= 80) return "bg-green-500";
-    if (c >= 60) return "bg-yellow-500";
-    return "bg-red-500";
+    if (!c) return CONFIDENCE_COLOR_MAP.NONE;
+    if (c >= CONFIDENCE_HIGH_THRESHOLD) return CONFIDENCE_COLOR_MAP.HIGH;
+    if (c >= CONFIDENCE_MEDIUM_THRESHOLD) return CONFIDENCE_COLOR_MAP.MEDIUM;
+    return CONFIDENCE_COLOR_MAP.LOW;
 };
 const avatarColor = (initials = "??") => {
-    const colors = ["bg-blue-100 text-blue-700", "bg-green-100 text-green-700", "bg-purple-100 text-purple-700", "bg-orange-100 text-orange-700", "bg-pink-100 text-pink-700", "bg-teal-100 text-teal-700"];
-    return colors[((initials.charCodeAt(0) || 0) + (initials.charCodeAt(1) || 0)) % colors.length];
+    return AVATAR_INITIALS_COLORS[((initials.charCodeAt(0) || 0) + (initials.charCodeAt(1) || 0)) % AVATAR_INITIALS_COLORS.length];
 };
 
-// ─── SelectLoader ─────────────────────────────────────────────────────────────
 function SelectLoader() {
     return (
         <div className="h-9 w-32 rounded-lg bg-gray-200 shimmer">
@@ -93,7 +95,6 @@ function SelectLoader() {
     );
 }
 
-// ─── Stat Card Skeleton ───────────────────────────────────────────────────────
 function StatCardSkeleton() {
     return (
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 flex items-center gap-3 animate-pulse">
@@ -106,7 +107,6 @@ function StatCardSkeleton() {
     );
 }
 
-// ─── ActionDropDownComp ───────────────────────────────────────────────────────
 function ActionDropDownComp({ onAction, actionOptions }) {
     return (
         <div className="flex justify-center w-full">
@@ -124,23 +124,22 @@ function ActionDropDownComp({ onAction, actionOptions }) {
     );
 }
 
-// ─── Roster Table ─────────────────────────────────────────────────────────────
 function RosterView({
     students, loadingRoster, onUnmark, onMark, actionLoadingId,
     loadingClasses, loadingSections, classes, sections,
     selectedClass, selectedSection, handleClassChange, handleSectionChange,
     date, setDate,
 }) {
-    const [filter, setFilter] = useState("All Students");
+    const [filter, setFilter] = useState(FILTER_ALL_STUDENTS);
     const [search, setSearch] = useState("");
     const [page, setPage] = useState(1);
 
     const filtered = students.filter((s) => {
         const matchFilter =
-            filter === "All Students" ||
-            (filter === "Present" && s.status.includes("Present")) ||
-            (filter === "Late" && s.status === "Late") ||
-            (filter === "Not Marked" && s.status === "Not Marked");
+            filter === FILTER_ALL_STUDENTS ||
+            (filter === STATUS_PRESENT && s.status.includes(STATUS_PRESENT)) ||
+            (filter === STATUS_LATE && s.status === STATUS_LATE) ||
+            (filter === STATUS_NOT_MARKED && s.status === STATUS_NOT_MARKED);
         const matchSearch =
             s.name.toLowerCase().includes(search.toLowerCase()) ||
             (s.rollNo || "").includes(search);
@@ -191,11 +190,11 @@ function RosterView({
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
             <div className="flex flex-col sm:flex-row gap-3 p-4 border-b border-gray-100 flex-wrap">
                 <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold text-gray-600">Filter:</span>
+                    <span className="text-sm font-semibold text-gray-600">{UI_STRINGS.ROSTER.FILTER}</span>
                     <div className="relative">
                         <select value={filter} onChange={(e) => { setFilter(e.target.value); setPage(1); }}
                             className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm appearance-none pr-8 focus:outline-none focus:ring-2 focus:ring-blue-200 cursor-pointer bg-white">
-                            {["All Students", "Present", "Late", "Not Marked"].map((f) => <option key={f}>{f}</option>)}
+                            {FILTER_OPTIONS.map((f) => <option key={f}>{f}</option>)}
                         </select>
                         <ChevronDown className="w-3.5 h-3.5 text-gray-400 absolute right-2 top-2.5 pointer-events-none" />
                     </div>
@@ -203,7 +202,7 @@ function RosterView({
                 <div className="relative flex-1 sm:max-w-xs">
                     <Search className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
                     <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                        placeholder="Search by name or roll no..."
+                        placeholder={UI_STRINGS.ROSTER.SEARCH_PLACEHOLDER}
                         className="w-full border border-gray-200 rounded-lg pl-9 pr-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200" />
                 </div>
                 <div className="flex flex-wrap items-center gap-2 ml-auto">
@@ -211,7 +210,7 @@ function RosterView({
                         <div className="relative">
                             <select value={selectedClass?.id ?? ""} onChange={(e) => handleClassChange(e.target.value)}
                                 className="border border-gray-200 bg-white rounded-lg px-3 py-2 text-sm appearance-none pr-8 focus:outline-none focus:ring-2 focus:ring-blue-200 cursor-pointer shadow-sm">
-                                {classes.length === 0 && <option value="">No classes</option>}
+                                {classes.length === 0 && <option value="">{UI_STRINGS.ROSTER.NO_CLASSES}</option>}
                                 {classes.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                             </select>
                             <ChevronDown className="w-3.5 h-3.5 text-gray-400 absolute right-2 top-2.5 pointer-events-none" />
@@ -222,7 +221,7 @@ function RosterView({
                             <select value={selectedSection?.id ?? ""} onChange={(e) => handleSectionChange(e.target.value)}
                                 disabled={sections.length === 0}
                                 className="border border-gray-200 bg-white rounded-lg px-3 py-2 text-sm appearance-none pr-8 focus:outline-none focus:ring-2 focus:ring-blue-200 cursor-pointer shadow-sm disabled:opacity-60">
-                                {sections.length === 0 && <option value="">No sections</option>}
+                                {sections.length === 0 && <option value="">{UI_STRINGS.ROSTER.NO_SECTIONS}</option>}
                                 {sections.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
                             </select>
                             <ChevronDown className="w-3.5 h-3.5 text-gray-400 absolute right-2 top-2.5 pointer-events-none" />
@@ -239,14 +238,9 @@ function RosterView({
                         <table className="w-full">
                             <thead>
                                 <tr className="bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                                    <th className="px-4 py-3 text-left w-10">#</th>
-                                    <th className="px-4 py-3 text-left">Student</th>
-                                    <th className="px-4 py-3 text-left">Roll No.</th>
-                                    <th className="px-4 py-3 text-left">Status</th>
-                                    <th className="px-4 py-3 text-left">Check-In</th>
-                                    <th className="px-4 py-3 text-left">Source</th>
-                                    <th className="px-4 py-3 text-left">Confidence</th>
-                                    <th className="px-4 py-3 text-center">Actions</th>
+                                    {UI_STRINGS.ROSTER.HEADERS.map((h, i) => (
+                                        <th key={i} className={`px-4 py-3 ${i === 0 || i === UI_STRINGS.ROSTER.HEADERS.length - 1 ? 'text-center' : 'text-left'} ${i === 0 ? 'w-10' : ''}`}>{h}</th>
+                                    ))}
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
@@ -259,21 +253,16 @@ function RosterView({
                     </div>
                 </>
             ) : students.length === 0 ? (
-                <div className="p-10 text-center text-gray-400 text-sm">No students found for this section.</div>
+                <div className="p-10 text-center text-gray-400 text-sm">{UI_STRINGS.ROSTER.NO_STUDENTS}</div>
             ) : (
                 <>
                     <div className="hidden md:block overflow-x-auto">
                         <table className="w-full">
                             <thead>
                                 <tr className="bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                                    <th className="px-4 py-3 text-left w-10">#</th>
-                                    <th className="px-4 py-3 text-left">Student</th>
-                                    <th className="px-4 py-3 text-left">Roll No.</th>
-                                    <th className="px-4 py-3 text-left">Status</th>
-                                    <th className="px-4 py-3 text-left">Check-In</th>
-                                    <th className="px-4 py-3 text-left">Source</th>
-                                    <th className="px-4 py-3 text-left">Confidence</th>
-                                    <th className="px-4 py-3 text-center">Actions</th>
+                                    {UI_STRINGS.ROSTER.HEADERS.map((h, i) => (
+                                        <th key={i} className={`px-4 py-3 ${i === 0 || i === UI_STRINGS.ROSTER.HEADERS.length - 1 ? 'text-center' : 'text-left'} ${i === 0 ? 'w-10' : ''}`}>{h}</th>
+                                    ))}
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
@@ -285,7 +274,7 @@ function RosterView({
                                                 <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${avatarColor(s.initials)}`}>{s.initials}</div>
                                                 <div>
                                                     <p className="text-sm font-semibold text-gray-800">{s.name}</p>
-                                                    <p className="text-xs text-gray-400">ID: {s.id}</p>
+                                                    <p className="text-xs text-gray-400">{UI_STRINGS.COMMON.ID_LABEL} {s.id}</p>
                                                 </div>
                                             </div>
                                         </td>
@@ -309,15 +298,15 @@ function RosterView({
                                                     </div>
                                                     <span className="text-xs text-gray-600 font-mono">{s.confidence}%</span>
                                                 </div>
-                                            ) : <span className="text-xs text-gray-400">N/A</span>}
+                                            ) : <span className="text-xs text-gray-400">{UI_STRINGS.COMMON.N_A}</span>}
                                         </td>
                                         <td className="px-4 py-3">
                                             <ActionDropDownComp
                                                 onAction={(val) => val === "unmark" ? onUnmark(s) : onMark(s)}
                                                 actionOptions={
-                                                    s.status === "Not Marked"
-                                                        ? [{ label: actionLoadingId === s.id ? "Marking..." : "Mark", value: "mark", icon: actionLoadingId === s.id ? Loader2 : PenLine, bg: "bg-white", text: "text-orange-600", hover: "hover:bg-orange-50", disabled: actionLoadingId === s.id }]
-                                                        : [{ label: actionLoadingId === s.id ? "Unmarking..." : "Unmark", value: "unmark", icon: actionLoadingId === s.id ? Loader2 : Trash2, bg: "bg-white", text: "text-red-500", hover: "hover:bg-red-50", disabled: actionLoadingId === s.id }]
+                                                    s.status === STATUS_NOT_MARKED
+                                                        ? [{ label: actionLoadingId === s.id ? UI_STRINGS.COMMON.MARKING : UI_STRINGS.COMMON.MARK, value: "mark", icon: actionLoadingId === s.id ? Loader2 : PenLine, bg: "bg-white", text: "text-orange-600", hover: "hover:bg-orange-50", disabled: actionLoadingId === s.id }]
+                                                        : [{ label: actionLoadingId === s.id ? UI_STRINGS.COMMON.UNMARKING : UI_STRINGS.COMMON.UNMARK, value: "unmark", icon: actionLoadingId === s.id ? Loader2 : Trash2, bg: "bg-white", text: "text-red-500", hover: "hover:bg-red-50", disabled: actionLoadingId === s.id }]
                                                 }
                                             />
                                         </td>
@@ -335,7 +324,7 @@ function RosterView({
                                         <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${avatarColor(s.initials)}`}>{s.initials}</div>
                                         <div>
                                             <p className="text-sm font-semibold text-gray-800">{s.name}</p>
-                                            <p className="text-xs text-gray-400">Roll: {s.rollNo} · ID: {s.id}</p>
+                                            <p className="text-xs text-gray-400">{UI_STRINGS.COMMON.ROLL_LABEL}: {s.rollNo} · {UI_STRINGS.COMMON.ID_LABEL} {s.id}</p>
                                         </div>
                                     </div>
                                     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${statusColor(s.status)}`}>
@@ -351,9 +340,9 @@ function RosterView({
                                     <ActionDropDownComp
                                         onAction={(val) => val === "unmark" ? onUnmark(s) : onMark(s)}
                                         actionOptions={
-                                            s.status === "Not Marked"
-                                                ? [{ label: "Mark", value: "mark", icon: PenLine, bg: "bg-white", text: "text-orange-600", hover: "hover:bg-orange-50", disabled: false }]
-                                                : [{ label: "Unmark", value: "unmark", icon: Trash2, bg: "bg-white", text: "text-red-500", hover: "hover:bg-red-50", disabled: false }]
+                                            s.status === STATUS_NOT_MARKED
+                                                ? [{ label: UI_STRINGS.COMMON.MARK, value: "mark", icon: PenLine, bg: "bg-white", text: "text-orange-600", hover: "hover:bg-orange-50", disabled: false }]
+                                                : [{ label: UI_STRINGS.COMMON.UNMARK, value: "unmark", icon: Trash2, bg: "bg-white", text: "text-red-500", hover: "hover:bg-red-50", disabled: false }]
                                         }
                                     />
                                 </div>
@@ -363,12 +352,12 @@ function RosterView({
 
                     <div className="flex flex-col sm:flex-row items-center justify-between gap-2 px-4 py-3 border-t border-gray-100 bg-gray-50">
                         <p className="text-xs text-gray-500">
-                            Showing {filtered.length === 0 ? 0 : (page - 1) * PAGES_PER_VIEW + 1}–{Math.min(page * PAGES_PER_VIEW, filtered.length)} of {filtered.length} students
+                            {UI_STRINGS.ROSTER.SHOWING} {filtered.length === 0 ? 0 : (page - 1) * PAGES_PER_VIEW + 1}–{Math.min(page * PAGES_PER_VIEW, filtered.length)} {UI_STRINGS.ROSTER.OF} {filtered.length} {UI_STRINGS.ROSTER.STUDENTS_LOWER}
                         </p>
                         <div className="flex items-center gap-1">
                             <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
                                 className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-medium text-gray-600 hover:bg-white disabled:opacity-40 cursor-pointer transition-colors flex items-center gap-1">
-                                <ChevronLeft className="w-3.5 h-3.5" /> Prev
+                                <ChevronLeft className="w-3.5 h-3.5" /> {UI_STRINGS.ROSTER.PREV}
                             </button>
                             {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
                                 <button key={p} onClick={() => setPage(p)}
@@ -378,7 +367,7 @@ function RosterView({
                             ))}
                             <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages || totalPages === 0}
                                 className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-medium text-gray-600 hover:bg-white disabled:opacity-40 cursor-pointer transition-colors flex items-center gap-1">
-                                Next <ChevronRight className="w-3.5 h-3.5" />
+                                {UI_STRINGS.ROSTER.NEXT} <ChevronRight className="w-3.5 h-3.5" />
                             </button>
                         </div>
                     </div>
@@ -388,12 +377,11 @@ function RosterView({
     );
 }
 
-// ─── Summary View ─────────────────────────────────────────────────────────────
 function SummaryView({ rosterMeta, students, loadingSummary, date, selectedClassName, selectedSectionName }) {
     const totalStudents = rosterMeta?.totalStudents ?? students.length;
-    const presentCount = rosterMeta?.totalPresent ?? students.filter((s) => s.status.includes("Present")).length;
-    const lateCount = rosterMeta?.totalLate ?? students.filter((s) => s.status === "Late").length;
-    const absentCount = rosterMeta?.totalNotMarked ?? students.filter((s) => s.status === "Not Marked").length;
+    const presentCount = rosterMeta?.totalPresent ?? students.filter((s) => s.status.includes(STATUS_PRESENT)).length;
+    const lateCount = rosterMeta?.totalLate ?? students.filter((s) => s.status === STATUS_LATE).length;
+    const absentCount = rosterMeta?.totalNotMarked ?? students.filter((s) => s.status === STATUS_NOT_MARKED).length;
     const markedCount = presentCount + lateCount;
     const todayRate = totalStudents > 0 ? ((markedCount / totalStudents) * 100).toFixed(1) : "0.0";
     const presentPct = totalStudents > 0 ? ((presentCount / totalStudents) * 100).toFixed(1) : 0;
@@ -408,7 +396,7 @@ function SummaryView({ rosterMeta, students, loadingSummary, date, selectedClass
         { day: "Fri", pct: parseFloat(todayRate) || 87, color: "bg-blue-500", today: true },
     ];
 
-    const attentionStudents = students.filter((s) => s.status === "Not Marked").slice(0, 3);
+    const attentionStudents = students.filter((s) => s.status === STATUS_NOT_MARKED).slice(0, 3);
     const formattedDate = new Date(date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
 
     if (loadingSummary) {
@@ -433,9 +421,9 @@ function SummaryView({ rosterMeta, students, loadingSummary, date, selectedClass
         <div className="space-y-4">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 flex flex-col items-center justify-center text-center">
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Today's Rate</p>
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">{UI_STRINGS.SUMMARY.TODAY_RATE}</p>
                     <p className="text-5xl font-black text-green-600">{todayRate}%</p>
-                    <p className="text-sm text-gray-500 mt-1">{markedCount} of {totalStudents} marked</p>
+                    <p className="text-sm text-gray-500 mt-1">{markedCount} {UI_STRINGS.ROSTER.OF} {totalStudents} {UI_STRINGS.SUMMARY.OF_MARKED}</p>
                     <div className="w-full mt-3">
                         <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
                             <div className="h-full bg-green-500 rounded-full transition-all duration-700" style={{ width: `${todayRate}%` }} />
@@ -446,13 +434,13 @@ function SummaryView({ rosterMeta, students, loadingSummary, date, selectedClass
                 <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
                     <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
                         <BarChart2 className="w-4 h-4 text-blue-600" />
-                        Status Breakdown — {selectedClassName} {selectedSectionName} · {formattedDate}
+                        {UI_STRINGS.SUMMARY.BREAKDOWN} {selectedClassName} {selectedSectionName} · {formattedDate}
                     </h3>
                     <div className="space-y-3">
                         {[
-                            { label: "Present", pct: presentPct, count: presentCount, color: "bg-green-500", textColor: "text-green-600" },
-                            { label: "Late", pct: latePct, count: lateCount, color: "bg-orange-400", textColor: "text-orange-500" },
-                            { label: "Absent / Not Marked", pct: absentPct, count: absentCount, color: "bg-red-400", textColor: "text-red-500" },
+                            { label: STATUS_PRESENT, pct: presentPct, count: presentCount, color: "bg-green-500", textColor: "text-green-600" },
+                            { label: STATUS_LATE, pct: latePct, count: lateCount, color: "bg-orange-400", textColor: "text-orange-500" },
+                            { label: UI_STRINGS.SUMMARY.STAT_ABSENT, pct: absentPct, count: absentCount, color: "bg-red-400", textColor: "text-red-500" },
                         ].map((item) => (
                             <div key={item.label}>
                                 <div className="flex justify-between items-center mb-1">
@@ -460,7 +448,7 @@ function SummaryView({ rosterMeta, students, loadingSummary, date, selectedClass
                                         <div className={`w-2.5 h-2.5 rounded-full ${item.color}`} />
                                         <span className="text-sm font-medium text-gray-700">{item.label}</span>
                                     </div>
-                                    <span className={`text-sm font-bold ${item.textColor}`}>{item.count} students ({item.pct}%)</span>
+                                    <span className={`text-sm font-bold ${item.textColor}`}>{item.count} {UI_STRINGS.SUMMARY.STUDENTS_PAREN}{item.pct}%)</span>
                                 </div>
                                 <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
                                     <div className={`h-full rounded-full ${item.color} transition-all duration-700`} style={{ width: `${item.pct}%` }} />
@@ -474,7 +462,7 @@ function SummaryView({ rosterMeta, students, loadingSummary, date, selectedClass
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
                     <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
-                        <TrendingUp className="w-4 h-4 text-blue-600" /> This Week's Daily Trend
+                        <TrendingUp className="w-4 h-4 text-blue-600" /> {UI_STRINGS.SUMMARY.WEEKLY_TREND}
                     </h3>
                     <div className="flex items-end justify-around gap-2 h-32">
                         {weekDays.map((d) => (
@@ -494,12 +482,12 @@ function SummaryView({ rosterMeta, students, loadingSummary, date, selectedClass
                 <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
                     <div className="flex justify-between items-center mb-4">
                         <h3 className="font-bold text-gray-800 flex items-center gap-2">
-                            <AlertTriangle className="w-4 h-4 text-amber-500" /> Students Needing Attention
+                            <AlertTriangle className="w-4 h-4 text-amber-500" /> {UI_STRINGS.SUMMARY.NEED_ATTENTION}
                         </h3>
-                        <span className="text-xs text-gray-400">Not marked today</span>
+                        <span className="text-xs text-gray-400">{UI_STRINGS.SUMMARY.NOT_MARKED_TODAY}</span>
                     </div>
                     {attentionStudents.length === 0 ? (
-                        <div className="text-center py-8 text-gray-400 text-sm">🎉 All students marked today!</div>
+                        <div className="text-center py-8 text-gray-400 text-sm">{UI_STRINGS.SUMMARY.ALL_MARKED}</div>
                     ) : (
                         <div className="space-y-3">
                             {attentionStudents.map((s) => (
@@ -508,10 +496,10 @@ function SummaryView({ rosterMeta, students, loadingSummary, date, selectedClass
                                         <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold ${avatarColor(s.initials)}`}>{s.initials}</div>
                                         <div>
                                             <p className="text-sm font-semibold text-gray-800">{s.name}</p>
-                                            <p className="text-xs text-gray-500">Roll {s.rollNo} · ID: {s.id}</p>
+                                            <p className="text-xs text-gray-500">{UI_STRINGS.COMMON.ROLL_LABEL} {s.rollNo} · {UI_STRINGS.COMMON.ID_LABEL} {s.id}</p>
                                         </div>
                                     </div>
-                                    <span className="text-xs font-semibold text-amber-600 px-2 py-0.5 bg-amber-100 rounded-full">Not Marked</span>
+                                    <span className="text-xs font-semibold text-amber-600 px-2 py-0.5 bg-amber-100 rounded-full">{STATUS_NOT_MARKED}</span>
                                 </div>
                             ))}
                         </div>
@@ -522,7 +510,6 @@ function SummaryView({ rosterMeta, students, loadingSummary, date, selectedClass
     );
 }
 
-// ─── CSV Export Utility ───────────────────────────────────────────────────────
 function exportAttendanceCSV({ students, selectedClass, selectedSection, date, rosterMeta }) {
     const className = selectedClass?.name || "Unknown Class";
     const sectionName = selectedSection?.name || "Unknown Section";
@@ -535,25 +522,25 @@ function exportAttendanceCSV({ students, selectedClass, selectedSection, date, r
     });
 
     const total = rosterMeta?.totalStudents ?? students.length;
-    const present = rosterMeta?.totalPresent ?? students.filter(s => s.status.includes("Present")).length;
-    const late = rosterMeta?.totalLate ?? students.filter(s => s.status === "Late").length;
-    const absent = rosterMeta?.totalNotMarked ?? students.filter(s => s.status === "Not Marked").length;
+    const present = rosterMeta?.totalPresent ?? students.filter(s => s.status.includes(STATUS_PRESENT)).length;
+    const late = rosterMeta?.totalLate ?? students.filter(s => s.status === STATUS_LATE).length;
+    const absent = rosterMeta?.totalNotMarked ?? students.filter(s => s.status === STATUS_NOT_MARKED).length;
     const attendanceRate = total > 0 ? (((present + late) / total) * 100).toFixed(1) : "0.0";
 
     const cell = (val) => `"${String(val ?? "").replace(/"/g, '""')}"`;
     const rows = [];
 
-    rows.push([cell("ATTENDANCE REPORT"), "", "", "", "", "", "", ""]);
-    rows.push([cell(`Class:`), cell(className), cell(`Section:`), cell(sectionName), "", "", "", ""]);
-    rows.push([cell(`Date:`), cell(formattedDate), "", "", "", "", "", ""]);
-    rows.push([cell(`Exported At:`), cell(exportedAt), "", "", "", "", "", ""]);
+    rows.push([cell(UI_STRINGS.EXPORT.REPORT_TITLE), "", "", "", "", "", "", ""]);
+    rows.push([cell(UI_STRINGS.EXPORT.CLASS), cell(className), cell(UI_STRINGS.EXPORT.SECTION), cell(sectionName), "", "", "", ""]);
+    rows.push([cell(UI_STRINGS.EXPORT.DATE), cell(formattedDate), "", "", "", "", "", ""]);
+    rows.push([cell(UI_STRINGS.EXPORT.EXPORTED_AT), cell(exportedAt), "", "", "", "", "", ""]);
     rows.push(["", "", "", "", "", "", "", ""]);
-    rows.push([cell("─── SUMMARY ───"), "", "", "", "", "", "", ""]);
-    rows.push([cell("Total Students"), cell(total), cell("Attendance Rate"), cell(`${attendanceRate}%`), "", "", "", ""]);
-    rows.push([cell("Present"), cell(present), cell("Late"), cell(late), "", "", "", ""]);
-    rows.push([cell("Absent/Unmarked"), cell(absent), "", "", "", "", "", ""]);
+    rows.push([cell(UI_STRINGS.EXPORT.SUMMARY), "", "", "", "", "", "", ""]);
+    rows.push([cell(UI_STRINGS.EXPORT.TOTAL_STUDENTS), cell(total), cell(UI_STRINGS.EXPORT.ATTENDANCE_RATE), cell(`${attendanceRate}%`), "", "", "", ""]);
+    rows.push([cell(STATUS_PRESENT), cell(present), cell(STATUS_LATE), cell(late), "", "", "", ""]);
+    rows.push([cell(UI_STRINGS.EXPORT.ABSENT_UNMARKED), cell(absent), "", "", "", "", "", ""]);
     rows.push(["", "", "", "", "", "", "", ""]);
-    rows.push([cell("#"), cell("Student Name"), cell("Roll No."), cell("Student ID"), cell("Status"), cell("Check-In Time"), cell("Source"), cell("Confidence (%)")]);
+    rows.push(UI_STRINGS.EXPORT.HEADERS.map(cell));
 
     students.forEach((s, index) => {
         rows.push([cell(index + 1), cell(s.name), cell(s.rollNo), cell(s.id), cell(s.status), cell(s.checkIn || "—"), cell(s.source || "—"), cell(s.confidence ?? "—")]);
@@ -573,7 +560,6 @@ function exportAttendanceCSV({ students, selectedClass, selectedSection, date, r
     URL.revokeObjectURL(url);
 }
 
-// ─── Main Component ───────────────────────────────────────────────────────────
 export default function StudentAttendance() {
     const [view, setView] = useState("roster");
     const [activeTab, setActiveTab] = useState("roster");
@@ -645,9 +631,9 @@ export default function StudentAttendance() {
 
     const stats = {
         total: rosterMeta?.totalStudents ?? mergedStudents.length,
-        present: rosterMeta?.totalPresent ?? mergedStudents.filter((s) => s.status.includes("Present")).length,
-        late: rosterMeta?.totalLate ?? mergedStudents.filter((s) => s.status === "Late").length,
-        absent: rosterMeta?.totalNotMarked ?? mergedStudents.filter((s) => s.status === "Not Marked").length,
+        present: rosterMeta?.totalPresent ?? mergedStudents.filter((s) => s.status.includes(STATUS_PRESENT)).length,
+        late: rosterMeta?.totalLate ?? mergedStudents.filter((s) => s.status === STATUS_LATE).length,
+        absent: rosterMeta?.totalNotMarked ?? mergedStudents.filter((s) => s.status === STATUS_NOT_MARKED).length,
         enrolled: mergedStudents.filter((s) => s.enrolled).length,
     };
 
@@ -672,13 +658,13 @@ export default function StudentAttendance() {
     }, [selectedClass, selectedSection, date]);
 
     const handleUnmarkConfirm = async (student) => {
-        if (!student.attendanceId) { alert("No attendance record found for this student"); return; }
+        if (!student.attendanceId) { alert(UI_STRINGS.ALERTS.NO_ATTENDANCE_ID); return; }
         setActionLoadingId(student.id);
         try {
             await unmarkAttendance(student.attendanceId, "Wrong marking corrected by teacher");
             setUnmarkTarget(null);
             await refreshRoster();
-        } catch (err) { alert(err.message || "Failed to unmark attendance"); }
+        } catch (err) { alert(err.message || UI_STRINGS.COMMON.ERROR); }
         finally { setActionLoadingId(null); }
     };
 
@@ -688,7 +674,7 @@ export default function StudentAttendance() {
             await manualMarkAttendance({
                 classId: selectedClass?.id,
                 sectionId: selectedSection?.id,
-                attendanceDate: date, // already state me hai
+                attendanceDate: date,
                 checkInTime: data.time,
                 remarks: data.remarks || "",
                 students: [
@@ -703,13 +689,13 @@ export default function StudentAttendance() {
             setShowManualMark(false);
             setSelectedStudent(null);
             await refreshRoster();
-        } catch (err) { alert(err.message || "Failed to mark attendance"); }
+        } catch (err) { alert(err.message || UI_STRINGS.COMMON.ERROR); }
         finally { setActionLoadingId(null); }
     };
 
     const handleExportCSV = () => {
         if (mergedStudents.length === 0) {
-            alert("No student data to export. Please select a class and section first.");
+            alert(UI_STRINGS.ALERTS.NO_STUDENT_DATA_EXPORT);
             return;
         }
         setExportingCSV(true);
@@ -717,7 +703,7 @@ export default function StudentAttendance() {
             exportAttendanceCSV({ students: mergedStudents, selectedClass, selectedSection, date, rosterMeta });
         } catch (err) {
             console.error("CSV export error:", err);
-            alert("Failed to export CSV. Please try again.");
+            alert(UI_STRINGS.ALERTS.EXPORT_FAILED);
         } finally {
             setTimeout(() => setExportingCSV(false), 1000);
         }
@@ -727,7 +713,7 @@ export default function StudentAttendance() {
 
     const openSubView = (viewName) => {
         if (!selectedClass?.id || !selectedSection?.id) {
-            alert("Please wait for class and section to load before proceeding.");
+            alert(UI_STRINGS.ALERTS.WAIT_BEFORE_PROCEEDING);
             return;
         }
         setSubViewClass({ ...selectedClass });
@@ -751,41 +737,38 @@ export default function StudentAttendance() {
 
                 <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                     <div>
-                        <h1 className="text-xl sm:text-3xl font-bold text-gray-900">Student Attendance</h1>
-                        <p className="text-sm text-gray-500 mt-0.5">Mark and manage attendance for your class sections</p>
+                        <h1 className="text-xl sm:text-3xl font-bold text-gray-900">{UI_STRINGS.ROSTER.TITLE}</h1>
+                        <p className="text-sm text-gray-500 mt-0.5">{UI_STRINGS.ROSTER.SUBTITLE}</p>
                     </div>
                 </div>
 
                 {showStatSkeletons ? (
-                    /* ── Stat Cards Skeleton (Modified for Laptop View) ── */
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                         {Array(5).fill(0).map((_, i) => <StatCardSkeleton key={i} />)}
                     </div>
                 ) : (
-                    /* ── Stat Cards Actual Data (Modified for Laptop View) ── */
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-5 gap-3">
-                        <CardComponent IconName={Users} keyName="Total Students" val={stats.total} iconBgColor="bg-blue-100" iconTxColor="text-blue-600" />
-                        <CardComponent IconName={CheckCircle2} keyName="Present"
+                        <CardComponent IconName={Users} keyName={UI_STRINGS.SUMMARY.TOTAL_STUDENTS} val={stats.total} iconBgColor="bg-blue-100" iconTxColor="text-blue-600" />
+                        <CardComponent IconName={CheckCircle2} keyName={STATUS_PRESENT}
                             val={stats.total > 0 ? `${stats.present} · ${((stats.present / stats.total) * 100).toFixed(1)}%` : "0"}
                             iconBgColor="bg-green-100" iconTxColor="text-green-600" />
-                        <CardComponent IconName={Clock} keyName="Late" val={stats.late} iconBgColor="bg-orange-100" iconTxColor="text-orange-500" />
-                        <CardComponent IconName={XCircle} keyName="Absent / Unmarked" val={stats.absent} iconBgColor="bg-red-100" iconTxColor="text-red-500" />
-                        <CardComponent IconName={UserCheck} keyName="Enrolled in Face"
-                            val={`${stats.enrolled} · ${stats.total - stats.enrolled} not`}
+                        <CardComponent IconName={Clock} keyName={STATUS_LATE} val={stats.late} iconBgColor="bg-orange-100" iconTxColor="text-orange-500" />
+                        <CardComponent IconName={XCircle} keyName={UI_STRINGS.SUMMARY.ABSENT_UNMARKED} val={stats.absent} iconBgColor="bg-red-100" iconTxColor="text-red-500" />
+                        <CardComponent IconName={UserCheck} keyName={UI_STRINGS.SUMMARY.ENROLLED}
+                            val={`${stats.enrolled} · ${stats.total - stats.enrolled}${UI_STRINGS.SUMMARY.NOT_ENROLLED}`}
                             iconBgColor="bg-sky-100" iconTxColor="text-sky-600" />
                     </div>
                 )}
 
-                {/* ── Action Buttons ── */}
                 <div className="flex flex-col sm:flex-row justify-between gap-3">
                     <div className="flex flex-wrap gap-2">
                         <button
                             onClick={() => openSubView("groupPhoto")}
                             disabled={!sectionReady}
-                            title={!sectionReady ? "Please wait for sections to load" : ""}
+                            title={!sectionReady ? UI_STRINGS.ALERTS.WAIT_FOR_SECTIONS : ""}
                             className="flex items-center gap-2 bg-blue-700 hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer transition-colors shadow-sm">
                             <Camera className="w-4 h-4" />
-                            Group Photo Attendance
+                            {UI_STRINGS.ROSTER.GROUP_BTN}
                             {sectionReady && (
                                 <span className="text-blue-200 text-xs font-normal hidden sm:inline">
                                     · {selectedSection?.name}
@@ -796,38 +779,37 @@ export default function StudentAttendance() {
                         <button
                             onClick={() => openSubView("faceScan")}
                             disabled={!sectionReady}
-                            title={!sectionReady ? "Please wait for sections to load" : ""}
+                            title={!sectionReady ? UI_STRINGS.ALERTS.WAIT_FOR_SECTIONS : ""}
                             className="flex items-center gap-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer transition-colors shadow-sm">
-                            <ScanFace className="w-4 h-4" /> Individual Face Scan
+                            <ScanFace className="w-4 h-4" /> {UI_STRINGS.ROSTER.FACE_BTN}
                         </button>
 
                         <button onClick={() => setShowManualMark(true)}
                             className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer transition-colors shadow-sm">
-                            <PenLine className="w-4 h-4" /> Manual Mark
+                            <PenLine className="w-4 h-4" /> {UI_STRINGS.ROSTER.MANUAL_BTN}
                         </button>
                     </div>
                     <div className="flex flex-wrap gap-2">
                         <button onClick={() => { setView("roster"); setActiveTab("roster"); }}
                             className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer transition-colors border ${activeTab === "roster" && !isSubView ? "bg-blue-600 text-white border-blue-600 shadow-sm" : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"}`}>
-                            <List className="w-4 h-4" /> Roster
+                            <List className="w-4 h-4" /> {UI_STRINGS.ROSTER.BTN_ROSTER}
                         </button>
                         <button onClick={() => { setView("summary"); setActiveTab("summary"); }}
                             className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer transition-colors border ${activeTab === "summary" && !isSubView ? "bg-blue-600 text-white border-blue-600 shadow-sm" : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"}`}>
-                            <BarChart2 className="w-4 h-4" /> Summary
+                            <BarChart2 className="w-4 h-4" /> {UI_STRINGS.ROSTER.BTN_SUMMARY}
                         </button>
                         <button
                             onClick={handleExportCSV}
                             disabled={exportingCSV || mergedStudents.length === 0 || loadingRoster}
                             className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer transition-colors border bg-white text-gray-700 border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
                             {exportingCSV
-                                ? <><Loader2 className="w-4 h-4 animate-spin" /> Exporting...</>
-                                : <><Download className="w-4 h-4" /> Export CSV</>
+                                ? <><Loader2 className="w-4 h-4 animate-spin" /> {UI_STRINGS.ROSTER.EXPORTING}</>
+                                : <><Download className="w-4 h-4" /> {UI_STRINGS.ROSTER.EXPORT_CSV}</>
                             }
                         </button>
                     </div>
                 </div>
 
-                {/* ── Main Content ── */}
                 {view === "roster" && (
                     <RosterView
                         students={mergedStudents}

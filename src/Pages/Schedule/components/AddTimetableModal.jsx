@@ -3,6 +3,7 @@ import { X, Calendar } from 'lucide-react';
 import { getClasses, getSectionsByClass } from '../../../Api/Teachers/TeachersAPI';
 import { getAcademicYears } from '../../../Api/AcademicYears/AcademicYear';
 import { useDecodedUser } from '../../../ContextAPI/UserContext';
+import { TIMETABLE_CONSTS }  from '../../../Constants/StringConstants/TimetableConstants';
 
 export default function AddTimetableModal({ onClose, onSubmit, existingTimetables = [] }) {
     const [classes, setClasses] = useState([]);
@@ -40,7 +41,7 @@ export default function AddTimetableModal({ onClose, onSubmit, existingTimetable
         };
         loadClasses();
     }, []);
-    
+
     // Auto-select current academic year when years or current user data become available
     useEffect(() => {
         if (!academicYears || academicYears.length === 0) return;
@@ -52,6 +53,7 @@ export default function AddTimetableModal({ onClose, onSubmit, existingTimetable
             setForm(prev => ({ ...prev, academicYear: defaultYear.id }));
         }
     }, [academicYears, currentAcademicYear, form.academicYear]);
+
     useEffect(() => {
         const loadMeta = async () => {
             try {
@@ -67,10 +69,6 @@ export default function AddTimetableModal({ onClose, onSubmit, existingTimetable
                 const yearsList = (yearResp && (yearResp || yearResp.years)) || [];
                 setAcademicYears(Array.isArray(yearsList) ? yearsList : []);
 
-                // Note: we intentionally do not force-select a default here —
-                // a separate effect below will pick the current academic year
-                // once `academicYears` and `currentAcademicYear` are both available.
-
             } catch (err) {
                 console.error('Failed to load data:', err);
             } finally {
@@ -80,6 +78,7 @@ export default function AddTimetableModal({ onClose, onSubmit, existingTimetable
 
         loadMeta();
     }, []);
+
     // Load sections when classId changes
     useEffect(() => {
         if (!form.classId) { setSections([]); return; }
@@ -141,9 +140,9 @@ export default function AddTimetableModal({ onClose, onSubmit, existingTimetable
 
     const validate = () => {
         const errs = {};
-        if (!form.classId) errs.classId = 'Class is required';
-        if (!form.sectionId) errs.sectionId = 'Section is required';
-        if (!form.academicYear) errs.academicYear = 'Academic year is required';
+        if (!form.classId) errs.classId = TIMETABLE_CONSTS.ADD_TT_MODAL.ERR_REQ_CLASS;
+        if (!form.sectionId) errs.sectionId = TIMETABLE_CONSTS.ADD_TT_MODAL.ERR_REQ_SEC;
+        if (!form.academicYear) errs.academicYear = TIMETABLE_CONSTS.ADD_TT_MODAL.ERR_REQ_YEAR;
         return errs;
     };
 
@@ -165,7 +164,7 @@ export default function AddTimetableModal({ onClose, onSubmit, existingTimetable
                 <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-100 shrink-0">
                     <div className="flex items-center gap-2 min-w-0">
                         <Calendar size={20} className="text-blue-600 shrink-0" />
-                        <h2 className="text-base sm:text-lg font-semibold text-gray-900 truncate">New Timetable Schedule</h2>
+                        <h2 className="text-base sm:text-lg font-semibold text-gray-900 truncate">{TIMETABLE_CONSTS.ADD_TT_MODAL.TITLE}</h2>
                     </div>
                     <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 transition">
                         <X size={18} className="text-gray-500" />
@@ -179,7 +178,7 @@ export default function AddTimetableModal({ onClose, onSubmit, existingTimetable
                         {/* Class */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Class <span className="text-red-500">*</span>
+                                {TIMETABLE_CONSTS.ADD_TT_MODAL.LBL_CLASS} <span className="text-red-500">*</span>
                             </label>
                             <select
                                 value={form.classId}
@@ -190,7 +189,7 @@ export default function AddTimetableModal({ onClose, onSubmit, existingTimetable
                   ${loadingClasses ? 'opacity-60 cursor-wait' : ''}`}
                             >
                                 <option value="">
-                                    {loadingClasses ? 'Loading...' : '— Select Class —'}
+                                    {loadingClasses ? TIMETABLE_CONSTS.ADD_TT_MODAL.PH_LOAD_CLASS : TIMETABLE_CONSTS.ADD_TT_MODAL.PH_SEL_CLASS}
                                 </option>
                                 {classes.map(c => (
                                     <option key={c.id} value={c.id}>
@@ -204,7 +203,7 @@ export default function AddTimetableModal({ onClose, onSubmit, existingTimetable
                         {/* Section */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Section <span className="text-red-500">*</span>
+                                {TIMETABLE_CONSTS.ADD_TT_MODAL.LBL_SEC} <span className="text-red-500">*</span>
                             </label>
                             <select
                                 value={form.sectionId}
@@ -215,10 +214,10 @@ export default function AddTimetableModal({ onClose, onSubmit, existingTimetable
                   ${(!form.classId || loadingSections) ? 'opacity-60 cursor-not-allowed' : ''}`}
                             >
                                 <option value="">
-                                    {!form.classId ? '— Select Class first —'
-                                        : loadingSections ? 'Loading...'
-                                            : sections.length === 0 ? 'No sections found'
-                                                : '— Select Section —'}
+                                    {!form.classId ? TIMETABLE_CONSTS.ADD_TT_MODAL.PH_SEL_SEC_FIRST
+                                        : loadingSections ? TIMETABLE_CONSTS.ADD_TT_MODAL.PH_LOAD_CLASS
+                                            : sections.length === 0 ? TIMETABLE_CONSTS.ADD_TT_MODAL.PH_NO_SEC
+                                                : TIMETABLE_CONSTS.ADD_TT_MODAL.PH_SEL_SEC}
                                 </option>
                                 {sections.map(s => (
                                     <option key={s.id} value={s.id}>
@@ -233,7 +232,7 @@ export default function AddTimetableModal({ onClose, onSubmit, existingTimetable
                     {/* Academic Year */}
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Academic Year <span className="text-red-500">*</span>
+                            {TIMETABLE_CONSTS.ADD_TT_MODAL.LBL_YEAR} <span className="text-red-500">*</span>
                         </label>
                         <select
                             value={form.academicYear}
@@ -241,12 +240,12 @@ export default function AddTimetableModal({ onClose, onSubmit, existingTimetable
                             className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 bg-white
     ${errors.academicYear ? 'border-red-300' : 'border-gray-200'}`}
                         >
-                            <option value="">— Select Academic Year —</option>
+                            <option value="">{TIMETABLE_CONSTS.ADD_TT_MODAL.PH_SEL_YEAR}</option>
 
                             {academicYears.map(year => {
                                 const isCurrent = String(currentYearId) === String(year.id);
                                 const display = year.name || year.label || year.value || year.year || year.display || String(year.id);
-                                const label = `${isCurrent ? '★ ' : ''}${display}${isCurrent ? ' (Current Year)' : ''}`;
+                                const label = `${isCurrent ? '★ ' : ''}${display}${isCurrent ? TIMETABLE_CONSTS.ADD_TT_MODAL.LBL_CURRENT_YEAR : ''}`;
 
                                 return (
                                     <option key={year.id ?? display} value={year.id ?? display}>
@@ -262,14 +261,14 @@ export default function AddTimetableModal({ onClose, onSubmit, existingTimetable
                     {existingTimetables.length > 0 && (
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Copy Schedule From <span className="text-gray-400 font-normal">(optional)</span>
+                                {TIMETABLE_CONSTS.ADD_TT_MODAL.LBL_COPY} <span className="text-gray-400 font-normal">{TIMETABLE_CONSTS.ADD_TT_MODAL.LBL_OPTIONAL}</span>
                             </label>
                             <select
                                 value={form.copyFrom}
                                 onChange={handleCopyFromChange}
                                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 bg-white"
                             >
-                                <option value="">– Start empty –</option>
+                                <option value="">{TIMETABLE_CONSTS.ADD_TT_MODAL.PH_START_EMPTY}</option>
                                 {existingTimetables.map(t => (
                                     <option key={t.id} value={t.id}>
                                         {t.class} – {t.section} ({t.year})
@@ -281,11 +280,11 @@ export default function AddTimetableModal({ onClose, onSubmit, existingTimetable
 
                     {/* Notes */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">{TIMETABLE_CONSTS.ADD_TT_MODAL.LBL_NOTES}</label>
                         <textarea
                             value={form.notes}
                             onChange={e => set('notes', e.target.value)}
-                            placeholder="Any remarks..."
+                            placeholder={TIMETABLE_CONSTS.ADD_TT_MODAL.PH_NOTES}
                             rows={3}
                             className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 resize-none"
                         />
@@ -296,7 +295,7 @@ export default function AddTimetableModal({ onClose, onSubmit, existingTimetable
                 <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3 px-4 sm:px-6 py-4 border-t border-gray-100 shrink-0">
                     <button onClick={onClose}
                         className="w-full sm:w-auto px-5 py-2.5 sm:py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50">
-                        Cancel
+                        {TIMETABLE_CONSTS.ADD_TT_MODAL.BTN_CANCEL}
                     </button>
                     <button
                         onClick={handleSubmit}
@@ -306,9 +305,9 @@ export default function AddTimetableModal({ onClose, onSubmit, existingTimetable
                         {isSubmitting ? (
                             <span className="flex items-center justify-center gap-2">
                                 <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                Creating...
+                                {TIMETABLE_CONSTS.ADD_TT_MODAL.BTN_CREATING}
                             </span>
-                        ) : 'Create Schedule'}
+                        ) : TIMETABLE_CONSTS.ADD_TT_MODAL.BTN_CREATE}
                     </button>
                 </div>
             </div>

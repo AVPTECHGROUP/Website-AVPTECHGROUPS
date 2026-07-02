@@ -16,29 +16,20 @@ import {
   deleteRole,
 } from "../../Api/Permissions/AccessPermission";
 import ShowWarningDialog from "../../Components/CommonComp/WarningShowDialog/ShowWarningDialog";
+import {
+  PALETTE, PREDEFINED_MODULE_COLORS, REGEX, UI_TEXT
+} from "../../Constants/StringConstants/RolesPermissionsConstants";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MODULE COLOR MAP
 // ─────────────────────────────────────────────────────────────────────────────
-const PALETTE = [
-  "#7c3aed", "#2563eb", "#16a34a", "#d97706",
-  "#dc2626", "#0891b2", "#ec4899", "#10b981",
-  "#f59e0b", "#8b5cf6", "#ef4444", "#6366f1",
-];
-const MODULE_COLORS = {
-  GENERAL: "#0891b2", ACADEMIC: "#d97706", ATTENDANCE: "#16a34a",
-  DASHBOARD: "#6366f1", EXAM: "#7c3aed", EXPENSE: "#f59e0b",
-  FEE: "#10b981", HOMEWORK: "#ec4899", LEAVE: "#d97706",
-  NOTICE: "#8b5cf6", PAYROLL: "#ef4444", STORE: "#dc2626",
-  STUDENT: "#7c3aed", TEACHER: "#2563eb", USER: "#2563eb",
-  ACADEMIC_YEAR: "#0891b2", TIMETABLE: "#7c3aed",
-};
+const assignedColors = { ...PREDEFINED_MODULE_COLORS };
 let _colorIdx = 0;
 const getModuleColor = (mod) => {
-  if (MODULE_COLORS[mod]) return MODULE_COLORS[mod];
+  if (assignedColors[mod]) return assignedColors[mod];
   const c = PALETTE[_colorIdx % PALETTE.length];
   _colorIdx++;
-  MODULE_COLORS[mod] = c;
+  assignedColors[mod] = c;
   return c;
 };
 
@@ -50,19 +41,17 @@ function parseGroupedPermissions(groupedData) {
   const moduleRows = [];
 
   Object.entries(groupedData).forEach(([moduleName, permissions]) => {
-    // Store ALL permissions, not just unique actions
     const permissionsList = permissions.map(p => ({
       ...p,
-      uniqueKey: `${p.action}_${p.id}` // Create unique key combining action and ID
+      uniqueKey: `${p.action}_${p.id}`
     }));
-    
+
     moduleRows.push({
       module: moduleName,
       color: getModuleColor(moduleName),
-      permissions: permissionsList, // Store full list
+      permissions: permissionsList,
     });
 
-    // Collect all permissions for column generation
     permissionsList.forEach(p => allPermissionsList.push(p));
   });
 
@@ -71,21 +60,21 @@ function parseGroupedPermissions(groupedData) {
 
 function buildCheckedRows(moduleRows, assignedPermissions) {
   const assignedIds = new Set((assignedPermissions || []).map((p) => p.id));
-  
+
   return moduleRows.map((row) => {
     const cols = {};
     let checkedCount = 0;
-    
+
     row.permissions.forEach((perm) => {
       const isChecked = assignedIds.has(perm.id);
       cols[perm.uniqueKey] = isChecked ? 1 : 0;
       if (isChecked) checkedCount++;
     });
-    
-    return { 
-      ...row, 
-      cols, 
-      assigned: `${checkedCount}/${row.permissions.length}` 
+
+    return {
+      ...row,
+      cols,
+      assigned: `${checkedCount}/${row.permissions.length}`
     };
   });
 }
@@ -184,12 +173,12 @@ function RoleModal({ mode, role, moduleRows, onClose, onSave }) {
     const errs = {};
     if (!isEdit) {
       if (!form.name.trim()) {
-        errs.name = "Role name is required";
-      } else if (!/^[A-Z0-9_]+$/.test(form.name)) {
-        errs.name = "Uppercase letters, digits and underscores only";
+        errs.name = UI_TEXT.VALIDATION.NAME_REQ;
+      } else if (!REGEX.ROLE_NAME_TEST.test(form.name)) {
+        errs.name = UI_TEXT.VALIDATION.NAME_PATTERN;
       }
     }
-    if (!form.displayName.trim()) errs.displayName = "Display Role name is required";
+    if (!form.displayName.trim()) errs.displayName = UI_TEXT.VALIDATION.DISPLAY_NAME_REQ;
     setErrors(errs);
     return !Object.keys(errs).length;
   };
@@ -234,12 +223,10 @@ function RoleModal({ mode, role, moduleRows, onClose, onSave }) {
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 shrink-0">
           <div>
             <h2 className="font-bold text-gray-800 text-base leading-tight">
-              {isEdit ? "Edit Role" : "Create New Role"}
+              {isEdit ? UI_TEXT.MODAL.EDIT_TITLE : UI_TEXT.MODAL.CREATE_TITLE}
             </h2>
             <p className="text-[11px] text-gray-400 mt-0.5">
-              {isEdit
-                ? "Update role details and permissions to reflect current access requirements."
-                : "A protected role with predefined permissions for secure system access."}
+              {isEdit ? UI_TEXT.MODAL.EDIT_SUB : UI_TEXT.MODAL.CREATE_SUB}
             </p>
           </div>
           <button
@@ -256,22 +243,22 @@ function RoleModal({ mode, role, moduleRows, onClose, onSave }) {
           {/* Role Details */}
           <div>
             <p className="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-4">
-              Role Details
+              {UI_TEXT.MODAL.SECT_ROLE_DETAILS}
             </p>
 
             {!isEdit && (
               <div className="mb-4">
                 <label className="block text-xs font-semibold text-gray-700 mb-1">
-                  Role Name <span className="text-red-500">*</span>
+                  {UI_TEXT.FORM.LBL_ROLE_NAME} <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
-                  placeholder="E.G. STORE_ACCOUNTANT"
+                  placeholder={UI_TEXT.FORM.PH_ROLE_NAME}
                   value={form.name}
                   onChange={(e) =>
                     setForm((f) => ({
                       ...f,
-                      name: e.target.value.toUpperCase().replace(/[^A-Z0-9_]/g, "_"),
+                      name: e.target.value.toUpperCase().replace(REGEX.ROLE_NAME_REPLACE, "_"),
                     }))
                   }
                   className={`w-full border rounded-lg px-3 py-2.5 text-sm outline-none transition-colors
@@ -282,18 +269,18 @@ function RoleModal({ mode, role, moduleRows, onClose, onSave }) {
                 />
                 {errors.name
                   ? <p className="text-[11px] text-red-500 mt-1">{errors.name}</p>
-                  : <p className="text-[11px] text-gray-400 mt-1">Uppercase, underscores only.</p>
+                  : <p className="text-[11px] text-gray-400 mt-1">{UI_TEXT.VALIDATION.NAME_HINT}</p>
                 }
               </div>
             )}
 
             <div className="mb-4">
               <label className="block text-xs font-semibold text-gray-700 mb-1">
-                Display Name <span className="text-red-500">*</span>
+                {UI_TEXT.FORM.LBL_DISPLAY_NAME} <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
-                placeholder="e.g. Store Accountant"
+                placeholder={UI_TEXT.FORM.PH_DISPLAY_NAME}
                 value={form.displayName}
                 onChange={(e) => setForm((f) => ({ ...f, displayName: e.target.value }))}
                 className={`w-full border rounded-lg px-3 py-2.5 text-sm outline-none transition-colors
@@ -308,10 +295,10 @@ function RoleModal({ mode, role, moduleRows, onClose, onSave }) {
             </div>
 
             <div className="mb-4">
-              <label className="block text-xs font-semibold text-gray-700 mb-1">Description</label>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">{UI_TEXT.FORM.LBL_DESC}</label>
               <textarea
                 rows={3}
-                placeholder="Brief description of this role's responsibilities..."
+                placeholder={UI_TEXT.FORM.PH_DESC}
                 value={form.description}
                 onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
                 className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-blue-400 transition-colors resize-none"
@@ -319,7 +306,7 @@ function RoleModal({ mode, role, moduleRows, onClose, onSave }) {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-2">System Role</label>
+              <label className="block text-xs font-semibold text-gray-700 mb-2">{UI_TEXT.FORM.LBL_SYS_ROLE}</label>
               <div className="flex items-center gap-3">
                 <button
                   type="button"
@@ -333,24 +320,24 @@ function RoleModal({ mode, role, moduleRows, onClose, onSave }) {
                   />
                 </button>
                 <span className="text-sm text-gray-600">
-                  {form.isSystemRole ? "This role cannot be deleted." : "This role can be deleted."}
+                  {form.isSystemRole ? UI_TEXT.MODAL.SYS_ROLE_HINT_NODEL : UI_TEXT.MODAL.SYS_ROLE_HINT_DEL}
                 </span>
               </div>
-              <p className="text-[11px] text-gray-400 mt-1">System roles cannot be deleted from System.</p>
+              <p className="text-[11px] text-gray-400 mt-1">{UI_TEXT.MODAL.SYS_ROLE_WARN}</p>
             </div>
           </div>
 
           {/* Assign Permissions */}
           <div>
             <p className="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-1">
-              Assign Permissions
+              {UI_TEXT.MODAL.SECT_ASSIGN_PERMS}
             </p>
 
             <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 mb-3">
               <Search className="w-3.5 h-3.5 text-gray-400 shrink-0" />
               <input
                 type="text"
-                placeholder="Search permissions..."
+                placeholder={UI_TEXT.SEARCH_PERMS}
                 value={permSearch}
                 onChange={(e) => setPermSearch(e.target.value)}
                 className="bg-transparent text-sm w-full outline-none text-gray-700 placeholder-gray-400"
@@ -364,7 +351,7 @@ function RoleModal({ mode, role, moduleRows, onClose, onSave }) {
 
             <div className="border border-gray-200 rounded-xl overflow-hidden max-h-64 overflow-y-auto">
               {filteredModules.length === 0 ? (
-                <div className="px-4 py-8 text-center text-gray-400 text-sm">No permissions found.</div>
+                <div className="px-4 py-8 text-center text-gray-400 text-sm">{UI_TEXT.NO_PERMS}</div>
               ) : (
                 filteredModules.map((row) => {
                   const displayPerms = row.filteredPermissions ?? row.permissions;
@@ -378,11 +365,11 @@ function RoleModal({ mode, role, moduleRows, onClose, onSave }) {
                         <div className="flex items-center gap-2">
                           <div className="w-2 h-2 rounded-full shrink-0" style={{ background: row.color }} />
                           <span className="text-[10px] font-bold text-gray-600 uppercase tracking-wider">
-                            {row.module.replace(/_/g, " ")}
+                            {row.module.replace(REGEX.UNDERSCORE_REPLACE, " ")}
                           </span>
                           {someChecked && (
                             <span className="text-[10px] font-semibold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-full">
-                              partial
+                              {UI_TEXT.PARTIAL}
                             </span>
                           )}
                         </div>
@@ -395,7 +382,7 @@ function RoleModal({ mode, role, moduleRows, onClose, onSave }) {
                               : "text-blue-600 hover:text-blue-800"
                             }`}
                         >
-                          {allChecked ? "Deselect All" : "Select All"}
+                          {allChecked ? UI_TEXT.BUTTONS.DESELECT_ALL : UI_TEXT.BUTTONS.SELECT_ALL}
                         </button>
                       </div>
 
@@ -410,7 +397,7 @@ function RoleModal({ mode, role, moduleRows, onClose, onSave }) {
                             <Checkbox checked={checked} onChange={() => togglePerm(perm.id)} accent="blue" />
                             <div className="min-w-0">
                               <p className="text-sm font-medium text-gray-700 leading-tight">
-                                {perm.displayName || perm.name?.replace(/_/g, " ")}
+                                {perm.displayName || perm.name?.replace(REGEX.UNDERSCORE_REPLACE, " ")}
                               </p>
                               <p className="text-[10px] font-mono text-gray-400 mt-0.5">{perm.name}</p>
                             </div>
@@ -430,9 +417,9 @@ function RoleModal({ mode, role, moduleRows, onClose, onSave }) {
           <div className="flex items-center justify-between gap-3">
             <p className="text-xs text-gray-500 leading-tight">
               <span className="font-semibold text-blue-700">
-                {selectedIds.size === 0 ? "No" : selectedIds.size}
+                {selectedIds.size === 0 ? UI_TEXT.MODAL.NO_PERMS_SELECTED : selectedIds.size}
               </span>{" "}
-              {`permission${selectedIds.size !== 1 ? "s" : ""} selected`}
+              {`permission${selectedIds.size !== 1 ? "s" : ""} ${UI_TEXT.MODAL.PERMS_SELECTED}`}
             </p>
             <div className="flex gap-2 shrink-0">
               <button
@@ -440,7 +427,7 @@ function RoleModal({ mode, role, moduleRows, onClose, onSave }) {
                 onClick={onClose}
                 className="px-4 py-2 text-sm font-semibold text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors"
               >
-                Cancel
+                {UI_TEXT.BUTTONS.CANCEL}
               </button>
               <button
                 type="button"
@@ -454,7 +441,7 @@ function RoleModal({ mode, role, moduleRows, onClose, onSave }) {
                     <path d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="4" strokeLinecap="round" className="opacity-75" />
                   </svg>
                 )}
-                {isEdit ? "Save Changes" : "Create Role"}
+                {isEdit ? UI_TEXT.BUTTONS.SAVE_CHANGES : UI_TEXT.BUTTONS.CREATE_ROLE}
               </button>
             </div>
           </div>
@@ -478,7 +465,7 @@ export default function RolesPermissionsManagement() {
 
   const [selectedRole, setSelectedRole] = useState(null);
   const [permissionsMap, setPermissionsMap] = useState({});
-  const [activeFilter, setActiveFilter] = useState("All Modules");
+  const [activeFilter, setActiveFilter] = useState(UI_TEXT.ALL_MODULES);
   const [searchQuery, setSearchQuery] = useState("");
   const [hasChanges, setHasChanges] = useState(false);
   const [loadingPerms, setLoadingPerms] = useState(false);
@@ -487,10 +474,10 @@ export default function RolesPermissionsManagement() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const stats = [
-    { key: "Total Roles",       val: statsData.totalRoles,       icon: Shield,     txColor: "text-blue-600",   bgColor: "bg-blue-50"   },
-    { key: "System Roles",      val: statsData.systemRoles,      icon: Users,      txColor: "text-violet-600", bgColor: "bg-violet-50" },
-    { key: "Custom Roles",      val: statsData.customRoles,      icon: LayoutGrid, txColor: "text-amber-500",  bgColor: "bg-amber-50"  },
-    { key: "Total Permissions", val: statsData.totalPermissions, icon: Key,        txColor: "text-green-600",  bgColor: "bg-green-50"  },
+    { key: UI_TEXT.STATS.TOTAL_ROLES, val: statsData.totalRoles, icon: Shield, txColor: "text-blue-600", bgColor: "bg-blue-50" },
+    { key: UI_TEXT.STATS.SYSTEM_ROLES, val: statsData.systemRoles, icon: Users, txColor: "text-violet-600", bgColor: "bg-violet-50" },
+    { key: UI_TEXT.STATS.CUSTOM_ROLES, val: statsData.customRoles, icon: LayoutGrid, txColor: "text-amber-500", bgColor: "bg-amber-50" },
+    { key: UI_TEXT.STATS.TOTAL_PERMISSIONS, val: statsData.totalPermissions, icon: Key, txColor: "text-green-600", bgColor: "bg-green-50" },
   ];
 
   // ── Data fetching ──────────────────────────────────────────────────────────
@@ -548,7 +535,7 @@ export default function RolesPermissionsManagement() {
 
   // Rows filtered by active module chip
   const filteredPerms = useMemo(() =>
-    activeFilter === "All Modules"
+    activeFilter === UI_TEXT.ALL_MODULES
       ? currentPerms
       : currentPerms.filter((m) => m.module === activeFilter),
     [currentPerms, activeFilter]
@@ -558,8 +545,7 @@ export default function RolesPermissionsManagement() {
   const handleToggle = (mIdx, permId) => {
     if (!selectedRole) return;
     const roleId = selectedRole.id;
-    
-    // Find the permission's unique key
+
     const targetModule = filteredPerms[mIdx];
     const targetPerm = targetModule.permissions.find(p => p.id === permId);
     if (!targetPerm) return;
@@ -567,11 +553,11 @@ export default function RolesPermissionsManagement() {
     const updated = currentPerms.map((row) => ({ ...row, cols: { ...row.cols } }));
     const realIdx = currentPerms.findIndex((m) => m.module === targetModule.module);
     if (realIdx === -1) return;
-    
+
     updated[realIdx].cols[targetPerm.uniqueKey] = updated[realIdx].cols[targetPerm.uniqueKey] === 1 ? 0 : 1;
     const count = Object.values(updated[realIdx].cols).filter((v) => v === 1).length;
     updated[realIdx].assigned = `${count}/${updated[realIdx].permissions.length}`;
-    
+
     setPermissionsMap((prev) => ({ ...prev, [roleId]: updated }));
     setHasChanges(true);
   };
@@ -579,24 +565,22 @@ export default function RolesPermissionsManagement() {
   // ── Save - FIXED TO UPDATE BASELINE ───────────────────────────────────────
   const handleSave = async () => {
     if (!selectedRole) return;
-    
-    // Collect all checked permission IDs
+
     const permissionIds = currentPerms.flatMap((row) =>
       row.permissions
         .filter((perm) => row.cols[perm.uniqueKey] === 1)
         .map((perm) => perm.id)
     );
-    
+
     try {
       await updateRolePermissions(selectedRole.id, permissionIds);
-      
-      // CRITICAL FIX: Update the baseline after successful save
+
       const currentState = permissionsMap[selectedRole.id];
-      setBaselinePermissions((prev) => ({ 
-        ...prev, 
-        [selectedRole.id]: currentState 
+      setBaselinePermissions((prev) => ({
+        ...prev,
+        [selectedRole.id]: currentState
       }));
-      
+
       setHasChanges(false);
     } catch (e) {
       console.error("save permissions error:", e.message);
@@ -687,9 +671,9 @@ export default function RolesPermissionsManagement() {
 
       {/* Page Header */}
       <div className="mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">Roles &amp; Permissions</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">{UI_TEXT.PAGE_TITLE}</h1>
         <p className="text-gray-500 text-sm mt-1">
-          Manage role-based access control. Assign granular permissions per module for each role.
+          {UI_TEXT.PAGE_SUBTITLE}
         </p>
       </div>
 
@@ -722,7 +706,7 @@ export default function RolesPermissionsManagement() {
               className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
             >
               <Plus className="w-3.5 h-3.5" />
-              New Role
+              {UI_TEXT.BUTTONS.NEW_ROLE}
             </button>
           </div>
 
@@ -731,7 +715,7 @@ export default function RolesPermissionsManagement() {
               <Search className="w-3.5 h-3.5 text-gray-400 shrink-0" />
               <input
                 type="text"
-                placeholder="Search roles..."
+                placeholder={UI_TEXT.SEARCH_ROLES}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="bg-transparent text-sm w-full outline-none text-gray-700 placeholder-gray-400"
@@ -741,14 +725,14 @@ export default function RolesPermissionsManagement() {
 
           <div className="divide-y divide-gray-100 max-h-[601px] overflow-y-auto">
             {visibleRoles.length === 0 ? (
-              <div className="px-4 py-10 text-center text-gray-400 text-sm">No roles found.</div>
+              <div className="px-4 py-10 text-center text-gray-400 text-sm">{UI_TEXT.NO_ROLES}</div>
             ) : (
               visibleRoles.map((role) => {
                 const isSelected = selectedRole?.id === role.id;
                 return (
                   <button
                     key={role.id}
-                    onClick={() => { setSelectedRole(role); setHasChanges(false); setActiveFilter("All Modules"); }}
+                    onClick={() => { setSelectedRole(role); setHasChanges(false); setActiveFilter(UI_TEXT.ALL_MODULES); }}
                     className={`w-full flex items-center justify-between px-4 py-3 text-left transition-colors
                       ${isSelected
                         ? "bg-blue-50 border-l-4 border-blue-500"
@@ -770,7 +754,7 @@ export default function RolesPermissionsManagement() {
                     <div className="flex items-center gap-1.5 shrink-0">
                       <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full
                         ${role.isSystemRole ? "bg-blue-100 text-blue-700" : "bg-amber-100 text-amber-700"}`}>
-                        {role.isSystemRole ? "System" : "Custom"}
+                        {role.isSystemRole ? UI_TEXT.ROLE_TYPES.SYSTEM_SHORT : UI_TEXT.ROLE_TYPES.CUSTOM_SHORT}
                       </span>
                       <ChevronRight className={`w-3.5 h-3.5 ${isSelected ? "text-blue-500" : "text-gray-300"}`} />
                     </div>
@@ -784,8 +768,8 @@ export default function RolesPermissionsManagement() {
         {/* Delete warning dialog */}
         {ShowWarningDialog && selectedRole && showDeleteModal && (
           <ShowWarningDialog
-            title="Delete Role"
-            message={`Delete role "${selectedRole.displayName}"? This cannot be undone.`}
+            title={UI_TEXT.DIALOG.DEL_TITLE}
+            message={`${UI_TEXT.DIALOG.DEL_MSG_PREFIX}${selectedRole.displayName}${UI_TEXT.DIALOG.DEL_MSG_SUFFIX}`}
             onConfirm={handleDeleteDialogBox}
             onClose={() => setShowDeleteModal(false)}
           />
@@ -811,12 +795,12 @@ export default function RolesPermissionsManagement() {
               </div>
               {selectedRole?.isSystemRole === true && (
                 <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 shrink-0">
-                  System Role
+                  {UI_TEXT.ROLE_TYPES.SYSTEM}
                 </span>
               )}
               {selectedRole?.isSystemRole === false && (
                 <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 shrink-0">
-                  Custom Role
+                  {UI_TEXT.ROLE_TYPES.CUSTOM}
                 </span>
               )}
             </div>
@@ -827,16 +811,16 @@ export default function RolesPermissionsManagement() {
                 className="flex items-center gap-1.5 border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
               >
                 <Edit className="w-3.5 h-3.5" />
-                Edit Role
+                {UI_TEXT.BUTTONS.EDIT_ROLE}
               </button>
-              
+
               {/* <button
                 onClick={() => setShowDeleteModal(true)}
                 disabled={!selectedRole || selectedRole?.isSystemRole}
                 className="flex items-center gap-1.5 bg-red-50 text-red-600 hover:bg-red-100 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
               >
                 <Trash2 className="w-3.5 h-3.5" />
-                Delete
+                {UI_TEXT.BUTTONS.DELETE}
               </button> */}
             </div>
           </div>
@@ -845,11 +829,11 @@ export default function RolesPermissionsManagement() {
           <div className="px-5 py-2.5 border-b border-gray-100 overflow-x-auto">
             <div className="flex gap-2 flex-nowrap sm:flex-wrap">
               <button
-                onClick={() => setActiveFilter("All Modules")}
+                onClick={() => setActiveFilter(UI_TEXT.ALL_MODULES)}
                 className={`text-xs font-semibold px-3 py-1 rounded-full whitespace-nowrap transition-colors shrink-0
-                  ${activeFilter === "All Modules" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-500 hover:bg-gray-200"}`}
+                  ${activeFilter === UI_TEXT.ALL_MODULES ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-500 hover:bg-gray-200"}`}
               >
-                All Modules
+                {UI_TEXT.ALL_MODULES}
               </button>
               {MODULE_FILTERS.map((f) => (
                 <button
@@ -872,12 +856,12 @@ export default function RolesPermissionsManagement() {
                   <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" className="opacity-25" />
                   <path d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="4" strokeLinecap="round" className="opacity-75" />
                 </svg>
-                Loading permissions...
+                {UI_TEXT.LOADING_PERMS}
               </div>
             ) : !selectedRole ? (
               <div className="flex flex-col items-center justify-center h-40 text-gray-400 gap-2">
                 <Shield className="w-8 h-8 text-gray-200" />
-                <p className="text-sm">Select a role to view its permissions</p>
+                <p className="text-sm">{UI_TEXT.SELECT_ROLE_PROMPT}</p>
               </div>
             ) : (
               <div className="p-4 space-y-4">
@@ -887,9 +871,9 @@ export default function RolesPermissionsManagement() {
                       <div className="flex items-center gap-2">
                         <div className="w-2 h-2 rounded-full shrink-0" style={{ background: mod.color }} />
                         <p className="text-sm font-semibold text-gray-800">
-                          {mod.module.replace(/_/g, " ")}
+                          {mod.module.replace(REGEX.UNDERSCORE_REPLACE, " ")}
                         </p>
-                        <p className="text-[10px] text-gray-400 ml-auto">{mod.assigned} assigned</p>
+                        <p className="text-[10px] text-gray-400 ml-auto">{mod.assigned} {UI_TEXT.ASSIGNED}</p>
                       </div>
                     </div>
                     <div className="divide-y divide-gray-100">
@@ -902,7 +886,7 @@ export default function RolesPermissionsManagement() {
                           />
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-gray-700">
-                              {perm.displayName || perm.name?.replace(/_/g, " ")}
+                              {perm.displayName || perm.name?.replace(REGEX.UNDERSCORE_REPLACE, " ")}
                             </p>
                             <p className="text-[10px] font-mono text-gray-400 mt-0.5">{perm.name}</p>
                           </div>
@@ -918,7 +902,7 @@ export default function RolesPermissionsManagement() {
           {/* Footer */}
           <div className="flex items-center justify-between px-5 py-3 border-t border-gray-100 bg-gray-50">
             <span className={`text-xs font-medium ${hasChanges ? "text-amber-600" : "text-gray-400"}`}>
-              {hasChanges ? "You have unsaved changes" : "No pending changes"}
+              {hasChanges ? UI_TEXT.UNSAVED_CHANGES : UI_TEXT.NO_CHANGES}
             </span>
             <div className="flex gap-2">
               <button
@@ -927,7 +911,7 @@ export default function RolesPermissionsManagement() {
                 className="flex items-center gap-1.5 border border-gray-200 text-gray-600 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
-                Discard
+                {UI_TEXT.BUTTONS.DISCARD}
               </button>
               <button
                 onClick={handleSave}
@@ -935,7 +919,7 @@ export default function RolesPermissionsManagement() {
                 className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed text-white text-xs font-semibold px-4 py-1.5 rounded-lg transition-colors"
               >
                 <Save className="w-3.5 h-3.5" />
-                Save Permissions
+                {UI_TEXT.BUTTONS.SAVE_PERMS}
               </button>
             </div>
           </div>

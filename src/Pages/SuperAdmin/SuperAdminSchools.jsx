@@ -8,62 +8,61 @@ import {
 import SchoolSelectedCard from "../../Components/SuperAdmin/SchoolSelectedCard";
 import { getMySchools, getMySchoolStats } from "../../Api/SchoolConfiguration/Schools";
 import dpis from "../../assets/Images/dpis.jpg";
-
-const borderAccents = [
-  "border-t-blue-500", "border-t-purple-500", "border-t-emerald-500",
-  "border-t-orange-500", "border-t-pink-500", "border-t-teal-500",
-];
+import {
+  STORAGE_KEYS, ROUTES, CONFIG, ROLES, BOARDS, STATUS,
+  STATS, STYLES, UI_TEXT
+} from "../../Constants/StringConstants/SelectSchoolConstants";
 
 const boardBadge = (board) => {
   const map = {
-    CBSE:         "bg-blue-50 text-blue-700 border border-blue-200",
-    ICSE:         "bg-amber-50 text-amber-700 border border-amber-200",
-    "STATE BOARD":"bg-emerald-50 text-emerald-700 border border-emerald-200",
+    [BOARDS.CBSE]: STYLES.BOARD_BADGE.CBSE,
+    [BOARDS.ICSE]: STYLES.BOARD_BADGE.ICSE,
+    [BOARDS.STATE_BOARD]: STYLES.BOARD_BADGE.STATE_BOARD,
   };
-  return map[(board || "").toUpperCase()] ?? "bg-gray-100 text-gray-600 border border-gray-200";
+  return map[(board || "").toUpperCase()] ?? STYLES.BOARD_BADGE.DEFAULT;
 };
 
 const buildStats = (stats) => {
   const boardWise = stats?.boardWiseCount ?? {};
   return [
     {
-      keyName: "Total Schools", val: stats?.totalSchools ?? 0,
+      keyName: STATS.TOTAL_SCHOOLS.KEY, val: stats?.totalSchools ?? 0,
       IconName: School, accentBar: "bg-blue-500", iconBg: "bg-blue-50", iconColor: "text-blue-600",
-      sub: "All registered",
+      sub: STATS.TOTAL_SCHOOLS.SUB,
     },
     {
-      keyName: "Active", val: stats?.activeSchools ?? 0,
+      keyName: STATS.ACTIVE.KEY, val: stats?.activeSchools ?? 0,
       IconName: CheckCircle, accentBar: "bg-emerald-500", iconBg: "bg-emerald-50", iconColor: "text-emerald-600",
-      sub: "Currently operating", pulse: true,
+      sub: STATS.ACTIVE.SUB, pulse: true,
     },
     {
-      keyName: "Inactive", val: stats?.inactiveSchools ?? 0,
+      keyName: STATS.INACTIVE.KEY, val: stats?.inactiveSchools ?? 0,
       IconName: AlertTriangle, accentBar: "bg-slate-400", iconBg: "bg-slate-50", iconColor: "text-slate-500",
-      sub: "Not operating",
+      sub: STATS.INACTIVE.SUB,
     },
     {
-      keyName: "CBSE", val: boardWise["CBSE"] ?? 0,
+      keyName: STATS.CBSE.KEY, val: boardWise[BOARDS.CBSE] ?? 0,
       IconName: GraduationCap, accentBar: "bg-blue-500", iconBg: "bg-blue-50", iconColor: "text-blue-600",
-      sub: "Central board",
+      sub: STATS.CBSE.SUB,
     },
     {
-      keyName: "ICSE", val: boardWise["ICSE"] ?? 0,
+      keyName: STATS.ICSE.KEY, val: boardWise[BOARDS.ICSE] ?? 0,
       IconName: GraduationCap, accentBar: "bg-amber-400", iconBg: "bg-amber-50", iconColor: "text-amber-600",
-      sub: "Indian certificate",
+      sub: STATS.ICSE.SUB,
     },
     {
-      keyName: "State Board",
-      val: boardWise["STATE BOARD"] ?? boardWise["State Board"] ?? 0,
+      keyName: STATS.STATE_BOARD.KEY,
+      val: boardWise[BOARDS.STATE_BOARD] ?? boardWise[BOARDS.STATE_BOARD_CAMEL] ?? 0,
       IconName: TrendingUp, accentBar: "bg-violet-500", iconBg: "bg-violet-50", iconColor: "text-violet-600",
-      sub: "State curriculum",
+      sub: STATS.STATE_BOARD.SUB,
     },
   ];
 };
 
 const getRoleMeta = (role) => {
-  if (role === "GLOBAL_ADMIN")
-    return { label: "Global Admin Console", badge: "bg-indigo-100 text-indigo-700 border-indigo-200", roleTag: "GLOBAL ADMIN" };
-  return { label: "Super Admin Console", badge: "bg-blue-100 text-blue-700 border-blue-200", roleTag: "SUPER ADMIN" };
+  if (role === ROLES.GLOBAL_ADMIN)
+    return { label: ROLES.LBL_GLOBAL_ADMIN, badge: "bg-indigo-100 text-indigo-700 border-indigo-200", roleTag: ROLES.TAG_GLOBAL_ADMIN };
+  return { label: ROLES.LBL_SUPER_ADMIN, badge: "bg-blue-100 text-blue-700 border-blue-200", roleTag: ROLES.TAG_SUPER_ADMIN };
 };
 
 /* ── Stat Card Skeleton ── */
@@ -140,7 +139,7 @@ const PaginationButtons = ({ page, totalPages, setPage }) => {
         className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-white border border-gray-200 text-xs text-gray-500 hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50 transition-all duration-200 shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
       >
         <ChevronLeft size={13} />
-        <span className="hidden xs:inline">Prev</span>
+        <span className="hidden xs:inline">{UI_TEXT.PAGINATION.PREV}</span>
       </button>
 
       {visiblePages.map((p, idx) => {
@@ -168,12 +167,12 @@ const PaginationButtons = ({ page, totalPages, setPage }) => {
         onClick={() => setPage((p) => p + 1)}
         className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-white border border-gray-200 text-xs text-gray-500 hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50 transition-all duration-200 shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
       >
-        <span className="hidden xs:inline">Next</span>
+        <span className="hidden xs:inline">{UI_TEXT.PAGINATION.NEXT}</span>
         <ChevronRight size={13} />
       </button>
 
       <span className="w-full text-center sm:w-auto sm:text-left text-xs text-gray-400 sm:ml-2 mt-1 sm:mt-0">
-        Page {page + 1} of {totalPages}
+        {UI_TEXT.PAGINATION.PAGE}{page + 1}{UI_TEXT.PAGINATION.OF}{totalPages}
       </span>
     </div>
   );
@@ -186,7 +185,7 @@ export default function SuperAdminSchools() {
   const navigate = useNavigate();
 
   const storedUser = (() => {
-    try { return JSON.parse(localStorage.getItem("user")) || null; }
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.USER)) || null; }
     catch { return null; }
   })();
 
@@ -212,35 +211,34 @@ export default function SuperAdminSchools() {
     .slice(0, 2);
 
   const handleSignOut = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    localStorage.removeItem("school");
-    localStorage.removeItem("requireSchoolSelection");
-    navigate("/login");
+    localStorage.removeItem(STORAGE_KEYS.TOKEN);
+    localStorage.removeItem(STORAGE_KEYS.USER);
+    localStorage.removeItem(STORAGE_KEYS.SCHOOL);
+    localStorage.removeItem(STORAGE_KEYS.REQUIRE_SCHOOL_SELECTION);
+    navigate(ROUTES.LOGIN);
   };
 
-  const [schools,       setSchools]       = useState([]);
-  const [statsData,     setStatsData]     = useState([]);
-  const [loading,       setLoading]       = useState(true);
-  const [statsLoading,  setStatsLoading]  = useState(true);
-  const [error,         setError]         = useState(null);
-  const [selectedId,    setSelectedId]    = useState(null);
-  const [modalSchool,   setModalSchool]   = useState(null);
+  const [schools, setSchools] = useState([]);
+  const [statsData, setStatsData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [selectedId, setSelectedId] = useState(null);
+  const [modalSchool, setModalSchool] = useState(null);
 
-  const [searchInput,   setSearchInput]   = useState("");
-  const [search,        setSearch]        = useState("");
-  const [boardFilter,   setBoardFilter]   = useState("");
-  const [statusFilter,  setStatusFilter]  = useState("ACTIVE");
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
+  const [boardFilter, setBoardFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState(STATUS.ACTIVE);
 
-  const [page,          setPage]          = useState(0);
+  const [page, setPage] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
-  const [totalPages,    setTotalPages]    = useState(1);
-  const PAGE_SIZE   = 20;
+  const [totalPages, setTotalPages] = useState(1);
   const debounceRef = useRef(null);
 
   useEffect(() => {
     clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => { setSearch(searchInput); setPage(0); }, 400);
+    debounceRef.current = setTimeout(() => { setSearch(searchInput); setPage(0); }, CONFIG.DEBOUNCE_DELAY);
     return () => clearTimeout(debounceRef.current);
   }, [searchInput]);
 
@@ -251,11 +249,11 @@ export default function SuperAdminSchools() {
     setError(null);
     try {
       const isActive =
-        statusFilter === "ACTIVE"   ? true  :
-        statusFilter === "INACTIVE" ? false :
-        undefined;
+        statusFilter === STATUS.ACTIVE ? true :
+          statusFilter === STATUS.INACTIVE ? false :
+            undefined;
 
-      const res = await getMySchools(page, PAGE_SIZE, search, boardFilter, isActive);
+      const res = await getMySchools(page, CONFIG.PAGE_SIZE, search, boardFilter, isActive);
 
       if (res?.success && res?.data) {
         const { content = [], totalElements: te = 0, totalPages: tp = 1 } = res.data;
@@ -266,7 +264,7 @@ export default function SuperAdminSchools() {
         setSchools([]);
       }
     } catch (err) {
-      setError(err.message || "Failed to load schools");
+      setError(err.message || UI_TEXT.ERR_LOAD);
       setSchools([]);
     } finally {
       setLoading(false);
@@ -290,10 +288,10 @@ export default function SuperAdminSchools() {
   const handleRefresh = () => Promise.all([fetchSchools(), fetchStats()]);
 
   const getStatusBadge = (school) => {
-    const active = school.isActive || school.status === "ACTIVE";
+    const active = school.isActive || school.status === STATUS.ACTIVE;
     return active
-      ? { label: "Active",   cls: "text-emerald-600 bg-emerald-50 border-emerald-100", dot: "bg-emerald-500" }
-      : { label: "Inactive", cls: "text-red-500 bg-red-50 border-red-100",             dot: "bg-red-400"     };
+      ? { label: STATUS.LBL_ACTIVE, cls: "text-emerald-600 bg-emerald-50 border-emerald-100", dot: "bg-emerald-500" }
+      : { label: STATUS.LBL_INACTIVE, cls: "text-red-500 bg-red-50 border-red-100", dot: "bg-red-400" };
   };
 
   return (
@@ -307,7 +305,7 @@ export default function SuperAdminSchools() {
             {/* Left: Logo + Title */}
             <div className="flex items-center gap-2 min-w-0">
               <img src={dpis} alt="School Logo" className="w-7 h-7 sm:w-10 sm:h-10 object-cover shadow shrink-0" />
-              <span className="font-bold text-gray-800 md:text-lg tracking-wide truncate">SchoolSpine</span>
+              <span className="font-bold text-gray-800 md:text-lg tracking-wide truncate">{UI_TEXT.APP_NAME}</span>
               <span className={`hidden md:inline text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-widest border whitespace-nowrap ${roleMeta.badge}`}>
                 {roleMeta.label}
               </span>
@@ -326,7 +324,7 @@ export default function SuperAdminSchools() {
                 className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-xl text-xs text-gray-500 hover:text-red-600 hover:bg-red-50 transition-all duration-200 border cursor-pointer border-transparent hover:border-red-100"
               >
                 <LogOut size={13} />
-                <span className="hidden sm:inline">Sign Out</span>
+                <span className="hidden sm:inline">{UI_TEXT.SIGN_OUT}</span>
               </button>
             </div>
           </div>
@@ -338,10 +336,10 @@ export default function SuperAdminSchools() {
           <div className="flex flex-col xs:flex-row items-start xs:items-center justify-between gap-3">
             <div>
               <h1 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">
-                Welcome, {storedUser?.firstName || displayName}
+                {UI_TEXT.WELCOME}{storedUser?.firstName || displayName}
               </h1>
               <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
-                Select a school to operate. Logged in as{" "}
+                {UI_TEXT.SUBTITLE_PT1}
                 <span className="text-blue-600 font-semibold">{roleMeta.roleTag}</span>.
               </p>
             </div>
@@ -362,7 +360,7 @@ export default function SuperAdminSchools() {
                 type="text"
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
-                placeholder="Search by name, code or city..."
+                placeholder={UI_TEXT.SEARCH_PLACEHOLDER}
                 className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-9 pr-4 py-2.5 text-sm text-gray-700 placeholder:text-gray-400 focus:outline-none focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-100 transition-all duration-200"
               />
             </div>
@@ -371,22 +369,22 @@ export default function SuperAdminSchools() {
               onChange={(e) => setBoardFilter(e.target.value)}
               className="bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-700 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all duration-200 cursor-pointer"
             >
-              <option value="">All Boards</option>
-              <option value="CBSE">CBSE</option>
-              <option value="ICSE">ICSE</option>
-              <option value="STATE BOARD">State Board</option>
+              <option value="">{BOARDS.LBL_ALL}</option>
+              <option value={BOARDS.CBSE}>{BOARDS.CBSE}</option>
+              <option value={BOARDS.ICSE}>{BOARDS.ICSE}</option>
+              <option value={BOARDS.STATE_BOARD}>{BOARDS.STATE_BOARD_CAMEL}</option>
             </select>
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
               className="bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-700 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all duration-200 cursor-pointer"
             >
-              <option value="ACTIVE">Active only</option>
-              <option value="">All</option>
-              <option value="INACTIVE">Inactive only</option>
+              <option value={STATUS.ACTIVE}>{STATUS.LBL_ACTIVE_ONLY}</option>
+              <option value="">{STATUS.LBL_ALL}</option>
+              <option value={STATUS.INACTIVE}>{STATUS.LBL_INACTIVE_ONLY}</option>
             </select>
             <span className="text-xs text-gray-400 whitespace-nowrap font-medium text-center sm:text-left">
-              {loading ? "Loading…" : `${totalElements} school${totalElements !== 1 ? "s" : ""}`}
+              {loading ? UI_TEXT.LOADING : `${totalElements} ${totalElements !== 1 ? UI_TEXT.SCHOOLS : UI_TEXT.SCHOOL}`}
             </span>
           </div>
 
@@ -395,14 +393,14 @@ export default function SuperAdminSchools() {
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 bg-red-50 border border-red-200 text-red-700 rounded-2xl px-4 sm:px-5 py-4 text-sm">
               <ServerCrash size={18} className="shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="font-semibold">Failed to load schools</p>
+                <p className="font-semibold">{UI_TEXT.ERR_LOAD}</p>
                 <p className="text-xs text-red-500 mt-0.5 break-words">{error}</p>
               </div>
               <button
                 onClick={handleRefresh}
                 className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-red-100 hover:bg-red-200 transition-colors whitespace-nowrap"
               >
-                Retry
+                {UI_TEXT.RETRY}
               </button>
             </div>
           )}
@@ -415,14 +413,14 @@ export default function SuperAdminSchools() {
                 ? (
                   <div className="col-span-full flex flex-col items-center justify-center py-12 sm:py-16 text-gray-400 gap-3">
                     <School size={36} className="text-gray-300 sm:w-10 sm:h-10" />
-                    <p className="font-semibold text-gray-500 text-sm sm:text-base">No schools found</p>
-                    <p className="text-xs sm:text-sm text-center px-4">Try adjusting your search or filters</p>
+                    <p className="font-semibold text-gray-500 text-sm sm:text-base">{UI_TEXT.NO_SCHOOLS}</p>
+                    <p className="text-xs sm:text-sm text-center px-4">{UI_TEXT.ADJUST_FILTERS}</p>
                   </div>
                 )
                 : schools.map((school, idx) => {
-                  const accent     = borderAccents[idx % borderAccents.length];
+                  const accent = STYLES.BORDER_ACCENTS[idx % STYLES.BORDER_ACCENTS.length];
                   const isSelected = selectedId === school.id;
-                  const badge      = getStatusBadge(school);
+                  const badge = getStatusBadge(school);
                   return (
                     <div
                       key={school.id}
@@ -484,7 +482,7 @@ export default function SuperAdminSchools() {
                           {school.establishedYear && (
                             <div className="flex items-center gap-1.5">
                               <School size={11} className="text-gray-400 shrink-0" />
-                              Est. {school.establishedYear}
+                              {UI_TEXT.EST}{school.establishedYear}
                             </div>
                           )}
                           {school.phone && (
@@ -500,7 +498,7 @@ export default function SuperAdminSchools() {
                           onClick={(e) => { e.stopPropagation(); setModalSchool(school); }}
                           className="w-full flex items-center justify-center gap-2 py-2 sm:py-2.5 rounded-xl bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 active:scale-95 cursor-pointer transition-all duration-200 touch-manipulation"
                         >
-                          Enter School <ArrowRight size={13} />
+                          {UI_TEXT.ENTER_SCHOOL} <ArrowRight size={13} />
                         </button>
 
                       </div>

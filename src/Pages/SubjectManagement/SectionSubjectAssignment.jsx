@@ -5,6 +5,7 @@
 import { useState, useEffect, useCallback } from "react";
 import SectionSubjectService from "../../Api/Academics/SectionSubjectService";
 import { Edit, MinusCircle, BookOpen, Filter, Search, Plus } from "lucide-react";
+import { COMMON_STATUS, SEC_SUB_CONSTS }from "../../Constants/StringConstants/AcademicsConstants";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const INPUT_CLS =
@@ -24,14 +25,14 @@ const BTN_GHOST =
 
 const Badge = ({ children, variant = "default" }) => {
   const cls = {
-    default:   "bg-slate-100 text-slate-500",
-    code:      "bg-blue-50 text-blue-600 font-mono text-[11px] tracking-wide",
+    default: "bg-slate-100 text-slate-500",
+    code: "bg-blue-50 text-blue-600 font-mono text-[11px] tracking-wide",
     mandatory: "bg-violet-50 text-violet-600 border border-violet-100",
-    optional:  "bg-slate-50 text-slate-400 border border-slate-100",
-    active:    "bg-emerald-50 text-emerald-600 border border-emerald-100",
-    inactive:  "bg-rose-50 text-rose-400 border border-rose-100",
-    hours:     "bg-sky-50 text-sky-600 border border-sky-100",
-    count:     "bg-blue-100 text-blue-700 font-semibold",
+    optional: "bg-slate-50 text-slate-400 border border-slate-100",
+    active: "bg-emerald-50 text-emerald-600 border border-emerald-100",
+    inactive: "bg-rose-50 text-rose-400 border border-rose-100",
+    hours: "bg-sky-50 text-sky-600 border border-sky-100",
+    count: "bg-blue-100 text-blue-700 font-semibold",
   };
   return (
     <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium ${cls[variant]}`}>
@@ -43,7 +44,7 @@ const Badge = ({ children, variant = "default" }) => {
 const ActionButton = ({ onClick, variant = "blue", label, icon: Icon }) => {
   const cls = {
     blue: "border border-blue-200 text-blue-600 bg-blue-50/40 hover:bg-blue-100/70",
-    red:  "border border-rose-200 text-rose-600 bg-rose-50/40 hover:bg-rose-100/70",
+    red: "border border-rose-200 text-rose-600 bg-rose-50/40 hover:bg-rose-100/70",
   };
   return (
     <button
@@ -65,7 +66,7 @@ const Select = ({ value, onChange, children, className = "", loading = false, di
       disabled={disabled || loading}
       className={`appearance-none pr-8 ${INPUT_CLS} ${className} ${(disabled || loading) ? "opacity-60 cursor-not-allowed" : ""}`}
     >
-      {loading ? <option value="">Loading…</option> : children}
+      {loading ? <option value="">{SEC_SUB_CONSTS.TEXT.LOADING}</option> : children}
     </select>
     <span className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 text-xs">
       {loading ? "..." : "▾"}
@@ -94,7 +95,7 @@ const EmptyState = ({ message }) => (
 //  Assign Subjects Modal
 // ─────────────────────────────────────────────────────────────────────────────
 const AssignModal = ({ sectionId, allSubjects, assignedSubjectIds, onClose, onAssigned }) => {
-  const [rows, setRows] = useState([{ subjectId: "", weeklyHours: 1, isMandatory: false, status: "ACTIVE" }]);
+  const [rows, setRows] = useState([{ subjectId: "", weeklyHours: 1, isMandatory: false, status: COMMON_STATUS.ACTIVE }]);
   const [saving, setSaving] = useState(false);
 
   const available = allSubjects.filter(s => !assignedSubjectIds.includes(String(s.id)));
@@ -103,7 +104,7 @@ const AssignModal = ({ sectionId, allSubjects, assignedSubjectIds, onClose, onAs
     setRows(prev => prev.map((r, idx) => idx === i ? { ...r, [key]: value } : r));
 
   const addRow = () =>
-    setRows(prev => [...prev, { subjectId: "", weeklyHours: 1, isMandatory: false, status: "ACTIVE" }]);
+    setRows(prev => [...prev, { subjectId: "", weeklyHours: 1, isMandatory: false, status: COMMON_STATUS.ACTIVE }]);
 
   const removeRow = (i) =>
     setRows(prev => prev.filter((_, idx) => idx !== i));
@@ -122,8 +123,8 @@ const AssignModal = ({ sectionId, allSubjects, assignedSubjectIds, onClose, onAs
       <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-xl overflow-hidden animate-slideUp">
         <div className="bg-gradient-to-r from-blue-600 to-blue-500 px-5 py-3.5 flex items-center justify-between">
           <div>
-            <p className="text-blue-200 text-[10px] font-medium uppercase tracking-widest">Section Subjects</p>
-            <h3 className="text-white font-semibold text-sm mt-0.5">Assign Subjects</h3>
+            <p className="text-blue-200 text-[10px] font-medium uppercase tracking-widest">{SEC_SUB_CONSTS.TEXT.SECTION_SUBJECTS}</p>
+            <h3 className="text-white font-semibold text-sm mt-0.5">{SEC_SUB_CONSTS.TEXT.ASSIGN_SUBJECTS}</h3>
           </div>
           <button onClick={onClose} className="text-blue-200 hover:text-white text-sm w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/10">✕</button>
         </div>
@@ -132,9 +133,9 @@ const AssignModal = ({ sectionId, allSubjects, assignedSubjectIds, onClose, onAs
           {rows.map((row, i) => (
             <div key={i} className="p-3 rounded-xl border border-slate-100 bg-slate-50/50 flex flex-col gap-2.5">
               <div className="w-full">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide block mb-1">Subject</label>
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide block mb-1">{SEC_SUB_CONSTS.TEXT.SUBJECT}</label>
                 <Select value={row.subjectId} onChange={e => setRow(i, "subjectId", e.target.value)}>
-                  <option value="">— Select Subject —</option>
+                  <option value="">{SEC_SUB_CONSTS.TEXT.SELECT_SUBJECT}</option>
                   {available.map(s => (
                     <option key={s.id} value={s.id} disabled={rows.some((r, ri) => ri !== i && r.subjectId === String(s.id))}>
                       {s.name} ({s.code})
@@ -154,11 +155,11 @@ const AssignModal = ({ sectionId, allSubjects, assignedSubjectIds, onClose, onAs
                   </div>
                   <button type="button" onClick={() => setRow(i, "isMandatory", !row.isMandatory)}
                     className={`h-7 px-2.5 rounded-md border text-[11px] font-medium ${row.isMandatory ? "bg-violet-50 border-violet-200 text-violet-700" : "bg-white border-slate-200 text-slate-400"}`}>
-                    {row.isMandatory ? "Mandatory" : "Optional"}
+                    {row.isMandatory ? SEC_SUB_CONSTS.TEXT.MANDATORY : SEC_SUB_CONSTS.TEXT.OPTIONAL}
                   </button>
-                  <button type="button" onClick={() => setRow(i, "status", row.status === "ACTIVE" ? "INACTIVE" : "ACTIVE")}
-                    className={`h-7 px-2.5 rounded-md border text-[11px] font-medium ${row.status === "ACTIVE" ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-white border-slate-200 text-slate-400"}`}>
-                    {row.status === "ACTIVE" ? "Active" : "Inactive"}
+                  <button type="button" onClick={() => setRow(i, "status", row.status === COMMON_STATUS.ACTIVE ? COMMON_STATUS.INACTIVE : COMMON_STATUS.ACTIVE)}
+                    className={`h-7 px-2.5 rounded-md border text-[11px] font-medium ${row.status === COMMON_STATUS.ACTIVE ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-white border-slate-200 text-slate-400"}`}>
+                    {row.status === COMMON_STATUS.ACTIVE ? SEC_SUB_CONSTS.TEXT.ACTIVE : SEC_SUB_CONSTS.TEXT.INACTIVE}
                   </button>
                 </div>
                 {rows.length > 1 && (
@@ -168,14 +169,14 @@ const AssignModal = ({ sectionId, allSubjects, assignedSubjectIds, onClose, onAs
             </div>
           ))}
           <button onClick={addRow} className="w-full py-2 rounded-xl border border-dashed border-slate-200 text-xs text-slate-400 hover:border-blue-300 hover:text-blue-500 transition flex items-center justify-center gap-1">
-            + Add Another Subject
+            {SEC_SUB_CONSTS.TEXT.ADD_ANOTHER}
           </button>
         </div>
 
         <div className="px-4 py-3 flex gap-2 border-t border-slate-100 bg-slate-50/50">
-          <button onClick={onClose} className={`${BTN_GHOST} flex-1`}>Cancel</button>
+          <button onClick={onClose} className={`${BTN_GHOST} flex-1`}>{SEC_SUB_CONSTS.TEXT.CANCEL}</button>
           <button onClick={handleSave} disabled={saving || rows.every(r => !r.subjectId)} className={`${BTN_PRIMARY} flex-1`}>
-            {saving ? "Saving…" : "Assign Subjects"}
+            {saving ? SEC_SUB_CONSTS.TEXT.SAVING : SEC_SUB_CONSTS.TEXT.ASSIGN_SUBJECTS}
           </button>
         </div>
       </div>
@@ -188,10 +189,10 @@ const AssignModal = ({ sectionId, allSubjects, assignedSubjectIds, onClose, onAs
 // ─────────────────────────────────────────────────────────────────────────────
 const EditModal = ({ row, onClose, onSave }) => {
   const [form, setForm] = useState({
-    subjectId:   row.subjectId,
+    subjectId: row.subjectId,
     weeklyHours: row.weeklyHours ?? 1,
     isMandatory: row.isMandatory ?? false,
-    status:      row.status === "ACTIVE" ? "ACTIVE" : "INACTIVE",
+    status: row.status === COMMON_STATUS.ACTIVE ? COMMON_STATUS.ACTIVE : COMMON_STATUS.INACTIVE,
   });
 
   const set = (key, value) => setForm(prev => ({ ...prev, [key]: value }));
@@ -201,7 +202,7 @@ const EditModal = ({ row, onClose, onSave }) => {
       <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-sm overflow-hidden animate-slideUp">
         <div className="bg-gradient-to-r from-blue-600 to-blue-500 px-5 py-3.5 flex items-center justify-between">
           <div>
-            <p className="text-blue-200 text-[10px] font-medium uppercase tracking-widest">Edit Assignment</p>
+            <p className="text-blue-200 text-[10px] font-medium uppercase tracking-widest">{SEC_SUB_CONSTS.TEXT.EDIT_ASSIGNMENT}</p>
             <h3 className="text-white font-semibold text-sm mt-0.5 truncate max-w-[240px]">{row.subjectName}</h3>
           </div>
           <button onClick={onClose} className="text-blue-200 hover:text-white text-sm w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/10">✕</button>
@@ -209,7 +210,7 @@ const EditModal = ({ row, onClose, onSave }) => {
 
         <div className="p-4 space-y-4">
           <div className="space-y-1">
-            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Weekly Hours</label>
+            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{SEC_SUB_CONSTS.TEXT.WEEKLY_HOURS}</label>
             <input type="number" min={1} max={40} value={form.weeklyHours}
               onChange={e => set("weeklyHours", Number(e.target.value))}
               className="border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-700 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 w-full" />
@@ -217,22 +218,20 @@ const EditModal = ({ row, onClose, onSave }) => {
 
           <div className="flex gap-2">
             <button type="button" onClick={() => set("isMandatory", !form.isMandatory)}
-              className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-medium transition-all ${
-                form.isMandatory ? "bg-blue-50 border-blue-200 text-blue-700" : "bg-slate-50 border-slate-200 text-slate-400"
-              }`}>
-              Mandatory
+              className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-medium transition-all ${form.isMandatory ? "bg-blue-50 border-blue-200 text-blue-700" : "bg-slate-50 border-slate-200 text-slate-400"
+                }`}>
+              {SEC_SUB_CONSTS.TEXT.MANDATORY}
             </button>
-            <button type="button" onClick={() => set("status", form.status === "ACTIVE" ? "INACTIVE" : "ACTIVE")}
-              className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-medium transition-all ${
-                form.status === "ACTIVE" ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-slate-50 border-slate-200 text-slate-400"
-              }`}>
-              {form.status === "ACTIVE" ? "Active" : "Inactive"}
+            <button type="button" onClick={() => set("status", form.status === COMMON_STATUS.ACTIVE ? COMMON_STATUS.INACTIVE : COMMON_STATUS.ACTIVE)}
+              className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-medium transition-all ${form.status === COMMON_STATUS.ACTIVE ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-slate-50 border-slate-200 text-slate-400"
+                }`}>
+              {form.status === COMMON_STATUS.ACTIVE ? SEC_SUB_CONSTS.TEXT.ACTIVE : SEC_SUB_CONSTS.TEXT.INACTIVE}
             </button>
           </div>
 
           <div className="flex gap-2 pt-1 border-t border-slate-100 pt-3">
-            <button onClick={onClose} className={`${BTN_GHOST} flex-1`}>Cancel</button>
-            <button onClick={() => onSave(form)} className={`${BTN_PRIMARY} flex-1`}>Save Changes</button>
+            <button onClick={onClose} className={`${BTN_GHOST} flex-1`}>{SEC_SUB_CONSTS.TEXT.CANCEL}</button>
+            <button onClick={() => onSave(form)} className={`${BTN_PRIMARY} flex-1`}>{SEC_SUB_CONSTS.TEXT.SAVE_CHANGES}</button>
           </div>
         </div>
       </div>
@@ -249,7 +248,7 @@ const ConfirmDialog = ({ message, onConfirm, onCancel }) => {
   const handleConfirm = async () => {
     if (busy) return;
     setBusy(true);
-    try { await onConfirm(); } 
+    try { await onConfirm(); }
     catch { setBusy(false); }
   };
 
@@ -258,9 +257,9 @@ const ConfirmDialog = ({ message, onConfirm, onCancel }) => {
       <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-sm p-4 space-y-4 animate-slideUp">
         <p className="text-xs text-slate-700 leading-relaxed font-medium">{message}</p>
         <div className="flex gap-2">
-          <button onClick={onCancel} disabled={busy} className={`${BTN_GHOST} flex-1`}>Cancel</button>
+          <button onClick={onCancel} disabled={busy} className={`${BTN_GHOST} flex-1`}>{SEC_SUB_CONSTS.TEXT.CANCEL}</button>
           <button onClick={handleConfirm} disabled={busy} className="flex-1 px-4 py-1.5 text-xs rounded-lg bg-rose-500 text-white hover:bg-rose-600 font-medium disabled:opacity-50">
-            {busy ? "Removing…" : "Confirm"}
+            {busy ? SEC_SUB_CONSTS.TEXT.REMOVING : SEC_SUB_CONSTS.TEXT.CONFIRM}
           </button>
         </div>
       </div>
@@ -272,24 +271,24 @@ const ConfirmDialog = ({ message, onConfirm, onCancel }) => {
 //  Main Component Layout Block
 // ─────────────────────────────────────────────────────────────────────────────
 export default function SectionSubjectAssignment() {
-  const [classes,   setClasses]   = useState([]);
-  const [sections,  setSections]  = useState([]);
-  const [subjects,  setSubjects]  = useState([]);
+  const [classes, setClasses] = useState([]);
+  const [sections, setSections] = useState([]);
+  const [subjects, setSubjects] = useState([]);
   const [allSubjects, setAllSubjects] = useState([]);
 
-  const [selectedClassId,   setSelectedClassId]   = useState("");
+  const [selectedClassId, setSelectedClassId] = useState("");
   const [selectedSectionId, setSelectedSectionId] = useState("");
 
-  const [classesLoading,  setClassesLoading]  = useState(false);
+  const [classesLoading, setClassesLoading] = useState(false);
   const [sectionsLoading, setSectionsLoading] = useState(false);
-  const [tableLoading,    setTableLoading]    = useState(false);
+  const [tableLoading, setTableLoading] = useState(false);
 
   const [filterStatus, setFilterStatus] = useState("all");
-  const [search,       setSearch]       = useState("");
+  const [search, setSearch] = useState("");
 
-  const [editRow,    setEditRow]    = useState(null);
+  const [editRow, setEditRow] = useState(null);
   const [showAssign, setShowAssign] = useState(false);
-  const [confirmDg,  setConfirmDg]  = useState(null);
+  const [confirmDg, setConfirmDg] = useState(null);
 
   const loadClasses = useCallback(async () => {
     setClassesLoading(true);
@@ -344,7 +343,7 @@ export default function SectionSubjectAssignment() {
   };
 
   const handleRemove = (row) => setConfirmDg({
-    message: `Remove "${row.subjectName}" from this section?`,
+    message: SEC_SUB_CONSTS.CONFIRM.REMOVE(row.subjectName),
     onConfirm: async () => {
       const res = await SectionSubjectService.removeSubject(selectedSectionId, row.subjectId);
       if (res) setSubjects(prev => prev.filter(s => s.subjectId !== row.subjectId));
@@ -352,9 +351,9 @@ export default function SectionSubjectAssignment() {
     },
   });
 
-  const selectedClassName   = classes.find(c => String(c.id) === selectedClassId)?.name ?? "";
+  const selectedClassName = classes.find(c => String(c.id) === selectedClassId)?.name ?? "";
   const selectedSectionName = sections.find(s => String(s.id) === selectedSectionId)?.name ?? "";
-  const assignedSubjectIds  = subjects.map(s => String(s.subjectId));
+  const assignedSubjectIds = subjects.map(s => String(s.subjectId));
 
   const filteredSubjects = subjects.filter(s => {
     if (!search) return true;
@@ -377,14 +376,14 @@ export default function SectionSubjectAssignment() {
       <div className="bg-white rounded-xl border border-slate-200 shadow-xs p-3 m-2 sm:m-4 shrink-0">
         <div className="flex flex-col sm:flex-row items-center gap-3 w-full min-w-0">
           <div className="flex items-center gap-2 w-full sm:w-[180px] min-w-0">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider w-11 shrink-0">Class</span>
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider w-11 shrink-0">{SEC_SUB_CONSTS.TEXT.CLASS}</span>
             <Select value={selectedClassId} onChange={e => setSelectedClassId(e.target.value)} loading={classesLoading} className="flex-1">
               {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </Select>
           </div>
 
           <div className="flex items-center gap-2 w-full sm:w-[180px] min-w-0">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider w-13 shrink-0">Section</span>
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider w-13 shrink-0">{SEC_SUB_CONSTS.TEXT.SECTION}</span>
             <Select value={selectedSectionId} onChange={e => setSelectedSectionId(e.target.value)} loading={sectionsLoading} disabled={!selectedClassId} className="flex-1">
               {sections.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
             </Select>
@@ -394,30 +393,30 @@ export default function SectionSubjectAssignment() {
 
       {/* Main Subjects Render Area Wrapper Block Container */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-xs mx-2 sm:mx-4 mb-4 flex flex-col overflow-hidden flex-1 min-h-0">
-        
+
         {/* Compact Dynamic Card Subheader Layout Block */}
         <div className="flex items-center justify-between gap-3 px-4 py-2 bg-slate-50/50 border-b border-slate-100 shrink-0">
           <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 min-w-0">
             <Filter size={12} className="text-slate-400 stroke-[2.5]" />
-            <span className="truncate">{selectedClassName || "—"} / {selectedSectionName || "—"}</span>
+            <span className="truncate">{selectedClassName || SEC_SUB_CONSTS.TEXT.FALLBACK_DASH} / {selectedSectionName || SEC_SUB_CONSTS.TEXT.FALLBACK_DASH}</span>
             <Badge variant="count">{filteredSubjects.length}</Badge>
           </div>
           <button onClick={() => setShowAssign(true)} disabled={!selectedSectionId} className={BTN_PRIMARY}>
-            <Plus size={12} /> <span>Assign Subjects</span>
+            <Plus size={12} /> <span>{SEC_SUB_CONSTS.TEXT.ASSIGN_SUBJECTS}</span>
           </button>
         </div>
 
         {/* Dense Inputs Searching Controls Block Frame */}
         <div className="flex flex-row items-center gap-2 px-4 py-1.5 border-b border-slate-100 bg-white shrink-0">
           <Select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="w-[115px] sm:w-[125px]">
-            <option value="all">All Status</option>
-            <option value="active">Active Only</option>
+            <option value="all">{SEC_SUB_CONSTS.TEXT.ALL_STATUS}</option>
+            <option value="active">{SEC_SUB_CONSTS.TEXT.ACTIVE_ONLY}</option>
           </Select>
 
           <div className="relative flex-1 max-w-[260px]">
             <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
             <input
-              value={search} onChange={e => setSearch(e.target.value)} placeholder="Search subject code..."
+              value={search} onChange={e => setSearch(e.target.value)} placeholder={SEC_SUB_CONSTS.TEXT.SEARCH_PLACEHOLDER}
               className="w-full pl-7 pr-2.5 py-1 text-xs border border-gray-200 rounded-lg bg-white outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-100"
             />
           </div>
@@ -430,7 +429,7 @@ export default function SectionSubjectAssignment() {
               <div className="w-5 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
             </div>
           ) : filteredSubjects.length === 0 ? (
-            <EmptyState message={!selectedSectionId ? "Select section to load details." : "No matching subject details located."} />
+            <EmptyState message={!selectedSectionId ? SEC_SUB_CONSTS.TEXT.EMPTY_SEC_DTL : SEC_SUB_CONSTS.TEXT.EMPTY_SUB_DTL} />
           ) : (
             filteredSubjects.map((row) => (
               <div key={row.id} className="bg-white rounded-xl border border-slate-100 p-2.5 shadow-xs flex flex-row items-center justify-between gap-3 h-auto fade-row">
@@ -438,15 +437,19 @@ export default function SectionSubjectAssignment() {
                   <h4 className="text-xs font-bold text-slate-800 truncate leading-tight">{row.subjectName}</h4>
                   <div className="flex flex-wrap gap-1 mt-1">
                     <Badge variant="code">{row.subjectCode}</Badge>
-                    <Badge variant="hours">{row.weeklyHours} hrs</Badge>
-                    <Badge variant={row.isMandatory ? "mandatory" : "optional"}>{row.isMandatory ? "Mandatory" : "Optional"}</Badge>
-                    <Badge variant={row.status === "ACTIVE" ? "active" : "inactive"}>{row.status === "ACTIVE" ? "Active" : "Inactive"}</Badge>
+                    <Badge variant="hours">{row.weeklyHours} {SEC_SUB_CONSTS.TEXT.HRS}</Badge>
+                    <Badge variant={row.isMandatory ? "mandatory" : "optional"}>
+                      {row.isMandatory ? SEC_SUB_CONSTS.TEXT.MANDATORY : SEC_SUB_CONSTS.TEXT.OPTIONAL}
+                    </Badge>
+                    <Badge variant={row.status === COMMON_STATUS.ACTIVE ? "active" : "inactive"}>
+                      {row.status === COMMON_STATUS.ACTIVE ? SEC_SUB_CONSTS.TEXT.ACTIVE : SEC_SUB_CONSTS.TEXT.INACTIVE}
+                    </Badge>
                   </div>
                 </div>
-                
+
                 <div className="flex flex-col sm:flex-row gap-1 shrink-0 justify-center">
-                  <ActionButton label="Edit" icon={Edit} variant="blue" onClick={() => setEditRow(row)} />
-                  <ActionButton label="Remove" icon={MinusCircle} variant="red" onClick={() => handleRemove(row)} />
+                  <ActionButton label={SEC_SUB_CONSTS.TEXT.EDIT} icon={Edit} variant="blue" onClick={() => setEditRow(row)} />
+                  <ActionButton label={SEC_SUB_CONSTS.TEXT.REMOVE} icon={MinusCircle} variant="red" onClick={() => handleRemove(row)} />
                 </div>
               </div>
             ))
@@ -459,7 +462,7 @@ export default function SectionSubjectAssignment() {
             <table className="w-full border-collapse">
               <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10 select-none">
                 <tr>
-                  {["Subject", "Code", "Weekly Hours", "Mandatory", "Status", "Actions"].map(h => (
+                  {SEC_SUB_CONSTS.HEADERS.map(h => (
                     <th key={h} className="px-6 py-2 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">
                       {h}
                     </th>
@@ -471,29 +474,33 @@ export default function SectionSubjectAssignment() {
                   ? [...Array(4)].map((_, i) => <SkeletonRow key={i} />)
                   : filteredSubjects.length === 0
                     ? <tr>
-                        <td colSpan={6} className="py-6">
-                          <EmptyState message={!selectedSectionId ? "Select a section to view assignments." : "No records match search selection parameters."} />
+                      <td colSpan={6} className="py-6">
+                        <EmptyState message={!selectedSectionId ? SEC_SUB_CONSTS.TEXT.EMPTY_VIEW_ASS : SEC_SUB_CONSTS.TEXT.EMPTY_NO_MATCH} />
+                      </td>
+                    </tr>
+                    : filteredSubjects.map(row => (
+                      <tr key={row.id} className="hover:bg-slate-50/40 transition-colors fade-row">
+                        <td className="px-6 py-1.5 text-xs font-semibold text-slate-800 whitespace-nowrap">{row.subjectName}</td>
+                        <td className="px-6 py-1.5 whitespace-nowrap"><Badge variant="code">{row.subjectCode}</Badge></td>
+                        <td className="px-6 py-1.5 whitespace-nowrap"><Badge variant="hours">{row.weeklyHours} {SEC_SUB_CONSTS.TEXT.HRS}</Badge></td>
+                        <td className="px-6 py-1.5 whitespace-nowrap">
+                          <Badge variant={row.isMandatory ? "mandatory" : "optional"}>
+                            {row.isMandatory ? SEC_SUB_CONSTS.TEXT.MANDATORY : SEC_SUB_CONSTS.TEXT.OPTIONAL}
+                          </Badge>
+                        </td>
+                        <td className="px-6 py-1.5 whitespace-nowrap">
+                          <Badge variant={row.status === COMMON_STATUS.ACTIVE ? "active" : "inactive"}>
+                            {row.status === COMMON_STATUS.ACTIVE ? SEC_SUB_CONSTS.TEXT.ACTIVE : SEC_SUB_CONSTS.TEXT.INACTIVE}
+                          </Badge>
+                        </td>
+                        <td className="px-6 py-1.5 whitespace-nowrap">
+                          <div className="flex items-center gap-1.5">
+                            <ActionButton label={SEC_SUB_CONSTS.TEXT.EDIT} icon={Edit} variant="blue" onClick={() => setEditRow(row)} />
+                            <ActionButton label={SEC_SUB_CONSTS.TEXT.REMOVE} icon={MinusCircle} variant="red" onClick={() => handleRemove(row)} />
+                          </div>
                         </td>
                       </tr>
-                    : filteredSubjects.map(row => (
-                        <tr key={row.id} className="hover:bg-slate-50/40 transition-colors fade-row">
-                          <td className="px-6 py-1.5 text-xs font-semibold text-slate-800 whitespace-nowrap">{row.subjectName}</td>
-                          <td className="px-6 py-1.5 whitespace-nowrap"><Badge variant="code">{row.subjectCode}</Badge></td>
-                          <td className="px-6 py-1.5 whitespace-nowrap"><Badge variant="hours">{row.weeklyHours} hrs</Badge></td>
-                          <td className="px-6 py-1.5 whitespace-nowrap">
-                            <Badge variant={row.isMandatory ? "mandatory" : "optional"}>{row.isMandatory ? "Mandatory" : "Optional"}</Badge>
-                          </td>
-                          <td className="px-6 py-1.5 whitespace-nowrap">
-                            <Badge variant={row.status === "ACTIVE" ? "active" : "inactive"}>{row.status === "ACTIVE" ? "Active" : "Inactive"}</Badge>
-                          </td>
-                          <td className="px-6 py-1.5 whitespace-nowrap">
-                            <div className="flex items-center gap-1.5">
-                              <ActionButton label="Edit" icon={Edit} variant="blue" onClick={() => setEditRow(row)} />
-                              <ActionButton label="Remove" icon={MinusCircle} variant="red" onClick={() => handleRemove(row)} />
-                            </div>
-                          </td>
-                        </tr>
-                      ))
+                    ))
                 }
               </tbody>
             </table>

@@ -1,10 +1,11 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import {
   X, ClipboardList, Loader2, Check, ChevronRight, ChevronLeft,
   AlertCircle, Sparkles, Rocket
 } from "lucide-react";
 import { createExamEvent } from "../../Api/Academics/Exams";
 import { getSectionSubjectsByClass, getSectionsByClass } from "../../Api/Teachers/TeachersAPI";
+import { EXAM_CONSTS } from "../../Constants/StringConstants/AcademicsConstants";
 
 // Builds [{ sectionId, sectionName, subjects:[{sectionSubjectId, subjectId, subjectName, subjectCode}] }]
 // for one class, straight from your existing TeachersAPI endpoints:
@@ -47,10 +48,10 @@ async function getClassSectionsWithSubjects(classId) {
 }
 
 const STEPS = [
-  { id: 1, label: "Event Info" },
-  { id: 2, label: "Classes" },
-  { id: 3, label: "Subjects" },
-  { id: 4, label: "Confirm" },
+  { id: 1, label: EXAM_CONSTS.NEW_EXAM.STEP_EVENT },
+  { id: 2, label: EXAM_CONSTS.NEW_EXAM.STEP_CLASSES },
+  { id: 3, label: EXAM_CONSTS.NEW_EXAM.STEP_SUBJECTS },
+  { id: 4, label: EXAM_CONSTS.NEW_EXAM.STEP_CONFIRM },
 ];
 
 // ─── Stepper ────────────────────────────────────────────────────────────────
@@ -114,17 +115,17 @@ export default function CreateExamEventWizard({ examTypes, academicYears, classe
 
   // ── Step 1 validation ────────────────────────────────────────
   const validateStep1 = () => {
-    if (!form.examTypeId) return "Please select an exam type.";
-    if (!form.academicYearId) return "Please select an academic year.";
-    if (!form.startDate) return "Start date is required.";
-    if (!form.endDate) return "End date is required.";
-    if (form.startDate > form.endDate) return "Start date cannot be after end date.";
+    if (!form.examTypeId) return EXAM_CONSTS.NEW_EXAM.VAL_EXAM_TYPE;
+    if (!form.academicYearId) return EXAM_CONSTS.NEW_EXAM.VAL_YEAR;
+    if (!form.startDate) return EXAM_CONSTS.NEW_EXAM.VAL_START;
+    if (!form.endDate) return EXAM_CONSTS.NEW_EXAM.VAL_END;
+    if (form.startDate > form.endDate) return EXAM_CONSTS.NEW_EXAM.VAL_DATE_ORDER;
     return null;
   };
 
   // ── Step 2 -> 3: fetch sections+subjects per selected class ───
   const goToSubjects = async () => {
-    if (selectedClassIds.length === 0) { setError("Please select at least one class."); return; }
+    if (selectedClassIds.length === 0) { setError(EXAM_CONSTS.NEW_EXAM.VAL_CLASS_REQ); return; }
     setError(null);
     setLoadingSubjects(true);
     try {
@@ -175,7 +176,7 @@ export default function CreateExamEventWizard({ examTypes, academicYears, classe
 
       setStep(3);
     } catch (err) {
-      setError(err?.message || "Failed to load class subjects.");
+      setError(err?.message || EXAM_CONSTS.NEW_EXAM.ERR_LOAD_SUB);
     } finally {
       setLoadingSubjects(false);
     }
@@ -184,8 +185,6 @@ export default function CreateExamEventWizard({ examTypes, academicYears, classe
   // ── row helpers ─────────────────────────────────────────────
   const updateRow = (key, patch) => setRows(prev => prev.map(r => (r.key === key ? { ...r, ...patch } : r)));
 
-  // Editing one row in a "same subjects across sections" class propagates
-  // numeric/type changes to every row sharing that subjectId in that class.
   const updateCompactRow = (classId, subjectId, patch) => {
     setRows(prev => prev.map(r => (r.classId === classId && r.subjectId === subjectId ? { ...r, ...patch } : r)));
   };
@@ -247,7 +246,7 @@ export default function CreateExamEventWizard({ examTypes, academicYears, classe
       await createExamEvent(buildPayload());
       onSuccess?.();
     } catch (err) {
-      setError(err?.message || "Failed to create exam event.");
+      setError(err?.message || EXAM_CONSTS.NEW_EXAM.ERR_CREATE);
     } finally {
       setSubmitting(false);
     }
@@ -260,7 +259,7 @@ export default function CreateExamEventWizard({ examTypes, academicYears, classe
         <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-100 flex-shrink-0">
           <div className="flex items-center gap-2">
             <ClipboardList className="w-5 h-5 text-indigo-600" />
-            <h2 className="text-lg font-semibold text-gray-800">Create Exam Event — Step {step}: {STEPS.find(s => s.id === step)?.label}</h2>
+            <h2 className="text-lg font-semibold text-gray-800">{EXAM_CONSTS.NEW_EXAM.TITLE} — Step {step}: {STEPS.find(s => s.id === step)?.label}</h2>
           </div>
           <button onClick={onClose} disabled={submitting} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors text-gray-400 hover:text-gray-600 disabled:opacity-50">
             <X className="w-5 h-5" />
@@ -327,7 +326,7 @@ export default function CreateExamEventWizard({ examTypes, academicYears, classe
             disabled={submitting}
             className="flex items-center gap-1.5 px-5 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-all disabled:opacity-50"
           >
-            {step > 1 && <ChevronLeft className="w-4 h-4" />} {step === 1 ? "Cancel" : "Back"}
+            {step > 1 && <ChevronLeft className="w-4 h-4" />} {step === 1 ? EXAM_CONSTS.NEW_EXAM.BTN_CANCEL : EXAM_CONSTS.NEW_EXAM.BTN_BACK}
           </button>
 
           {step < 4 ? (
@@ -343,7 +342,7 @@ export default function CreateExamEventWizard({ examTypes, academicYears, classe
                   const includedRows = rows.filter(r => r.included);
 
                   if (includedRows.length === 0) {
-                    setError("Please select at least one subject.");
+                    setError(EXAM_CONSTS.NEW_EXAM.VAL_SUB_REQ);
                     return;
                   }
 
@@ -355,7 +354,7 @@ export default function CreateExamEventWizard({ examTypes, academicYears, classe
               className="flex items-center gap-1.5 px-5 py-2 text-sm font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 active:scale-95 transition-all shadow-sm disabled:opacity-60"
             >
               {loadingSubjects && <Loader2 className="w-4 h-4 animate-spin" />}
-              Next <ChevronRight className="w-4 h-4" />
+              {EXAM_CONSTS.NEW_EXAM.BTN_NEXT} <ChevronRight className="w-4 h-4" />
             </button>
           ) : (
             <button
@@ -364,7 +363,7 @@ export default function CreateExamEventWizard({ examTypes, academicYears, classe
               className="flex items-center gap-2 px-5 py-2 text-sm font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700 active:scale-95 transition-all shadow-sm disabled:opacity-60"
             >
               {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Rocket className="w-4 h-4" />}
-              {submitting ? "Creating…" : "Create Exam Event"}
+              {submitting ? EXAM_CONSTS.NEW_EXAM.BTN_CREATING : EXAM_CONSTS.NEW_EXAM.TITLE}
             </button>
           )}
         </div>
@@ -382,22 +381,22 @@ function Step1EventInfo({ form, setForm, examTypes, academicYears, currentAcadem
     const t = examTypes.find(t => String(t.id) === String(form.examTypeId))?.name ?? "";
     const y = academicYears.find(y => String(y.id) === String(form.academicYearId))?.label
       ?? academicYears.find(y => String(y.id) === String(form.academicYearId))?.name ?? "";
-    return t && y ? `Auto: ${t} ${y}` : "Auto-generated if blank";
+    return t && y ? `Auto: ${t} ${y}` : EXAM_CONSTS.NEW_EXAM.PH_AUTO_GEN;
   }, [form.examTypeId, form.academicYearId, examTypes, academicYears]);
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Exam Type <span className="text-red-500">*</span></label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">{EXAM_CONSTS.NEW_EXAM.LBL_EXAM_TYPE} <span className="text-red-500">*</span></label>
         <select name="examTypeId" value={form.examTypeId} onChange={handleChange} className={inputCls}>
-          <option value="" disabled>Select type</option>
+          <option value="" disabled>{EXAM_CONSTS.NEW_EXAM.PH_SEL_TYPE}</option>
           {examTypes.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
         </select>
       </div>
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Academic Year <span className="text-red-500">*</span></label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">{EXAM_CONSTS.NEW_EXAM.LBL_YEAR} <span className="text-red-500">*</span></label>
         <select name="academicYearId" value={form.academicYearId} onChange={handleChange} className={inputCls}>
-          <option value="" disabled>Select year</option>
+          <option value="" disabled>{EXAM_CONSTS.NEW_EXAM.PH_SEL_YEAR}</option>
           {academicYears.map(y => {
             const isCur = y.id === currentAcademicYearId || y.isCurrent;
             return <option key={y.id} value={y.id}>{isCur ? "● " : ""}{y.label ?? y.name}{isCur ? " (Current)" : ""}</option>;
@@ -405,20 +404,20 @@ function Step1EventInfo({ form, setForm, examTypes, academicYears, currentAcadem
         </select>
       </div>
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Event Name <span className="text-xs font-normal text-gray-400">(optional)</span></label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">{EXAM_CONSTS.NEW_EXAM.LBL_EVENT_NAME} <span className="text-xs font-normal text-gray-400">({EXAM_CONSTS.ANALYTICS.OPTIONAL})</span></label>
         <input name="name" value={form.name} onChange={handleChange} placeholder={autoName} className={inputCls} />
       </div>
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Start Date <span className="text-red-500">*</span></label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">{EXAM_CONSTS.NEW_EXAM.LBL_START} <span className="text-red-500">*</span></label>
         <input type="date" name="startDate" value={form.startDate} onChange={handleChange} className={inputCls} />
       </div>
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">End Date <span className="text-red-500">*</span></label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">{EXAM_CONSTS.NEW_EXAM.LBL_END} <span className="text-red-500">*</span></label>
         <input type="date" name="endDate" value={form.endDate} min={form.startDate} onChange={handleChange} className={inputCls} />
       </div>
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-        <input name="description" value={form.description} onChange={handleChange} placeholder="Optional notes…" className={inputCls} />
+        <label className="block text-sm font-medium text-gray-700 mb-1">{EXAM_CONSTS.NEW_EXAM.LBL_DESC}</label>
+        <input name="description" value={form.description} onChange={handleChange} placeholder={EXAM_CONSTS.NEW_EXAM.PH_NOTES} className={inputCls} />
       </div>
     </div>
   );
@@ -439,14 +438,14 @@ function Step2Classes({ classes, selectedClassIds, setSelectedClassIds, defaultM
     <div>
       <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
         <p className="text-sm font-medium text-gray-700">
-          Select Classes <span className="text-red-500">*</span>
-          <span className="text-xs font-normal text-gray-400 ml-2">— one exam created per selected class</span>
+          {EXAM_CONSTS.NEW_EXAM.LBL_SEL_CLASSES} <span className="text-red-500">*</span>
+          <span className="text-xs font-normal text-gray-400 ml-2">{EXAM_CONSTS.NEW_EXAM.TXT_ONE_EXAM_PER_CLASS}</span>
         </p>
         <div className="flex items-center gap-2 shrink-0">
           <button type="button" onClick={selectAll} className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-green-700 bg-green-50 border border-green-200 rounded-full hover:bg-green-100">
-            <Check className="w-3 h-3" /> Select All
+            <Check className="w-3 h-3" /> {EXAM_CONSTS.NEW_EXAM.BTN_SEL_ALL}
           </button>
-          <button type="button" onClick={clearAll} className="px-3 py-1.5 text-xs font-semibold text-gray-700 border border-gray-300 rounded-full hover:bg-gray-50">Clear</button>
+          <button type="button" onClick={clearAll} className="px-3 py-1.5 text-xs font-semibold text-gray-700 border border-gray-300 rounded-full hover:bg-gray-50">{EXAM_CONSTS.NEW_EXAM.BTN_CLEAR}</button>
         </div>
       </div>
 
@@ -465,25 +464,25 @@ function Step2Classes({ classes, selectedClassIds, setSelectedClassIds, defaultM
       </div>
 
       <div className="bg-blue-50/60 border border-blue-100 rounded-xl p-4">
-        <p className="text-sm font-semibold text-blue-800 mb-3">Default Marks <span className="text-xs font-normal text-blue-500">— applied to all subjects; override per-subject in next step</span></p>
+        <p className="text-sm font-semibold text-blue-800 mb-3">{EXAM_CONSTS.NEW_EXAM.LBL_DEF_MARKS} <span className="text-xs font-normal text-blue-500">{EXAM_CONSTS.NEW_EXAM.TXT_DEF_MARKS_SUB}</span></p>
         <div className="flex flex-wrap items-center gap-4">
           <div>
-            <label className="block text-xs font-medium text-blue-700 mb-1">Max Marks</label>
+            <label className="block text-xs font-medium text-blue-700 mb-1">{EXAM_CONSTS.NEW_EXAM.LBL_MAX}</label>
             <input type="number" value={defaultMarks.maxMarks} onChange={e => setDefaultMarks(d => ({ ...d, maxMarks: Number(e.target.value) }))} className="w-24 border border-blue-200 rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
           </div>
           <div>
-            <label className="block text-xs font-medium text-blue-700 mb-1">Pass Marks</label>
+            <label className="block text-xs font-medium text-blue-700 mb-1">{EXAM_CONSTS.NEW_EXAM.LBL_PASS}</label>
             <input type="number" value={defaultMarks.passingMarks} onChange={e => setDefaultMarks(d => ({ ...d, passingMarks: Number(e.target.value) }))} className="w-24 border border-blue-200 rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
           </div>
           <label className="flex items-center gap-2 text-sm font-medium text-blue-700 cursor-pointer mt-4">
             <input type="checkbox" checked={defaultMarks.hasTheoryPractical} onChange={e => setDefaultMarks(d => ({ ...d, hasTheoryPractical: e.target.checked }))} className="w-4 h-4 accent-indigo-600" />
-            Theory + Practical split
+            {EXAM_CONSTS.NEW_EXAM.LBL_TP_SPLIT}
           </label>
         </div>
-        <p className="mt-3 text-xs text-blue-500 flex items-center gap-1"><Sparkles className="w-3.5 h-3.5" /> These defaults apply to every subject in every selected class. Fine-tune individual subjects in the next step.</p>
+        <p className="mt-3 text-xs text-blue-500 flex items-center gap-1"><Sparkles className="w-3.5 h-3.5" /> {EXAM_CONSTS.NEW_EXAM.TXT_DEF_APPLY}</p>
       </div>
 
-      <p className="mt-3 text-xs text-gray-400">{selectedClassIds.length} of {classes.length} selected{selectedClassIds.length === classes.length && classes.length > 0 ? " (all classes)" : ""}</p>
+      <p className="mt-3 text-xs text-gray-400">{selectedClassIds.length} of {classes.length} {EXAM_CONSTS.NEW_EXAM.TXT_SELECTED_OF}{selectedClassIds.length === classes.length && classes.length > 0 ? ` ${EXAM_CONSTS.NEW_EXAM.TXT_ALL_CLASSES}` : ""}</p>
     </div>
   );
 }
@@ -501,21 +500,21 @@ function Step3Subjects({
   return (
     <div>
       <div className="bg-green-50 border border-green-100 rounded-xl px-4 py-3 mb-4 text-sm text-green-800">
-        <strong>Subjects auto-loaded per section</strong> — sections with identical subjects are shown compactly; sections with different subjects (e.g. streams) are shown per section. Uncheck any subject to exclude it.
+        <strong>{EXAM_CONSTS.NEW_EXAM.TXT_AUTO_LOADED}</strong> {EXAM_CONSTS.NEW_EXAM.TXT_AUTO_DESC}
       </div>
 
       <div className="flex flex-wrap items-center gap-3 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 mb-5">
-        <span className="text-sm font-semibold text-gray-700">Quick apply to all:</span>
+        <span className="text-sm font-semibold text-gray-700">{EXAM_CONSTS.NEW_EXAM.LBL_QUICK_APPLY}</span>
         <div className="flex items-center gap-1.5">
-          <span className="text-xs text-gray-500">Max</span>
+          <span className="text-xs text-gray-500">{EXAM_CONSTS.NEW_EXAM.MODALS?.MAX ?? "Max"}</span>
           <input type="number" value={quickApply.maxMarks} onChange={e => setQuickApply(q => ({ ...q, maxMarks: e.target.value }))} className="w-16 border border-gray-200 rounded-lg px-2 py-1 text-sm" />
-          <span className="text-xs text-gray-500">Pass</span>
+          <span className="text-xs text-gray-500">{EXAM_CONSTS.NEW_EXAM.MODALS?.PASS ?? "Pass"}</span>
           <input type="number" value={quickApply.passingMarks} onChange={e => setQuickApply(q => ({ ...q, passingMarks: e.target.value }))} className="w-16 border border-gray-200 rounded-lg px-2 py-1 text-sm" />
         </div>
         <button onClick={applyQuickToAll} className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700">
-          Apply to all <ChevronRight className="w-3 h-3" />
+          {EXAM_CONSTS.NEW_EXAM.BTN_APPLY_ALL} <ChevronRight className="w-3 h-3" />
         </button>
-        <span className="ml-auto text-xs text-gray-400">{totalConfigs} section-subject configs across {selectedClassIds.length} classes</span>
+        <span className="ml-auto text-xs text-gray-400">{totalConfigs} {EXAM_CONSTS.NEW_EXAM.TXT_SUB_CONFIGS} {selectedClassIds.length} classes</span>
       </div>
 
       <div className="space-y-5">
@@ -542,13 +541,12 @@ function ClassSubjectBlock({ classId, className, data, rows, updateRow, updateCo
   if (!data) return null;
   const { sections, sameAcrossSections } = data;
   const includedCount = rows.filter(r => r.included).length;
-  const totalSubjects = new Set(rows.map(r => r.subjectId)).size;
 
   if (sections.length === 0) {
     return (
       <div className="border border-gray-200 rounded-xl p-4">
         <p className="text-sm font-semibold text-gray-700">{className}</p>
-        <p className="text-xs text-gray-400 mt-1">No sections/subjects found for this class.</p>
+        <p className="text-xs text-gray-400 mt-1">{EXAM_CONSTS.NEW_EXAM.TXT_NO_SEC_SUB}</p>
       </div>
     );
   }
@@ -565,8 +563,8 @@ function ClassSubjectBlock({ classId, className, data, rows, updateRow, updateCo
           )}
         </div>
         <div className="flex items-center gap-2 text-xs font-semibold">
-          <button onClick={() => toggleClassAll(classId, true)} className="text-indigo-600 hover:underline">All ✓</button>
-          <button onClick={() => toggleClassAll(classId, false)} className="text-red-500 hover:underline">None ✗</button>
+          <button onClick={() => toggleClassAll(classId, true)} className="text-indigo-600 hover:underline">{EXAM_CONSTS.NEW_EXAM.BTN_ALL}</button>
+          <button onClick={() => toggleClassAll(classId, false)} className="text-red-500 hover:underline">{EXAM_CONSTS.NEW_EXAM.BTN_NONE}</button>
         </div>
       </div>
 
@@ -599,7 +597,6 @@ function ClassSubjectBlock({ classId, className, data, rows, updateRow, updateCo
   );
 }
 
-// For compact (same-across-sections) display, show one representative row per subjectId.
 function dedupeBySubject(rows) {
   const seen = new Map();
   rows.forEach(r => { if (!seen.has(r.subjectId)) seen.set(r.subjectId, r); });
@@ -613,10 +610,10 @@ function SubjectTable({ rows, onToggle, onChange, useRowKey }) {
       <thead>
         <tr className="text-left text-xs font-semibold text-gray-400 uppercase">
           <th className="px-4 py-2 w-8"></th>
-          <th className="px-2 py-2">Subject</th>
-          <th className="px-2 py-2 w-24">Max Marks</th>
-          <th className="px-2 py-2 w-24">Pass Marks</th>
-          <th className="px-2 py-2 w-28">Type</th>
+          <th className="px-2 py-2">{EXAM_CONSTS.NEW_EXAM.TH_SUBJECT}</th>
+          <th className="px-2 py-2 w-24">{EXAM_CONSTS.NEW_EXAM.TH_MAX}</th>
+          <th className="px-2 py-2 w-24">{EXAM_CONSTS.NEW_EXAM.TH_PASS}</th>
+          <th className="px-2 py-2 w-28">{EXAM_CONSTS.NEW_EXAM.TH_TYPE}</th>
         </tr>
       </thead>
       <tbody>
@@ -640,9 +637,9 @@ function SubjectTable({ rows, onToggle, onChange, useRowKey }) {
             <td className="px-2 py-2">
               <div className="inline-flex rounded-lg border border-gray-200 overflow-hidden">
                 <button disabled={!r.included} onClick={() => onChange(r.subjectId, { hasTheoryPractical: false }, r.key)}
-                  className={`px-2.5 py-1 text-xs font-semibold ${!r.hasTheoryPractical ? "bg-indigo-600 text-white" : "bg-white text-gray-600"}`}>Full</button>
+                  className={`px-2.5 py-1 text-xs font-semibold ${!r.hasTheoryPractical ? "bg-indigo-600 text-white" : "bg-white text-gray-600"}`}>{EXAM_CONSTS.NEW_EXAM.BTN_FULL}</button>
                 <button disabled={!r.included} onClick={() => onChange(r.subjectId, { hasTheoryPractical: true }, r.key)}
-                  className={`px-2.5 py-1 text-xs font-semibold ${r.hasTheoryPractical ? "bg-indigo-600 text-white" : "bg-white text-gray-600"}`}>T+P</button>
+                  className={`px-2.5 py-1 text-xs font-semibold ${r.hasTheoryPractical ? "bg-indigo-600 text-white" : "bg-white text-gray-600"}`}>{EXAM_CONSTS.NEW_EXAM.BTN_TP}</button>
               </div>
             </td>
           </tr>
@@ -655,24 +652,22 @@ function SubjectTable({ rows, onToggle, onChange, useRowKey }) {
 // ══════════════════════════════════════════════════════════════════
 // STEP 4 — Confirm & Create
 // ══════════════════════════════════════════════════════════════════
-function Step4Confirm({ summaryByClass, includedRowsCount, payloadPreview }) {
-  const sectionsCovered = new Set();
-  summaryByClass.forEach(c => { /* sectionCount already per class */ });
+function Step4Confirm({ summaryByClass, includedRowsCount }) {
   const totalSections = summaryByClass.reduce((sum, c) => sum + c.sectionCount, 0);
 
   return (
     <div>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-green-50 border border-green-100 rounded-xl p-4 mb-5 text-center">
-        <div><p className="text-2xl font-extrabold text-green-700">{summaryByClass.length}</p><p className="text-xs text-green-600">Classes</p></div>
+        <div><p className="text-2xl font-extrabold text-green-700">{summaryByClass.length}</p><p className="text-xs text-green-600">{EXAM_CONSTS.EXAMS.STATS.CLASSES?.split(' ')[0]}</p></div>
         <div><p className="text-2xl font-extrabold text-green-700">{includedRowsCount}</p><p className="text-xs text-green-600">Subject Configs</p></div>
         <div><p className="text-2xl font-extrabold text-green-700">{totalSections}</p><p className="text-xs text-green-600">Sections Covered</p></div>
-        <div><p className="text-2xl font-extrabold text-green-700">0</p><p className="text-xs text-green-600">Manual Steps After</p></div>
+        <div><p className="text-2xl font-extrabold text-green-700">0</p><p className="text-xs text-green-600">{EXAM_CONSTS.NEW_EXAM.LBL_MANUAL_STEPS}</p></div>
       </div>
 
       <table className="w-full text-sm mb-5">
         <thead>
           <tr className="text-left text-xs font-semibold text-gray-400 uppercase border-b border-gray-100">
-            <th className="py-2">Class</th><th className="py-2">Sections</th><th className="py-2">Subjects</th><th className="py-2 text-right">Status</th>
+            <th className="py-2">{EXAM_CONSTS.NEW_EXAM.TH_CLASS}</th><th className="py-2">{EXAM_CONSTS.NEW_EXAM.TH_SECTIONS}</th><th className="py-2">{EXAM_CONSTS.NEW_EXAM.TH_SUBJECTS}</th><th className="py-2 text-right">{EXAM_CONSTS.NEW_EXAM.TH_STATUS}</th>
           </tr>
         </thead>
         <tbody>
@@ -683,15 +678,13 @@ function Step4Confirm({ summaryByClass, includedRowsCount, payloadPreview }) {
               <td className="py-2.5 text-gray-600">{c.includedSubjects} subjects selected{c.excludedNames.length ? ` (${c.excludedNames.join(", ")} excluded)` : ""}</td>
               <td className="py-2.5 text-right">
                 <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${c.ready ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"}`}>
-                  {c.ready ? <><Check className="w-3 h-3" /> Ready</> : "No subjects"}
+                  {c.ready ? <><Check className="w-3 h-3" /> {EXAM_CONSTS.NEW_EXAM.TXT_READY}</> : EXAM_CONSTS.NEW_EXAM.TXT_NO_SUB}
                 </span>
               </td>
             </tr>
           ))}
         </tbody>
       </table>
-
-
     </div>
   );
 }

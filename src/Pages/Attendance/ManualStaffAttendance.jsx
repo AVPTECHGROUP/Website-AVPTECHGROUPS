@@ -4,35 +4,28 @@ import { toast } from 'react-toastify';
 import { getUsersSummary } from '../../Api/StaffManagement/UserManagementAPI';
 import { requestManualAttendance } from '../../Api/Attendance/AttendanceApi';
 import { getSchoolLocation } from "../../utils/getSchoolLocation";
+import {
+    REMARKS_MAX,
+    DASH_PLACEHOLDER,
+    TOAST_SELECT_STAFF, TOAST_RESOLVE_USER_ID, TOAST_RESOLVE_USER_ROLE,
+    TOAST_ENTER_REMARKS, TOAST_REMARKS_EXCEED,
+    TOAST_SUBMIT_SUCCESS, TOAST_SUBMIT_FAILED,
+    UI_STRINGS
+} from "../../Constants/StringConstants/AttendanceConstants";
 
 const TODAY = new Date().toISOString().split('T')[0];
-const REMARKS_MAX = 200;
 
 const resolveStaff = (raw) => {
-    const userId =
-        raw.userId ?? raw.id ?? raw.user_id ??
-        raw.staffId ?? raw.empId ?? null;
-
-    const rolesArray = Array.isArray(raw.roles) ? raw.roles
-        : Array.isArray(raw.userRoles) ? raw.userRoles
-            : null;
-    const userType =
-        raw.userType ?? raw.role ?? raw.userRole ?? raw.roleName ??
-        raw.type ?? raw.designation ?? raw.position ??
-        (rolesArray && rolesArray.length > 0 ? rolesArray[0] : null);
-
+    const userId = raw.userId ?? raw.id ?? raw.user_id ?? raw.staffId ?? raw.empId ?? null;
+    const rolesArray = Array.isArray(raw.roles) ? raw.roles : Array.isArray(raw.userRoles) ? raw.userRoles : null;
+    const userType = raw.userType ?? raw.role ?? raw.userRole ?? raw.roleName ?? raw.type ?? raw.designation ?? raw.position ?? (rolesArray && rolesArray.length > 0 ? rolesArray[0] : null);
     const firstName = raw.firstName ?? raw.first_name ?? '';
     const lastName = raw.lastName ?? raw.last_name ?? '';
     const fullName = `${firstName} ${lastName}`.trim();
-
-    const userName =
-        (raw.userName ?? raw.name ?? raw.fullName ??
-            raw.full_name ?? fullName) || `User #${userId}`;
-
+    const userName = (raw.userName ?? raw.name ?? raw.fullName ?? raw.full_name ?? fullName) || `User #${userId}`;
     return { userId, userType, userName };
 };
 
-/* Display helpers for raw list items (before selection) */
 const getDisplayName = (raw) => {
     if (raw.userName) return raw.userName;
     if (raw.name) return raw.name;
@@ -52,19 +45,15 @@ const getDisplayRole = (raw) => {
     if (raw.position) return raw.position;
     const arr = Array.isArray(raw.roles) ? raw.roles : Array.isArray(raw.userRoles) ? raw.userRoles : null;
     if (arr && arr.length > 0) return arr[0];
-    return '—';
+    return DASH_PLACEHOLDER;
 };
 
-/* ─────────────────────────────────────────────────────────────────
-   Component
-───────────────────────────────────────────────────────────────── */
 const ManualStaffAttendance = ({ onClose, onSuccess }) => {
     const [staffList, setStaffList] = useState([]);
     const [staffLoading, setStaffLoading] = useState(false);
     const [staffSearch, setStaffSearch] = useState('');
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [selectedStaff, setSelectedStaff] = useState(null);
-
     const [attendanceDate, setAttendanceDate] = useState(TODAY);
     const [checkInTime, setCheckInTime] = useState('09:00');
     const [remarks, setRemarks] = useState('');
@@ -72,28 +61,20 @@ const ManualStaffAttendance = ({ onClose, onSuccess }) => {
 
     const dropdownRef = useRef(null);
 
-    /* ── Fetch staff list ── */
     useEffect(() => {
         const fetchStaff = async () => {
             setStaffLoading(true);
             try {
                 const data = await getUsersSummary({ search: staffSearch, size: 200 });
-
-                console.log('[ManualAttendance] getUsersSummary raw response:', data);
-
                 const list =
                     Array.isArray(data) ? data :
                         Array.isArray(data?.content) ? data.content :
                             Array.isArray(data?.data) ? data.data :
                                 Array.isArray(data?.users) ? data.users :
                                     Array.isArray(data?.result) ? data.result :
-                                        Array.isArray(data?.results) ? data.results :
-                                            [];
-
-                console.log('[ManualAttendance] First staff item ALL KEYS:', list[0] ? Object.keys(list[0]) : 'empty'); console.log('[ManualAttendance] First staff item FULL:', JSON.stringify(list[0], null, 2));
+                                        Array.isArray(data?.results) ? data.results : [];
                 setStaffList(list);
             } catch (err) {
-                console.error('[ManualAttendance] Failed to fetch staff:', err);
                 setStaffList([]);
             } finally {
                 setStaffLoading(false);
@@ -102,7 +83,6 @@ const ManualStaffAttendance = ({ onClose, onSuccess }) => {
         fetchStaff();
     }, [staffSearch]);
 
-    /* ── Close dropdown on outside click ── */
     useEffect(() => {
         const handler = (e) => {
             if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
@@ -113,48 +93,20 @@ const ManualStaffAttendance = ({ onClose, onSuccess }) => {
         return () => document.removeEventListener('mousedown', handler);
     }, []);
 
-    /* ── Select — resolve fields once at click time ── */
     const handleSelectStaff = (raw) => {
         const resolved = resolveStaff(raw);
-        console.log('[ManualAttendance] Resolved staff on select:', resolved); // 👈 verify userId & userType here
         setSelectedStaff(resolved);
         setDropdownOpen(false);
         setStaffSearch('');
     };
 
-    /* ── Submit ── */
     const handleSubmit = async () => {
         const { gpsLatitude, gpsLongitude } = getSchoolLocation();
-        if (!selectedStaff) {
-            toast.error('Please select a staff member');
-            return;
-        }
-        if (!selectedStaff.userId) {
-            console.error(
-                '[ManualAttendance] userId is null/undefined.\n' +
-                'Open the log "First staff item" above and add the correct field name to resolveStaff().\n' +
-                'Resolved object:', selectedStaff
-            );
-            toast.error('Could not resolve User ID — see browser console for fix instructions');
-            return;
-        }
-        if (!selectedStaff.userType) {
-            console.error(
-                '[ManualAttendance] userType is null/undefined.\n' +
-                'Open the log "First staff item" above and add the correct field name to resolveStaff().\n' +
-                'Resolved object:', selectedStaff
-            );
-            toast.error('Could not resolve User Role — see browser console for fix instructions');
-            return;
-        }
-        if (!remarks.trim()) {
-            toast.error('Please enter a reason / remarks');
-            return;
-        }
-        if (remarks.trim().length > REMARKS_MAX) {
-            toast.error(`Remarks cannot exceed ${REMARKS_MAX} characters`);
-            return;
-        }
+        if (!selectedStaff) { toast.error(TOAST_SELECT_STAFF); return; }
+        if (!selectedStaff.userId) { toast.error(TOAST_RESOLVE_USER_ID); return; }
+        if (!selectedStaff.userType) { toast.error(TOAST_RESOLVE_USER_ROLE); return; }
+        if (!remarks.trim()) { toast.error(TOAST_ENTER_REMARKS); return; }
+        if (remarks.trim().length > REMARKS_MAX) { toast.error(TOAST_REMARKS_EXCEED(REMARKS_MAX)); return; }
 
         setSubmitting(true);
         try {
@@ -166,11 +118,11 @@ const ManualStaffAttendance = ({ onClose, onSuccess }) => {
                 gpsLongitude: parseFloat(gpsLongitude),
                 remarks: remarks.trim(),
             });
-            toast.success('Manual attendance submitted for review!');
+            toast.success(TOAST_SUBMIT_SUCCESS);
             onSuccess?.();
             onClose();
         } catch (err) {
-            toast.error(err.message || 'Submission failed');
+            toast.error(err.message || TOAST_SUBMIT_FAILED);
         } finally {
             setSubmitting(false);
         }
@@ -179,12 +131,10 @@ const ManualStaffAttendance = ({ onClose, onSuccess }) => {
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden max-h-[90vh] flex flex-col">
-
-                {/* Header */}
                 <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
                     <div className="flex items-center gap-2">
                         <ClipboardEdit className="w-5 h-5 text-amber-500" />
-                        <h3 className="text-base font-bold text-gray-900">Manual Attendance Entry</h3>
+                        <h3 className="text-base font-bold text-gray-900">{UI_STRINGS.MANUAL_STAFF.HEADER}</h3>
                     </div>
                     <button onClick={onClose}
                         className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors text-gray-400 hover:text-gray-600">
@@ -192,17 +142,12 @@ const ManualStaffAttendance = ({ onClose, onSuccess }) => {
                     </button>
                 </div>
 
-                {/* Body */}
                 <div className="overflow-y-auto flex-1 px-6 py-4 space-y-4">
-
-                    {/* Staff Dropdown */}
                     <div>
                         <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1.5">
-                            Staff Member <span className="text-red-500">*</span>
+                            {UI_STRINGS.MANUAL_STAFF.STAFF_MEMBER} <span className="text-red-500">*</span>
                         </label>
-
                         <div className="relative" ref={dropdownRef}>
-                            {/* Trigger button */}
                             <button type="button" onClick={() => setDropdownOpen(prev => !prev)}
                                 className="w-full flex items-center justify-between px-4 py-2.5 border border-gray-300 rounded-xl bg-white text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-amber-400 transition-all hover:border-amber-400">
                                 {selectedStaff ? (
@@ -216,36 +161,31 @@ const ManualStaffAttendance = ({ onClose, onSuccess }) => {
                                         </span>
                                     </div>
                                 ) : (
-                                    <span className="text-gray-400">— Select staff member —</span>
+                                    <span className="text-gray-400">{UI_STRINGS.MANUAL_STAFF.SELECT_STAFF}</span>
                                 )}
                                 <ChevronDown className={`w-4 h-4 text-gray-400 shrink-0 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
                             </button>
 
-                            {/* Dropdown panel */}
                             {dropdownOpen && (
                                 <div className="absolute z-50 mt-1.5 w-full bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden">
-                                    {/* Search inside dropdown */}
                                     <div className="p-2 border-b border-gray-100">
                                         <div className="relative">
                                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                                             <input type="text" value={staffSearch}
                                                 onChange={(e) => setStaffSearch(e.target.value)}
-                                                placeholder="Search by name..."
-                                                autoFocus
+                                                placeholder={UI_STRINGS.MANUAL_STAFF.SEARCH_NAME} autoFocus
                                                 className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400 bg-gray-50"
                                             />
                                         </div>
                                     </div>
-
-                                    {/* Staff list */}
                                     <div className="max-h-52 overflow-y-auto">
                                         {staffLoading ? (
                                             <div className="flex items-center justify-center py-6 gap-2 text-gray-400">
                                                 <Loader2 className="w-4 h-4 animate-spin" />
-                                                <span className="text-sm">Loading staff...</span>
+                                                <span className="text-sm">{UI_STRINGS.MANUAL_STAFF.LOADING_STAFF}</span>
                                             </div>
                                         ) : staffList.length === 0 ? (
-                                            <div className="py-6 text-center text-sm text-gray-400">No staff members found</div>
+                                            <div className="py-6 text-center text-sm text-gray-400">{UI_STRINGS.MANUAL_STAFF.NO_STAFF}</div>
                                         ) : (
                                             staffList.map((staff, idx) => {
                                                 const name = getDisplayName(staff);
@@ -259,7 +199,7 @@ const ManualStaffAttendance = ({ onClose, onSuccess }) => {
                                                         </div>
                                                         <div className="flex-1 min-w-0">
                                                             <p className="text-sm font-semibold text-gray-800 truncate">{name}</p>
-                                                            <p className="text-xs text-gray-400">ID: {id}</p>
+                                                            <p className="text-xs text-gray-400">{UI_STRINGS.COMMON.ID_LABEL} {id}</p>
                                                         </div>
                                                         <span className="shrink-0 px-2 py-0.5 bg-slate-100 text-slate-600 text-xs font-semibold rounded-md">
                                                             {role}
@@ -274,11 +214,10 @@ const ManualStaffAttendance = ({ onClose, onSuccess }) => {
                         </div>
                     </div>
 
-                    {/* Date & Time */}
                     <div className="grid grid-cols-2 gap-3">
                         <div>
                             <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1.5">
-                                Attendance Date <span className="text-red-500">*</span>
+                                {UI_STRINGS.MANUAL_STAFF.ATTENDANCE_DATE} <span className="text-red-500">*</span>
                             </label>
                             <input type="date" value={attendanceDate} max={TODAY}
                                 onChange={(e) => setAttendanceDate(e.target.value)}
@@ -287,7 +226,7 @@ const ManualStaffAttendance = ({ onClose, onSuccess }) => {
                         </div>
                         <div>
                             <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1.5">
-                                Check-In Time
+                                {UI_STRINGS.MANUAL_STAFF.CHECK_IN_TIME}
                             </label>
                             <input type="time" value={checkInTime}
                                 onChange={(e) => setCheckInTime(e.target.value)}
@@ -296,34 +235,32 @@ const ManualStaffAttendance = ({ onClose, onSuccess }) => {
                         </div>
                     </div>
 
-                    {/* Remarks */}
                     <div>
                         <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1.5">
-                            Reason / Remarks <span className="text-red-500">*</span>
+                            {UI_STRINGS.MANUAL_STAFF.REASON_REMARKS} <span className="text-red-500">*</span>
                         </label>
                         <textarea value={remarks} onChange={(e) => setRemarks(e.target.value.slice(0, REMARKS_MAX))} rows={3} maxLength={REMARKS_MAX}
-                            placeholder="e.g. Face recognition device unavailable, manual entry requested by HOD..."
+                            placeholder="e.g. Face recognition device unavailable..."
                             className="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-amber-400 transition-all resize-none"
                         />
                         <div className="mt-2 flex items-center justify-between">
-                            <div className={`text-xs ${remarks.trim().length > REMARKS_MAX ? 'text-red-600' : 'text-gray-500'}`}>{remarks.trim().length}/{REMARKS_MAX} characters</div>
+                            <div className={`text-xs ${remarks.trim().length > REMARKS_MAX ? 'text-red-600' : 'text-gray-500'}`}>{remarks.trim().length}/{REMARKS_MAX} {UI_STRINGS.MANUAL_STAFF.CHARACTERS}</div>
                             {remarks.trim().length > REMARKS_MAX && (
-                                <div className="text-xs text-red-600">Remarks exceed maximum length</div>
+                                <div className="text-xs text-red-600">{UI_STRINGS.MANUAL_STAFF.REMARKS_EXCEED}</div>
                             )}
                         </div>
                     </div>
                 </div>
 
-                {/* Footer */}
                 <div className="flex gap-3 px-6 py-4 border-t border-gray-100 bg-gray-50 shrink-0">
                     <button onClick={onClose}
                         className="flex-1 px-4 py-2.5 border border-gray-300 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-100 transition-all">
-                        Cancel
+                        {UI_STRINGS.COMMON.CANCEL}
                     </button>
                     <button onClick={handleSubmit} disabled={submitting || remarks.trim().length > REMARKS_MAX}
                         className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-amber-500 hover:bg-amber-600 disabled:opacity-60 rounded-xl text-sm font-semibold text-white transition-all">
                         {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
-                        {submitting ? 'Submitting...' : 'Submit for Review'}
+                        {submitting ? UI_STRINGS.MANUAL_STAFF.BTN_SUBMITTING : UI_STRINGS.MANUAL_STAFF.BTN_SUBMIT}
                     </button>
                 </div>
             </div>

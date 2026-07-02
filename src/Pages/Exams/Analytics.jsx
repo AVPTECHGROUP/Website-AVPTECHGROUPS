@@ -15,11 +15,12 @@ import {
     getGradeDistribution,
     getExamEventSummary,
     getClassPerformanceTrend,
-    getExamEvents, // Imported to resolve event mapping fallbacks dynamically
+    getExamEvents,
 } from "../../Api/Academics/Exams";
 import { getActiveClasses, getSectionsByClass } from "../../Api/Teachers/TeachersAPI";
 import { getAcademicYears } from "../../Api/AcademicYears/AcademicYear";
 import { useDecodedUser } from "../../ContextAPI/UserContext";
+import { EXAM_CONSTS } from "../../Constants/StringConstants/AcademicsConstants";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const PASS_LINE = 33;
@@ -53,7 +54,7 @@ function gradeBadgeBg(grade = "") {
     return GRADE_STYLES[grade]?.chip ?? "bg-gray-100 text-gray-600";
 }
 
-function safeFixed(val, decimals = 1, fallback = "—") {
+function safeFixed(val, decimals = 1, fallback = EXAM_CONSTS.ANALYTICS.FALLBACK_DASH) {
     const n = Number(val);
     return isNaN(n) ? fallback : n.toFixed(decimals);
 }
@@ -89,7 +90,7 @@ function FilterSelect({ label, hint, value, onChange, disabled, children }) {
     );
 }
 
-// ─── Component: Event Summary Panel (Strict layout match for image_3b76c3.png) ───
+// ─── Component: Event Summary Panel ───
 function EventSummaryPanel({ summaryData, examName, loading }) {
     if (loading) {
         return <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm animate-pulse h-64" />;
@@ -108,10 +109,10 @@ function EventSummaryPanel({ summaryData, examName, loading }) {
                 <div className="flex items-center gap-2">
                     <span className="text-lg">📋</span>
                     <h3 className="text-sm font-bold text-gray-800">
-                        Event Summary — {summaryData.eventName || examName || "Selected Event"}
+                        {EXAM_CONSTS.ANALYTICS.EVENT_SUMMARY}{summaryData.eventName || examName || "Selected Event"}
                     </h3>
                     <span className="bg-purple-100 text-purple-700 font-extrabold text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider">
-                        All Classes
+                        {EXAM_CONSTS.ANALYTICS.ALL_CLASSES}
                     </span>
                 </div>
 
@@ -120,24 +121,24 @@ function EventSummaryPanel({ summaryData, examName, loading }) {
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="bg-gray-50/40 border border-gray-100 rounded-xl p-4 text-center">
                     <p className="text-3xl font-black text-gray-900 tracking-tight">{totalClasses}</p>
-                    <p className="text-xs font-semibold text-gray-400 mt-1">Classes</p>
+                    <p className="text-xs font-semibold text-gray-400 mt-1">{EXAM_CONSTS.ANALYTICS.CLASSES}</p>
                 </div>
                 <div className="bg-gray-50/40 border border-gray-100 rounded-xl p-4 text-center">
                     <p className="text-3xl font-black text-gray-900 tracking-tight">{totalSections}</p>
-                    <p className="text-xs font-semibold text-gray-400 mt-1">Sections</p>
+                    <p className="text-xs font-semibold text-gray-400 mt-1">{EXAM_CONSTS.ANALYTICS.SECTIONS}</p>
                 </div>
                 <div className="bg-gray-50/40 border border-gray-100 rounded-xl p-4 text-center">
                     <p className="text-3xl font-black text-indigo-600 tracking-tight">{safeFixed(calculatedPassRate)}%</p>
-                    <p className="text-xs font-semibold text-gray-400 mt-1">Overall Pass Rate</p>
+                    <p className="text-xs font-semibold text-gray-400 mt-1">{EXAM_CONSTS.ANALYTICS.OVERALL_PASS}</p>
                 </div>
                 <div className="bg-gray-50/40 border border-gray-100 rounded-xl p-4 text-center">
                     <p className="text-3xl font-black text-gray-900 tracking-tight">{safeFixed(schoolAvg)}%</p>
-                    <p className="text-xs font-semibold text-gray-400 mt-1">School Avg</p>
+                    <p className="text-xs font-semibold text-gray-400 mt-1">{EXAM_CONSTS.ANALYTICS.SCHOOL_AVG}</p>
                 </div>
             </div>
 
             <div className="space-y-4 pt-2">
-                <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Pass Rate By Class</h4>
+                <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">{EXAM_CONSTS.ANALYTICS.PASS_RATE_BY_CLASS}</h4>
                 <div className="space-y-3.5">
                     {classResults.map((cls, idx) => {
                         const passRate = cls.passRate !== null ? Number(cls.passRate) : Number(cls.avgPercentage) || 0;
@@ -167,11 +168,11 @@ function EventSummaryPanel({ summaryData, examName, loading }) {
                                         {passRate > 0 && <span className="text-white font-black text-[11px]">{safeFixed(passRate)}%</span>}
                                     </div>
                                     {!cls.resultDeclared && (
-                                        <span className="text-gray-400 font-bold text-[11px] ml-3 italic">Result Undeclared</span>
+                                        <span className="text-gray-400 font-bold text-[11px] ml-3 italic">{EXAM_CONSTS.ANALYTICS.RESULT_UNDECLARED}</span>
                                     )}
                                 </div>
                                 <div className={`px-2.5 py-0.5 rounded-full text-xs font-bold border shrink-0 ${pillTheme}`}>
-                                    {cls.sectionResults?.length || 1} sections · {cls.totalStudents ?? 0} students
+                                    {cls.sectionResults?.length || 1} {EXAM_CONSTS.ANALYTICS.SECTIONS.toLowerCase()} · {cls.totalStudents ?? 0} {EXAM_CONSTS.ANALYTICS.STUDENTS.toLowerCase()}
                                 </div>
                             </div>
                         );
@@ -196,7 +197,7 @@ function PerformanceTrendCard({ trendData, currentExamId, currentClassName, load
                 <div className="flex items-center gap-2">
                     <TrendingUp className="w-4 h-4 text-indigo-600" />
                     <h3 className="text-sm font-bold text-gray-800">
-                        Performance Trend — {currentClassName || "Class"} — {trendData?.academicYearLabel || ""}
+                        {EXAM_CONSTS.ANALYTICS.PERF_TREND}{currentClassName || EXAM_CONSTS.ANALYTICS.LBL_CLASS} — {trendData?.academicYearLabel || ""}
                     </h3>
 
                 </div>
@@ -216,7 +217,7 @@ function PerformanceTrendCard({ trendData, currentExamId, currentClassName, load
                         <div key={pt.examId || i} className="flex items-center gap-4">
                             <div className="w-32 text-right shrink-0">
                                 <span className={`text-xs font-semibold ${isCurrent ? "text-indigo-600 font-bold" : "text-gray-500"}`}>
-                                    {pt.examName} {isCurrent && <span className="text-indigo-500 ml-1 font-bold">← now</span>}
+                                    {pt.examName} {isCurrent && <span className="text-indigo-500 ml-1 font-bold">{EXAM_CONSTS.ANALYTICS.NOW}</span>}
                                 </span>
                             </div>
 
@@ -230,7 +231,7 @@ function PerformanceTrendCard({ trendData, currentExamId, currentClassName, load
                                     </div>
                                 ) : (
                                     <div className="w-full h-full bg-gray-100/40 flex items-center pl-3">
-                                        <span className="text-gray-300 font-medium text-xs italic">Undeclared Timeline Block</span>
+                                        <span className="text-gray-300 font-medium text-xs italic">{EXAM_CONSTS.ANALYTICS.UNDECLARED_TIMELINE}</span>
                                     </div>
                                 )}
                                 <div
@@ -241,7 +242,7 @@ function PerformanceTrendCard({ trendData, currentExamId, currentClassName, load
 
                             <div className="w-12 text-left shrink-0">
                                 <span className={`text-xs font-bold ${isCurrent ? "text-indigo-600" : "text-gray-500"}`}>
-                                    {!isUndeclared ? `${safeFixed(val)}%` : "—"}
+                                    {!isUndeclared ? `${safeFixed(val)}%` : EXAM_CONSTS.ANALYTICS.FALLBACK_DASH}
                                 </span>
                             </div>
                         </div>
@@ -274,7 +275,7 @@ function StatCardSkeleton() {
     return <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 animate-pulse h-28" />;
 }
 
-// ─── Subject Average Graphic Chart (Fixed Duplicate Rows Bug) ─────────────────
+// ─── Subject Average Graphic Chart ─────────────────
 function SubjectBarChart({ subjectStats, loading }) {
     const maxVal = 100;
     const passLinePct = (PASS_LINE / maxVal) * 100;
@@ -284,16 +285,16 @@ function SubjectBarChart({ subjectStats, loading }) {
             <div className="flex items-center justify-between mb-4 border-b border-gray-50 pb-3">
                 <div className="flex items-center gap-2">
                     <TrendingUp className="w-4 h-4 text-indigo-600 shrink-0" />
-                    <h3 className="text-sm font-bold text-gray-800">Subject-wise Average %</h3>
+                    <h3 className="text-sm font-bold text-gray-800">{EXAM_CONSTS.ANALYTICS.SUB_WISE_AVG}</h3>
                 </div>
                 <div className="flex items-center gap-3">
                     <div className="flex items-center gap-1">
                         <span className="w-2.5 h-2.5 rounded-full bg-indigo-600" />
-                        <span className="text-[11px] text-gray-500 font-medium">Avg %</span>
+                        <span className="text-[11px] text-gray-500 font-medium">{EXAM_CONSTS.ANALYTICS.AVG_PCT}</span>
                     </div>
                     <div className="flex items-center gap-1">
                         <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
-                        <span className="text-[11px] text-gray-500 font-medium">Pass line ({PASS_LINE}%)</span>
+                        <span className="text-[11px] text-gray-500 font-medium">{EXAM_CONSTS.ANALYTICS.PASS_LINE} ({PASS_LINE}%)</span>
                     </div>
                 </div>
             </div>
@@ -303,7 +304,7 @@ function SubjectBarChart({ subjectStats, loading }) {
                     {Array(5).fill(0).map((_, i) => <div key={i} className="h-6 rounded bg-gray-100 animate-pulse" />)}
                 </div>
             ) : subjectStats.length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-8">No subject metrics accessible.</p>
+                <p className="text-sm text-gray-400 text-center py-8">{EXAM_CONSTS.ANALYTICS.NO_SUB_METRICS}</p>
             ) : (
                 <div className="space-y-3.5">
                     {subjectStats.map((sub, idx) => {
@@ -358,26 +359,26 @@ function SubjectBarChart({ subjectStats, loading }) {
     );
 }
 
-// ─── Pass / Fail Matrix Table Layout (Fixed Duplicate Rows Bug) ───────────────
+// ─── Pass / Fail Matrix Table Layout ───────────────
 function PassFailTable({ subjectStats, loading }) {
     return (
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden flex flex-col justify-between">
             <div>
                 <div className="px-5 py-4 border-b border-gray-100 bg-gray-50/20 flex items-center gap-2">
                     <BarChart2 className="w-4 h-4 text-indigo-600" />
-                    <h3 className="text-sm font-bold text-gray-800">Pass / Fail per Subject</h3>
+                    <h3 className="text-sm font-bold text-gray-800">{EXAM_CONSTS.ANALYTICS.PASS_FAIL_SUB}</h3>
                 </div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left">
                         <thead>
                             <tr className="bg-gray-50 border-b border-gray-100 text-[11px] font-bold text-gray-400 uppercase tracking-wider">
-                                <th className="px-4 py-3">Subject</th>
-                                <th className="px-3 py-3">Max</th>
-                                <th className="px-3 py-3">Avg</th>
-                                <th className="px-3 py-3">Pass</th>
-                                <th className="px-3 py-3">Fail</th>
-                                <th className="px-3 py-3">Abs</th>
-                                <th className="px-4 py-3 text-right">Pass %</th>
+                                <th className="px-4 py-3">{EXAM_CONSTS.ANALYTICS.LBL_SUBJECT}</th>
+                                <th className="px-3 py-3">{EXAM_CONSTS.ANALYTICS.MAX}</th>
+                                <th className="px-3 py-3">{EXAM_CONSTS.ANALYTICS.AVG.trim()}</th>
+                                <th className="px-3 py-3">{EXAM_CONSTS.ANALYTICS.PASS}</th>
+                                <th className="px-3 py-3">{EXAM_CONSTS.ANALYTICS.FAIL.trim()}</th>
+                                <th className="px-3 py-3">{EXAM_CONSTS.ANALYTICS.ABS}</th>
+                                <th className="px-4 py-3 text-right">{EXAM_CONSTS.ANALYTICS.PASS_RATE.replace('Rate', '%')}</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-50 font-medium text-gray-700">
@@ -386,7 +387,7 @@ function PassFailTable({ subjectStats, loading }) {
                                     <tr key={i}><td colSpan={7} className="p-4"><div className="h-5 bg-gray-50 rounded animate-pulse" /></td></tr>
                                 ))
                             ) : subjectStats.length === 0 ? (
-                                <tr><td colSpan={7} className="text-center py-10 text-gray-400">No data mapped.</td></tr>
+                                <tr><td colSpan={7} className="text-center py-10 text-gray-400">{EXAM_CONSTS.ANALYTICS.NO_DATA}</td></tr>
                             ) : (
                                 subjectStats.map((sub) => {
                                     const total = Number(sub.totalStudents || 0);
@@ -435,7 +436,7 @@ function GradeDistributionCard({ gradeDistribution, loading }) {
             <div className="flex items-center justify-between mb-4 border-b border-gray-50 pb-3">
                 <div className="flex items-center gap-2">
                     <Medal className="w-4 h-4 text-violet-600 shrink-0" />
-                    <h3 className="text-sm font-bold text-gray-800">Grade Distribution</h3>
+                    <h3 className="text-sm font-bold text-gray-800">{EXAM_CONSTS.ANALYTICS.GRADE_DIST}</h3>
                 </div>
 
             </div>
@@ -445,7 +446,7 @@ function GradeDistributionCard({ gradeDistribution, loading }) {
                     {Array(4).fill(0).map((_, i) => <div key={i} className="h-6 rounded bg-gray-100 animate-pulse" />)}
                 </div>
             ) : bands.length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-8">Grade metrics mapping missing variables.</p>
+                <p className="text-sm text-gray-400 text-center py-8">{EXAM_CONSTS.ANALYTICS.GRADE_MISSING}</p>
             ) : (
                 <div className="space-y-2.5">
                     {GRADE_ORDER.map((grade) => {
@@ -482,7 +483,7 @@ function GradeDistributionCard({ gradeDistribution, loading }) {
                         );
                     })}
                     <div className="text-right pt-2 border-t border-gray-50 text-xs text-gray-400 font-medium">
-                        Total: {total} students verified
+                        {EXAM_CONSTS.ANALYTICS.TOTAL}{total}{EXAM_CONSTS.ANALYTICS.TOTAL_VERIFIED}
                     </div>
                 </div>
             )}
@@ -500,7 +501,7 @@ function SectionComparisonCard({ classSummary, sectionFiltered, loading }) {
             <div>
                 <div className="px-5 py-4 border-b border-gray-100 bg-gray-50/20 flex items-center gap-2">
                     <TrendingUp className="w-4 h-4 text-blue-600" />
-                    <h3 className="text-sm font-bold text-gray-800">Section-wise Comparison</h3>
+                    <h3 className="text-sm font-bold text-gray-800">{EXAM_CONSTS.ANALYTICS.SEC_WISE_COMP}</h3>
                 </div>
 
                 {loading ? (
@@ -509,24 +510,24 @@ function SectionComparisonCard({ classSummary, sectionFiltered, loading }) {
                     </div>
                 ) : sectionFiltered ? (
                     <div className="p-8 text-center text-sm text-gray-400 font-medium">
-                        Select "All Sections" context filters to visualize comparative rows.
+                        {EXAM_CONSTS.ANALYTICS.SELECT_ALL_SEC_VIS}
                     </div>
                 ) : rows.length === 0 ? (
                     <div className="p-8 text-center text-sm text-gray-400 font-medium">
-                        No comparative rows generated.
+                        {EXAM_CONSTS.ANALYTICS.NO_COMP_ROWS}
                     </div>
                 ) : (
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm text-left">
                             <thead>
                                 <tr className="bg-gray-50 border-b border-gray-100 text-[11px] font-bold text-gray-400 uppercase tracking-wider">
-                                    <th className="px-4 py-3">Section</th>
-                                    <th className="px-3 py-3">Students</th>
-                                    <th className="px-3 py-3">Pass</th>
-                                    <th className="px-3 py-3">Fail</th>
-                                    <th className="px-3 py-3">Avg %</th>
-                                    <th className="px-3 py-3">High</th>
-                                    <th className="px-4 py-3 text-right">Low</th>
+                                    <th className="px-4 py-3">{EXAM_CONSTS.ANALYTICS.LBL_SECTION}</th>
+                                    <th className="px-3 py-3">{EXAM_CONSTS.ANALYTICS.STUDENTS}</th>
+                                    <th className="px-3 py-3">{EXAM_CONSTS.ANALYTICS.PASS}</th>
+                                    <th className="px-3 py-3">{EXAM_CONSTS.ANALYTICS.FAIL.trim()}</th>
+                                    <th className="px-3 py-3">{EXAM_CONSTS.ANALYTICS.AVG_PCT}</th>
+                                    <th className="px-3 py-3">{EXAM_CONSTS.ANALYTICS.HIGH}</th>
+                                    <th className="px-4 py-3 text-right">{EXAM_CONSTS.ANALYTICS.LOW}</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-50 font-medium text-gray-700">
@@ -536,25 +537,25 @@ function SectionComparisonCard({ classSummary, sectionFiltered, loading }) {
                                             {r.sectionName}
                                             {bestAvg !== null && Number(r.avgPercentage) === bestAvg && (
                                                 <span className="text-[9px] font-black uppercase bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded border border-emerald-200/50">
-                                                    Best Avg
+                                                    {EXAM_CONSTS.ANALYTICS.BEST_AVG}
                                                 </span>
                                             )}
                                         </td>
-                                        <td className="px-3 py-3 text-gray-500">{r.totalStudents ?? "—"}</td>
-                                        <td className="px-3 py-3 text-emerald-600 font-bold">{r.passedStudents ?? "—"}</td>
-                                        <td className="px-3 py-3 text-red-500 font-bold">{r.failedStudents ?? "—"}</td>
+                                        <td className="px-3 py-3 text-gray-500">{r.totalStudents ?? EXAM_CONSTS.ANALYTICS.FALLBACK_DASH}</td>
+                                        <td className="px-3 py-3 text-emerald-600 font-bold">{r.passedStudents ?? EXAM_CONSTS.ANALYTICS.FALLBACK_DASH}</td>
+                                        <td className="px-3 py-3 text-red-500 font-bold">{r.failedStudents ?? EXAM_CONSTS.ANALYTICS.FALLBACK_DASH}</td>
                                         <td className="px-3 py-3 font-black text-gray-900">{safeFixed(r.avgPercentage)}%</td>
                                         <td className="px-3 py-3 text-gray-600">{safeFixed(r.highestPercentage)}%</td>
                                         <td className="px-4 py-3 text-right text-gray-400">{safeFixed(r.lowestPercentage)}%</td>
                                     </tr>
                                 ))}
                                 <tr className="bg-gray-50/40 font-bold text-gray-900 border-t border-gray-100">
-                                    <td className="px-4 py-3 text-indigo-600">Class Total</td>
-                                    <td className="px-3 py-3">{classSummary?.totalStudents ?? "—"}</td>
-                                    <td className="px-3 py-3 text-emerald-600">{classSummary?.passedStudents ?? "—"}</td>
-                                    <td className="px-3 py-3 text-red-500">{classSummary?.failedStudents ?? "—"}</td>
+                                    <td className="px-4 py-3 text-indigo-600">{EXAM_CONSTS.ANALYTICS.CLASS_TOTAL}</td>
+                                    <td className="px-3 py-3">{classSummary?.totalStudents ?? EXAM_CONSTS.ANALYTICS.FALLBACK_DASH}</td>
+                                    <td className="px-3 py-3 text-emerald-600">{classSummary?.passedStudents ?? EXAM_CONSTS.ANALYTICS.FALLBACK_DASH}</td>
+                                    <td className="px-3 py-3 text-red-500">{classSummary?.failedStudents ?? EXAM_CONSTS.ANALYTICS.FALLBACK_DASH}</td>
                                     <td className="px-3 py-3 font-black text-indigo-600">{safeFixed(classSummary?.classAvgPercentage)}%</td>
-                                    <td colSpan={2} className="px-4 py-3 text-right text-gray-300">—</td>
+                                    <td colSpan={2} className="px-4 py-3 text-right text-gray-300">{EXAM_CONSTS.ANALYTICS.FALLBACK_DASH}</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -571,19 +572,19 @@ function TopPerformersTable({ toppers, loading }) {
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
             <div className="px-5 py-4 border-b border-gray-100 bg-gray-50/20 flex items-center gap-2">
                 <Trophy className="w-4 h-4 text-amber-500" />
-                <h3 className="text-sm font-bold text-gray-800">Top Performers</h3>
+                <h3 className="text-sm font-bold text-gray-800">{EXAM_CONSTS.ANALYTICS.TOP_PERFORMERS}</h3>
             </div>
             <div className="overflow-x-auto">
                 <table className="w-full text-sm text-left">
                     <thead>
                         <tr className="bg-gray-50 border-b border-gray-100 text-[11px] font-bold text-gray-400 uppercase tracking-wider">
-                            <th className="px-4 py-3 w-16">Rank</th>
-                            <th className="px-4 py-3">Student</th>
-                            <th className="px-3 py-3">Adm No</th>
-                            <th className="px-3 py-3">Section</th>
-                            <th className="px-3 py-3">Sec Rank</th>
-                            <th className="px-3 py-3">Percentage</th>
-                            <th className="px-4 py-3 text-right">Grade</th>
+                            <th className="px-4 py-3 w-16">{EXAM_CONSTS.ANALYTICS.RANK}</th>
+                            <th className="px-4 py-3">{EXAM_CONSTS.ANALYTICS.STUDENT}</th>
+                            <th className="px-3 py-3">{EXAM_CONSTS.ANALYTICS.ADM_NO}</th>
+                            <th className="px-3 py-3">{EXAM_CONSTS.ANALYTICS.LBL_SECTION}</th>
+                            <th className="px-3 py-3">{EXAM_CONSTS.ANALYTICS.SEC_RANK}</th>
+                            <th className="px-3 py-3">{EXAM_CONSTS.ANALYTICS.PERCENTAGE}</th>
+                            <th className="px-4 py-3 text-right">{EXAM_CONSTS.ANALYTICS.GRADE}</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50 font-medium text-gray-700">
@@ -592,7 +593,7 @@ function TopPerformersTable({ toppers, loading }) {
                                 <tr key={i}><td colSpan={7} className="p-4"><div className="h-5 bg-gray-50 rounded animate-pulse" /></td></tr>
                             ))
                         ) : toppers.length === 0 ? (
-                            <tr><td colSpan={7} className="text-center py-8 text-gray-400">No parameters loaded.</td></tr>
+                            <tr><td colSpan={7} className="text-center py-8 text-gray-400">{EXAM_CONSTS.ANALYTICS.NO_PARAMS}</td></tr>
                         ) : (
                             toppers.map((s, idx) => {
                                 const rankNum = s.classRank ?? idx + 1;
@@ -606,12 +607,12 @@ function TopPerformersTable({ toppers, loading }) {
                                         </td>
                                         <td className="px-4 py-2.5 font-bold text-gray-900">{s.studentName}</td>
                                         <td className="px-3 py-2.5 text-gray-400 font-mono text-xs">{s.admissionNumber}</td>
-                                        <td className="px-3 py-2.5 font-semibold text-gray-600">{s.sectionName ?? "—"}</td>
-                                        <td className="px-3 py-2.5 text-gray-500 font-bold">{s.sectionRank ?? "—"}</td>
+                                        <td className="px-3 py-2.5 font-semibold text-gray-600">{s.sectionName ?? EXAM_CONSTS.ANALYTICS.FALLBACK_DASH}</td>
+                                        <td className="px-3 py-2.5 text-gray-500 font-bold">{s.sectionRank ?? EXAM_CONSTS.ANALYTICS.FALLBACK_DASH}</td>
                                         <td className="px-3 py-2.5 font-black text-indigo-600">{safeFixed(s.percentage)}%</td>
                                         <td className="px-4 py-2.5 text-right">
                                             <span className={`px-2 py-0.5 rounded font-black text-xs ${gradeBadgeBg(s.overallGrade)}`}>
-                                                {s.overallGrade || "—"}
+                                                {s.overallGrade || EXAM_CONSTS.ANALYTICS.FALLBACK_DASH}
                                             </span>
                                         </td>
                                     </tr>
@@ -631,7 +632,7 @@ function FailedStudentsTable({ failedStudents, loading }) {
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
             <div className="px-5 py-4 border-b border-gray-100 bg-gray-50/20 flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4 text-red-500" />
-                <h3 className="text-sm font-bold text-gray-800">Failed Students</h3>
+                <h3 className="text-sm font-bold text-gray-800">{EXAM_CONSTS.ANALYTICS.FAILED_STUDENTS}</h3>
                 {failedStudents.length > 0 && (
                     <span className="bg-red-100 text-red-700 text-xs font-black px-2 py-0.5 rounded-full">
                         {failedStudents.length}
@@ -642,12 +643,12 @@ function FailedStudentsTable({ failedStudents, loading }) {
                 <table className="w-full text-sm text-left">
                     <thead>
                         <tr className="bg-gray-50 border-b border-gray-100 text-[11px] font-bold text-gray-400 uppercase tracking-wider">
-                            <th className="px-4 py-3">Student</th>
-                            <th className="px-3 py-3">Adm No</th>
-                            <th className="px-3 py-3">Section</th>
-                            <th className="px-3 py-3">Percentage</th>
-                            <th className="px-3 py-3">Grade</th>
-                            <th className="px-4 py-3 text-right">Failed In</th>
+                            <th className="px-4 py-3">{EXAM_CONSTS.ANALYTICS.STUDENT}</th>
+                            <th className="px-3 py-3">{EXAM_CONSTS.ANALYTICS.ADM_NO}</th>
+                            <th className="px-3 py-3">{EXAM_CONSTS.ANALYTICS.LBL_SECTION}</th>
+                            <th className="px-3 py-3">{EXAM_CONSTS.ANALYTICS.PERCENTAGE}</th>
+                            <th className="px-3 py-3">{EXAM_CONSTS.ANALYTICS.GRADE}</th>
+                            <th className="px-4 py-3 text-right">{EXAM_CONSTS.ANALYTICS.FAILED_IN}</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50 font-medium text-gray-700">
@@ -658,7 +659,7 @@ function FailedStudentsTable({ failedStudents, loading }) {
                         ) : failedStudents.length === 0 ? (
                             <tr>
                                 <td colSpan={6} className="text-center py-10 text-emerald-600 font-bold bg-emerald-50/20">
-                                    <CheckSquare className="w-6 h-6 mx-auto mb-1 text-emerald-500" /> All profiles passed parameters.
+                                    <CheckSquare className="w-6 h-6 mx-auto mb-1 text-emerald-500" /> {EXAM_CONSTS.ANALYTICS.ALL_PASSED}
                                 </td>
                             </tr>
                         ) : (
@@ -666,7 +667,7 @@ function FailedStudentsTable({ failedStudents, loading }) {
                                 <tr key={s.studentId} className="hover:bg-red-50/10 transition-colors">
                                     <td className="px-4 py-3 font-bold text-gray-900">{s.studentName}</td>
                                     <td className="px-3 py-3 text-gray-400 font-mono text-xs">{s.admissionNumber}</td>
-                                    <td className="px-3 py-3 font-semibold text-gray-600">{s.sectionName ?? "—"}</td>
+                                    <td className="px-3 py-3 font-semibold text-gray-600">{s.sectionName ?? EXAM_CONSTS.ANALYTICS.FALLBACK_DASH}</td>
                                     <td className="px-3 py-3 text-red-600 font-black">{safeFixed(s.percentage)}%</td>
                                     <td className="px-3 py-3"><span className="bg-red-50 text-red-700 px-2 py-0.5 rounded font-black text-xs">F</span></td>
                                     <td className="px-4 py-3 text-right">
@@ -688,7 +689,7 @@ function FailedStudentsTable({ failedStudents, loading }) {
     );
 }
 
-// ─── Main Controller Component (Strict Non-Blocking Pipeline Alignment) ─────
+// ─── Main Controller Component ─────
 export default function Analytics() {
     const { currentAcademicYear } = useDecodedUser();
 
@@ -739,7 +740,7 @@ export default function Analytics() {
                     setYearId(String(yearsList[0].id));
                 }
             } catch {
-                setMetaError("Failed to initialize system context targets.");
+                setMetaError(EXAM_CONSTS.ANALYTICS.ERR_META);
             } finally {
                 setLoadingMeta(false);
             }
@@ -762,7 +763,7 @@ export default function Analytics() {
             setExamId(list.length > 0 ? String(list[0].id) : "");
             setSectionId("");
         } catch {
-            setExamsError("Error parsing fields for targeted class layout.");
+            setExamsError(EXAM_CONSTS.ANALYTICS.ERR_EXAMS);
             setExams([]); setSections([]); setExamId("");
         } finally {
             setLoadingExams(false);
@@ -784,24 +785,21 @@ export default function Analytics() {
         })();
     }, [examId]);
 
-    // ─── Parallel Pipeline Execution Logic (Guarantees Event Summary call) ───
+    // ─── Parallel Pipeline Execution Logic ───
     const fetchAnalytics = useCallback(async (targetExamId, targetSectionId, targetSubjectId, fallbackExamsList) => {
         if (!targetExamId) return;
         setLoadingAnalytics(true);
         setAnalyticsError(null);
 
-        // Race condition solution: use fallback exams array if current closure state is batching
         const activeExamsArray = fallbackExamsList || exams;
         const selectedExamObj = activeExamsArray.find((e) => String(e.id) === String(targetExamId));
 
-        // Multi-layered property detection to secure dynamic eventId lookup
         let matchedEventId = selectedExamObj?.examEventId || selectedExamObj?.eventId || selectedExamObj?.examEvent?.id || selectedExamObj?.exam_event_id;
         const isDeclared = selectedExamObj?.resultDeclared ?? true;
 
         setResultNotDeclared(!isDeclared);
 
         try {
-            // Unconditional Event List Deep Scan fallback matching to resolve eventId if properties are completely unmapped
             if (!matchedEventId && yearId) {
                 try {
                     const globalEvents = await getExamEvents({ academicYearId: yearId });
@@ -816,7 +814,6 @@ export default function Analytics() {
                 }
             }
 
-            // Unconditional execution of Event Summary & Trend APIs (Regardless of individual status mapping)
             const [crossClassSummary, trend] = await Promise.all([
                 matchedEventId ? getExamEventSummary(matchedEventId).catch(() => null) : Promise.resolve(null),
                 getClassPerformanceTrend(classId, yearId).catch(() => null)
@@ -843,13 +840,12 @@ export default function Analytics() {
                 setClassSummary(null); setSubjectStats([]); setToppers([]); setFailedStudents([]); setGradeDistribution(null);
             }
         } catch (err) {
-            setAnalyticsError(err?.message || "Data sync fault. Request manual refresh step.");
+            setAnalyticsError(err?.message || EXAM_CONSTS.ANALYTICS.ERR_SYNC);
         } finally {
             setLoadingAnalytics(false);
         }
     }, [exams, classId, yearId]);
 
-    // Triggers execution directly matching live arrays during active render state transitions
     useEffect(() => {
         if (!examId || exams.length === 0) return;
         fetchAnalytics(examId, sectionId, subjectId, exams);
@@ -871,7 +867,6 @@ export default function Analytics() {
     const failedRatePct = total > 0 ? (failedCount / total) * 100 : 0;
     const sectionsCovered = Array.isArray(classSummary?.sectionResults) ? classSummary.sectionResults.length : sections.length;
 
-    // Filter duplication bug row elements out safely (Clean layout rows resolution)
     const cleanSubjectStats = subjectStats.filter(sub => Number(sub.totalStudents || 0) > 0 || Number(sub.avgPercentage || 0) > 0);
 
     const weakestSubject = cleanSubjectStats.length > 0
@@ -880,28 +875,28 @@ export default function Analytics() {
 
     const STATS_CONFIG = [
         {
-            title: "Class Average", value: classSummary ? `${avgPct.toFixed(1)}%` : "—",
-            caption: classSummary ? `${sectionsCovered} sections · ${total} students` : "Awaiting selection",
+            title: EXAM_CONSTS.ANALYTICS.CLASS_AVG, value: classSummary ? `${avgPct.toFixed(1)}%` : EXAM_CONSTS.ANALYTICS.FALLBACK_DASH,
+            caption: classSummary ? `${sectionsCovered} sections · ${total} students` : EXAM_CONSTS.ANALYTICS.AWAITING,
             icon: BarChart2, iconBg: "bg-blue-50", iconColor: "text-blue-600",
         },
         {
-            title: "Highest Score", value: topTopper ? `${safeFixed(topTopper.percentage)}%` : "—",
-            caption: topTopper ? `${topTopper.studentName}${topTopper.sectionName ? ` (${topTopper.sectionName})` : ""}` : "Awaiting selection",
+            title: EXAM_CONSTS.ANALYTICS.HIGH_SCORE, value: topTopper ? `${safeFixed(topTopper.percentage)}%` : EXAM_CONSTS.ANALYTICS.FALLBACK_DASH,
+            caption: topTopper ? `${topTopper.studentName}${topTopper.sectionName ? ` (${topTopper.sectionName})` : ""}` : EXAM_CONSTS.ANALYTICS.AWAITING,
             icon: Trophy, iconBg: "bg-amber-50", iconColor: "text-amber-500",
         },
         {
-            title: "Failed Students", value: classSummary ? `${failedCount}` : "—",
-            caption: classSummary ? `${failedRatePct.toFixed(1)}% of total layout` : "Awaiting selection",
+            title: EXAM_CONSTS.ANALYTICS.FAILED_STUDENTS, value: classSummary ? `${failedCount}` : EXAM_CONSTS.ANALYTICS.FALLBACK_DASH,
+            caption: classSummary ? `${failedRatePct.toFixed(1)}%${EXAM_CONSTS.ANALYTICS.OF_TOTAL_LAYOUT}` : EXAM_CONSTS.ANALYTICS.AWAITING,
             icon: AlertTriangle, iconBg: "bg-red-50", iconColor: "text-red-500",
         },
         {
-            title: "Pass Rate", value: classSummary ? `${passRatePct.toFixed(1)}%` : "—",
-            caption: classSummary ? `${passedCount} of ${total} verified` : "Awaiting selection",
+            title: EXAM_CONSTS.ANALYTICS.PASS_RATE, value: classSummary ? `${passRatePct.toFixed(1)}%` : EXAM_CONSTS.ANALYTICS.FALLBACK_DASH,
+            caption: classSummary ? `${passedCount}${EXAM_CONSTS.ANALYTICS.OF}${total}${EXAM_CONSTS.ANALYTICS.VERIFIED}` : EXAM_CONSTS.ANALYTICS.AWAITING,
             icon: CheckSquare, iconBg: "bg-emerald-50", iconColor: "text-emerald-600",
         },
         {
-            title: "Weakest Subject", value: weakestSubject ? weakestSubject.subjectName : "—",
-            caption: weakestSubject ? `Avg ${safeFixed(weakestSubject.avgPercentage)}% · ${weakestSubject.failedStudents ?? 0} fail` : "Awaiting selection",
+            title: EXAM_CONSTS.ANALYTICS.WEAKEST_SUB, value: weakestSubject ? weakestSubject.subjectName : EXAM_CONSTS.ANALYTICS.FALLBACK_DASH,
+            caption: weakestSubject ? `${EXAM_CONSTS.ANALYTICS.AVG}${safeFixed(weakestSubject.avgPercentage)}% · ${weakestSubject.failedStudents ?? 0}${EXAM_CONSTS.ANALYTICS.FAIL}` : EXAM_CONSTS.ANALYTICS.AWAITING,
             icon: TrendingDown, iconBg: "bg-rose-50", iconColor: "text-rose-600",
         },
     ];
@@ -911,8 +906,8 @@ export default function Analytics() {
 
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 pb-4">
                 <h1 className="text-xl sm:text-2xl font-black tracking-tight text-gray-900">
-                    <TooltipComponent message="Comprehensive high-fidelity academic tracking." direction="right" color="nocolor">
-                        Exam Analytics Dashboard
+                    <TooltipComponent message={EXAM_CONSTS.ANALYTICS.TOOLTIP} direction="right" color="nocolor">
+                        {EXAM_CONSTS.ANALYTICS.TITLE}
                     </TooltipComponent>
                 </h1>
             </div>
@@ -921,13 +916,13 @@ export default function Analytics() {
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-6">
                 <div className="flex items-center gap-2 border-b border-gray-50 pb-2">
                     <Filter className="w-4 h-4 text-indigo-600" />
-                    <h2 className="text-sm font-bold text-gray-900">Cascade Filter Framework</h2>
+                    <h2 className="text-sm font-bold text-gray-900">{EXAM_CONSTS.ANALYTICS.CASCADE_FILTER}</h2>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-[1fr_1fr_1fr_1fr_1fr_160px] gap-5 items-end">
                     <div className="contents">
                         <FilterSelect
-                            label="Academic Year"
+                            label={EXAM_CONSTS.ANALYTICS.LBL_ACADEMIC_YEAR}
                             value={yearId}
                             disabled={loadingMeta}
                             onChange={(e) => { setYearId(e.target.value); setClassId(""); }}
@@ -938,47 +933,47 @@ export default function Analytics() {
                         </FilterSelect>
 
                         <FilterSelect
-                            label="Class"
+                            label={EXAM_CONSTS.ANALYTICS.LBL_CLASS}
                             value={classId}
                             disabled={loadingMeta || !yearId}
                             onChange={(e) => setClassId(e.target.value)}
                         >
-                            <option value="">Select Class</option>
+                            <option value="">{EXAM_CONSTS.ANALYTICS.SELECT_CLASS}</option>
                             {classes.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                         </FilterSelect>
 
                         <FilterSelect
-                            label="Exam"
+                            label={EXAM_CONSTS.ANALYTICS.LBL_EXAM}
                             value={examId}
                             disabled={!classId || loadingExams}
                             onChange={(e) => setExamId(e.target.value)}
                         >
                             {exams.length === 0 ? (
-                                <option value="">{loadingExams ? "Loading…" : "Select Exam"}</option>
+                                <option value="">{loadingExams ? EXAM_CONSTS.ANALYTICS.LOADING : EXAM_CONSTS.ANALYTICS.SELECT_EXAM}</option>
                             ) : (
                                 exams.map((ex) => <option key={ex.id} value={ex.id}>{ex.name}</option>)
                             )}
                         </FilterSelect>
 
                         <FilterSelect
-                            label="Section"
-                            hint="optional"
+                            label={EXAM_CONSTS.ANALYTICS.LBL_SECTION}
+                            hint={EXAM_CONSTS.ANALYTICS.OPTIONAL}
                             value={sectionId}
                             disabled={!classId || loadingExams}
                             onChange={(e) => setSectionId(e.target.value)}
                         >
-                            <option value="">All Sections</option>
+                            <option value="">{EXAM_CONSTS.ANALYTICS.ALL_SECTIONS}</option>
                             {sections.map((s) => <option key={s.id} value={s.id}>{s.name ?? s.sectionName}</option>)}
                         </FilterSelect>
 
                         <FilterSelect
-                            label="Subject"
-                            hint="optional"
+                            label={EXAM_CONSTS.ANALYTICS.LBL_SUBJECT}
+                            hint={EXAM_CONSTS.ANALYTICS.OPTIONAL}
                             value={subjectId}
                             disabled={!examId}
                             onChange={(e) => setSubjectId(e.target.value)}
                         >
-                            <option value="">All Subjects</option>
+                            <option value="">{EXAM_CONSTS.ANALYTICS.ALL_SUBJECTS}</option>
                             {examSubjectOptions.map((s) => (
                                 <option key={s.subjectId ?? s.id} value={s.subjectId ?? s.id}>{s.subjectName}</option>
                             ))}
@@ -1003,7 +998,7 @@ flex items-center
 justify-center
 "
                     >
-                        {loadingAnalytics ? <RefreshCw className="w-4 h-4 animate-spin" /> : "Apply Sync"}
+                        {loadingAnalytics ? <RefreshCw className="w-4 h-4 animate-spin" /> : EXAM_CONSTS.ANALYTICS.APPLY_SYNC}
                     </button>
                 </div>
             </div>
@@ -1011,12 +1006,12 @@ justify-center
             {/* Render Dashboard Tree */}
             {!examId ? (
                 <div className="bg-white border border-gray-100 text-gray-400 font-medium text-sm rounded-xl p-12 text-center shadow-sm">
-                    Isolate context filters above to build visualization reporting elements.
+                    {EXAM_CONSTS.ANALYTICS.ISOLATE_CONTEXT}
                 </div>
             ) : (
                 <div className="space-y-6 animate-fadeIn">
 
-                    {/* Event Summary Card Panel (Guaranteed Fetch Execution Visibility) */}
+                    {/* Event Summary Card Panel */}
                     <EventSummaryPanel
                         summaryData={eventSummary}
                         examName={selectedExam?.name}
@@ -1025,11 +1020,11 @@ justify-center
 
                     {/* Active State Context Label Bar */}
                     <div className="flex items-center gap-2 flex-wrap text-xs font-bold text-gray-400 bg-gray-100 px-4 py-2.5 rounded-lg border border-gray-200/40">
-                        <span className="uppercase tracking-wider text-[10px]">Context:</span>
+                        <span className="uppercase tracking-wider text-[10px]">{EXAM_CONSTS.ANALYTICS.CONTEXT}</span>
                         <span className="bg-white text-indigo-700 px-2 py-0.5 rounded border border-gray-200 shadow-2xs">{selectedClass?.name}</span>
                         <span className="bg-white text-blue-700 px-2 py-0.5 rounded border border-gray-200 shadow-2xs">{selectedExam?.name}</span>
-                        <span className="bg-white text-gray-700 px-2 py-0.5 rounded border border-gray-200 shadow-2xs">{sectionId ? `Section ${sections.find(s => String(s.id) === String(sectionId))?.name}` : "All Sections"}</span>
-                        <span className="bg-white text-gray-700 px-2 py-0.5 rounded border border-gray-200 shadow-2xs">{subjectId ? examSubjectOptions.find(s => String(s.subjectId ?? s.id) === String(subjectId))?.subjectName : "All Subjects"}</span>
+                        <span className="bg-white text-gray-700 px-2 py-0.5 rounded border border-gray-200 shadow-2xs">{sectionId ? `${EXAM_CONSTS.ANALYTICS.LBL_SECTION} ${sections.find(s => String(s.id) === String(sectionId))?.name}` : EXAM_CONSTS.ANALYTICS.ALL_SECTIONS}</span>
+                        <span className="bg-white text-gray-700 px-2 py-0.5 rounded border border-gray-200 shadow-2xs">{subjectId ? examSubjectOptions.find(s => String(s.subjectId ?? s.id) === String(subjectId))?.subjectName : EXAM_CONSTS.ANALYTICS.ALL_SUBJECTS}</span>
                     </div>
 
                     {/* Conditional Split: Real Non-Blocking Info Alert Banner vs Class Analytical Grids */}
@@ -1038,10 +1033,10 @@ justify-center
                             <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" />
                             <div>
                                 <h4 className="text-sm font-semibold text-amber-900">
-                                    Results Not Declared
+                                    {EXAM_CONSTS.ANALYTICS.RES_NOT_DEC}
                                 </h4>
                                 <p className="text-xs text-amber-700">
-                                    Class analytics will be available after results are declared.
+                                    {EXAM_CONSTS.ANALYTICS.CLASS_ANA_AVAIL}
                                 </p>
                             </div>
                         </div>

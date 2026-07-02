@@ -11,7 +11,7 @@ import {
     getExamSubjects,
 } from "../../Api/Academics/Exams";
 import { getActiveClasses, getAllSections } from "../../Api/Teachers/TeachersAPI";
-
+import { EXAM_CONSTS } from "../../Constants/StringConstants/AcademicsConstants";
 // ─── Grade colour helper ──────────────────────────────────────────────────────
 function getGrade(marks, max, absent) {
     if (absent || !max) return { label: "AB", bg: "bg-gray-100 text-gray-600" };
@@ -329,13 +329,12 @@ export default function MarksEntry() {
             setHasChanges(false);
         } catch (err) {
             console.error("loadSheet error:", err);
-            setSheetError("Failed to load marks sheet automaticamente.");
+            setSheetError(EXAM_CONSTS.MARKS_ENTRY.ERR_LOAD);
         } finally {
             setLoadingSheet(false);
         }
     }, [selectedExamId, selectedSectionSubjectId]);
 
-    // FIX FEATURE: सब्जेक्ट सिलेक्ट होते ही ऑटोमैटिकली शीट लोड करने का नया Effect हुक
     useEffect(() => {
         if (selectedExamId && selectedSectionSubjectId) {
             loadSheet();
@@ -375,13 +374,13 @@ export default function MarksEntry() {
     // ── Save / Update ─────────────────────────────────────────────────────────
     const handleSave = async () => {
         if (!selectedExamId) {
-            setSaveError("No exam selected.");
+            setSaveError(EXAM_CONSTS.MARKS_ENTRY.ERR_NO_EXAM);
             return;
         }
 
         const resolvedConfigId = examSubjectConfigId;
         if (!resolvedConfigId) {
-            setSaveError("Subject config ID not found.");
+            setSaveError(EXAM_CONSTS.MARKS_ENTRY.ERR_NO_CONFIG);
             return;
         }
 
@@ -448,7 +447,7 @@ export default function MarksEntry() {
             setSaveSuccess(true);
         } catch (err) {
             console.error("handleSave error:", err);
-            setSaveError(err.message ?? "Failed to save marks.");
+            setSaveError(err.message ?? EXAM_CONSTS.MARKS_ENTRY.ERR_SAVE);
         } finally {
             setSaving(false);
         }
@@ -459,13 +458,13 @@ export default function MarksEntry() {
 
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">
-                    <TooltipComponent message="Enter and manage student marks." direction="right" color="nocolor">
-                        Manage Marks Entry
+                    <TooltipComponent message={EXAM_CONSTS.MARKS_ENTRY.TOOLTIP} direction="right" color="nocolor">
+                        {EXAM_CONSTS.MARKS_ENTRY.TITLE}
                     </TooltipComponent>
                 </h2>
             </div>
 
-            {/* ── Fixed Filter Bar (4 Equal Columns without manual button) ── */}
+            {/* ── Fixed Filter Bar ── */}
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm px-4 sm:px-5 py-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
 
@@ -473,7 +472,7 @@ export default function MarksEntry() {
                         value={selectedClassId}
                         onChange={(v) => { setSelectedClassId(v); setSheetLoaded(false); setLocalRows([]); setSavedRows([]); setHasChanges(false); }}
                         options={classes.map((c) => ({ value: String(c.id), label: c.name }))}
-                        placeholder={loadingMeta ? "Loading..." : "Select Class"}
+                        placeholder={loadingMeta ? EXAM_CONSTS.MARKS_ENTRY.LOADING : EXAM_CONSTS.MARKS_ENTRY.PH_CLASS}
                         disabled={loadingMeta}
                         className="w-full"
                     />
@@ -484,7 +483,7 @@ export default function MarksEntry() {
                         options={sections
                             .filter((s) => String(s.classId) === String(selectedClassId) || String(s.schoolClassId) === String(selectedClassId))
                             .map((s) => ({ value: String(s.id), label: sectionLabel(s) }))}
-                        placeholder={loadingMeta ? "Loading..." : "Select Section"}
+                        placeholder={loadingMeta ? EXAM_CONSTS.MARKS_ENTRY.LOADING : EXAM_CONSTS.MARKS_ENTRY.PH_SECTION}
                         disabled={loadingMeta || !selectedClassId}
                         className="w-full"
                     />
@@ -493,7 +492,7 @@ export default function MarksEntry() {
                         value={selectedExamId}
                         onChange={(v) => { setSelectedExamId(v); setSheetLoaded(false); setLocalRows([]); setSavedRows([]); setHasChanges(false); }}
                         options={exams.map((e) => ({ value: String(e.id), label: e.name }))}
-                        placeholder={loadingExams ? "Loading exams..." : "Select Exam"}
+                        placeholder={loadingExams ? EXAM_CONSTS.MARKS_ENTRY.LOADING_EXAMS : EXAM_CONSTS.MARKS_ENTRY.PH_EXAM}
                         disabled={loadingExams || !selectedClassId}
                         className="w-full"
                     />
@@ -505,7 +504,7 @@ export default function MarksEntry() {
                             value: String(s.sectionSubjectId),
                             label: s.subjectName + (s.subjectCode ? ` (${s.subjectCode})` : ""),
                         }))}
-                        placeholder={loadingSubjects ? "Loading subjects..." : "Select Subject"}
+                        placeholder={loadingSubjects ? EXAM_CONSTS.MARKS_ENTRY.LOADING_SUBJECTS : EXAM_CONSTS.MARKS_ENTRY.PH_SUBJECT}
                         disabled={loadingSubjects || !selectedExamId || !selectedSectionId}
                         className="w-full"
                     />
@@ -516,7 +515,7 @@ export default function MarksEntry() {
             {loadingSheet && (
                 <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-12 flex flex-col items-center justify-center gap-3">
                     <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-                    <p className="text-sm text-gray-500 font-medium">Fetching student marks sheet automatically...</p>
+                    <p className="text-sm text-gray-500 font-medium">{EXAM_CONSTS.MARKS_ENTRY.FETCHING_MSG}</p>
                 </div>
             )}
 
@@ -547,7 +546,7 @@ export default function MarksEntry() {
             {!sheetLoaded && !loadingSheet && !sheetError && (
                 <div className="bg-white rounded-2xl border border-gray-200 shadow-sm px-6 py-16 text-center">
                     <p className="text-sm text-gray-400">
-                        Select a Class, Section, Exam and Subject. The sheet will load automatically.
+                        {EXAM_CONSTS.MARKS_ENTRY.SELECT_PROMPT}
                     </p>
                 </div>
             )}
@@ -571,10 +570,10 @@ function MarksSheet({
     saving, saveError, saveSuccess, hasChanges, isUpdateMode, anyAlreadySaved,
 }) {
     const saveLabel = () => {
-        if (saving) return anyAlreadySaved ? "Updating..." : "Saving...";
-        if (anyAlreadySaved && !hasChanges) return "Saved ✓";
-        if (isUpdateMode) return "Update Marks";
-        return "Save Marks (Bulk)";
+        if (saving) return anyAlreadySaved ? EXAM_CONSTS.MARKS_ENTRY.BTN_UPDATING : EXAM_CONSTS.MARKS_ENTRY.BTN_SAVING;
+        if (anyAlreadySaved && !hasChanges) return EXAM_CONSTS.MARKS_ENTRY.BTN_SAVED;
+        if (isUpdateMode) return EXAM_CONSTS.MARKS_ENTRY.BTN_UPDATE;
+        return EXAM_CONSTS.MARKS_ENTRY.BTN_SAVE_BULK;
     };
 
     const saveBtnColor = () => {
@@ -587,11 +586,11 @@ function MarksSheet({
     const saveDisabled = saving || (anyAlreadySaved && !hasChanges);
 
     const headCols = [
-        "#", "Roll No.", "Student Name", "Adm. No.",
+        "#", EXAM_CONSTS.MARKS_ENTRY.TH_ROLL, EXAM_CONSTS.MARKS_ENTRY.TH_STUDENT, EXAM_CONSTS.MARKS_ENTRY.TH_ADM,
         ...(hasTheoryPractical
-            ? [`Theory (/${maxTheory})`, `Practical (/${maxPractical})`, `Total (/${maxMarks})`]
-            : [`Marks (/${maxMarks})`]),
-        "Absent", "Grade", "Remarks",
+            ? [EXAM_CONSTS.MARKS_ENTRY.TH_THEORY(maxTheory), EXAM_CONSTS.MARKS_ENTRY.TH_PRACTICAL(maxPractical), EXAM_CONSTS.MARKS_ENTRY.TH_TOTAL(maxMarks)]
+            : [EXAM_CONSTS.MARKS_ENTRY.TH_MARKS(maxMarks)]),
+        EXAM_CONSTS.MARKS_ENTRY.TH_ABSENT, EXAM_CONSTS.MARKS_ENTRY.TH_GRADE, EXAM_CONSTS.MARKS_ENTRY.TH_REMARKS,
     ];
 
     return (
@@ -599,26 +598,26 @@ function MarksSheet({
 
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-4 sm:px-6 py-4 border-b border-gray-100">
                 <h2 className="text-sm sm:text-base font-semibold text-gray-800">
-                    Marks Sheet —{" "}
+                    {EXAM_CONSTS.MARKS_ENTRY.SHEET_TITLE} —{" "}
                     <span className="text-blue-600">{subjectName} — {sectionName} — {examName}</span>
                 </h2>
                 <div className="flex items-center flex-wrap gap-2">
-                    <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-100">Max: {maxMarks}</span>
-                    <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-orange-50 text-orange-600 border border-orange-100">Pass: {passingMarks}</span>
+                    <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-100">{EXAM_CONSTS.MARKS_ENTRY.MAX}: {maxMarks}</span>
+                    <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-orange-50 text-orange-600 border border-orange-100">{EXAM_CONSTS.MARKS_ENTRY.PASS}: {passingMarks}</span>
                     {hasTheoryPractical && (
                         <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-100">
-                            Th {maxTheory} + Pr {maxPractical}
+                            {EXAM_CONSTS.MARKS_ENTRY.TH_PR_LBL(maxTheory, maxPractical)}
                         </span>
                     )}
-                    <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-600">{rows.length} students</span>
+                    <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-600">{rows.length} {EXAM_CONSTS.MARKS_ENTRY.STUDENTS}</span>
                     {anyAlreadySaved && !hasChanges && (
                         <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-green-50 text-green-700 border border-green-100 flex items-center gap-1">
-                            <CheckCircle2 className="w-3 h-3" /> Marks Saved
+                            <CheckCircle2 className="w-3 h-3" /> {EXAM_CONSTS.MARKS_ENTRY.MARKS_SAVED}
                         </span>
                     )}
                     {anyAlreadySaved && hasChanges && (
                         <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-orange-50 text-orange-600 border border-orange-100">
-                            Unsaved Changes
+                            {EXAM_CONSTS.MARKS_ENTRY.UNSAVED_CHANGES}
                         </span>
                     )}
                 </div>
@@ -626,7 +625,7 @@ function MarksSheet({
 
             {saveSuccess && (
                 <div className="mx-4 sm:mx-6 mt-3 px-4 py-2.5 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700 flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 shrink-0" /> Marks saved successfully!
+                    <CheckCircle2 className="w-4 h-4 shrink-0" /> {EXAM_CONSTS.MARKS_ENTRY.SUCC_SAVED}
                 </div>
             )}
             {saveError && (
@@ -654,26 +653,26 @@ function MarksSheet({
                                 {hasTheoryPractical ? (
                                     <>
                                         <div className="flex items-center gap-2">
-                                            <label className="text-xs text-gray-500 whitespace-nowrap">Theory (/{maxTheory})</label>
+                                            <label className="text-xs text-gray-500 whitespace-nowrap">{EXAM_CONSTS.MARKS_ENTRY.TH_THEORY(maxTheory)}</label>
                                             <MarksInput value={row.isAbsent ? 0 : row.theoryMarks} max={maxTheory} disabled={row.isAbsent} onChange={(v) => onUpdateRow(row.studentId, "theoryMarks", v)} />
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            <label className="text-xs text-gray-500 whitespace-nowrap">Pract. (/{maxPractical})</label>
+                                            <label className="text-xs text-gray-500 whitespace-nowrap">{EXAM_CONSTS.MARKS_ENTRY.TH_PRACTICAL(maxPractical)}</label>
                                             <MarksInput value={row.isAbsent ? 0 : row.practicalMarks} max={maxPractical} disabled={row.isAbsent} onChange={(v) => onUpdateRow(row.studentId, "practicalMarks", v)} />
                                         </div>
                                     </>
                                 ) : (
                                     <div className="flex items-center gap-2">
-                                        <label className="text-xs text-gray-500 whitespace-nowrap">Marks (/{maxMarks})</label>
+                                        <label className="text-xs text-gray-500 whitespace-nowrap">{EXAM_CONSTS.MARKS_ENTRY.TH_MARKS(maxMarks)}</label>
                                         <MarksInput value={row.isAbsent ? 0 : row.totalMarks} max={maxMarks} disabled={row.isAbsent} onChange={(v) => onUpdateRow(row.studentId, "totalMarks", v)} />
                                     </div>
                                 )}
                                 <label className="flex items-center gap-1.5 text-xs text-gray-500 font-medium cursor-pointer">
                                     <input type="checkbox" checked={row.isAbsent} onChange={(e) => onAbsent(row.studentId, e.target.checked)} className="w-4 h-4 rounded accent-blue-600" />
-                                    Absent
+                                    {EXAM_CONSTS.MARKS_ENTRY.TH_ABSENT}
                                 </label>
                             </div>
-                            <input type="text" value={row.remarks} onChange={(e) => onUpdateRow(row.studentId, "remarks", e.target.value)} placeholder="Remarks..."
+                            <input type="text" value={row.remarks} onChange={(e) => onUpdateRow(row.studentId, "remarks", e.target.value)} placeholder={EXAM_CONSTS.MARKS_ENTRY.PH_REMARKS}
                                 className="mt-3 w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-gray-700 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500" />
                         </div>
                     );
@@ -717,7 +716,7 @@ function MarksSheet({
                                         <span className={`inline-flex items-center justify-center w-9 h-9 rounded-full text-xs font-bold ${grade.bg}`}>{grade.label}</span>
                                     </td>
                                     <td className="px-4 py-3">
-                                        <input type="text" value={row.remarks} onChange={(e) => onUpdateRow(row.studentId, "remarks", e.target.value)} placeholder="Remarks..."
+                                        <input type="text" value={row.remarks} onChange={(e) => onUpdateRow(row.studentId, "remarks", e.target.value)} placeholder={EXAM_CONSTS.MARKS_ENTRY.PH_REMARKS}
                                             className="w-32 lg:w-44 border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-gray-700 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all" />
                                     </td>
                                 </tr>
@@ -731,13 +730,13 @@ function MarksSheet({
             <div className="flex items-center justify-end gap-3 px-4 sm:px-6 py-4 border-t border-gray-100 bg-gray-50">
                 <button onClick={onReset} disabled={saving || !hasChanges}
                     className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
-                    <RotateCcw className="w-4 h-4" /> Reset
+                    <RotateCcw className="w-4 h-4" /> {EXAM_CONSTS.MARKS_ENTRY.BTN_RESET}
                 </button>
                 <button onClick={onSave} disabled={saveDisabled}
                     className={`flex items-center gap-2 px-4 sm:px-5 py-2 text-sm font-semibold text-white rounded-lg transition-all shadow-sm active:scale-95 disabled:cursor-not-allowed ${saveBtnColor()}`}>
                     {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : anyAlreadySaved && !hasChanges ? <CheckCircle2 className="w-4 h-4" /> : <Save className="w-4 h-4" />}
                     <span className="hidden sm:inline">{saveLabel()}</span>
-                    <span className="sm:hidden">{saving ? "..." : isUpdateMode ? "Update" : anyAlreadySaved && !hasChanges ? "✓" : "Save"}</span>
+                    <span className="sm:hidden">{saving ? "..." : isUpdateMode ? EXAM_CONSTS.MARKS_ENTRY.BTN_UPDATE : anyAlreadySaved && !hasChanges ? "✓" : "Save"}</span>
                 </button>
             </div>
         </div>
