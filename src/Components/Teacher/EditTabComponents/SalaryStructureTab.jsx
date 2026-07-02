@@ -269,7 +269,6 @@ const SalaryStructureTab = ({ formData, setFormData, handleInputChange, teacherI
                                         {formData.salaryType === 'PER_DAY' ? '/ DAY' : '/ MONTH'}
                                     </span>
                                 </div>
-                                <p className="text-xs text-gray-400 mt-1.5">Based on a 22-day working month</p>
                             </div>
                         </div>
                     </div>

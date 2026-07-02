@@ -1,31 +1,13 @@
-import { useState, useEffect, useRef } from 'react';
-import { X, ClipboardEdit, FileText, Search, ChevronDown, Loader2 } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { X, ClipboardEdit, FileText, Search, Loader2, Check } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { getUsersSummary } from '../../Api/StaffManagement/UserManagementAPI';
-import { requestManualAttendance } from '../../Api/Attendance/AttendanceApi';
-import { getSchoolLocation } from "../../utils/getSchoolLocation";
-import {
-    REMARKS_MAX,
-    DASH_PLACEHOLDER,
-    TOAST_SELECT_STAFF, TOAST_RESOLVE_USER_ID, TOAST_RESOLVE_USER_ROLE,
-    TOAST_ENTER_REMARKS, TOAST_REMARKS_EXCEED,
-    TOAST_SUBMIT_SUCCESS, TOAST_SUBMIT_FAILED,
-    UI_STRINGS
-} from "../../Constants/StringConstants/AttendanceConstants";
+
 
 const TODAY = new Date().toISOString().split('T')[0];
+const REMARKS_MAX = 200;
 
-const resolveStaff = (raw) => {
-    const userId = raw.userId ?? raw.id ?? raw.user_id ?? raw.staffId ?? raw.empId ?? null;
-    const rolesArray = Array.isArray(raw.roles) ? raw.roles : Array.isArray(raw.userRoles) ? raw.userRoles : null;
-    const userType = raw.userType ?? raw.role ?? raw.userRole ?? raw.roleName ?? raw.type ?? raw.designation ?? raw.position ?? (rolesArray && rolesArray.length > 0 ? rolesArray[0] : null);
-    const firstName = raw.firstName ?? raw.first_name ?? '';
-    const lastName = raw.lastName ?? raw.last_name ?? '';
-    const fullName = `${firstName} ${lastName}`.trim();
-    const userName = (raw.userName ?? raw.name ?? raw.fullName ?? raw.full_name ?? fullName) || `User #${userId}`;
-    return { userId, userType, userName };
-};
-
+/* Display helpers for raw list items */
 const getDisplayName = (raw) => {
     if (raw.userName) return raw.userName;
     if (raw.name) return raw.name;
@@ -36,93 +18,143 @@ const getDisplayName = (raw) => {
 };
 
 const getDisplayRole = (raw) => {
-    if (raw.userType) return raw.userType;
-    if (raw.role) return raw.role;
-    if (raw.userRole) return raw.userRole;
-    if (raw.roleName) return raw.roleName;
-    if (raw.type) return raw.type;
-    if (raw.designation) return raw.designation;
-    if (raw.position) return raw.position;
-    const arr = Array.isArray(raw.roles) ? raw.roles : Array.isArray(raw.userRoles) ? raw.userRoles : null;
-    if (arr && arr.length > 0) return arr[0];
-    return DASH_PLACEHOLDER;
+    const rolesArray = Array.isArray(raw.roles) ? raw.roles
+        : Array.isArray(raw.userRoles) ? raw.userRoles : null;
+    return (
+        raw.userType ?? raw.role ?? raw.userRole ?? raw.roleName ??
+        raw.type ?? raw.designation ?? raw.position ??
+        (rolesArray && rolesArray.length > 0 ? rolesArray[0] : null) ?? '—'
+    );
 };
 
+const getUserId = (raw, idx) => raw.userId ?? raw.id ?? raw.user_id ?? raw.staffId ?? raw.empId ?? idx;
+
+/* ─────────────────────────────────────────────────────────────────
+   Component
+───────────────────────────────────────────────────────────────── */
 const ManualStaffAttendance = ({ onClose, onSuccess }) => {
     const [staffList, setStaffList] = useState([]);
     const [staffLoading, setStaffLoading] = useState(false);
     const [staffSearch, setStaffSearch] = useState('');
-    const [dropdownOpen, setDropdownOpen] = useState(false);
-    const [selectedStaff, setSelectedStaff] = useState(null);
+
     const [attendanceDate, setAttendanceDate] = useState(TODAY);
-    const [checkInTime, setCheckInTime] = useState('09:00');
-    const [remarks, setRemarks] = useState('');
+
+    // Map<userId, { userId, userType, userName, checkInTime, remarks }>
+    const [selections, setSelections] = useState(new Map());
     const [submitting, setSubmitting] = useState(false);
 
-    const dropdownRef = useRef(null);
-
+    /* ── Fetch full staff list once ── */
     useEffect(() => {
         const fetchStaff = async () => {
             setStaffLoading(true);
             try {
-                const data = await getUsersSummary({ search: staffSearch, size: 200 });
+                const data = await getUsersSummary({ size: 500 });
                 const list =
                     Array.isArray(data) ? data :
                         Array.isArray(data?.content) ? data.content :
                             Array.isArray(data?.data) ? data.data :
                                 Array.isArray(data?.users) ? data.users :
                                     Array.isArray(data?.result) ? data.result :
-                                        Array.isArray(data?.results) ? data.results : [];
+                                        Array.isArray(data?.results) ? data.results :
+                                            [];
                 setStaffList(list);
             } catch (err) {
+                console.error('[BulkAttendance] Failed to fetch staff:', err);
                 setStaffList([]);
             } finally {
                 setStaffLoading(false);
             }
         };
         fetchStaff();
-    }, [staffSearch]);
-
-    useEffect(() => {
-        const handler = (e) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-                setDropdownOpen(false);
-            }
-        };
-        document.addEventListener('mousedown', handler);
-        return () => document.removeEventListener('mousedown', handler);
     }, []);
 
-    const handleSelectStaff = (raw) => {
-        const resolved = resolveStaff(raw);
-        setSelectedStaff(resolved);
-        setDropdownOpen(false);
-        setStaffSearch('');
+    /* ── Client-side search filter (selections persist regardless of filter) ── */
+    const filteredStaff = useMemo(() => {
+        if (!staffSearch.trim()) return staffList;
+        const q = staffSearch.toLowerCase();
+        return staffList.filter((s) => getDisplayName(s).toLowerCase().includes(q));
+    }, [staffList, staffSearch]);
+
+    /* ── Toggle selection ── */
+    const toggleStaff = (raw, idx) => {
+        const userId = getUserId(raw, idx);
+        setSelections((prev) => {
+            const next = new Map(prev);
+            if (next.has(userId)) {
+                next.delete(userId);
+            } else {
+                next.set(userId, {
+                    userId,
+                    userType: getDisplayRole(raw),
+                    userName: getDisplayName(raw),
+                    checkInTime: '09:00',
+                    remarks: '',
+                });
+            }
+            return next;
+        });
     };
 
+    const updateSelection = (userId, field, value) => {
+        setSelections((prev) => {
+            const next = new Map(prev);
+            const entry = next.get(userId);
+            if (!entry) return prev;
+            next.set(userId, { ...entry, [field]: value });
+            return next;
+        });
+    };
+
+    const selectedCount = selections.size;
+
+    /* ── Validation: every selected entry must have checkInTime + remarks ── */
+    const invalidSelections = useMemo(() => {
+        const invalid = [];
+        for (const entry of selections.values()) {
+            if (!entry.checkInTime || !entry.remarks.trim() || entry.remarks.trim().length > REMARKS_MAX) {
+                invalid.push(entry.userId);
+            }
+        }
+        return invalid;
+    }, [selections]);
+
+    /* ── Submit (bulk) ── */
     const handleSubmit = async () => {
-        const { gpsLatitude, gpsLongitude } = getSchoolLocation();
-        if (!selectedStaff) { toast.error(TOAST_SELECT_STAFF); return; }
-        if (!selectedStaff.userId) { toast.error(TOAST_RESOLVE_USER_ID); return; }
-        if (!selectedStaff.userType) { toast.error(TOAST_RESOLVE_USER_ROLE); return; }
-        if (!remarks.trim()) { toast.error(TOAST_ENTER_REMARKS); return; }
-        if (remarks.trim().length > REMARKS_MAX) { toast.error(TOAST_REMARKS_EXCEED(REMARKS_MAX)); return; }
+        if (selectedCount === 0) {
+            toast.error('Please select at least one staff member');
+            return;
+        }
+        if (invalidSelections.length > 0) {
+            toast.error('Fill check-in time & remarks (within 200 chars) for all selected staff');
+            return;
+        }
+
+        const payload = {
+            attendanceDate,
+            staff: Array.from(selections.values()).map((s) => ({
+                userId: s.userId,
+                userType: s.userType,
+                status: 'PRESENT',
+                checkInTime: s.checkInTime,
+                remarks: s.remarks.trim(),
+            })),
+        };
 
         setSubmitting(true);
         try {
-            await requestManualAttendance({
-                userId: selectedStaff.userId,
-                userType: selectedStaff.userType,
-                userName: selectedStaff.userName,
-                gpsLatitude: parseFloat(gpsLatitude),
-                gpsLongitude: parseFloat(gpsLongitude),
-                remarks: remarks.trim(),
-            });
-            toast.success(TOAST_SUBMIT_SUCCESS);
+            const res = await bulkManualStaffAttendance(payload);
+            const summary = res?.data;
+            if (summary) {
+                toast.success(
+                    `Marked: ${summary.totalMarked} | Already Marked: ${summary.totalAlreadyMarked} | Failed: ${summary.totalFailed}`
+                );
+            } else {
+                toast.success('Bulk attendance submitted!');
+            }
             onSuccess?.();
             onClose();
         } catch (err) {
-            toast.error(err.message || TOAST_SUBMIT_FAILED);
+            toast.error(err.message || 'Bulk submission failed');
         } finally {
             setSubmitting(false);
         }
@@ -130,11 +162,13 @@ const ManualStaffAttendance = ({ onClose, onSuccess }) => {
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden max-h-[90vh] flex flex-col">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden max-h-[90vh] flex flex-col">
+
+                {/* Header */}
                 <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
                     <div className="flex items-center gap-2">
                         <ClipboardEdit className="w-5 h-5 text-amber-500" />
-                        <h3 className="text-base font-bold text-gray-900">{UI_STRINGS.MANUAL_STAFF.HEADER}</h3>
+                        <h3 className="text-base font-bold text-gray-900">Bulk Manual Attendance</h3>
                     </div>
                     <button onClick={onClose}
                         className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors text-gray-400 hover:text-gray-600">
@@ -142,125 +176,116 @@ const ManualStaffAttendance = ({ onClose, onSuccess }) => {
                     </button>
                 </div>
 
-                <div className="overflow-y-auto flex-1 px-6 py-4 space-y-4">
-                    <div>
-                        <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1.5">
-                            {UI_STRINGS.MANUAL_STAFF.STAFF_MEMBER} <span className="text-red-500">*</span>
+                {/* Top bar: shared date + search */}
+                <div className="px-6 py-4 border-b border-gray-100 shrink-0 space-y-3">
+                    <div className="flex items-center gap-3">
+                        <label className="text-xs font-bold text-gray-700 uppercase tracking-wide shrink-0">
+                            Attendance Date <span className="text-red-500">*</span>
                         </label>
-                        <div className="relative" ref={dropdownRef}>
-                            <button type="button" onClick={() => setDropdownOpen(prev => !prev)}
-                                className="w-full flex items-center justify-between px-4 py-2.5 border border-gray-300 rounded-xl bg-white text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-amber-400 transition-all hover:border-amber-400">
-                                {selectedStaff ? (
-                                    <div className="flex items-center gap-2 min-w-0">
-                                        <div className="w-6 h-6 rounded-full bg-amber-100 flex items-center justify-center text-amber-700 text-xs font-bold shrink-0">
-                                            {selectedStaff.userName.charAt(0).toUpperCase()}
-                                        </div>
-                                        <span className="font-semibold text-gray-900 truncate">{selectedStaff.userName}</span>
-                                        <span className="shrink-0 px-2 py-0.5 bg-slate-100 text-slate-600 text-xs font-semibold rounded-md">
-                                            {selectedStaff.userType}
-                                        </span>
-                                    </div>
-                                ) : (
-                                    <span className="text-gray-400">{UI_STRINGS.MANUAL_STAFF.SELECT_STAFF}</span>
-                                )}
-                                <ChevronDown className={`w-4 h-4 text-gray-400 shrink-0 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
-                            </button>
-
-                            {dropdownOpen && (
-                                <div className="absolute z-50 mt-1.5 w-full bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden">
-                                    <div className="p-2 border-b border-gray-100">
-                                        <div className="relative">
-                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                                            <input type="text" value={staffSearch}
-                                                onChange={(e) => setStaffSearch(e.target.value)}
-                                                placeholder={UI_STRINGS.MANUAL_STAFF.SEARCH_NAME} autoFocus
-                                                className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400 bg-gray-50"
-                                            />
-                                        </div>
-                                    </div>
-                                    <div className="max-h-52 overflow-y-auto">
-                                        {staffLoading ? (
-                                            <div className="flex items-center justify-center py-6 gap-2 text-gray-400">
-                                                <Loader2 className="w-4 h-4 animate-spin" />
-                                                <span className="text-sm">{UI_STRINGS.MANUAL_STAFF.LOADING_STAFF}</span>
-                                            </div>
-                                        ) : staffList.length === 0 ? (
-                                            <div className="py-6 text-center text-sm text-gray-400">{UI_STRINGS.MANUAL_STAFF.NO_STAFF}</div>
-                                        ) : (
-                                            staffList.map((staff, idx) => {
-                                                const name = getDisplayName(staff);
-                                                const role = getDisplayRole(staff);
-                                                const id = staff.userId ?? staff.id ?? idx;
-                                                return (
-                                                    <button key={id} type="button" onClick={() => handleSelectStaff(staff)}
-                                                        className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-amber-50 transition-colors text-left group">
-                                                        <div className="w-8 h-8 rounded-full bg-amber-100 group-hover:bg-amber-200 flex items-center justify-center text-amber-700 text-sm font-bold shrink-0 transition-colors">
-                                                            {name.charAt(0).toUpperCase()}
-                                                        </div>
-                                                        <div className="flex-1 min-w-0">
-                                                            <p className="text-sm font-semibold text-gray-800 truncate">{name}</p>
-                                                            <p className="text-xs text-gray-400">{UI_STRINGS.COMMON.ID_LABEL} {id}</p>
-                                                        </div>
-                                                        <span className="shrink-0 px-2 py-0.5 bg-slate-100 text-slate-600 text-xs font-semibold rounded-md">
-                                                            {role}
-                                                        </span>
-                                                    </button>
-                                                );
-                                            })
-                                        )}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                        <div>
-                            <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1.5">
-                                {UI_STRINGS.MANUAL_STAFF.ATTENDANCE_DATE} <span className="text-red-500">*</span>
-                            </label>
-                            <input type="date" value={attendanceDate} max={TODAY}
-                                onChange={(e) => setAttendanceDate(e.target.value)}
-                                className="w-full px-3 py-2.5 border border-gray-300 rounded-xl bg-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 transition-all"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1.5">
-                                {UI_STRINGS.MANUAL_STAFF.CHECK_IN_TIME}
-                            </label>
-                            <input type="time" value={checkInTime}
-                                onChange={(e) => setCheckInTime(e.target.value)}
-                                className="w-full px-3 py-2.5 border border-gray-300 rounded-xl bg-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 transition-all"
-                            />
-                        </div>
-                    </div>
-
-                    <div>
-                        <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1.5">
-                            {UI_STRINGS.MANUAL_STAFF.REASON_REMARKS} <span className="text-red-500">*</span>
-                        </label>
-                        <textarea value={remarks} onChange={(e) => setRemarks(e.target.value.slice(0, REMARKS_MAX))} rows={3} maxLength={REMARKS_MAX}
-                            placeholder="e.g. Face recognition device unavailable..."
-                            className="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-amber-400 transition-all resize-none"
+                        <input type="date" value={attendanceDate} max={TODAY}
+                            onChange={(e) => setAttendanceDate(e.target.value)}
+                            className="px-3 py-2 border border-gray-300 rounded-xl bg-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 transition-all"
                         />
-                        <div className="mt-2 flex items-center justify-between">
-                            <div className={`text-xs ${remarks.trim().length > REMARKS_MAX ? 'text-red-600' : 'text-gray-500'}`}>{remarks.trim().length}/{REMARKS_MAX} {UI_STRINGS.MANUAL_STAFF.CHARACTERS}</div>
-                            {remarks.trim().length > REMARKS_MAX && (
-                                <div className="text-xs text-red-600">{UI_STRINGS.MANUAL_STAFF.REMARKS_EXCEED}</div>
-                            )}
-                        </div>
+                        <span className="ml-auto text-xs font-semibold text-amber-600 bg-amber-50 px-2.5 py-1 rounded-md">
+                            {selectedCount} selected
+                        </span>
+                    </div>
+
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <input type="text" value={staffSearch}
+                            onChange={(e) => setStaffSearch(e.target.value)}
+                            placeholder="Search staff by name..."
+                            className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400 bg-gray-50"
+                        />
                     </div>
                 </div>
 
+                {/* Staff list */}
+                <div className="overflow-y-auto flex-1 px-6 py-3 space-y-2">
+                    {staffLoading ? (
+                        <div className="flex items-center justify-center py-10 gap-2 text-gray-400">
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <span className="text-sm">Loading staff...</span>
+                        </div>
+                    ) : filteredStaff.length === 0 ? (
+                        <div className="py-10 text-center text-sm text-gray-400">No staff members found</div>
+                    ) : (
+                        filteredStaff.map((raw, idx) => {
+                            const userId = getUserId(raw, idx);
+                            const name = getDisplayName(raw);
+                            const role = getDisplayRole(raw);
+                            const entry = selections.get(userId);
+                            const isSelected = !!entry;
+                            const isInvalid = isSelected && invalidSelections.includes(userId);
+
+                            return (
+                                <div key={userId}
+                                    className={`border rounded-xl transition-all ${isSelected ? 'border-amber-300 bg-amber-50/40' : 'border-gray-200 bg-white'}`}>
+                                    {/* Row */}
+                                    <button type="button" onClick={() => toggleStaff(raw, idx)}
+                                        className="w-full flex items-center gap-3 px-4 py-3 text-left">
+                                        <div className={`w-5 h-5 rounded-md border flex items-center justify-center shrink-0 transition-all ${isSelected ? 'bg-amber-500 border-amber-500' : 'border-gray-300'}`}>
+                                            {isSelected && <Check className="w-3.5 h-3.5 text-white" />}
+                                        </div>
+                                        <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center text-amber-700 text-sm font-bold shrink-0">
+                                            {name.charAt(0).toUpperCase()}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-semibold text-gray-800 truncate">{name}</p>
+                                            <p className="text-xs text-gray-400">ID: {userId}</p>
+                                        </div>
+                                        <span className="shrink-0 px-2 py-0.5 bg-slate-100 text-slate-600 text-xs font-semibold rounded-md">
+                                            {role}
+                                        </span>
+                                    </button>
+
+                                    {/* Expanded fields when selected */}
+                                    {isSelected && (
+                                        <div className="px-4 pb-4 pt-1 grid grid-cols-1 sm:grid-cols-[140px_1fr] gap-3">
+                                            <div>
+                                                <label className="block text-[11px] font-bold text-gray-600 uppercase tracking-wide mb-1">
+                                                    Check-In Time <span className="text-red-500">*</span>
+                                                </label>
+                                                <input type="time" value={entry.checkInTime}
+                                                    onChange={(e) => updateSelection(userId, 'checkInTime', e.target.value)}
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-[11px] font-bold text-gray-600 uppercase tracking-wide mb-1">
+                                                    Remarks <span className="text-red-500">*</span>
+                                                </label>
+                                                <input type="text" value={entry.remarks}
+                                                    maxLength={REMARKS_MAX}
+                                                    onChange={(e) => updateSelection(userId, 'remarks', e.target.value)}
+                                                    placeholder="e.g. Face recognition device unavailable..."
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                                                />
+                                            </div>
+                                            {isInvalid && (
+                                                <div className="sm:col-span-2 text-xs text-red-600">
+                                                    Check-in time & remarks required (max {REMARKS_MAX} chars)
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })
+                    )}
+                </div>
+
+                {/* Footer */}
                 <div className="flex gap-3 px-6 py-4 border-t border-gray-100 bg-gray-50 shrink-0">
                     <button onClick={onClose}
                         className="flex-1 px-4 py-2.5 border border-gray-300 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-100 transition-all">
-                        {UI_STRINGS.COMMON.CANCEL}
+                        Cancel
                     </button>
-                    <button onClick={handleSubmit} disabled={submitting || remarks.trim().length > REMARKS_MAX}
+                    <button onClick={handleSubmit} disabled={submitting || selectedCount === 0}
                         className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-amber-500 hover:bg-amber-600 disabled:opacity-60 rounded-xl text-sm font-semibold text-white transition-all">
                         {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
-                        {submitting ? UI_STRINGS.MANUAL_STAFF.BTN_SUBMITTING : UI_STRINGS.MANUAL_STAFF.BTN_SUBMIT}
+                        {submitting ? 'Submitting...' : `Submit ${selectedCount > 0 ? `(${selectedCount})` : ''}`}
                     </button>
                 </div>
             </div>

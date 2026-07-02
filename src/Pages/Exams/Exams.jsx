@@ -185,21 +185,24 @@ function ClassRow({ event, exam, sections, onAction, onRemove }) {
     const meta = ROW_META[status];
     const { hasPermission } = useAuth();
 
+    // Uniform styling class matching your original theme accents
+    const activeChipStyle = exam.isActive
+        ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+        : "bg-gray-100 text-gray-500 border border-gray-200";
+
     return (
         <div className={`px-3 sm:px-4 py-3.5 border-b border-gray-100 last:border-0 ${meta.rowBg}`}>
             <div className={`flex flex-col gap-3 xl:grid ${ROW_GRID_COLS} xl:gap-3 xl:items-center`}>
 
                 {/* COLUMN 1: CLASS INFO */}
-                <div className="min-w-0 flex items-center justify-between xl:block">
+                <div className="min-w-0 flex items-center justify-betwee xl:block">
                     <div>
                         <p className="text-sm font-bold text-gray-800">{exam.schoolClassName}</p>
-                        <span className={`inline-block mt-1 px-2 py-0.5 rounded-md text-[10px] font-bold tracking-wide uppercase ${exam.isActive ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-gray-100 text-gray-500"}`}>
-                            {exam.isActive ? "Active" : "Inactive"}
-                        </span>
                     </div>
-                    <span className={`xl:hidden inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold tracking-wide uppercase shrink-0 ${meta.chip}`}>
-                        <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                        {meta.label}
+                    {/* Responsive badge for smaller viewports */}
+                    <span className={`xl:hidden inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold tracking-wide uppercase shrink-0 ${activeChipStyle}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${exam.isActive ? "bg-emerald-500" : "bg-gray-400"}`} />
+                        {exam.isActive ? "Active" : "Inactive"}
                     </span>
                 </div>
 
@@ -218,11 +221,11 @@ function ClassRow({ event, exam, sections, onAction, onRemove }) {
                     )}
                 </div>
 
-                {/* COLUMN 3: STATUS CHIP */}
+                {/* COLUMN 3: STATUS CHIP (Single Unified Active Badge) */}
                 <div className="hidden xl:flex items-center min-w-0">
-                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold tracking-wide uppercase ${meta.chip}`}>
-                        <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                        {meta.label}
+                    <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-bold tracking-wide uppercase ${activeChipStyle}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${exam.isActive ? "bg-emerald-500" : "bg-gray-400"}`} />
+                        {exam.isActive ? "Active" : "Inactive"}
                     </span>
                 </div>
 
@@ -336,9 +339,9 @@ function EventItem({ event, expanded, onToggle, sectionsCache, onLoadSections, o
                 <div className="border-t border-gray-100">
                     <div className={`hidden xl:grid ${ROW_GRID_COLS} xl:gap-3 px-4 py-3 bg-gray-50 text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-gray-200/60`}>
                         <span>Class</span>
-                        <span>Sections (marks)</span>
+                        <span>Sections</span>
                         <span>Status</span>
-                        <span className="text-right">Actions</span>
+                        <span className="text-center">Actions</span>
                     </div>
                     {exams.length === 0 ? (
                         <p className="text-sm text-gray-400 text-center py-8">No classes in this event yet.</p>
@@ -385,6 +388,7 @@ function ModalShell({ title, icon: Icon, onClose, children, maxW = "max-w-md" })
     );
 }
 
+// (Rest of the wizard models remain unaltered)
 function DeclareModal({ examName, onConfirm, onCancel, loading }) {
     return (
         <ModalShell title={EXAM_CONSTS.EXAMS.MODALS.DECLARE_TITLE} icon={AlertCircle} onClose={onCancel}>
@@ -577,6 +581,7 @@ function SubjectsModal({ event, exam, onClose, onChanged }) {
 
     const handleDelete = async (configId) => {
         setBusyId(configId);
+
         try {
             await deleteEventSubject(event.eventId, exam.schoolClassId, configId);
             await load();
@@ -677,17 +682,13 @@ export default function ExamEvents() {
     const fetchEvents = useCallback(async () => {
         setLoadingEvents(true);
         setErrorEvents(null);
-
         try {
-
             const f = {};
-
             if (yearId) {
                 f.academicYearId = yearId;
             }
 
             let list = await getExamEvents(f);
-
             list = Array.isArray(list) ? list : [];
 
             // Exam Type Filter

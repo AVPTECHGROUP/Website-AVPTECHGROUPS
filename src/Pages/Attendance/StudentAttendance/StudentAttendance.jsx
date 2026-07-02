@@ -40,6 +40,7 @@ const mapStatus = (apiStatus) => {
     if (s === "PRESENT") return STATUS_PRESENT;
     if (s === "LATE") return STATUS_LATE;
     if (s === "PRESENT_MANUAL" || s === "MANUAL") return STATUS_PRESENT_MANUAL;
+        if (s === "ABSENT") return "Absent";
     return STATUS_NOT_MARKED;
 };
 
@@ -60,6 +61,7 @@ const shapeRosterStudent = (st) => {
         confidence,
         attendanceId: st.attendanceId || null,
         enrolled: true,
+        remarks: st.remarks || "", // Added to bridge historical backend entries
     };
 };
 
@@ -68,15 +70,19 @@ const statusColor = (s) => {
     if (s.includes(STATUS_PRESENT_MANUAL)) return STATUS_COLOR_MAP.PRESENT_MANUAL;
     if (s.includes(STATUS_PRESENT)) return STATUS_COLOR_MAP.PRESENT;
     if (s === STATUS_LATE) return STATUS_COLOR_MAP.LATE;
+    if (s === "Absent") return "bg-red-100 text-red-600";
     return STATUS_COLOR_MAP.DEFAULT;
 };
+
 const statusIcon = (s) => {
     if (!s || s === STATUS_NOT_MARKED) return <BookOpen className="w-3.5 h-3.5" />;
     if (s.includes(STATUS_PRESENT_MANUAL)) return <PenLine className="w-3.5 h-3.5" />;
     if (s.includes(STATUS_PRESENT)) return <CheckCircle2 className="w-3.5 h-3.5" />;
+     if (s === "Absent") return <XCircle className="w-3.5 h-3.5" />;
     if (s === STATUS_LATE) return <Clock className="w-3.5 h-3.5" />;
     return null;
 };
+
 const confidenceColor = (c) => {
     if (!c) return CONFIDENCE_COLOR_MAP.NONE;
     if (c >= CONFIDENCE_HIGH_THRESHOLD) return CONFIDENCE_COLOR_MAP.HIGH;
@@ -668,30 +674,11 @@ export default function StudentAttendance() {
         finally { setActionLoadingId(null); }
     };
 
-    const handleManualMark = async (data) => {
-        setActionLoadingId(data.studentId);
-        try {
-            await manualMarkAttendance({
-                classId: selectedClass?.id,
-                sectionId: selectedSection?.id,
-                attendanceDate: date,
-                checkInTime: data.time,
-                remarks: data.remarks || "",
-                students: [
-                    {
-                        studentId: parseInt(data.studentId),
-                        status: data.status?.toUpperCase() || "PRESENT",
-                        checkInTime: data.time,
-                        remarks: data.remarks || "",
-                    }
-                ]
-            });
-            setShowManualMark(false);
-            setSelectedStudent(null);
-            await refreshRoster();
-        } catch (err) { alert(err.message || UI_STRINGS.COMMON.ERROR); }
-        finally { setActionLoadingId(null); }
+    const handleManualMark = async (payload) => {
+        const result = await bulkManualMarkAttendance(payload);
+        await refreshRoster();
     };
+
 
     const handleExportCSV = () => {
         if (mergedStudents.length === 0) {
@@ -858,11 +845,14 @@ export default function StudentAttendance() {
             {showManualMark && (
                 <ManualMarkModal
                     students={mergedStudents}
-                    selectedStudent={selectedStudent}
+                    selectedClass={selectedClass}
+                    selectedSection={selectedSection}
+                    date={date}
                     onClose={() => { setShowManualMark(false); setSelectedStudent(null); }}
                     onConfirm={handleManualMark}
                 />
             )}
+
             {unmarkTarget && (
                 <UnmarkModal
                     student={unmarkTarget}

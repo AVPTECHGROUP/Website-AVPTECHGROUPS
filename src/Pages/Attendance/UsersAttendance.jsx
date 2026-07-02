@@ -290,6 +290,9 @@ const UsersAttendance = () => {
 
   const pendingCount = pendingUsers.filter(u => u.status === 'PENDING_MANUAL_REVIEW').length;
 
+  // ─── CRITICAL: Check if actions column should be visible on current page ───
+  const showActionsColumn = currentUsers.some(u => u.status === 'PENDING_MANUAL_REVIEW');
+
   const pendingStatCards = [
     { icon: Clock, label: UI_STRINGS.PENDING_APPROVALS.STAT_PENDING, val: pendingCount, sub: UI_STRINGS.PENDING_APPROVALS.STAT_PENDING_SUB, subColor: 'text-yellow-600 font-semibold', iconTx: 'text-yellow-600', iconBg: 'bg-yellow-100' },
   ];
@@ -300,12 +303,13 @@ const UsersAttendance = () => {
       PENDING_MANUAL_REVIEW: 'bg-yellow-50 text-yellow-700 ring-1 ring-yellow-200',
       REJECTED: 'bg-red-50 text-red-700 ring-1 ring-red-200',
       LATE: 'bg-orange-50 text-orange-700 ring-1 ring-orange-200',
+      HALF_DAY: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200',
     };
     return map[status] || 'bg-gray-100 text-gray-600 ring-1 ring-gray-200';
   };
 
   const getStatusLabel = (status) => {
-    const map = { PRESENT: 'Approved', PENDING_MANUAL_REVIEW: 'Pending Review', REJECTED: 'Rejected', LATE: 'Late' };
+    const map = { PRESENT: 'Approved', PENDING_MANUAL_REVIEW: 'Pending Review', REJECTED: 'Rejected', LATE: 'Late', HALF_DAY: 'Half Day' };
     return map[status] || status;
   };
 
@@ -365,7 +369,7 @@ const UsersAttendance = () => {
             </div>
           </div>
 
-          {/* ── 3 Pending Stat Cards ── */}
+          {/* ── Stat Cards ── */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-5">
             {statsLoading
               ? pendingStatCards.map((_, i) => <CardLoader key={i} />)
@@ -384,7 +388,7 @@ const UsersAttendance = () => {
           </div>
 
           {/* ── Desktop Table ── */}
-          <div className="hidden lg:block bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="hidden xl:block bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-gray-50 border-b border-gray-200">
@@ -392,6 +396,10 @@ const UsersAttendance = () => {
                     {UI_STRINGS.PENDING_APPROVALS.HEADERS.map((col) => (
                       <th key={col} className="px-4 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">{col}</th>
                     ))}
+                    {/* Actions header is conditionally rendered here */}
+                    {showActionsColumn && (
+                      <th className="px-4 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
+                    )}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -399,7 +407,7 @@ const UsersAttendance = () => {
                     <tr><td colSpan={7} className="py-12 text-center">
                       <div className="flex flex-col items-center gap-2">
                         <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
-                        <p className="text-sm text-gray-500">{UI_STRINGS.COMMON.LOADING}</p>
+                          <p className="text-sm text-gray-500">{UI_STRINGS.COMMON.LOADING}</p>
                       </div>
                     </td></tr>
                   )}
@@ -421,6 +429,16 @@ const UsersAttendance = () => {
                       </td>
                       <td className="px-4 py-4 text-center">
                         <span className="text-sm text-gray-600 whitespace-nowrap">{user.attendanceDate}</span>
+                      </td>
+                      <td className="px-4 py-4 text-center">
+                        {user.checkInTime ? (
+                          <span className="inline-flex items-center gap-1 text-sm text-gray-600 whitespace-nowrap">
+                            <Clock className="w-4 h-4 text-blue-500" />
+                            {user.checkInTime}
+                          </span>
+                        ) : (
+                          <span className="text-sm text-gray-400">—</span>
+                        )}
                       </td>
                       <td className="px-4 py-4 text-center max-w-[180px]">
                         {user.remarks ? (
@@ -465,7 +483,7 @@ const UsersAttendance = () => {
                   ))}
                   {!listLoading && currentUsers.length === 0 && (
                     <tr>
-                      <td colSpan={7} className="py-16 text-center">
+                      <td colSpan={showActionsColumn ? 7 : 6} className="py-16 text-center">
                         <Inbox className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                         <p className="text-base font-semibold text-gray-500">{UI_STRINGS.PENDING_APPROVALS.NO_PENDING}</p>
                         <p className="text-sm text-gray-400 mt-1">{UI_STRINGS.PENDING_APPROVALS.ALL_UP_TO_DATE}</p>
@@ -505,7 +523,7 @@ const UsersAttendance = () => {
           </div>
 
           {/* ── Mobile Cards ── */}
-          <div className="lg:hidden space-y-3">
+          <div className="xl:hidden space-y-3">
             {listLoading && (
               <div className="bg-white rounded-2xl p-10 flex flex-col items-center gap-3">
                 <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
@@ -530,7 +548,7 @@ const UsersAttendance = () => {
                 </div>
                 <div className="space-y-2 mb-4 bg-gray-50 rounded-xl p-3">
                   <div className="flex justify-between items-center">
-                    <span className="text-xs text-gray-400 font-medium">Department</span>
+                    <span className="text-xs text-gray-900 font-medium">Department</span>
                     <span className="text-xs text-gray-900 font-semibold">{user.userType}</span>
                   </div>
                   <div className="flex justify-between items-center">
@@ -605,9 +623,9 @@ const UsersAttendance = () => {
             )}
           </div>
 
-        </div>
       </div>
     </div>
+    </div >
   );
 };
 

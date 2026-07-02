@@ -326,13 +326,13 @@ export default function TimeTable() {
                                 </tr>
                             ) : filtered.map(tt => (
                                 <tr key={tt.id} className="hover:bg-gray-50/60 transition">
-                                    <td className="px-5 py-4 font-medium text-gray-900">{tt.class}</td>
-                                    <td className="px-5 py-4 text-gray-600">{tt.section}</td>
+                                    <td className="px-5 text-center py-4 font-medium text-gray-900">{tt.class}</td>
+                                    <td className="px-5 text-center py-4 text-gray-600">{tt.section}</td>
 
-                                    <td className="px-5 py-4"><StatusBadge status={tt.status} /></td>
-                                    <td className="px-5 py-4 text-gray-500">{tt.lastUpdated}</td>
-                                    <td className="px-5 py-4">
-                                        <div className="flex items-center gap-2 flex-wrap">
+                                    <td className="px-5 text-center py-4"><StatusBadge status={tt.status} /></td>
+                                    <td className="px-5 text-center py-4 text-gray-500">{tt.lastUpdated}</td>
+                                    <td className="px-5 text-center py-4">
+                                        <div className="flex items-center justify-center gap-2 flex-wrap">
                                             <button onClick={() => setOpenWorkspace({ timetable: tt, mode: 'view' })}
                                                 className="flex items-center gap-1 px-3 cursor-pointer py-1.5 border border-gray-200 rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-50 transition">
                                                 <Eye size={13} /> {DIRECTORY.BTN_VIEW}

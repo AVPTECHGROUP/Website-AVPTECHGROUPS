@@ -10,6 +10,10 @@ const LandingLayout = lazy(() => import('../../Pages/SchoolSpineWeb/pages/Landin
 const Terms_Of_Service = lazy(() => import('../../Pages/SchoolSpineWeb/pages/Terms'));
 const Cookie_Policy = lazy(() => import('../../Pages/SchoolSpineWeb/pages/CookiePolicy'));
 const FaqListing = lazy(() => import('../../Components/Homes/Faq/FaqLisitng'));
+const Blog = lazy(() => import('../../Pages/SchoolSpineWeb/pages/Blog'));
+const FeatureDetails = lazy(() => import('../../Components/Homes/Details/Features/FeatureDetails'));
+const Support = lazy(() => import('../../Pages/SchoolSpineWeb/pages/Help_Support'));
+
 
 // Called as a function: SchoolSpineWebRoutes({ RootRedirect, isLoggedIn })
 export default function SchoolSpineWebRoutes({ RootRedirect, isLoggedIn }) {
@@ -40,6 +44,9 @@ export default function SchoolSpineWebRoutes({ RootRedirect, isLoggedIn }) {
         path={ROUTE_PATHS.FAQS}
         element={isLoggedIn ? <RootRedirect /> : <LandingLayout><FaqListing /></LandingLayout>}
       />
+        <Route path="/blog" element={isLoggedIn ? <RootRedirect /> : <LandingLayout><Blog /></LandingLayout>} />
+        <Route path="/features/:slug" element={isLoggedIn ? <RootRedirect /> : <LandingLayout><FeatureDetails /></LandingLayout>} />
+        <Route path="/support" element={isLoggedIn ? <RootRedirect /> : <LandingLayout><Support /></LandingLayout>} />
     </>
   );
 }

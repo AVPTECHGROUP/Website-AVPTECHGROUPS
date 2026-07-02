@@ -1,225 +1,184 @@
-import React, { useState } from 'react';
-import { CircleStar, Phone, Menu, X } from 'lucide-react';
+import React, { useState, useContext } from 'react';
+import { CircleStar, Phone, Mail, Menu, X, Sun, Moon, User, ArrowRight } from 'lucide-react';
 import ss_logo_2 from '../../assets/Images/SS_logo_3.png';
-import { useNavigate } from 'react-router-dom';
-// ─── Framer Motion Imports ───
-import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { UserContext } from '../../ContextAPI/UserContext';
 
 const Navbar = () => {
     const [menuOpen, setMenuOpen] = useState(false);
     const navigate = useNavigate();
-    const navLinks = ['Home', 'Features', 'Highlights', 'In The News', 'Clients', 'Blog'];
+    const location = useLocation();
+    const { theme, toggleTheme } = useContext(UserContext);
+    const navLinks = ['Home', 'Features', 'Blog', 'Pricing', "About Us", 'Contact Us'];
 
-    // ─── Framer Motion Variants ───
-    const sidebarVariants = {
-        hidden: { x: '100%', opacity: 0.9 },
-        visible: {
-            x: 0,
-            opacity: 1,
-            transition: {
-                type: 'tween',
-                duration: 0.35,
-                ease: 'easeOut',
-                staggerChildren: 0.05, // लिंक्स को एक-एक करके एनिमेट करेगा
-                delayChildren: 0.1,
-            },
-        },
-        exit: {
-            x: '100%',
-            opacity: 0.9,
-            transition: {
-                type: 'tween',
-                duration: 0.25,
-                ease: 'easeIn',
-            },
-        },
-    };
+    // Unified link click handler for flawless smooth sliding
+    const handleNavLinkClick = (link) => {
+        setMenuOpen(false); // Instantly close mobile drawer if open
 
-    const linkVariants = {
-        hidden: { opacity: 0, x: 20 },
-        visible: { opacity: 1, x: 0, transition: { type: 'spring', stiffness: 100 } },
+        if (link === "Home") {
+            navigate("/");
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        } else if (link === "Features") {
+            if (location.pathname === "/") {
+                document.getElementById('features-section')?.scrollIntoView({ behavior: 'smooth' });
+            } else {
+                navigate("/#features-section");
+            }
+        } else if (link === "Pricing") {
+            /* ── Added Pricing Scroll Logic ── */
+            if (location.pathname === "/") {
+                document.getElementById('pricing-section')?.scrollIntoView({ behavior: 'smooth' });
+            } else {
+                navigate("/#pricing-section");
+            }
+        } else if (link === "Blog") {
+            navigate("/blog");
+        } else if (link === "About Us") {
+            navigate("/about");
+        } else if (link === "Contact Us") {
+            navigate("/contact");
+        }
     };
 
     return (
-        <div className="relative bg-[linear-gradient(to_right,#102130,#132939,#152F3F,#173343)] w-full overflow-hidden">
+        <div className="relative bg-theme-nav text-theme-text transition-colors duration-300 w-full">
+            <style>{`
+                @keyframes custom-shimmer {
+                    0% { transform: translateX(-200%) skewX(-20deg); }
+                    100% { transform: translateX(200%) skewX(-20deg); }
+                }
+                .shimmer-effect {
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: linear-gradient(
+                        90deg,
+                        transparent,
+                        rgba(255, 255, 255, 0.45),
+                        transparent
+                    );
+                    animation: custom-shimmer 4s infinite ease-in-out;
+                }
+            `}</style>
 
-            {/* ── Top Announcement Bar (Desktop & Tablet) ── */}
-            <div className="hidden md:flex px-6 lg:px-12 xl:px-16 py-2 items-center justify-between border-b border-white/10">
-                <p className='flex gap-2 items-center text-white font-medium text-xs lg:text-sm'>
-                    <CircleStar size={16} color='gold' />
+            <div className="absolute bottom-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-[#00C9B1]/35 via-[#F5A623]/20 to-transparent z-30" />
+
+            {/* ── Top Announcement Bar ── */}
+            <div className="hidden md:flex px-6 lg:px-12 xl:px-16 py-2 items-center justify-between border-b border-theme-border/40">
+                <p className='flex gap-2 items-center text-theme-subtext font-medium text-xs lg:text-sm'>
+                    <CircleStar size={16} color='gold' className="animate-spin-slow" />
                     Recognized by Startup India
                 </p>
-                <div className='flex gap-5 lg:gap-8'>
-                    <p className='flex items-center gap-1 text-white font-body text-xs lg:text-sm cursor-pointer hover:opacity-80 transition'>
-                        <Phone size={13} color='white' />
-                        Call Us
-                    </p>
-                    <p
-                        onClick={() => navigate('/login')}
-                        className='text-white font-body text-xs lg:text-sm cursor-pointer hover:opacity-80 transition'
-                    >
-                        Login
-                    </p>
-                    <p className='text-white font-body text-xs lg:text-sm cursor-pointer hover:opacity-80 transition'>
-                        Support
-                    </p>
+                <div className='flex gap-4 lg:gap-6'>
+                    <a href="tel:+919511117450" className='flex items-center gap-1.5 text-theme-subtext hover:text-[#00C9B1] font-body text-xs lg:text-sm transition-colors duration-200'>
+                        <Phone size={12} className="text-theme-text" /> +91 9511117450
+                    </a>
+                    <a href="mailto:info@computesofttech.com" className='flex items-center gap-1.5 text-theme-subtext hover:text-[#00C9B1] font-body text-xs lg:text-sm transition-colors duration-200'>
+                        <Mail size={12} className="text-theme-text" /> info@computesofttech.com
+                    </a>
                 </div>
             </div>
 
             {/* ── Main Navbar ── */}
-            <div className='flex items-center justify-between px-4 sm:px-8 lg:px-12 xl:px-16 py-4'>
-
-                {/* Logo Area */}
-                <div className="flex items-center shrink-0">
-                    <img
-                        onClick={() => navigate('/')}
-                        className="h-12 sm:h-14 md:h-16 lg:h-18 xl:h-20 cursor-pointer w-auto object-contain drop-shadow-md hover:scale-105 transition-transform duration-300"
-                        src={ss_logo_2}
-                        alt="SchoolSpine Logo"
-                    />
+            <div className='flex items-center justify-between px-4 sm:px-8 lg:px-12 xl:px-16 py-3 relative max-w-7xl mx-auto w-full'>
+                
+                {/* Logo */}
+                <div className="flex-shrink-0 cursor-pointer" onClick={() => navigate('/')}>
+                    <img className="h-12 sm:h-14 lg:h-16 xl:h-20 w-auto object-contain drop-shadow-md hover:drop-shadow-xl transition duration-300 ease-in-out hover:scale-105" src={ss_logo_2} alt="SchoolSpine Logo" />
                 </div>
 
-                {/* Navigation Links (Desktop) */}
-                <div className='hidden lg:flex items-center justify-center flex-1 mx-4 xl:mx-8 font-body tracking-wide text-sm xl:text-base'>
-                    <div className='flex gap-4 xl:gap-6 text-white text-nowrap'>
+                {/* Desktop Navigation */}
+                <div className='hidden lg:flex items-center justify-between flex-1 ml-8 xl:ml-12 z-50'>
+                    <div className='flex gap-4 xl:gap-8 font-body tracking-wide text-sm xl:text-base text-theme-subtext mx-auto'>
                         {navLinks.map(link => (
                             <p
                                 key={link}
-                                onClick={() => {
-                                    if (link === "Home") navigate("/");
-                                }}
-                                className='text-white hover:text-[#00CAFB] cursor-pointer transition duration-200 relative group py-2'
+                                onClick={() => handleNavLinkClick(link)}
+                                className='text-theme-subtext hover:text-[#00C9B1] cursor-pointer transition duration-200 relative group py-2'
                             >
                                 {link}
-                                <span className='absolute bottom-0 left-0 w-0 h-0.5 bg-[#00CAFB] group-hover:w-full transition-all duration-300'></span>
+                                <span className='absolute bottom-0 left-0 w-0 h-0.5 bg-[#00C9B1] group-hover:w-full transition-all duration-300'></span>
                             </p>
                         ))}
                     </div>
+
+                    {/* Desktop CTA Action Actions */}
+                    <div className="flex items-center gap-4 xl:gap-5">
+                        <button onClick={toggleTheme} className="p-2.5 rounded-xl border border-theme-border bg-theme-card text-theme-text hover:bg-theme-border/20 transition-all duration-300 cursor-pointer flex items-center justify-center" aria-label="Toggle theme">
+                            {theme === 'dark' ? <Sun size={18} className="text-[#F5A623]" /> : <Moon size={18} className="text-[#00C9B1]" />}
+                        </button>
+
+                        <button onClick={() => window.open("/login", "_blank")} className="group relative overflow-hidden flex items-center gap-2 px-5 xl:px-6 py-2.5 rounded-xl font-bold tracking-wide text-slate-950 cursor-pointer bg-gradient-to-r from-[#00C9B1] via-[#00C9B1] to-[#F5A623] shadow-[0_4px_20px_rgba(0,201,177,0.22)] hover:shadow-[0_6px_24px_rgba(245,166,35,0.32)] hover:-translate-y-0.5 transition-all duration-300 active:scale-[0.98]">
+                            <div className="shimmer-effect" />
+                            <User size={16} className="text-slate-950 relative z-10 stroke-[2.5]" />
+                            <span className="text-sm xl:text-base relative z-10">Login</span>
+                        </button>
+
+                        <button className="group relative overflow-hidden flex items-center gap-2 px-4 xl:px-5 py-2.5 rounded-xl font-bold tracking-wide text-slate-950 cursor-pointer bg-gradient-to-r from-[#00C9B1] via-[#00C9B1] to-[#F5A623] shadow-[0_4px_20px_rgba(0,201,177,0.25)] hover:shadow-[0_6px_24px_rgba(245,166,35,0.35)] hover:-translate-y-0.5 transition-all duration-300 active:scale-[0.98]">
+                            <div className="shimmer-effect" />
+                            <span className="text-sm xl:text-base relative z-10">Get Free Demo</span>
+                        </button>
+                    </div>
                 </div>
 
-                {/* Action Buttons (Desktop) */}
-                <div className='hidden lg:flex items-center gap-3 xl:gap-4 flex-shrink-0'>
-                    <button
-                        onClick={() => navigate("/login")}
-                        className="group relative overflow-hidden px-5 xl:px-6 py-2.5 rounded-xl border border-[#00CAFB]/60 bg-white/[0.03] backdrop-blur-xl text-white font-semibold tracking-wide cursor-pointer shadow-[0_8px_30px_rgba(0,202,251,0.08)] hover:border-[#00CAFB] hover:bg-[#00CAFB]/10 hover:-translate-y-0.5 hover:shadow-[0_12px_35px_rgba(0,202,251,0.25)] transition-all duration-300 text-sm"
-                    >
-                        <span className="relative z-10">Login</span>
-                        <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/10 to-transparent group-hover:translate-x-full transition-transform duration-1000" />
+                {/* Mobile/Tablet Triggers */}
+                <div className='flex lg:hidden gap-3 items-center'>
+                    <button onClick={toggleTheme} className="p-2 rounded-xl border border-theme-border bg-theme-card text-theme-text hover:bg-white/[0.08] transition-all duration-300 cursor-pointer flex items-center justify-center" aria-label="Toggle theme">
+                        {theme === 'dark' ? <Sun size={16} className="text-[#F5A623]" /> : <Moon size={16} className="text-[#00C9B1]" />}
                     </button>
 
-                    <button
-                        className="group relative overflow-hidden px-6 xl:px-7 py-2.5 rounded-xl font-semibold tracking-wide text-white cursor-pointer bg-gradient-to-r from-[#00C9B1] to-[#F5A623] shadow-[0_10px_35px_rgba(0,202,251,0.35)] hover:-translate-y-0.5 hover:scale-[1.02] transition-all duration-300 text-sm text-nowrap"
-                    >
-                        <span className="relative z-10">Get Free Demo</span>
-                        <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/25 to-transparent group-hover:translate-x-full transition-transform duration-1000" />
-                        <span className="absolute inset-x-0 top-0 h-px bg-white/40" />
-                    </button>
-                </div>
-
-                {/* Mobile Right Controls */}
-                <div className='flex lg:hidden items-center gap-4'>
-                    <div className='flex md:hidden gap-3 items-center text-white text-xs'>
-                        <p className='flex items-center gap-1 text-nowrap cursor-pointer hover:opacity-80'>
-                            <Phone size={11} color='white' /> Call Us
-                        </p>
-                        <p onClick={() => navigate('/login')} className='cursor-pointer hover:opacity-80'>Login</p>
+                    <div className='flex md:hidden gap-3 items-center text-theme-text text-xs border-r border-theme-border pr-2 mr-1'>
+                        <a href="tel:+919511117450" className='flex items-center gap-1 text-nowrap hover:text-[#00C9B1]'><Phone size={12} className="text-theme-text" /> Call</a>
+                        <a href="mailto:info@computesofttech.com" className='flex items-center gap-1 text-nowrap hover:text-[#00C9B1]'><Mail size={12} className="text-theme-text" /> Email</a>
                     </div>
 
-                    <button
-                        className='p-1.5 text-white/90 hover:text-[#00CAFB] transition'
-                        onClick={() => setMenuOpen(true)}
-                        aria-label="Open menu"
-                    >
-                        <Menu size={28} />
+                    <button className='p-1 text-[#00C9B1] cursor-pointer hover:scale-105 transition-transform' onClick={() => setMenuOpen(true)} aria-label="Open menu">
+                        <Menu size={24} />
                     </button>
                 </div>
-
             </div>
 
-            {/* ── Mobile Sidebar Drawer with Framer Motion ── */}
-            <AnimatePresence>
-                {menuOpen && (
-                    <motion.div
-                        variants={sidebarVariants}
-                        initial="hidden"
-                        animate="visible"
-                        exit="exit"
-                        className='lg:hidden fixed inset-0 z-50 bg-white flex flex-col'
-                    >
-                        {/* Drawer Header */}
-                        <div className='flex items-center justify-between px-5 py-4 border-b border-gray-100'>
-                            <img
-                                onClick={() => { navigate('/'); setMenuOpen(false); }}
-                                className="h-12 w-auto object-contain"
-                                src={ss_logo_2}
-                                alt="SchoolSpine Logo"
-                            />
+            {/* ── Mobile/Tablet Drawer ── */}
+            {menuOpen && (
+                <div className='lg:hidden fixed inset-0 z-50 bg-theme-bg text-theme-text flex flex-col transition-colors duration-300 animate-in fade-in zoom-in-95 duration-200'>
+                    <div className='flex items-center justify-between px-6 py-4 border-b border-theme-border'>
+                        <img onClick={() => { navigate('/'); setMenuOpen(false); }} className="h-12 w-auto object-contain cursor-pointer" src={ss_logo_2} alt="SchoolSpine Logo" />
+                        <button onClick={() => setMenuOpen(false)} className='text-theme-text p-1 cursor-pointer hover:text-[#00C9B1]' aria-label="Close menu">
+                            <X size={24} />
+                        </button>
+                    </div>
 
-                            <button 
-                                onClick={() => setMenuOpen(false)} 
-                                className='text-gray-700 p-1.5 hover:bg-gray-100 rounded-full transition' 
-                                aria-label="Close menu"
+                    <div className='flex flex-col px-6 py-4 overflow-y-auto split-y divide-y divide-theme-border/60'>
+                        {navLinks.map((link) => (
+                            <p
+                                key={link}
+                                className='text-theme-text font-body text-base font-medium py-4 cursor-pointer hover:text-[#00C9B1] transition duration-200'
+                                onClick={() => handleNavLinkClick(link)}
                             >
-                                <X size={26} />
-                            </button>
-                        </div>
-
-                        {/* Secondary Utilities Container inside Drawer */}
-                        <motion.div 
-                            variants={linkVariants}
-                            className='flex gap-5 justify-around items-center bg-gray-50 py-3 px-5 border-b border-gray-100 text-sm font-medium text-gray-700'
-                        >
-                            <p className='flex items-center gap-1.5 cursor-pointer hover:text-[#00CAFB]'>
-                                <Phone size={14} color='#1A8A8A' /> Call Us
+                                {link}
                             </p>
-                            <p onClick={() => { navigate('/login'); setMenuOpen(false); }} className='cursor-pointer hover:text-[#00CAFB]'>
-                                Login
-                            </p>
-                            <p className='cursor-pointer hover:text-[#00CAFB]'>
-                                Support
-                            </p>
-                        </motion.div>
+                        ))}
+                    </div>
 
-                        {/* Nav Links with Stagger Animation */}
-                        <div className='flex flex-col px-6 py-4 overflow-y-auto divide-y divide-gray-100'>
-                            {navLinks.map((link) => (
-                                <motion.p
-                                    variants={linkVariants}
-                                    key={link}
-                                    className='text-gray-800 font-body text-lg font-medium py-4 cursor-pointer hover:text-[#00CAFB] transition-colors'
-                                    onClick={() => {
-                                        if (link === "Home") navigate("/");
-                                        setMenuOpen(false);
-                                    }}
-                                >
-                                    {link}
-                                </motion.p>
-                            ))}
-                        </div>
-
-                        {/* Drawer Action Buttons */}
-                        <motion.div 
-                            variants={linkVariants}
-                            className='px-6 mt-auto pb-8 flex flex-col gap-3.5'
-                        >
-                            <button
-                                onClick={() => { navigate("/login"); setMenuOpen(false); }}
-                                className='w-full py-3 text-base border-2 border-[#00C9B1] rounded-xl text-[#1A8A8A] font-body font-semibold cursor-pointer hover:bg-gradient-to-r hover:from-[#1A8A8A] hover:to-[#00C9B1] hover:text-white transition duration-300'
-                            >
-                                Login
-                            </button>
-                            <button 
-                                onClick={() => setMenuOpen(false)}
-                                className='w-full py-3 text-base text-white bg-gradient-to-r from-[#1A8A8A] to-[#00C9B1] rounded-xl font-body font-semibold cursor-pointer drop-shadow-md'
-                            >
-                                Get Free Demo
-                            </button>
-                        </motion.div>
-
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
+                    <div className='px-6 mt-auto pb-8 flex flex-col gap-3 border-t border-theme-border/40 pt-4'>
+                        <button onClick={() => { window.open("/login", "_blank"); setMenuOpen(false); }} className='w-full py-3 text-sm relative overflow-hidden flex items-center justify-center gap-2 text-slate-950 bg-gradient-to-r from-[#00C9B1] to-[#F5A623] rounded-xl font-bold cursor-pointer transition-transform duration-200 shadow-md'>
+                            <div className="shimmer-effect" />
+                            <User size={16} className="text-slate-950 relative z-10" />
+                            <span className="relative z-10">Login</span>
+                        </button>
+                        
+                        <button className='w-full py-3 text-sm relative overflow-hidden flex items-center justify-center gap-2 text-slate-950 bg-gradient-to-r from-[#00C9B1] to-[#F5A623] rounded-xl font-bold cursor-pointer transition-transform duration-200 shadow-md'>
+                            <div className="shimmer-effect" />
+                            <span className="relative z-10">Get Free Demo</span>
+                            <div className="relative z-10 bg-slate-950/10 rounded-md p-0.5 flex items-center justify-center">
+                                <ArrowRight size={12} className="text-slate-950 stroke-[2.5]" />
+                            </div>
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

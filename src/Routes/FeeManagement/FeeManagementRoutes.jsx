@@ -13,7 +13,7 @@ const CollectionsPage = lazy(() =>
   import('../../Pages/FeeManagement/FeeManagement').then((m) => ({ default: m.CollectionsPage }))
 );
 const FeePeriods = lazy(() => import('../../Pages/FeeManagement/FeePeriods'));
-const FeeStructures = lazy(() => import('../../Pages/FeeManagement/Feestructures.'));
+const FeeStructures = lazy(() => import('../../Pages/FeeManagement/Feestructures'));
 
 export default function FeeManagementRoutes() {
   return (
