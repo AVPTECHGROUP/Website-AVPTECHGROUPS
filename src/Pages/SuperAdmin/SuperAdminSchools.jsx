@@ -7,10 +7,13 @@ import {
   Sun, Moon,
 } from "lucide-react";
 import SchoolSelectedCard from "../../Components/SuperAdmin/SchoolSelectedCard";
-import { getMySchools, getMySchoolStats } from "../../Api/Schools";
+import { getMySchools, getMySchoolStats } from "../../Api/SchoolConfiguration/Schools";
 import dpis from "../../assets/Images/dpis.jpg";
+import {
+  STORAGE_KEYS, ROUTES, CONFIG, ROLES, BOARDS, STATUS,
+  STATS, STYLES, UI_TEXT
+} from "../../Constants/StringConstants/SelectSchoolConstants";
 import { UserContext } from "../../ContextAPI/UserContext";
-
 const borderAccents = [
   "border-t-blue-500", "border-t-purple-500", "border-t-emerald-500",
   "border-t-orange-500", "border-t-pink-500", "border-t-teal-500",
@@ -21,8 +24,12 @@ const boardBadge = (board) => {
     CBSE:         "bg-blue-500/10 text-blue-400 border border-blue-500/20",
     ICSE:         "bg-amber-500/10 text-amber-400 border border-amber-500/20",
     "STATE BOARD":"bg-purple-500/10 text-purple-400 border border-purple-500/20",
+    [BOARDS.CBSE]: STYLES.BOARD_BADGE.CBSE,
+    [BOARDS.ICSE]: STYLES.BOARD_BADGE.ICSE,
+    [BOARDS.STATE_BOARD]: STYLES.BOARD_BADGE.STATE_BOARD,
   };
   return map[(board || "").toUpperCase()] ?? "bg-white/5 text-slate-400 border border-white/10";
+  return map[(board || "").toUpperCase()] ?? STYLES.BOARD_BADGE.DEFAULT;
 };
 
 const buildStats = (stats) => {
@@ -32,32 +39,51 @@ const buildStats = (stats) => {
       keyName: "Total Schools", val: stats?.totalSchools ?? 0,
       IconName: School, accentBar: "bg-blue-500", iconBg: "bg-blue-50", iconColor: "text-[#00C9B1]",
       sub: "All registered",
+      keyName: STATS.TOTAL_SCHOOLS.KEY, val: stats?.totalSchools ?? 0,
+      IconName: School, accentBar: "bg-blue-500", iconBg: "bg-blue-50", iconColor: "text-blue-600",
+      sub: STATS.TOTAL_SCHOOLS.SUB,
     },
     {
       keyName: "Active", val: stats?.activeSchools ?? 0,
       IconName: CheckCircle, accentBar: "bg-emerald-500", iconBg: "bg-emerald-50", iconColor: "text-[#00C9B1]",
       sub: "Currently operating", pulse: true,
+      keyName: STATS.ACTIVE.KEY, val: stats?.activeSchools ?? 0,
+      IconName: CheckCircle, accentBar: "bg-emerald-500", iconBg: "bg-emerald-50", iconColor: "text-emerald-600",
+      sub: STATS.ACTIVE.SUB, pulse: true,
     },
     {
       keyName: "Inactive", val: stats?.inactiveSchools ?? 0,
       IconName: AlertTriangle, accentBar: "bg-slate-400", iconBg: "bg-slate-50", iconColor: "text-[#00C9B1]",
       sub: "Not operating",
+      keyName: STATS.INACTIVE.KEY, val: stats?.inactiveSchools ?? 0,
+      IconName: AlertTriangle, accentBar: "bg-slate-400", iconBg: "bg-slate-50", iconColor: "text-slate-500",
+      sub: STATS.INACTIVE.SUB,
     },
     {
       keyName: "CBSE", val: boardWise["CBSE"] ?? 0,
       IconName: GraduationCap, accentBar: "bg-blue-500", iconBg: "bg-blue-50", iconColor: "text-[#00C9B1]",
       sub: "Central board",
+      keyName: STATS.CBSE.KEY, val: boardWise[BOARDS.CBSE] ?? 0,
+      IconName: GraduationCap, accentBar: "bg-blue-500", iconBg: "bg-blue-50", iconColor: "text-blue-600",
+      sub: STATS.CBSE.SUB,
     },
     {
       keyName: "ICSE", val: boardWise["ICSE"] ?? 0,
       IconName: GraduationCap, accentBar: "bg-amber-400", iconBg: "bg-amber-50", iconColor: "text-[#00C9B1]",
       sub: "Indian certificate",
+      keyName: STATS.ICSE.KEY, val: boardWise[BOARDS.ICSE] ?? 0,
+      IconName: GraduationCap, accentBar: "bg-amber-400", iconBg: "bg-amber-50", iconColor: "text-amber-600",
+      sub: STATS.ICSE.SUB,
     },
     {
       keyName: "State Board",
       val: boardWise["STATE BOARD"] ?? boardWise["State Board"] ?? 0,
       IconName: TrendingUp, accentBar: "bg-violet-500", iconBg: "bg-violet-50", iconColor: "text-[#00C9B1]",
       sub: "State curriculum",
+      keyName: STATS.STATE_BOARD.KEY,
+      val: boardWise[BOARDS.STATE_BOARD] ?? boardWise[BOARDS.STATE_BOARD_CAMEL] ?? 0,
+      IconName: TrendingUp, accentBar: "bg-violet-500", iconBg: "bg-violet-50", iconColor: "text-violet-600",
+      sub: STATS.STATE_BOARD.SUB,
     },
   ];
 };
@@ -66,6 +92,9 @@ const getRoleMeta = (role) => {
   if (role === "GLOBAL_ADMIN")
     return { label: "Global Admin Console", badge: "bg-indigo-500/15 text-indigo-400 border-indigo-500/25", roleTag: "GLOBAL ADMIN" };
   return { label: "Super Admin Console", badge: "bg-blue-500/15 text-blue-400 border-blue-500/25", roleTag: "SUPER ADMIN" };
+  if (role === ROLES.GLOBAL_ADMIN)
+    return { label: ROLES.LBL_GLOBAL_ADMIN, badge: "bg-indigo-100 text-indigo-700 border-indigo-200", roleTag: ROLES.TAG_GLOBAL_ADMIN };
+  return { label: ROLES.LBL_SUPER_ADMIN, badge: "bg-blue-100 text-blue-700 border-blue-200", roleTag: ROLES.TAG_SUPER_ADMIN };
 };
 
 /* ── Stat Card Skeleton ── */
@@ -186,6 +215,8 @@ const PaginationButtons = ({ page, totalPages, setPage }) => {
 
       <span className="w-full text-center sm:w-auto sm:text-left text-xs text-slate-400 sm:ml-2 mt-1 sm:mt-0">
         Page {page + 1} of {totalPages}
+      <span className="w-full text-center sm:w-auto sm:text-left text-xs text-gray-400 sm:ml-2 mt-1 sm:mt-0">
+        {UI_TEXT.PAGINATION.PAGE}{page + 1}{UI_TEXT.PAGINATION.OF}{totalPages}
       </span>
     </div>
   );
@@ -307,6 +338,8 @@ export default function SuperAdminSchools() {
     return active
       ? { label: "Active",   cls: "text-emerald-400 bg-emerald-500/10 border-emerald-500/25", dot: "bg-emerald-500" }
       : { label: "Inactive", cls: "text-red-400 bg-red-500/10 border-red-500/25",             dot: "bg-red-400"     };
+      ? { label: STATUS.LBL_ACTIVE, cls: "text-emerald-600 bg-emerald-50 border-emerald-100", dot: "bg-emerald-500" }
+      : { label: STATUS.LBL_INACTIVE, cls: "text-red-500 bg-red-50 border-red-100", dot: "bg-red-400" };
   };
 
   return (
@@ -330,6 +363,10 @@ export default function SuperAdminSchools() {
               <span className="font-extrabold text-theme-text md:text-lg tracking-wide truncate">SchoolSpine</span>
               <span className={`hidden md:inline text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-widest border whitespace-nowrap bg-gradient-to-r from-[#00C9B1]/20 to-[#F5A623]/10 text-[#00C9B1] border-[#00C9B1]/30`}>
                 {roleMeta.roleTag}
+              <img src={dpis} alt="School Logo" className="w-7 h-7 sm:w-10 sm:h-10 object-cover shadow shrink-0" />
+              <span className="font-bold text-gray-800 md:text-lg tracking-wide truncate">{UI_TEXT.APP_NAME}</span>
+              <span className={`hidden md:inline text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-widest border whitespace-nowrap ${roleMeta.badge}`}>
+                {roleMeta.label}
               </span>
             </div>
 
@@ -369,10 +406,15 @@ export default function SuperAdminSchools() {
             <div>
               <h1 className="text-2xl sm:text-3xl font-black text-theme-text tracking-tight">
                 Welcome, {storedUser?.firstName || displayName}
+              <h1 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">
+                {UI_TEXT.WELCOME}{storedUser?.firstName || displayName}
               </h1>
               <p className="text-xs sm:text-sm text-theme-subtext mt-1">
                 Select a school to operate. Logged in as{" "}
                 <span className="text-[#00C9B1] font-semibold">{roleMeta.roleTag}</span>.
+              <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
+                {UI_TEXT.SUBTITLE_PT1}
+                <span className="text-blue-600 font-semibold">{roleMeta.roleTag}</span>.
               </p>
             </div>
           </div>
@@ -394,6 +436,8 @@ export default function SuperAdminSchools() {
                 onChange={(e) => setSearchInput(e.target.value)}
                 placeholder="Search by name, code or city..."
                 className="w-full bg-theme-card border border-theme-border rounded-xl pl-9 pr-4 py-2.5 text-sm text-theme-text placeholder:text-theme-subtext focus:outline-none focus:border-[#00C9B1]/60 focus:bg-theme-bg focus:ring-2 focus:ring-[#00C9B1]/20 transition-all duration-200"
+                placeholder={UI_TEXT.SEARCH_PLACEHOLDER}
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-9 pr-4 py-2.5 text-sm text-gray-700 placeholder:text-gray-400 focus:outline-none focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-100 transition-all duration-200"
               />
             </div>
             <select
@@ -405,6 +449,10 @@ export default function SuperAdminSchools() {
               <option value="CBSE" className="bg-theme-bg text-theme-text">CBSE</option>
               <option value="ICSE" className="bg-theme-bg text-theme-text">ICSE</option>
               <option value="STATE BOARD" className="bg-theme-bg text-theme-text">State Board</option>
+              <option value="">{BOARDS.LBL_ALL}</option>
+              <option value={BOARDS.CBSE}>{BOARDS.CBSE}</option>
+              <option value={BOARDS.ICSE}>{BOARDS.ICSE}</option>
+              <option value={BOARDS.STATE_BOARD}>{BOARDS.STATE_BOARD_CAMEL}</option>
             </select>
             <select
               value={statusFilter}
@@ -414,9 +462,14 @@ export default function SuperAdminSchools() {
               <option value="ACTIVE" className="bg-theme-bg text-theme-text">Active only</option>
               <option value="" className="bg-theme-bg text-theme-text">All</option>
               <option value="INACTIVE" className="bg-theme-bg text-theme-text">Inactive only</option>
+              <option value={STATUS.ACTIVE}>{STATUS.LBL_ACTIVE_ONLY}</option>
+              <option value="">{STATUS.LBL_ALL}</option>
+              <option value={STATUS.INACTIVE}>{STATUS.LBL_INACTIVE_ONLY}</option>
             </select>
             <span className="text-xs text-slate-400 whitespace-nowrap font-semibold text-center sm:text-left">
               {loading ? "Loading…" : `${totalElements} school${totalElements !== 1 ? "s" : ""}`}
+            <span className="text-xs text-gray-400 whitespace-nowrap font-medium text-center sm:text-left">
+              {loading ? UI_TEXT.LOADING : `${totalElements} ${totalElements !== 1 ? UI_TEXT.SCHOOLS : UI_TEXT.SCHOOL}`}
             </span>
           </div>
 
@@ -447,9 +500,15 @@ export default function SuperAdminSchools() {
                     <School size={36} className="text-slate-600 sm:w-10 sm:h-10" />
                     <p className="font-semibold text-slate-400 text-sm sm:text-base">No schools found</p>
                     <p className="text-xs sm:text-sm text-center px-4">Try adjusting your search or filters</p>
+                  <div className="col-span-full flex flex-col items-center justify-center py-12 sm:py-16 text-gray-400 gap-3">
+                    <School size={36} className="text-gray-300 sm:w-10 sm:h-10" />
+                    <p className="font-semibold text-gray-500 text-sm sm:text-base">{UI_TEXT.NO_SCHOOLS}</p>
+                    <p className="text-xs sm:text-sm text-center px-4">{UI_TEXT.ADJUST_FILTERS}</p>
                   </div>
                 )
                 : schools.map((school) => {
+                : schools.map((school, idx) => {
+                  const accent = STYLES.BORDER_ACCENTS[idx % STYLES.BORDER_ACCENTS.length];
                   const isSelected = selectedId === school.id;
                   const badge      = getStatusBadge(school);
                   return (
@@ -531,6 +590,9 @@ export default function SuperAdminSchools() {
                             <div className="flex items-center gap-2">
                               <School size={12} className="text-[#00C9B1] shrink-0" />
                               Est. {school.establishedYear}
+                            <div className="flex items-center gap-1.5">
+                              <School size={11} className="text-gray-400 shrink-0" />
+                              {UI_TEXT.EST}{school.establishedYear}
                             </div>
                           )}
                           {school.phone && (

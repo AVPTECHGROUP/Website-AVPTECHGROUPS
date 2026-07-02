@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { getAllUserRoles } from '../../../Api/userManagementAPI';
+import { getAllUserRoles } from '../../../Api/StaffManagement/userManagementAPI';
 
 // ─── Reusable helpers ─────────────────────────────────────────────────────────
 const inputCls = (hasError) =>

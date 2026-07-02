@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { TriangleAlert, Search, ChevronDown, Loader2 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { getUsersSummary } from "../../Api/userManagementAPI";
-import { requestManualAttendance } from '../../Api/AttendanceApi';
+import { getUsersSummary } from "../../Api/StaffManagement/UserManagementAPI";
+import { requestManualAttendance } from '../../Api/Attendance/AttendanceApi';
 import { toast } from 'react-toastify';
 
 const TODAY = new Date().toISOString().split('T')[0];

@@ -22,7 +22,7 @@ import {
     Link2Icon,
     LucideTarget
 } from 'lucide-react';
-import { fetchCircularById } from '../../Api/CircularApi.js';
+import { fetchCircularById } from '../../Api/Communication/CircularApi.js';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 

@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { X, ClipboardEdit, FileText, Search, Loader2, Check } from 'lucide-react';
 import { toast } from 'react-toastify';
-import { getUsersSummary } from '../../Api/userManagementAPI';
-import { bulkManualStaffAttendance } from '../../Api/AttendanceApi';
+import { getUsersSummary } from '../../Api/StaffManagement/UserManagementAPI';
+import { bulkManualStaffAttendance } from '../../Api/Attendance/AttendanceApi';
 
 const TODAY = new Date().toISOString().split('T')[0];
 const REMARKS_MAX = 200;

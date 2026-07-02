@@ -12,25 +12,20 @@ import {
   updateLeaveConfig,
   deleteLeaveConfig,
   seedLeaveConfigs,
-} from '../../Api/LeaveConfigAPI';
-import { getListOfValues } from '../../Api/ListOfValues';
+} from '../../Api/Leaves/LeaveConfigAPI';
+import { getListOfValues } from '../../Api/Lov/ListOfValues';
 import { toast } from 'react-toastify';
+import {
+  LEAVE_TYPE_COLOR_PALETTE,
+  FALLBACK_COLOR,
+  LEAVE_CONFIG_EMPTY_FORM,
+  LEAVE_CONFIG_TEXT,
+  LEAVE_CONFIG_VALIDATION_MESSAGES,
+  LEAVE_CONFIG_TOAST_MESSAGES,
+} from '../../Constants/StringConstants/LeavesConstants';
 
 // ─── Leave Type Colors (keyed by value string) ────────────────────────────────
 // Falls back to a neutral style for unknown types
-const LEAVE_TYPE_COLOR_PALETTE = [
-  'bg-red-50 text-red-600 border-red-200',
-  'bg-blue-50 text-blue-600 border-blue-200',
-  'bg-green-50 text-green-600 border-green-200',
-  'bg-gray-100 text-gray-600 border-gray-200',
-  'bg-pink-50 text-pink-600 border-pink-200',
-  'bg-indigo-50 text-indigo-600 border-indigo-200',
-  'bg-slate-50 text-slate-600 border-slate-200',
-  'bg-yellow-50 text-yellow-600 border-yellow-200',
-  'bg-orange-50 text-orange-600 border-orange-200',
-  'bg-purple-50 text-purple-600 border-purple-200',
-];
-
 // Build a stable color map from the dynamic list
 const buildColorMap = (leaveTypes) => {
   const map = {};
@@ -40,16 +35,7 @@ const buildColorMap = (leaveTypes) => {
   return map;
 };
 
-const FALLBACK_COLOR = 'bg-gray-100 text-gray-600 border-gray-200';
-
-const EMPTY_FORM = {
-  leaveType: '',
-  leaveName: '',
-  annualLimit: '',
-  description: '',
-  carryForwardAllowed: false,
-  maxCarryForwardDays: 0,
-};
+const EMPTY_FORM = LEAVE_CONFIG_EMPTY_FORM;
 
 // ─── View Modal ───────────────────────────────────────────────────────────────
 const ViewLeaveConfigModal = ({ config, colorMap, onClose }) => {
@@ -80,14 +66,14 @@ const ViewLeaveConfigModal = ({ config, colorMap, onClose }) => {
         <div className="px-6 py-5 space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-gray-50 rounded-xl px-4 py-3">
-              <p className="text-xs text-gray-500 mb-1">Annual Limit</p>
+              <p className="text-xs text-gray-500 mb-1">{LEAVE_CONFIG_TEXT.viewModal.annualLimitLabel}</p>
               <p className="text-lg font-bold text-gray-900">
                 {config.annualLimit}
                 <span className="text-sm font-normal text-gray-500 ml-1">days</span>
               </p>
             </div>
             <div className="bg-gray-50 rounded-xl px-4 py-3">
-              <p className="text-xs text-gray-500 mb-1">Status</p>
+              <p className="text-xs text-gray-500 mb-1">{LEAVE_CONFIG_TEXT.viewModal.statusLabel}</p>
               <div className="flex items-center gap-2 mt-1">
                 <span
                   className="relative inline-flex h-5 w-10 items-center rounded-full"
@@ -96,32 +82,32 @@ const ViewLeaveConfigModal = ({ config, colorMap, onClose }) => {
                   <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform ${config.isActive ? 'translate-x-5' : 'translate-x-1'}`} />
                 </span>
                 <span className={`text-sm font-medium ${config.isActive ? 'text-green-700' : 'text-gray-500'}`}>
-                  {config.isActive ? 'Active' : 'Inactive'}
+                  {config.isActive ? LEAVE_CONFIG_TEXT.viewModal.active : LEAVE_CONFIG_TEXT.viewModal.inactive}
                 </span>
               </div>
             </div>
           </div>
 
           <div className="bg-gray-50 rounded-xl px-4 py-3">
-            <p className="text-xs text-gray-500 mb-1">Carry Forward</p>
+            <p className="text-xs text-gray-500 mb-1">{LEAVE_CONFIG_TEXT.viewModal.carryForwardLabel}</p>
             {config.carryForwardAllowed ? (
               <div className="flex items-center gap-2">
                 <CheckCircle className="w-4 h-4 text-blue-500" />
                 <span className="text-sm font-medium text-gray-900">
-                  Enabled
+                  {LEAVE_CONFIG_TEXT.viewModal.enabled}
                   {config.maxCarryForwardDays > 0
                     ? ` — up to ${config.maxCarryForwardDays} days`
-                    : ' — Unlimited'}
+                    : ` — ${LEAVE_CONFIG_TEXT.viewModal.unlimited}`}
                 </span>
               </div>
             ) : (
-              <p className="text-sm text-gray-500">Not allowed</p>
+              <p className="text-sm text-gray-500">{LEAVE_CONFIG_TEXT.viewModal.notAllowed}</p>
             )}
           </div>
 
           {config.description && (
             <div className="bg-gray-50 rounded-xl px-4 py-3">
-              <p className="text-xs text-gray-500 mb-1">Description</p>
+              <p className="text-xs text-gray-500 mb-1">{LEAVE_CONFIG_TEXT.viewModal.descriptionLabel}</p>
               <p className="text-sm text-gray-700 leading-relaxed">{config.description}</p>
             </div>
           )}
@@ -132,7 +118,7 @@ const ViewLeaveConfigModal = ({ config, colorMap, onClose }) => {
             onClick={onClose}
             className="px-5 py-2 rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50 font-medium text-sm transition-colors"
           >
-            Close
+            {LEAVE_CONFIG_TEXT.buttons.close}
           </button>
         </div>
       </div>
@@ -148,13 +134,13 @@ const DeleteConfirmModal = ({ config, onConfirm, onCancel, loading }) => (
         <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center">
           <AlertTriangle className="w-5 h-5 text-red-600" />
         </div>
-        <h2 className="text-lg font-bold text-gray-900">Disable Leave Type</h2>
+        <h2 className="text-lg font-bold text-gray-900">{LEAVE_CONFIG_TEXT.deleteModal.title}</h2>
       </div>
       <p className="text-gray-600 mb-1">
-        Are you sure you want to disable <span className="font-semibold text-gray-900">{config?.leaveName}</span>?
+        {LEAVE_CONFIG_TEXT.deleteModal.confirmPrefix} <span className="font-semibold text-gray-900">{config?.leaveName}</span>?
       </p>
       <p className="text-sm text-gray-500 mb-6">
-        This leave type will no longer appear in balance or apply-for-leave screens.
+        {LEAVE_CONFIG_TEXT.deleteModal.note}
       </p>
       <div className="flex gap-3 justify-end">
         <button
@@ -162,7 +148,7 @@ const DeleteConfirmModal = ({ config, onConfirm, onCancel, loading }) => (
           disabled={loading}
           className="px-4 py-2 rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50 font-medium transition-colors"
         >
-          Cancel
+          {LEAVE_CONFIG_TEXT.buttons.cancel}
         </button>
         <button
           onClick={onConfirm}
@@ -170,7 +156,7 @@ const DeleteConfirmModal = ({ config, onConfirm, onCancel, loading }) => (
           className="px-4 py-2 rounded-xl bg-red-600 text-white hover:bg-red-700 font-medium transition-colors flex items-center gap-2 disabled:opacity-60"
         >
           {loading && <RefreshCw className="w-4 h-4 animate-spin" />}
-          Disable
+          {LEAVE_CONFIG_TEXT.buttons.disable}
         </button>
       </div>
     </div>
@@ -185,13 +171,13 @@ const SeedConfirmModal = ({ onConfirm, onCancel, loading }) => (
         <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
           <RefreshCw className="w-5 h-5 text-blue-600" />
         </div>
-        <h2 className="text-lg font-bold text-gray-900">Seed Default Leave Types</h2>
+        <h2 className="text-lg font-bold text-gray-900">{LEAVE_CONFIG_TEXT.seedModal.title}</h2>
       </div>
       <p className="text-gray-600 mb-1">
-        This will provision all <span className="font-semibold text-gray-900">standard leave types</span> with platform-recommended defaults.
+        {LEAVE_CONFIG_TEXT.seedModal.description}
       </p>
       <p className="text-sm text-gray-500 mb-6">
-        Only runs if no active configurations exist. If active configs already exist, this is a no-op.
+        {LEAVE_CONFIG_TEXT.seedModal.note}
       </p>
       <div className="flex gap-3 justify-end">
         <button
@@ -207,7 +193,7 @@ const SeedConfirmModal = ({ onConfirm, onCancel, loading }) => (
           className="px-4 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 font-medium transition-colors flex items-center gap-2 disabled:opacity-60"
         >
           {loading && <RefreshCw className="w-4 h-4 animate-spin" />}
-          Seed Defaults
+          {LEAVE_CONFIG_TEXT.buttons.seedDefaults}
         </button>
       </div>
     </div>
@@ -222,23 +208,23 @@ const ReEnableConfirmModal = ({ config, onConfirm, onCancel, loading }) => (
         <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center">
           <RotateCw className="w-5 h-5 text-green-600" />
         </div>
-        <h2 className="text-lg font-bold text-gray-900">Re-enable Leave Type</h2>
+        <h2 className="text-lg font-bold text-gray-900">{LEAVE_CONFIG_TEXT.reEnableModal.title}</h2>
       </div>
       <p className="text-gray-600 mb-1">
-        Re-enable <span className="font-semibold text-gray-900">{config?.leaveName}</span>?
+        {LEAVE_CONFIG_TEXT.reEnableModal.confirmPrefix} <span className="font-semibold text-gray-900">{config?.leaveName}</span>?
       </p>
       <p className="text-sm text-gray-500 mb-6">
-        It will be restored with its current settings and appear again in balance and leave application screens.
+        {LEAVE_CONFIG_TEXT.reEnableModal.note}
       </p>
       <div className="flex gap-3 justify-end">
         <button onClick={onCancel} disabled={loading}
           className="px-4 py-2 rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50 font-medium transition-colors">
-          Cancel
+          {LEAVE_CONFIG_TEXT.buttons.cancel}
         </button>
         <button onClick={onConfirm} disabled={loading}
           className="px-4 py-2 rounded-xl bg-green-600 text-white hover:bg-green-700 font-medium transition-colors flex items-center gap-2 disabled:opacity-60">
           {loading && <RefreshCw className="w-4 h-4 animate-spin" />}
-          Re-enable
+          {LEAVE_CONFIG_TEXT.buttons.reEnable}
         </button>
       </div>
     </div>
@@ -277,16 +263,16 @@ const LeaveConfigModal = ({ mode, initialData, activeTypes, leaveTypeOptions, on
 
   const validate = () => {
     const e = {};
-    if (!form.leaveType) e.leaveType = 'Leave type is required';
-    if (!form.leaveName.trim()) e.leaveName = 'Display name is required';
-    if (form.leaveName.trim().length < 2) e.leaveName = 'Min 2 characters';
-    if (form.leaveName.trim().length > 100) e.leaveName = 'Max 100 characters';
-    if (form.annualLimit === '' || form.annualLimit === null) e.annualLimit = 'Annual limit is required';
-    if (Number(form.annualLimit) < 0) e.annualLimit = 'Must be ≥ 0';
-    if (form.description && form.description.length > 500) e.description = 'Max 500 characters';
-    if (form.carryForwardAllowed && Number(form.maxCarryForwardDays) < 0) e.maxCarryForwardDays = 'Must be ≥ 0';
+    if (!form.leaveType) e.leaveType = LEAVE_CONFIG_VALIDATION_MESSAGES.leaveTypeRequired;
+    if (!form.leaveName.trim()) e.leaveName = LEAVE_CONFIG_VALIDATION_MESSAGES.displayNameRequired;
+    if (form.leaveName.trim().length < 2) e.leaveName = LEAVE_CONFIG_VALIDATION_MESSAGES.displayNameMin;
+    if (form.leaveName.trim().length > 100) e.leaveName = LEAVE_CONFIG_VALIDATION_MESSAGES.displayNameMax;
+    if (form.annualLimit === '' || form.annualLimit === null) e.annualLimit = LEAVE_CONFIG_VALIDATION_MESSAGES.annualLimitRequired;
+    if (Number(form.annualLimit) < 0) e.annualLimit = LEAVE_CONFIG_VALIDATION_MESSAGES.annualLimitMin;
+    if (form.description && form.description.length > 500) e.description = LEAVE_CONFIG_VALIDATION_MESSAGES.descriptionMax;
+    if (form.carryForwardAllowed && Number(form.maxCarryForwardDays) < 0) e.maxCarryForwardDays = LEAVE_CONFIG_VALIDATION_MESSAGES.maxCarryForwardMin;
     if (mode === 'add' && activeTypes.includes(form.leaveType))
-      e.leaveType = 'Leave type already exists.';
+      e.leaveType = LEAVE_CONFIG_VALIDATION_MESSAGES.leaveTypeExists;
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -318,7 +304,7 @@ const LeaveConfigModal = ({ mode, initialData, activeTypes, leaveTypeOptions, on
               <Settings className="w-5 h-5 text-blue-600" />
             </div>
             <h2 className="text-lg font-bold text-gray-900">
-              {mode === 'add' ? 'Add Leave Type' : 'Edit Leave Configuration'}
+              {mode === 'add' ? LEAVE_CONFIG_TEXT.formModal.titleAdd : LEAVE_CONFIG_TEXT.formModal.titleEdit}
             </h2>
           </div>
           <button onClick={onClose} disabled={loading} className="text-gray-400 hover:text-gray-600 transition-colors">
@@ -331,13 +317,13 @@ const LeaveConfigModal = ({ mode, initialData, activeTypes, leaveTypeOptions, on
           {/* Leave Type */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Leave Type <span className="text-red-500">*</span>
+              {LEAVE_CONFIG_TEXT.formModal.leaveTypeLabel} <span className="text-red-500">*</span>
             </label>
             {mode === 'add' ? (
               leaveTypeOptions.length === 0 ? (
                 <div className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-gray-50 text-gray-400 flex items-center gap-2">
                   <RefreshCw className="w-4 h-4 animate-spin" />
-                  Loading leave types…
+                  {LEAVE_CONFIG_TEXT.formModal.leaveTypeLoading}
                 </div>
               ) : (
                 <select
@@ -345,7 +331,7 @@ const LeaveConfigModal = ({ mode, initialData, activeTypes, leaveTypeOptions, on
                   onChange={e => handleLeaveTypeChange(e.target.value)}
                   className={`w-full border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white ${errors.leaveType ? 'border-red-400' : 'border-gray-200'}`}
                 >
-                  <option value="">— Select leave type —</option>
+                  <option value="">{LEAVE_CONFIG_TEXT.formModal.leaveTypePlaceholder}</option>
                   {leaveTypeOptions.map(o => (
                     <option key={o.id ?? o.value} value={o.value}>{o.label}</option>
                   ))}
@@ -365,13 +351,13 @@ const LeaveConfigModal = ({ mode, initialData, activeTypes, leaveTypeOptions, on
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Display Name <span className="text-red-500">*</span>
+                {LEAVE_CONFIG_TEXT.formModal.displayNameLabel} <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
                 value={form.leaveName}
                 onChange={e => setForm(p => ({ ...p, leaveName: e.target.value }))}
-                placeholder="e.g. Sick Leave"
+                placeholder={LEAVE_CONFIG_TEXT.formModal.displayNamePlaceholder}
                 className={`w-full border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 ${errors.leaveName ? 'border-red-400' : 'border-gray-200'}`}
               />
               {errors.leaveName && <p className="text-xs text-red-500 mt-1">{errors.leaveName}</p>}
@@ -379,15 +365,15 @@ const LeaveConfigModal = ({ mode, initialData, activeTypes, leaveTypeOptions, on
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Annual Limit (days) <span className="text-red-500">*</span>
-                <span className="text-gray-400 ml-1 font-normal">(0 = unlimited)</span>
+                {LEAVE_CONFIG_TEXT.formModal.annualLimitLabel} <span className="text-red-500">*</span>
+                <span className="text-gray-400 ml-1 font-normal">{LEAVE_CONFIG_TEXT.formModal.annualLimitUnlimitedHint}</span>
               </label>
               <input
                 type="number"
                 min="0"
                 value={form.annualLimit}
                 onChange={e => setForm(p => ({ ...p, annualLimit: e.target.value }))}
-                placeholder="e.g. 12"
+                placeholder={LEAVE_CONFIG_TEXT.formModal.annualLimitPlaceholder}
                 className={`w-full border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 ${errors.annualLimit ? 'border-red-400' : 'border-gray-200'}`}
               />
               {errors.annualLimit && <p className="text-xs text-red-500 mt-1">{errors.annualLimit}</p>}
@@ -396,12 +382,12 @@ const LeaveConfigModal = ({ mode, initialData, activeTypes, leaveTypeOptions, on
 
           {/* Description */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{LEAVE_CONFIG_TEXT.formModal.descriptionLabel}</label>
             <textarea
               rows={3}
               value={form.description}
               onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
-              placeholder="Policy note shown to staff (optional)"
+              placeholder={LEAVE_CONFIG_TEXT.formModal.descriptionPlaceholder}
               className={`w-full border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none ${errors.description ? 'border-red-400' : 'border-gray-200'}`}
             />
             <div className="flex justify-between mt-1">
@@ -416,8 +402,8 @@ const LeaveConfigModal = ({ mode, initialData, activeTypes, leaveTypeOptions, on
           {/* Carry Forward Toggle */}
           <div className="flex items-center justify-between border border-gray-200 rounded-xl px-4 py-3">
             <div>
-              <p className="text-sm font-medium text-gray-700">Carry Forward</p>
-              <p className="text-xs text-gray-500">Roll unused days to next year</p>
+              <p className="text-sm font-medium text-gray-700">{LEAVE_CONFIG_TEXT.formModal.carryForwardLabel}</p>
+              <p className="text-xs text-gray-500">{LEAVE_CONFIG_TEXT.formModal.carryForwardHint}</p>
             </div>
             <button
               type="button"
@@ -435,7 +421,7 @@ const LeaveConfigModal = ({ mode, initialData, activeTypes, leaveTypeOptions, on
           {form.carryForwardAllowed && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Max Carry Forward Days <span className="text-gray-400">(0 = unlimited)</span>
+                {LEAVE_CONFIG_TEXT.formModal.maxCarryForwardLabel} <span className="text-gray-400">{LEAVE_CONFIG_TEXT.formModal.maxCarryForwardHint}</span>
               </label>
               <input
                 type="number"
@@ -456,7 +442,7 @@ const LeaveConfigModal = ({ mode, initialData, activeTypes, leaveTypeOptions, on
               disabled={loading}
               className="px-5 py-2.5 rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50 font-medium transition-colors text-sm"
             >
-              Cancel
+              {LEAVE_CONFIG_TEXT.buttons.cancel}
             </button>
             <button
               type="submit"
@@ -464,7 +450,7 @@ const LeaveConfigModal = ({ mode, initialData, activeTypes, leaveTypeOptions, on
               className="px-5 py-2.5 rounded-xl bg-blue-600 text-white hover:bg-blue-700 font-medium transition-colors text-sm flex items-center gap-2 disabled:opacity-60"
             >
               {loading && <RefreshCw className="w-4 h-4 animate-spin" />}
-              {mode === 'add' ? 'Add Leave Type' : 'Save Changes'}
+              {mode === 'add' ? LEAVE_CONFIG_TEXT.formModal.titleAdd : LEAVE_CONFIG_TEXT.buttons.saveChanges}
             </button>
           </div>
         </form>
@@ -516,7 +502,7 @@ export default function LeaveConfig() {
         setColorMap(buildColorMap(formatted));
       } catch (e) {
         console.error('get list of values error:', e.message);
-        toast.error('Failed to load leave type options');
+        toast.error(LEAVE_CONFIG_TOAST_MESSAGES.loadLeaveTypeOptionsFailed);
       }
     };
     fetchListOfValues();
@@ -536,7 +522,7 @@ export default function LeaveConfig() {
         setAllConfigs(res.data || []);
       }
     } catch {
-      toast.error('Failed to load leave configurations');
+      toast.error(LEAVE_CONFIG_TOAST_MESSAGES.loadConfigsFailed);
     } finally {
       setLoading(false);
     }
@@ -554,11 +540,11 @@ export default function LeaveConfig() {
     try {
       setSeedLoading(true);
       const res = await seedLeaveConfigs();
-      toast.success(res.message || 'Default leave configurations seeded successfully');
+      toast.success(res.message || LEAVE_CONFIG_TOAST_MESSAGES.seedSuccess);
       setShowSeedConfirm(false);
       await fetchConfigs(filterStatus);
     } catch (err) {
-      toast.error(err.message || 'Failed to seed defaults');
+      toast.error(err.message || LEAVE_CONFIG_TOAST_MESSAGES.seedFailed);
     } finally {
       setSeedLoading(false);
     }
@@ -569,11 +555,11 @@ export default function LeaveConfig() {
     try {
       setSubmitLoading(true);
       await createLeaveConfig(payload);
-      toast.success(`${payload.leaveName} added successfully!`);
+      toast.success(`${payload.leaveName} ${LEAVE_CONFIG_TOAST_MESSAGES.addedSuccessSuffix}`);
       setModalMode(null);
       await fetchConfigs(filterStatus);
     } catch (err) {
-      toast.error(err.message || 'Failed to create leave configuration');
+      toast.error(err.message || LEAVE_CONFIG_TOAST_MESSAGES.createFailed);
     } finally {
       setSubmitLoading(false);
     }
@@ -586,12 +572,12 @@ export default function LeaveConfig() {
     try {
       setSubmitLoading(true);
       await updateLeaveConfig(editTarget.id, payload);
-      toast.success(`${payload.leaveName} updated successfully!`);
+      toast.success(`${payload.leaveName} ${LEAVE_CONFIG_TOAST_MESSAGES.updatedSuccessSuffix}`);
       setModalMode(null);
       setEditTarget(null);
       await fetchConfigs(filterStatus);
     } catch (err) {
-      toast.error(err.message || 'Failed to update leave configuration');
+      toast.error(err.message || LEAVE_CONFIG_TOAST_MESSAGES.updateFailed);
     } finally {
       setSubmitLoading(false);
     }
@@ -602,11 +588,11 @@ export default function LeaveConfig() {
     try {
       setDeleteLoading(true);
       await deleteLeaveConfig(deleteTarget.id);
-      toast.success(`${deleteTarget.leaveName} disabled successfully`);
+      toast.success(`${deleteTarget.leaveName} ${LEAVE_CONFIG_TOAST_MESSAGES.disabledSuccessSuffix}`);
       setDeleteTarget(null);
       await fetchConfigs(filterStatus);
     } catch (err) {
-      toast.error(err.message || 'Failed to disable leave type');
+      toast.error(err.message || LEAVE_CONFIG_TOAST_MESSAGES.disableFailed);
     } finally {
       setDeleteLoading(false);
     }
@@ -624,11 +610,11 @@ export default function LeaveConfig() {
         carryForwardAllowed: reEnableTarget.carryForwardAllowed,
         maxCarryForwardDays: reEnableTarget.maxCarryForwardDays,
       });
-      toast.success(`${reEnableTarget.leaveName} re-enabled successfully`);
+      toast.success(`${reEnableTarget.leaveName} ${LEAVE_CONFIG_TOAST_MESSAGES.reEnabledSuccessSuffix}`);
       setReEnableTarget(null);
       await fetchConfigs(filterStatus);
     } catch (err) {
-      toast.error(err.message || 'Failed to re-enable leave type');
+      toast.error(err.message || LEAVE_CONFIG_TOAST_MESSAGES.reEnableFailed);
     } finally {
       setReEnableLoading(false);
     }
@@ -636,10 +622,10 @@ export default function LeaveConfig() {
 
   // ── Stat cards ──
   const statsCards = [
-    { IconName: Layers, keyName: 'Total Types', val: totalConfigs, iconTxColor: 'text-blue-600', iconBgColor: 'bg-blue-50' },
-    { IconName: CheckCircle, keyName: 'Active Types', val: activeConfigs, iconTxColor: 'text-green-600', iconBgColor: 'bg-green-50' },
-    { IconName: CalendarDays, keyName: 'Total Annual Days', val: totalAnnualDays, iconTxColor: 'text-purple-600', iconBgColor: 'bg-purple-50' },
-    { IconName: RotateCcw, keyName: 'Carry Forward', val: carryForwardCount, iconTxColor: 'text-orange-600', iconBgColor: 'bg-orange-50' },
+    { IconName: Layers, keyName: LEAVE_CONFIG_TEXT.statCards.totalTypes, val: totalConfigs, iconTxColor: 'text-blue-600', iconBgColor: 'bg-blue-50' },
+    { IconName: CheckCircle, keyName: LEAVE_CONFIG_TEXT.statCards.activeTypes, val: activeConfigs, iconTxColor: 'text-green-600', iconBgColor: 'bg-green-50' },
+    { IconName: CalendarDays, keyName: LEAVE_CONFIG_TEXT.statCards.totalAnnualDays, val: totalAnnualDays, iconTxColor: 'text-purple-600', iconBgColor: 'bg-purple-50' },
+    { IconName: RotateCcw, keyName: LEAVE_CONFIG_TEXT.statCards.carryForward, val: carryForwardCount, iconTxColor: 'text-orange-600', iconBgColor: 'bg-orange-50' },
   ];
 
   return (
@@ -648,9 +634,9 @@ export default function LeaveConfig() {
       {/* ── Header ── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Leave Configuration</h1>
+          <h1 className="text-2xl font-bold text-gray-900">{LEAVE_CONFIG_TEXT.pageTitle}</h1>
           <p className="text-sm text-gray-500 mt-1">
-            Manage annual leave limits and policies for each leave type
+            {LEAVE_CONFIG_TEXT.pageSubtitle}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -660,14 +646,14 @@ export default function LeaveConfig() {
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 font-medium text-sm transition-colors shadow-sm disabled:opacity-60"
           >
             <RefreshCw className={`w-4 h-4 ${seedLoading ? 'animate-spin' : ''}`} />
-            Seed Defaults
+            {LEAVE_CONFIG_TEXT.buttons.seedDefaults}
           </button>
           <button
             onClick={() => setModalMode('add')}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 text-white hover:bg-blue-700 font-medium text-sm transition-colors shadow-sm"
           >
             <Plus className="w-4 h-4" />
-            Add Leave Type
+            {LEAVE_CONFIG_TEXT.buttons.addLeaveType}
           </button>
         </div>
       </div>
@@ -685,7 +671,7 @@ export default function LeaveConfig() {
         {/* Table toolbar */}
         <div className="px-4 lg:px-6 py-4 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <h2 className="font-semibold text-gray-900">
-            Leave Types
+            {LEAVE_CONFIG_TEXT.table.sectionTitle}
             <span className="ml-2 text-sm font-normal text-gray-500">({configs.length})</span>
           </h2>
           <select
@@ -693,9 +679,9 @@ export default function LeaveConfig() {
             onChange={(e) => handleFilterChange(e.target.value)}
             className="px-4 py-2 border cursor-pointer border-gray-200 bg-gray-100 rounded-lg focus:outline-none focus:shadow-sm focus:shadow-blue-200 text-sm w-full sm:w-auto"
           >
-            <option value="all">All Status</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
+            {LEAVE_CONFIG_TEXT.table.filterOptions.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
           </select>
         </div>
 
@@ -706,13 +692,9 @@ export default function LeaveConfig() {
             <table className="w-full min-w-[700px] table-fixed" style={{ minWidth: '700px' }}>
               <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
                 <tr className="text-xs">
-                  <th className="px-4 lg:px-5 py-3 text-left font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap w-10">#</th>
-                  <th className="px-4 lg:px-5 py-3 text-left font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Leave Type</th>
-                  <th className="px-4 lg:px-5 py-3 text-left font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Display Name</th>
-                  <th className="px-4 lg:px-5 py-3 text-center font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Annual Limit</th>
-                  <th className="px-4 lg:px-5 py-3 text-center font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Carry Forward</th>
-                  <th className="px-4 lg:px-5 py-3 text-center font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Status</th>
-                  <th className="px-4 lg:px-5 py-3 text-center font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Actions</th>
+                  {LEAVE_CONFIG_TEXT.table.headers.map((h, i) => (
+                    <th key={h} className={`px-4 lg:px-5 py-3 font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap ${i === 0 ? 'text-left w-10' : i <= 2 ? 'text-left' : 'text-center'}`}>{h}</th>
+                  ))}
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-100">
@@ -728,14 +710,14 @@ export default function LeaveConfig() {
                         </div>
                         <p className="text-sm font-semibold text-gray-700">
                           {filterStatus === 'inactive'
-                            ? 'No inactive leave types'
+                            ? LEAVE_CONFIG_TEXT.emptyStates.inactive
                             : filterStatus === 'active'
-                              ? 'No active leave types'
-                              : 'No leave types configured'}
+                              ? LEAVE_CONFIG_TEXT.emptyStates.active
+                              : LEAVE_CONFIG_TEXT.emptyStates.none}
                         </p>
                         {filterStatus === 'all' && (
                           <p className="text-xs text-gray-500">
-                            Click <span className="font-medium text-blue-500">"Seed Defaults"</span> to set up standard leave types, or add one manually.
+                            {LEAVE_CONFIG_TEXT.emptyStates.seedHint}
                           </p>
                         )}
                       </div>
@@ -837,10 +819,10 @@ export default function LeaveConfig() {
                 </div>
                 <p className="text-sm font-semibold text-gray-700">
                   {filterStatus === 'inactive'
-                    ? 'No inactive leave types'
+                    ? LEAVE_CONFIG_TEXT.emptyStates.inactive
                     : filterStatus === 'active'
-                      ? 'No active leave types'
-                      : 'No leave types configured'}
+                      ? LEAVE_CONFIG_TEXT.emptyStates.active
+                      : LEAVE_CONFIG_TEXT.emptyStates.none}
                 </p>
               </div>
             </div>

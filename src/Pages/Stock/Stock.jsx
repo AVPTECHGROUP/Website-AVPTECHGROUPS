@@ -21,12 +21,11 @@ import ListLoader from "../../Components/CommonComp/ListLoader";
 import StockManagementCard from "../../Components/Stock/StockManagementCard";
 import { useNavigate } from "react-router-dom";
 import {
-    getActiveStores,
     getLowStockItems,
     getStockMovementHistory,
     getStockItemsStats,
-} from "../../Api/StockApi";
-import { getStockList } from "../../Api/StoreApi";
+} from "../../Api/Stock/StockApi";
+import { getStockList, getActiveStores } from "../../Api/Stock/StoreApi";
 
 // ─── Shared helpers (same as Movement.jsx) ────────────────────────────────────
 const mvTypeMeta = {

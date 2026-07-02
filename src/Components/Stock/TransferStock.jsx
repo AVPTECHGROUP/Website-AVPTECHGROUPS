@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { X, ArrowRight, Package, AlignLeft, ArrowLeftRight, Info, Loader2 } from "lucide-react";
-import { getActiveStores, transferStock } from "../../Api/StockApi";
-import { getStoreStock } from "../../Api/StoreApi";
+import { transferStock } from "../../Api/Stock/StockApi";
+import { getStoreStock, getActiveStores } from "../../Api/Stock/StoreApi";
 
 export default function TransferStock({
     isOpen,

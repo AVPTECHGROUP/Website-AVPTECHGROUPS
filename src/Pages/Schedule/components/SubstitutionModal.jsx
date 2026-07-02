@@ -5,16 +5,8 @@ import {
     createSubstitution,
     updateSubstitutionStatus,
     getAvailableTeachersForSlot,
-} from '../../../Api/ScheduleApi';
-
-const REASONS = [
-    'Medical Leave',
-    'Personal Leave',
-    'Official Duty',
-    'Training / Workshop',
-    'Emergency',
-    'Other',
-];
+} from '../../../Api/Academics/ScheduleApi';
+import { TIMETABLE_CONSTS }  from '../../../Constants/StringConstants/TimetableConstants';
 
 export default function SubstitutionModal({ timetableId, selectedSlots = [], onClose }) {
     const [activeSlotIndex, setActiveSlotIndex] = useState(0);
@@ -87,14 +79,14 @@ export default function SubstitutionModal({ timetableId, selectedSlots = [], onC
 
     const checkExistingSubstitution = (slot) => {
         if (!slot?.slotId || substitutions.length === 0) { setExistingSubstitution(null); return; }
-        const existing = substitutions.find(s => s.slotId === slot.slotId && s.status === 'PENDING');
+        const existing = substitutions.find(s => s.slotId === slot.slotId && s.status === TIMETABLE_CONSTS.STATUS.PENDING);
         if (existing) {
             setExistingSubstitution(existing);
             setForm({
                 date: existing.substituteDate || '',
                 substituteTeacherId: String(existing.substituteTeacherId || ''),
-                reason: REASONS.includes(existing.reason) ? existing.reason : 'Other',
-                reasonOther: REASONS.includes(existing.reason) ? '' : (existing.reason || ''),
+                reason: TIMETABLE_CONSTS.SUBSTITUTION.REASONS.includes(existing.reason) ? existing.reason : TIMETABLE_CONSTS.SUBSTITUTION.OTHER,
+                reasonOther: TIMETABLE_CONSTS.SUBSTITUTION.REASONS.includes(existing.reason) ? '' : (existing.reason || ''),
                 notes: existing.notes || '',
             });
         } else {
@@ -109,17 +101,17 @@ export default function SubstitutionModal({ timetableId, selectedSlots = [], onC
 
     const validate = () => {
         const errs = {};
-        if (!form.date) errs.date = 'Date is required';
-        if (!form.substituteTeacherId) errs.substituteTeacherId = 'Please select a substitute teacher';
+        if (!form.date) errs.date = TIMETABLE_CONSTS.SUBSTITUTION.ERR_DATE_REQ;
+        if (!form.substituteTeacherId) errs.substituteTeacherId = TIMETABLE_CONSTS.SUBSTITUTION.ERR_TEACHER_REQ;
         if (activeSlot?.teacher?.id && String(activeSlot.teacher.id) === String(form.substituteTeacherId))
-            errs.substituteTeacherId = 'Substitute cannot be the same as the original teacher';
-        if (!form.reason) errs.reason = 'Please select a reason';
-        if (form.reason === 'Other' && !form.reasonOther.trim())
-            errs.reasonOther = 'Please specify the reason';
+            errs.substituteTeacherId = TIMETABLE_CONSTS.SUBSTITUTION.ERR_TEACHER_SAME;
+        if (!form.reason) errs.reason = TIMETABLE_CONSTS.SUBSTITUTION.ERR_REASON_REQ;
+        if (form.reason === TIMETABLE_CONSTS.SUBSTITUTION.OTHER && !form.reasonOther.trim())
+            errs.reasonOther = TIMETABLE_CONSTS.SUBSTITUTION.ERR_REASON_SPEC;
         return errs;
     };
 
-    const resolvedReason = form.reason === 'Other' ? form.reasonOther.trim() : form.reason;
+    const resolvedReason = form.reason === TIMETABLE_CONSTS.SUBSTITUTION.OTHER ? form.reasonOther.trim() : form.reason;
 
     const handleConfirm = async () => {
         const errs = validate();
@@ -127,7 +119,7 @@ export default function SubstitutionModal({ timetableId, selectedSlots = [], onC
         try {
             setSaving(true);
             if (existingSubstitution) {
-                await updateSubstitutionStatus(timetableId, existingSubstitution.id, 'CONFIRMED');
+                await updateSubstitutionStatus(timetableId, existingSubstitution.id, TIMETABLE_CONSTS.STATUS.CONFIRMED);
             } else {
                 const payload = {
                     slotId: activeSlot?.slotId || null,
@@ -146,7 +138,7 @@ export default function SubstitutionModal({ timetableId, selectedSlots = [], onC
                 onClose();
             }
         } catch (err) {
-            setErrors({ submit: err.message || 'Something went wrong' });
+            setErrors({ submit: err.message || TIMETABLE_CONSTS.SUBSTITUTION.ERR_SUBMIT_GEN });
         } finally {
             setSaving(false);
         }
@@ -171,7 +163,7 @@ export default function SubstitutionModal({ timetableId, selectedSlots = [], onC
                     <div className="flex items-center gap-2">
                         <ArrowLeftRight size={17} className="text-blue-600" />
                         <h2 className="text-base sm:text-lg font-semibold text-gray-900">
-                            {isUpdate ? 'Update Substitution' : 'Arrange Substitution'}
+                            {isUpdate ? TIMETABLE_CONSTS.SUBSTITUTION.TITLE_UPDATE : TIMETABLE_CONSTS.SUBSTITUTION.TITLE_ARRANGE}
                         </h2>
                     </div>
                     <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 cursor-pointer">
@@ -185,7 +177,7 @@ export default function SubstitutionModal({ timetableId, selectedSlots = [], onC
                     {selectedSlots.length > 1 && (
                         <div>
                             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
-                                Selected Slot
+                                {TIMETABLE_CONSTS.SUBSTITUTION.LBL_SEL_SLOT}
                             </label>
                             <div className="flex flex-wrap gap-1.5">
                                 {selectedSlots.map((s, i) => (
@@ -207,7 +199,7 @@ export default function SubstitutionModal({ timetableId, selectedSlots = [], onC
                             <div className="flex items-center justify-between gap-2">
                                 <div>
                                     <p className="font-semibold text-blue-900">
-                                        {activeSlot.subject?.label || activeSlot.subject?.code || 'Unknown Subject'}
+                                        {activeSlot.subject?.label || activeSlot.subject?.code || TIMETABLE_CONSTS.SUBSTITUTION.LBL_UNKNOWN_SUBJ}
                                     </p>
                                     <p className="text-blue-600 text-xs mt-0.5">
                                         {activeSlot.day} · {activeSlot.periodId}
@@ -216,7 +208,7 @@ export default function SubstitutionModal({ timetableId, selectedSlots = [], onC
                                 </div>
                                 {isUpdate && (
                                     <span className="text-xs bg-amber-100 text-amber-700 font-semibold px-2 py-0.5 rounded-full border border-amber-200 shrink-0">
-                                        Pending
+                                        {TIMETABLE_CONSTS.SUBSTITUTION.BADGE_PENDING}
                                     </span>
                                 )}
                             </div>
@@ -232,7 +224,7 @@ export default function SubstitutionModal({ timetableId, selectedSlots = [], onC
 
                     {/* Original Teacher */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Original Teacher</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">{TIMETABLE_CONSTS.SUBSTITUTION.LBL_ORIG_TEACHER}</label>
                         <div className="w-full border border-gray-200 bg-gray-50 rounded-lg px-3 py-2 text-sm text-gray-600 select-none">
                             {originalTeacherName}
                         </div>
@@ -241,7 +233,7 @@ export default function SubstitutionModal({ timetableId, selectedSlots = [], onC
                     {/* Date */}
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Substitution Date <span className="text-red-500">*</span>
+                            {TIMETABLE_CONSTS.SUBSTITUTION.LBL_DATE} <span className="text-red-500">*</span>
                         </label>
                         <input type="date" value={form.date} onChange={e => set('date', e.target.value)}
                             className={`w-full border rounded-lg px-3 py-2.5 sm:py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100
@@ -252,12 +244,12 @@ export default function SubstitutionModal({ timetableId, selectedSlots = [], onC
                     {/* Substitute Teacher */}
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Substitute Teacher <span className="text-red-500">*</span>
+                            {TIMETABLE_CONSTS.SUBSTITUTION.LBL_SUB_TEACHER} <span className="text-red-500">*</span>
                         </label>
 
                         {loadingTeachers ? (
                             <div className="w-full border border-gray-200 bg-gray-50 rounded-lg px-3 py-2.5 text-sm text-gray-400">
-                                Loading available teachers…
+                                {TIMETABLE_CONSTS.SUBSTITUTION.LOADING_TEACHERS}
                             </div>
                         ) : (
                             <div className="relative">
@@ -275,7 +267,7 @@ export default function SubstitutionModal({ timetableId, selectedSlots = [], onC
                                                 </span>
                                             </>
                                         ) : (
-                                            <span className="text-gray-500">Select substitute teacher</span>
+                                            <span className="text-gray-500">{TIMETABLE_CONSTS.SUBSTITUTION.PH_SEL_TEACHER}</span>
                                         )}
                                     </span>
                                     <ChevronDown size={15} className={`text-gray-400 transition-transform shrink-0 ${teacherDropdownOpen ? 'rotate-180' : ''}`} />
@@ -285,12 +277,12 @@ export default function SubstitutionModal({ timetableId, selectedSlots = [], onC
                                     <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-30 overflow-hidden">
                                         <div className="p-2 border-b border-gray-100">
                                             <input autoFocus value={teacherSearch} onChange={e => setTeacherSearch(e.target.value)}
-                                                placeholder="Search teacher…"
+                                                placeholder={TIMETABLE_CONSTS.SUBSTITUTION.PH_SEARCH_TEACHER}
                                                 className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300" />
                                         </div>
                                         <div className="max-h-44 overflow-y-auto">
                                             {filteredTeachers.length === 0 ? (
-                                                <p className="text-xs text-gray-400 text-center py-4">No teachers found</p>
+                                                <p className="text-xs text-gray-400 text-center py-4">{TIMETABLE_CONSTS.SUBSTITUTION.NO_TEACHERS}</p>
                                             ) : (
                                                 filteredTeachers.map(t => {
                                                     const teacherId = t.id || t.teacherId;
@@ -321,27 +313,27 @@ export default function SubstitutionModal({ timetableId, selectedSlots = [], onC
                     {/* Reason */}
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Reason <span className="text-red-500">*</span>
+                            {TIMETABLE_CONSTS.SUBSTITUTION.LBL_REASON} <span className="text-red-500">*</span>
                         </label>
                         <select value={form.reason} onChange={e => set('reason', e.target.value)}
                             className={`w-full border rounded-lg px-3 py-2.5 sm:py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-100
                                 ${errors.reason ? 'border-red-300' : 'border-gray-200'}`}>
-                            <option value="">Select reason</option>
-                            {REASONS.map(r => <option key={r}>{r}</option>)}
+                            <option value="">{TIMETABLE_CONSTS.SUBSTITUTION.PH_SEL_REASON}</option>
+                            {TIMETABLE_CONSTS.SUBSTITUTION.REASONS.map(r => <option key={r}>{r}</option>)}
                         </select>
                         {errors.reason && <p className="text-xs text-red-500 mt-1">{errors.reason}</p>}
                     </div>
 
                     {/* "Other" reason */}
-                    {form.reason === 'Other' && (
+                    {form.reason === TIMETABLE_CONSTS.SUBSTITUTION.OTHER && (
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Specify Reason <span className="text-red-500">*</span>
+                                {TIMETABLE_CONSTS.SUBSTITUTION.LBL_SPEC_REASON} <span className="text-red-500">*</span>
                             </label>
                             <div className="relative">
                                 <textarea value={form.reasonOther}
                                     onChange={e => { if (e.target.value.length <= 100) set('reasonOther', e.target.value); }}
-                                    placeholder="Describe the reason (max 100 characters)…"
+                                    placeholder={TIMETABLE_CONSTS.SUBSTITUTION.PH_DESC_REASON}
                                     rows={2} maxLength={100}
                                     className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 resize-none
                                         ${errors.reasonOther ? 'border-red-300' : 'border-gray-200'}`} />
@@ -353,9 +345,9 @@ export default function SubstitutionModal({ timetableId, selectedSlots = [], onC
 
                     {/* Notes */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Additional Notes</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">{TIMETABLE_CONSTS.SUBSTITUTION.LBL_NOTES}</label>
                         <textarea value={form.notes} onChange={e => set('notes', e.target.value)}
-                            placeholder="Any extra instructions for the substitute…"
+                            placeholder={TIMETABLE_CONSTS.SUBSTITUTION.PH_NOTES}
                             rows={2}
                             className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 resize-none" />
                     </div>
@@ -364,11 +356,11 @@ export default function SubstitutionModal({ timetableId, selectedSlots = [], onC
                 <div className="flex gap-3 px-4 sm:px-6 py-3.5 sm:py-4 border-t border-gray-100">
                     <button onClick={onClose}
                         className="flex-1 sm:flex-none px-5 py-2.5 sm:py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 cursor-pointer transition text-center">
-                        Cancel
+                        {TIMETABLE_CONSTS.SUBSTITUTION.BTN_CANCEL}
                     </button>
                     <button onClick={handleConfirm} disabled={saving}
                         className="flex-1 sm:flex-none px-5 py-2.5 sm:py-2 bg-[#1e293b] text-white rounded-lg text-sm font-medium hover:bg-[#334155] disabled:opacity-50 transition cursor-pointer text-center">
-                        {saving ? 'Saving…' : isUpdate ? 'Update' : 'Confirm'}
+                        {saving ? TIMETABLE_CONSTS.SUBSTITUTION.BTN_SAVING : isUpdate ? TIMETABLE_CONSTS.SUBSTITUTION.BTN_UPDATE : TIMETABLE_CONSTS.SUBSTITUTION.BTN_CONFIRM}
                     </button>
                 </div>
             </div>

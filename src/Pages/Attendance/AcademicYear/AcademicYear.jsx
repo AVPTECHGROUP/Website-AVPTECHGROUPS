@@ -4,13 +4,25 @@ import {
     getAcademicYears,
     setCurrentAcademicYear,
     closeAcademicYear,
-} from "../../../Api/AcademicYear";
-import NewAcademicYear from "./NewAcademicYear"; 
+} from "../../../Api/AcademicYears/AcademicYear";
+import NewAcademicYear from "./NewAcademicYear";
+import {
+    STATUS,
+    ROWS_OPTIONS,
+    DEFAULT_ROWS_PER_PAGE,
+    TOAST_TYPE,
+    TOAST_DURATION_MS,
+    TABLE_COLUMNS,
+    MESSAGES,
+    FIELD_LABELS,
+    ACTION_LABELS,
+    CONFIRM_CLOSE_MODAL,
+} from "../../../constants/StringConstants/AcademicYear";
 
 // ─── Action Dropdown Component ──────────────────────────────────────────────
 const ActionDropDown = ({ year, onSetCurrent, onClose }) => {
     const isCurrent = year.isCurrent;
-    const isClosed = year.status === "CLOSED";
+    const isClosed = year.status === STATUS.CLOSED;
 
     if (isClosed) return <span className="text-gray-300">—</span>;
 
@@ -21,14 +33,14 @@ const ActionDropDown = ({ year, onSetCurrent, onClose }) => {
                     onClick={() => onSetCurrent(year)}
                     className="px-3 py-1.5 text-xs font-semibold text-blue-600 border border-blue-500 rounded-lg hover:bg-blue-50 transition-colors whitespace-nowrap"
                 >
-                    Set Current
+                    {ACTION_LABELS.SET_CURRENT}
                 </button>
             )}
             <button
                 onClick={() => onClose(year)}
                 className="px-3 py-1.5 text-xs font-semibold text-red-600 border border-red-400 rounded-lg hover:bg-red-50 transition-colors whitespace-nowrap"
             >
-                Close
+                {ACTION_LABELS.CLOSE}
             </button>
         </div>
     );
@@ -50,12 +62,12 @@ const ConfirmCloseModal = ({ year, onConfirm, onCancel, loading }) => {
                     </div>
                     <div>
                         <h3 className="text-base font-semibold text-gray-900">
-                            Close Academic Year?
+                            {CONFIRM_CLOSE_MODAL.TITLE}
                         </h3>
                         <p className="text-sm text-gray-500 mt-1">
-                            Are you sure you want to close{" "}
-                            <span className="font-medium text-gray-800">{year.label}</span>?
-                            This action cannot be undone.
+                            {CONFIRM_CLOSE_MODAL.DESCRIPTION_PREFIX}{" "}
+                            <span className="font-medium text-gray-800">{year.label}</span>
+                            {CONFIRM_CLOSE_MODAL.DESCRIPTION_SUFFIX}
                         </p>
                     </div>
                     <button
@@ -70,7 +82,7 @@ const ConfirmCloseModal = ({ year, onConfirm, onCancel, loading }) => {
                         onClick={onCancel}
                         className="flex-1 px-4 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
                     >
-                        No, Cancel
+                        {CONFIRM_CLOSE_MODAL.CANCEL}
                     </button>
                     <button
                         onClick={onConfirm}
@@ -83,10 +95,10 @@ const ConfirmCloseModal = ({ year, onConfirm, onCancel, loading }) => {
                                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                                 </svg>
-                                Closing...
+                                {CONFIRM_CLOSE_MODAL.CONFIRM_LOADING}
                             </>
                         ) : (
-                            "Yes, Close"
+                            CONFIRM_CLOSE_MODAL.CONFIRM
                         )}
                     </button>
                 </div>
@@ -98,7 +110,7 @@ const ConfirmCloseModal = ({ year, onConfirm, onCancel, loading }) => {
 // ─── Status Badge ────────────────────────────────────────────────────────────
 const StatusBadge = ({ status }) => {
     const styles =
-        status === "ACTIVE"
+        status === STATUS.ACTIVE
             ? "bg-green-100 text-green-700 border border-green-200"
             : "bg-gray-100 text-gray-500 border border-gray-200";
     return (
@@ -113,7 +125,7 @@ const CurrentBadge = ({ isCurrent }) => {
     if (!isCurrent) return <span className="text-gray-400 text-sm">—</span>;
     return (
         <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700 border border-blue-200">
-            YES
+            {FIELD_LABELS.YES}
         </span>
     );
 };
@@ -137,7 +149,7 @@ const MobileCard = ({ year, onSetCurrent, onClose }) => (
                 <span className="text-base font-bold text-gray-900">{year.label}</span>
                 {year.isCurrent && (
                     <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700 border border-blue-200">
-                        CURRENT
+                        {FIELD_LABELS.CURRENT}
                     </span>
                 )}
             </div>
@@ -146,32 +158,32 @@ const MobileCard = ({ year, onSetCurrent, onClose }) => (
         <div className="grid grid-cols-2 gap-2 text-sm text-gray-600 mb-4">
             <div>
                 <p className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-0.5">
-                    Start Date
+                    {FIELD_LABELS.START_DATE}
                 </p>
                 <p className="font-medium text-gray-800">{year.startDate}</p>
             </div>
             <div>
                 <p className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-0.5">
-                    End Date
+                    {FIELD_LABELS.END_DATE}
                 </p>
                 <p className="font-medium text-gray-800">{year.endDate}</p>
             </div>
         </div>
-        {year.status !== "CLOSED" && (
+        {year.status !== STATUS.CLOSED && (
             <div className="flex gap-2 pt-2 border-t border-gray-100">
                 {!year.isCurrent && (
                     <button
                         onClick={() => onSetCurrent(year)}
                         className="flex-1 px-3 py-2 text-xs font-semibold text-blue-600 border border-blue-500 rounded-lg hover:bg-blue-50 transition-colors"
                     >
-                        Set Current
+                        {ACTION_LABELS.SET_CURRENT}
                     </button>
                 )}
                 <button
                     onClick={() => onClose(year)}
                     className="flex-1 px-3 py-2 text-xs font-semibold text-red-600 border border-red-400 rounded-lg hover:bg-red-50 transition-colors"
                 >
-                    Close
+                    {ACTION_LABELS.CLOSE}
                 </button>
             </div>
         )}
@@ -179,32 +191,32 @@ const MobileCard = ({ year, onSetCurrent, onClose }) => (
 );
 
 // ─── Main Component ──────────────────────────────────────────────────────────
-const ROWS_OPTIONS = [5, 10, 20];
-
 const AcademicYear = () => {
-    const [years, setYears] = useState([]);
+    const [years, setYears] = useState([]); // Initialized as array
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [showAdd, setShowAdd] = useState(false);
     const [closeTarget, setCloseTarget] = useState(null);
     const [actionLoading, setActionLoading] = useState(false);
     const [page, setPage] = useState(1);
-    const [rowsPerPage, setRowsPerPage] = useState(10);
+    const [rowsPerPage, setRowsPerPage] = useState(DEFAULT_ROWS_PER_PAGE);
     const [toast, setToast] = useState(null);
 
-    const showToast = (msg, type = "success") => {
+    const showToast = (msg, type = TOAST_TYPE.SUCCESS) => {
         setToast({ msg, type });
-        setTimeout(() => setToast(null), 3000);
+        setTimeout(() => setToast(null), TOAST_DURATION_MS);
     };
 
     const fetchYears = useCallback(async () => {
         try {
             setLoading(true);
             setError("");
-            const { years: data } = await getAcademicYears();
-            setYears(data);
+            const response = await getAcademicYears();
+            // Ensure we handle response structure safely
+            setYears(response || []);
         } catch (err) {
-            setError("Failed to load academic years. Please try again.");
+            setError(MESSAGES.FETCH_ERROR);
+            setYears([]); // Reset on error
         } finally {
             setLoading(false);
         }
@@ -218,10 +230,10 @@ const AcademicYear = () => {
         try {
             setActionLoading(true);
             await setCurrentAcademicYear(year.id);
-            showToast(`${year.label} set as current year.`);
+            showToast(MESSAGES.SET_CURRENT_SUCCESS(year.label));
             fetchYears();
         } catch (err) {
-            showToast(err.message || "Failed to set current year.", "error");
+            showToast(err.message || MESSAGES.SET_CURRENT_ERROR, TOAST_TYPE.ERROR);
         } finally {
             setActionLoading(false);
         }
@@ -233,19 +245,20 @@ const AcademicYear = () => {
         try {
             setActionLoading(true);
             await closeAcademicYear(closeTarget.id);
-            showToast(`${closeTarget.label} has been closed.`);
+            showToast(MESSAGES.CLOSE_SUCCESS(closeTarget.label));
             setCloseTarget(null);
             fetchYears();
         } catch (err) {
-            showToast(err.message || "Failed to close academic year.", "error");
+            showToast(err.message || MESSAGES.CLOSE_ERROR, TOAST_TYPE.ERROR);
         } finally {
             setActionLoading(false);
         }
     };
 
-    // Pagination
-    const totalPages = Math.ceil(years.length / rowsPerPage);
-    const paginated = years.slice((page - 1) * rowsPerPage, page * rowsPerPage);
+    // Pagination logic with safety defaults
+    const safeYears = years || [];
+    const totalPages = Math.max(1, Math.ceil(safeYears.length / rowsPerPage));
+    const paginated = safeYears.slice((page - 1) * rowsPerPage, page * rowsPerPage);
 
     const handleRowsChange = (e) => {
         setRowsPerPage(Number(e.target.value));
@@ -257,9 +270,9 @@ const AcademicYear = () => {
             {/* Toast */}
             {toast && (
                 <div
-                    className={`fixed top-4 right-4 z-50 px-5 py-3 rounded-xl shadow-lg text-sm font-medium transition-all ${toast.type === "error"
-                            ? "bg-red-600 text-white"
-                            : "bg-green-600 text-white"
+                    className={`fixed top-4 right-4 z-50 px-5 py-3 rounded-xl shadow-lg text-sm font-medium transition-all ${toast.type === TOAST_TYPE.ERROR
+                        ? "bg-red-600 text-white"
+                        : "bg-green-600 text-white"
                         }`}
                 >
                     {toast.msg}
@@ -271,7 +284,7 @@ const AcademicYear = () => {
                 isOpen={showAdd}
                 onClose={() => setShowAdd(false)}
                 onSuccess={() => {
-                    showToast("Academic year created successfully!");
+                    showToast(MESSAGES.CREATE_SUCCESS);
                     fetchYears();
                 }}
             />
@@ -291,10 +304,12 @@ const AcademicYear = () => {
                         </div>
                         <div>
                             <h1 className="text-xl sm:text-3xl font-bold text-gray-900">
-                                Manage Academic Years
+                                {MESSAGES.PAGE_TITLE}
                             </h1>
                             <p className="text-sm text-gray-500">
-                                {years.length} year{years.length !== 1 ? "s" : ""} configured
+                                {safeYears?.length || 0}{" "}
+                                {safeYears?.length !== 1 ? MESSAGES.YEAR_PLURAL : MESSAGES.YEAR_SINGULAR}{" "}
+                                {MESSAGES.YEARS_CONFIGURED_SUFFIX}
                             </p>
                         </div>
                     </div>
@@ -303,7 +318,7 @@ const AcademicYear = () => {
                             onClick={fetchYears}
                             disabled={loading}
                             className="p-2.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors border border-gray-200"
-                            title="Refresh"
+                            title={MESSAGES.REFRESH_TITLE}
                         >
                             <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
                         </button>
@@ -312,7 +327,7 @@ const AcademicYear = () => {
                             className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-sm transition-colors"
                         >
                             <Plus size={16} />
-                            <span>Add Academic Year</span>
+                            <span>{MESSAGES.ADD_BUTTON}</span>
                         </button>
                     </div>
                 </div>
@@ -326,7 +341,7 @@ const AcademicYear = () => {
                             onClick={fetchYears}
                             className="ml-auto text-red-600 hover:text-red-800 font-medium underline"
                         >
-                            Retry
+                            {MESSAGES.RETRY}
                         </button>
                     </div>
                 )}
@@ -337,7 +352,7 @@ const AcademicYear = () => {
                         <table className="w-full">
                             <thead>
                                 <tr className="border-b border-gray-100 bg-gray-50">
-                                    {["Label", "Start Date", "End Date", "Status", "Current", "Actions"].map(
+                                    {TABLE_COLUMNS.map(
                                         (col) => (
                                             <th
                                                 key={col}
@@ -363,7 +378,7 @@ const AcademicYear = () => {
                                                 size={36}
                                                 className="mx-auto mb-2 text-gray-300"
                                             />
-                                            No academic years found.
+                                            {MESSAGES.NO_YEARS_FOUND}
                                         </td>
                                     </tr>
                                 ) : (
@@ -405,19 +420,19 @@ const AcademicYear = () => {
                     {!loading && years.length > 0 && (
                         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-5 py-4 border-t border-gray-100 bg-gray-50">
                             <p className="text-sm text-gray-600">
-                                Showing{" "}
+                                {MESSAGES.SHOWING_PREFIX}{" "}
                                 <span className="font-semibold">
                                     {(page - 1) * rowsPerPage + 1}
                                 </span>{" "}
-                                to{" "}
+                                {MESSAGES.SHOWING_TO}{" "}
                                 <span className="font-semibold">
                                     {Math.min(page * rowsPerPage, years.length)}
                                 </span>{" "}
-                                of <span className="font-semibold">{years.length}</span> records
+                                {MESSAGES.OF_LABEL} <span className="font-semibold">{years.length}</span> {MESSAGES.SHOWING_OF_RECORDS}
                             </p>
                             <div className="flex items-center gap-3">
                                 <div className="flex items-center gap-2 text-sm text-gray-600">
-                                    <span>Rows per page:</span>
+                                    <span>{MESSAGES.ROWS_PER_PAGE_LABEL}</span>
                                     <select
                                         value={rowsPerPage}
                                         onChange={handleRowsChange}
@@ -443,8 +458,8 @@ const AcademicYear = () => {
                                             key={i}
                                             onClick={() => setPage(i + 1)}
                                             className={`w-8 h-8 flex items-center justify-center rounded-lg text-sm font-medium transition-colors ${page === i + 1
-                                                    ? "bg-blue-600 text-white"
-                                                    : "border border-gray-200 text-gray-600 hover:bg-gray-100"
+                                                ? "bg-blue-600 text-white"
+                                                : "border border-gray-200 text-gray-600 hover:bg-gray-100"
                                                 }`}
                                         >
                                             {i + 1}
@@ -481,7 +496,7 @@ const AcademicYear = () => {
                     ) : paginated.length === 0 ? (
                         <div className="bg-white rounded-xl border border-gray-200 py-16 text-center text-gray-400 text-sm">
                             <GraduationCap size={36} className="mx-auto mb-2 text-gray-300" />
-                            No academic years found.
+                            {MESSAGES.NO_YEARS_FOUND}
                         </div>
                     ) : (
                         paginated.map((year) => (
@@ -499,7 +514,7 @@ const AcademicYear = () => {
                         <div className="flex items-center justify-between pt-2">
                             <p className="text-xs text-gray-500">
                                 {(page - 1) * rowsPerPage + 1}–
-                                {Math.min(page * rowsPerPage, years.length)} of {years.length}
+                                {Math.min(page * rowsPerPage, years.length)} {MESSAGES.OF_LABEL} {years.length}
                             </p>
                             <div className="flex items-center gap-1">
                                 <button

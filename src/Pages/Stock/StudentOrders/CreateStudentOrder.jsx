@@ -5,13 +5,13 @@ import {
     Loader2, Save, Check, AlertCircle, AlertTriangle, RefreshCw,
     ArrowLeft, CheckCircle, Plus, IndianRupee, CreditCard, Hash,
 } from "lucide-react";
-import { getActiveStores } from "../../../Api/StockApi";
-import { getStudents } from "../../../Api/StudentsApi";
+import getActiveStores  from "../../Api/Stock/StoreApi";
+import { getStudents } from "../../../Api/Students/StudentsApi";
 import {
     createStudentOrder, confirmStudentOrder,
     previewStudentOrder, checkItemAvailability,
-} from "../../../Api/StudentOrder";
-import { getListOfValues } from "../../../Api/ListOfValues";
+} from "../../../Api/Stock/StudentOrder";
+import { getListOfValues } from "../../../Api/Lov/ListOfValues";
 import PrintConfirmModal from "../../../Components/CommonComp/Print/PrintConfirmCard";
 import { printOrder } from "../../../Components/CommonComp/Print/Printorderutil";
 import StudentOrderAddItem from "./StudentOrderAddItem";

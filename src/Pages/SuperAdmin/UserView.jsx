@@ -1,9 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { User, Mail, Phone, ChevronLeft, GraduationCap, DollarSign, UserCheck, LogIn, Clock } from 'lucide-react';
-import { getUserById } from '../../Api/userManagementAPI';
+import { getUserById } from '../../Api/StaffManagement/UserManagementAPI';
+import USER_MANAGEMENT_STRINGS from '../../Constants/StringConstants/UserManagemetConstant';
 
 const UserView = () => {
+    const strings = USER_MANAGEMENT_STRINGS.USER_VIEW;
+    const commonStrings = USER_MANAGEMENT_STRINGS.COMMON;
     const { id } = useParams();
     const navigate = useNavigate();
     const [userData, setUserData] = useState(null);
@@ -29,7 +32,7 @@ const UserView = () => {
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
                 <div className="text-center">
                     <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-                    <p className="text-gray-600 font-medium">Loading user profile details...</p>
+                    <p className="text-gray-600 font-medium">{strings.LOADING_PROFILE}</p>
                 </div>
             </div>
         );
@@ -38,9 +41,9 @@ const UserView = () => {
     if (!userData) {
         return (
             <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
-                <p className="text-gray-600 font-medium text-lg mb-4">User profiles could not be loaded or do not exist.</p>
+                <p className="text-gray-600 font-medium text-lg mb-4">{commonStrings.PROFILE_ERROR}</p>
                 <button onClick={() => navigate(-1)} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                    Go Back
+                    {commonStrings.GO_BACK}
                 </button>
             </div>
         );
@@ -54,10 +57,10 @@ const UserView = () => {
 
                 {/* Header Title Section */}
                 <div className="mb-6 flex items-center justify-between">
-                    <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">User Profile</h1>
+                    <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">{strings.PAGE_TITLE}</h1>
                     <button onClick={() => navigate(-1)} className="flex items-center cursor-pointer bg-slate-700 px-4 py-2 rounded-xl text-white gap-2 hover:bg-slate-900 transition-colors shadow-sm">
                         <ChevronLeft className="w-5 h-5" />
-                        <span className="text-sm font-medium">Back to List</span>
+                        <span className="text-sm font-medium">{strings.BACK_TO_LIST}</span>
                     </button>
                 </div>
 
@@ -73,20 +76,20 @@ const UserView = () => {
                         </div>
                         <div className="flex-1">
                             <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mb-1">
-                                <h2 className="text-xl sm:text-2xl font-bold text-gray-900">{userData.fullName || 'N/A'}</h2>
+                                <h2 className="text-xl sm:text-2xl font-bold text-gray-900">{userData.fullName || commonStrings.N_A}</h2>
                                 <span className={`inline-flex items-center px-3 py-0.5 rounded-full text-xs font-semibold tracking-wide w-fit ${userData.status === 'ACTIVE' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                                     {userData.status || 'INACTIVE'}
                                 </span>
                             </div>
-                            <p className="text-sm text-gray-500 font-medium mb-3">Employee ID: {userData.employeeCode || userData.id}</p>
+                            <p className="text-sm text-gray-500 font-medium mb-3">{strings.EMPLOYEE_ID}: {userData.employeeCode || userData.id}</p>
                             <div className="flex flex-wrap gap-4 sm:gap-6 text-sm text-gray-600">
                                 <div className="flex items-center gap-2">
                                     <Mail className="w-4 h-4 text-blue-600" />
-                                    <span className="break-all">{userData.email || 'N/A'}</span>
+                                    <span className="break-all">{userData.email || commonStrings.N_A}</span>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <Phone className="w-4 h-4 text-blue-600" />
-                                    <span>{userData.mobile || 'N/A'}</span>
+                                    <span>{userData.mobile || commonStrings.N_A}</span>
                                 </div>
                             </div>
                         </div>
@@ -100,24 +103,24 @@ const UserView = () => {
                     <div className="bg-white rounded-2xl border border-gray-100 p-5 sm:p-6 shadow-xs">
                         <div className="flex items-center gap-2.5 mb-5 border-b border-gray-50 pb-3">
                             <User className="w-5 h-5 text-blue-600" />
-                            <h3 className="text-md font-bold text-gray-900">Personal Details</h3>
+                            <h3 className="text-md font-bold text-gray-900">{strings.PERSONAL_DETAILS}</h3>
                         </div>
                         <div className="divide-y divide-gray-100/70 text-sm">
                             <div className="flex justify-between py-3">
-                                <span className="text-gray-500 font-medium">Email Address</span>
-                                <span className="text-gray-900 font-semibold">{userData.email || 'N/A'}</span>
+                                <span className="text-gray-500 font-medium">{strings.EMAIL_ADDRESS}</span>
+                                <span className="text-gray-900 font-semibold">{userData.email || commonStrings.N_A}</span>
                             </div>
                             <div className="flex justify-between py-3">
-                                <span className="text-gray-500 font-medium">Phone Number</span>
-                                <span className="text-gray-900 font-semibold">{userData.mobile || 'N/A'}</span>
+                                <span className="text-gray-500 font-medium">{strings.PHONE_NUMBER}</span>
+                                <span className="text-gray-900 font-semibold">{userData.mobile || commonStrings.N_A}</span>
                             </div>
                             <div className="flex justify-between py-3">
-                                <span className="text-gray-500 font-medium">Residential Address</span>
-                                <span className="text-gray-900 font-semibold">{userData.address || 'NA'}</span>
+                                <span className="text-gray-500 font-medium">{strings.RESIDENTIAL_ADDRESS}</span>
+                                <span className="text-gray-900 font-semibold">{userData.address || commonStrings.N_A}</span>
                             </div>
                             <div className="flex justify-between py-3">
-                                <span className="text-gray-500 font-medium">Date of Birth</span>
-                                <span className="text-gray-900 font-semibold">{userData.dateOfBirth || 'N/A'}</span>
+                                <span className="text-gray-500 font-medium">{strings.DATE_OF_BIRTH}</span>
+                                <span className="text-gray-900 font-semibold">{userData.dateOfBirth || commonStrings.N_A}</span>
                             </div>
                         </div>
                     </div>
@@ -126,24 +129,24 @@ const UserView = () => {
                     <div className="bg-white rounded-2xl border border-gray-100 p-5 sm:p-6 shadow-xs">
                         <div className="flex items-center gap-2.5 mb-5 border-b border-gray-50 pb-3">
                             <GraduationCap className="w-5 h-5 text-blue-600" />
-                            <h3 className="text-md font-bold text-gray-900">Professional Details</h3>
+                            <h3 className="text-md font-bold text-gray-900">{strings.PROFESSIONAL_DETAILS}</h3>
                         </div>
                         <div className="divide-y divide-gray-100/70 text-sm">
                             <div className="flex justify-between py-3">
-                                <span className="text-gray-500 font-medium">Highest Qualification</span>
-                                <span className="text-gray-900 font-semibold">{userData.qualification || 'NA'}</span>
+                                <span className="text-gray-500 font-medium">{strings.HIGHEST_QUALIFICATION}</span>
+                                <span className="text-gray-900 font-semibold">{userData.qualification || commonStrings.N_A}</span>
                             </div>
                             <div className="flex justify-between py-3">
-                                <span className="text-gray-500 font-medium">Years of Experience</span>
+                                <span className="text-gray-500 font-medium">{strings.YEARS_OF_EXPERIENCE}</span>
                                 <span className="text-gray-900 font-semibold">{userData.experienceYears ?? '0'}</span>
                             </div>
                             <div className="flex justify-between py-3">
-                                <span className="text-gray-500 font-medium">Salary Type</span>
+                                <span className="text-gray-500 font-medium">{strings.SALARY_TYPE}</span>
                                 <span className="text-gray-900 font-semibold uppercase">{userData.salaryType || 'MONTHLY'}</span>
                             </div>
                             <div className="flex justify-between py-3">
-                                <span className="text-gray-500 font-medium">Joined Date</span>
-                                <span className="text-gray-900 font-semibold">{userData.joiningDate || 'N/A'}</span>
+                                <span className="text-gray-500 font-medium">{strings.JOINED_DATE}</span>
+                                <span className="text-gray-900 font-semibold">{userData.joiningDate || commonStrings.N_A}</span>
                             </div>
                         </div>
                     </div>
@@ -152,16 +155,16 @@ const UserView = () => {
                     <div className="bg-white rounded-2xl border border-gray-100 p-5 sm:p-6 shadow-xs">
                         <div className="flex items-center gap-2.5 mb-5 border-b border-gray-50 pb-3">
                             <DollarSign className="w-5 h-5 text-blue-600" />
-                            <h3 className="text-md font-bold text-gray-900">Salary & Payroll</h3>
+                            <h3 className="text-md font-bold text-gray-900">{strings.SALARY_PAYROLL}</h3>
                         </div>
                         <div className="divide-y divide-gray-100/70 text-sm">
                             <div className="flex justify-between py-3">
-                                <span className="text-gray-500 font-medium">Basic Salary</span>
+                                <span className="text-gray-500 font-medium">{strings.BASIC_SALARY}</span>
                                 <span className="text-gray-900 font-semibold">₹{(userData.basicSalary || 9999).toLocaleString()}</span>
                             </div>
                            
                             <div className="flex justify-between py-3 items-center">
-                                <span className="text-gray-500 font-medium">Payroll Status</span>
+                                <span className="text-gray-500 font-medium">{strings.PAYROLL_STATUS}</span>
                                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-100 uppercase">
                                     {userData.payrollStatus || 'INCLUDED'}
                                 </span>
@@ -173,7 +176,7 @@ const UserView = () => {
                     <div className="bg-white rounded-2xl border border-gray-100 p-5 sm:p-6 shadow-xs">
                         <div className="flex items-center gap-2.5 mb-5 border-b border-gray-50 pb-3">
                             <UserCheck className="w-5 h-5 text-blue-600" />
-                            <h3 className="text-md font-bold text-gray-900">System Eligibility</h3>
+                            <h3 className="text-md font-bold text-gray-900">{strings.SYSTEM_ELIGIBILITY}</h3>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
@@ -184,8 +187,8 @@ const UserView = () => {
                                         <LogIn className="w-5 h-5 text-blue-600" />
                                     </div>
                                     <div>
-                                        <h4 className="text-sm font-bold text-gray-900">Login Access</h4>
-                                        <p className="text-xs text-gray-500 mt-0.5">Authorized for web dashboard</p>
+                                        <h4 className="text-sm font-bold text-gray-900">{strings.LOGIN_ACCESS}</h4>
+                                        <p className="text-xs text-gray-500 mt-0.5">{strings.LOGIN_ACCESS_DESC}</p>
                                     </div>
                                 </div>
                                 {userData.status === "ACTIVE" && (
@@ -204,8 +207,8 @@ const UserView = () => {
                                         <Clock className="w-5 h-5 text-blue-600" />
                                     </div>
                                     <div>
-                                        <h4 className="text-sm font-bold text-gray-900">Attendance Access</h4>
-                                        <p className="text-xs text-gray-500 mt-0.5">Enabled for mobile check-in</p>
+                                        <h4 className="text-sm font-bold text-gray-900">{strings.ATTENDANCE_ACCESS}</h4>
+                                        <p className="text-xs text-gray-500 mt-0.5">{strings.ATTENDANCE_ACCESS_DESC}</p>
                                     </div>
                                 </div>
                                 {userData.status === "ACTIVE" && (

@@ -9,7 +9,7 @@ import {
   LucideClockPlus,
   PiIcon,
 } from 'lucide-react';
-import { createCircular, uploadCircularAttachment } from '../../../Api/CircularApi';
+import { createCircular, uploadCircularAttachment } from '../../../Api/Communication/CircularApi';
 import { useClasses } from '../../../ContextAPI/ClassContext.jsx';
 
 // ── Constants ──────────────────────────────────────────────────────────────────

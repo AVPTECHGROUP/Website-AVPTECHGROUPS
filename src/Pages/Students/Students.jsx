@@ -15,13 +15,16 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import CardComponent from '../../Components/CommonComp/CardComponent';
-import { getStudents, searchStudents } from '../../Api/StudentsApi';
-import { getAllSections } from '../../Api/TeachersAPI';
+import { getStudents, searchStudents } from '../../Api/Students/StudentsApi';
+import { getAllSections } from '../../Api/Teachers/TeachersAPI';
 import CardLoader from '../../Components/CommonComp/CardLoader';
 import ListLoader from '../../Components/CommonComp/ListLoader';
 import TooltipComponent from '../../Components/CommonComp/Tooltip_comp/TooltipComp';
 import { useAuth } from '../../hooks/useAuth';
 import { PERMISSIONS as P } from '../../Constants/Permission';
+import STUDENT_MODULE_STRINGS from '../../Constants/StringConstants/StudentsConst';
+
+const SL = STUDENT_MODULE_STRINGS.STUDENTS_LIST;
 
 const Student = () => {
     const { hasPermission } = useAuth();
@@ -90,20 +93,11 @@ const Student = () => {
         if (debounceTimer.current) clearTimeout(debounceTimer.current);
     };
 
-    const handleSectionChange = (e) => {
-        setSelectedSectionId(e.target.value);
-        setPage(1);
-    };
-
-    const handleStatusChange = (e) => {
-        setStatusFilter(e.target.value);
-        setPage(1);
-    };
+    const handleSectionChange = (e) => { setSelectedSectionId(e.target.value); setPage(1); };
+    const handleStatusChange = (e) => { setStatusFilter(e.target.value); setPage(1); };
 
     useEffect(() => {
-        return () => {
-            if (debounceTimer.current) clearTimeout(debounceTimer.current);
-        };
+        return () => { if (debounceTimer.current) clearTimeout(debounceTimer.current); };
     }, []);
 
     useEffect(() => {
@@ -156,7 +150,7 @@ const Student = () => {
                 setTotalElements(res.pagination?.totalElements || 0);
                 setTotalPages(res.pagination?.totalPages || 0);
             } catch (err) {
-                setError(err.message || 'Failed to load students');
+                setError(err.message || SL.ERROR_LOADING);
             } finally {
                 setLoading(false);
             }
@@ -220,7 +214,7 @@ const Student = () => {
     const cardsArray = [
         {
             IconName: UsersIcon,
-            keyName: 'Total Students',
+            keyName: SL.TOTAL_STUDENTS,
             val: totalElements,
             iconTxColor: 'text-blue-600',
             iconBgColor: 'bg-blue-50',
@@ -266,10 +260,10 @@ const Student = () => {
 
     const handleExportStudentsCSV = () => {
         if (students.length === 0) {
-            toast.info('No students on this page to export.');
+            toast.info(SL.EXPORT_EMPTY);
             return;
         }
-        const HEADERS = ['Student Name', 'Admission Number', 'Mobile Number', 'Email', 'Class', 'Section', 'Status'];
+        const HEADERS = SL.TABLE_HEADERS.filter(h => h !== 'Actions');
         const dataRows = students.map((s) => [
             csvCell(s.name || 'Unknown'),
             csvCell(s.admissionNumber || 'N/A'),
@@ -290,7 +284,13 @@ const Student = () => {
         anchor.click();
         document.body.removeChild(anchor);
         URL.revokeObjectURL(url);
-        toast.success(`✓ Exported ${students.length} student${students.length !== 1 ? 's' : ''} — CSV ${page} of ${totalPages}`);
+        toast.success(
+            SL.EXPORT_SUCCESS
+                .replace('{count}', students.length)
+                .replace('{plural}', students.length !== 1 ? 's' : '')
+                .replace('{page}', page)
+                .replace('{totalPages}', totalPages)
+        );
     };
 
     return (
@@ -301,11 +301,11 @@ const Student = () => {
                 <div>
                     <h2 className="text-xl sm:text-2xl font-bold text-gray-900">
                         <TooltipComponent
-                            message="Efficiently manage all student records, class assignments and account status."
+                            message={SL.TOOLTIP}
                             direction="right"
                             color="nocolor"
                         >
-                            Manage All Students
+                            {SL.PAGE_TITLE}
                         </TooltipComponent>
                     </h2>
                 </div>
@@ -333,15 +333,15 @@ const Student = () => {
                             />
                         ))}
                 </div>
-                <div className="bg-white flex flex-col lg:flex-row lg:items-center gap-2 px-3 py-2.5 rounded-xl border border-gray-200 shrink-0 w-full">
 
-                    {/* 1. Search — flex-1 on lg so it takes all leftover space */}
+                <div className="bg-white flex flex-col lg:flex-row lg:items-center gap-2 px-3 py-2.5 rounded-xl border border-gray-200 shrink-0 w-full">
+                    {/* 1. Search */}
                     <div className="w-full lg:flex-1 lg:min-w-0 flex items-center gap-2 border border-gray-200 rounded-lg bg-gray-100 px-3 py-2.5 focus-within:ring-2 focus-within:ring-blue-200 transition-all">
                         <SearchIcon className="w-4 h-4 text-gray-400 shrink-0" />
                         <input
                             value={searchInput}
                             onChange={handleSearchChange}
-                            placeholder="Search name, admission no…"
+                            placeholder={SL.SEARCH_PLACEHOLDER}
                             className="text-xs focus:outline-none text-gray-600 w-full bg-transparent placeholder:text-gray-400"
                         />
                         {searchInput && searchInput !== debouncedSearch && (
@@ -357,9 +357,8 @@ const Student = () => {
                         )}
                     </div>
 
-                    {/* 2. Dropdowns — side-by-side on all screens, shrink-0 on lg */}
+                    {/* 2. Dropdowns */}
                     <div className="flex items-center gap-2 w-full lg:w-auto lg:shrink-0">
-                        {/* Class/Section Dropdown */}
                         <div className="relative flex-1 lg:w-36">
                             <select
                                 value={selectedSectionId}
@@ -367,7 +366,7 @@ const Student = () => {
                                 disabled={sectionsLoading}
                                 className={dropdownClass}
                             >
-                                <option value="">All Classes</option>
+                                <option value="">{SL.FILTERS.ALL_CLASSES}</option>
                                 {groupedSections.map((grp) => (
                                     <optgroup key={grp.classId} label={grp.className}>
                                         {grp.sections.map((sec) => (
@@ -381,29 +380,28 @@ const Student = () => {
                             <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
                         </div>
 
-                        {/* Status Dropdown */}
                         <div className="relative flex-1 lg:w-28">
                             <select
                                 value={statusFilter}
                                 onChange={handleStatusChange}
                                 className={dropdownClass}
                             >
-                                <option value="">All Status</option>
-                                <option value="ACTIVE">Active</option>
-                                <option value="INACTIVE">Inactive</option>
+                                <option value="">{SL.FILTERS.ALL_STATUS}</option>
+                                <option value="ACTIVE">{SL.FILTERS.ACTIVE}</option>
+                                <option value="INACTIVE">{SL.FILTERS.INACTIVE}</option>
                             </select>
                             <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
                         </div>
                     </div>
 
-                    {/* 3. Action Buttons — side-by-side on all screens, shrink-0 on lg */}
+                    {/* 3. Action Buttons */}
                     <div className="flex items-center gap-2 w-full lg:w-auto lg:shrink-0">
                         <button
                             onClick={() => navigate('/students/addStudents')}
                             className="flex-1 lg:flex-none flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg font-semibold text-xs bg-blue-600 hover:bg-blue-700 active:scale-[0.97] text-white transition-all whitespace-nowrap cursor-pointer"
                         >
                             <UserPlus className="w-4 h-4" />
-                            Add Student
+                            {SL.ACTIONS.ADD_STUDENT}
                         </button>
 
                         <button
@@ -411,7 +409,7 @@ const Student = () => {
                             className="flex-1 lg:flex-none flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg font-semibold text-xs bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 active:scale-[0.97] transition-all whitespace-nowrap cursor-pointer"
                         >
                             <Upload className="w-4 h-4 text-gray-500" />
-                            Export CSV
+                            {SL.ACTIONS.EXPORT_CSV}
                         </button>
                     </div>
                 </div>
@@ -421,24 +419,26 @@ const Student = () => {
                     {loading ? (
                         <div className="col-span-full flex flex-col items-center justify-center py-10 gap-3">
                             <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
-                            <p className="text-gray-500 text-sm">Loading students…</p>
+                            <p className="text-gray-500 text-sm">{SL.LOADING}</p>
                         </div>
                     ) : error ? (
                         <div className="col-span-full text-center py-10">
                             <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
                                 <UserRoundXIcon className="w-6 h-6 text-red-600" />
                             </div>
-                            <p className="text-gray-900 font-semibold mb-1">Error loading students</p>
+                            <p className="text-gray-900 font-semibold mb-1">{SL.ERROR}</p>
                             <p className="text-gray-500 text-sm mb-4">{error}</p>
-                            <button onClick={() => window.location.reload()} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm">Retry</button>
+                            <button onClick={() => window.location.reload()} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm">
+                                {SL.RETRY}
+                            </button>
                         </div>
                     ) : noUserFound ? (
                         <div className="col-span-full text-center py-10">
                             <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
                                 <UserSearch className="w-6 h-6 text-blue-500" />
                             </div>
-                            <p className="text-gray-700 font-semibold">No Students Found</p>
-                            <p className="text-gray-400 text-sm mt-1">Try a different search or add a new student.</p>
+                            <p className="text-gray-700 font-semibold">{SL.EMPTY_TITLE}</p>
+                            <p className="text-gray-400 text-sm mt-1">{SL.EMPTY_HELP}</p>
                         </div>
                     ) : (
                         students.map((student) => (
@@ -452,8 +452,8 @@ const Student = () => {
                                 </div>
                                 <div className="space-y-1.5">
                                     {[
-                                        { label: 'Contact', value: student.mobile },
-                                        { label: 'Email', value: student.email },
+                                        { label: SL.CONTACT_LABEL, value: student.mobile },
+                                        { label: SL.EMAIL_LABEL, value: student.email },
                                     ].map(({ label, value }) => (
                                         <div key={label} className="flex items-center gap-2">
                                             <span className="text-xs text-gray-400 w-14 shrink-0">{label}</span>
@@ -461,19 +461,19 @@ const Student = () => {
                                         </div>
                                     ))}
                                     <div className="flex items-center gap-2">
-                                        <span className="text-xs text-gray-400 w-14 shrink-0">Class</span>
+                                        <span className="text-xs text-gray-400 w-14 shrink-0">{SL.CLASS_LABEL}</span>
                                         {student.className
                                             ? <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-700 text-xs font-medium">{student.className}</span>
                                             : <span className="text-gray-400 text-xs">N/A</span>}
                                     </div>
                                     <div className="flex items-center gap-2">
-                                        <span className="text-xs text-gray-400 w-14 shrink-0">Section</span>
+                                        <span className="text-xs text-gray-400 w-14 shrink-0">{SL.SECTION_LABEL}</span>
                                         {student.sectionName
                                             ? <span className="px-2 py-0.5 rounded bg-purple-50 text-purple-700 text-xs font-medium">{student.sectionName}</span>
                                             : <span className="text-gray-400 text-xs">N/A</span>}
                                     </div>
                                     <div className="flex items-center gap-2">
-                                        <span className="text-xs text-gray-400 w-14 shrink-0">Status</span>
+                                        <span className="text-xs text-gray-400 w-14 shrink-0">{SL.STATUS_LABEL}</span>
                                         <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium
                                             ${student.status === 'ACTIVE' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
                                             <span className={`w-1.5 h-1.5 rounded-full ${student.status === 'ACTIVE' ? 'bg-green-500' : 'bg-red-500'}`} />
@@ -487,14 +487,14 @@ const Student = () => {
                                             onClick={() => navigate(`/students/editStudent/${student.id}`)}
                                             className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium bg-blue-50 text-blue-600 hover:bg-blue-100"
                                         >
-                                            <UserPenIcon className="w-3.5 h-3.5" /> Edit
+                                            <UserPenIcon className="w-3.5 h-3.5" /> {SL.EDIT}
                                         </button>
                                     )}
                                     <button
                                         onClick={() => navigate(`/students/${student.id}`)}
                                         className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium bg-orange-50 text-orange-600 hover:bg-orange-100"
                                     >
-                                        <Info className="w-3.5 h-3.5" /> View
+                                        <Info className="w-3.5 h-3.5" /> {SL.VIEW}
                                     </button>
                                 </div>
                             </div>
@@ -518,7 +518,7 @@ const Student = () => {
 
                             <thead className="sticky top-0 z-10 bg-gray-50 border-b border-gray-100">
                                 <tr>
-                                    {['Student Name', 'Mobile Number', 'Email', 'Class', 'Section', 'Status', 'Actions'].map((h) => (
+                                    {SL.TABLE_HEADERS.map((h) => (
                                         <th key={h} className="px-3 py-2.5 text-left text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
                                             {h}
                                         </th>
@@ -535,9 +535,11 @@ const Student = () => {
                                             <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
                                                 <UserRoundXIcon className="w-6 h-6 text-red-600" />
                                             </div>
-                                            <p className="font-semibold text-gray-900 mb-1">Error loading students</p>
+                                            <p className="font-semibold text-gray-900 mb-1">{SL.ERROR}</p>
                                             <p className="text-gray-500 text-sm mb-4">{error}</p>
-                                            <button onClick={() => window.location.reload()} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm">Retry</button>
+                                            <button onClick={() => window.location.reload()} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm">
+                                                {SL.RETRY}
+                                            </button>
                                         </td>
                                     </tr>
                                 ) : noUserFound ? (
@@ -546,8 +548,8 @@ const Student = () => {
                                             <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-3">
                                                 <UserSearch className="w-6 h-6 text-blue-500" />
                                             </div>
-                                            <p className="font-semibold text-gray-700 text-sm">No Students Found</p>
-                                            <p className="text-gray-400 text-xs mt-1">Try a different search or add a new student.</p>
+                                            <p className="font-semibold text-gray-700 text-sm">{SL.EMPTY_TITLE}</p>
+                                            <p className="text-gray-400 text-xs mt-1">{SL.EMPTY_HELP}</p>
                                         </td>
                                     </tr>
                                 ) : (
@@ -583,19 +585,21 @@ const Student = () => {
                                                     {student.status}
                                                 </span>
                                             </td>
-                                            <td className="px-2 py-2.5 text-">
+                                            <td className="px-2 py-2.5">
                                                 <div className="flex gap-1 items-start">
-                                                    <button
-                                                        onClick={() => navigate(`/students/editStudent/${student.id}`)}
-                                                        className="flex items-center gap-1 px-2 py-1.5 rounded-lg font-medium bg-blue-50 text-blue-600 hover:bg-blue-100 cursor-pointer transition-colors whitespace-nowrap text-[10px]"
-                                                    >
-                                                        <UserPenIcon className="w-3 h-3" /> Edit
-                                                    </button>
+                                                    {hasPermission(P.STUDENT_EDIT) && (
+                                                        <button
+                                                            onClick={() => navigate(`/students/editStudent/${student.id}`)}
+                                                            className="flex items-center gap-1 px-2 py-1.5 rounded-lg font-medium bg-blue-50 text-blue-600 hover:bg-blue-100 cursor-pointer transition-colors whitespace-nowrap text-[10px]"
+                                                        >
+                                                            <UserPenIcon className="w-3 h-3" /> {SL.EDIT}
+                                                        </button>
+                                                    )}
                                                     <button
                                                         onClick={() => navigate(`/students/${student.id}`)}
                                                         className="flex items-center gap-1 cursor-pointer px-2 py-1.5 rounded-lg font-medium bg-orange-50 text-orange-600 hover:bg-orange-100 transition-colors whitespace-nowrap text-[10px]"
                                                     >
-                                                        <Info className="w-3 h-3" /> View
+                                                        <Info className="w-3 h-3" /> {SL.VIEW}
                                                     </button>
                                                 </div>
                                             </td>
@@ -610,15 +614,15 @@ const Student = () => {
                     <div className="shrink-0 px-4 py-2.5 border-t border-gray-100 bg-white flex flex-wrap items-center justify-between gap-2">
                         <div className="flex items-center gap-3">
                             <span className="text-xs text-gray-500">
-                                Showing{' '}
+                                {SL.PAGE_INFO_PREFIX}{' '}
                                 <span className="font-medium text-gray-700">{totalElements === 0 ? 0 : (page - 1) * rowsPerPage + 1}</span>
-                                {' '}to{' '}
+                                {' '}{SL.PAGE_INFO_SEPARATOR}{' '}
                                 <span className="font-medium text-gray-700">{Math.min(page * rowsPerPage, totalElements)}</span>
-                                {' '}of{' '}
+                                {' '}{SL.PAGE_INFO_OF}{' '}
                                 <span className="font-medium text-gray-700">{totalElements}</span>
                             </span>
                             <div className="flex items-center gap-1.5">
-                                <span className="text-xs text-gray-500">Rows per page:</span>
+                                <span className="text-xs text-gray-500">{SL.ROWS_LABEL}</span>
                                 <select
                                     value={rowsPerPage}
                                     onChange={(e) => { setRowsPerPage(Number(e.target.value)); setPage(1); }}
@@ -642,15 +646,15 @@ const Student = () => {
                 <div className="lg:hidden bg-white rounded-xl border border-gray-200 p-3 shrink-0">
                     <div className="flex flex-col gap-2">
                         <div className="text-center text-xs text-gray-500">
-                            Showing{' '}
+                            {SL.PAGE_INFO_PREFIX}{' '}
                             <span className="font-medium text-gray-700">{totalElements === 0 ? 0 : (page - 1) * rowsPerPage + 1}</span>
                             {' '}–{' '}
                             <span className="font-medium text-gray-700">{Math.min(page * rowsPerPage, totalElements)}</span>
-                            {' '}of{' '}
+                            {' '}{SL.PAGE_INFO_OF}{' '}
                             <span className="font-medium text-gray-700">{totalElements}</span>
                         </div>
                         <div className="flex items-center justify-center gap-2">
-                            <span className="text-xs text-gray-500">Rows:</span>
+                            <span className="text-xs text-gray-500">{SL.ROWS_LABEL_SHORT}</span>
                             <select
                                 value={rowsPerPage}
                                 onChange={(e) => { setRowsPerPage(Number(e.target.value)); setPage(1); }}
@@ -666,7 +670,9 @@ const Student = () => {
                             {renderPageButtons()}
                             <NextBtn />
                         </div>
-                        <div className="text-center text-xs text-gray-400">Page {page} of {totalPages}</div>
+                        <div className="text-center text-xs text-gray-400">
+                            {SL.PAGE_LABEL} {page} {SL.PAGE_INFO_OF} {totalPages}
+                        </div>
                     </div>
                 </div>
 

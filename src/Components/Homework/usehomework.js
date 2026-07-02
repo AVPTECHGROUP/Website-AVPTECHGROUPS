@@ -6,7 +6,7 @@ import {
   uploadHomeworkAttachment,
   updateHomeworkStatus,
   getHomeworkBySection,
-} from "../../Api/Homework";
+} from "../../Api/Academics/Homework";
 
 /**
  * useHomework

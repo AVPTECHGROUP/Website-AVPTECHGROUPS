@@ -15,7 +15,7 @@ import {
   fetchPendingEvents,
   approveEvent,
   rejectEvent,
-} from '../../../Api/CircularApi';
+} from '../../../Api/Communication/CircularApi';
 
 // ─── Toast ─────────────────────────────────────────────────────────────────────
 const useToast = () => {

@@ -4,8 +4,12 @@ import { ChevronLeft, User, Users, Camera, X } from 'lucide-react';
 import { toast } from 'react-toastify';
 import AddStudentPersonalDetails from '../../Components/Students/AddStudentPersonalDetails';
 import AddStudentFamilyDetails from '../../Components/Students/AddStudentFamilyDetails';
-import { createStudents } from '../../Api/StudentsApi';
-import { getAllSections } from '../../Api/TeachersAPI';
+import { createStudents } from '../../Api/Students/StudentsApi';
+import { getAllSections } from '../../Api/Teachers/TeachersAPI';
+import STUDENT_MODULE_STRINGS from '../../Constants/StringConstants/StudentsConst';
+
+const AS = STUDENT_MODULE_STRINGS.ADD_STUDENT;
+const C = STUDENT_MODULE_STRINGS.COMMON;
 
 function AddNewStudent() {
     const navigate = useNavigate();
@@ -16,20 +20,20 @@ function AddNewStudent() {
     const [activeTab, setActiveTab] = useState('personal');
     const [guardianSource, setGuardianSource] = useState(null);
 
-    // ── Image state ──────────────────────────────────────────────────────────
-    const [profileImage, setProfileImage] = useState(null);      // File object
-    const [imagePreview, setImagePreview] = useState(null);      // data-URL
+    const [profileImage, setProfileImage] = useState(null);
+    const [imagePreview, setImagePreview] = useState(null);
     const fileInputRef = useRef(null);
+    const formTopRef = useRef(null);
 
     const [formData, setFormData] = useState({
-        name: "", gender: "", email: "", mobile: "", address: "", dob: "",
-        admissionNumber: "", admissionDate: "", academicYear: "2025-2026",
-        rollNumber: "",
-        status: "ACTIVE", bloodGroup: "", previousSchool: "", profileImageUrl: "",
-        sectionId: "", fatherName: "", fatherOccupation: "", fatherPhone: "",
-        fatherEmail: "", motherName: "", motherOccupation: "", motherPhone: "",
-        motherEmail: "", guardianName: "", guardianRelation: "", guardianPhone: "",
-        guardianEmail: "", emergencyContact: "", hostelRequired: false, transportRequired: false,
+        name: '', gender: '', email: '', mobile: '', address: '', dob: '',
+        admissionNumber: '', admissionDate: '', academicYear: '2025-2026',
+        rollNumber: '',
+        status: 'ACTIVE', bloodGroup: '', previousSchool: '', profileImageUrl: '',
+        sectionId: '', fatherName: '', fatherOccupation: '', fatherPhone: '',
+        fatherEmail: '', motherName: '', motherOccupation: '', motherPhone: '',
+        motherEmail: '', guardianName: '', guardianRelation: '', guardianPhone: '',
+        guardianEmail: '', emergencyContact: '', hostelRequired: false, transportRequired: false,
     });
 
     useEffect(() => {
@@ -39,11 +43,11 @@ function AddNewStudent() {
                 if (res?.success && Array.isArray(res.data)) {
                     setSections(res.data);
                 } else {
-                    toast.error("Failed to load sections.");
+                    toast.error(S.EDIT_STUDENT.ERRORS.SECTION_LOAD_FAILED);
                 }
             } catch (err) {
-                console.error("fetchSections error:", err);
-                toast.error("Could not fetch sections. Please refresh.");
+                console.error('fetchSections error:', err);
+                toast.error(S.EDIT_STUDENT.ERRORS.SECTION_LOAD_RETRY);
             } finally {
                 setSectionsLoading(false);
             }
@@ -51,21 +55,12 @@ function AddNewStudent() {
         fetchSections();
     }, []);
 
-    // ── Image handlers ───────────────────────────────────────────────────────
     const handleImageChange = (e) => {
         const file = e.target.files[0];
         if (!file) return;
-
         const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
-        if (!validTypes.includes(file.type)) {
-            toast.error("Only JPEG or PNG images are allowed!");
-            return;
-        }
-        if (file.size > 10 * 1024 * 1024) {
-            toast.error("Image must be smaller than 10 MB!");
-            return;
-        }
-
+        if (!validTypes.includes(file.type)) { toast.error(AS.ERRORS.PHOTO_TYPE); return; }
+        if (file.size > 10 * 1024 * 1024) { toast.error(AS.ERRORS.PHOTO_SIZE); return; }
         setProfileImage(file);
         const reader = new FileReader();
         reader.onloadend = () => setImagePreview(reader.result);
@@ -89,22 +84,19 @@ function AddNewStudent() {
     const handleGuardianSource = (source) => {
         const newSource = guardianSource === source ? null : source;
         setGuardianSource(newSource);
-
         if (newSource === 'father') {
+            if (!formData.fatherName) { toast.warning(S.FAMILY_FORM.GUARDIAN_ALERT_FATHER); return; }
             setFormData(prev => ({
                 ...prev,
-                guardianName: prev.fatherName,
-                guardianRelation: 'Father',
-                guardianPhone: prev.fatherPhone,
-                guardianEmail: prev.fatherEmail,
+                guardianName: prev.fatherName, guardianRelation: 'Father',
+                guardianPhone: prev.fatherPhone, guardianEmail: prev.fatherEmail,
             }));
         } else if (newSource === 'mother') {
+            if (!formData.motherName) { toast.warning(S.FAMILY_FORM.GUARDIAN_ALERT_MOTHER); return; }
             setFormData(prev => ({
                 ...prev,
-                guardianName: prev.motherName,
-                guardianRelation: 'Mother',
-                guardianPhone: prev.motherPhone,
-                guardianEmail: prev.motherEmail,
+                guardianName: prev.motherName, guardianRelation: 'Mother',
+                guardianPhone: prev.motherPhone, guardianEmail: prev.motherEmail,
             }));
         } else {
             setFormData(prev => ({
@@ -124,22 +116,18 @@ function AddNewStudent() {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     const validatePersonalDetails = () => {
-        if (!profileImage) {
-            toast.error("Please upload a student profile photo!");
-            return false;
-        }
+        if (!profileImage) { toast.error(AS.ERRORS.PHOTO_REQUIRED); return false; }
         if (!formData.name.trim() || !formData.gender || !formData.mobile || !formData.dob || !formData.admissionDate || !formData.academicYear) {
-            toast.error("Please fill all required fields!"); return false;
+            toast.error(AS.ERRORS.REQUIRED_FIELDS); return false;
         }
-        if (!formData.rollNumber.trim()) { toast.error("Please enter a roll number!"); return false; }
-        if (!formData.sectionId) { toast.error("Please select a section!"); return false; }
-        if (!phoneRegex.test(formData.mobile)) { toast.error("Mobile number must be exactly 10 digits!"); return false; }
-        if (formData.email && !emailRegex.test(formData.email)) { toast.error("Please enter a valid student email address!"); return false; }
-        if (formData.status !== 'ACTIVE') { toast.error("Student status must be ACTIVE to add a new student!"); return false; }
+        if (!formData.rollNumber.trim()) { toast.error(AS.ERRORS.ROLL_REQUIRED); return false; }
+        if (!formData.sectionId) { toast.error(AS.ERRORS.SECTION_REQUIRED); return false; }
+        if (!phoneRegex.test(formData.mobile)) { toast.error(AS.ERRORS.MOBILE_INVALID); return false; }
+        if (formData.email && !emailRegex.test(formData.email)) { toast.error(AS.ERRORS.EMAIL_INVALID); return false; }
+        if (formData.status !== 'ACTIVE') { toast.error(AS.ERRORS.STATUS_INVALID); return false; }
         const today = new Date(); today.setHours(0, 0, 0, 0);
-        const dobDate = new Date(formData.dob);
-        if (dobDate >= today) { toast.error("Date of birth cannot be today or in the future!"); return false; }
-        if (new Date(formData.admissionDate) > today) { toast.error("Admission date cannot be in the future!"); return false; }
+        if (new Date(formData.dob) >= today) { toast.error(AS.ERRORS.DOB_INVALID); return false; }
+        if (new Date(formData.admissionDate) > today) { toast.error(AS.ERRORS.ADMISSION_DATE_INVALID); return false; }
         return true;
     };
 
@@ -148,14 +136,14 @@ function AddNewStudent() {
         if (!data.fatherName.trim()) e.fatherName = "Father's name is required";
         if (!data.fatherOccupation.trim()) e.fatherOccupation = "Father's occupation is required";
         if (!data.fatherPhone) e.fatherPhone = "Father's phone is required";
-        else if (!phoneRegex.test(data.fatherPhone)) e.fatherPhone = "Must be exactly 10 digits";
-        if (data.fatherEmail && !emailRegex.test(data.fatherEmail)) e.fatherEmail = "Invalid email format";
+        else if (!phoneRegex.test(data.fatherPhone)) e.fatherPhone = 'Must be exactly 10 digits';
+        if (data.fatherEmail && !emailRegex.test(data.fatherEmail)) e.fatherEmail = 'Invalid email format';
         if (!data.motherName.trim()) e.motherName = "Mother's name is required";
-        if (data.motherPhone && !phoneRegex.test(data.motherPhone)) e.motherPhone = "Must be exactly 10 digits";
-        if (data.motherEmail && !emailRegex.test(data.motherEmail)) e.motherEmail = "Invalid email format";
-        if (data.guardianPhone && !phoneRegex.test(data.guardianPhone)) e.guardianPhone = "Must be exactly 10 digits";
-        if (data.guardianEmail && !emailRegex.test(data.guardianEmail)) e.guardianEmail = "Invalid email format";
-        if (data.emergencyContact && !phoneRegex.test(data.emergencyContact)) e.emergencyContact = "Must be exactly 10 digits";
+        if (data.motherPhone && !phoneRegex.test(data.motherPhone)) e.motherPhone = 'Must be exactly 10 digits';
+        if (data.motherEmail && !emailRegex.test(data.motherEmail)) e.motherEmail = 'Invalid email format';
+        if (data.guardianPhone && !phoneRegex.test(data.guardianPhone)) e.guardianPhone = 'Must be exactly 10 digits';
+        if (data.guardianEmail && !emailRegex.test(data.guardianEmail)) e.guardianEmail = 'Invalid email format';
+        if (data.emergencyContact && !phoneRegex.test(data.emergencyContact)) e.emergencyContact = 'Must be exactly 10 digits';
         return e;
     };
 
@@ -166,15 +154,8 @@ function AddNewStudent() {
         return true;
     };
 
-    // 1. Add this ref at the top of the component (with other refs)
-    const formTopRef = useRef(null);
+    const scrollToTop = () => formTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
-    // 2. Create a helper scroll function
-    const scrollToTop = () => {
-        formTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    };
-
-    // 3. Update handlers to use it
     const handleNextTab = () => {
         if (!validatePersonalDetails()) return;
         setActiveTab('family');
@@ -193,17 +174,15 @@ function AddNewStudent() {
         if (!validatePersonalDetails()) { setActiveTab('personal'); return; }
         if (!validateFamilyDetails()) return;
         setIsSubmitting(true);
-        const loadingToast = toast.loading("Adding student...");
+        const loadingToast = toast.loading(AS.LOADING);
         try {
-            const nameParts = formData.name.trim().split(" ");
+            const nameParts = formData.name.trim().split(' ');
             const firstName = nameParts[0];
-            const lastName = nameParts.slice(1).join(" ").trim() || firstName;
+            const lastName = nameParts.slice(1).join(' ').trim() || firstName;
             const generatedAdmissionNumber = formData.admissionNumber.trim()
                 ? formData.admissionNumber.trim()
                 : `DPIS-${Math.floor(10000 + Math.random() * 90000)}`;
 
-            // ── Build payload — do NOT include profileImageUrl so the backend
-            //    sets it automatically from the uploaded image file. ─────────
             const apiPayload = {
                 admissionNumber: generatedAdmissionNumber,
                 rollNumber: formData.rollNumber.trim() || null,
@@ -243,20 +222,15 @@ function AddNewStudent() {
                 remarks: null,
             };
 
-            console.log("📦 API PAYLOAD:", JSON.stringify(apiPayload, null, 2));
-
-            // Pass profileImage as second argument so the API function appends
-            // it as the "image" part of the multipart/form-data request.
             const response = await createStudents(apiPayload, profileImage);
-            console.log("✅ Create Student Response:", response);
-
+            console.log('✅ Create Student Response:', response);
             toast.dismiss(loadingToast);
-            toast.success("Student added successfully ✅");
-            setTimeout(() => navigate("/students"), 500);
+            toast.success(AS.SUCCESS);
+            setTimeout(() => navigate('/students'), 500);
         } catch (err) {
             toast.dismiss(loadingToast);
-            toast.error(err.message || "Failed to add student ❌");
-            console.error("❌ Submit error:", err);
+            toast.error(err.message || 'Failed to add student ❌');
+            console.error('❌ Submit error:', err);
         } finally {
             setIsSubmitting(false);
         }
@@ -270,11 +244,11 @@ function AddNewStudent() {
                 <button onClick={() => navigate(-1)}
                     className="flex items-center cursor-pointer bg-gray-600 p-2 rounded-xl text-white gap-2 hover:bg-gray-900 transition-colors mb-4">
                     <ChevronLeft className="w-5 h-5" />
-                    <span className="hidden sm:inline">Back to List</span>
+                    <span className="hidden sm:inline">{C.BACK_TO_LIST}</span>
                 </button>
                 <div className="mb-6">
-                    <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Add New Student</h1>
-                    <p className="text-sm sm:text-base text-gray-500">Enter the details below to onboard a new student into the system.</p>
+                    <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">{AS.PAGE_TITLE}</h1>
+                    <p className="text-sm sm:text-base text-gray-500">{AS.SUBTITLE}</p>
                 </div>
                 <form onSubmit={handleSubmit}>
                     <div className="bg-white rounded-lg shadow">
@@ -283,13 +257,13 @@ function AddNewStudent() {
                                 <button type="button" onClick={() => setActiveTab('personal')}
                                     className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'personal' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
                                     <User size={20} />
-                                    <span className="hidden sm:inline">Personal Details</span>
+                                    <span className="hidden sm:inline">{AS.TABS.PERSONAL}</span>
                                     <span className="sm:hidden">Personal</span>
                                 </button>
                                 <button type="button" onClick={() => handleTabClick('family')}
                                     className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'family' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
                                     <Users size={20} />
-                                    <span className="hidden sm:inline">Family Details</span>
+                                    <span className="hidden sm:inline">{AS.TABS.FAMILY}</span>
                                     <span className="sm:hidden">Family</span>
                                 </button>
                             </nav>
@@ -300,23 +274,17 @@ function AddNewStudent() {
                                     {/* ── Profile Photo Upload ── */}
                                     <div className="mb-6">
                                         <label className="block font-semibold text-gray-600 text-sm mb-3">
-                                            Profile Photo <span className="text-red-600 ml-1">*</span>
+                                            {AS.PROFILE_PHOTO.LABEL} <span className="text-red-600 ml-1">*</span>
                                         </label>
                                         <div className="flex items-center gap-5">
-                                            {/* Avatar preview */}
                                             <div className="relative shrink-0">
                                                 <div className="w-20 h-20 rounded-full overflow-hidden bg-blue-100 border-2 border-blue-200 flex items-center justify-center">
                                                     {imagePreview ? (
-                                                        <img
-                                                            src={imagePreview}
-                                                            alt="Preview"
-                                                            className="w-full h-full object-cover"
-                                                        />
+                                                        <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
                                                     ) : (
                                                         <User className="w-8 h-8 text-blue-400" />
                                                     )}
                                                 </div>
-                                                {/* Camera overlay button */}
                                                 <button
                                                     type="button"
                                                     onClick={() => fileInputRef.current?.click()}
@@ -326,7 +294,6 @@ function AddNewStudent() {
                                                 </button>
                                             </div>
 
-                                            {/* Upload area */}
                                             <div className="flex-1">
                                                 {!imagePreview ? (
                                                     <button
@@ -335,8 +302,8 @@ function AddNewStudent() {
                                                         className="w-full border-2 border-dashed border-blue-300 hover:border-blue-500 bg-blue-50 hover:bg-blue-100 rounded-lg p-4 text-center transition-colors cursor-pointer"
                                                     >
                                                         <Camera className="w-5 h-5 text-blue-400 mx-auto mb-1" />
-                                                        <p className="text-sm font-medium text-blue-600">Click to upload photo</p>
-                                                        <p className="text-xs text-gray-400 mt-0.5">JPEG or PNG, max 10 MB</p>
+                                                        <p className="text-sm font-medium text-blue-600">{AS.PROFILE_PHOTO.CTA}</p>
+                                                        <p className="text-xs text-gray-400 mt-0.5">{AS.PROFILE_PHOTO.FORMAT_HELP}</p>
                                                     </button>
                                                 ) : (
                                                     <div className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-lg">
@@ -352,7 +319,7 @@ function AddNewStudent() {
                                                                 onClick={() => fileInputRef.current?.click()}
                                                                 className="text-xs px-2.5 py-1 bg-white border border-green-300 text-green-700 rounded-md hover:bg-green-50 transition-colors"
                                                             >
-                                                                Change
+                                                                {AS.PROFILE_PHOTO.CHANGE}
                                                             </button>
                                                             <button
                                                                 type="button"
@@ -366,8 +333,6 @@ function AddNewStudent() {
                                                 )}
                                             </div>
                                         </div>
-
-                                        {/* Hidden file input */}
                                         <input
                                             ref={fileInputRef}
                                             type="file"
@@ -384,17 +349,14 @@ function AddNewStudent() {
                                     />
                                     <div className="grid lg:grid-cols-2 sm:grid-cols-1 gap-4 mt-4">
                                         <div>
-                                            <label htmlFor="rollNumber" className='block font-semibold text-gray-600 text-sm mb-2'>
-                                                Roll Number<span className="text-red-600 ml-1">*</span>
+                                            <label htmlFor="rollNumber" className="block font-semibold text-gray-600 text-sm mb-2">
+                                                {AS.ROLL_LABEL}<span className="text-red-600 ml-1">*</span>
                                             </label>
                                             <input
-                                                type="text"
-                                                id="rollNumber"
-                                                name="rollNumber"
-                                                value={formData.rollNumber}
-                                                onChange={handleInputChange}
-                                                placeholder="Enter roll number"
-                                                className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                                                type="text" id="rollNumber" name="rollNumber"
+                                                value={formData.rollNumber} onChange={handleInputChange}
+                                                placeholder={AS.ROLL_PLACEHOLDER}
+                                                className="bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                             />
                                         </div>
                                     </div>
@@ -414,22 +376,22 @@ function AddNewStudent() {
                             <div className="flex flex-col sm:flex-row justify-end gap-3">
                                 <button type="button" onClick={handleDiscard}
                                     className="px-6 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
-                                    Discard Changes
+                                    {C.DISCARD_CHANGES}
                                 </button>
                                 {activeTab === 'personal' ? (
                                     <button type="button" onClick={handleNextTab}
                                         className="px-6 py-2.5 text-sm font-medium rounded-lg transition-all bg-blue-500 hover:bg-blue-600 cursor-pointer text-white flex items-center gap-2">
-                                        Next <ChevronLeft className="w-4 h-4 rotate-180" />
+                                        {AS.NEXT} <ChevronLeft className="w-4 h-4 rotate-180" />
                                     </button>
                                 ) : (
                                     <button disabled={isSubmitting} type="button" onClick={handleSaveDetails}
                                         className={`px-6 py-2.5 text-sm font-medium rounded-lg transition-all ${isSubmitting ? 'bg-blue-300 cursor-not-allowed text-white' : 'bg-blue-500 hover:bg-blue-600 cursor-pointer text-white'}`}>
                                         {isSubmitting ? (
                                             <span className="flex items-center justify-center gap-2">
-                                                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                                                Adding...
+                                                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                                {AS.SUBMIT_LOADING}
                                             </span>
-                                        ) : 'Save Details'}
+                                        ) : AS.SAVE}
                                     </button>
                                 )}
                             </div>

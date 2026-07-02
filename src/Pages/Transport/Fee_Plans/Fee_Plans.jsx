@@ -12,7 +12,7 @@ import {
   getTransportFeePlans,
   activateTransportFeePlan,
   deactivateTransportFeePlan,
-} from "../../../Api/TransportAPI";
+} from "../../../Api/Transport/TransportAPI";
 
 const freqColors = {
   MONTHLY: "bg-blue-100 text-blue-700",

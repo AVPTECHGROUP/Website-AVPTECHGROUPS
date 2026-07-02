@@ -11,7 +11,7 @@ import {
   getTransportStaff,
   activateTransportStaff,
   deactivateTransportStaff,
-} from "../../Api/TransportAPI";
+} from "../../Api/Transport/TransportAPI";
 import { toast } from "react-toastify";
 
 const ROLE_OPTIONS = [

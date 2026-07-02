@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { CheckCircle2, Copy, Check, X, Key, Eye, EyeOff, RefreshCw } from "lucide-react";
-import { updateUserPassword } from "../../Api/userManagementAPI";
+import { updateUserPassword } from "../../Api/StaffManagement/userManagementAPI";
 
 const getPasswordStrength = (pwd) => {
   if (!pwd || pwd.length < 8) return null;

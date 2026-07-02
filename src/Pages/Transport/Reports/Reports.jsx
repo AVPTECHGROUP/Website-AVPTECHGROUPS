@@ -4,7 +4,7 @@ import VehicleCapacityTab from "./VehicleCapaityTab";
 import StaffAssignmentsTab from "./StaffAssignmentsTab";
 import StudentFeeTab from "./StudentFeeTab";
 import { toast } from "react-toastify";
-import { getActiveRoutes, getRouteStudentsReport } from "../../../Api/TransportAPI";
+import { getActiveRoutes, getRouteStudentsReport } from "../../../Api/Transport/TransportAPI";
 
 const typeColors = {
   "BOTH": "bg-blue-100 text-blue-700",

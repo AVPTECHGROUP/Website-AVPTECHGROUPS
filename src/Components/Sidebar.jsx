@@ -44,9 +44,9 @@ const menuSections = [
     section: 'ACADEMICS',
     items: [
       {
-        id: 'academics', icon: GraduationCap, label: 'Academics', route: '/subjectsmaster',
+        id: 'academics', icon: GraduationCap, label: 'Academics', route: '/subjectMaster',
         subItems: [
-          { label: 'Subjects', route: '/subjectsmaster', permission: P.ACADEMIC_VIEW },
+          { label: 'Subjects', route: '/subjectMaster', permission: P.ACADEMIC_VIEW },
           { label: 'Class & Sections', route: '/academics/classSections', permission: P.ACADEMIC_YEAR_MANAGE },
           { label: 'HomeWork', route: '/homework', permission: P.HOMEWORK_VIEW },
           { label: 'Time Table', route: '/schedule', permission: P.TIMETABLE_VIEW },
@@ -164,11 +164,11 @@ const menuSections = [
         ]
       },
       {
-        id: 'FeeManagement', icon: IndianRupee, label: 'Fee Management', route: '/feemanagement',
+        id: 'FeeManagement', icon: IndianRupee, label: 'Fee Management', route: '/feeManagement',
         permission: P.FEE_VIEW,
         subItems: [
-          { label: 'Fee Config', route: '/feemanagement/config', permission: P.FEE_STRUCTURE_MANAGE },
-          { label: 'Collection and History', route: '/feemanagement/collections', permission: P.FEE_COLLECT },
+          { label: 'Fee Config', route: '/feeManagement/config', permission: P.FEE_STRUCTURE_MANAGE },
+          { label: 'Collection and History', route: '/feeManagement/collections', permission: P.FEE_COLLECT },
         ]
       }
     ]
