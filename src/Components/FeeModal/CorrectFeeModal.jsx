@@ -3,40 +3,45 @@
 // - On submit: calls createFeeCollection API, returns receipt data via onSubmit
 // - Shows toast on success/error
 
-import React, { useEffect, useState } from 'react';
-import { createFeeCollection } from '../../Api/FeeManagement/FeeCollectionApi';
-import { getOutstandingFees } from '../../Api/FeeManagement/FeeCollectionApi';
+import React, { useEffect, useRef, useState } from 'react';
+import { createFeeCollection } from '../../Api/FeeCollectionApi';
+import { getOutstandingFees } from '../../Api/FeeCollectionApi';
 import { useToast } from '../Toast/Toast';
 
 const PAYMENT_MODES = [
-  { value: 'CASH',   label: 'Cash',   icon: '💵' },
+  { value: 'CASH', label: 'Cash', icon: '💵' },
   { value: 'ONLINE', label: 'Online', icon: '📲' },
   { value: 'CHEQUE', label: 'Cheque', icon: '🏦' },
-  { value: 'DD',     label: 'D.D.',   icon: '📄' },
+  { value: 'DD', label: 'D.D.', icon: '📄' },
 ];
 
 const fmtINR = (n) => n == null ? '—' : `₹${Number(n).toLocaleString('en-IN')}`;
-const today  = () => new Date().toISOString().split('T')[0];
+const today = () => new Date().toISOString().split('T')[0];
+const SEARCH_DEBOUNCE_MS = 300;
 
 const CollectFeeModal = ({ isOpen, onClose, student: initialStudent, onSubmit }) => {
   const { show: toast } = useToast();
 
   // ── State ──────────────────────────────────────────────────────────────────
-  const [student,     setStudent]     = useState(null);
+  const [student, setStudent] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
-  const [searching,   setSearching]   = useState(false);
+  const [searching, setSearching] = useState(false);
 
-  const [amountPaid,   setAmountPaid]   = useState('');
-  const [discount,     setDiscount]     = useState('');
+  const [amountPaid, setAmountPaid] = useState('');
+  const [discount, setDiscount] = useState('');
   const [discountNote, setDiscountNote] = useState('');
-  const [lateFine,     setLateFine]     = useState('');
-  const [paymentMode,  setPaymentMode]  = useState('CASH');
-  const [paymentDate,  setPaymentDate]  = useState(today());
-  const [referenceNo,  setReferenceNo]  = useState('');
-  const [remarks,      setRemarks]      = useState('');
+  const [lateFine, setLateFine] = useState('');
+  const [paymentMode, setPaymentMode] = useState('CASH');
+  const [paymentDate, setPaymentDate] = useState(today());
+  const [referenceNo, setReferenceNo] = useState('');
+  const [remarks, setRemarks] = useState('');
 
   const [submitting, setSubmitting] = useState(false);
+
+  // Debounce + race-condition guards for search
+  const debounceRef = useRef(null);
+  const searchSeqRef = useRef(0);
 
   // ── Pre-fill when student prop changes ────────────────────────────────────
   useEffect(() => {
@@ -59,26 +64,58 @@ const CollectFeeModal = ({ isOpen, onClose, student: initialStudent, onSubmit })
     setRemarks('');
   }, [isOpen, initialStudent]);
 
-  // ── Student search (outstanding fees without student pre-selected) ────────
-  const handleSearch = async (q) => {
-    setSearchQuery(q);
-    if (q.trim().length < 2) { setSearchResults([]); return; }
+  // Clear any pending debounce timer when modal closes/unmounts
+  useEffect(() => {
+    if (!isOpen && debounceRef.current) {
+      clearTimeout(debounceRef.current);
+      debounceRef.current = null;
+    }
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [isOpen]);
+
+  // ── Student search (debounced, race-safe) ──────────────────────────────────
+  const runSearch = async (q) => {
+    const mySeq = ++searchSeqRef.current;
     setSearching(true);
     try {
       // Outstanding fees endpoint returns all — client-side filter by name/code
       const res = await getOutstandingFees({});
-      const filtered = (res.records || []).filter(r => {
+      // Ignore this result if a newer search has started since this one fired
+      if (mySeq !== searchSeqRef.current) return;
+
+      const records = res?.records || res?.data?.content || res?.content || [];
+      const qLow = q.toLowerCase();
+      const filtered = records.filter((r) => {
         const name = (r.studentName || '').toLowerCase();
         const code = (r.studentCode || '').toLowerCase();
-        const qLow = q.toLowerCase();
         return name.includes(qLow) || code.includes(qLow);
       }).slice(0, 8);
+
       setSearchResults(filtered);
     } catch (err) {
-      toast('Search failed: ' + err.message, 'error');
+      if (mySeq === searchSeqRef.current) {
+        toast('Search failed: ' + err.message, 'error');
+      }
     } finally {
-      setSearching(false);
+      if (mySeq === searchSeqRef.current) setSearching(false);
     }
+  };
+
+  const handleSearch = (q) => {
+    setSearchQuery(q);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    if (q.trim().length < 2) {
+      setSearchResults([]);
+      setSearching(false);
+      // Bump sequence so any in-flight search response gets ignored
+      searchSeqRef.current++;
+      return;
+    }
+
+    debounceRef.current = setTimeout(() => runSearch(q), SEARCH_DEBOUNCE_MS);
   };
 
   const selectStudent = (s) => {
@@ -87,26 +124,30 @@ const CollectFeeModal = ({ isOpen, onClose, student: initialStudent, onSubmit })
     setLateFine(String(s.lateFine || ''));
     setSearchResults([]);
     setSearchQuery('');
+    searchSeqRef.current++; // invalidate any pending search
   };
 
   // ── Derived values ─────────────────────────────────────────────────────────
-  const totalDue      = student?.balance      || 0;
-  const totalFee      = student?.totalFee     || 0;
-  const paid          = parseFloat(amountPaid)  || 0;
-  const discountVal   = parseFloat(discount)    || 0;
-  const lateFineVal   = parseFloat(lateFine)    || 0;
-  const netPayable    = Math.max(0, totalDue - discountVal + lateFineVal);
-  const balanceAfter  = Math.max(0, totalDue - paid - discountVal);
+  const totalDue = student?.balance || 0;
+  const totalFee = student?.totalFee || 0;
+  const paid = parseFloat(amountPaid) || 0;
+  const discountVal = parseFloat(discount) || 0;
+  const lateFineVal = parseFloat(lateFine) || 0;
+
+  // Total amount the student actually owes for this period, after discount, plus any late fine
+  const totalObligation = Math.max(0, totalDue - discountVal + lateFineVal);
+  // What remains after this payment is applied
+  const balanceAfter = Math.max(0, totalObligation - paid);
 
   // ── Validate ───────────────────────────────────────────────────────────────
   const validate = () => {
-    if (!student)       { toast('Please select a student', 'warning');     return false; }
-    if (!paid || paid <= 0) { toast('Enter a valid amount', 'warning');    return false; }
-    if (paid > netPayable + 0.01) {
-      toast(`Amount cannot exceed balance ₹${netPayable.toLocaleString('en-IN')}`, 'warning');
+    if (!student) { toast('Please select a student', 'warning'); return false; }
+    if (!paid || paid <= 0) { toast('Enter a valid amount', 'warning'); return false; }
+    if (paid > totalObligation + 0.01) {
+      toast(`Amount cannot exceed balance ₹${totalObligation.toLocaleString('en-IN')}`, 'warning');
       return false;
     }
-    if (!paymentDate)   { toast('Select a payment date', 'warning');       return false; }
+    if (!paymentDate) { toast('Select a payment date', 'warning'); return false; }
     if ((paymentMode === 'ONLINE' || paymentMode === 'CHEQUE' || paymentMode === 'DD') && !referenceNo.trim()) {
       toast('Reference number is required for this payment mode', 'warning');
       return false;
@@ -120,37 +161,40 @@ const CollectFeeModal = ({ isOpen, onClose, student: initialStudent, onSubmit })
     setSubmitting(true);
 
     const payload = {
-      studentId:      student.studentId || student.id,
+      studentId: student.studentId || student.id,
       feeStructureId: student.feeStructureId,
-      amountPaid:     paid,
-      discount:       discountVal || 0,
+      amountPaid: paid,
+      discount: discountVal || 0,
       discountReason: discountNote || '',
-      lateFine:       lateFineVal  || 0,
+      lateFine: lateFineVal || 0,
       paymentMode,
       paymentDate,
-      referenceNo:    referenceNo || '',
-      remarks:        remarks     || '',
+      referenceNo: referenceNo || '',
+      remarks: remarks || '',
     };
 
     try {
-      const data = await createFeeCollection(payload);
-      toast(`Fee collected successfully! Receipt: ${data?.data?.receiptNo || ''}`, 'success');
+      const res = await createFeeCollection(payload);
+      // Defensive: handle both { data: {...} } and unwrapped {...} response shapes
+      const data = res?.data || res || {};
+
+      toast(`Fee collected successfully! Receipt: ${data.receiptNo || ''}`, 'success');
       // Pass receipt data up to parent for ReceiptModal
       onSubmit?.({
-        receiptNo:    data?.data?.receiptNo,
+        receiptNo: data.receiptNo,
         paymentDate,
-        studentName:  student.studentName,
-        studentCode:  student.studentCode,
-        class:        student.className || student.class,
-        period:       student.periodName || student.period,
-        components:   data?.data?.components || student.components || [],
-        amountPaid:   paid,
-        discount:     discountVal,
-        lateFine:     lateFineVal,
+        studentName: student.studentName,
+        studentCode: student.studentCode,
+        class: student.className || student.class,
+        period: student.periodName || student.period,
+        components: data.components || student.components || [],
+        amountPaid: paid,
+        discount: discountVal,
+        lateFine: lateFineVal,
         paymentMode,
-        balanceAfter: data?.data?.balanceAfter ?? balanceAfter,
-        referenceNo:  referenceNo || '',
-        recordedBy:   data?.data?.recordedBy || '',
+        balanceAfter: data.balanceAfter ?? balanceAfter,
+        referenceNo: referenceNo || '',
+        recordedBy: data.recordedBy || '',
       });
     } catch (err) {
       toast(`Payment failed: ${err.message}`, 'error');
@@ -303,11 +347,10 @@ const CollectFeeModal = ({ isOpen, onClose, student: initialStudent, onSubmit })
                     <button
                       key={m.value}
                       onClick={() => setPaymentMode(m.value)}
-                      className={`flex-1 flex flex-col items-center gap-1 border rounded-lg py-2.5 transition-all text-[10.5px] font-bold ${
-                        paymentMode === m.value
+                      className={`flex-1 flex flex-col items-center gap-1 border rounded-lg py-2.5 transition-all text-[10.5px] font-bold ${paymentMode === m.value
                           ? 'border-[#1A3A5C] bg-[#EEF4FF] text-[#1A3A5C]'
                           : 'border-gray-200 text-gray-600 hover:border-gray-300'
-                      }`}
+                        }`}
                     >
                       <span className="text-[18px]">{m.icon}</span>
                       {m.label}
@@ -362,7 +405,7 @@ const CollectFeeModal = ({ isOpen, onClose, student: initialStudent, onSubmit })
                   </span>
                 </div>
                 <div className="text-white font-extrabold text-[15px]">
-                  Net Payable: {fmtINR(paid)}
+                  Net Payable: {fmtINR(totalObligation)}
                 </div>
               </div>
             </>
@@ -380,11 +423,10 @@ const CollectFeeModal = ({ isOpen, onClose, student: initialStudent, onSubmit })
           <button
             onClick={handleSubmit}
             disabled={submitting || !student}
-            className={`px-5 py-2 text-[12.5px] font-semibold text-white rounded-lg transition-colors flex items-center gap-2 ${
-              submitting || !student
+            className={`px-5 py-2 text-[12.5px] font-semibold text-white rounded-lg transition-colors flex items-center gap-2 ${submitting || !student
                 ? 'bg-green-300 cursor-not-allowed'
                 : 'bg-green-700 hover:bg-green-800'
-            }`}
+              }`}
           >
             {submitting && <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}
             {submitting ? 'Processing...' : 'Collect & Generate Receipt'}

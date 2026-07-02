@@ -442,10 +442,10 @@ export default function StudentAttendanceRegistration() {
                         Array(4).fill(0).map((_, i) => <CardLoader key={i} />)
                     ) : (
                         <>
-                            <CardComponent IconName={GraduationCap} keyName="Total RegisteredStudents" val={`${stats?.totalStudents ?? 0} `} iconTxColor="text-blue-600" iconBgColor="bg-blue-100" />
+                            <CardComponent IconName={GraduationCap} keyName="Total Registered Students" val={`${stats?.totalStudents ?? 0} `} iconTxColor="text-blue-600" iconBgColor="bg-blue-100" />
                             <CardComponent IconName={UserCheck} keyName="Students Enrolled" val={`${stats?.studentsEnrolled ?? 0} / ${stats?.totalStudents ?? 0}`} iconTxColor="text-emerald-600" iconBgColor="bg-emerald-100" />
                             <CardComponent IconName={UserX} keyName="Not Enrolled" val={`${(stats?.totalStudents ?? 0) - (stats?.studentsEnrolled ?? 0)} `} iconTxColor="text-red-500" iconBgColor="bg-red-100" />
-                            <CardComponent IconName={Users} keyName="Enrollment completed" val={`${stats?.enrollmentPercentage ?? 0}% `} iconTxColor="text-purple-600" iconBgColor="bg-purple-100" />
+                            <CardComponent IconName={Users} keyName="Enrollment completed" val={`${stats?.studentEnrollmentPercentage ?? 0}% `} iconTxColor="text-purple-600" iconBgColor="bg-purple-100" />
                         </>
                     )}
                 </div>

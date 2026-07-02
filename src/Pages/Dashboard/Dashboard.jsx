@@ -210,7 +210,7 @@ export default function Dashboard() {
   const attendanceLate = stats?.attendanceLate || 0;
   const attendanceAbsent = stats?.attendanceAbsent || 0;
   const attendanceOnLeave = stats?.attendanceOnLeave || 0;
-  const attendancePending = stats?.attendancePendingApproval || 0;
+  const attendancePending = stats?.pendingAttendanceApprovals || 0;
   const presentPct = attendanceTotalRecords > 0
     ? Math.round((attendancePresent / attendanceTotalRecords) * 100) : 0;
 

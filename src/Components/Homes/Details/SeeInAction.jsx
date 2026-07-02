@@ -2,8 +2,7 @@
  * SeeInAction.jsx  –  Final, production-ready version
  *
  * Desktop  → beautiful 5-card grid with a large "hero" card in the centre-top
- *             and 4 supporting cards below.  GSAP handles only enter animations
- *             and hover lifts — no absolute-positioned radial chaos.
+ *             and 4 supporting cards below. Native CSS handles smooth hover transforms.
  *
  * Mobile   → full-width swipe carousel with dots + arrows.
  *
@@ -55,48 +54,61 @@ function useIsMobile(bp = 768) {
 
 // ─── DeviceCard ───────────────────────────────────────────────────────────────
 
-function DeviceCard({ src, label, isPhone, big = false, index = 0 }) {
+function DeviceCard({ src, label, isPhone, big = false, index = 0, onHover }) {
   const ref = useRef(null)
-  const init = useRef(false)
+  const [isHovered, setIsHovered] = useState(false)
 
+  // Section entry animation (Only runs once when component mounts)
   useEffect(() => {
-    if (!ref.current || init.current) return
-    init.current = true
+    if (!ref.current) return
     gsap.fromTo(ref.current,
-      { opacity: 0, y: 36, scale: 0.93 },
+      { opacity: 0, y: 24 },
       {
-        opacity: 1, y: 0, scale: 1,
-        duration: 0.7, ease: 'power3.out',
-        delay: index * 0.09,
-        scrollTrigger: { trigger: ref.current, start: 'top 88%', once: true },
+        opacity: 1, y: 0,
+        duration: 0.5, ease: 'power3.out',
+        delay: index * 0.06,
       }
     )
-  }, [index])
+  }, [])
 
-  const onEnter = () => gsap.to(ref.current, { y: -8, scale: 1.03, duration: 0.3, ease: 'power2.out' })
-  const onLeave = () => gsap.to(ref.current, { y: 0, scale: 1, duration: 0.3, ease: 'power2.out' })
+  // Quick elegant fade transition for the main Hero card when hover image changes
+  useEffect(() => {
+    if (big && ref.current) {
+      gsap.fromTo(ref.current, { opacity: 0.6 }, { opacity: 1, duration: 0.25, ease: 'power2.out' })
+    }
+  }, [src, big])
 
   return (
     <div
       ref={ref}
-      onMouseEnter={onEnter}
-      onMouseLeave={onLeave}
+      onMouseEnter={() => {
+        setIsHovered(true)
+        if (onHover) onHover(true) // ─── Trigger dynamic hero image change ───
+      }}
+      onMouseLeave={() => {
+        setIsHovered(false)
+        if (onHover) onHover(false) // ─── Reset to default dashboard ───
+      }}
       style={{
-        opacity: 0,                       // GSAP will reveal
+        opacity: 0, 
         borderRadius: 16,
         background: 'rgba(8,20,38,0.92)',
-        border: '1px solid rgba(45,212,191,0.14)',
-        boxShadow: '0 12px 48px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.04)',
+        border: isHovered ? '1px solid rgba(45,212,191,0.45)' : '1px solid rgba(45,212,191,0.14)',
+        boxShadow: isHovered 
+          ? '0 20px 50px rgba(0,0,0,0.65), 0 0 25px rgba(45,212,191,0.15), inset 0 1px 0 rgba(255,255,255,0.04)'
+          : '0 12px 48px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.04)',
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         padding: big ? 10 : 8,
         gap: 8,
-        cursor: 'default',
+        cursor: big ? 'default' : 'pointer',
         willChange: 'transform',
         backdropFilter: 'blur(20px)',
-        transition: 'border-color 0.25s',
+        WebkitBackdropFilter: 'blur(20px)',
+        transform: isHovered && !big ? 'translateY(-8px) scale(1.03)' : 'translateY(0) scale(1)',
+        transition: 'transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), border-color 0.3s ease, box-shadow 0.3s ease',
       }}
     >
       {/* Screen frame */}
@@ -110,7 +122,7 @@ function DeviceCard({ src, label, isPhone, big = false, index = 0 }) {
         <img
           src={src}
           alt={label}
-          loading="lazy"
+          loading="eager"
           draggable={false}
           style={{ width: '100%', height: 'auto', display: 'block', userSelect: 'none' }}
         />
@@ -121,7 +133,8 @@ function DeviceCard({ src, label, isPhone, big = false, index = 0 }) {
         fontWeight: 700,
         letterSpacing: '0.13em',
         textTransform: 'uppercase',
-        color: '#64748b',
+        color: isHovered && !big ? '#2dd4bf' : '#64748b',
+        transition: 'color 0.3s ease',
       }}>
         {label}
       </span>
@@ -130,18 +143,21 @@ function DeviceCard({ src, label, isPhone, big = false, index = 0 }) {
 }
 
 // ─── DesktopGrid ──────────────────────────────────────────────────────────────
-// Layout:   1 big hero card top-center, then 4 equal cards in a row below.
-// For phone mockups: 3-across grid looks better (portrait cards are narrow).
 
 function DesktopGrid({ images, isPhone }) {
-  const [hero, ...rest] = images          // hero = first image
+  const [defaultHero, ...rest] = images 
+  const [currentHero, setCurrentHero] = useState(defaultHero)
+
+  // Reset hero selection when switching tabs
+  useEffect(() => {
+    setCurrentHero(images[0])
+  }, [images])
 
   if (isPhone) {
     const row1 = images.slice(0, 3)
     const row2 = images.slice(3)
     return (
       <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 24, alignItems: 'center' }}>
-        {/* Row 1 — 3 cards equal width, centred */}
         <div style={{ display: 'flex', gap: 24, justifyContent: 'center', width: '100%', maxWidth: 900 }}>
           {row1.map((img, i) => (
             <div key={i} style={{ flex: '0 0 calc(33.33% - 16px)', maxWidth: 280 }}>
@@ -149,7 +165,6 @@ function DesktopGrid({ images, isPhone }) {
             </div>
           ))}
         </div>
-        {/* Row 2 — 2 cards same width as above, centred */}
         <div style={{ display: 'flex', gap: 24, justifyContent: 'center' }}>
           {row2.map((img, i) => (
             <div key={i + 3} style={{ width: 'calc(33.33% - 16px)', maxWidth: 280, minWidth: 200 }}>
@@ -161,17 +176,30 @@ function DesktopGrid({ images, isPhone }) {
     )
   }
 
-  // Laptop layout: hero on top (wider), 4 smaller below
   return (
     <div style={{ width: '100%', maxWidth: 1000, display: 'flex', flexDirection: 'column', gap: 30, alignItems: 'center' }}>
-      {/* Hero */}
+      {/* Dynamic Hero Card */}
       <div style={{ width: '62%' }}>
-        <DeviceCard src={hero.src} label={hero.label} isPhone={false} big index={0} />
+        <DeviceCard src={currentHero.src} label={currentHero.label} isPhone={false} big index={0} />
       </div>
-      {/* 4-card row */}
+      {/* 4-card row at the bottom */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 26, width: '100%' }}>
         {rest.map((img, i) => (
-          <DeviceCard key={i + 1} src={img.src} label={img.label} isPhone={false} index={i + 1} />
+          <DeviceCard 
+            key={i + 1} 
+            src={img.src} 
+            label={img.label} 
+            isPhone={false} 
+            index={i + 1} 
+            // ─── Pass down hover update callbacks ───
+            onHover={(hovering) => {
+              if (hovering) {
+                setCurrentHero(img) // Show hovered card inside hero
+              } else {
+                setCurrentHero(defaultHero) // Back to Dashboard mockup
+              }
+            }}
+          />
         ))}
       </div>
     </div>
@@ -195,7 +223,6 @@ function MobileCarousel({ images, isPhone }) {
 
   return (
     <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.2rem' }}>
-      {/* Slides */}
       <div style={{ width: '100%', overflow: 'hidden' }}>
         <div ref={trackRef} style={{ display: 'flex', willChange: 'transform' }}>
           {images.map((img, i) => (
@@ -230,7 +257,7 @@ function MobileCarousel({ images, isPhone }) {
           <button key={i} onClick={() => setActive(i)} style={{
             height: 8, width: i === active ? 22 : 8,
             borderRadius: 999, border: 'none', padding: 0, cursor: 'pointer',
-            background: i === active ? 'linear-gradient(90deg,#2dd4bf,#fbbf24)' : 'rgba(255,255,255,0.15)',
+            background: i === active ? 'linear-gradient(90deg,#2dd4bf,#34d399 50%,#fbbf24)' : 'rgba(255,255,255,0.15)',
             transition: 'width 0.28s, background 0.28s',
           }} />
         ))}
@@ -268,7 +295,7 @@ export default function SeeInAction() {
   const images = activeTab === 'admin' ? LAPTOP_IMAGES : MOBILE_IMAGES
   const isPhone = activeTab === 'parent'
 
-  // Section heading entrance
+  // Header content entrance trigger
   useEffect(() => {
     const ctx = gsap.context(() => {
       gsap.fromTo(
@@ -392,7 +419,7 @@ const S = {
     WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
   },
   sub: {
-    fontSize: 'clamp(0.88rem,1.5vw,1.02rem)', color: '#64748b',
+    fontSize: 'clamp(0.88rem,1.5vw,1.02rem)', color: '#94a3b8',
     margin: '0.85rem auto 0', maxWidth: 480, lineHeight: 1.68,
   },
   pill: {
@@ -420,13 +447,12 @@ const S = {
     transition: 'color 0.22s', whiteSpace: 'nowrap',
   },
   hint: {
-    fontSize: '0.73rem', color: '#334155',
+    fontSize: '0.73rem', color: '#94a3b8',
     letterSpacing: '0.04em', margin: 0, textAlign: 'center',
     position: 'relative', zIndex: 1,
   },
 }
 
-// Inject font + pulse keyframe once
 if (typeof document !== 'undefined' && !document.getElementById('sia-kf')) {
   const s = document.createElement('style')
   s.id = 'sia-kf'

@@ -29,9 +29,9 @@ const DesignCard = ({ icon, title, description, features, accentColor }) => {
 
     return (
         <div
-            className={`group relative bg-white rounded-2xl p-5 sm:p-6 lg:p-7 flex flex-col gap-3 sm:gap-4
+            className={`group relative bg-theme-card border border-theme-border rounded-2xl p-5 sm:p-6 lg:p-7 flex flex-col gap-3 sm:gap-4
         transition-all duration-300 hover:-translate-y-1.5 cursor-pointer ${colors.hoverShadow}`}
-            style={{ boxShadow: `${colors.shadow}, 0 4px 16px rgba(0,0,0,0.07)` }}
+            style={{ boxShadow: `${colors.shadow}, 0 4px 16px rgba(0,0,0,0.03)` }}
         >
             {/* Icon */}
             <div className={`w-12 h-12 sm:w-13 sm:h-13 lg:w-14 lg:h-14 rounded-2xl ${colors.iconBg} flex items-center justify-center ${colors.iconColor}`}>
@@ -39,15 +39,15 @@ const DesignCard = ({ icon, title, description, features, accentColor }) => {
             </div>
 
             {/* Title */}
-            <h3 className="text-lg sm:text-xl font-bold text-gray-900">{title}</h3>
+            <h3 className="text-lg sm:text-xl font-bold text-theme-text">{title}</h3>
 
             {/* Description */}
-            <p className="text-gray-700 text-xs sm:text-[14px] font-medium leading-relaxed">{description}</p>
+            <p className="text-theme-subtext text-xs sm:text-[14px] font-medium leading-relaxed">{description}</p>
 
             {/* Feature List */}
             <ul className="flex flex-col gap-1.5 sm:gap-2 mt-1">
                 {features.map((feature, i) => (
-                    <li key={i} className="flex items-center gap-2 sm:gap-2.5 text-xs sm:text-sm text-gray-700">
+                    <li key={i} className="flex items-center gap-2 sm:gap-2.5 text-xs sm:text-sm text-theme-subtext">
                         <span className={`w-2 h-2 rounded-full shrink-0 ${colors.dotColor}`} />
                         {feature}
                     </li>

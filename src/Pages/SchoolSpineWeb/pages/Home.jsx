@@ -10,9 +10,8 @@ import TransformSchool from '../../../Components/Homes/Transform_School/Transfor
 
 const Home = () => {
     return (
-        <div className='scroll-smooth'>
+        <div className='scroll-smooth relative bg-theme-bg text-theme-text min-h-screen overflow-x-hidden transition-colors duration-300'>
             <Header />
-            <Mockups />
             <Details />
             <Review />
             <Pricing />

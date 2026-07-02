@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import {
   Users, Search, ChevronDown, AlertTriangle,
   Pencil, ToggleLeft, ToggleRight, Plus, SlidersHorizontal,
-  XCircle, Phone, CheckCircle, XCircle as XCircleIcon,
+  XCircle, Phone,
 } from "lucide-react";
 import AddStaffCard from "../../Components/Transport/AddStaffCard";
 import ActionDropDownComp from "../../Components/CommonComp/ActionDropDownComp";
@@ -12,6 +12,7 @@ import {
   activateTransportStaff,
   deactivateTransportStaff,
 } from "../../Api/Transport/TransportAPI";
+import { toast } from "react-toastify";
 
 const ROLE_OPTIONS = [
   { value: "", label: "All Roles" },
@@ -28,40 +29,6 @@ const roleColors = {
   DRIVER: "bg-blue-100 text-blue-700",
   ATTENDANT: "bg-teal-100 text-teal-700",
 };
-
-// ─── Toast ────────────────────────────────────────────────────────
-let _setToasts = null;
-const toast = {
-  success: (msg) => _setToasts?.((p) => [...p, { id: Date.now(), type: "success", msg }]),
-  error: (msg) => _setToasts?.((p) => [...p, { id: Date.now(), type: "error", msg }]),
-};
-
-function ToastContainer() {
-  const [toasts, setToasts] = useState([]);
-  _setToasts = toasts;
-  const remove = (id) => setToasts((p) => p.filter((t) => t.id !== id));
-  
-  useEffect(() => {
-    if (!toasts.length) return;
-    const t = setTimeout(() => remove(toasts[toasts.length - 1].id), 3500);
-    return () => clearTimeout(t);
-  }, [toasts]);
-
-  return (
-    <div className="fixed bottom-5 right-5 z-[9999] flex flex-col gap-2 items-end pointer-events-none">
-      {toasts.map((t) => (
-        <div key={t.id} className={`flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lg text-sm font-medium pointer-events-auto min-w-[220px] max-w-xs
-          ${t.type === "success" ? "bg-white border border-green-200 text-green-800" : "bg-white border border-red-200 text-red-700"}`}>
-          {t.type === "success"
-            ? <CheckCircle className="w-4 h-4 text-green-500 shrink-0" />
-            : <XCircleIcon className="w-4 h-4 text-red-500 shrink-0" />}
-          <span className="flex-1">{t.msg}</span>
-          <button onClick={() => remove(t.id)} className="text-gray-400 hover:text-gray-600 ml-1">✕</button>
-        </div>
-      ))}
-    </div>
-  );
-}
 
 // ─── Helpers ──────────────────────────────────────────────────────
 function fmtDate(dateStr) {
@@ -218,7 +185,6 @@ export default function Driver_Attendants() {
 
   return (
     <>
-      <ToastContainer />
       <div className="min-h-screen bg-[#f0f2f8] font-sans w-full max-w-full overflow-x-hidden min-w-0 flex flex-col">
 
         {/* Top Header Section */}
@@ -296,7 +262,6 @@ export default function Driver_Attendants() {
             {/* Laptop & Desktop Table View Container Box */}
             <div className="hidden xl:block w-full max-w-full min-w-0 overflow-x-auto">
               <div className="inline-block min-w-full align-middle">
-                {/* Changed min-w configuration to 1000px since 1 full column is reduced */}
                 <table className="w-full text-xs xl:text-sm text-left border-collapse table-auto min-w-[1000px]">
                   <thead>
                     <tr className="bg-gray-50 border-b border-gray-100">
@@ -335,7 +300,6 @@ export default function Driver_Attendants() {
                             <span className={`text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap ${roleColors[s.staffRole] || "bg-gray-100 text-gray-600"}`}>{s.staffRole}</span>
                           </td>
                           
-                          {/* Merged Contact Column: Displays Main phone number + small sub-text layout for Alt Contact */}
                           <td className="px-3 xl:px-4 py-4 text-gray-600 font-medium whitespace-nowrap">
                             <span className="flex items-center gap-1.5">
                               <Phone className="w-3.5 h-3.5 text-gray-400 shrink-0" />

@@ -307,12 +307,21 @@ function SubjectBarChart({ subjectStats, loading }) {
             ) : (
                 <div className="space-y-3.5">
                     {subjectStats.map((sub, idx) => {
-                        const color = subjectColor(idx);
                         const raw = Number(sub.avgPercentage);
-                        const avg = (!isNaN(raw) && raw > 0) ? raw : 0;
+                        const avg = !isNaN(raw) && raw > 0 ? raw : 0;
+
                         const barWidthPct = Math.min((avg / maxVal) * 100, 100);
                         const labelOutside = barWidthPct < 15;
-                        const isFailing = avg < PASS_LINE;
+
+                        let color = "#10b981"; // Green (Good)
+
+                        if (avg < PASS_LINE) {
+                            color = "#ef4444"; // Red
+                        } else if (avg < 50) {
+                            color = "#f59e0b"; // Orange
+                        } else if (avg < 75) {
+                            color = "#3b82f6"; // Blue
+                        }
 
                         return (
                             <div key={sub.subjectId ?? sub.subjectName} className="flex items-center gap-3">
@@ -327,7 +336,7 @@ function SubjectBarChart({ subjectStats, loading }) {
                                                 className="h-full flex items-center transition-all duration-500"
                                                 style={{
                                                     width: `${barWidthPct}%`,
-                                                    backgroundColor: isFailing ? "#ef4444" : color,
+                                                    backgroundColor: color,
                                                     paddingLeft: labelOutside ? 0 : "0.5rem",
                                                 }}
                                             >

@@ -154,7 +154,10 @@ const GradeConfigTab = () => {
       );
       closeModal();
       fetchGrades();
-    } catch { toast.error("Operation failed. Please try again."); }
+    } catch (error) {
+      const errMsg = error?.message || "Operation failed. Please try again.";
+      toast.error(errMsg);
+    }
     finally { setSaving(false); }
   };
 
@@ -301,7 +304,7 @@ const ExamTypeTab = () => {
   const [form, setForm] = useState(ET_INIT);
   const [saving, setSaving] = useState(false);
   const [toggling, setToggling] = useState(null);
-  
+
   const [errors, setErrors] = useState({});
 
 
@@ -339,7 +342,10 @@ const ExamTypeTab = () => {
       );
       closeModal();
       fetchTypes();
-    } catch { toast.error("Operation failed. Please try again."); }
+    } catch (error) { 
+      const errMsg = error?.message || "Operation failed. Please try again.";
+      toast.error(errMsg); 
+    }
     finally { setSaving(false); }
   };
 

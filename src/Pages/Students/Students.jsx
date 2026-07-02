@@ -172,27 +172,24 @@ const Student = () => {
         const base = 'min-w-[28px] h-7 px-1.5 rounded text-xs transition-all font-medium';
         const active = 'bg-blue-500 text-white';
         const inactive = 'text-gray-600 hover:bg-gray-100';
-        const dots = (key) => (
-            <span key={key} className="min-w-[28px] h-7 flex items-center justify-center text-gray-400 text-xs select-none">…</span>
-        );
         const btn = (num) => (
             <button key={num} onClick={() => setPage(num)} className={`${base} ${page === num ? active : inactive}`}>
                 {num}
             </button>
         );
+        const dots = (key) => (
+            <span key={key} className="min-w-[28px] h-7 flex items-center justify-center text-gray-400 text-xs select-none">…</span>
+        );
         if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => btn(i + 1));
-        const items = [];
-        items.push(btn(1));
-        const left = page - 1;
-        const right = page + 1;
-        if (left > 2) items.push(dots('dl'));
-        else if (left === 2) items.push(btn(2));
-        for (let i = Math.max(2, left); i <= Math.min(totalPages - 1, right); i++) items.push(btn(i));
-        if (right < totalPages - 1) items.push(dots('dr'));
-        else if (right === totalPages - 1) items.push(btn(totalPages - 1));
-        items.push(btn(totalPages));
-        return items;
-    };
+        const pages = new Set([1, 2, totalPages - 1, totalPages]);
+        for (let i = Math.max(1, page - 1); i <= Math.min(totalPages, page + 1); i++) pages.add(i);
+        const sorted = Array.from(pages).sort((a, b) => a - b);
+        return sorted.reduce((acc, num, idx) => {
+            if (idx > 0 && num - sorted[idx - 1] > 1) acc.push(dots(`d${idx}`));
+            acc.push(btn(num));
+            return acc;
+        }, []);
+    };  
 
     const PrevBtn = () => (
         <button
@@ -298,7 +295,7 @@ const Student = () => {
 
     return (
         <div className="flex flex-col min-h-screen lg:h-screen lg:overflow-hidden bg-linear-to-b from-sky-50 to-sky-100">
-            <div className="flex flex-col flex-1 lg:overflow-hidden p-3 sm:p-4 gap-3">
+            <div className="flex flex-col flex-1 lg:overflow-hidden p-3 sm:p-4 gap-3 min-h-0">
 
                 {/* ── Page Title ── */}
                 <div>
