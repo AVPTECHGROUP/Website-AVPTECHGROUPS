@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { getAllUserRoles } from '../../../Api/StaffManagement/userManagementAPI';
+import { getAllUserRoles } from '../../../Api/StaffManagement/UserManagementAPI';
 
 const UserPersonalDetailsTab = ({ formData, setFormData, handleInputChange }) => {
     const [enabled, setEnabled] = useState(formData.accountStatus);
