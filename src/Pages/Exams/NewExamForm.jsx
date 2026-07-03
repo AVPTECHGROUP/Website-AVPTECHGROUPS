@@ -6,6 +6,9 @@ import {
 import { createExamEvent } from "../../Api/Academics/Exams";
 import { getSectionSubjectsByClass, getSectionsByClass } from "../../Api/Teachers/TeachersAPI";
 import { EXAM_CONSTS } from "../../Constants/StringConstants/AcademicsConstants";
+
+const NX = EXAM_CONSTS.NEW_EXAM;
+
 // Builds [{ sectionId, sectionName, subjects:[{sectionSubjectId, subjectId, subjectName, subjectCode}] }]
 async function getClassSectionsWithSubjects(classId) {
   const [mappings, sections] = await Promise.all([
@@ -24,7 +27,7 @@ async function getClassSectionsWithSubjects(classId) {
     if (!bySection.has(sectionId)) {
       bySection.set(sectionId, {
         sectionId,
-        sectionName: m.sectionName ?? sectionNameMap.get(sectionId) ?? `Section ${sectionId}`,
+        sectionName: m.sectionName ?? sectionNameMap.get(sectionId) ?? NX.SECTION_FALLBACK(sectionId),
         subjects: [],
       });
     }
@@ -45,10 +48,10 @@ async function getClassSectionsWithSubjects(classId) {
 }
 
 const STEPS = [
-  { id: 1, label: "Event Details" },
-  { id: 2, label: "Select Classes" },
-  { id: 3, label: "Configure Subjects" },
-  { id: 4, label: "Review & Create" },
+  { id: 1, label: NX.STEP_EVENT },
+  { id: 2, label: NX.STEP_CLASSES },
+  { id: 3, label: NX.STEP_SUBJECTS },
+  { id: 4, label: NX.STEP_CONFIRM },
 ];
 
 // ─── Stepper ────────────────────────────────────────────────────────────────
@@ -56,7 +59,7 @@ function Stepper({ current }) {
   return (
     <div className="flex items-center px-4 sm:px-6 py-4 border-b border-gray-100 overflow-x-auto">
       {STEPS.map((s, i) => {
-        const done   = s.id < current;
+        const done = s.id < current;
         const active = s.id === current;
         return (
           <div key={s.id} className="flex items-center shrink-0">
@@ -94,32 +97,32 @@ export default function CreateExamEventWizard({
 
   // Step 1 — Event Details
   const [form, setForm] = useState({
-    examTypeId:      examTypes[0]?.id ?? "",
-    academicYearId:  currentAcademicYearId ?? academicYears[0]?.id ?? "",
-    name:            "",
-    startDate:       "",
-    endDate:         "",
-    description:     "",
+    examTypeId: examTypes[0]?.id ?? "",
+    academicYearId: currentAcademicYearId ?? academicYears[0]?.id ?? "",
+    name: "",
+    startDate: "",
+    endDate: "",
+    description: "",
   });
 
   // Step 2 — Select Classes
   const [selectedClassIds, setSelectedClassIds] = useState([]);
   const [defaultMarks, setDefaultMarks] = useState({
-    maximumMarks:          100,
-    passingMarks:          33,
-    hasTheoryPractical:    false,
+    maximumMarks: 100,
+    passingMarks: 33,
+    hasTheoryPractical: false,
   });
 
   // Step 3 — Configure Subjects
   const [classSectionsData, setClassSectionsData] = useState({});
-  const [rows, setRows]                           = useState([]);
-  const [loadingSubjects, setLoadingSubjects]     = useState(false);
-  const [activeSectionTab, setActiveSectionTab]   = useState({});
-  const [quickApply, setQuickApply]               = useState({ maximumMarks: 100, passingMarks: 33 });
+  const [rows, setRows] = useState([]);
+  const [loadingSubjects, setLoadingSubjects] = useState(false);
+  const [activeSectionTab, setActiveSectionTab] = useState({});
+  const [quickApply, setQuickApply] = useState({ maximumMarks: 100, passingMarks: 33 });
 
   // Submission state
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError]           = useState(null);
+  const [error, setError] = useState(null);
 
   const classMap = useMemo(
     () => new Map(classes.map(c => [Number(c.id), c])),
@@ -128,18 +131,18 @@ export default function CreateExamEventWizard({
 
   // ── Step 1 validation ────────────────────────────────────────
   const validateStep1 = () => {
-    if (!form.examTypeId)     return "Please select an exam type.";
-    if (!form.academicYearId) return "Please select an academic year.";
-    if (!form.startDate)      return "Start date is required.";
-    if (!form.endDate)        return "End date is required.";
-    if (form.startDate > form.endDate) return "Start date cannot be after end date.";
+    if (!form.examTypeId) return NX.VAL_EXAM_TYPE;
+    if (!form.academicYearId) return NX.VAL_YEAR;
+    if (!form.startDate) return NX.VAL_START;
+    if (!form.endDate) return NX.VAL_END;
+    if (form.startDate > form.endDate) return NX.VAL_DATE_ORDER;
     return null;
   };
 
   // ── Step 2 → 3: fetch sections + subjects per selected class ──
   const goToSubjects = async () => {
     if (selectedClassIds.length === 0) {
-      setError("Please select at least one class.");
+      setError(NX.VAL_CLASS_REQ);
       return;
     }
     setError(null);
@@ -166,21 +169,21 @@ export default function CreateExamEventWizard({
         sections.forEach(sec => {
           sec.subjects.forEach(sub => {
             draftRows.push({
-              key:              sub.sectionSubjectId,
+              key: sub.sectionSubjectId,
               classId,
-              sectionId:        sec.sectionId,
-              sectionName:      sec.sectionName,
-              subjectId:        sub.subjectId,
-              subjectName:      sub.subjectName,
-              subjectCode:      sub.subjectCode,
-              included:         true,
-              maximumMarks:             defaultMarks.maximumMarks,
-              passingMarks:     defaultMarks.passingMarks,
+              sectionId: sec.sectionId,
+              sectionName: sec.sectionName,
+              subjectId: sub.subjectId,
+              subjectName: sub.subjectName,
+              subjectCode: sub.subjectCode,
+              included: true,
+              maximumMarks: defaultMarks.maximumMarks,
+              passingMarks: defaultMarks.passingMarks,
               hasTheoryPractical: defaultMarks.hasTheoryPractical,
-              maximumTheoryMarks:    defaultMarks.hasTheoryPractical ? Math.round(defaultMarks.maximumMarks * 0.7) : 0,
+              maximumTheoryMarks: defaultMarks.hasTheoryPractical ? Math.round(defaultMarks.maximumMarks * 0.7) : 0,
               maximumPracticalMarks: defaultMarks.hasTheoryPractical ? Math.round(defaultMarks.maximumMarks * 0.3) : 0,
-              passingTheoryMarks:    defaultMarks.hasTheoryPractical ? Math.round(defaultMarks.passingMarks  * 0.7) : 0,
-              passingPracticalMarks: defaultMarks.hasTheoryPractical ? Math.round(defaultMarks.passingMarks  * 0.3) : 0,
+              passingTheoryMarks: defaultMarks.hasTheoryPractical ? Math.round(defaultMarks.passingMarks * 0.7) : 0,
+              passingPracticalMarks: defaultMarks.hasTheoryPractical ? Math.round(defaultMarks.passingMarks * 0.3) : 0,
             });
           });
         });
@@ -196,7 +199,7 @@ export default function CreateExamEventWizard({
 
       setStep(3);
     } catch (err) {
-      setError(err?.message || "Failed to load subjects for selected classes.");
+      setError(err?.message || NX.ERR_LOAD_SUB);
     } finally {
       setLoadingSubjects(false);
     }
@@ -223,42 +226,42 @@ export default function CreateExamEventWizard({
     );
 
   // ── Derived summary for Step 4 ───────────────────────────────
-  const includedRows  = rows.filter(r => r.included);
+  const includedRows = rows.filter(r => r.included);
   const summaryByClass = selectedClassIds.map(classId => {
-    const classRows  = rows.filter(r => r.classId === classId);
-    const included   = classRows.filter(r => r.included);
+    const classRows = rows.filter(r => r.classId === classId);
+    const included = classRows.filter(r => r.included);
     const sectionIds = new Set(classRows.map(r => r.sectionId));
     const includedSubjectCount = new Set(included.map(r => r.subjectId)).size;
     const excludedNames = [...new Set(classRows.filter(r => !r.included).map(r => r.subjectName))];
     return {
       classId,
-      className:        classMap.get(Number(classId))?.name ?? `Class ${classId}`,
-      sectionCount:     sectionIds.size,
-      totalSubjects:    new Set(classRows.map(r => r.subjectId)).size,
+      className: classMap.get(Number(classId))?.name ?? NX.CLASS_FALLBACK(classId),
+      sectionCount: sectionIds.size,
+      totalSubjects: new Set(classRows.map(r => r.subjectId)).size,
       includedSubjects: includedSubjectCount,
       excludedNames,
-      ready:            included.length > 0,
+      ready: included.length > 0,
     };
   });
 
   // ── Build API payload ────────────────────────────────────────
   const buildPayload = () => ({
-    examTypeId:      Number(form.examTypeId),
-    academicYearId:  Number(form.academicYearId),
-    name:            form.name.trim() || undefined,
-    startDate:       form.startDate,
-    endDate:         form.endDate,
-    description:     form.description.trim() || undefined,
-    classIds:        selectedClassIds.map(Number),
-    subjectConfigs:  includedRows.map(r => ({
-      sectionSubjectId:   r.key,
-      maxMarks:           Number(r.maximumMarks),
-      passingMarks:       Number(r.passingMarks),
+    examTypeId: Number(form.examTypeId),
+    academicYearId: Number(form.academicYearId),
+    name: form.name.trim() || undefined,
+    startDate: form.startDate,
+    endDate: form.endDate,
+    description: form.description.trim() || undefined,
+    classIds: selectedClassIds.map(Number),
+    subjectConfigs: includedRows.map(r => ({
+      sectionSubjectId: r.key,
+      maxMarks: Number(r.maximumMarks),
+      passingMarks: Number(r.passingMarks),
       hasTheoryPractical: !!r.hasTheoryPractical,
       ...(r.hasTheoryPractical ? {
-        maxTheoryMarks:       Number(r.maximumTheoryMarks),
-        maxPracticalMarks:    Number(r.maximumPracticalMarks),
-        passingTheoryMarks:   Number(r.passingTheoryMarks),
+        maxTheoryMarks: Number(r.maximumTheoryMarks),
+        maxPracticalMarks: Number(r.maximumPracticalMarks),
+        passingTheoryMarks: Number(r.passingTheoryMarks),
         passingPracticalMarks: Number(r.passingPracticalMarks),
       } : {}),
     })),
@@ -271,7 +274,7 @@ export default function CreateExamEventWizard({
       await createExamEvent(buildPayload());
       onSuccess?.();
     } catch (err) {
-      setError(err?.message || "Failed to create exam event. Please try again.");
+      setError(err?.message || NX.ERR_CREATE);
     } finally {
       setSubmitting(false);
     }
@@ -288,7 +291,7 @@ export default function CreateExamEventWizard({
       goToSubjects();
     } else if (step === 3) {
       const activeRows = rows.filter(r => r.included);
-      if (activeRows.length === 0) { setError("Please include at least one subject."); return; }
+      if (activeRows.length === 0) { setError(NX.VAL_SUB_REQ); return; }
       setError(null);
       setStep(4);
     }
@@ -303,7 +306,7 @@ export default function CreateExamEventWizard({
           <div className="flex items-center gap-2">
             <ClipboardList className="w-5 h-5 text-indigo-600" />
             <h2 className="text-lg font-semibold text-gray-800">
-              Create Exam Event — {STEPS.find(s => s.id === step)?.label}
+              {NX.TITLE}{NX.TITLE_SEPARATOR}{STEPS.find(s => s.id === step)?.label}
             </h2>
           </div>
           <button
@@ -347,7 +350,7 @@ export default function CreateExamEventWizard({
             loadingSubjects ? (
               <div className="py-16 flex flex-col items-center gap-3 text-gray-400">
                 <Loader2 className="w-6 h-6 animate-spin" />
-                <p className="text-sm">Loading sections and subjects…</p>
+                <p className="text-sm">{NX.LOADING_SUBJECTS}</p>
               </div>
             ) : (
               <Step3ConfigureSubjects
@@ -382,7 +385,7 @@ export default function CreateExamEventWizard({
             className="flex items-center gap-1.5 px-5 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-all disabled:opacity-50"
           >
             {step > 1 && <ChevronLeft className="w-4 h-4" />}
-            {step === 1 ? "Cancel" : "Back"}
+            {step === 1 ? NX.BTN_CANCEL : NX.BTN_BACK}
           </button>
 
           {step < 4 ? (
@@ -392,7 +395,7 @@ export default function CreateExamEventWizard({
               className="flex items-center gap-1.5 px-5 py-2 text-sm font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 active:scale-95 transition-all shadow-sm disabled:opacity-60"
             >
               {loadingSubjects && <Loader2 className="w-4 h-4 animate-spin" />}
-              Next <ChevronRight className="w-4 h-4" />
+              {NX.BTN_NEXT} <ChevronRight className="w-4 h-4" />
             </button>
           ) : (
             <button
@@ -401,7 +404,7 @@ export default function CreateExamEventWizard({
               className="flex items-center gap-2 px-5 py-2 text-sm font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700 active:scale-95 transition-all shadow-sm disabled:opacity-60"
             >
               {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Rocket className="w-4 h-4" />}
-              {submitting ? "Creating Exam Event…" : "Create Exam Event"}
+              {submitting ? NX.BTN_CREATING : NX.BTN_CREATE}
             </button>
           )}
         </div>
@@ -422,32 +425,32 @@ function Step1EventDetails({ form, setForm, examTypes, academicYears, currentAca
       academicYears.find(y => String(y.id) === String(form.academicYearId))?.label ??
       academicYears.find(y => String(y.id) === String(form.academicYearId))?.name ??
       "";
-    return typeName && yearLabel ? `Auto: ${typeName} ${yearLabel}` : "Auto-generated from exam type and year";
+    return typeName && yearLabel ? `${NX.AUTO_NAME_PREFIX}${typeName} ${yearLabel}` : NX.AUTO_NAME_FALLBACK;
   }, [form.examTypeId, form.academicYearId, examTypes, academicYears]);
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Exam Type <span className="text-red-500">*</span>
+          {NX.LBL_EXAM_TYPE} <span className="text-red-500">{NX.REQUIRED_MARK}</span>
         </label>
         <select name="examTypeId" value={form.examTypeId} onChange={handleChange} className={inputCls}>
-          <option value="" disabled>Select exam type</option>
+          <option value="" disabled>{NX.PH_SEL_TYPE}</option>
           {examTypes.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
         </select>
       </div>
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Academic Year <span className="text-red-500">*</span>
+          {NX.LBL_YEAR} <span className="text-red-500">{NX.REQUIRED_MARK}</span>
         </label>
         <select name="academicYearId" value={form.academicYearId} onChange={handleChange} className={inputCls}>
-          <option value="" disabled>Select academic year</option>
+          <option value="" disabled>{NX.PH_SEL_YEAR}</option>
           {academicYears.map(y => {
             const isCurrent = y.id === currentAcademicYearId || y.isCurrent;
             return (
               <option key={y.id} value={y.id}>
-                {isCurrent ? "● " : ""}{y.label ?? y.name}{isCurrent ? " (Current)" : ""}
+                {isCurrent ? NX.CURRENT_BULLET : ""}{y.label ?? y.name}{isCurrent ? NX.CURRENT_SUFFIX : ""}
               </option>
             );
           })}
@@ -456,8 +459,8 @@ function Step1EventDetails({ form, setForm, examTypes, academicYears, currentAca
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Event Name{" "}
-          <span className="text-xs font-normal text-gray-400">(optional)</span>
+          {NX.LBL_EVENT_NAME}{" "}
+          <span className="text-xs font-normal text-gray-400">{NX.OPTIONAL_LBL}</span>
         </label>
         <input
           name="name"
@@ -470,14 +473,14 @@ function Step1EventDetails({ form, setForm, examTypes, academicYears, currentAca
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Start Date <span className="text-red-500">*</span>
+          {NX.LBL_START} <span className="text-red-500">{NX.REQUIRED_MARK}</span>
         </label>
         <input type="date" name="startDate" value={form.startDate} onChange={handleChange} className={inputCls} />
       </div>
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          End Date <span className="text-red-500">*</span>
+          {NX.LBL_END} <span className="text-red-500">{NX.REQUIRED_MARK}</span>
         </label>
         <input
           type="date"
@@ -490,12 +493,12 @@ function Step1EventDetails({ form, setForm, examTypes, academicYears, currentAca
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">{NX.LBL_DESC}</label>
         <input
           name="description"
           value={form.description}
           onChange={handleChange}
-          placeholder="Optional notes or remarks…"
+          placeholder={NX.PH_NOTES}
           className={inputCls}
         />
       </div>
@@ -507,23 +510,23 @@ function Step1EventDetails({ form, setForm, examTypes, academicYears, currentAca
 // STEP 2 — Select Classes
 // ══════════════════════════════════════════════════════════════════
 function Step2SelectClasses({ classes, selectedClassIds, setSelectedClassIds, defaultMarks, setDefaultMarks }) {
-  const toggleClass  = id => {
+  const toggleClass = id => {
     const numId = Number(id);
     setSelectedClassIds(prev =>
       prev.includes(numId) ? prev.filter(c => c !== numId) : [...prev, numId]
     );
   };
   const selectAllClasses = () => setSelectedClassIds(classes.map(c => Number(c.id)));
-  const clearAllClasses  = () => setSelectedClassIds([]);
+  const clearAllClasses = () => setSelectedClassIds([]);
 
   return (
     <div>
       {/* Class picker */}
       <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
         <p className="text-sm font-medium text-gray-700">
-          Select Classes <span className="text-red-500">*</span>
+          {NX.LBL_SEL_CLASSES} <span className="text-red-500">{NX.REQUIRED_MARK}</span>
           <span className="text-xs font-normal text-gray-400 ml-2">
-            — a separate exam is created for each class
+            {NX.TXT_ONE_EXAM_PER_CLASS}
           </span>
         </p>
         <div className="flex items-center gap-2 shrink-0">
@@ -532,21 +535,21 @@ function Step2SelectClasses({ classes, selectedClassIds, setSelectedClassIds, de
             onClick={selectAllClasses}
             className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-green-700 bg-green-50 border border-green-200 rounded-full hover:bg-green-100"
           >
-            <Check className="w-3 h-3" /> Select All
+            <Check className="w-3 h-3" /> {NX.BTN_SEL_ALL}
           </button>
           <button
             type="button"
             onClick={clearAllClasses}
             className="px-3 py-1.5 text-xs font-semibold text-gray-700 border border-gray-300 rounded-full hover:bg-gray-50"
           >
-            Clear
+            {NX.BTN_CLEAR}
           </button>
         </div>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5 mb-5">
         {classes.map(c => {
-          const id         = Number(c.id);
+          const id = Number(c.id);
           const isSelected = selectedClassIds.includes(id);
           return (
             <label
@@ -567,13 +570,13 @@ function Step2SelectClasses({ classes, selectedClassIds, setSelectedClassIds, de
       {/* Default marks */}
       <div className="bg-blue-50/60 border border-blue-100 rounded-xl p-4">
         <div className="flex flex-wrap items-center justify-between gap-1 mb-3">
-          <p className="text-sm font-semibold text-blue-800">Default Marks</p>
-          <p className="text-xs text-blue-500">You can adjust these per subject in the next step.</p>
+          <p className="text-sm font-semibold text-blue-800">{NX.LBL_DEF_MARKS}</p>
+          <p className="text-xs text-blue-500">{NX.TXT_DEF_MARKS_SUB}</p>
         </div>
 
         <div className="flex flex-wrap items-end gap-5">
           <div>
-            <label className="block text-xs font-medium text-blue-700 mb-1">Maximum Marks</label>
+            <label className="block text-xs font-medium text-blue-700 mb-1">{NX.LBL_MAX}</label>
             <input
               type="number"
               value={defaultMarks.maximumMarks}
@@ -582,7 +585,7 @@ function Step2SelectClasses({ classes, selectedClassIds, setSelectedClassIds, de
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-blue-700 mb-1">Passing Marks</label>
+            <label className="block text-xs font-medium text-blue-700 mb-1">{NX.LBL_PASS}</label>
             <input
               type="number"
               value={defaultMarks.passingMarks}
@@ -597,14 +600,14 @@ function Step2SelectClasses({ classes, selectedClassIds, setSelectedClassIds, de
               onChange={e => setDefaultMarks(d => ({ ...d, hasTheoryPractical: e.target.checked }))}
               className="w-4 h-4 accent-indigo-600"
             />
-            Theory + Practical split
+            {NX.LBL_TP_SPLIT}
           </label>
         </div>
       </div>
 
       <p className="mt-3 text-xs text-gray-400">
-        {selectedClassIds.length} of {classes.length} selected
-        {selectedClassIds.length === classes.length && classes.length > 0 ? " (all classes)" : ""}
+        {NX.TXT_SELECTED_OF(selectedClassIds.length, classes.length)}
+        {selectedClassIds.length === classes.length && classes.length > 0 ? NX.TXT_ALL_CLASSES : ""}
       </p>
     </div>
   );
@@ -624,14 +627,14 @@ function Step3ConfigureSubjects({
   return (
     <div>
       <p className="text-sm text-gray-500 mb-4">
-        Subjects are loaded per section. Uncheck any subject to exclude it from the exam.
+        {NX.TXT_AUTO_DESC}
       </p>
 
       {/* Quick apply bar */}
       <div className="flex flex-wrap items-center gap-3 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 mb-5">
-        <span className="text-sm font-semibold text-gray-700">Apply to All Subjects:</span>
+        <span className="text-sm font-semibold text-gray-700">{NX.LBL_QUICK_APPLY}</span>
         <div className="flex items-center gap-2">
-          <label className="text-xs text-gray-500">Maximum Marks</label>
+          <label className="text-xs text-gray-500">{NX.LBL_MAX}</label>
           <input
             type="number"
             value={quickApply.maximumMarks}
@@ -640,7 +643,7 @@ function Step3ConfigureSubjects({
           />
         </div>
         <div className="flex items-center gap-2">
-          <label className="text-xs text-gray-500">Passing Marks</label>
+          <label className="text-xs text-gray-500">{NX.LBL_PASS}</label>
           <input
             type="number"
             value={quickApply.passingMarks}
@@ -652,10 +655,10 @@ function Step3ConfigureSubjects({
           onClick={applyQuickToAll}
           className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700"
         >
-          Apply <ChevronRight className="w-3 h-3" />
+          {NX.BTN_APPLY_ALL} <ChevronRight className="w-3 h-3" />
         </button>
         <span className="ml-auto text-xs text-gray-400">
-          {totalConfigs} subject configs across {selectedClassIds.length} class{selectedClassIds.length !== 1 ? "es" : ""}
+          {NX.TXT_SUB_CONFIGS(totalConfigs, selectedClassIds.length)}
         </span>
       </div>
 
@@ -665,7 +668,7 @@ function Step3ConfigureSubjects({
           <ClassSubjectBlock
             key={classId}
             classId={classId}
-            className={classMap.get(Number(classId))?.name ?? `Class ${classId}`}
+            className={classMap.get(Number(classId))?.name ?? NX.CLASS_FALLBACK(classId)}
             data={classSectionsData[classId]}
             rows={rows.filter(r => r.classId === classId)}
             updateRow={updateRow}
@@ -688,13 +691,13 @@ function ClassSubjectBlock({
 }) {
   if (!data) return null;
   const { sections, sameAcrossSections } = data;
-  const includedCount  = rows.filter(r => r.included).length;
+  const includedCount = rows.filter(r => r.included).length;
 
   if (sections.length === 0) {
     return (
       <div className="border border-gray-200 rounded-xl p-4">
         <p className="text-sm font-semibold text-gray-700">{className}</p>
-        <p className="text-xs text-gray-400 mt-1">No sections or subjects found for this class.</p>
+        <p className="text-xs text-gray-400 mt-1">{NX.TXT_NO_SEC_SUB}</p>
       </div>
     );
   }
@@ -707,17 +710,17 @@ function ClassSubjectBlock({
           <span className="text-sm font-semibold text-gray-800">{className}</span>
           {sameAcrossSections ? (
             <span className="text-xs text-gray-400">
-              {sections.length} section{sections.length !== 1 ? "s" : ""} · {includedCount} of {rows.length} subjects selected
+              {NX.SECTION_SUMMARY(sections.length, includedCount, rows.length)}
             </span>
           ) : (
             <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-700">
-              {sections.length} sections — subjects vary by section
+              {NX.SECTIONS_VARY(sections.length)}
             </span>
           )}
         </div>
         <div className="flex items-center gap-3 text-xs font-semibold shrink-0">
-          <button onClick={() => toggleClassAll(classId, true)}  className="text-indigo-600 hover:underline">Include All</button>
-          <button onClick={() => toggleClassAll(classId, false)} className="text-red-500 hover:underline">Exclude All</button>
+          <button onClick={() => toggleClassAll(classId, true)} className="text-indigo-600 hover:underline">{NX.BTN_INCLUDE_ALL}</button>
+          <button onClick={() => toggleClassAll(classId, false)} className="text-red-500 hover:underline">{NX.BTN_EXCLUDE_ALL}</button>
         </div>
       </div>
 
@@ -726,7 +729,7 @@ function ClassSubjectBlock({
         <SubjectTable
           rows={dedupeBySubject(rows)}
           onToggle={(subjectId, included) => updateCompactRow(classId, subjectId, { included })}
-          onChange={(subjectId, patch)    => updateCompactRow(classId, subjectId, patch)}
+          onChange={(subjectId, patch) => updateCompactRow(classId, subjectId, patch)}
         />
       ) : (
         /* Per-section tab view */
@@ -749,7 +752,7 @@ function ClassSubjectBlock({
           <SubjectTable
             rows={rows.filter(r => r.sectionId === activeSectionId)}
             onToggle={(_subjectId, included, key) => updateRow(key, { included })}
-            onChange={(_subjectId, patch, key)    => updateRow(key, patch)}
+            onChange={(_subjectId, patch, key) => updateRow(key, patch)}
             useRowKey
           />
         </div>
@@ -768,7 +771,7 @@ function dedupeBySubject(rows) {
 // ── SubjectTable ─────────────────────────────────────────────────
 function SubjectTable({ rows, onToggle, onChange, useRowKey }) {
   if (rows.length === 0) {
-    return <p className="text-sm text-gray-400 text-center py-6">No subjects found.</p>;
+    return <p className="text-sm text-gray-400 text-center py-6">{NX.NO_SUBJECTS_FOUND}</p>;
   }
 
   return (
@@ -777,10 +780,10 @@ function SubjectTable({ rows, onToggle, onChange, useRowKey }) {
         <thead>
           <tr className="text-left text-xs font-semibold text-gray-400 uppercase">
             <th className="px-4 py-2 w-8"></th>
-            <th className="px-2 py-2">Subject</th>
-            <th className="px-2 py-2 w-28">Maximum Marks</th>
-            <th className="px-2 py-2 w-28">Passing Marks</th>
-            <th className="px-2 py-2 w-44">Assessment Type</th>
+            <th className="px-2 py-2">{NX.TH_SUBJECT}</th>
+            <th className="px-2 py-2 w-28">{NX.TH_MAX}</th>
+            <th className="px-2 py-2 w-28">{NX.TH_PASS}</th>
+            <th className="px-2 py-2 w-44">{NX.TH_ASSESSMENT_TYPE}</th>
           </tr>
         </thead>
         <tbody>
@@ -836,7 +839,7 @@ function SubjectTable({ rows, onToggle, onChange, useRowKey }) {
                   />
                   <span className={`text-xs whitespace-nowrap font-medium
                     ${r.hasTheoryPractical ? "text-indigo-700" : "text-gray-400"}`}>
-                    {r.hasTheoryPractical ? "Theory + Practical" : "Theory Only"}
+                    {r.hasTheoryPractical ? NX.ASSESSMENT_TP : NX.ASSESSMENT_THEORY_ONLY}
                   </span>
                 </label>
               </td>
@@ -853,7 +856,7 @@ function SubjectTable({ rows, onToggle, onChange, useRowKey }) {
 // ══════════════════════════════════════════════════════════════════
 function Step4ReviewAndCreate({ summaryByClass, includedRowsCount }) {
   const totalSections = summaryByClass.reduce((sum, c) => sum + c.sectionCount, 0);
-  const allReady      = summaryByClass.every(c => c.ready);
+  const allReady = summaryByClass.every(c => c.ready);
 
   return (
     <div>
@@ -861,22 +864,22 @@ function Step4ReviewAndCreate({ summaryByClass, includedRowsCount }) {
       <div className="grid grid-cols-3 gap-3 bg-green-50 border border-green-100 rounded-xl p-4 mb-5 text-center">
         <div>
           <p className="text-2xl font-extrabold text-green-700">{summaryByClass.length}</p>
-          <p className="text-xs text-green-600">Classes</p>
+          <p className="text-xs text-green-600">{NX.STAT_CLASSES}</p>
         </div>
         <div>
           <p className="text-2xl font-extrabold text-green-700">{totalSections}</p>
-          <p className="text-xs text-green-600">Sections Covered</p>
+          <p className="text-xs text-green-600">{NX.STAT_SECTIONS_COVERED}</p>
         </div>
         <div>
           <p className="text-2xl font-extrabold text-green-700">{includedRowsCount}</p>
-          <p className="text-xs text-green-600">Subject Configurations</p>
+          <p className="text-xs text-green-600">{NX.STAT_SUBJECT_CONFIGS}</p>
         </div>
       </div>
 
       {!allReady && (
         <div className="mb-4 px-4 py-2.5 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-700 flex items-center gap-2">
           <AlertCircle className="w-4 h-4 shrink-0" />
-          One or more classes have no subjects selected. Go back to include at least one subject per class.
+          {NX.WARN_NOT_READY}
         </div>
       )}
 
@@ -884,10 +887,10 @@ function Step4ReviewAndCreate({ summaryByClass, includedRowsCount }) {
       <table className="w-full text-sm mb-5">
         <thead>
           <tr className="text-left text-xs font-semibold text-gray-400 uppercase border-b border-gray-100">
-            <th className="py-2">Class</th>
-            <th className="py-2">Sections</th>
-            <th className="py-2">Subjects</th>
-            <th className="py-2 text-right">Status</th>
+            <th className="py-2">{NX.TH_CLASS}</th>
+            <th className="py-2">{NX.TH_SECTIONS}</th>
+            <th className="py-2">{NX.TH_SUBJECTS}</th>
+            <th className="py-2 text-right">{NX.TH_STATUS}</th>
           </tr>
         </thead>
         <tbody>
@@ -896,19 +899,19 @@ function Step4ReviewAndCreate({ summaryByClass, includedRowsCount }) {
               <td className="py-2.5 font-medium text-gray-800">{c.className}</td>
               <td className="py-2.5">
                 <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700">
-                  {c.sectionCount} {c.sectionCount === 1 ? "section" : "sections"}
+                  {NX.SECTION_COUNT(c.sectionCount)}
                 </span>
               </td>
               <td className="py-2.5 text-gray-600">
-                {c.includedSubjects} selected
+                {NX.SUBJECTS_SELECTED(c.includedSubjects)}
                 {c.excludedNames.length > 0 && (
-                  <span className="text-gray-400"> ({c.excludedNames.join(", ")} excluded)</span>
+                  <span className="text-gray-400">{NX.EXCLUDED_SUFFIX(c.excludedNames)}</span>
                 )}
               </td>
               <td className="py-2.5 text-right">
                 <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold
                   ${c.ready ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"}`}>
-                  {c.ready ? <><Check className="w-3 h-3" /> Ready</> : "No subjects selected"}
+                  {c.ready ? <><Check className="w-3 h-3" /> {NX.TXT_READY}</> : NX.TXT_NO_SUB}
                 </span>
               </td>
             </tr>

@@ -1,6 +1,6 @@
 import { authFetch } from "../../Authfetch/Authfetch";
 import { getCurrUserDetails } from "../../utils/getCurrUserDetails";
-import {API_ENDPOINTS} from "../../Constants/Endpoints";
+import { API_ENDPOINTS } from "../../Constants/Endpoints";
 
 // ==================== TEACHER CORE OPERATIONS ====================
 
@@ -198,4 +198,22 @@ export const getAllSections = async () => {
     console.error("getAllSections error:", error.message);
     throw error;
   }
+};
+
+/** Fetch a single subject by its ID */
+export const getSubjectById = async (subjectId) => {
+  const res = await authFetch(API_ENDPOINTS.subjectById(subjectId));
+  if (!res.ok) throw new Error('Failed to fetch subject');
+  const data = await res.json();
+  return data.data || data;
+};
+
+
+/** Fetch only active sections for a specific class */
+export const getActiveSectionsByClass = async (classId) => {
+  if (!classId) return [];
+  const res = await authFetch(API_ENDPOINTS.activeSectionsByClass(classId), { method: "GET" });
+  if (!res.ok) throw new Error((await res.text()) || "Failed to fetch active sections");
+  const data = await res.json();
+  return Array.isArray(data?.data) ? data.data : [];
 };

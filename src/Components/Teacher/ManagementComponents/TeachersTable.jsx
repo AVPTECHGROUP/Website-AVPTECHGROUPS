@@ -32,7 +32,7 @@ const NoDataFound = ({ message = 'No data found' }) => (
 const TeachersTable = ({
   selectedTeacherId,
   onRowSelect,
-  assignTeacherId, // Preserved in case it's used by a parent wrapper
+  assignTeacherId,
   teachers,
   setTeachers,
   loading,

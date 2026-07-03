@@ -35,6 +35,7 @@ export const API_ENDPOINTS = {
 
   // ─── Attendance 
   ATTENDANCE_ENROLL: `${BASE_URL}/attendance/enroll`,
+  ATTENDANCE_SUMMARY_CARD : `${BASE_URL}/attendance/students/summary?`,
   ATTENDANCE_MARK: `${BASE_URL}/attendance/mark`,
   ATTENDANCE_MANUAL_REVIEW: `${BASE_URL}/attendance/manual-review`,
   ATTENDANCE_PENDING: `${BASE_URL}/attendance/pending-approvals`,
