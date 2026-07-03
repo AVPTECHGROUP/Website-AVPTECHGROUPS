@@ -9,7 +9,7 @@ import SS_logo from "../assets/Images/ss_logo.png"
 import cstech from "../assets/Images/cstech.png"
 import { motion } from 'framer-motion'
 import SS_logo_3 from "../assets/Images/loginimageschool.png"
-import { getSchoolById } from '../Api/SchoolConfiguration/SchoolConfig'
+import { getSchoolById } from '../Api/SchoolConfiguration/schoolconfig'
 import { getCurrentAcademicYear } from '../Api/AcademicYears/AcademicYear'
 import LOGIN_CONSTANTS from '../Constants/StringConstants/LoginConstants'
 
