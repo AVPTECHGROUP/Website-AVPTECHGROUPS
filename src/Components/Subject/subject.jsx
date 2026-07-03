@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import {
   getSubjectsWithFilters,
   deleteSubject,
-} from "../../Api/Academics/subject";
+} from "../../Api/Academics/Subject";
 import { getSubjectCategoryLov } from "../../Api/Lov/ListOfValues";
 import AddNewSubject from "./AddnewSubject";
 import SectionSubjectAssignment from "../../Pages/SubjectManagement/SectionSubjectAssignment";
