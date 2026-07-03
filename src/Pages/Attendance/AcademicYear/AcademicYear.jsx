@@ -17,7 +17,7 @@ import {
     FIELD_LABELS,
     ACTION_LABELS,
     CONFIRM_CLOSE_MODAL,
-} from "../../../constants/StringConstants/AcademicYear";
+} from "../../../Constants/StringConstants/AcademicYear";
 
 // ─── Action Dropdown Component ──────────────────────────────────────────────
 const ActionDropDown = ({ year, onSetCurrent, onClose }) => {
