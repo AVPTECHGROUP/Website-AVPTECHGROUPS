@@ -194,7 +194,7 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
         try {
             const data = await SectionSubjectService.getSubjectsBySection(secId);
             const enriched = (data || []).map((s, i) => ({
-                id: s.id,
+                id: s.subjectId,
                 code: s.code || s.subjectCode || '',
                 label: s.name || s.subjectName || '',
                 total: 0,

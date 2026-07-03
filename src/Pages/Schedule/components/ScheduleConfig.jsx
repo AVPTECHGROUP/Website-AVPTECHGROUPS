@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { X, Settings, CheckCircle, AlertCircle } from 'lucide-react';
 import { getTimetableConfig, saveTimetableConfig } from '../../../Api/Academics/ScheduleApi';
 import { getAcademicYears, getCurrentAcademicYear } from '../../../Api/AcademicYears/AcademicYear';
-import { TIMETABLE_CONSTS }  from '../../../Constants/StringConstants/TimetableConstants';
+import { TIMETABLE_CONSTS } from '../../../Constants/StringConstants/TimetableConstants';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -107,8 +107,13 @@ export default function ScheduleConfig({ onClose }) {
                     getCurrentAcademicYear(),
                 ]);
 
-                const yearsList =
-                    yearsResult.status === 'fulfilled' ? (yearsResult ?? []) : [];
+                const rawYears =
+                    yearsResult.status === 'fulfilled' ? yearsResult.value : [];
+                const yearsList = Array.isArray(rawYears)
+                    ? rawYears
+                    : Array.isArray(rawYears?.data)
+                        ? rawYears.data
+                        : [];
                 setAcademicYears(yearsList);
 
                 if (currentYear.status === 'fulfilled' && currentYear.value?.id) {

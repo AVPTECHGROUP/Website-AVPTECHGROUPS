@@ -798,7 +798,7 @@ function ClassAssignment() {
                                             <>
                                               <option value="">{strings.ASSIGNMENT.SELECT_SUBJECT_PLACEHOLDER}</option>
                                               {subjectsList.map(subj => (
-                                                <option key={subj.id} value={subj.id}>
+                                                <option key={subj.id} value={subj.subjectId}>
                                                   {subj.name || subj.subjectName}
                                                 </option>
                                               ))}
@@ -956,7 +956,7 @@ function ClassAssignment() {
                           <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 mb-1">Section</p>
                           <div className="flex flex-wrap gap-1">
                             {secList.map(s => {
-                              const sId = typeof s === 'object' ? s.id : s;
+                              const sId = typeof s === 'object' ? s.subjectId : s;
                               const sName = typeof s === 'object' ? s.name : null;
                               return (
                                 <span
