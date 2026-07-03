@@ -14,36 +14,32 @@ import {
   getTransportStaff,
   getVehicleCapacityReport,
 } from "../../Api/Transport/TransportAPI";
-
-const typeColors = {
-  BUS: "bg-blue-100 text-blue-700",
-  MINI_BUS: "bg-purple-100 text-purple-700",
-  "MINI BUS": "bg-purple-100 text-purple-700",
-  VAN: "bg-orange-100 text-orange-700",
-};
-
-const typeLabel = { BUS: "BUS", MINI_BUS: "MINI BUS", VAN: "VAN" };
+import {
+  VEHICLE_TYPE_COLORS,
+  VEHICLE_TYPE_LABELS,
+  DASHBOARD_UI_TEXT
+} from "../../Constants/StringConstants/TransportConstants";
 
 function UtilBadge({ allocated, capacity }) {
   const pct = capacity > 0 ? Math.round((allocated / capacity) * 100) : 0;
   if (pct === 100) return (
     <span className="inline-flex items-center gap-1 bg-red-50 text-red-600 text-xs font-semibold px-2.5 py-1 rounded-full border border-red-100 whitespace-nowrap">
-      <span className="w-2 h-2 rounded-full bg-red-500 inline-block" /> Full
+      <span className="w-2 h-2 rounded-full bg-red-500 inline-block" /> {DASHBOARD_UI_TEXT.BADGE_FULL}
     </span>
   );
   if (pct >= 80) return (
     <span className="inline-flex items-center gap-1 bg-orange-50 text-orange-600 text-xs font-semibold px-2.5 py-1 rounded-full border border-orange-100 whitespace-nowrap">
-      <AlertTriangle className="w-3 h-3" /> Near Full
+      <AlertTriangle className="w-3 h-3" /> {DASHBOARD_UI_TEXT.BADGE_NEAR_FULL}
     </span>
   );
   if (pct === 0) return (
     <span className="inline-flex items-center gap-1 bg-green-50 text-green-600 text-xs font-semibold px-2.5 py-1 rounded-full border border-green-100 whitespace-nowrap">
-      <CheckCircle2 className="w-3 h-3" /> Available
+      <CheckCircle2 className="w-3 h-3" /> {DASHBOARD_UI_TEXT.BADGE_AVAILABLE}
     </span>
   );
   return (
     <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-600 text-xs font-semibold px-2.5 py-1 rounded-full border border-blue-100 whitespace-nowrap">
-      <Activity className="w-3 h-3" /> Active
+      <Activity className="w-3 h-3" /> {DASHBOARD_UI_TEXT.LBL_ACTIVE}
     </span>
   );
 }
@@ -62,9 +58,9 @@ function buildAlerts(capacityReport, staff) {
         msg: {
           pre: "",
           bold1: v.vehicleNumber,
-          mid: " – Insurance expires on ",
+          mid: DASHBOARD_UI_TEXT.ALERT_INS_EXPIRES,
           bold2: new Date(v.insuranceExpiryDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }),
-          post: days > 0 ? ` (${days} days left)` : " (EXPIRED)",
+          post: days > 0 ? ` (${days} ${DASHBOARD_UI_TEXT.DAYS_LEFT})` : DASHBOARD_UI_TEXT.ALERT_EXPIRED,
         },
       });
     }
@@ -77,9 +73,9 @@ function buildAlerts(capacityReport, staff) {
         msg: {
           pre: "",
           bold1: v.vehicleNumber,
-          mid: " – Fitness certificate expires on ",
+          mid: DASHBOARD_UI_TEXT.ALERT_FIT_EXPIRES,
           bold2: new Date(v.fitnessCertExpiryDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }),
-          post: days > 0 ? ` (${days} days left)` : " (EXPIRED)",
+          post: days > 0 ? ` (${days} ${DASHBOARD_UI_TEXT.DAYS_LEFT})` : DASHBOARD_UI_TEXT.ALERT_EXPIRED,
         },
       });
     }
@@ -88,9 +84,9 @@ function buildAlerts(capacityReport, staff) {
         id: `cap-${v.vehicleId}`,
         type: "info",
         msg: {
-          pre: `${v.vehicleNumber} route is at `,
-          bold1: "100% capacity",
-          mid: ". No more students can be allocated.",
+          pre: `${v.vehicleNumber}${DASHBOARD_UI_TEXT.ALERT_CAP_1}`,
+          bold1: DASHBOARD_UI_TEXT.ALERT_CAP_2,
+          mid: DASHBOARD_UI_TEXT.ALERT_CAP_3,
           bold2: "",
           post: "",
         },
@@ -110,10 +106,10 @@ function buildAlerts(capacityReport, staff) {
             pre: "",
             bold1: s.fullName,
             mid: days <= 0
-              ? " – Driving licence expired on "
-              : " – Driving licence expires on ",
+              ? DASHBOARD_UI_TEXT.ALERT_LIC_EXPIRED
+              : DASHBOARD_UI_TEXT.ALERT_LIC_EXPIRES,
             bold2: exp.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }),
-            post: days > 0 ? ` (${days} days left)` : "",
+            post: days > 0 ? ` (${days} ${DASHBOARD_UI_TEXT.DAYS_LEFT})` : "",
           },
         });
       }
@@ -212,13 +208,13 @@ export default function Transport_Management() {
 
       {/* Page Header */}
       <div className="px-4 sm:px-6 lg:px-8 pt-8 pb-2">
-        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Transport Management</h1>
-        <p className="text-gray-500 text-xs sm:text-sm mt-1">Monitor vehicles, routes, drivers and compliance across your fleet.</p>
+        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">{DASHBOARD_UI_TEXT.PAGE_TITLE}</h1>
+        <p className="text-gray-500 text-xs sm:text-sm mt-1">{DASHBOARD_UI_TEXT.PAGE_SUBTITLE}</p>
       </div>
 
       <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-6">
 
-        {/* ── Stat Cards ── */}  
+        {/* ── Stat Cards ── */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {loadingStats ? (
             <><CardLoader /><CardLoader /><CardLoader /><CardLoader /></>
@@ -226,33 +222,33 @@ export default function Transport_Management() {
             <>
               <CardComponent
                 IconName={Bus}
-                keyName="Total Vehicles"
+                keyName={DASHBOARD_UI_TEXT.CARD_VEHICLES}
                 val={String(totalVehicles)}
-                subText={`${totalVehicles} Active`}
+                subText={`${totalVehicles} ${DASHBOARD_UI_TEXT.LBL_ACTIVE}`}
                 iconTxColor="text-blue-600"
                 iconBgColor="bg-blue-50"
               />
               <CardComponent
                 IconName={MapPin}
-                keyName="Active Routes"
+                keyName={DASHBOARD_UI_TEXT.CARD_ROUTES}
                 val={String(activeRoutes)}
-                subText={`${totalStops} Stops Total`}
+                subText={`${totalStops} ${DASHBOARD_UI_TEXT.LBL_STOPS_TOTAL}`}
                 iconTxColor="text-teal-600"
                 iconBgColor="bg-teal-50"
               />
               <CardComponent
                 IconName={GraduationCap}
-                keyName="Students Allocated"
+                keyName={DASHBOARD_UI_TEXT.CARD_STUDENTS}
                 val={String(studentsAllocated)}
-                subText={`Out of ${totalCapacity} capacity`}
+                subText={`${DASHBOARD_UI_TEXT.LBL_OUT_OF} ${totalCapacity} ${DASHBOARD_UI_TEXT.LBL_CAPACITY}`}
                 iconTxColor="text-orange-500"
                 iconBgColor="bg-orange-50"
               />
               <CardComponent
                 IconName={Users}
-                keyName="Transport Staff"
+                keyName={DASHBOARD_UI_TEXT.CARD_STAFF}
                 val={String(staff.length)}
-                subText={`${driverCount} Driver${driverCount !== 1 ? "s" : ""} · ${attendantCount} Attendant${attendantCount !== 1 ? "s" : ""}`}
+                subText={`${driverCount} ${driverCount !== 1 ? DASHBOARD_UI_TEXT.LBL_DRIVERS : DASHBOARD_UI_TEXT.LBL_DRIVER} · ${attendantCount} ${attendantCount !== 1 ? DASHBOARD_UI_TEXT.LBL_ATTENDANTS : DASHBOARD_UI_TEXT.LBL_ATTENDANT}`}
                 iconTxColor="text-indigo-600"
                 iconBgColor="bg-indigo-50"
               />
@@ -265,7 +261,7 @@ export default function Transport_Management() {
           <div className="bg-white rounded-xl border border-gray-100 shadow-sm flex flex-col overflow-hidden">
             <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-2 shrink-0">
               <Bus className="w-4 h-4 text-blue-500" />
-              <span className="font-semibold text-gray-900 text-sm sm:text-base">Vehicle Capacity Utilisation</span>
+              <span className="font-semibold text-gray-900 text-sm sm:text-base">{DASHBOARD_UI_TEXT.SECTION_CAPACITY}</span>
             </div>
 
             <div className="overflow-x-auto flex-1">
@@ -307,8 +303,8 @@ export default function Transport_Management() {
 
                           {/* Type */}
                           <div className="flex justify-center">
-                            <span className={`text-xs font-semibold px-2 py-1 rounded-full text-center leading-tight whitespace-nowrap ${typeColors[v.vehicleType] || "bg-gray-100 text-gray-600"}`}>
-                              {typeLabel[v.vehicleType] || v.vehicleType}
+                            <span className={`text-xs font-semibold px-2 py-1 rounded-full text-center leading-tight whitespace-nowrap ${VEHICLE_TYPE_COLORS[v.vehicleType] || "bg-gray-100 text-gray-600"}`}>
+                              {VEHICLE_TYPE_LABELS[v.vehicleType] || v.vehicleType}
                             </span>
                           </div>
 
@@ -339,8 +335,8 @@ export default function Transport_Management() {
                               <p className="font-bold text-gray-900 text-sm">{v.vehicleNumber}</p>
                               <p className="text-xs text-gray-400">{v.makeModel}</p>
                             </div>
-                            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full shrink-0 leading-tight text-center ${typeColors[v.vehicleType] || "bg-gray-100 text-gray-600"}`}>
-                              {typeLabel[v.vehicleType] || v.vehicleType}
+                            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full shrink-0 leading-tight text-center ${VEHICLE_TYPE_COLORS[v.vehicleType] || "bg-gray-100 text-gray-600"}`}>
+                              {VEHICLE_TYPE_LABELS[v.vehicleType] || v.vehicleType}
                             </span>
                           </div>
                           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
@@ -369,7 +365,7 @@ export default function Transport_Management() {
           <div className="bg-white rounded-xl border border-gray-100 shadow-sm flex flex-col">
             <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-2 shrink-0">
               <AlertTriangle className="w-4 h-4 text-amber-500" />
-              <span className="font-semibold text-gray-900 text-sm sm:text-base">Alerts &amp; Expiry Notices</span>
+              <span className="font-semibold text-gray-900 text-sm sm:text-base">{DASHBOARD_UI_TEXT.SECTION_ALERTS}</span>
             </div>
             <div className="p-4 space-y-3 flex-1">
               {loadingCapacity || loadingStats ? (
@@ -381,8 +377,8 @@ export default function Transport_Management() {
               ) : alerts.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-8 text-gray-400">
                   <CheckCircle2 className="w-10 h-10 text-green-400 mb-2" />
-                  <p className="text-sm font-medium text-gray-600">All clear! No active alerts.</p>
-                  <p className="text-xs mt-1">Insurance, fitness &amp; licences are up to date.</p>
+                  <p className="text-sm font-medium text-gray-600">{DASHBOARD_UI_TEXT.ALERTS_CLEAR_TITLE}</p>
+                  <p className="text-xs mt-1">{DASHBOARD_UI_TEXT.ALERTS_CLEAR_SUB}</p>
                 </div>
               ) : (
                 alerts.map((a) => <AlertItem key={a.id} type={a.type} msg={a.msg} />)
@@ -393,7 +389,7 @@ export default function Transport_Management() {
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
           <div className="px-4 sm:px-5 py-4 border-b border-gray-100 flex items-center gap-2">
             <MapPin className="w-4 h-4 text-teal-500" />
-            <span className="font-bold text-gray-900 text-sm sm:text-base">Active Routes Summary</span>
+            <span className="font-bold text-gray-900 text-sm sm:text-base">{DASHBOARD_UI_TEXT.SECTION_ROUTES_SUMMARY}</span>
           </div>
           <div className="p-4 sm:p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
             {loadingRoutes ? (
@@ -432,7 +428,7 @@ export default function Transport_Management() {
                     <div className="flex flex-wrap gap-x-3 gap-y-1.5 text-xs text-gray-600 mt-3">
                       <span className="flex items-center gap-1">
                         <Bus className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-                        <span className="truncate">{r.vehicleNumber} ({typeLabel[r.vehicleType] || r.vehicleType})</span>
+                        <span className="truncate">{r.vehicleNumber} ({VEHICLE_TYPE_LABELS[r.vehicleType] || r.vehicleType})</span>
                       </span>
                       <span className="flex items-center gap-1">
                         <UserCheck className="w-3.5 h-3.5 text-orange-400 shrink-0" />{r.driverName}

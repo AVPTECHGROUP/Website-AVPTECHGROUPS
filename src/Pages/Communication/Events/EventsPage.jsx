@@ -17,6 +17,7 @@ import EventDetailModal from '../../../Components/CircularDetailsPopup/EventDeta
 import { useNavigate } from "react-router-dom";
 import { useAuth } from '../../../hooks/useAuth';
 import { PERMISSIONS as P } from '../../../Constants/Permission';
+import COMMUNICATION_CONSTS from '../../../Constants/StringConstants/CommunicationConstants';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 function typeLabel(t) {
@@ -57,50 +58,23 @@ function fmtTimeRange(startStr, endStr) {
   return `${s} – ${e}`;
 }
 
-const TYPE_ICONS = { SCHOOL_WIDE: "🏫", CLASS_SPECIFIC: "📚" };
-const PER_PAGE = 10;
-
-const STATUS_OPTIONS = [
-  { label: "All Status",       value: "" },
-  { label: "Published",        value: "PUBLISHED" },
-  { label: "Pending Approval", value: "PENDING_APPROVAL" },
-  { label: "Draft",            value: "DRAFT" },
-  { label: "Rejected",         value: "REJECTED" },
-  { label: "Cancelled",        value: "CANCELLED" },
-];
-const TYPE_OPTIONS = [
-  { label: "All Types",      value: "" },
-  { label: "School-Wide",    value: "SCHOOL_WIDE" },
-  { label: "Class-Specific", value: "CLASS_SPECIFIC" },
-];
-
 // ── Status Badge ───────────────────────────────────────────────────────────────
 function StatusBadge({ status }) {
   const s = status?.toUpperCase();
-  const map = {
-    PUBLISHED:        "bg-green-50 text-green-700 border-green-200",
-    APPROVED:         "bg-green-50 text-green-700 border-green-200",
-    PENDING_APPROVAL: "bg-amber-50 text-amber-700 border-amber-200",
-    CANCELLED:        "bg-red-50 text-red-600 border-red-200",
-    REJECTED:         "bg-red-50 text-red-600 border-red-200",
-    DRAFT:            "bg-blue-50 text-blue-600 border-blue-200",
-  };
-  const labels = {
-    PUBLISHED: "Published", APPROVED: "Approved",
-    PENDING_APPROVAL: "Pending Approval", CANCELLED: "Cancelled",
-    REJECTED: "Rejected", DRAFT: "Draft",
-  };
+  const sc = COMMUNICATION_CONSTS.EVENT_STATUS_BADGE_STYLE[s] || COMMUNICATION_CONSTS.EVENT_STATUS_BADGE_STYLE.DEFAULT;
+  const label = COMMUNICATION_CONSTS.EVENT_STATUS_LABEL[s] || status;
+
   return (
-    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border whitespace-nowrap ${map[s] || "bg-slate-50 text-slate-500 border-slate-200"}`}>
+    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border whitespace-nowrap ${sc}`}>
       {(s === "PUBLISHED" || s === "APPROVED") && <CheckCircle2 size={10} />}
       {s === "PENDING_APPROVAL" && <Timer size={10} />}
       {(s === "CANCELLED" || s === "DRAFT" || s === "REJECTED") && <XCircle size={10} />}
-      {labels[s] || status}
+      {label}
     </span>
   );
 }
 
-function EmptyState({ message = "No events found." }) {
+function EmptyState({ message = COMMUNICATION_CONSTS.EVENTS_PAGE_TEXT.EMPTY_DEFAULT }) {
   return (
     <div className="flex flex-col items-center justify-center py-14 px-6 text-slate-400">
       <CalendarDays size={40} className="mb-3 text-blue-200" />
@@ -117,7 +91,7 @@ function ErrorBanner({ message, onRetry }) {
       {onRetry && (
         <button onClick={onRetry}
           className="flex items-center gap-1 px-3 py-1 rounded-md border border-red-200 bg-white text-red-600 text-xs cursor-pointer hover:bg-red-50">
-          <RefreshCw size={11} /> Retry
+          <RefreshCw size={11} /> {COMMUNICATION_CONSTS.EVENTS_PAGE_TEXT.RETRY}
         </button>
       )}
     </div>
@@ -151,7 +125,7 @@ function CalendarStrip({ events, selectedDate, onDateSelect }) {
     const s = ev.status?.toUpperCase();
     const color = (s === "PENDING_APPROVAL") ? "bg-amber-400"
       : (s === "PUBLISHED" || s === "APPROVED") ? "bg-green-500"
-      : "bg-red-400";
+        : "bg-red-400";
     if (!existing || pri > existing.priority) {
       eventMap[key] = { priority: pri, color, events: existing?.events || [] };
     }
@@ -176,7 +150,6 @@ function CalendarStrip({ events, selectedDate, onDateSelect }) {
     cells.push({ d, date, isToday: ds === todayStr, isSelected: ds === selectedStr, eventInfo: eventMap[ds] || null, isSunday: date.getDay() === 0 });
   }
 
-  const dayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const selectedDayEvents = selectedDate
     ? (eventMap[new Date(selectedDate).toDateString()]?.events || [])
     : [];
@@ -198,10 +171,10 @@ function CalendarStrip({ events, selectedDate, onDateSelect }) {
         </div>
         <div className="flex items-center gap-3 sm:gap-4">
           <div className="hidden sm:flex items-center gap-3">
-            {[["bg-green-400","Published"],["bg-amber-400","Pending"],["bg-red-400","Rejected"]].map(([c,l]) => (
-              <div key={l} className="flex items-center gap-1.5">
-                <span className={`w-2.5 h-2.5 rounded-full ${c} inline-block`} />
-                <span className="text-blue-100 text-xs font-medium">{l}</span>
+            {COMMUNICATION_CONSTS.CALENDAR_LEGEND.map((l) => (
+              <div key={l.label} className="flex items-center gap-1.5">
+                <span className={`w-2.5 h-2.5 rounded-full ${l.color} inline-block`} />
+                <span className="text-blue-100 text-xs font-medium">{l.label}</span>
               </div>
             ))}
           </div>
@@ -212,7 +185,7 @@ function CalendarStrip({ events, selectedDate, onDateSelect }) {
             </button>
             <button onClick={() => { setOffset(0); onDateSelect && onDateSelect(null); }}
               className="px-2.5 h-8 rounded-lg bg-white/20 hover:bg-white/30 text-white text-xs font-semibold cursor-pointer transition-colors">
-              Today
+              {COMMUNICATION_CONSTS.EVENTS_PAGE_TEXT.TODAY}
             </button>
             <button onClick={() => setOffset((p) => p + 1)}
               className="w-8 h-8 rounded-lg bg-white/20 hover:bg-white/30 flex items-center justify-center text-white cursor-pointer transition-colors">
@@ -225,7 +198,7 @@ function CalendarStrip({ events, selectedDate, onDateSelect }) {
       {/* Grid */}
       <div className="bg-gradient-to-b from-blue-50 to-white p-3 sm:p-5">
         <div className="grid grid-cols-7 gap-1 mb-2">
-          {dayLabels.map((d, i) => (
+          {COMMUNICATION_CONSTS.CALENDAR_DAY_LABELS.map((d, i) => (
             <div key={i} className={`text-center py-1.5 text-xs font-bold uppercase tracking-wide rounded-md
               ${i === 0 ? "text-red-500 bg-red-50" : "text-blue-700 bg-blue-100/70"}`}>
               {d}
@@ -273,10 +246,10 @@ function CalendarStrip({ events, selectedDate, onDateSelect }) {
         </div>
 
         <div className="flex sm:hidden items-center justify-center gap-4 mt-3 pt-3 border-t border-blue-100">
-          {[["bg-green-500","Published"],["bg-amber-400","Pending"],["bg-red-400","Rejected"]].map(([c,l]) => (
-            <div key={l} className="flex items-center gap-1.5">
-              <span className={`w-2 h-2 rounded-full ${c} inline-block`} />
-              <span className="text-slate-500 text-xs">{l}</span>
+          {COMMUNICATION_CONSTS.CALENDAR_LEGEND_MOBILE.map((l) => (
+            <div key={l.label} className="flex items-center gap-1.5">
+              <span className={`w-2 h-2 rounded-full ${l.color} inline-block`} />
+              <span className="text-slate-500 text-xs">{l.label}</span>
             </div>
           ))}
         </div>
@@ -302,7 +275,7 @@ function CalendarStrip({ events, selectedDate, onDateSelect }) {
                 const timeStr = fmtTimeRange(start, end);
                 return (
                   <div key={i} className="flex items-center gap-3 bg-white rounded-xl border border-blue-100 px-3 py-2.5 hover:border-blue-300 transition-colors">
-                    <span className="text-xl shrink-0">{TYPE_ICONS[ev.type] || "📅"}</span>
+                    <span className="text-xl shrink-0">{COMMUNICATION_CONSTS.TYPE_ICONS[ev.type] || "📅"}</span>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-slate-800 truncate">{ev.title || "Untitled"}</p>
                       <div className="flex items-center gap-3 mt-0.5">
@@ -334,24 +307,22 @@ function CalendarStrip({ events, selectedDate, onDateSelect }) {
 function EventListHeader() {
   return (
     <div className="hidden sm:grid px-5 py-2.5 border-b border-gray-100 bg-gray-50/80"
-             style={{ gridTemplateColumns: "40% 25% 15% 20%" }}>
-      <span className="text-[10.5px] font-bold text-gray-400 uppercase tracking-wider">Event</span>
-      <span className="text-[10.5px] font-bold text-gray-400 uppercase tracking-wider">Date & Time</span>
-      <span className="text-[10.5px] font-bold text-gray-400 uppercase tracking-wider">Status</span>
-      <span className="text-[10.5px] font-bold text-gray-400 uppercase tracking-wider text-right">Actions</span>
+      style={{ gridTemplateColumns: "40% 25% 15% 20%" }}>
+      <span className="text-[10.5px] font-bold text-gray-400 uppercase tracking-wider">{COMMUNICATION_CONSTS.EVENTS_PAGE_TEXT.COLUMN_EVENT}</span>
+      <span className="text-[10.5px] font-bold text-gray-400 uppercase tracking-wider">{COMMUNICATION_CONSTS.EVENTS_PAGE_TEXT.COLUMN_DATE_TIME}</span>
+      <span className="text-[10.5px] font-bold text-gray-400 uppercase tracking-wider">{COMMUNICATION_CONSTS.EVENTS_PAGE_TEXT.COLUMN_STATUS}</span>
+      <span className="text-[10.5px] font-bold text-gray-400 uppercase tracking-wider text-right">{COMMUNICATION_CONSTS.EVENTS_PAGE_TEXT.COLUMN_ACTIONS}</span>
     </div>
   );
 }
 
 // ── Event Row ──────────────────────────────────────────────────────────────────
-// canApprove prop controls whether approve/reject buttons render.
 function EventRow({ ev, onApprove, onCancel, onView, approving, cancelling, canApprove }) {
   const startDate = getEventDate(ev);
-  const endDate   = getEventEnd(ev);
-  const timeStr   = fmtTimeRange(startDate, endDate);
+  const endDate = getEventEnd(ev);
+  const timeStr = fmtTimeRange(startDate, endDate);
   const isPending = ev.status === "PENDING_APPROVAL" || ev.status === "pending";
 
-  // ── ROLE GUARD: show approve/reject only when user has access AND event is pending ──
   const showApproveActions = canApprove && isPending;
 
   return (
@@ -361,9 +332,8 @@ function EventRow({ ev, onApprove, onCancel, onView, approving, cancelling, canA
       <div className="hidden sm:grid px-5 py-4 items-center gap-4"
         style={{ gridTemplateColumns: "2fr 1.3fr 0.9fr 1fr" }}>
 
-        {/* Col 1: Icon + Title + Tags */}
         <div className="flex items-start gap-3 min-w-0">
-          <span className="text-xl shrink-0 mt-0.5">{TYPE_ICONS[ev.type] || "📅"}</span>
+          <span className="text-xl shrink-0 mt-0.5">{COMMUNICATION_CONSTS.TYPE_ICONS[ev.type] || "📅"}</span>
           <div className="min-w-0">
             <p className="text-sm font-bold text-slate-800 truncate">{ev.title || "Untitled Event"}</p>
             {ev.description && (
@@ -387,7 +357,6 @@ function EventRow({ ev, onApprove, onCancel, onView, approving, cancelling, canA
           </div>
         </div>
 
-        {/* Col 2: Date + Time + Location */}
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center gap-1.5 text-xs">
             <Calendar size={12} className="text-blue-400 shrink-0" />
@@ -407,12 +376,10 @@ function EventRow({ ev, onApprove, onCancel, onView, approving, cancelling, canA
           )}
         </div>
 
-        {/* Col 3: Status */}
         <div className="flex items-center">
           <StatusBadge status={ev.status} />
         </div>
 
-        {/* Col 4: Actions */}
         <div className="flex items-center justify-end gap-1.5">
           {showApproveActions && (
             <>
@@ -432,7 +399,7 @@ function EventRow({ ev, onApprove, onCancel, onView, approving, cancelling, canA
           )}
           <button onClick={() => onView(ev)}
             className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-blue-200 bg-white text-blue-600 text-xs font-semibold hover:bg-blue-50 cursor-pointer transition-colors shadow-sm">
-            <Eye size={12} /> View
+            <Eye size={12} /> {COMMUNICATION_CONSTS.EVENTS_PAGE_TEXT.VIEW}
           </button>
         </div>
       </div>
@@ -441,7 +408,7 @@ function EventRow({ ev, onApprove, onCancel, onView, approving, cancelling, canA
       <div className="sm:hidden px-4 py-3.5">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-2.5 flex-1 min-w-0">
-            <span className="text-xl shrink-0">{TYPE_ICONS[ev.type] || "📅"}</span>
+            <span className="text-xl shrink-0">{COMMUNICATION_CONSTS.TYPE_ICONS[ev.type] || "📅"}</span>
             <div className="min-w-0">
               <p className="text-sm font-bold text-slate-800 truncate">{ev.title || "Untitled"}</p>
               {ev.description && (
@@ -490,7 +457,7 @@ function EventRow({ ev, onApprove, onCancel, onView, approving, cancelling, canA
             )}
             <button onClick={() => onView(ev)}
               className="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-blue-200 bg-white text-blue-600 text-xs font-semibold hover:bg-blue-50 cursor-pointer">
-              <Eye size={11} /> View
+              <Eye size={11} /> {COMMUNICATION_CONSTS.EVENTS_PAGE_TEXT.VIEW}
             </button>
           </div>
         </div>
@@ -503,25 +470,25 @@ function EventRow({ ev, onApprove, onCancel, onView, approving, cancelling, canA
 export default function EventsPage() {
   const { hasPermission } = useAuth();
   const canApprove = hasPermission(P.EVENT_APPROVE);
-  const canCreate  = hasPermission(P.EVENT_CREATE);
+  const canCreate = hasPermission(P.EVENT_CREATE);
 
-  const [view,            setView]            = useState("events");
-  const [events,          setEvents]          = useState([]);
-  const [pendingCount,    setPendingCount]    = useState(0);
-  const [totalPages,      setTotalPages]      = useState(1);
-  const [totalElements,   setTotalElements]   = useState(0);
-  const [loading,         setLoading]         = useState(true);
-  const [error,           setError]           = useState(null);
-  const [search,          setSearch]          = useState("");
+  const [view, setView] = useState("events");
+  const [events, setEvents] = useState([]);
+  const [pendingCount, setPendingCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalElements, setTotalElements] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [statusFilter,    setStatusFilter]    = useState("");
-  const [typeFilter,      setTypeFilter]      = useState("");
-  const [selectedEvent,   setSelectedEvent]   = useState(null);
-  const [actionLoading,   setActionLoading]   = useState({});
-  const [page,            setPage]            = useState(0);
-  const [showFilters,     setShowFilters]     = useState(false);
-  const [showCalendar,    setShowCalendar]    = useState(true);
-  const [selectedDate,    setSelectedDate]    = useState(null);
+  const [statusFilter, setStatusFilter] = useState("");
+  const [typeFilter, setTypeFilter] = useState("");
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [actionLoading, setActionLoading] = useState({});
+  const [page, setPage] = useState(0);
+  const [showFilters, setShowFilters] = useState(false);
+  const [showCalendar, setShowCalendar] = useState(true);
+  const [selectedDate, setSelectedDate] = useState(null);
 
   const navigate = useNavigate();
   const debounceTimer = useRef(null);
@@ -531,15 +498,15 @@ export default function EventsPage() {
     debounceTimer.current = setTimeout(() => {
       setDebouncedSearch(search.trim());
       setPage(0);
-    }, 700);
+    }, COMMUNICATION_CONSTS.SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(debounceTimer.current);
   }, [search]);
 
   const loadEvents = useCallback(async () => {
     setLoading(true); setError(null);
-    const params = { page, size: PER_PAGE };
-    if (statusFilter)    params.status = statusFilter;
-    if (typeFilter)      params.type   = typeFilter;
+    const params = { page, size: COMMUNICATION_CONSTS.PAGINATION.EVENTS_PER_PAGE };
+    if (statusFilter) params.status = statusFilter;
+    if (typeFilter) params.type = typeFilter;
     if (debouncedSearch) params.search = debouncedSearch;
 
     const { data, error: err } = await fetchEvents(params);
@@ -548,7 +515,7 @@ export default function EventsPage() {
 
     const list = Array.isArray(data) ? data
       : Array.isArray(data?.data) ? data.data
-      : (data?.events || []);
+        : (data?.events || []);
 
     const pagination = data?.pagination ?? {};
     setEvents(list);
@@ -587,7 +554,7 @@ export default function EventsPage() {
   };
 
   if (view === "create") {
-    navigate("/communication/events/create");
+    navigate(COMMUNICATION_CONSTS.COMMUNICATION_ROUTES.EVENTS_CREATE);
   }
 
   const published = events.filter((e) =>
@@ -602,41 +569,41 @@ export default function EventsPage() {
   }).length;
 
   const cardsArray = [
-    { keyName: "Total Events",       val: totalElements, IconName: LayoutList,  iconTxColor: "text-blue-600",   iconBgColor: "bg-blue-50"   },
-    { keyName: "Published",          val: published,     IconName: CheckCheck,  iconTxColor: "text-green-600",  iconBgColor: "bg-green-50"  },
-    { keyName: "Pending Approval",   val: pendingCount,  IconName: Timer,       iconTxColor: "text-amber-600",  iconBgColor: "bg-amber-50"  },
-    { keyName: "Upcoming (30 Days)", val: upcoming,      IconName: TrendingUp,  iconTxColor: "text-violet-600", iconBgColor: "bg-violet-50" },
+    { keyName: COMMUNICATION_CONSTS.EVENTS_STAT_CARD_LABELS.TOTAL_EVENTS, val: totalElements, IconName: LayoutList, iconTxColor: "text-blue-600", iconBgColor: "bg-blue-50" },
+    { keyName: COMMUNICATION_CONSTS.EVENTS_STAT_CARD_LABELS.PUBLISHED, val: published, IconName: CheckCheck, iconTxColor: "text-green-600", iconBgColor: "bg-green-50" },
+    { keyName: COMMUNICATION_CONSTS.EVENTS_STAT_CARD_LABELS.PENDING_APPROVAL, val: pendingCount, IconName: Timer, iconTxColor: "text-amber-600", iconBgColor: "bg-amber-50" },
+    { keyName: COMMUNICATION_CONSTS.EVENTS_STAT_CARD_LABELS.UPCOMING_30_DAYS, val: upcoming, IconName: TrendingUp, iconTxColor: "text-violet-600", iconBgColor: "bg-violet-50" },
   ];
 
   const displayedEvents = selectedDate
     ? events.filter((ev) => {
-        const d = getEventDate(ev);
-        return d && new Date(d).toDateString() === new Date(selectedDate).toDateString();
-      })
+      const d = getEventDate(ev);
+      return d && new Date(d).toDateString() === new Date(selectedDate).toDateString();
+    })
     : events;
 
   return (
     <div className="min-h-screen bg-[#f0f4f9] p-4 md:p-6">
 
       {/* Header */}
-      <div className="flex items-start justify-between mb-4 sm:mb-5 gap-3 flex-wrap">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-6 gap-3 flex-wrap">
         <div className="min-w-0">
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">School Events</h1>
-          <p className="text-xs sm:text-sm text-gray-500 mt-0.5">Plan and manage school-wide and class-specific events.</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{COMMUNICATION_CONSTS.EVENTS_PAGE_TEXT.TITLE}</h1>
+          <p className="text-xs sm:text-sm text-gray-500 mt-0.5">{COMMUNICATION_CONSTS.EVENTS_PAGE_TEXT.SUBTITLE}</p>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
           <button
-            onClick={() => setShowCalendar((v) => !v)}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs sm:text-sm font-semibold transition-colors cursor-pointer
+            onClick={() => { setShowCalendar((v) => !v); if (showCalendar) setSelectedDate(null); }}
+            className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border text-xs sm:text-sm font-semibold transition-colors cursor-pointer
               ${showCalendar ? "border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100" : "border-gray-200 bg-white text-gray-500 hover:bg-gray-50"}`}
           >
             {showCalendar ? <EyeOff size={14} /> : <CalendarDays size={14} />}
-            <span className="hidden sm:inline">{showCalendar ? "Hide" : "Show"} Calendar</span>
+            <span className="hidden sm:inline">{showCalendar ? COMMUNICATION_CONSTS.EVENTS_PAGE_TEXT.HIDE_CALENDAR : COMMUNICATION_CONSTS.EVENTS_PAGE_TEXT.SHOW_CALENDAR}</span>
           </button>
           {canCreate && (
             <button
               onClick={() => setView("create")}
-              className="flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl bg-blue-600 text-white text-xs sm:text-sm font-bold hover:bg-blue-700 cursor-pointer transition-colors shadow-sm whitespace-nowrap"
+              className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl bg-blue-600 text-white text-xs sm:text-sm font-bold hover:bg-blue-700 cursor-pointer transition-colors shadow-sm whitespace-nowrap"
             >
               <Plus size={15} /> <span className="hidden sm:inline">Create</span> Event
             </button>
@@ -678,7 +645,7 @@ export default function EventsPage() {
             <div className="flex items-center gap-2 mb-2.5">
               <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 text-xs font-semibold">
                 <CalendarCheck size={12} />
-                Showing events on {fmtDate(selectedDate)}
+                {COMMUNICATION_CONSTS.EVENTS_PAGE_TEXT.SHOWING_EVENTS_ON(fmtDate(selectedDate))}
                 <button onClick={() => setSelectedDate(null)} className="ml-1 text-blue-400 hover:text-blue-700 cursor-pointer">
                   <X size={12} />
                 </button>
@@ -691,7 +658,7 @@ export default function EventsPage() {
             <div className="relative flex-1">
               <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300" />
               <input value={search} onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search events…"
+                placeholder={COMMUNICATION_CONSTS.EVENTS_PAGE_TEXT.SEARCH_PLACEHOLDER}
                 className="w-full border border-gray-200 rounded-lg py-2 pl-8 pr-3 text-sm text-gray-700 bg-gray-50 outline-none focus:border-blue-400" />
             </div>
             <button onClick={() => setShowFilters((v) => !v)}
@@ -709,11 +676,11 @@ export default function EventsPage() {
             <div className="flex flex-col gap-2 mt-2 sm:hidden">
               <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(0); }}
                 className="border border-gray-200 rounded-lg py-2 px-3 text-sm text-gray-700 bg-gray-50 outline-none w-full">
-                {STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                {COMMUNICATION_CONSTS.EVENT_STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
               <select value={typeFilter} onChange={(e) => { setTypeFilter(e.target.value); setPage(0); }}
                 className="border border-gray-200 rounded-lg py-2 px-3 text-sm text-gray-700 bg-gray-50 outline-none w-full">
-                {TYPE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                {COMMUNICATION_CONSTS.TYPE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
             </div>
           )}
@@ -723,14 +690,14 @@ export default function EventsPage() {
             <div className="relative flex-1 min-w-44 max-w-xs">
               <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300" />
               <input value={search} onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search events…"
+                placeholder={COMMUNICATION_CONSTS.EVENTS_PAGE_TEXT.SEARCH_PLACEHOLDER}
                 className="w-full border border-gray-200 rounded-lg py-2 pl-8 pr-3 text-sm text-gray-700 bg-gray-50 outline-none focus:border-blue-400" />
             </div>
             <div className="relative flex items-center">
               <Filter size={12} className="absolute left-2.5 text-gray-400 pointer-events-none" />
               <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(0); }}
                 className="border border-gray-200 rounded-lg py-2 pl-7 pr-7 text-sm text-gray-700 bg-gray-50 outline-none cursor-pointer appearance-none">
-                {STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                {COMMUNICATION_CONSTS.EVENT_STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
               <ChevronDown size={12} className="absolute right-2 text-gray-400 pointer-events-none" />
             </div>
@@ -738,13 +705,13 @@ export default function EventsPage() {
               <Filter size={12} className="absolute left-2.5 text-gray-400 pointer-events-none" />
               <select value={typeFilter} onChange={(e) => { setTypeFilter(e.target.value); setPage(0); }}
                 className="border border-gray-200 rounded-lg py-2 pl-7 pr-7 text-sm text-gray-700 bg-gray-50 outline-none cursor-pointer appearance-none">
-                {TYPE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                {COMMUNICATION_CONSTS.TYPE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
               <ChevronDown size={12} className="absolute right-2 text-gray-400 pointer-events-none" />
             </div>
             <button onClick={loadEvents}
               className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-500 text-sm hover:bg-gray-50 cursor-pointer">
-              <RefreshCw size={12} className={loading ? "animate-spin" : ""} /> Refresh
+              <RefreshCw size={12} className={loading ? "animate-spin" : ""} /> {COMMUNICATION_CONSTS.EVENTS_PAGE_TEXT.REFRESH}
             </button>
           </div>
         </div>
@@ -756,8 +723,8 @@ export default function EventsPage() {
         ) : displayedEvents.length === 0 ? (
           <EmptyState message={
             selectedDate
-              ? `No events on ${fmtDate(selectedDate)}.`
-              : "No events found. Try adjusting your filters."
+              ? COMMUNICATION_CONSTS.EVENTS_PAGE_TEXT.EMPTY_NO_DATE_RESULTS(fmtDate(selectedDate))
+              : (search || statusFilter || typeFilter ? COMMUNICATION_CONSTS.EVENTS_PAGE_TEXT.EMPTY_NO_RESULTS : COMMUNICATION_CONSTS.EVENTS_PAGE_TEXT.EMPTY_DEFAULT)
           } />
         ) : (
           displayedEvents.map((ev, i) => (
@@ -778,7 +745,7 @@ export default function EventsPage() {
         {!loading && !selectedDate && totalPages > 0 && (
           <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-between flex-wrap gap-2 bg-gray-50/50">
             <span className="text-xs text-gray-400">
-              Page {page + 1} of {totalPages} · {totalElements} event{totalElements !== 1 ? "s" : ""}
+              {COMMUNICATION_CONSTS.EVENTS_PAGE_TEXT.PAGE_LABEL(page + 1, totalPages)} · {totalElements} event{totalElements !== 1 ? "s" : ""}
             </span>
             <div className="flex gap-1.5">
               <button onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0}
