@@ -129,7 +129,7 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
     const [substitutionTarget, setSubstitutionTarget] = useState(null);
     const [showPendingSubstitutions, setShowPendingSubstitutions] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
-    const [showSubstitution, setShowSubstitution] = useState(false);
+    // const [showSubstitution, setShowSubstitution] = useState(false);
     const [showPublishConfirm, setShowPublishConfirm] = useState(false);
     const [draggedSubject, setDraggedSubject] = useState(null);
     const [dragOverCell, setDragOverCell] = useState(null);
@@ -194,7 +194,7 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
         try {
             const data = await SectionSubjectService.getSubjectsBySection(secId);
             const enriched = (data || []).map((s, i) => ({
-                id: s.id,
+                id: s.subjectId,
                 code: s.code || s.subjectCode || '',
                 label: s.name || s.subjectName || '',
                 total: 0,
