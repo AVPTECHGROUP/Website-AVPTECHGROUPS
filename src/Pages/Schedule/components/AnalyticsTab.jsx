@@ -67,7 +67,7 @@ export default function AnalyticsTab({
                 SectionSubjectService.getSubjectsBySection(sectionId).then(data => {
                     if (!cancelled) {
                         setFetchedSubjects((data || []).map(s => ({
-                            id: s.id || s.subjectId,
+                            id:  s.subjectId || s.id ,
                             code: s.code || s.subjectCode || '',
                             label: s.name || s.subjectName || '',
                             weeklyHours: s.weeklyHours || 0,

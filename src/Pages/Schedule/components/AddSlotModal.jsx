@@ -5,11 +5,24 @@ import { getAvailableTeachersForSlot } from '../../../Api/Academics/ScheduleApi'
 import SectionSubjectService from "../../../Api/Academics/SectionSubjectService";
 import { TIMETABLE_CONSTS } from '../../../Constants/StringConstants/TimetableConstants';
 
-/* ─── Helpers (rely on constants now) ────────────────────────── */
+/* ─── subject colour map (hex values, sourced from constants) ──── */
+const SUBJECT_COLOR_MAP = Object.fromEntries(
+    Object.entries(TIMETABLE_CONSTS.COLORS.SUBJECT_MAP).map(([code, c]) => [
+        code,
+        { color: c.hex, bg: c.hexBg, dot: c.hexDot },
+    ])
+);
+const COLOR_POOL = TIMETABLE_CONSTS.COLORS.SUBJECT_POOL.map(c => ({
+    color: c.hex,
+    bg: c.hexBg,
+    dot: c.hexDot,
+}));
 const getSubjectColor = (code, index) => {
     const upper = (code || '').toUpperCase();
-    return TIMETABLE_CONSTS.COLORS.SUBJECT_MAP[upper] || TIMETABLE_CONSTS.COLORS.SUBJECT_POOL[index % TIMETABLE_CONSTS.COLORS.SUBJECT_POOL.length];
+    return SUBJECT_COLOR_MAP[upper] || COLOR_POOL[index % COLOR_POOL.length];
 };
+
+const ROOMS = TIMETABLE_CONSTS.ADD_SLOT.ROOMS;
 
 const normalizeTeacher = (t) => ({
     id: t.teacherId,
@@ -19,7 +32,8 @@ const normalizeTeacher = (t) => ({
 });
 
 /* ─── avatar colours (cycle by id) ──────────────────────────── */
-const avatarColor = (id) => TIMETABLE_CONSTS.COLORS.AVATAR_POOL[(id || 0) % TIMETABLE_CONSTS.COLORS.AVATAR_POOL.length];
+const AVATAR_COLORS = TIMETABLE_CONSTS.COLORS.AVATAR_POOL;
+const avatarColor = (id) => AVATAR_COLORS[(id || 0) % AVATAR_COLORS.length];
 
 /* ─── SearchBar ──────────────────────────────────────────────── */
 function SearchBar({ value, onChange, placeholder, disabled }) {
@@ -156,7 +170,7 @@ export default function AddSlotModal({
 
     /* load subjects on mount */
     useEffect(() => {
-        if (!sectionId) { setSubjectError(TIMETABLE_CONSTS.MESSAGES.ERR_LOAD_SUBJ); return; }
+        if (!sectionId) { setSubjectError('sectionId not provided'); return; }
         loadSubjects();
     }, [sectionId]);
 
@@ -166,7 +180,7 @@ export default function AddSlotModal({
             setSubjectError('');
             const data = await SectionSubjectService.getSubjectsBySection(sectionId);
             const enriched = (data || []).map((s, i) => ({
-                id: s.id,
+                id: s.subjectId,
                 code: s.code || s.subjectCode || '',
                 label: s.name || s.subjectName || '',
                 ...getSubjectColor(s.code || s.subjectCode, i),
@@ -175,8 +189,8 @@ export default function AddSlotModal({
 
             // Resolve and upgrade the currently selected subject to its enriched version
             const currentId = editSlot?.subject?.id ?? prefillSubject?.id;
-            if (currentId) {
-                const matched = enriched.find(s => s.id === currentId);
+            if (currentId != null) {
+                const matched = enriched.find(s => String(s.id) === String(currentId));
                 if (matched) setSelectedSubject(matched);
             }
         } catch {
@@ -336,7 +350,7 @@ export default function AddSlotModal({
                             ) : (
                                 <div className="flex flex-col gap-1.5 pb-2">
                                     {filteredSubjects.map(s => {
-                                        const active = selectedSubject?.id === s.id;
+                                        const active = selectedSubject != null && String(selectedSubject.id) === String(s.id);
                                         return (
                                             <button
                                                 key={s.id}
@@ -348,8 +362,8 @@ export default function AddSlotModal({
                                                 style={active ? { background: s.bg, borderColor: s.dot } : {}}
                                             >
                                                 <span className="w-2 h-2 rounded-full shrink-0" style={{ background: s.dot }} />
-                                                <span className="text-xs font-bold shrink-0 w-10" style={{ color: s.color }}>{s.code}</span>
-                                                <span className="text-sm text-gray-700 flex-1 truncate">{s.label}</span>
+                                                <span className="text-xs font-bold shrink-0 whitespace-nowrap" style={{ color: s.color }}>{s.code}</span>
+                                                <span className="text-sm text-gray-700 flex-1 min-w-0 truncate">{s.label}</span>
                                                 {active && (
                                                     <span
                                                         className="w-4 h-4 rounded-full flex items-center justify-center text-white text-[10px] shrink-0"
@@ -375,7 +389,7 @@ export default function AddSlotModal({
                                     placeholder={TIMETABLE_CONSTS.ADD_SLOT.PH_ROOM}
                                     className="w-20 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-gray-400 text-gray-700 transition"
                                 />
-                                {TIMETABLE_CONSTS.ADD_SLOT.ROOMS.map(r => (
+                                {ROOMS.map(r => (
                                     <button key={r}
                                         onClick={() => setSelectedRoom(r)}
                                         className={`px-3 py-2 rounded-xl text-xs font-medium border transition
@@ -455,7 +469,7 @@ export default function AddSlotModal({
                                             ))}
                                         </>
                                     )}
-                                    {/* ── Busy teachers are READ-ONLY — no radio, no selection ── */}
+                                    {/* ── FIX: Busy teachers are READ-ONLY — no radio, no selection ── */}
                                     {filteredBusy.length > 0 && (
                                         <>
                                             <SectionLabel className="text-red-400">{TIMETABLE_CONSTS.ADD_SLOT.LBL_BUSY}</SectionLabel>

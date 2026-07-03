@@ -1,12 +1,13 @@
 import { useState, useCallback, useEffect } from "react";
 import {
     Camera, Users, ScanFace, PenLine, Download, BarChart2, List,
-    ChevronDown, Search, CheckCircle2, Clock, XCircle, AlertTriangle,
-    UserCheck, Trash2, ArrowLeft, ChevronLeft, ChevronRight,
-    TrendingUp, BookOpen, Star, Loader2,
+    ChevronDown, Search, CheckCircle2, Clock, XCircle, UserCheck,
+    Trash2, ChevronLeft, ChevronRight, Loader2,
+    BookOpen,
 } from "lucide-react";
 import UnmarkModal from "./UnmarkModel";
 import ManualMarkModal from "./ManualMarkModel";
+import SummaryView from "./SummaryView";
 import { getClasses, getSectionsByClass } from "../../../Api/Teachers/TeachersAPI";
 import {
     getAttendanceRoster,
@@ -56,7 +57,7 @@ const shapeRosterStudent = (st) => {
         confidence,
         attendanceId: st.attendanceId || null,
         enrolled: true,
-        remarks: st.remarks || "", // Added to bridge historical backend entries
+        remarks: st.remarks || "",
     };
 };
 
@@ -71,8 +72,7 @@ const statusColor = (s) => {
 };
 
 const statusIcon = (s) => {
-    if (!s || s === "Not Marked") return <BookOpen className="w-3.5 h-3.5" />;
-    if (s.includes("Present (Manual)")) return <PenLine className="w-3.5 h-3.5" />;
+    if (!s || s === "Not Marked") return <BookOpen className="w-3.5 h-3.5" />; // 
     if (s.includes("Present")) return <CheckCircle2 className="w-3.5 h-3.5" />;
     if (s === "Late") return <Clock className="w-3.5 h-3.5" />;
     if (s === "Absent") return <XCircle className="w-3.5 h-3.5" />;
@@ -311,7 +311,7 @@ function RosterView({
                                             {s.confidence ? (
                                                 <div className="flex items-center gap-2">
                                                     <div className="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                                                        <div className="h-full rounded-full ${confidenceColor(s.confidence)}" style={{ width: `${s.confidence}%` }} />
+                                                        <div className={`h-full rounded-full ${confidenceColor(s.confidence)}`} style={{ width: `${s.confidence}%` }} />
                                                     </div>
                                                     <span className="text-xs text-gray-600 font-mono">{s.confidence}%</span>
                                                 </div>
@@ -390,154 +390,6 @@ function RosterView({
                     </div>
                 </>
             )}
-        </div>
-    );
-}
-
-// ─── Summary View ─────────────────────────────────────────────────────────────
-function SummaryView({ rosterMeta, students, loadingSummary, date, selectedClassName, selectedSectionName }) {
-    const totalStudents = students.length;
-
-    const presentCount = students.filter(
-        s => s.status.includes("Present")
-    ).length;
-
-    const lateCount = students.filter(
-        s => s.status === "Late"
-    ).length;
-
-    const absentCount = students.filter(
-        s =>
-            s.status === "Absent" ||
-            s.status === "Not Marked"
-    ).length;
-    const markedCount =
-        students.filter(
-            s => s.status !== "Not Marked"
-        ).length;
-    const todayRate = totalStudents > 0 ? ((markedCount / totalStudents) * 100).toFixed(1) : "0.0";
-    const presentPct = totalStudents > 0 ? ((presentCount / totalStudents) * 100).toFixed(1) : 0;
-    const latePct = totalStudents > 0 ? ((lateCount / totalStudents) * 100).toFixed(1) : 0;
-    const absentPct = totalStudents > 0 ? ((absentCount / totalStudents) * 100).toFixed(1) : 0;
-
-    const weekDays = [
-        { day: "Mon", pct: 95, color: "bg-green-600" },
-        { day: "Tue", pct: 89, color: "bg-green-500" },
-        { day: "Wed", pct: 82, color: "bg-yellow-500" },
-        { day: "Thu", pct: 76, color: "bg-orange-500" },
-        { day: "Fri", pct: parseFloat(todayRate) || 87, color: "bg-blue-500", today: true },
-    ];
-
-    const attentionStudents = students.filter((s) => s.status === "Not Marked").slice(0, 3);
-    const formattedDate = new Date(date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
-
-    if (loadingSummary) {
-        return (
-            <div className="space-y-4">
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 animate-pulse">
-                        <div className="h-4 w-24 bg-gray-200 rounded mx-auto mb-3" />
-                        <div className="h-14 w-28 bg-gray-200 rounded mx-auto mb-2" />
-                        <div className="h-3 w-32 bg-gray-200 rounded mx-auto" />
-                    </div>
-                    <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-200 shadow-sm p-5 animate-pulse space-y-4">
-                        <div className="h-5 w-48 bg-gray-200 rounded" />
-                        {[1, 2, 3].map(i => <div key={i} className="h-8 bg-gray-200 rounded" />)}
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
-    return (
-        <div className="space-y-4">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 flex flex-col items-center justify-center text-center">
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Today's Rate</p>
-                    <p className="text-5xl font-black text-green-600">{todayRate}%</p>
-                    <p className="text-sm text-gray-500 mt-1">{markedCount} of {totalStudents} marked</p>
-                    <div className="w-full mt-3">
-                        <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-                            <div className="h-full bg-green-500 rounded-full transition-all duration-700" style={{ width: `${todayRate}%` }} />
-                        </div>
-                    </div>
-                    <p className="text-xs text-gray-400 mt-2">{selectedClassName} · {selectedSectionName}</p>
-                </div>
-                <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
-                    <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
-                        <BarChart2 className="w-4 h-4 text-blue-600" />
-                        Status Breakdown — {selectedClassName} {selectedSectionName} · {formattedDate}
-                    </h3>
-                    <div className="space-y-3">
-                        {[
-                            { label: "Present", pct: presentPct, count: presentCount, color: "bg-green-500", textColor: "text-green-600" },
-                            { label: "Late", pct: latePct, count: lateCount, color: "bg-orange-400", textColor: "text-orange-500" },
-                            { label: "Absent / Not Marked", pct: absentPct, count: absentCount, color: "bg-red-400", textColor: "text-red-500" },
-                        ].map((item) => (
-                            <div key={item.label}>
-                                <div className="flex justify-between items-center mb-1">
-                                    <div className="flex items-center gap-2">
-                                        <div className={`w-2.5 h-2.5 rounded-full ${item.color}`} />
-                                        <span className="text-sm font-medium text-gray-700">{item.label}</span>
-                                    </div>
-                                    <span className={`text-sm font-bold ${item.textColor}`}>{item.count} students ({item.pct}%)</span>
-                                </div>
-                                <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
-                                    <div className={`h-full rounded-full ${item.color} transition-all duration-700`} style={{ width: `${item.pct}%` }} />
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
-                    <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
-                        <TrendingUp className="w-4 h-4 text-blue-600" /> This Week's Daily Trend
-                    </h3>
-                    <div className="flex items-end justify-around gap-2 h-32">
-                        {weekDays.map((d) => (
-                            <div key={d.day} className="flex flex-col items-center gap-1 flex-1">
-                                <span className={`text-xs font-bold ${d.today ? "text-blue-600" : "text-gray-600"}`}>{d.pct}%</span>
-                                <div className="w-full rounded-t-lg overflow-hidden" style={{ height: `${(d.pct / 100) * 96}px` }}>
-                                    <div className={`w-full h-full ${d.color} rounded-t-lg`} />
-                                </div>
-                                <span className={`text-xs font-semibold ${d.today ? "text-blue-600" : "text-gray-500"}`}>
-                                    {d.day}{d.today && <Star className="w-3 h-3 inline ml-0.5 text-blue-500 fill-blue-500" />}
-                                </span>
-                            </div>
-                        ))}
-                    </div>
-                    <p className="text-xs text-gray-400 mt-3">{selectedClassName} · {selectedSectionName}</p>
-                </div>
-                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
-                    <div className="flex justify-between items-center mb-4">
-                        <h3 className="font-bold text-gray-800 flex items-center gap-2">
-                            <AlertTriangle className="w-4 h-4 text-amber-500" /> Students Needing Attention
-                        </h3>
-                        <span className="text-xs text-gray-400">Not marked today</span>
-                    </div>
-                    {attentionStudents.length === 0 ? (
-                        <div className="text-center py-8 text-gray-400 text-sm">🎉 All students marked today!</div>
-                    ) : (
-                        <div className="space-y-3">
-                            {attentionStudents.map((s) => (
-                                <div key={s.id} className="rounded-xl border p-3 bg-amber-50 border-amber-100 flex items-center justify-between gap-3">
-                                    <div className="flex items-center gap-2.5">
-                                        <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold ${avatarColor(s.initials)}`}>{s.initials}</div>
-                                        <div>
-                                            <p className="text-sm font-semibold text-gray-800">{s.name}</p>
-                                            <p className="text-xs text-gray-500">Roll {s.rollNo} · ID: {s.id}</p>
-                                        </div>
-                                    </div>
-                                    <span className="text-xs font-semibold text-amber-600 px-2 py-0.5 bg-amber-100 rounded-full">Not Marked</span>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
-            </div>
         </div>
     );
 }
@@ -705,10 +557,9 @@ export default function StudentAttendance() {
     };
 
     const handleManualMark = async (payload) => {
-        const result = await bulkManualMarkAttendance(payload);
+        await bulkManualMarkAttendance(payload);
         await refreshRoster();
     };
-
 
     const handleExportCSV = () => {
         if (mergedStudents.length === 0) {
@@ -760,12 +611,10 @@ export default function StudentAttendance() {
                 </div>
 
                 {showStatSkeletons ? (
-                    /* ── Stat Cards Skeleton (Modified for Laptop View) ── */
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                         {Array(5).fill(0).map((_, i) => <StatCardSkeleton key={i} />)}
                     </div>
                 ) : (
-                    /* ── Stat Cards Actual Data (Modified for Laptop View) ── */
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-5 gap-3">
                         <CardComponent IconName={Users} keyName="Total Students" val={stats.total} iconBgColor="bg-blue-100" iconTxColor="text-blue-600" />
                         <CardComponent IconName={CheckCircle2} keyName="Present"
@@ -852,12 +701,9 @@ export default function StudentAttendance() {
                 )}
                 {view === "summary" && (
                     <SummaryView
-                        rosterMeta={rosterMeta}
-                        students={mergedStudents}
-                        loadingSummary={loadingRoster}
+                        selectedClass={selectedClass}
+                        selectedSection={selectedSection}
                         date={date}
-                        selectedClassName={selectedClass?.name || ""}
-                        selectedSectionName={selectedSection?.name || ""}
                     />
                 )}
                 {view === "faceScan" && (

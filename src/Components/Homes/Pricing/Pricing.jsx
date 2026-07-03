@@ -3,10 +3,8 @@ import { useLocation } from 'react-router-dom'
 import Pricing_List from './Pricing_List'
 
 const Pricing = () => {
-    const [activeTab, setActiveTab] = useState('Monthly')
     const { hash } = useLocation()
 
-    // Agar doosre page se direct pricing link par click kiya ho, to smooth scroll karega
     useEffect(() => {
         if (hash === '#pricing-section') {
             const element = document.getElementById('pricing-section');
@@ -19,7 +17,6 @@ const Pricing = () => {
     }, [hash]);
 
     return (
-        /* Added id="pricing-section" here */
         <div id="pricing-section" className="w-full bg-theme-bg text-theme-text relative py-16 sm:py-24 overflow-hidden transition-colors duration-300">
             {/* Top Gradient Divider */}
             <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-[#00C9B1]/30 via-[#F5A623]/20 to-transparent z-10" />
@@ -45,38 +42,20 @@ const Pricing = () => {
                 </p>
 
                 {/* Toggle */}
-                <div className="w-fit p-1 bg-theme-card border border-theme-border backdrop-blur-md rounded-full flex gap-1 items-center shadow-[0_12px_40px_rgba(0,0,0,0.1)] mt-4">
-                    <button
-                        onClick={() => setActiveTab('Monthly')}
-                        className={`px-6 sm:px-8 py-2 rounded-full cursor-pointer text-sm sm:text-base font-body font-semibold transition-all duration-300 ${activeTab === 'Monthly'
-                                ? 'bg-gradient-to-r from-[#00C9B1] to-[#00E5D4] text-[#05111D] shadow-[0_4px_20px_rgba(0,201,177,0.3)]'
-                                : 'text-theme-subtext hover:text-theme-text'
-                            }`}
-                    >
-                        Monthly
-                    </button>
+                <div className="mt-6 flex items-center justify-center gap-4 w-full max-w-md">
+                    <div className="h-px flex-1 bg-gradient-to-r from-transparent to-[#00C9B1]/50"></div>
 
-                    <button
-                        onClick={() => setActiveTab('Yearly')}
-                        className={`flex items-center gap-2 px-6 sm:px-8 py-2 rounded-full cursor-pointer text-sm sm:text-base font-body font-semibold transition-all duration-300 ${activeTab === 'Yearly'
-                                ? 'bg-gradient-to-r from-[#00C9B1] to-[#00E5D4] text-[#05111D] shadow-[0_4px_20px_rgba(0,201,177,0.3)]'
-                                : 'text-theme-subtext hover:text-theme-text'
-                            }`}
-                    >
-                        Yearly
-                        <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full whitespace-nowrap transition-all duration-300 ${activeTab === 'Yearly'
-                                ? 'bg-theme-bg text-[#00C9B1]'
-                                : 'bg-[#F5A623] text-[#05111D]'
-                            }`}>
-                            Save 20%
-                        </span>
-                    </button>
+                    <span className="text-[#00E5D4] lg:text-xl sm:text-sm md:text-lg  font-bold uppercase tracking-[0.25em] whitespace-nowrap">
+                        Choose Your Plan
+                    </span>
+
+                    <div className="h-px flex-1 bg-gradient-to-l from-transparent to-[#00C9B1]/50"></div>
                 </div>
             </div>
 
             {/* Cards */}
             <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-                <Pricing_List activeTab={activeTab} />
+                <Pricing_List />
             </div>
         </div>
     )

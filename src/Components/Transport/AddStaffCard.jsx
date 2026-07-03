@@ -133,10 +133,8 @@ export default function AddStaffCard({ isOpen, onClose, onSaved, editData }) {
     try {
       if (isEditMode) {
         await updateTransportStaff(editData.id, payload);
-        toast.success("Staff updated successfully");
       } else {
         await addTransportStaff(payload);
-        toast.success("Staff added successfully");
       }
 
       onSaved?.(isEditMode);
