@@ -771,3 +771,53 @@ export const bulkManualStaffAttendance = async (payload) => {
     throw error;
   }
 };
+// shivam->
+// Attendance Summary
+export const getAttendanceSummary = async ({
+  classId,
+  sectionId,
+  date,
+  year,
+  month,
+  atRiskThreshold,
+}) => {
+  try {
+    if (!classId || !sectionId) {
+      throw new Error("classId and sectionId are required");
+    }
+
+    const query = new URLSearchParams({
+      class_id: classId,
+      section_id: sectionId,
+      ...(date && { date }),
+      ...(year && { year }),
+      ...(month && { month }),
+      ...(atRiskThreshold && {
+        at_risk_threshold: atRiskThreshold,
+      }),
+    }).toString();
+
+    const res = await authFetch(
+      `${BASE_URL}/attendance/students/summary?${query}`,
+      {
+        method: "GET",
+      }
+    );
+
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(
+        errText || "Failed to fetch attendance summary"
+      );
+    }
+
+    const data = await res.json();
+    return data?.data || {};
+  } catch (error) {
+    console.error(
+      "getAttendanceSummary error:",
+      error.message
+    );
+    throw error;
+  }
+};

@@ -1,17 +1,7 @@
-/**
- * SeeInAction.jsx  –  Final, production-ready version
- *
- * Desktop  → beautiful 5-card grid with a large "hero" card in the centre-top
- *             and 4 supporting cards below. Native CSS handles smooth hover transforms.
- *
- * Mobile   → full-width swipe carousel with dots + arrows.
- *
- * No overflow, no overlap, fully responsive.
- */
-
-import React, { useRef, useState, useEffect } from 'react'
+import React, { useRef, useState, useEffect, useContext } from 'react'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import { UserContext } from '../../../ContextAPI/UserContext'
 
 import {
   attendance, dashboard, student_enrolment, teachers, transport,
@@ -54,11 +44,10 @@ function useIsMobile(bp = 768) {
 
 // ─── DeviceCard ───────────────────────────────────────────────────────────────
 
-function DeviceCard({ src, label, isPhone, big = false, index = 0, onHover }) {
+function DeviceCard({ src, label, isPhone, big = false, index = 0, onHover, isDark }) {
   const ref = useRef(null)
   const [isHovered, setIsHovered] = useState(false)
 
-  // Section entry animation (Only runs once when component mounts)
   useEffect(() => {
     if (!ref.current) return
     gsap.fromTo(ref.current,
@@ -71,7 +60,6 @@ function DeviceCard({ src, label, isPhone, big = false, index = 0, onHover }) {
     )
   }, [])
 
-  // Quick elegant fade transition for the main Hero card when hover image changes
   useEffect(() => {
     if (big && ref.current) {
       gsap.fromTo(ref.current, { opacity: 0.6 }, { opacity: 1, duration: 0.25, ease: 'power2.out' })
@@ -83,25 +71,27 @@ function DeviceCard({ src, label, isPhone, big = false, index = 0, onHover }) {
       ref={ref}
       onMouseEnter={() => {
         setIsHovered(true)
-        if (onHover) onHover(true) // ─── Trigger dynamic hero image change ───
+        if (onHover) onHover(true)
       }}
       onMouseLeave={() => {
         setIsHovered(false)
-        if (onHover) onHover(false) // ─── Reset to default dashboard ───
+        if (onHover) onHover(false)
       }}
       style={{
-        opacity: 0, 
+        opacity: 1,
         borderRadius: 16,
-        background: 'rgba(8,20,38,0.92)',
-        border: isHovered ? '1px solid rgba(45,212,191,0.45)' : '1px solid rgba(45,212,191,0.14)',
-        boxShadow: isHovered 
-          ? '0 20px 50px rgba(0,0,0,0.65), 0 0 25px rgba(45,212,191,0.15), inset 0 1px 0 rgba(255,255,255,0.04)'
-          : '0 12px 48px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.04)',
+        background: isDark ? 'rgba(8,20,38,0.92)' : '#ffffff',
+        border: isHovered
+          ? '1px solid rgba(45,212,191,0.6)'
+          : isDark ? '1px solid rgba(45,212,191,0.14)' : '1px solid rgba(0,0,0,0.08)',
+        boxShadow: isHovered
+          ? `0 20px 50px ${isDark ? 'rgba(0,0,0,0.65)' : 'rgba(148,163,184,0.25)'}, 0 0 25px rgba(45,212,191,0.2), inset 0 1px 0 rgba(255,255,255,0.04)`
+          : `0 12px 48px ${isDark ? 'rgba(0,0,0,0.45)' : 'rgba(148,163,184,0.15)'}, inset 0 1px 0 rgba(255,255,255,0.04)`,
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        padding: big ? 10 : 8,
+        padding: big ? 12 : 10,
         gap: 8,
         cursor: big ? 'default' : 'pointer',
         willChange: 'transform',
@@ -111,13 +101,12 @@ function DeviceCard({ src, label, isPhone, big = false, index = 0, onHover }) {
         transition: 'transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), border-color 0.3s ease, box-shadow 0.3s ease',
       }}
     >
-      {/* Screen frame */}
       <div style={{
         width: '100%',
         borderRadius: isPhone ? 12 : 8,
         overflow: 'hidden',
-        background: '#050f1e',
-        border: '1px solid rgba(255,255,255,0.06)',
+        background: isDark ? '#050f1e' : '#ffffff',
+        border: isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(0,0,0,0.05)',
       }}>
         <img
           src={src}
@@ -127,13 +116,12 @@ function DeviceCard({ src, label, isPhone, big = false, index = 0, onHover }) {
           style={{ width: '100%', height: 'auto', display: 'block', userSelect: 'none' }}
         />
       </div>
-      {/* Label */}
       <span style={{
-        fontSize: '0.6rem',
+        fontSize: '0.65rem',
         fontWeight: 700,
         letterSpacing: '0.13em',
         textTransform: 'uppercase',
-        color: isHovered && !big ? '#2dd4bf' : '#64748b',
+        color: isHovered && !big ? '#2dd4bf' : isDark ? '#64748b' : '#475569',
         transition: 'color 0.3s ease',
       }}>
         {label}
@@ -144,11 +132,17 @@ function DeviceCard({ src, label, isPhone, big = false, index = 0, onHover }) {
 
 // ─── DesktopGrid ──────────────────────────────────────────────────────────────
 
-function DesktopGrid({ images, isPhone }) {
-  const [defaultHero, ...rest] = images 
+function DesktopGrid({ images, isPhone, isDark, autoActiveIndex, setAutoActiveIndex, isUserHovering }) {
+  const [defaultHero, ...rest] = images
   const [currentHero, setCurrentHero] = useState(defaultHero)
 
-  // Reset hero selection when switching tabs
+  // Sync index rotation into view state
+  useEffect(() => {
+    if (!isUserHovering.current) {
+      setCurrentHero(images[autoActiveIndex])
+    }
+  }, [autoActiveIndex, images])
+
   useEffect(() => {
     setCurrentHero(images[0])
   }, [images])
@@ -159,18 +153,29 @@ function DesktopGrid({ images, isPhone }) {
     return (
       <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 24, alignItems: 'center' }}>
         <div style={{ display: 'flex', gap: 24, justifyContent: 'center', width: '100%', maxWidth: 900 }}>
-          {row1.map((img, i) => (
-            <div key={i} style={{ flex: '0 0 calc(33.33% - 16px)', maxWidth: 280 }}>
-              <DeviceCard src={img.src} label={img.label} isPhone index={i} />
-            </div>
-          ))}
+          {row1.map((img, i) => {
+            const isCurrentlySelected = !isUserHovering.current && autoActiveIndex === i;
+            return (
+              <div key={i} style={{ flex: '0 0 calc(33.33% - 16px)', maxWidth: 280 }}>
+                <div style={{ transform: isCurrentlySelected ? 'translateY(-4px)' : 'none', transition: 'transform 0.4s' }}>
+                  <DeviceCard src={img.src} label={img.label} isPhone isDark={isDark} index={i} />
+                </div>
+              </div>
+            )
+          })}
         </div>
-        <div style={{ display: 'flex', gap: 24, justifyContent: 'center' }}>
-          {row2.map((img, i) => (
-            <div key={i + 3} style={{ width: 'calc(33.33% - 16px)', maxWidth: 280, minWidth: 200 }}>
-              <DeviceCard src={img.src} label={img.label} isPhone index={i + 3} />
-            </div>
-          ))}
+        <div style={{ display: 'flex', gap: 24, justifyContent: 'center', width: '100%' }}>
+          {row2.map((img, i) => {
+            const actualIndex = i + 3;
+            const isCurrentlySelected = !isUserHovering.current && autoActiveIndex === actualIndex;
+            return (
+              <div key={actualIndex} style={{ width: 'calc(33.33% - 16px)', maxWidth: 280, minWidth: 200 }}>
+                <div style={{ transform: isCurrentlySelected ? 'translateY(-4px)' : 'none', transition: 'transform 0.4s' }}>
+                  <DeviceCard src={img.src} label={img.label} isPhone isDark={isDark} index={actualIndex} />
+                </div>
+              </div>
+            )
+          })}
         </div>
       </div>
     )
@@ -178,29 +183,36 @@ function DesktopGrid({ images, isPhone }) {
 
   return (
     <div style={{ width: '100%', maxWidth: 1000, display: 'flex', flexDirection: 'column', gap: 30, alignItems: 'center' }}>
-      {/* Dynamic Hero Card */}
-      <div style={{ width: '62%' }}>
-        <DeviceCard src={currentHero.src} label={currentHero.label} isPhone={false} big index={0} />
+      <div style={{ width: '65%' }}>
+        <DeviceCard src={currentHero.src} label={currentHero.label} isPhone={false} big index={0} isDark={isDark} />
       </div>
-      {/* 4-card row at the bottom */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 26, width: '100%' }}>
-        {rest.map((img, i) => (
-          <DeviceCard 
-            key={i + 1} 
-            src={img.src} 
-            label={img.label} 
-            isPhone={false} 
-            index={i + 1} 
-            // ─── Pass down hover update callbacks ───
-            onHover={(hovering) => {
-              if (hovering) {
-                setCurrentHero(img) // Show hovered card inside hero
-              } else {
-                setCurrentHero(defaultHero) // Back to Dashboard mockup
-              }
-            }}
-          />
-        ))}
+        {rest.map((img, i) => {
+          const actualCardIndex = i + 1;
+          const isAutoplayTarget = !isUserHovering.current && autoActiveIndex === actualCardIndex;
+
+          return (
+            <div key={actualCardIndex} style={{ transform: isAutoplayTarget ? 'translateY(-6px)' : 'none', transition: 'transform 0.4s ease-out' }}>
+              <DeviceCard
+                src={img.src}
+                label={img.label}
+                isPhone={false}
+                index={actualCardIndex}
+                isDark={isDark}
+                onHover={(hovering) => {
+                  if (hovering) {
+                    isUserHovering.current = true
+                    setCurrentHero(img)
+                  } else {
+                    isUserHovering.current = false
+                    setAutoActiveIndex(0)
+                    setCurrentHero(defaultHero)
+                  }
+                }}
+              />
+            </div>
+          )
+        })}
       </div>
     </div>
   )
@@ -208,13 +220,9 @@ function DesktopGrid({ images, isPhone }) {
 
 // ─── MobileCarousel ───────────────────────────────────────────────────────────
 
-function MobileCarousel({ images, isPhone }) {
-  const [active, setActive] = useState(0)
+function MobileCarousel({ images, isPhone, isDark, active, setActive }) {
   const trackRef = useRef(null)
-
   const go = (dir) => setActive(p => (p + dir + images.length) % images.length)
-
-  useEffect(() => { setActive(0) }, [images])
 
   useEffect(() => {
     if (trackRef.current)
@@ -226,24 +234,24 @@ function MobileCarousel({ images, isPhone }) {
       <div style={{ width: '100%', overflow: 'hidden' }}>
         <div ref={trackRef} style={{ display: 'flex', willChange: 'transform' }}>
           {images.map((img, i) => (
-            <div key={i} style={{ minWidth: '100%', padding: '0.5rem 1.75rem', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+            <div key={i} style={{ minWidth: '100%', padding: '0.5rem 1.25rem', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
               <div style={{
-                background: 'rgba(8,20,38,0.92)',
-                border: `2px solid ${i === active ? 'rgba(45,212,191,0.7)' : 'rgba(45,212,191,0.1)'}`,
+                background: isDark ? 'rgba(8,20,38,0.92)' : '#ffffff',
+                border: `2px solid ${i === active ? 'rgba(45,212,191,0.7)' : isDark ? 'rgba(45,212,191,0.1)' : 'rgba(0,0,0,0.06)'}`,
                 borderRadius: 16,
-                boxShadow: i === active ? '0 0 0 4px rgba(45,212,191,0.1), 0 20px 60px rgba(0,0,0,0.5)' : '0 8px 32px rgba(0,0,0,0.4)',
+                boxShadow: i === active ? '0 0 0 4px rgba(45,212,191,0.1), 0 20px 60px rgba(0,0,0,0.3)' : '0 8px 32px rgba(0,0,0,0.1)',
                 overflow: 'hidden',
                 padding: 8,
                 transition: 'border 0.3s, box-shadow 0.3s',
-                width: isPhone ? '62%' : '100%',
-                maxWidth: isPhone ? 220 : 400,
+                width: isPhone ? '65%' : '100%',
+                maxWidth: isPhone ? 240 : 450,
                 boxSizing: 'border-box',
               }}>
-                <div style={{ borderRadius: isPhone ? 12 : 8, overflow: 'hidden', background: '#050f1e' }}>
+                <div style={{ borderRadius: isPhone ? 12 : 8, overflow: 'hidden', background: isDark ? '#050f1e' : '#f1f5f9' }}>
                   <img src={img.src} alt={img.label} style={{ width: '100%', height: 'auto', display: 'block' }} draggable={false} />
                 </div>
               </div>
-              <span style={{ fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.13em', textTransform: 'uppercase', color: '#94a3b8' }}>
+              <span style={{ fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.13em', textTransform: 'uppercase', color: isDark ? '#94a3b8' : '#475569' }}>
                 {img.label}
               </span>
             </div>
@@ -257,7 +265,7 @@ function MobileCarousel({ images, isPhone }) {
           <button key={i} onClick={() => setActive(i)} style={{
             height: 8, width: i === active ? 22 : 8,
             borderRadius: 999, border: 'none', padding: 0, cursor: 'pointer',
-            background: i === active ? 'linear-gradient(90deg,#2dd4bf,#34d399 50%,#fbbf24)' : 'rgba(255,255,255,0.15)',
+            background: i === active ? 'linear-gradient(90deg,#2dd4bf,#34d399 50%,#fbbf24)' : 'rgba(148,163,184,0.3)',
             transition: 'width 0.28s, background 0.28s',
           }} />
         ))}
@@ -268,34 +276,54 @@ function MobileCarousel({ images, isPhone }) {
         {[{ label: '‹', dir: -1 }, { label: '›', dir: 1 }].map(({ label, dir }, i) => (
           <button key={i} onClick={() => go(dir)} style={{
             width: 40, height: 40, borderRadius: '50%',
-            border: '1px solid rgba(45,212,191,0.3)',
+            border: '1px solid rgba(45,212,191,0.4)',
             background: 'rgba(45,212,191,0.07)',
             color: '#2dd4bf', fontSize: '1.5rem',
-            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer', display: 'flex', alignItems: 'center', justifycontent: 'center',
             backdropFilter: 'blur(8px)', lineHeight: 1,
           }}>
             {label}
           </button>
         ))}
       </div>
-      <span style={{ fontSize: '0.75rem', color: '#475569' }}>{active + 1} / {images.length}</span>
     </div>
   )
 }
 
-// ─── Root ──────────────────────────────────────────────────────────────────────
+// ─── Root Component ────────────────────────────────────────────────────────────
 
 export default function SeeInAction() {
+  const { theme } = useContext(UserContext)
+  const isDark = theme === 'dark'
+
   const [activeTab, setActiveTab] = useState('admin')
+  const [autoActiveIndex, setAutoActiveIndex] = useState(0)
+
   const sectionRef = useRef(null)
   const headRef = useRef(null)
   const pillRef = useRef(null)
+  const isUserHovering = useRef(false)
   const isMobile = useIsMobile()
 
   const images = activeTab === 'admin' ? LAPTOP_IMAGES : MOBILE_IMAGES
   const isPhone = activeTab === 'parent'
 
-  // Header content entrance trigger
+  // ─── 3 Seconds Interval Auto Carousel Slide Logic ───
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!isUserHovering.current) {
+        setAutoActiveIndex((prevIndex) => (prevIndex + 1) % images.length)
+      }
+    }, 3000)
+
+    return () => clearInterval(interval)
+  }, [images.length])
+
+  // Reset tab active tracker index dynamically
+  useEffect(() => {
+    setAutoActiveIndex(0)
+  }, [activeTab])
+
   useEffect(() => {
     const ctx = gsap.context(() => {
       gsap.fromTo(
@@ -311,27 +339,43 @@ export default function SeeInAction() {
   }, [])
 
   return (
-    <section ref={sectionRef} style={S.section}>
-
-      {/* Ambient glows */}
-      <div style={S.glowA} />
-      <div style={S.glowB} />
-      <div style={S.glowC} />
+    <section
+      ref={sectionRef}
+      style={{
+        ...S.section,
+        background: isDark
+          ? 'linear-gradient(145deg,#020c18 0%,#041a2e 40%,#061e2e 65%,#051219 100%)'
+          : 'linear-gradient(145deg,#f8fafc 0%,#f1f5f9 50%,#e2e8f0 100%)',
+        transition: 'background 0.3s ease-in-out'
+      }}
+    >
+      {/* Ambient glows (Dark Mode only) */}
+      {isDark && (
+        <>
+          <div style={S.glowA} />
+          <div style={S.glowB} />
+          <div style={S.glowC} />
+        </>
+      )}
 
       {/* Heading */}
       <div ref={headRef} style={{ opacity: 0, textAlign: 'center', position: 'relative', zIndex: 1, padding: '0 1rem' }}>
         <p style={S.eyebrow}>Live Preview</p>
-        <h2 style={S.heading}>
+        <h2 style={{ ...S.heading, color: isDark ? '#e2e8f0' : '#0f172a' }}>
           See <span style={S.grad}>SchoolSpine</span> in action
         </h2>
-        <p style={S.sub}>
+        <p style={{ ...S.sub, color: isDark ? '#94a3b8' : '#475569' }}>
           Explore the interface that thousands of schools rely on every day.
         </p>
       </div>
 
-      {/* Tab pill */}
+      {/* Tab pill container */}
       <div ref={pillRef} style={{ opacity: 0, position: 'relative', zIndex: 1 }}>
-        <div style={S.pill}>
+        <div style={{
+          ...S.pill,
+          background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
+          borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'
+        }}>
           <div style={{ ...S.slider, left: activeTab === 'admin' ? 4 : 'calc(50%)' }} />
           {[
             { key: 'admin', e: '🖥️', t: 'Admin Dashboard' },
@@ -342,26 +386,44 @@ export default function SeeInAction() {
               onClick={() => setActiveTab(key)}
               style={{
                 ...S.pillBtn,
-                color: activeTab === key ? '#0f172a' : '#94a3b8',
-                fontWeight: activeTab === key ? 700 : 500,
+                color: activeTab === key ? '#0f172a' : isDark ? '#94a3b8' : '#64748b',
+                fontWeight: activeTab === key ? 700 : 600,
               }}
             >
-              {e}&nbsp;{t}
+              <span style={{ whiteSpace: 'nowrap' }}>{e}&nbsp;{t}</span>
             </button>
           ))}
         </div>
       </div>
 
-      {/* Device showcase */}
+      {/* Device showcase container */}
       <div style={{ width: '100%', maxWidth: 1080, padding: '0 clamp(1rem,4vw,2.5rem)', boxSizing: 'border-box', position: 'relative', zIndex: 1 }}>
-        {isMobile
-          ? <MobileCarousel images={images} isPhone={isPhone} />
-          : <DesktopGrid images={images} isPhone={isPhone} key={activeTab} />
-        }
+        {isMobile ? (
+          <MobileCarousel
+            images={images}
+            isPhone={isPhone}
+            isDark={isDark}
+            active={autoActiveIndex}
+            setActive={(idx) => {
+              isUserHovering.current = true;
+              setAutoActiveIndex(idx);
+            }}
+          />
+        ) : (
+          <DesktopGrid
+            images={images}
+            isPhone={isPhone}
+            isDark={isDark}
+            key={activeTab}
+            autoActiveIndex={autoActiveIndex}
+            setAutoActiveIndex={setAutoActiveIndex}
+            isUserHovering={isUserHovering}
+          />
+        )}
       </div>
 
-      {/* Hint */}
-      <p style={S.hint}>
+      {/* Hint footer note */}
+      <p style={{ ...S.hint, color: isDark ? '#94a3b8' : '#64748b' }}>
         {isMobile
           ? 'Tap arrows to browse all screens'
           : 'Hover over any screen to preview it up close'}
@@ -382,8 +444,7 @@ const S = {
     alignItems: 'center',
     justifyContent: 'center',
     gap: 'clamp(1.5rem,3vw,2.5rem)',
-    padding: 'clamp(1.5rem,3vw,1rem) 0 clamp(4rem,6vw,6rem)',
-    background: 'linear-gradient(145deg,#020c18 0%,#041a2e 40%,#061e2e 65%,#051219 100%)',
+    padding: 'clamp(2rem,4vw,4rem) 0 clamp(4rem,6vw,6rem)',
     overflow: 'hidden',
     fontFamily: "'Sora','Inter',sans-serif",
     boxSizing: 'border-box',
@@ -412,22 +473,24 @@ const S = {
   },
   heading: {
     fontSize: 'clamp(2rem,5vw,3.4rem)', fontWeight: 800,
-    color: '#e2e8f0', lineHeight: 1.15, letterSpacing: '-0.02em', margin: 0,
+    lineHeight: 1.15, letterSpacing: '-0.02em', margin: 0,
   },
   grad: {
     background: 'linear-gradient(90deg,#2dd4bf 0%,#34d399 30%,#fbbf24 70%,#f59e0b 100%)',
     WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
   },
   sub: {
-    fontSize: 'clamp(0.88rem,1.5vw,1.02rem)', color: '#94a3b8',
+    fontSize: 'clamp(0.88rem,1.5vw,1.02rem)',
     margin: '0.85rem auto 0', maxWidth: 480, lineHeight: 1.68,
   },
   pill: {
-    position: 'relative', display: 'flex',
-    background: 'rgba(255,255,255,0.04)',
-    border: '1px solid rgba(255,255,255,0.08)',
-    borderRadius: 999, padding: 4,
-    width: 'clamp(270px,54vw,370px)',
+    position: 'relative',
+    display: 'flex',
+    alignItems: 'center',
+    border: '1px solid',
+    borderRadius: 999,
+    padding: 4,
+    width: 'clamp(310px, 55vw, 420px)', // Increased width boundaries to stop item clipping
     backdropFilter: 'blur(16px)',
     boxSizing: 'border-box',
   },
@@ -440,14 +503,22 @@ const S = {
     boxShadow: '0 0 20px rgba(45,212,191,0.35)', zIndex: 0,
   },
   pillBtn: {
-    flex: 1, padding: '0.55rem 0.4rem', borderRadius: 999,
-    border: 'none', background: 'transparent', cursor: 'pointer',
-    fontSize: 'clamp(0.74rem,1.3vw,0.9rem)',
-    position: 'relative', zIndex: 1,
-    transition: 'color 0.22s', whiteSpace: 'nowrap',
+    flex: 1,
+    padding: '0.65rem 0.5rem',
+    borderRadius: 999,
+    border: 'none',
+    background: 'transparent',
+    cursor: 'pointer',
+    fontSize: 'clamp(0.78rem,1.3vw,0.92rem)',
+    position: 'relative',
+    zIndex: 1,
+    transition: 'color 0.22s',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   hint: {
-    fontSize: '0.73rem', color: '#94a3b8',
+    fontSize: '0.73rem',
     letterSpacing: '0.04em', margin: 0, textAlign: 'center',
     position: 'relative', zIndex: 1,
   },

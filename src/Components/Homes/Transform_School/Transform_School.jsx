@@ -1,5 +1,6 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, useContext } from 'react'
 import { motion, useInView} from 'framer-motion'
+import { UserContext } from '../../../ContextAPI/UserContext'
 
 // ─── School-themed Floating SVGs ──────────────────────────────────────────────
 const SchoolSVGs = {
@@ -100,6 +101,9 @@ const demoPoints = [
 ]
 
 export default function TransformSchool() {
+    const { theme } = useContext(UserContext)
+    const isDark = theme === 'dark'
+
     const ref = useRef(null)
     const inView = useInView(ref, { once: true, margin: '-80px' })
     const [form, setForm] = useState({ name: '', school: '', phone: '', strength: '' })
@@ -114,21 +118,23 @@ export default function TransformSchool() {
         width: '100%',
         padding: '14px 18px',
         borderRadius: '10px',
-        background: 'rgba(255,255,255,0.06)',
-        border: '1.5px solid rgba(0,201,177,0.22)',
-        color: 'white',
+        background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+        border: isDark ? '1.5px solid rgba(0,201,177,0.22)' : '1.5px solid rgba(0,201,177,0.35)',
+        color: isDark ? 'white' : '#0f172a',
         fontSize: '14px',
         fontFamily: '"DM Sans", sans-serif',
         outline: 'none',
-        transition: 'border-color 0.2s',
+        transition: 'border-color 0.2s, background-color 0.2s',
     }
 
     return (
         <section
             id="demo"
-            className="relative overflow-hidden"
+            className="relative overflow-hidden transition-colors duration-300"
             style={{
-                background: 'linear-gradient(to right, #102130, #132939, #152F3F, #173343)',
+                background: isDark 
+                    ? 'linear-gradient(to right, #102130, #132939, #152F3F, #173343)' 
+                    : 'linear-gradient(to right, #f8fafc, #f1f5f9, #e2e8f0)',
                 minHeight: '100vh',
             }}
         >
@@ -138,7 +144,9 @@ export default function TransformSchool() {
             <div
                 className="absolute inset-0 pointer-events-none"
                 style={{
-                    backgroundImage: 'radial-gradient(circle, rgba(0,201,177,0.09) 1px, transparent 1px)',
+                    backgroundImage: isDark
+                        ? 'radial-gradient(circle, rgba(0,201,177,0.09) 1px, transparent 1px)'
+                        : 'radial-gradient(circle, rgba(0,201,177,0.15) 1px, transparent 1px)',
                     backgroundSize: '28px 28px',
                 }}
             />
@@ -161,10 +169,10 @@ export default function TransformSchool() {
                             initial={{ opacity: 0, y: -10 }}
                             animate={inView ? { opacity: 1, y: 0 } : {}}
                             transition={{ delay: 0.15 }}
-                            className="inline-block px-4 py-1.5 rounded-full text-sm font-semibold mb-6"
+                            className="inline-block px-4 py-1.5 rounded-full text-sm font-semibold mb-6 animate-pulse"
                             style={{
                                 background: 'rgba(0,201,177,0.1)',
-                                color: '#00C9B1',
+                                color: isDark ? '#00C9B1' : '#00a693',
                                 border: '1px solid rgba(0,201,177,0.28)',
                                 fontFamily: '"DM Sans", sans-serif',
                                 letterSpacing: '0.03em',
@@ -173,11 +181,11 @@ export default function TransformSchool() {
                             Free Demo
                         </motion.span>
 
-                        {/* Heading — exact original structure + Syne font */}
+                        {/* Heading */}
                         <div className="flex flex-col items-start gap-0.5 mb-6">
                             <h1
-                                className="font-extrabold text-4xl sm:text-5xl md:text-6xl text-white leading-tight"
-                                style={{ fontFamily: '"Syne", sans-serif' }}
+                                className="font-extrabold text-4xl sm:text-5xl md:text-6xl leading-tight transition-colors"
+                                style={{ fontFamily: '"Syne", sans-serif', color: isDark ? 'white' : '#0f172a' }}
                             >
                                 Ready to
                             </h1>
@@ -189,16 +197,16 @@ export default function TransformSchool() {
                                 <span style={{ color: '#F5A623' }}>form</span>
                             </h1>
                             <h1
-                                className="font-extrabold text-4xl sm:text-5xl md:text-6xl text-white leading-tight"
-                                style={{ fontFamily: '"Syne", sans-serif' }}
+                                className="font-extrabold text-4xl sm:text-5xl md:text-6xl leading-tight transition-colors"
+                                style={{ fontFamily: '"Syne", sans-serif', color: isDark ? 'white' : '#0f172a' }}
                             >
                                 your school?
                             </h1>
                         </div>
 
                         <p
-                            className="text-base sm:text-lg mb-8 max-w-md leading-relaxed"
-                            style={{ color: '#8A9BB0', fontFamily: '"DM Sans", sans-serif' }}
+                            className="text-base sm:text-lg mb-8 max-w-md leading-relaxed transition-colors"
+                            style={{ color: isDark ? '#8A9BB0' : '#475569', fontFamily: '"DM Sans", sans-serif' }}
                         >
                             Join{' '}
                             <strong style={{ color: '#00C9B1', fontWeight: 600 }}>500+ schools</strong>{' '}
@@ -213,8 +221,8 @@ export default function TransformSchool() {
                                     initial={{ opacity: 0, x: -20 }}
                                     animate={inView ? { opacity: 1, x: 0 } : {}}
                                     transition={{ delay: 0.3 + i * 0.1 }}
-                                    className="flex items-center gap-3 text-sm"
-                                    style={{ color: 'rgba(255,255,255,0.78)', fontFamily: '"DM Sans", sans-serif' }}
+                                    className="flex items-center gap-3 text-sm transition-colors"
+                                    style={{ color: isDark ? 'rgba(255,255,255,0.78)' : '#334155', fontFamily: '"DM Sans", sans-serif' }}
                                 >
                                     <span
                                         className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
@@ -224,7 +232,7 @@ export default function TransformSchool() {
                                         }}
                                     >
                                         <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                                            <path d="M2 6 L5 9 L10 3" stroke="#00C9B1" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                                            <path d="M2 6 L5 9 L10 3" stroke={isDark ? "#00C9B1" : "#00a693"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                                         </svg>
                                     </span>
                                     {point}
@@ -232,17 +240,17 @@ export default function TransformSchool() {
                             ))}
                         </ul>
 
-                        {/* Buttons — exact original style */}
+                        {/* Buttons */}
                         <div className="flex flex-col sm:flex-row items-start gap-4">
                             <motion.button
                                 whileHover={{ opacity: 0.88, scale: 1.03 }}
                                 whileTap={{ scale: 0.97 }}
-                                className="px-8 py-3.5 rounded-full font-semibold text-white text-base cursor-pointer"
+                                className="px-8 py-3.5 rounded-full font-semibold text-slate-950 text-base cursor-pointer"
                                 style={{
                                     background: 'linear-gradient(to right, #00C9B1, #F5A623)',
                                     border: 'none',
                                     fontFamily: '"DM Sans", sans-serif',
-                                    fontWeight: 600,
+                                    fontWeight: 700,
                                     boxShadow: '0 8px 24px rgba(0,201,177,0.18)',
                                 }}
                             >
@@ -253,11 +261,12 @@ export default function TransformSchool() {
                                 href="https://wa.me/919511117450?text=Hi%2C%20I%20want%20to%20know%20more%20about%20SchoolSpine"
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                whileHover={{ backgroundColor: 'rgba(255,255,255,0.08)', scale: 1.03 }}
+                                whileHover={{ backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)', scale: 1.03 }}
                                 whileTap={{ scale: 0.97 }}
-                                className="inline-flex items-center gap-2 px-8 py-3.5 rounded-full font-semibold text-white text-base cursor-pointer"
+                                className="inline-flex items-center gap-2 px-8 py-3.5 rounded-full font-semibold text-base cursor-pointer"
                                 style={{
-                                    border: '1px solid rgba(255,255,255,0.28)',
+                                    border: isDark ? '1px solid rgba(255,255,255,0.28)' : '1px solid rgba(0,0,0,0.2)',
+                                    color: isDark ? 'white' : '#1e293b',
                                     textDecoration: 'none',
                                     fontFamily: '"DM Sans", sans-serif',
                                     fontWeight: 600,
@@ -276,13 +285,15 @@ export default function TransformSchool() {
                         transition={{ duration: 0.7, delay: 0.2 }}
                     >
                         <div
-                            className="rounded-2xl p-8"
+                            className="rounded-2xl p-8 transition-all"
                             style={{
-                                background: 'rgba(255,255,255,0.05)',
+                                background: isDark ? 'rgba(255,255,255,0.05)' : '#ffffff',
                                 backdropFilter: 'blur(24px)',
                                 WebkitBackdropFilter: 'blur(24px)',
-                                border: '1.5px solid rgba(0,201,177,0.18)',
-                                boxShadow: '0 0 56px rgba(0,201,177,0.07), 0 2px 32px rgba(0,0,0,0.3)',
+                                border: isDark ? '1.5px solid rgba(0,201,177,0.18)' : '1.5px solid rgba(0,201,177,0.25)',
+                                boxShadow: isDark 
+                                    ? '0 0 56px rgba(0,201,177,0.07), 0 2px 32px rgba(0,0,0,0.3)'
+                                    : '0 10px 40px rgba(148,163,184,0.12), 0 1px 3px rgba(0,0,0,0.05)',
                             }}
                         >
                             {submitted ? (
@@ -293,26 +304,26 @@ export default function TransformSchool() {
                                 >
                                     <div className="text-5xl mb-4">🎉</div>
                                     <h3
-                                        className="text-2xl font-bold text-white mb-3"
-                                        style={{ fontFamily: '"Syne", sans-serif' }}
+                                        className="text-2xl font-bold mb-3"
+                                        style={{ fontFamily: '"Syne", sans-serif', color: isDark ? 'white' : '#0f172a' }}
                                     >
                                         Demo Booked!
                                     </h3>
-                                    <p style={{ color: '#8A9BB0', fontFamily: '"DM Sans", sans-serif' }}>
+                                    <p style={{ color: isDark ? '#8A9BB0' : '#64748b', fontFamily: '"DM Sans", sans-serif' }}>
                                         Our team will reach out within 24 hours to confirm your demo slot.
                                     </p>
                                 </motion.div>
                             ) : (
                                 <>
                                     <h3
-                                        className="text-xl font-bold text-white mb-1.5"
-                                        style={{ fontFamily: '"Syne", sans-serif' }}
+                                        className="text-xl font-bold mb-1.5"
+                                        style={{ fontFamily: '"Syne", sans-serif', color: isDark ? 'white' : '#0f172a' }}
                                     >
                                         Book Your Free Demo
                                     </h3>
                                     <p
                                         className="text-sm mb-7"
-                                        style={{ color: '#8A9BB0', fontFamily: '"DM Sans", sans-serif' }}
+                                        style={{ color: isDark ? '#8A9BB0' : '#64748b', fontFamily: '"DM Sans", sans-serif' }}
                                     >
                                         Fill in your details and our education specialist will set up a personalised demo.
                                     </p>
@@ -326,7 +337,7 @@ export default function TransformSchool() {
                                             style={inputStyle}
                                             required
                                             onFocus={(e) => (e.target.style.borderColor = '#00C9B1')}
-                                            onBlur={(e) => (e.target.style.borderColor = 'rgba(0,201,177,0.22)')}
+                                            onBlur={(e) => (e.target.style.borderColor = isDark ? 'rgba(0,201,177,0.22)' : 'rgba(0,201,177,0.35)')}
                                         />
                                         <input
                                             type="text"
@@ -336,7 +347,7 @@ export default function TransformSchool() {
                                             style={inputStyle}
                                             required
                                             onFocus={(e) => (e.target.style.borderColor = '#00C9B1')}
-                                            onBlur={(e) => (e.target.style.borderColor = 'rgba(0,201,177,0.22)')}
+                                            onBlur={(e) => (e.target.style.borderColor = isDark ? 'rgba(0,201,177,0.22)' : 'rgba(0,201,177,0.35)')}
                                         />
                                         <input
                                             type="tel"
@@ -346,30 +357,30 @@ export default function TransformSchool() {
                                             style={inputStyle}
                                             required
                                             onFocus={(e) => (e.target.style.borderColor = '#00C9B1')}
-                                            onBlur={(e) => (e.target.style.borderColor = 'rgba(0,201,177,0.22)')}
+                                            onBlur={(e) => (e.target.style.borderColor = isDark ? 'rgba(0,201,177,0.22)' : 'rgba(0,201,177,0.35)')}
                                         />
                                         <select
                                             value={form.strength}
                                             onChange={(e) => setForm({ ...form, strength: e.target.value })}
                                             style={{
                                                 ...inputStyle,
-                                                color: form.strength ? 'white' : '#8A9BB0',
+                                                color: form.strength ? (isDark ? 'white' : '#0f172a') : '#8A9BB0',
                                             }}
                                             onFocus={(e) => (e.target.style.borderColor = '#00C9B1')}
-                                            onBlur={(e) => (e.target.style.borderColor = 'rgba(0,201,177,0.22)')}
+                                            onBlur={(e) => (e.target.style.borderColor = isDark ? 'rgba(0,201,177,0.22)' : 'rgba(0,201,177,0.35)')}
                                         >
-                                            <option value="" disabled style={{ background: '#152F3F', color: '#8A9BB0' }}>Student Strength</option>
-                                            <option value="<200" style={{ background: '#152F3F' }}>Below 200 Students</option>
-                                            <option value="200-500" style={{ background: '#152F3F' }}>200–500 Students</option>
-                                            <option value="500-1000" style={{ background: '#152F3F' }}>500–1000 Students</option>
-                                            <option value="1000+" style={{ background: '#152F3F' }}>1000+ Students</option>
+                                            <option value="" disabled style={{ background: isDark ? '#152F3F' : '#ffffff', color: '#8A9BB0' }}>Student Strength</option>
+                                            <option value="<200" style={{ background: isDark ? '#152F3F' : '#ffffff', color: isDark ? 'white' : '#0f172a' }}>Below 200 Students</option>
+                                            <option value="200-500" style={{ background: isDark ? '#152F3F' : '#ffffff', color: isDark ? 'white' : '#0f172a' }}>200–500 Students</option>
+                                            <option value="500-1000" style={{ background: isDark ? '#152F3F' : '#ffffff', color: isDark ? 'white' : '#0f172a' }}>500–1000 Students</option>
+                                            <option value="1000+" style={{ background: isDark ? '#152F3F' : '#ffffff', color: isDark ? 'white' : '#0f172a' }}>1000+ Students</option>
                                         </select>
 
                                         <motion.button
                                             type="submit"
-                                            whileHover={{ scale: 1.03, boxShadow: '0 0 28px rgba(0,201,177,0.3)' }}
-                                            whileTap={{ scale: 0.97 }}
-                                            className="w-full py-4 rounded-xl font-bold text-white text-base mt-2 cursor-pointer"
+                                            whileHover={{ scale: 1.02, boxShadow: '0 0 28px rgba(0,201,177,0.3)' }}
+                                            whileTap={{ scale: 0.98 }}
+                                            className="w-full py-4 rounded-xl font-bold text-slate-950 text-base mt-2 cursor-pointer"
                                             style={{
                                                 background: 'linear-gradient(to right, #00C9B1, #F5A623)',
                                                 border: 'none',
@@ -384,7 +395,7 @@ export default function TransformSchool() {
 
                                     <p
                                         className="text-center text-xs mt-4"
-                                        style={{ color: 'rgba(138,155,176,0.6)', fontFamily: '"DM Sans", sans-serif' }}
+                                        style={{ color: isDark ? 'rgba(138,155,176,0.6)' : '#64748b', fontFamily: '"DM Sans", sans-serif' }}
                                     >
                                         No credit card required · 100% free · Response within 24hrs
                                     </p>
