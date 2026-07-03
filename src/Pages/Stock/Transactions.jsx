@@ -20,17 +20,18 @@ import ListLoader from "../../Components/CommonComp/ListLoader";
 import StockManagementCard from "../../Components/Stock/StockManagementCard";
 import TransferStock from "../../Components/Stock/TransferStock";
 import { getStockOverview } from "../../Api/Stock/StockApi";
-import {getActiveStores } from "../../Api/Stock/StoreApi";
+import { getActiveStores } from "../../Api/Stock/StoreApi";
 import { getListOfValues } from "../../Api/Lov/ListOfValues";
+import { STOCK_SHARED_CONSTS, TRANSACTIONS_CONSTS } from "../../Constants/StringConstants/StockAndOrdersConstants";
 
-const SEARCH_DEBOUNCE_MS = 400;
+const SEARCH_DEBOUNCE_MS = TRANSACTIONS_CONSTS.CONFIG.SEARCH_DEBOUNCE_MS;
 const ALL_STORES_ID = "";
 
 const STATUS_OPTIONS = [
-    { label: "All Status", val: "" },
-    { label: "OK", val: "OK" },
-    { label: "Low", val: "LOW" },
-    { label: "Critical", val: "CRITICAL" },
+    { label: STOCK_SHARED_CONSTS.STATUS.ALL, val: "" },
+    { label: TRANSACTIONS_CONSTS.STOCK_LEVEL.OK, val: TRANSACTIONS_CONSTS.STOCK_LEVEL.OK_API },
+    { label: TRANSACTIONS_CONSTS.STOCK_LEVEL.LOW, val: TRANSACTIONS_CONSTS.STOCK_LEVEL.LOW_API },
+    { label: TRANSACTIONS_CONSTS.STOCK_LEVEL.CRITICAL, val: TRANSACTIONS_CONSTS.STOCK_LEVEL.CRITICAL_API },
 ];
 
 const categoryColors = {
@@ -46,14 +47,14 @@ const categoryColors = {
 };
 
 const stockStatusStyle = {
-    OK: "text-green-700 font-semibold",
-    LOW: "text-orange-500 font-semibold",
-    CRITICAL: "text-red-600 font-semibold",
+    [TRANSACTIONS_CONSTS.STOCK_LEVEL.OK_API]: "text-green-700 font-semibold",
+    [TRANSACTIONS_CONSTS.STOCK_LEVEL.LOW_API]: "text-orange-500 font-semibold",
+    [TRANSACTIONS_CONSTS.STOCK_LEVEL.CRITICAL_API]: "text-red-600 font-semibold",
 };
 
 const stockBarColor = (status) => {
-    if (status === "CRITICAL") return "bg-red-500";
-    if (status === "LOW") return "bg-orange-400";
+    if (status === TRANSACTIONS_CONSTS.STOCK_LEVEL.CRITICAL_API) return "bg-red-500";
+    if (status === TRANSACTIONS_CONSTS.STOCK_LEVEL.LOW_API) return "bg-orange-400";
     return "bg-blue-500";
 };
 
@@ -82,7 +83,7 @@ const InlineActions = ({ onAction }) => (
             className="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-white hover:bg-blue-50 active:bg-blue-100 text-blue-600 border border-blue-200 text-xs font-semibold transition cursor-pointer whitespace-nowrap"
         >
             <ArrowLeftRight className="w-3 h-3" />
-            <span className="hidden lg:inline">Transfer</span>
+            <span className="hidden lg:inline">{TRANSACTIONS_CONSTS.STOCK_MODAL.TRANSFER_TITLE}</span>
         </button>
     </div>
 );
@@ -100,7 +101,7 @@ const MobileActions = ({ onAction }) => (
         </button>
         <button onClick={() => onAction("transfer")}
             className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white hover:bg-blue-50 text-blue-600 border border-blue-200 text-xs font-semibold transition cursor-pointer">
-            <ArrowLeftRight className="w-3 h-3" /> Transfer
+            <ArrowLeftRight className="w-3 h-3" /> {TRANSACTIONS_CONSTS.STOCK_MODAL.TRANSFER_TITLE}
         </button>
     </div>
 );
@@ -159,7 +160,7 @@ export default function Transactions() {
     const [storesLoading, setStoresLoading] = useState(false);
 
     // ── Categories from LOV API ────────────────────────────────
-    const [categoryOptions, setCategoryOptions] = useState([{ label: "All Categories", val: "" }]);
+    const [categoryOptions, setCategoryOptions] = useState([{ label: STOCK_SHARED_CONSTS.ITEM_CATEGORY.ALL, val: "" }]);
     const [categoriesLoading, setCategoriesLoading] = useState(false);
 
     // ── Filter state ───────────────────────────────────────────
@@ -191,32 +192,24 @@ export default function Transactions() {
         setStoresLoading(true);
         getActiveStores()
             .then((res) => setStores(res?.data ?? []))
-            .catch(() => toast.error("Failed to load stores."))
+            .catch(() => toast.error(TRANSACTIONS_CONSTS.MESSAGES.LOAD_STORES_FAILED))
             .finally(() => setStoresLoading(false));
     }, []);
 
     // ── Load ITEM_CATEGORY from LOV API once ───────────────────
     useEffect(() => {
         setCategoriesLoading(true);
-        getListOfValues("ITEM_CATEGORY")
+        getListOfValues(STOCK_SHARED_CONSTS.ITEM_CATEGORY.LOV_KEY)
             .then((data) => {
                 setCategoryOptions([
-                    { label: "All Categories", val: "" },
+                    { label: STOCK_SHARED_CONSTS.ITEM_CATEGORY.ALL, val: "" },
                     ...data.map((item) => ({ label: item.label, val: item.value })),
                 ]);
             })
             .catch(() => {
                 setCategoryOptions([
-                    { label: "All Categories", val: "" },
-                    { label: "Books", val: "BOOKS" },
-                    { label: "Uniform", val: "UNIFORM" },
-                    { label: "Lab", val: "LAB" },
-                    { label: "Stationery", val: "STATIONERY" },
-                    { label: "Sports", val: "SPORTS" },
-                    { label: "Furniture", val: "FURNITURE" },
-                    { label: "Electronics", val: "ELECTRONICS" },
-                    { label: "Cleaning", val: "CLEANING" },
-                    { label: "Other", val: "OTHER" },
+                    { label: STOCK_SHARED_CONSTS.ITEM_CATEGORY.ALL, val: "" },
+                    ...STOCK_SHARED_CONSTS.ITEM_CATEGORY.OPTIONS.map(opt => ({ label: opt.label, val: opt.api }))
                 ]);
             })
             .finally(() => setCategoriesLoading(false));
@@ -245,7 +238,7 @@ export default function Transactions() {
             if (statusFilter) filters.stockStatus = statusFilter;
 
             const { items: raw, pagination: pg } = await getStockOverview(
-                filters, page - 1, rowsPerPage, "id,desc"
+                filters, page - 1, rowsPerPage, TRANSACTIONS_CONSTS.SORT.DEFAULT
             );
 
             const mapped = (raw ?? []).map((item) => ({
@@ -259,7 +252,7 @@ export default function Transactions() {
                 storeCount: item.storeCount ?? 0,
                 storeNames: parseStoreNames(item.stockedInStores),
                 isBelowMin: item.isBelowMinimum,
-                stockStatus: item.stockStatus ?? "OK",
+                stockStatus: item.stockStatus ?? TRANSACTIONS_CONSTS.STOCK_LEVEL.OK_API,
                 stores: item.stores ?? [],
             }));
 
@@ -268,9 +261,9 @@ export default function Transactions() {
             setTotalPages(pg?.totalPages ?? 0);
             setNoItemFound(mapped.length === 0);
         } catch {
-            setItemsError("Failed to load stock data.");
+            setItemsError(TRANSACTIONS_CONSTS.MESSAGES.LOAD_STOCK_FAILED);
             setItems([]);
-            toast.error("Failed to load stock data. Please try again.");
+            toast.error(TRANSACTIONS_CONSTS.MESSAGES.LOAD_STOCK_FAILED_RETRY);
         } finally {
             setItemsLoading(false);
         }
@@ -285,7 +278,7 @@ export default function Transactions() {
 
     const clearFilters = () => {
         setSearch(""); setCategoryFilter(""); setStatusFilter(""); resetPage();
-        toast.info("Filters cleared.");
+        toast.info(TRANSACTIONS_CONSTS.MESSAGES.FILTERS_CLEARED);
     };
 
     const activeFilterCount = [
@@ -308,28 +301,28 @@ export default function Transactions() {
     const closeTransferModal = () => { setIsTransferOpen(false); setPreselectedItem(null); };
 
     const transactionCards = [
-        { icon: <ArrowDownToLine className="w-6 h-6 sm:w-7 sm:h-7 xl:w-8 xl:h-8 text-green-600" />, bg: "bg-green-50", border: "border-green-200", title: "Stock IN", titleColor: "text-green-600", sub: "Add stock to a store", type: "in" },
-        { icon: <ArrowUpFromLine className="w-6 h-6 sm:w-7 sm:h-7 xl:w-8 xl:h-8 text-red-500" />, bg: "bg-red-50", border: "border-red-200", title: "Stock OUT", titleColor: "text-red-500", sub: "Remove stock from a store", type: "out" },
-        { icon: <ArrowLeftRight className="w-6 h-6 sm:w-7 sm:h-7 xl:w-8 xl:h-8 text-blue-600" />, bg: "bg-blue-50", border: "border-blue-200", title: "Transfer", titleColor: "text-blue-600", sub: "Move between stores", type: "transfer" },
+        { icon: <ArrowDownToLine className="w-6 h-6 sm:w-7 sm:h-7 xl:w-8 xl:h-8 text-green-600" />, bg: "bg-green-50", border: "border-green-200", title: TRANSACTIONS_CONSTS.STOCK_MODAL.STOCK_IN_TITLE, titleColor: "text-green-600", sub: TRANSACTIONS_CONSTS.STOCK_MODAL.STOCK_IN_DESC, type: "in" },
+        { icon: <ArrowUpFromLine className="w-6 h-6 sm:w-7 sm:h-7 xl:w-8 xl:h-8 text-red-500" />, bg: "bg-red-50", border: "border-red-200", title: TRANSACTIONS_CONSTS.STOCK_MODAL.STOCK_OUT_TITLE, titleColor: "text-red-500", sub: TRANSACTIONS_CONSTS.STOCK_MODAL.STOCK_OUT_DESC, type: "out" },
+        { icon: <ArrowLeftRight className="w-6 h-6 sm:w-7 sm:h-7 xl:w-8 xl:h-8 text-blue-600" />, bg: "bg-blue-50", border: "border-blue-200", title: TRANSACTIONS_CONSTS.STOCK_MODAL.TRANSFER_TITLE, titleColor: "text-blue-600", sub: TRANSACTIONS_CONSTS.STOCK_MODAL.TRANSFER_DESC, type: "transfer" },
     ];
 
     const colSpan = isAllStores ? 9 : 8;
 
     const handleStockConfirm = (data) => {
-        console.log(`Stock ${modalType.toUpperCase()}:`, data);
+        console.log(TRANSACTIONS_CONSTS.STOCK_MODAL.MODAL_HEADER(modalType), data);
         handleStockChange();
-        toast.success(modalType === "in" ? "Stock added successfully!" : "Stock removed successfully!");
+        toast.success(modalType === "in" ? TRANSACTIONS_CONSTS.MESSAGES.STOCK_ADDED : TRANSACTIONS_CONSTS.MESSAGES.STOCK_REMOVED);
     };
 
     const handleTransferConfirm = (data) => {
-        console.log("Transfer:", data);
+        console.log(TRANSACTIONS_CONSTS.STOCK_MODAL.TRANSFER_HEADER, data);
         handleStockChange();
-        toast.success("Stock transferred successfully!");
+        toast.success(TRANSACTIONS_CONSTS.MESSAGES.STOCK_TRANSFERRED);
     };
 
     const handleRefresh = () => {
         handleStockChange();
-        toast.info("Stock data refreshed.");
+        toast.info(TRANSACTIONS_CONSTS.MESSAGES.STOCK_REFRESHED);
     };
 
     // ── Pagination renderer (shared) ──────────────────────────
@@ -396,10 +389,10 @@ export default function Transactions() {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 sm:mb-5">
                     <div>
                         <h2 className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold text-gray-900 leading-tight">
-                            Transactions
+                            {TRANSACTIONS_CONSTS.TEXT.TITLE}
                         </h2>
                         <p className="text-gray-500 mt-0.5 font-medium text-xs sm:text-sm lg:text-base">
-                            Manage stock movements — add, remove or transfer inventory across stores.
+                            {TRANSACTIONS_CONSTS.TEXT.SUBTITLE}
                         </p>
                     </div>
                 </div>
@@ -431,13 +424,13 @@ export default function Transactions() {
                         <div className="flex items-center gap-2 flex-wrap">
                             <div className="flex items-center gap-1.5 sm:gap-2 bg-blue-600 text-white px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg sm:rounded-xl shadow-sm shrink-0">
                                 <Store className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                                <span className="text-xs sm:text-sm md:text-base font-semibold whitespace-nowrap">Store Stock View</span>
+                                <span className="text-xs sm:text-sm md:text-base font-semibold whitespace-nowrap">{TRANSACTIONS_CONSTS.TEXT.TITLE}</span>
                             </div>
 
                             <div className="relative">
                                 {storesLoading ? (
                                     <div className="border-2 border-blue-200 flex items-center bg-blue-50 text-blue-400 text-xs sm:text-sm font-semibold px-3 py-1.5 sm:py-2 rounded-lg sm:rounded-xl min-w-32 gap-2">
-                                        Loading <Loader2 className="w-3.5 h-3.5 text-blue-400 animate-spin" />
+                                        {TRANSACTIONS_CONSTS.TEXT.LOADING} <Loader2 className="w-3.5 h-3.5 text-blue-400 animate-spin" />
                                     </div>
                                 ) : (
                                     <>
@@ -446,7 +439,7 @@ export default function Transactions() {
                                             onChange={(e) => { setSelectedStoreId(e.target.value); resetPage(); }}
                                             className="appearance-none border-2 border-blue-300 bg-blue-50 hover:bg-blue-100 focus:bg-white text-blue-800 font-semibold text-xs sm:text-sm pl-3 pr-8 py-1.5 sm:py-2 rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all min-w-32 sm:min-w-40 cursor-pointer"
                                         >
-                                            <option value="">All Stores</option>
+                                            <option value="">{TRANSACTIONS_CONSTS.TEXT.ALL_STORES}</option>
                                             {stores.map((s) => (
                                                 <option key={s.id} value={s.id}>{s.storeName.trim()}</option>
                                             ))}
@@ -481,7 +474,7 @@ export default function Transactions() {
                     ) : isAllStores && (
                         <div className="px-3 sm:px-4 md:px-5 xl:px-6 py-2 bg-blue-50 border-b border-blue-100">
                             <span className="text-[11px] sm:text-xs font-semibold text-blue-700">
-                                Aggregated stock across all {stores.length} active stores
+                                {TRANSACTIONS_CONSTS.TEXT.AGGREGATED_ACROSS_STORES(stores.length)}
                             </span>
                         </div>
                     )}
@@ -492,7 +485,7 @@ export default function Transactions() {
                             <SearchIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 shrink-0" />
                             <input
                                 type="text"
-                                placeholder="Search item name or code…"
+                                placeholder={TRANSACTIONS_CONSTS.TEXT.SEARCH_ITEM_NAME_OR_CODE}
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
                                 className="text-xs sm:text-sm focus:outline-none text-gray-600 w-full bg-transparent"
@@ -513,7 +506,7 @@ export default function Transactions() {
                                     className="w-full sm:w-36 md:w-40 xl:w-44 px-2.5 py-2 border border-gray-200 bg-gray-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-200 text-xs sm:text-sm text-gray-700 disabled:opacity-60 disabled:cursor-not-allowed appearance-none pr-7 cursor-pointer"
                                 >
                                     {categoriesLoading
-                                        ? <option value="">Loading…</option>
+                                        ? <option value="">{TRANSACTIONS_CONSTS.TEXT.LOADING}</option>
                                         : categoryOptions.map((o) => <option key={o.val} value={o.val}>{o.label}</option>)
                                     }
                                 </select>
@@ -539,7 +532,7 @@ export default function Transactions() {
                                     onClick={clearFilters}
                                     className="flex items-center gap-1 text-xs text-red-500 hover:text-red-700 font-medium whitespace-nowrap shrink-0 cursor-pointer"
                                 >
-                                    <X className="w-3 h-3" /> Clear {activeFilterCount > 1 ? `(${activeFilterCount})` : ""}
+                                    <X className="w-3 h-3" /> Clear {activeFilterCount > 1 ? TRANSACTIONS_CONSTS.TEXT.ACTIVE_FILTER_COUNT(activeFilterCount) : ""}
                                 </button>
                             )}
                         </div>
@@ -554,22 +547,22 @@ export default function Transactions() {
                             <div className="text-center py-10 col-span-2">
                                 <div className="flex flex-col items-center gap-2">
                                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-                                    <span className="text-gray-500 text-sm">Loading items…</span>
+                                    <span className="text-gray-500 text-sm">{TRANSACTIONS_CONSTS.TEXT.LOADING_ITEMS}</span>
                                 </div>
                             </div>
                         ) : itemsError ? (
                             <div className="text-center py-10 col-span-2">
                                 <p className="text-red-500 text-sm mb-3">{itemsError}</p>
-                                <button onClick={() => { fetchItems(); toast.info("Retrying…"); }}
+                                <button onClick={() => { fetchItems(); toast.info(TRANSACTIONS_CONSTS.TEXT.RETRYING); }}
                                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm cursor-pointer">
-                                    Retry
+                                    {STOCK_SHARED_CONSTS.COMMON.RETRY}
                                 </button>
                             </div>
                         ) : noItemFound ? (
                             <div className="text-center py-10 col-span-2">
                                 <Inbox className="w-8 h-8 opacity-30 mx-auto mb-2 text-gray-400" />
-                                <h3 className="text-base font-bold text-gray-900 mb-1">No Items Found</h3>
-                                <p className="text-gray-500 text-sm">Try adjusting your filters</p>
+                                <h3 className="text-base font-bold text-gray-900 mb-1">{TRANSACTIONS_CONSTS.TEXT.EMPTY_TITLE}</h3>
+                                <p className="text-gray-500 text-sm">{TRANSACTIONS_CONSTS.TEXT.TRY_ADJUSTING_FILTERS}</p>
                             </div>
                         ) : (
                             items.map((item, idx) => {
@@ -585,7 +578,7 @@ export default function Transactions() {
                                                     <p className="text-[11px] text-gray-400 truncate mt-0.5">{item.itemCode}</p>
                                                 </div>
                                             </div>
-                                            <span className={`text-[11px] shrink-0 mt-0.5 ${stockStatusStyle[status] ?? stockStatusStyle.OK}`}>
+                                            <span className={`text-[11px] shrink-0 mt-0.5 ${stockStatusStyle[status] ?? stockStatusStyle[TRANSACTIONS_CONSTS.STOCK_LEVEL.OK_API]}`}>
                                                 {status}
                                             </span>
                                         </div>
@@ -598,8 +591,8 @@ export default function Transactions() {
 
                                             <div>
                                                 <div className="flex justify-between text-[11px] text-gray-500 mb-1">
-                                                    <span>Qty: <span className={`font-bold ${item.isBelowMin ? "text-red-500" : "text-gray-700"}`}>{qty}</span></span>
-                                                    <span>Min: <span className="font-medium text-gray-700">{item.minLevel}</span></span>
+                                                    <span>{TRANSACTIONS_CONSTS.TEXT.QTY_LABEL} <span className={`font-bold ${item.isBelowMin ? "text-red-500" : "text-gray-700"}`}>{qty}</span></span>
+                                                    <span>{TRANSACTIONS_CONSTS.TEXT.MIN_LABEL} <span className="font-medium text-gray-700">{item.minLevel}</span></span>
                                                 </div>
                                                 <div className="w-full bg-gray-100 rounded-full h-1.5">
                                                     <div
@@ -641,30 +634,30 @@ export default function Transactions() {
                                         #
                                     </th>
                                     <th className="px-2 md:px-3 xl:px-4 py-2.5 md:py-3 text-left text-[10px] md:text-xs font-semibold text-gray-500 uppercase tracking-wider min-w-30 md:min-w-37.5 xl:min-w-45">
-                                        Item
+                                        {TRANSACTIONS_CONSTS.TABLE_HEADERS.ITEM}
                                     </th>
                                     <th className="px-2 md:px-3 xl:px-4 py-2.5 md:py-3 text-left text-[10px] md:text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                                        Category
+                                        {TRANSACTIONS_CONSTS.TABLE_HEADERS.CATEGORY}
                                     </th>
                                     <th className="px-2 md:px-3 xl:px-4 py-2.5 md:py-3 text-left text-[10px] md:text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                                        Unit
+                                        {TRANSACTIONS_CONSTS.TABLE_HEADERS.UNIT}
                                     </th>
                                     <th className="px-2 md:px-3 xl:px-4 py-2.5 md:py-3 text-left text-[10px] md:text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap min-w-20">
-                                        {isAllStores ? "Total Qty" : "Qty"}
+                                        {isAllStores ? TRANSACTIONS_CONSTS.TABLE_HEADERS.TOTAL_QTY : TRANSACTIONS_CONSTS.TABLE_HEADERS.QTY}
                                     </th>
                                     {isAllStores && (
                                         <th className="px-2 md:px-3 xl:px-4 py-2.5 md:py-3 text-left text-[10px] md:text-xs font-semibold text-gray-500 uppercase tracking-wider min-w-30">
-                                            Stocked In
+                                            {TRANSACTIONS_CONSTS.TABLE_HEADERS.STOCKED_IN}
                                         </th>
                                     )}
                                     <th className="px-2 md:px-3 xl:px-4 py-2.5 md:py-3 text-center text-[10px] md:text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                                        Min
+                                        {TRANSACTIONS_CONSTS.TABLE_HEADERS.MIN}
                                     </th>
                                     <th className="px-2 md:px-3 xl:px-4 py-2.5 md:py-3 text-left text-[10px] md:text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                                        Status
+                                        {TRANSACTIONS_CONSTS.TABLE_HEADERS.STATUS}
                                     </th>
                                     <th className="px-2 md:px-3 xl:px-4 py-2.5 md:py-3 text-center text-[10px] md:text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                                        Actions
+                                        {TRANSACTIONS_CONSTS.TABLE_HEADERS.ACTIONS}
                                     </th>
                                 </tr>
                             </thead>
@@ -676,9 +669,9 @@ export default function Transactions() {
                                     <tr>
                                         <td colSpan={colSpan} className="px-4 py-10 text-center">
                                             <p className="text-red-500 text-sm mb-3">{itemsError}</p>
-                                            <button onClick={() => { fetchItems(); toast.info("Retrying…"); }}
+                                            <button onClick={() => { fetchItems(); toast.info(TRANSACTIONS_CONSTS.TEXT.RETRYING); }}
                                                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm cursor-pointer">
-                                                Retry
+                                                {STOCK_SHARED_CONSTS.COMMON.RETRY}
                                             </button>
                                         </td>
                                     </tr>
@@ -686,8 +679,8 @@ export default function Transactions() {
                                     <tr>
                                         <td colSpan={colSpan} className="px-4 py-12 text-center">
                                             <Inbox className="w-8 h-8 opacity-30 mx-auto mb-2 text-gray-400" />
-                                            <h3 className="text-sm font-bold text-gray-700 mb-1">No Items Found</h3>
-                                            <p className="text-xs text-gray-400">Try adjusting your filters</p>
+                                            <h3 className="text-sm font-bold text-gray-700 mb-1">{TRANSACTIONS_CONSTS.TEXT.EMPTY_TITLE}</h3>
+                                            <p className="text-xs text-gray-400">{TRANSACTIONS_CONSTS.TEXT.TRY_ADJUSTING_FILTERS}</p>
                                         </td>
                                     </tr>
                                 ) : (
@@ -740,7 +733,7 @@ export default function Transactions() {
                                                 </td>
 
                                                 <td className="px-2 md:px-3 xl:px-4 py-2 md:py-3">
-                                                    <span className={`text-[11px] md:text-xs ${stockStatusStyle[status] ?? stockStatusStyle.OK}`}>
+                                                    <span className={`text-[11px] md:text-xs ${stockStatusStyle[status] ?? stockStatusStyle[TRANSACTIONS_CONSTS.STOCK_LEVEL.OK_API]}`}>
                                                         {status}
                                                     </span>
                                                 </td>
@@ -764,11 +757,11 @@ export default function Transactions() {
                             <div className="flex flex-col xs:flex-row items-center justify-center xl:justify-start gap-3 text-center xl:text-left">
                                 <span className="text-xs sm:text-sm text-gray-700">
                                     {totalItems === 0
-                                        ? "No items"
-                                        : `Showing ${(page - 1) * rowsPerPage + 1}–${Math.min(page * rowsPerPage, totalItems)} of ${totalItems}`}
+                                        ? TRANSACTIONS_CONSTS.TEXT.NO_ITEMS
+                                        : STOCK_SHARED_CONSTS.COMMON.SHOWING_RANGE((page - 1) * rowsPerPage + 1, Math.min(page * rowsPerPage, totalItems), totalItems)}
                                 </span>
                                 <div className="flex items-center gap-2 shrink-0">
-                                    <span className="text-xs sm:text-sm text-gray-500 whitespace-nowrap">Rows:</span>
+                                    <span className="text-xs sm:text-sm text-gray-500 whitespace-nowrap">{STOCK_SHARED_CONSTS.COMMON.ROWS_SHORT}</span>
                                     <select
                                         value={rowsPerPage}
                                         onChange={(e) => { setRowsPerPage(Number(e.target.value)); resetPage(); }}

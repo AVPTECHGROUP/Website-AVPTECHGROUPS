@@ -2,15 +2,16 @@ import { useState, useEffect, useCallback } from "react";
 import { X, Search, Loader2, Plus, Check, AlertCircle, AlertTriangle, IndianRupee } from "lucide-react";
 import { getStockItems } from "../../../Api/Stock/StockApi";
 import { checkItemAvailability } from "../../../Api/Stock/StudentOrder";
+import { STOCK_SHARED_CONSTS, STUDENT_ORDER_ADD_ITEM_CONSTS } from "../../../Constants/StringConstants/StockAndOrdersConstants";
 
 // ─── Category badge colors ────────────────────────────────────────
 const categoryColors = {
   STATIONERY: "bg-yellow-100 text-yellow-700 border-yellow-200",
-  BOOKS:      "bg-purple-100 text-purple-700 border-purple-200",
-  LAB:        "bg-blue-100   text-blue-700   border-blue-200",
-  SPORTS:     "bg-green-100  text-green-700  border-green-200",
-  UNIFORM:    "bg-pink-100   text-pink-700   border-pink-200",
-  ARTS:       "bg-orange-100 text-orange-700 border-orange-200",
+  BOOKS: "bg-purple-100 text-purple-700 border-purple-200",
+  LAB: "bg-blue-100   text-blue-700   border-blue-200",
+  SPORTS: "bg-green-100  text-green-700  border-green-200",
+  UNIFORM: "bg-pink-100   text-pink-700   border-pink-200",
+  ARTS: "bg-orange-100 text-orange-700 border-orange-200",
 };
 function categoryBadgeCls(cat) {
   return categoryColors[(cat || "").toUpperCase()] || "bg-gray-100 text-gray-600 border-gray-200";
@@ -19,15 +20,15 @@ function categoryBadgeCls(cat) {
 // ─── Main ─────────────────────────────────────────────────────────
 export default function StudentOrderAddItem({ isOpen, onClose, storeId, existingItems = [], onAddItems }) {
 
-  const [allItems,     setAllItems]     = useState([]);
-  const [availMap,     setAvailMap]     = useState({});
-  const [loading,      setLoading]      = useState(false);
+  const [allItems, setAllItems] = useState([]);
+  const [availMap, setAvailMap] = useState({});
+  const [loading, setLoading] = useState(false);
   const [availLoading, setAvailLoading] = useState(false);
-  const [error,        setError]        = useState("");
+  const [error, setError] = useState("");
 
-  const [search,         setSearch]         = useState("");
+  const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("ALL");
-  const [categories,     setCategories]     = useState([]);
+  const [categories, setCategories] = useState([]);
 
   const [selected, setSelected] = useState(new Set());
 
@@ -36,7 +37,7 @@ export default function StudentOrderAddItem({ isOpen, onClose, storeId, existing
   const loadItems = useCallback(async () => {
     setLoading(true); setError(""); setAvailMap({});
     try {
-      const res  = await getStockItems({ status: "ACTIVE" });
+      const res = await getStockItems({ status: STOCK_SHARED_CONSTS.STATUS.ACTIVE_API });
       const list =
         res?.content || res?.data?.content || res?.items ||
         (Array.isArray(res?.data) ? res.data : null) ||
@@ -49,7 +50,7 @@ export default function StudentOrderAddItem({ isOpen, onClose, storeId, existing
       }
     } catch (e) {
       console.error("StudentOrderAddItem loadItems:", e);
-      setError("Failed to load items. Please try again.");
+      setError(STUDENT_ORDER_ADD_ITEM_CONSTS.MESSAGES.LOAD_ITEMS_FAILED);
     } finally { setLoading(false); }
   }, [storeId]); // eslint-disable-line
 
@@ -57,17 +58,17 @@ export default function StudentOrderAddItem({ isOpen, onClose, storeId, existing
     if (!storeId || !itemIds?.length) return;
     setAvailLoading(true);
     try {
-      const res  = await checkItemAvailability(Number(storeId), itemIds);
+      const res = await checkItemAvailability(Number(storeId), itemIds);
       const list = Array.isArray(res) ? res : (res?.data || []);
-      const map  = {};
+      const map = {};
       list.forEach((i) => {
         const fullItem = (itemsList || allItems).find((it) => String(it.itemId ?? it.id) === String(i.itemId));
         map[String(i.itemId)] = {
           availableQuantity: i.notStockedInStore ? 0 : (i.availableQuantity ?? 0),
           notStockedInStore: i.notStockedInStore ?? false,
-          isAvailable:       i.isAvailable       ?? false,
-          isOutOfStock:      i.isOutOfStock       ?? false,
-          unitPrice:         fullItem?.unitPrice  ?? null,
+          isAvailable: i.isAvailable ?? false,
+          isOutOfStock: i.isOutOfStock ?? false,
+          unitPrice: fullItem?.unitPrice ?? null,
         };
       });
       setAvailMap(map);
@@ -108,21 +109,21 @@ export default function StudentOrderAddItem({ isOpen, onClose, storeId, existing
     const toAdd = allItems
       .filter((item) => selected.has(String(item.itemId ?? item.id)))
       .map((item) => {
-        const id    = String(item.itemId ?? item.id);
+        const id = String(item.itemId ?? item.id);
         const avail = availMap[id];
         const unitPriceSnapshot = avail?.unitPrice ?? item.unitPrice ?? null;
-        const qty   = 1;
+        const qty = 1;
         return {
-          itemId:            item.itemId   ?? item.id,
-          itemName:          item.itemName ?? item.name ?? `Item #${id}`,
-          itemCode:          item.itemCode ?? item.code ?? "—",
-          itemUnit:          item.itemUnit ?? item.unit ?? "PCS",
-          category:          item.category ?? "",
-          quantity:          qty,
-          availableQty:      avail?.availableQuantity ?? item.availableQuantity ?? null,
+          itemId: item.itemId ?? item.id,
+          itemName: item.itemName ?? item.name ?? STUDENT_ORDER_ADD_ITEM_CONSTS.FALLBACKS.ITEM_ID(id),
+          itemCode: item.itemCode ?? item.code ?? "—",
+          itemUnit: item.itemUnit ?? item.unit ?? STOCK_SHARED_CONSTS.UNIT.PCS,
+          category: item.category ?? "",
+          quantity: qty,
+          availableQty: avail?.availableQuantity ?? item.availableQuantity ?? null,
           notStockedInStore: avail?.notStockedInStore ?? false,
           unitPriceSnapshot,
-          lineTotal:         unitPriceSnapshot !== null ? unitPriceSnapshot * qty : null,
+          lineTotal: unitPriceSnapshot !== null ? unitPriceSnapshot * qty : null,
         };
       });
     if (toAdd.length) onAddItems?.(toAdd);
@@ -155,10 +156,10 @@ export default function StudentOrderAddItem({ isOpen, onClose, storeId, existing
             <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-blue-50 flex items-center justify-center">
               <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-600" />
             </div>
-            <h2 className="text-sm font-bold text-gray-800">Add Extra Items</h2>
+            <h2 className="text-sm font-bold text-gray-800">{STUDENT_ORDER_ADD_ITEM_CONSTS.TEXT.TITLE}</h2>
           </div>
           <button onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
+            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -167,19 +168,19 @@ export default function StudentOrderAddItem({ isOpen, onClose, storeId, existing
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 px-4 py-3 border-b border-gray-100 shrink-0">
           <div className="flex flex-1 items-center gap-2 border border-gray-200 bg-gray-50 rounded-lg px-3 py-2 focus-within:ring-2 focus-within:ring-blue-200 focus-within:border-blue-400 transition">
             <Search className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-            <input type="text" placeholder="Search item by name or code..."
+            <input type="text" placeholder={STUDENT_ORDER_ADD_ITEM_CONSTS.TEXT.SEARCH_ITEM_PH}
               value={search} onChange={(e) => setSearch(e.target.value)}
               className="text-xs focus:outline-none text-gray-600 w-full bg-transparent placeholder:text-gray-400"
               autoFocus />
             {search && (
-              <button onClick={() => setSearch("")} className="text-gray-300 hover:text-gray-500 shrink-0">
+              <button onClick={() => setSearch("")} className="text-gray-300 hover:text-gray-500 shrink-0 cursor-pointer">
                 <X className="w-3 h-3" />
               </button>
             )}
           </div>
           <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}
-            className="text-xs border border-gray-200 bg-white rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200 text-gray-600 w-full sm:w-auto">
-            <option value="ALL">All Categories</option>
+            className="text-xs border border-gray-200 bg-white rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200 text-gray-600 w-full sm:w-auto cursor-pointer">
+            <option value="ALL">{STUDENT_ORDER_ADD_ITEM_CONSTS.TEXT.ALL_CATEGORIES}</option>
             {categories.map((c) => (
               <option key={c} value={c}>{c.charAt(0) + c.slice(1).toLowerCase()}</option>
             ))}
@@ -190,12 +191,12 @@ export default function StudentOrderAddItem({ isOpen, onClose, storeId, existing
         <div className="hidden sm:grid items-center px-4 py-2.5 border-b border-gray-100 shrink-0 bg-sky-50/80"
           style={{ gridTemplateColumns: "32px 1fr 90px 52px 72px 80px" }}>
           <span />
-          <span className="text-xs font-bold text-blue-600 uppercase tracking-wider">Item</span>
-          <span className="text-xs font-bold text-blue-600 uppercase tracking-wider">Category</span>
-          <span className="text-xs font-bold text-blue-600 uppercase tracking-wider">Unit</span>
-          <span className="text-xs font-bold text-blue-600 uppercase tracking-wider text-right">Stock</span>
+          <span className="text-xs font-bold text-blue-600 uppercase tracking-wider">{STUDENT_ORDER_ADD_ITEM_CONSTS.TABLE_HEADERS.ITEM}</span>
+          <span className="text-xs font-bold text-blue-600 uppercase tracking-wider">{STUDENT_ORDER_ADD_ITEM_CONSTS.TABLE_HEADERS.CATEGORY}</span>
+          <span className="text-xs font-bold text-blue-600 uppercase tracking-wider">{STUDENT_ORDER_ADD_ITEM_CONSTS.TABLE_HEADERS.UNIT}</span>
+          <span className="text-xs font-bold text-blue-600 uppercase tracking-wider text-right">{STUDENT_ORDER_ADD_ITEM_CONSTS.TABLE_HEADERS.STOCK}</span>
           <span className="text-xs font-bold text-blue-600 uppercase tracking-wider text-right flex items-center justify-end gap-0.5">
-            <IndianRupee className="w-3 h-3" /> Price
+            <IndianRupee className="w-3 h-3" /> {STUDENT_ORDER_ADD_ITEM_CONSTS.TABLE_HEADERS.PRICE}
           </span>
         </div>
 
@@ -204,46 +205,46 @@ export default function StudentOrderAddItem({ isOpen, onClose, storeId, existing
           {loading ? (
             <div className="flex flex-col items-center justify-center gap-3 py-16 text-gray-400">
               <Loader2 className="w-6 h-6 animate-spin text-blue-400" />
-              <p className="text-xs">Loading items…</p>
+              <p className="text-xs">{STUDENT_ORDER_ADD_ITEM_CONSTS.TEXT.LOADING_ITEMS}</p>
             </div>
           ) : error ? (
             <div className="flex flex-col items-center gap-2 py-12 text-red-400 text-center px-6">
               <AlertCircle className="w-7 h-7 opacity-50" />
               <p className="text-xs font-medium">{error}</p>
-              <button onClick={loadItems} className="text-xs text-blue-500 hover:underline mt-1">Retry</button>
+              <button onClick={loadItems} className="text-xs text-blue-500 hover:underline mt-1 cursor-pointer">{STOCK_SHARED_CONSTS.COMMON.RETRY}</button>
             </div>
           ) : filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-2 py-14 text-gray-400">
               <Search className="w-7 h-7 opacity-30" />
-              <p className="text-xs font-medium">No items found</p>
+              <p className="text-xs font-medium">{STUDENT_ORDER_ADD_ITEM_CONSTS.TEXT.NO_ITEMS_FOUND}</p>
               {(search || categoryFilter !== "ALL") && (
-                <button onClick={() => { setSearch(""); setCategoryFilter("ALL"); }} className="text-xs text-blue-500 hover:underline">
-                  Clear filters
+                <button onClick={() => { setSearch(""); setCategoryFilter("ALL"); }} className="text-xs text-blue-500 hover:underline cursor-pointer">
+                  {STUDENT_ORDER_ADD_ITEM_CONSTS.TEXT.CLEAR_FILTERS}
                 </button>
               )}
             </div>
           ) : (
             filtered.map((item) => {
-              const id         = String(item.itemId ?? item.id);
+              const id = String(item.itemId ?? item.id);
               const isExisting = existingIds.has(id);
               const isSelected = selected.has(id);
-              const name       = item.itemName ?? item.name ?? `Item #${id}`;
-              const code       = item.itemCode ?? item.code ?? "—";
-              const unit       = item.itemUnit ?? item.unit ?? "PCS";
-              const cat        = item.category ? item.category.toUpperCase() : "";
-              const catCls     = categoryBadgeCls(cat);
-              const avail      = availMap[id];
-              const availQty   = avail?.availableQuantity ?? null;
+              const name = item.itemName ?? item.name ?? STUDENT_ORDER_ADD_ITEM_CONSTS.FALLBACKS.ITEM_ID(id);
+              const code = item.itemCode ?? item.code ?? "—";
+              const unit = item.itemUnit ?? item.unit ?? STOCK_SHARED_CONSTS.UNIT.PCS;
+              const cat = item.category ? item.category.toUpperCase() : "";
+              const catCls = categoryBadgeCls(cat);
+              const avail = availMap[id];
+              const availQty = avail?.availableQuantity ?? null;
               const notStocked = avail?.notStockedInStore ?? false;
               const isOutOfStock = availQty === 0;
-              const unitPrice  = avail?.unitPrice ?? item.unitPrice ?? null;
+              const unitPrice = avail?.unitPrice ?? item.unitPrice ?? null;
 
               return (
                 <div key={id} onClick={() => toggle(id)}
                   className={`transition-colors select-none
-                    ${isExisting  ? "bg-yellow-50/60 cursor-not-allowed"
-                    : isSelected  ? "bg-blue-50 hover:bg-blue-100 cursor-pointer"
-                    :               "hover:bg-gray-50 cursor-pointer"}`}>
+                    ${isExisting ? "bg-yellow-50/60 cursor-not-allowed"
+                      : isSelected ? "bg-blue-50 hover:bg-blue-100 cursor-pointer"
+                        : "hover:bg-gray-50 cursor-pointer"}`}>
 
                   {/* ── Desktop row ── */}
                   <div className="hidden sm:grid items-center px-4 py-3 gap-2"
@@ -251,11 +252,11 @@ export default function StudentOrderAddItem({ isOpen, onClose, storeId, existing
                     <div>
                       <div className={`w-5 h-5 rounded flex items-center justify-center border-2 transition-all shrink-0
                         ${isExisting ? "border-yellow-300 bg-yellow-100"
-                        : isSelected  ? "border-blue-600 bg-blue-600"
-                        :               "border-gray-300 bg-white"}`}>
+                          : isSelected ? "border-blue-600 bg-blue-600"
+                            : "border-gray-300 bg-white"}`}>
                         {isExisting ? <Check className="w-3 h-3 text-yellow-500" />
-                        : isSelected ? <Check className="w-3 h-3 text-white" />
-                        : null}
+                          : isSelected ? <Check className="w-3 h-3 text-white" />
+                            : null}
                       </div>
                     </div>
                     <div className="min-w-0 pr-2">
@@ -273,7 +274,7 @@ export default function StudentOrderAddItem({ isOpen, onClose, storeId, existing
                         <Loader2 className="w-3.5 h-3.5 animate-spin text-gray-300 ml-auto" />
                       ) : notStocked ? (
                         <span className="text-xs font-semibold text-gray-400 flex items-center justify-end gap-1">
-                          <AlertTriangle className="w-3 h-3 text-gray-300 shrink-0" />N/A
+                          <AlertTriangle className="w-3 h-3 text-gray-300 shrink-0" />{STUDENT_ORDER_ADD_ITEM_CONSTS.TEXT.NOT_APPLICABLE}
                         </span>
                       ) : isOutOfStock ? (
                         <span className="text-xs font-bold text-red-500">0</span>
@@ -301,11 +302,11 @@ export default function StudentOrderAddItem({ isOpen, onClose, storeId, existing
                     <div className="pt-0.5 shrink-0">
                       <div className={`w-5 h-5 rounded flex items-center justify-center border-2 transition-all
                         ${isExisting ? "border-yellow-300 bg-yellow-100"
-                        : isSelected  ? "border-blue-600 bg-blue-600"
-                        :               "border-gray-300 bg-white"}`}>
+                          : isSelected ? "border-blue-600 bg-blue-600"
+                            : "border-gray-300 bg-white"}`}>
                         {isExisting ? <Check className="w-3 h-3 text-yellow-500" />
-                        : isSelected ? <Check className="w-3 h-3 text-white" />
-                        : null}
+                          : isSelected ? <Check className="w-3 h-3 text-white" />
+                            : null}
                       </div>
                     </div>
                     <div className="flex-1 min-w-0">
@@ -322,9 +323,9 @@ export default function StudentOrderAddItem({ isOpen, onClose, storeId, existing
                         {cat && <span className={`inline-block text-xs font-bold px-1.5 py-0.5 rounded-full border ${catCls}`}>{cat}</span>}
                         <span className="text-xs text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">{unit}</span>
                         {notStocked ? (
-                          <span className="text-xs text-gray-400 flex items-center gap-0.5"><AlertTriangle className="w-3 h-3" />N/A</span>
+                          <span className="text-xs text-gray-400 flex items-center gap-0.5"><AlertTriangle className="w-3 h-3" />{STUDENT_ORDER_ADD_ITEM_CONSTS.TEXT.NOT_APPLICABLE}</span>
                         ) : isOutOfStock ? (
-                          <span className="text-xs font-bold text-red-500">Out of stock</span>
+                          <span className="text-xs font-bold text-red-500">{STUDENT_ORDER_ADD_ITEM_CONSTS.TEXT.OUT_OF_STOCK}</span>
                         ) : availQty !== null ? (
                           <span className={`text-xs font-bold ${availQty <= 5 ? "text-orange-500" : "text-green-600"}`}>{availQty} in stock</span>
                         ) : availLoading ? (
@@ -344,7 +345,7 @@ export default function StudentOrderAddItem({ isOpen, onClose, storeId, existing
           <p className="text-xs min-w-0">
             {selected.size > 0
               ? <span className="font-semibold text-blue-600">{selected.size} item{selected.size > 1 ? "s" : ""} selected</span>
-              : <span className="text-gray-400">Tap items to select</span>}
+              : <span className="text-gray-400">{STUDENT_ORDER_ADD_ITEM_CONSTS.TEXT.TAP_TO_SELECT}</span>}
             {existingIds.size > 0 && (
               <span className="text-gray-400 ml-2 hidden sm:inline">· {existingIds.size} already in order</span>
             )}
@@ -356,13 +357,13 @@ export default function StudentOrderAddItem({ isOpen, onClose, storeId, existing
           </p>
           <div className="flex items-center gap-2 shrink-0">
             <button type="button" onClick={onClose}
-              className="px-3 sm:px-4 py-2 text-xs font-semibold text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors">
-              Cancel
+              className="px-3 sm:px-4 py-2 text-xs font-semibold text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
+              {STOCK_SHARED_CONSTS.COMMON.CANCEL}
             </button>
             <button type="button" onClick={handleAdd} disabled={selected.size === 0}
-              className="flex items-center gap-1.5 px-3 sm:px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+              className="flex items-center gap-1.5 px-3 sm:px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer">
               <Plus className="w-3.5 h-3.5" />
-              Add {selected.size > 0 ? `(${selected.size})` : "Items"}
+              Add {selected.size > 0 ? `(${selected.size})` : STUDENT_ORDER_ADD_ITEM_CONSTS.TEXT.ITEMS_BTN}
             </button>
           </div>
         </div>

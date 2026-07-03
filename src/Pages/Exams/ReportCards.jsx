@@ -19,7 +19,7 @@ import {
     updateReportCardRemarks,
 } from "../../Api/Academics/Exams";
 import { getExams } from "../../Api/Academics/Exams";
-import { getActiveClasses, getAllSections } from "../../Api/Teachers/TeachersAPI";
+import { getActiveClasses, getActiveSectionsByClass } from "../../Api/Teachers/TeachersAPI";
 import { EXAM_CONSTS } from "../../Constants/StringConstants/AcademicsConstants";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

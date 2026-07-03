@@ -2,8 +2,14 @@ import { useState, useEffect } from "react";
 import { X, CreditCard, Save, Loader2 } from "lucide-react";
 import { toast } from "react-toastify";
 import { getActiveRoutes, updateTransportFeePlan } from "../../../Api/Transport/TransportAPI";
-
-const FREQUENCIES = ["MONTHLY", "QUARTERLY", "ANNUALLY", "ONE-TIME"];
+import {
+  FEE_FREQUENCY_OPTIONS,
+  FEE_FREQUENCIES,
+  SHARED_INPUT_STYLES,
+  VALIDATION_MESSAGES,
+  TOAST_MESSAGES,
+  FEE_PLAN_UI_TEXT
+} from "../../../Constants/StringConstants/TransportConstants";
 
 function Field({ label, required, children }) {
   return (
@@ -16,18 +22,13 @@ function Field({ label, required, children }) {
   );
 }
 
-const base =
-  "w-full border rounded-lg px-3 py-2.5 text-sm text-gray-700 bg-white " +
-  "focus:outline-none focus:ring-2 transition border-gray-200 focus:ring-blue-300 focus:border-blue-400";
-const errCls = "border-red-400 focus:ring-red-200 focus:border-red-400";
-
 function SelectInput({ value, onChange, children, hasError }) {
   return (
     <div className="relative">
       <select
         value={value}
         onChange={onChange}
-        className={`${base} appearance-none pr-9 cursor-pointer ${hasError ? errCls : ""}`}
+        className={`${SHARED_INPUT_STYLES.base} appearance-none pr-9 cursor-pointer ${hasError ? SHARED_INPUT_STYLES.errCls : ""}`}
       >
         {children}
       </select>
@@ -40,23 +41,23 @@ function SelectInput({ value, onChange, children, hasError }) {
 }
 
 export default function EditFeePlanCard({ isOpen, onClose, onSave, plan }) {
-  const [form, setForm]                   = useState({});
-  const [saving, setSaving]               = useState(false);
-  const [errors, setErrors]               = useState({});
-  const [routes, setRoutes]               = useState([]);
+  const [form, setForm] = useState({});
+  const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [routes, setRoutes] = useState([]);
   const [loadingRoutes, setLoadingRoutes] = useState(false);
 
   useEffect(() => {
     if (isOpen && plan) {
       setForm({
-        planName:       plan.planName      ?? "",
-        routeId:        plan.routeId       ?? "",
-        feeAmount:      plan.amount        ?? "",
-        frequency:      plan.frequency     ?? "MONTHLY",
+        planName: plan.planName ?? "",
+        routeId: plan.routeId ?? "",
+        feeAmount: plan.amount ?? "",
+        frequency: plan.frequency ?? FEE_FREQUENCIES.MONTHLY,
         distanceSlabKm: plan.distanceSlab && plan.distanceSlab !== "—"
-                          ? plan.distanceSlab.replace(" km", "")
-                          : "",
-        description:    plan.description   ?? "",
+          ? plan.distanceSlab.replace(" km", "")
+          : "",
+        description: plan.description ?? "",
       });
       setErrors({});
       fetchRoutes();
@@ -75,7 +76,7 @@ export default function EditFeePlanCard({ isOpen, onClose, onSave, plan }) {
       setRoutes(data);
     } catch (err) {
       console.error("Failed to fetch routes:", err);
-      toast.error("Failed to load routes. Please try again.");
+      toast.error(TOAST_MESSAGES.ROUTES_LOAD_FAIL);
     } finally {
       setLoadingRoutes(false);
     }
@@ -90,12 +91,12 @@ export default function EditFeePlanCard({ isOpen, onClose, onSave, plan }) {
 
   const validate = () => {
     const e = {};
-    if (!form.planName?.trim())    e.planName    = "Plan name is required";
-    if (!form.feeAmount)           e.feeAmount   = "Fee amount is required";
+    if (!form.planName?.trim()) e.planName = VALIDATION_MESSAGES.PLAN_NAME_REQ;
+    if (!form.feeAmount) e.feeAmount = VALIDATION_MESSAGES.FEE_AMOUNT_REQ;
     else if (isNaN(Number(form.feeAmount)) || Number(form.feeAmount) <= 0)
-                                   e.feeAmount   = "Enter a valid positive amount";
-    if (!form.frequency)           e.frequency   = "Frequency is required";
-    if (!form.description?.trim()) e.description = "Description is required";
+      e.feeAmount = VALIDATION_MESSAGES.FEE_AMOUNT_INVALID;
+    if (!form.frequency) e.frequency = VALIDATION_MESSAGES.FREQUENCY_REQ;
+    if (!form.description?.trim()) e.description = VALIDATION_MESSAGES.DESCRIPTION_REQ;
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -105,20 +106,20 @@ export default function EditFeePlanCard({ isOpen, onClose, onSave, plan }) {
     setSaving(true);
     try {
       const payload = {
-        planName:    form.planName.trim(),
-        feeAmount:   Number(form.feeAmount),
-        frequency:   form.frequency,
+        planName: form.planName.trim(),
+        feeAmount: Number(form.feeAmount),
+        frequency: form.frequency,
         description: form.description.trim(),
-        ...(form.routeId        && { routeId:        Number(form.routeId) }),
+        ...(form.routeId && { routeId: Number(form.routeId) }),
         ...(form.distanceSlabKm && { distanceSlabKm: Number(form.distanceSlabKm) }),
       };
       await updateTransportFeePlan(plan.id, payload);
-      toast.success("Fee plan updated successfully!");
+      toast.success(TOAST_MESSAGES.FEE_PLAN_UPDATE_SUCCESS);
       onSave?.();
       onClose();
     } catch (err) {
       console.error("Failed to update fee plan:", err);
-      toast.error("Failed to update fee plan. Please try again.");
+      toast.error(TOAST_MESSAGES.FEE_PLAN_UPDATE_FAIL);
     } finally {
       setSaving(false);
     }
@@ -143,7 +144,7 @@ export default function EditFeePlanCard({ isOpen, onClose, onSave, plan }) {
             <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center">
               <CreditCard className="w-4 h-4 text-indigo-600" />
             </div>
-            <h2 className="text-lg font-bold text-gray-800">Edit Fee Plan</h2>
+            <h2 className="text-lg font-bold text-gray-800">{FEE_PLAN_UI_TEXT.EDIT_MODAL_TITLE}</h2>
           </div>
           <button onClick={onClose}
             className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
@@ -155,56 +156,56 @@ export default function EditFeePlanCard({ isOpen, onClose, onSave, plan }) {
         <div className="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto">
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label="Plan Name" required>
-              <input type="text" placeholder="e.g. Route C Monthly Fee"
+            <Field label={FEE_PLAN_UI_TEXT.LBL_PLAN_NAME} required>
+              <input type="text" placeholder={FEE_PLAN_UI_TEXT.PH_PLAN_NAME}
                 value={form.planName ?? ""} onChange={(e) => set("planName", e.target.value)}
-                className={`${base} ${errors.planName ? errCls : ""}`} />
+                className={`${SHARED_INPUT_STYLES.base} ${errors.planName ? SHARED_INPUT_STYLES.errCls : ""}`} />
               {errors.planName && <p className="text-xs text-red-500 mt-0.5">{errors.planName}</p>}
             </Field>
 
-            <Field label="Route (optional)">
+            <Field label={FEE_PLAN_UI_TEXT.LBL_ROUTE}>
               <SelectInput value={form.routeId ?? ""} onChange={(e) => set("routeId", e.target.value)}>
-                <option value="">— Generic / Distance Plan —</option>
+                <option value="">{FEE_PLAN_UI_TEXT.OPT_GENERIC_ROUTE}</option>
                 {loadingRoutes
-                  ? <option disabled>Loading routes…</option>
+                  ? <option disabled>{FEE_PLAN_UI_TEXT.OPT_LOADING_ROUTES}</option>
                   : routes.map((r) => (
-                      <option key={r.id} value={r.id}>{r.routeName || r.name}</option>
-                    ))
+                    <option key={r.id} value={r.id}>{r.routeName || r.name}</option>
+                  ))
                 }
               </SelectInput>
             </Field>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label="Fee Amount" required>
+            <Field label={FEE_PLAN_UI_TEXT.LBL_FEE_AMOUNT} required>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-medium">₹</span>
-                <input type="number" min="0" step="0.01" placeholder="1200.00"
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-medium">{FEE_PLAN_UI_TEXT.CURRENCY_SYMBOL}</span>
+                <input type="number" min="0" step="0.01" placeholder={FEE_PLAN_UI_TEXT.PH_FEE_AMOUNT}
                   value={form.feeAmount ?? ""} onChange={(e) => set("feeAmount", e.target.value)}
-                  className={`${base} pl-7 ${errors.feeAmount ? errCls : ""}`} />
+                  className={`${SHARED_INPUT_STYLES.base} pl-7 ${errors.feeAmount ? SHARED_INPUT_STYLES.errCls : ""}`} />
               </div>
               {errors.feeAmount && <p className="text-xs text-red-500 mt-0.5">{errors.feeAmount}</p>}
             </Field>
 
-            <Field label="Frequency" required>
-              <SelectInput value={form.frequency ?? "MONTHLY"} onChange={(e) => set("frequency", e.target.value)} hasError={!!errors.frequency}>
-                {FREQUENCIES.map((f) => <option key={f} value={f}>{f}</option>)}
+            <Field label={FEE_PLAN_UI_TEXT.LBL_FREQUENCY} required>
+              <SelectInput value={form.frequency ?? FEE_FREQUENCIES.MONTHLY} onChange={(e) => set("frequency", e.target.value)} hasError={!!errors.frequency}>
+                {FEE_FREQUENCY_OPTIONS.map((f) => <option key={f} value={f}>{f}</option>)}
               </SelectInput>
               {errors.frequency && <p className="text-xs text-red-500 mt-0.5">{errors.frequency}</p>}
             </Field>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label="Distance Slab (km)">
-              <input type="number" min="0" step="0.1" placeholder="5.0 (optional)"
+            <Field label={FEE_PLAN_UI_TEXT.LBL_DISTANCE_SLAB}>
+              <input type="number" min="0" step="0.1" placeholder={FEE_PLAN_UI_TEXT.PH_DISTANCE_SLAB}
                 value={form.distanceSlabKm ?? ""} onChange={(e) => set("distanceSlabKm", e.target.value)}
-                className={base} />
+                className={SHARED_INPUT_STYLES.base} />
             </Field>
 
-            <Field label="Description" required>
-              <input type="text" placeholder="Brief description"
+            <Field label={FEE_PLAN_UI_TEXT.LBL_DESCRIPTION} required>
+              <input type="text" placeholder={FEE_PLAN_UI_TEXT.PH_DESCRIPTION}
                 value={form.description ?? ""} onChange={(e) => set("description", e.target.value)}
-                className={`${base} ${errors.description ? errCls : ""}`} />
+                className={`${SHARED_INPUT_STYLES.base} ${errors.description ? SHARED_INPUT_STYLES.errCls : ""}`} />
               {errors.description && <p className="text-xs text-red-500 mt-0.5">{errors.description}</p>}
             </Field>
           </div>
@@ -215,13 +216,13 @@ export default function EditFeePlanCard({ isOpen, onClose, onSave, plan }) {
         <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100 bg-gray-50">
           <button onClick={onClose} disabled={saving}
             className="px-5 py-2 text-sm font-semibold text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-            Cancel
+            {FEE_PLAN_UI_TEXT.BTN_CANCEL}
           </button>
           <button onClick={handleSave} disabled={saving}
             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed text-white text-sm font-semibold px-5 py-2 rounded-lg transition-colors">
             {saving
-              ? <><Loader2 className="w-4 h-4 animate-spin" /> Updating…</>
-              : <><Save className="w-4 h-4" /> Update Plan</>
+              ? <><Loader2 className="w-4 h-4 animate-spin" /> {FEE_PLAN_UI_TEXT.BTN_UPDATING}</>
+              : <><Save className="w-4 h-4" /> {FEE_PLAN_UI_TEXT.BTN_UPDATE}</>
             }
           </button>
         </div>

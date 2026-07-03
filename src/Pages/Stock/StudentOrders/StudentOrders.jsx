@@ -7,7 +7,6 @@ import {
   ClipboardList, Eye, Pencil, Ban, AlertTriangle, Loader2,
   ChevronLeft, ChevronRight, SearchIcon, IndianRupee,
 } from "lucide-react";
-import { useContext } from "react";
 import { UserContext } from "../../../ContextAPI/UserContext";
 import CardComponent from "../../../Components/CommonComp/CardComponent";
 import CardLoader from "../../../Components/CommonComp/CardLoader";
@@ -19,32 +18,37 @@ import { getOrderStats, getStudentOrders, cancelStudentOrder } from "../../../Ap
 import { getClasses } from "../../../Api/Teachers/TeachersAPI";
 
 import { toast } from "react-toastify";
+import { STOCK_SHARED_CONSTS, STUDENT_ORDERS_CONSTS } from "../../../Constants/StringConstants/StockAndOrdersConstants";
 
 const STATUS_OPTIONS = [
-  { value: "", label: "All Status" },
-  { value: "DRAFT", label: "Draft" },
-  { value: "CONFIRMED", label: "Confirmed" },
-  { value: "CANCELLED", label: "Cancelled" },
+  { value: "", label: STUDENT_ORDERS_CONSTS.TEXT.ALL_STATUS },
+  { value: STOCK_SHARED_CONSTS.ORDER_STATUS.DRAFT_API, label: STOCK_SHARED_CONSTS.ORDER_STATUS.DRAFT_LABEL },
+  { value: STOCK_SHARED_CONSTS.ORDER_STATUS.CONFIRMED_API, label: STOCK_SHARED_CONSTS.ORDER_STATUS.CONFIRMED_LABEL },
+  { value: STOCK_SHARED_CONSTS.ORDER_STATUS.CANCELLED_API, label: STOCK_SHARED_CONSTS.ORDER_STATUS.CANCELLED_LABEL },
 ];
 
 const statusColors = {
-  DRAFT: "bg-gray-100   text-gray-600   border border-gray-300",
+  [STOCK_SHARED_CONSTS.ORDER_STATUS.DRAFT_API]: "bg-gray-100   text-gray-600   border border-gray-300",
   PENDING: "bg-yellow-100 text-yellow-700  border border-yellow-200",
-  CONFIRMED: "bg-blue-100   text-blue-700    border border-blue-200",
+  [STOCK_SHARED_CONSTS.ORDER_STATUS.CONFIRMED_API]: "bg-blue-100   text-blue-700    border border-blue-200",
   APPROVED: "bg-blue-100   text-blue-700    border border-blue-200",
-  DISPATCHED: "bg-purple-100 text-purple-700  border border-purple-200",
-  DELIVERED: "bg-green-100  text-green-700   border border-green-200",
-  CANCELLED: "bg-red-100    text-red-600     border border-red-200",
+  [STOCK_SHARED_CONSTS.ORDER_STATUS.DISPATCHED_API]: "bg-purple-100 text-purple-700  border border-purple-200",
+  [STOCK_SHARED_CONSTS.ORDER_STATUS.DELIVERED_API]: "bg-green-100  text-green-700   border border-green-200",
+  [STOCK_SHARED_CONSTS.ORDER_STATUS.CANCELLED_API]: "bg-red-100    text-red-600     border border-red-200",
 };
 
-const CANCEL_CONFIRMED_ROLES = ["SUPER_ADMIN", "GLOBAL_ADMIN", "STORE_ACCOUNTANT"];
+const CANCEL_CONFIRMED_ROLES = [
+  STUDENT_ORDERS_CONSTS.ROLES.SUPER_ADMIN,
+  STUDENT_ORDERS_CONSTS.ROLES.GLOBAL_ADMIN,
+  STUDENT_ORDERS_CONSTS.ROLES.STORE_ACCOUNTANT
+];
 
 function CancelConfirmModal({ order, onConfirm, onClose, loading }) {
   const [confirmInput, setConfirmInput] = useState("");
 
   if (!order) return null;
 
-  const isConfirmed = order.status === "CONFIRMED";
+  const isConfirmed = order.status === STOCK_SHARED_CONSTS.ORDER_STATUS.CONFIRMED_API;
   const isMatch = confirmInput === String(order.id);
 
   return (
@@ -58,7 +62,7 @@ function CancelConfirmModal({ order, onConfirm, onClose, loading }) {
           </div>
 
           <div>
-            <h3 className="text-base font-bold text-gray-800">Cancel Order?</h3>
+            <h3 className="text-base font-bold text-gray-800">{STUDENT_ORDERS_CONSTS.CANCEL_MODAL.TITLE}</h3>
             <p className="text-sm text-gray-500 mt-1">
               Are you sure you want to cancel{" "}
               <span className="font-semibold text-gray-700">
@@ -66,7 +70,7 @@ function CancelConfirmModal({ order, onConfirm, onClose, loading }) {
               </span>{" "}
               for{" "}
               <span className="font-semibold text-gray-700">
-                {order.studentName || "this student"}
+                {order.studentName || STUDENT_ORDERS_CONSTS.TEXT.THIS_STUDENT}
               </span>?
             </p>
 
@@ -81,7 +85,7 @@ function CancelConfirmModal({ order, onConfirm, onClose, loading }) {
         {isConfirmed && (
           <input
             type="text"
-            placeholder={`Type Order ID`}
+            placeholder={STUDENT_ORDERS_CONSTS.TEXT.TYPE_ORDER_ID_PLACEHOLDER}
             value={confirmInput}
             onChange={(e) => setConfirmInput(e.target.value)}
             className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
@@ -92,17 +96,17 @@ function CancelConfirmModal({ order, onConfirm, onClose, loading }) {
           <button
             onClick={onClose}
             disabled={loading}
-            className="px-4 py-2 border rounded-lg text-gray-600"
+            className="px-4 py-2 border rounded-lg text-gray-600 cursor-pointer"
           >
-            Keep Order
+            {STUDENT_ORDERS_CONSTS.CANCEL_MODAL.KEEP_ORDER}
           </button>
 
           <button
             onClick={() => onConfirm()}
             disabled={loading || (isConfirmed && !isMatch)}
-            className="px-4 py-2 bg-red-500 text-white rounded-lg disabled:opacity-50"
+            className="px-4 py-2 bg-red-500 text-white rounded-lg disabled:opacity-50 cursor-pointer"
           >
-            {loading ? "Cancelling..." : "Yes, Cancel"}
+            {loading ? STUDENT_ORDERS_CONSTS.CANCEL_MODAL.CANCELLING : STUDENT_ORDERS_CONSTS.CANCEL_MODAL.CONFIRM_BTN}
           </button>
         </div>
       </div>
@@ -113,12 +117,7 @@ function CancelConfirmModal({ order, onConfirm, onClose, loading }) {
 // ── Helpers ───────────────────────────────────────────────────────
 function fmtDate(d) {
   if (!d) return "—";
-  return new Date(d).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
-}
-
-function fmtAmount(val) {
-  if (val === null || val === undefined) return "—";
-  return `₹${Number(val).toFixed(2)}`;
+  return new Date(d).toLocaleDateString(STOCK_SHARED_CONSTS.LOCALE.DATE_IN, { day: "2-digit", month: "short", year: "numeric" });
 }
 
 // ── Smart Pagination Helper ───────────────────────────────────────
@@ -144,23 +143,23 @@ function buildActionOptions(status, userRole) {
   const normalizedAllowed = CANCEL_CONFIRMED_ROLES.map(normalize);
   const canCancelConfirmed = normalizedAllowed.includes(normalizedUserRole);
 
-  if (s === "DRAFT") {
+  if (s === STOCK_SHARED_CONSTS.ORDER_STATUS.DRAFT_API) {
     return [
-      { value: "edit", label: "Edit", icon: Pencil, text: "text-blue-600", bg: "bg-blue-50", hover: "hover:bg-blue-100" },
-      { value: "view", label: "View", icon: Eye, text: "text-gray-600", bg: "bg-gray-50", hover: "hover:bg-gray-100" },
-      { value: "cancel", label: "Cancel", icon: Ban, text: "text-red-500", bg: "bg-red-50", hover: "hover:bg-red-100" },
+      { value: "edit", label: STOCK_SHARED_CONSTS.COMMON.EDIT, icon: Pencil, text: "text-blue-600", bg: "bg-blue-50", hover: "hover:bg-blue-100" },
+      { value: "view", label: STOCK_SHARED_CONSTS.COMMON.VIEW, icon: Eye, text: "text-gray-600", bg: "bg-gray-50", hover: "hover:bg-gray-100" },
+      { value: "cancel", label: STOCK_SHARED_CONSTS.COMMON.CANCEL, icon: Ban, text: "text-red-500", bg: "bg-red-50", hover: "hover:bg-red-100" },
     ];
   }
 
-  if (s === "CONFIRMED") {
+  if (s === STOCK_SHARED_CONSTS.ORDER_STATUS.CONFIRMED_API) {
     return [
-      { value: "view", label: "View", icon: Eye, text: "text-gray-600", bg: "bg-gray-50", hover: "hover:bg-gray-100" },
-      ...(canCancelConfirmed ? [{ value: "cancel", label: "Cancel", icon: Ban, text: "text-red-500", bg: "bg-red-50", hover: "hover:bg-red-100" }] : []),
+      { value: "view", label: STOCK_SHARED_CONSTS.COMMON.VIEW, icon: Eye, text: "text-gray-600", bg: "bg-gray-50", hover: "hover:bg-gray-100" },
+      ...(canCancelConfirmed ? [{ value: "cancel", label: STOCK_SHARED_CONSTS.COMMON.CANCEL, icon: Ban, text: "text-red-500", bg: "bg-red-50", hover: "hover:bg-red-100" }] : []),
     ];
   }
 
   return [
-    { value: "view", label: "View", icon: Eye, text: "text-blue-600", bg: "bg-blue-50", hover: "hover:bg-blue-100" },
+    { value: "view", label: STOCK_SHARED_CONSTS.COMMON.VIEW, icon: Eye, text: "text-blue-600", bg: "bg-blue-50", hover: "hover:bg-blue-100" },
   ];
 }
 
@@ -175,7 +174,7 @@ function PageButtons({ page, totalPages, onPageChange }) {
           <button
             key={p}
             onClick={() => onPageChange(p)}
-            className={`px-3 py-1 rounded transition-all ${page === p ? "bg-blue-500 text-white" : "text-gray-600 hover:bg-gray-100"}`}
+            className={`px-3 py-1 rounded transition-all cursor-pointer ${page === p ? "bg-blue-500 text-white" : "text-gray-600 hover:bg-gray-100"}`}
           >
             {p}
           </button>
@@ -218,7 +217,7 @@ export default function StudentOrders() {
   useEffect(() => {
     if (location.state?.saved) {
       const status = location.state.saved;
-      toast.success(status === "DRAFT" ? "Order saved as draft." : "Order confirmed & stock issued.");
+      toast.success(status === STOCK_SHARED_CONSTS.ORDER_STATUS.DRAFT_API ? STUDENT_ORDERS_CONSTS.MESSAGES.SAVED_AS_DRAFT : STUDENT_ORDERS_CONSTS.MESSAGES.CONFIRMED_STOCK_ISSUED);
       window.history.replaceState({}, document.title);
       fetchOrders();
       fetchStats();
@@ -239,7 +238,7 @@ export default function StudentOrders() {
         const res = await getClasses();
         setClasses(res || []);
       } catch (err) {
-        console.error("Failed to fetch classes", err);
+        console.error(STUDENT_ORDERS_CONSTS.MESSAGES.LOAD_CLASSES_FAILED, err);
       } finally {
         setClassesLoading(false);
       }
@@ -275,7 +274,7 @@ export default function StudentOrders() {
         classId: classesFilter || undefined,
         fromDate: fromDate || undefined,
         toDate: toDate || undefined,
-        sort: "createdAt,desc",
+        sort: STUDENT_ORDERS_CONSTS.SORT.DEFAULT,
       });
       const list = res.orders || [];
       setOrders(list);
@@ -283,28 +282,28 @@ export default function StudentOrders() {
       setNoOrderFound(list.length === 0);
     } catch (e) {
       console.error(e);
-      toast.error("Failed to load student orders.");
+      toast.error(STUDENT_ORDERS_CONSTS.MESSAGES.LOAD_ORDERS_FAILED);
     } finally {
       setLoading(false);
     }
   }, [page, rowsPerPage, search, statusFilter, classesFilter, fromDate, toDate]);
 
   useEffect(() => { fetchOrders(); }, [fetchOrders]);
-  
+
   const totalItems = pagination?.totalElements ?? orders.length;
   const totalPages = pagination?.totalPages ?? Math.max(1, Math.ceil(totalItems / rowsPerPage));
-  
+
   const handleCancelOrder = async () => {
     if (!cancelTarget) return;
     setCancelling(true);
     try {
-      await cancelStudentOrder(cancelTarget.id, "Cancelled by admin - restore stock");
-      toast.success(`Order #${cancelTarget.id} cancelled.`);
+      await cancelStudentOrder(cancelTarget.id, STUDENT_ORDERS_CONSTS.CANCEL_MODAL.DEFAULT_REASON);
+      toast.success(STUDENT_ORDERS_CONSTS.MESSAGES.ORDER_CANCELLED(cancelTarget.id));
       setCancelTarget(null);
       fetchOrders();
       fetchStats();
     } catch (e) {
-      toast.error(`Failed to cancel: ${e.message}`);
+      toast.error(STUDENT_ORDERS_CONSTS.MESSAGES.CANCEL_FAILED(e.message));
     } finally {
       setCancelling(false);
     }
@@ -312,14 +311,14 @@ export default function StudentOrders() {
 
   const handleAction = (val, order) => {
     if (val === "view") setViewOrder(order);
-    if (val === "edit") navigate(`/stock/studentOrders/editOrder?editId=${order.id}`);
+    if (val === "edit") navigate(STUDENT_ORDERS_CONSTS.ROUTES.EDIT_ORDER(order.id));
     if (val === "cancel") setCancelTarget(order);
   };
 
   const statCards = [
-    { key: "draft", label: "Draft Orders", val: stats.draftOrders, iconTxColor: "text-orange-500", iconBgColor: "bg-orange-100", Icon: ClipboardList },
-    { key: "confirmed", label: "Confirmed Orders", val: stats.confirmedOrders, iconTxColor: "text-green-600", iconBgColor: "bg-green-100", Icon: CheckCircle },
-    { key: "cancelled", label: "Cancelled Orders", val: stats.cancelledOrders, iconTxColor: "text-red-500", iconBgColor: "bg-red-100", Icon: XCircleIcon },
+    { key: "draft", label: STUDENT_ORDERS_CONSTS.STATS.DRAFT_ORDERS, val: stats.draftOrders, iconTxColor: "text-orange-500", iconBgColor: "bg-orange-100", Icon: ClipboardList },
+    { key: "confirmed", label: STUDENT_ORDERS_CONSTS.STATS.CONFIRMED_ORDERS, val: stats.confirmedOrders, iconTxColor: "text-green-600", iconBgColor: "bg-green-100", Icon: CheckCircle },
+    { key: "cancelled", label: STUDENT_ORDERS_CONSTS.STATS.CANCELLED_ORDERS, val: stats.cancelledOrders, iconTxColor: "text-red-500", iconBgColor: "bg-red-100", Icon: XCircleIcon },
   ];
 
   const tdStyle = "px-2 py-2 text-left text-gray-700 text-sm";
@@ -339,9 +338,9 @@ export default function StudentOrders() {
           {/* Page Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Student Orders</h2>
+              <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">{STUDENT_ORDERS_CONSTS.TEXT.TITLE}</h2>
               <p className="text-gray-500 mt-1 font-medium text-sm sm:text-base">
-                Create and manage stock orders for students — track from draft through confirmed.
+                {STUDENT_ORDERS_CONSTS.TEXT.SUBTITLE}
               </p>
             </div>
           </div>
@@ -369,7 +368,7 @@ export default function StudentOrders() {
             <div className="flex items-center justify-between gap-3 px-4 md:px-5 py-3 md:py-4 border-b border-gray-100">
               <div className="flex items-center gap-2 min-w-0">
                 <ShoppingBag className="w-5 h-5 text-blue-500 shrink-0" />
-                <h2 className="font-semibold text-gray-800 text-base md:text-lg truncate">Student Orders</h2>
+                <h2 className="font-semibold text-gray-800 text-base md:text-lg truncate">{STUDENT_ORDERS_CONSTS.TEXT.TITLE}</h2>
               </div>
               <button
                 onClick={() => navigate("/stock/studentOrders/addOrder")}
@@ -386,7 +385,7 @@ export default function StudentOrders() {
                 <SearchIcon className="w-4 h-4 text-gray-400 shrink-0" />
                 <input
                   type="text"
-                  placeholder="Search by student name or order ID…"
+                  placeholder={STUDENT_ORDERS_CONSTS.TEXT.SEARCH_ORDER_PH}
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
                   className="text-sm focus:outline-none text-gray-600 w-full bg-transparent"
@@ -395,7 +394,7 @@ export default function StudentOrders() {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-3 py-2 border border-gray-200 bg-gray-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-200 text-sm text-gray-700 w-36 shrink-0"
+                className="px-3 py-2 border border-gray-200 bg-gray-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-200 text-sm text-gray-700 w-36 shrink-0 cursor-pointer"
               >
                 {STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
@@ -405,9 +404,9 @@ export default function StudentOrders() {
                   setClassesFilter(e.target.value);
                   resetPage();
                 }}
-                className="px-3 py-2 border border-gray-200 bg-gray-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-200 text-sm text-gray-700 w-36 shrink-0">
+                className="px-3 py-2 border border-gray-200 bg-gray-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-200 text-sm text-gray-700 w-36 shrink-0 cursor-pointer">
                 <option value="">
-                  {classesLoading ? "Loading..." : "All Classes"}
+                  {classesLoading ? STUDENT_ORDERS_CONSTS.TEXT.LOADING_ELLIPSIS : STUDENT_ORDERS_CONSTS.TEXT.ALL_CLASSES}
                 </option>
                 {classes.map((cls) => (
                   <option key={cls.id} value={cls.id}>
@@ -417,7 +416,7 @@ export default function StudentOrders() {
               </select>
               <div className="flex items-center gap-3">
                 <div className="flex flex-col">
-                  <label className="text-xs text-gray-500 mb-1">From</label>
+                  <label className="text-xs text-gray-500 mb-1">{STUDENT_ORDERS_CONSTS.TEXT.FROM}</label>
                   <input
                     type="date"
                     value={fromDate}
@@ -426,12 +425,12 @@ export default function StudentOrders() {
                       setFromDate(e.target.value);
                       setPage(1);
                     }}
-                    className="px-3 py-2 border border-gray-200 bg-gray-50 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+                    className="px-3 py-2 border border-gray-200 bg-gray-50 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 cursor-pointer"
                   />
                 </div>
 
                 <div className="flex flex-col">
-                  <label className="text-xs text-gray-500 mb-1">To</label>
+                  <label className="text-xs text-gray-500 mb-1">{STUDENT_ORDERS_CONSTS.TEXT.TO}</label>
                   <input
                     type="date"
                     value={toDate}
@@ -440,7 +439,7 @@ export default function StudentOrders() {
                       setToDate(e.target.value);
                       setPage(1);
                     }}
-                    className="px-3 py-2 border border-gray-200 bg-gray-50 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+                    className="px-3 py-2 border border-gray-200 bg-gray-50 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 cursor-pointer"
                   />
                 </div>
               </div>
@@ -452,14 +451,14 @@ export default function StudentOrders() {
                 <div className="text-center py-8 col-span-2">
                   <div className="flex flex-col items-center">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-2" />
-                    <span className="text-gray-600">Loading orders…</span>
+                    <span className="text-gray-600">{STUDENT_ORDERS_CONSTS.TEXT.LOADING}</span>
                   </div>
                 </div>
               ) : noOrderFound ? (
                 <div className="text-center py-8 col-span-2">
                   <ShoppingBag className="w-10 h-10 text-gray-200 mx-auto mb-2" />
-                  <h3 className="text-lg font-bold text-gray-900 mb-1">No Orders Found</h3>
-                  <p className="text-gray-500 text-sm">Try adjusting your filters.</p>
+                  <h3 className="text-lg font-bold text-gray-900 mb-1">{STUDENT_ORDERS_CONSTS.TEXT.EMPTY_TITLE}</h3>
+                  <p className="text-gray-500 text-sm">{STUDENT_ORDERS_CONSTS.TEXT.EMPTY_SUB}</p>
                 </div>
               ) : (
                 orders.map((order, idx) => {
@@ -486,13 +485,13 @@ export default function StudentOrders() {
                         </span>
                       </div>
                       <div className="space-y-1.5 text-sm">
-                        <p><span className="font-medium text-gray-500">Class:</span><span className="ml-2 text-gray-700">{orderClass}</span></p>
-                        <p><span className="font-medium text-gray-500">Store:</span><span className="ml-2 text-gray-700">{storeName}</span></p>
-                        <p><span className="font-medium text-gray-500">Date:</span><span className="ml-2 text-gray-700">{fmtDate(order.orderDate || order.createdAt)}</span></p>
-                        <p><span className="font-medium text-gray-500">Items:</span><span className="ml-2 text-gray-700">{itemsList.length}</span></p>
+                        <p><span className="font-medium text-gray-500">{STUDENT_ORDERS_CONSTS.TEXT.CLASS_LABEL}</span><span className="ml-2 text-gray-700">{orderClass}</span></p>
+                        <p><span className="font-medium text-gray-500">{STUDENT_ORDERS_CONSTS.TEXT.STORE_LABEL}</span><span className="ml-2 text-gray-700">{storeName}</span></p>
+                        <p><span className="font-medium text-gray-500">{STUDENT_ORDERS_CONSTS.TEXT.DATE_LABEL}</span><span className="ml-2 text-gray-700">{fmtDate(order.orderDate || order.createdAt)}</span></p>
+                        <p><span className="font-medium text-gray-500">{STUDENT_ORDERS_CONSTS.TEXT.ITEMS_LABEL}</span><span className="ml-2 text-gray-700">{itemsList.length}</span></p>
                         <div className="flex items-center gap-1">
                           <IndianRupee className="w-3.5 h-3.5 text-green-600 shrink-0" />
-                          <span className="font-bold text-green-700 text-sm">{fmtAmount(totalAmt)}</span>
+                          <span className="font-bold text-green-700 text-sm">{STUDENT_ORDERS_CONSTS.CURRENCY.AMOUNT(totalAmt)}</span>
                         </div>
                         <div className="flex justify-start items-center pt-1">
                           <ActionDropDownComp
@@ -514,19 +513,19 @@ export default function StudentOrders() {
                   <thead className="border-b border-gray-200">
                     <tr>
                       <th className="px-2 py-3 text-left   text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10 w-10">#</th>
-                      <th className="px-2 py-3 text-left   text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10">Student</th>
-                      <th className="px-2 py-3 text-left   text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10">Class</th>
-                      <th className="px-2 py-3 text-center text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10">Store</th>
-                      <th className="px-2 py-3 text-center text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10">Items</th>
-                      <th className="px-2 py-3 text-left   text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10 whitespace-nowrap">Order Date</th>
+                      <th className="px-2 py-3 text-left   text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10">{STUDENT_ORDERS_CONSTS.TABLE_HEADERS.STUDENT}</th>
+                      <th className="px-2 py-3 text-left   text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10">{STUDENT_ORDERS_CONSTS.TABLE_HEADERS.CLASS}</th>
+                      <th className="px-2 py-3 text-center text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10">{STUDENT_ORDERS_CONSTS.TABLE_HEADERS.STORE}</th>
+                      <th className="px-2 py-3 text-center text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10">{STUDENT_ORDERS_CONSTS.TABLE_HEADERS.ITEMS}</th>
+                      <th className="px-2 py-3 text-left   text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10 whitespace-nowrap">{STUDENT_ORDERS_CONSTS.TABLE_HEADERS.ORDER_DATE}</th>
                       <th className="px-2 py-3 text-left   text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10 whitespace-nowrap">
                         <span className="flex items-center gap-1">
                           <IndianRupee className="w-3.5 h-3.5" />
                           Total
                         </span>
                       </th>
-                      <th className="px-2 py-3 text-left   text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10">Status</th>
-                      <th className="px-6 py-3 text-center text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10">Actions</th>
+                      <th className="px-2 py-3 text-left   text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10">{STUDENT_ORDERS_CONSTS.TABLE_HEADERS.STATUS}</th>
+                      <th className="px-6 py-3 text-center text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10">{STUDENT_ORDERS_CONSTS.TABLE_HEADERS.ACTIONS}</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200 font-normal">
@@ -536,8 +535,8 @@ export default function StudentOrders() {
                       <tr>
                         <td colSpan={9} className="px-6 py-10 text-center">
                           <ShoppingBag className="w-10 h-10 text-gray-200 mx-auto mb-2" />
-                          <h3 className="text-sm font-bold text-gray-700 mb-1">No Orders Found</h3>
-                          <p className="text-xs text-gray-400">Try adjusting your filters.</p>
+                          <h3 className="text-sm font-bold text-gray-700 mb-1">{STUDENT_ORDERS_CONSTS.TEXT.EMPTY_TITLE}</h3>
+                          <p className="text-xs text-gray-400">{STUDENT_ORDERS_CONSTS.TEXT.EMPTY_SUB}</p>
                         </td>
                       </tr>
                     ) : (
@@ -616,15 +615,15 @@ export default function StudentOrders() {
                 <div className="flex flex-col sm:flex-row items-center gap-4">
                   <span className="text-sm text-gray-700">
                     {totalItems === 0
-                      ? "No orders"
-                      : `Showing ${(page - 1) * rowsPerPage + 1} to ${Math.min(page * rowsPerPage, totalItems)} of ${totalItems}`}
+                      ? STUDENT_ORDERS_CONSTS.TEXT.NO_ORDERS
+                      : STOCK_SHARED_CONSTS.COMMON.SHOWING_RANGE((page - 1) * rowsPerPage + 1, Math.min(page * rowsPerPage, totalItems), totalItems)}
                   </span>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-700">Rows per page:</span>
+                    <span className="text-sm text-gray-700">{STOCK_SHARED_CONSTS.COMMON.ROWS_PER_PAGE}</span>
                     <select
                       value={rowsPerPage}
                       onChange={(e) => { setRowsPerPage(Number(e.target.value)); resetPage(); }}
-                      className="px-3 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="px-3 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
                     >
                       <option value={10}>10</option>
                       <option value={25}>25</option>
@@ -636,7 +635,7 @@ export default function StudentOrders() {
                   <button
                     onClick={() => setPage((p) => Math.max(1, p - 1))}
                     disabled={page === 1 || loading}
-                    className="px-3 py-1 text-gray-600 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                    className="px-3 py-1 text-gray-600 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer"
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </button>
@@ -644,7 +643,7 @@ export default function StudentOrders() {
                   <button
                     onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                     disabled={page === totalPages || totalPages === 0 || loading}
-                    className="px-3 py-1 text-gray-600 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                    className="px-3 py-1 text-gray-600 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer"
                   >
                     <ChevronRight className="w-4 h-4" />
                   </button>
@@ -657,15 +656,15 @@ export default function StudentOrders() {
               <div className="flex flex-col gap-4">
                 <div className="text-center text-sm text-gray-700">
                   {totalItems === 0
-                    ? "No orders"
-                    : `Showing ${(page - 1) * rowsPerPage + 1} to ${Math.min(page * rowsPerPage, totalItems)} of ${totalItems}`}
+                    ? STUDENT_ORDERS_CONSTS.TEXT.NO_ORDERS
+                    : STOCK_SHARED_CONSTS.COMMON.SHOWING_RANGE((page - 1) * rowsPerPage + 1, Math.min(page * rowsPerPage, totalItems), totalItems)}
                 </div>
                 <div className="flex items-center justify-center gap-2">
-                  <span className="text-sm text-gray-700">Rows:</span>
+                  <span className="text-sm text-gray-700">{STOCK_SHARED_CONSTS.COMMON.ROWS_SHORT}</span>
                   <select
                     value={rowsPerPage}
                     onChange={(e) => { setRowsPerPage(Number(e.target.value)); resetPage(); }}
-                    className="px-3 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="px-3 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
                   >
                     <option value={10}>10</option>
                     <option value={25}>25</option>
@@ -676,7 +675,7 @@ export default function StudentOrders() {
                   <button
                     onClick={() => setPage((p) => Math.max(1, p - 1))}
                     disabled={page === 1 || loading}
-                    className="px-4 py-2 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                    className="px-4 py-2 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer"
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </button>
@@ -684,7 +683,7 @@ export default function StudentOrders() {
                   <button
                     onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                     disabled={page === totalPages || totalPages === 0 || loading}
-                    className="px-4 py-2 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                    className="px-4 py-2 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer"
                   >
                     <ChevronRight className="w-4 h-4" />
                   </button>
