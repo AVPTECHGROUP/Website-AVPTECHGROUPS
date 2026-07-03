@@ -3,7 +3,7 @@ import {
     BarChart2, TrendingUp, AlertTriangle, Star, RefreshCw,
     ChevronDown, AlertCircle, Loader2, CalendarDays,
 } from "lucide-react";
-import { getAttendanceSummary } from "../../../Api/AttendanceApi";
+import { getAttendanceSummary } from "../../../Api/Attendance/AttendanceApi";
 import { useDecodedUser } from "../../../ContextAPI/UserContext";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

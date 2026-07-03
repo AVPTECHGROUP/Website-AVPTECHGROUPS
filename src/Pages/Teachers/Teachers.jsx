@@ -1,16 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { KeyIcon } from 'lucide-react';
 import { toast } from 'react-toastify';
-import { getTeachers, getTeacherStatistics, searchTeachers } from '../../Api/TeachersAPI';
-import { getClasses } from '../../Api/TeachersAPI';
+import { getTeachers, getTeacherStatistics, searchTeachers } from '../../Api/Teachers/TeachersAPI';
+import { getClasses } from '../../Api/Teachers/TeachersAPI';
 import TeachersHeader from '../../Components/Teacher/ManagementComponents/TeachersHeader';
 import QuickActions from '../../Components/Teacher/ManagementComponents/QuickActions';
 import TeachersFilters from '../../Components/Teacher/ManagementComponents/TeachersFilters';
 import TeachersTable from '../../Components/Teacher/ManagementComponents/TeachersTable';
 import PasswordResetModal from '../../Components/PopupResetPassword/ResetPasswordComponent';
-import { resetUserPassword } from '../../Api/userManagementAPI';
+import { resetUserPassword } from '../../Api/StaffManagement/UserManagementAPI';
+import TEACHER_MODULE_STRINGS from '../../Constants/StringConstants/TeacherConstants';
 
 const Teachers = () => {
+  const strings = TEACHER_MODULE_STRINGS;
   // Search and Filters
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -193,7 +195,7 @@ const Teachers = () => {
     try {
       return await resetUserPassword(id);
     } catch (err) {
-      toast.error(err.message || 'Reset password failed');
+      toast.error(err.message || strings.COMMON.RETRY);
     }
   };
 
@@ -209,23 +211,12 @@ const Teachers = () => {
   // ── EXPORT CSV LOGIC FOR TEACHERS ────────────────────────────────────────
   const handleExportTeachersCSV = () => {
     if (teachers.length === 0) {
-      toast.info('No teachers on this page to export.');
+      toast.info(strings.TEACHERS_LIST.EXPORT_INFO);
       return;
     }
 
     // Header structure according to the table fields
-    const HEADERS = [
-      'Full Name',
-      'Employee Code',
-      'Designation/Role',
-      'Mobile Number',
-      'Assigned Classes',
-      'Salary Type',
-      'Status',
-      'Attendance Access',
-      'Payroll Status',
-      'Joining Date'
-    ];
+    const HEADERS = strings.TEACHERS_LIST.TABLE_HEADERS;
 
     // Mapping over current paginated mapped teachers array
     const dataRows = teachers.map((t) =>
@@ -257,9 +248,7 @@ const Teachers = () => {
     document.body.removeChild(anchor);
     URL.revokeObjectURL(url);
 
-    toast.success(
-      `✓ Exported ${teachers.length} teacher${teachers.length !== 1 ? 's' : ''} — CSV ${page} of ${totalPages}`
-    );
+    toast.success(strings.TEACHERS_LIST.EXPORT_SUCCESS.replace('{count}', teachers.length).replace('{plural}', teachers.length !== 1 ? 's' : '').replace('{page}', page).replace('{totalPages}', totalPages));
   };
 
   useEffect(() => {

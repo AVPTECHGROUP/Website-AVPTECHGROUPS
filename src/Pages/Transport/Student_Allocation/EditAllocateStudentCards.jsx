@@ -1,19 +1,14 @@
 import { useState, useEffect, useRef } from "react";
 import { X, Pencil, Save, Loader2, Info, ChevronDown, Search, X as XIcon } from "lucide-react";
-import { updateTransportAllocation, getActiveRoutes, getTransportFeePlans } from "../../../Api/TransportAPI";
-
-// ─── Constants ────────────────────────────────────────────────────
-const PICKUP_TYPES = [
-  { value: "BOTH",        label: "BOTH" },
-  { value: "PICKUP_ONLY", label: "PICKUP ONLY" },
-  { value: "DROP_ONLY",   label: "DROP ONLY" },
-];
+import { updateTransportAllocation, getActiveRoutes, getTransportFeePlans } from "../../../Api/Transport/TransportAPI";
+import {
+  PICKUP_TYPES_OPTIONS,
+  SHARED_INPUT_STYLES,
+  VALIDATION_MESSAGES,
+  ALLOCATION_UI_TEXT
+} from "../../../Constants/StringConstants/TransportConstants"; // Adjust import path as needed
 
 // ─── Styles ───────────────────────────────────────────────────────
-const inputBase =
-  "w-full border rounded-lg px-3 py-2.5 text-sm text-gray-700 bg-white " +
-  "focus:outline-none focus:ring-2 transition border-gray-200 focus:ring-blue-300 focus:border-blue-400";
-const errCls = "border-red-400 focus:ring-red-200 focus:border-red-400";
 const disCls = "opacity-50 cursor-not-allowed bg-gray-50";
 
 // ─── Field wrapper ────────────────────────────────────────────────
@@ -29,21 +24,21 @@ function Field({ label, required, children }) {
 }
 
 // ─── Custom Scrollable SelectInput ────────────────────────────────
-function SelectInput({ value, onChange, options = [], placeholder = "— Select —", hasError = false, disabled = false, loading = false }) {
-  const [open,    setOpen]    = useState(false);
-  const [query,   setQuery]   = useState("");
+function SelectInput({ value, onChange, options = [], placeholder = ALLOCATION_UI_TEXT.PH_SELECT_DEFAULT, hasError = false, disabled = false, loading = false }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
   const [focused, setFocused] = useState(-1);
 
   const containerRef = useRef(null);
-  const searchRef    = useRef(null);
-  const listRef      = useRef(null);
+  const searchRef = useRef(null);
+  const listRef = useRef(null);
 
   const showSearch = options.length > 6;
-  const filtered   = query.trim()
+  const filtered = query.trim()
     ? options.filter((o) => o.label.toLowerCase().includes(query.toLowerCase()))
     : options;
   const selectedLabel = options.find((o) => String(o.value) === String(value))?.label ?? "";
-  const isDisabled    = disabled || loading;
+  const isDisabled = disabled || loading;
 
   // Close on outside click
   useEffect(() => {
@@ -64,7 +59,7 @@ function SelectInput({ value, onChange, options = [], placeholder = "— Select 
     if (showSearch) setTimeout(() => searchRef.current?.focus(), 30);
     const idx = filtered.findIndex((o) => String(o.value) === String(value));
     setFocused(idx >= 0 ? idx : -1);
-  }, [open]); // eslint-disable-line
+  }, [open, showSearch, value, filtered]);
 
   // Scroll focused item into view
   useEffect(() => {
@@ -85,9 +80,9 @@ function SelectInput({ value, onChange, options = [], placeholder = "— Select 
       if (["Enter", " ", "ArrowDown"].includes(e.key)) { e.preventDefault(); setOpen(true); }
       return;
     }
-    if (e.key === "Escape")    { setOpen(false); setQuery(""); setFocused(-1); }
+    if (e.key === "Escape") { setOpen(false); setQuery(""); setFocused(-1); }
     if (e.key === "ArrowDown") { e.preventDefault(); setFocused((f) => Math.min(f + 1, filtered.length - 1)); }
-    if (e.key === "ArrowUp")   { e.preventDefault(); setFocused((f) => Math.max(f - 1, -1)); }
+    if (e.key === "ArrowUp") { e.preventDefault(); setFocused((f) => Math.max(f - 1, -1)); }
     if (e.key === "Enter" && focused >= 0) { e.preventDefault(); select(filtered[focused].value); }
   };
 
@@ -99,15 +94,15 @@ function SelectInput({ value, onChange, options = [], placeholder = "— Select 
         onClick={() => !isDisabled && setOpen((o) => !o)}
         disabled={isDisabled}
         className={[
-          inputBase,
+          SHARED_INPUT_STYLES.base,
           "flex items-center justify-between gap-2 text-left",
-          hasError ? errCls : "",
+          hasError ? SHARED_INPUT_STYLES.errCls : "",
           isDisabled ? disCls : "cursor-pointer",
           open ? "ring-2 ring-blue-300 border-blue-400" : "",
         ].filter(Boolean).join(" ")}
       >
         <span className={`truncate flex-1 ${!value ? "text-gray-400" : "text-gray-700"}`}>
-          {loading ? "Loading…" : (selectedLabel || placeholder)}
+          {loading ? ALLOCATION_UI_TEXT.LBL_LOADING : (selectedLabel || placeholder)}
         </span>
         {loading
           ? <Loader2 className="w-3.5 h-3.5 text-gray-400 animate-spin shrink-0" />
@@ -138,7 +133,7 @@ function SelectInput({ value, onChange, options = [], placeholder = "— Select 
                   type="text"
                   value={query}
                   onChange={(e) => { setQuery(e.target.value); setFocused(-1); }}
-                  placeholder="Search…"
+                  placeholder={ALLOCATION_UI_TEXT.PH_SELECT_SEARCH}
                   className="w-full pl-8 pr-7 py-1.5 text-xs border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-400 placeholder-gray-400"
                 />
                 {query && (
@@ -160,29 +155,29 @@ function SelectInput({ value, onChange, options = [], placeholder = "— Select 
               </li>
             )}
             {filtered.length === 0
-              ? <li className="px-3 py-6 text-xs text-center text-gray-400">No results found</li>
+              ? <li className="px-3 py-6 text-xs text-center text-gray-400">{ALLOCATION_UI_TEXT.NO_RESULTS}</li>
               : filtered.map((o, i) => {
-                  const isSel = String(o.value) === String(value);
-                  const isFoc = i === focused;
-                  return (
-                    <li key={o.value} onClick={() => select(o.value)} onMouseEnter={() => setFocused(i)}
-                      role="option" aria-selected={isSel}
-                      className={[
-                        "px-3 py-2.5 text-sm cursor-pointer transition-colors",
-                        isSel            ? "bg-blue-50 text-blue-700 font-semibold" : "text-gray-700",
-                        isFoc && !isSel  ? "bg-gray-100" : "",
-                        !isSel && !isFoc ? "hover:bg-gray-50" : "",
-                      ].join(" ")}>
-                      {o.label}
-                    </li>
-                  );
-                })
+                const isSel = String(o.value) === String(value);
+                const isFoc = i === focused;
+                return (
+                  <li key={o.value} onClick={() => select(o.value)} onMouseEnter={() => setFocused(i)}
+                    role="option" aria-selected={isSel}
+                    className={[
+                      "px-3 py-2.5 text-sm cursor-pointer transition-colors",
+                      isSel ? "bg-blue-50 text-blue-700 font-semibold" : "text-gray-700",
+                      isFoc && !isSel ? "bg-gray-100" : "",
+                      !isSel && !isFoc ? "hover:bg-gray-50" : "",
+                    ].join(" ")}>
+                    {o.label}
+                  </li>
+                );
+              })
             }
           </ul>
 
           {filtered.length > 0 && (
             <div className="px-3 py-1.5 border-t border-gray-100 text-xs text-gray-400 text-right">
-              {filtered.length} option{filtered.length !== 1 ? "s" : ""}
+              {filtered.length} {filtered.length !== 1 ? ALLOCATION_UI_TEXT.OPTION_PLURAL : ALLOCATION_UI_TEXT.OPTION_SINGULAR}
             </div>
           )}
         </div>
@@ -192,24 +187,17 @@ function SelectInput({ value, onChange, options = [], placeholder = "— Select 
 }
 
 // ─── Main Component ───────────────────────────────────────────────
-/**
- * Props:
- *  isOpen    – boolean
- *  onClose   – () => void
- *  onUpdate  – () => void   called after successful PUT
- *  editData  – allocation object from GET /allocations (required when open)
- */
 export default function EditAllocateStudentCards({ isOpen, onClose, onUpdate, editData }) {
-  const [form,     setForm]     = useState({});
-  const [saving,   setSaving]   = useState(false);
-  const [errors,   setErrors]   = useState({});
+  const [form, setForm] = useState({});
+  const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState({});
   const [apiError, setApiError] = useState("");
 
-  const [routes,    setRoutes]    = useState([]);
-  const [feePlans,  setFeePlans]  = useState([]);
-  const [stops,     setStops]     = useState([]);
+  const [routes, setRoutes] = useState([]);
+  const [feePlans, setFeePlans] = useState([]);
+  const [stops, setStops] = useState([]);
 
-  const [loadingRoutes,   setLoadingRoutes]   = useState(false);
+  const [loadingRoutes, setLoadingRoutes] = useState(false);
   const [loadingFeePlans, setLoadingFeePlans] = useState(false);
 
   // Populate + fetch on open
@@ -218,14 +206,14 @@ export default function EditAllocateStudentCards({ isOpen, onClose, onUpdate, ed
     setErrors({});
     setApiError("");
     setForm({
-      studentId:      editData.studentId      ?? "",
-      routeId:        editData.routeId        ?? "",
-      stopId:         editData.stopId         ?? "",
+      studentId: editData.studentId ?? "",
+      routeId: editData.routeId ?? "",
+      stopId: editData.stopId ?? "",
       pickupDropType: editData.pickupDropType ?? "BOTH",
-      effectiveFrom:  editData.effectiveFrom  ?? "",
-      effectiveTo:    editData.effectiveTo    ?? "",
-      feePlanId:      editData.feePlanId      ?? "",
-      remarks:        editData.remarks        ?? "",
+      effectiveFrom: editData.effectiveFrom ?? "",
+      effectiveTo: editData.effectiveTo ?? "",
+      feePlanId: editData.feePlanId ?? "",
+      remarks: editData.remarks ?? "",
     });
 
     const fetchDropdowns = async () => {
@@ -288,11 +276,20 @@ export default function EditAllocateStudentCards({ isOpen, onClose, onUpdate, ed
 
   const validate = () => {
     const e = {};
-    if (!form.routeId)        e.routeId        = "Please select a route";
-    if (!form.stopId)         e.stopId         = "Please select a stop";
-    if (!form.pickupDropType) e.pickupDropType = "Please select pickup/drop type";
-    if (!form.effectiveFrom)  e.effectiveFrom  = "Effective from date is required";
-    if (!form.feePlanId)      e.feePlanId      = "Please select a fee plan";
+    if (!form.routeId) e.routeId = VALIDATION_MESSAGES.REQ_ROUTE;
+    if (!form.stopId) e.stopId = VALIDATION_MESSAGES.REQ_STOP;
+    if (!form.pickupDropType) e.pickupDropType = VALIDATION_MESSAGES.REQ_PICKUP_DROP;
+    if (!form.effectiveFrom) e.effectiveFrom = VALIDATION_MESSAGES.REQ_EFFECTIVE_FROM;
+    if (!form.feePlanId) e.feePlanId = VALIDATION_MESSAGES.REQ_FEE_PLAN;
+
+    if (form.effectiveFrom && form.effectiveTo) {
+      const fromDate = new Date(form.effectiveFrom).setHours(0, 0, 0, 0);
+      const toDate = new Date(form.effectiveTo).setHours(0, 0, 0, 0);
+      if (toDate < fromDate) {
+        e.effectiveTo = VALIDATION_MESSAGES.ERR_EFFECTIVE_TO_DATE;
+      }
+    }
+
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -303,19 +300,19 @@ export default function EditAllocateStudentCards({ isOpen, onClose, onUpdate, ed
     setApiError("");
     try {
       await updateTransportAllocation(editData.id, {
-        studentId:      Number(form.studentId),
-        routeId:        Number(form.routeId),
-        stopId:         Number(form.stopId),
+        studentId: Number(form.studentId),
+        routeId: Number(form.routeId),
+        stopId: Number(form.stopId),
         pickupDropType: form.pickupDropType,
-        effectiveFrom:  form.effectiveFrom,
-        effectiveTo:    form.effectiveTo || null,
-        feePlanId:      Number(form.feePlanId),
-        remarks:        form.remarks || null,
+        effectiveFrom: form.effectiveFrom,
+        effectiveTo: form.effectiveTo || null,
+        feePlanId: Number(form.feePlanId),
+        remarks: form.remarks || null,
       });
       onUpdate?.();
       onClose();
     } catch (err) {
-      setApiError(err?.message || "Something went wrong. Please try again.");
+      setApiError(err?.message || VALIDATION_MESSAGES.ERR_GENERIC);
     } finally {
       setSaving(false);
     }
@@ -343,9 +340,9 @@ export default function EditAllocateStudentCards({ isOpen, onClose, onUpdate, ed
               <Pencil className="w-5 h-5 text-blue-600" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-gray-900">Edit Transport Allocation</h2>
+              <h2 className="text-base font-bold text-gray-900">{ALLOCATION_UI_TEXT.EDIT_MODAL_TITLE}</h2>
               <p className="text-xs text-gray-400 mt-0.5">
-                Editing allocation for <span className="font-semibold text-gray-600">{editData.studentName}</span>
+                {ALLOCATION_UI_TEXT.EDIT_MODAL_SUBTITLE_PREFIX} <span className="font-semibold text-gray-600">{editData.studentName}</span>
               </p>
             </div>
           </div>
@@ -361,7 +358,7 @@ export default function EditAllocateStudentCards({ isOpen, onClose, onUpdate, ed
           {/* Amber info */}
           <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-xs text-amber-700">
             <Info className="w-4 h-4 shrink-0 mt-0.5 text-amber-500" />
-            <span>Changes to route or stop will take effect immediately. Student cannot be changed after allocation.</span>
+            <span>{ALLOCATION_UI_TEXT.INFO_BANNER_EDIT}</span>
           </div>
 
           {/* API error */}
@@ -374,18 +371,18 @@ export default function EditAllocateStudentCards({ isOpen, onClose, onUpdate, ed
 
           {/* Student (read-only) | Route */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label="Student">
-              <div className={`${inputBase} ${disCls} flex flex-col justify-center min-h-10.5`}>
+            <Field label={ALLOCATION_UI_TEXT.LBL_STUDENT}>
+              <div className={`${SHARED_INPUT_STYLES.base} ${disCls} flex flex-col justify-center min-h-10.5`}>
                 <span className="font-semibold text-gray-700">{editData.studentName}</span>
                 {editData.admissionNumber && (
-                  <span className="text-xs text-gray-400 mt-0.5">Adm: {editData.admissionNumber}</span>
+                  <span className="text-xs text-gray-400 mt-0.5">{ALLOCATION_UI_TEXT.LBL_ADM} {editData.admissionNumber}</span>
                 )}
               </div>
-              <p className="text-xs text-gray-400 mt-0.5">Student cannot be changed after allocation</p>
+              <p className="text-xs text-gray-400 mt-0.5">{ALLOCATION_UI_TEXT.LBL_READONLY_STUDENT}</p>
             </Field>
-            <Field label="Route" required>
+            <Field label={ALLOCATION_UI_TEXT.LBL_ROUTE} required>
               <SelectInput value={form.routeId} onChange={(e) => set("routeId", e.target.value)}
-                options={routeOptions} placeholder="— Select Route —"
+                options={routeOptions} placeholder={ALLOCATION_UI_TEXT.PH_ROUTE}
                 hasError={!!errors.routeId} loading={loadingRoutes} />
               {errors.routeId && <p className="text-xs text-red-500 mt-0.5">{errors.routeId}</p>}
             </Field>
@@ -393,16 +390,16 @@ export default function EditAllocateStudentCards({ isOpen, onClose, onUpdate, ed
 
           {/* Stop | Pickup/Drop Type */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label="Stop" required>
+            <Field label={ALLOCATION_UI_TEXT.LBL_STOP} required>
               <SelectInput value={form.stopId} onChange={(e) => set("stopId", e.target.value)}
                 options={stops}
-                placeholder={form.routeId ? "— Select Stop —" : "— Select Route first —"}
+                placeholder={form.routeId ? ALLOCATION_UI_TEXT.PH_STOP : ALLOCATION_UI_TEXT.PH_STOP_DISABLED}
                 hasError={!!errors.stopId} disabled={!form.routeId} />
               {errors.stopId && <p className="text-xs text-red-500 mt-0.5">{errors.stopId}</p>}
             </Field>
-            <Field label="Pickup / Drop Type" required>
+            <Field label={ALLOCATION_UI_TEXT.LBL_PICKUP_DROP} required>
               <SelectInput value={form.pickupDropType} onChange={(e) => set("pickupDropType", e.target.value)}
-                options={PICKUP_TYPES} placeholder="— Select Type —"
+                options={PICKUP_TYPES_OPTIONS} placeholder={ALLOCATION_UI_TEXT.PH_TYPE}
                 hasError={!!errors.pickupDropType} />
               {errors.pickupDropType && <p className="text-xs text-red-500 mt-0.5">{errors.pickupDropType}</p>}
             </Field>
@@ -410,30 +407,31 @@ export default function EditAllocateStudentCards({ isOpen, onClose, onUpdate, ed
 
           {/* Effective From | Effective To */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label="Effective From" required>
+            <Field label={ALLOCATION_UI_TEXT.LBL_EFFECTIVE_FROM} required>
               <input type="date" value={form.effectiveFrom}
                 onChange={(e) => set("effectiveFrom", e.target.value)}
-                className={`${inputBase} ${errors.effectiveFrom ? errCls : ""}`} />
+                className={`${SHARED_INPUT_STYLES.base} ${errors.effectiveFrom ? SHARED_INPUT_STYLES.errCls : ""}`} />
               {errors.effectiveFrom && <p className="text-xs text-red-500 mt-0.5">{errors.effectiveFrom}</p>}
             </Field>
-            <Field label="Effective To">
+            <Field label={ALLOCATION_UI_TEXT.LBL_EFFECTIVE_TO}>
               <input type="date" value={form.effectiveTo ?? ""}
                 onChange={(e) => set("effectiveTo", e.target.value)}
-                className={inputBase} />
+                className={`${SHARED_INPUT_STYLES.base} ${errors.effectiveTo ? SHARED_INPUT_STYLES.errCls : ""}`} />
+              {errors.effectiveTo && <p className="text-xs text-red-500 mt-0.5">{errors.effectiveTo}</p>}
             </Field>
           </div>
 
           {/* Fee Plan | Remarks */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label="Fee Plan" required>
+            <Field label={ALLOCATION_UI_TEXT.LBL_FEE_PLAN} required>
               <SelectInput value={form.feePlanId} onChange={(e) => set("feePlanId", e.target.value)}
-                options={feePlans} placeholder="— Select Fee Plan —"
+                options={feePlans} placeholder={ALLOCATION_UI_TEXT.PH_FEE_PLAN}
                 hasError={!!errors.feePlanId} loading={loadingFeePlans} />
               {errors.feePlanId && <p className="text-xs text-red-500 mt-0.5">{errors.feePlanId}</p>}
             </Field>
-            <Field label="Remarks">
-              <input type="text" placeholder="Optional" value={form.remarks ?? ""}
-                onChange={(e) => set("remarks", e.target.value)} className={inputBase} />
+            <Field label={ALLOCATION_UI_TEXT.LBL_REMARKS}>
+              <input type="text" placeholder={ALLOCATION_UI_TEXT.PH_OPTIONAL} value={form.remarks ?? ""}
+                onChange={(e) => set("remarks", e.target.value)} className={SHARED_INPUT_STYLES.base} />
             </Field>
           </div>
 
@@ -450,8 +448,8 @@ export default function EditAllocateStudentCards({ isOpen, onClose, onUpdate, ed
           <button onClick={handleSubmit} disabled={saving}
             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed text-white text-sm font-semibold px-5 py-2 rounded-lg transition-colors shadow-sm">
             {saving
-              ? <><Loader2 className="w-4 h-4 animate-spin" /> Updating…</>
-              : <><Save className="w-4 h-4" /> Update Allocation</>
+              ? <><Loader2 className="w-4 h-4 animate-spin" /> {ALLOCATION_UI_TEXT.BTN_UPDATING}</>
+              : <><Save className="w-4 h-4" /> {ALLOCATION_UI_TEXT.BTN_UPDATE_SAVE}</>
             }
           </button>
         </div>

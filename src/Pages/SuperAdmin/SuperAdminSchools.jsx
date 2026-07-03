@@ -7,14 +7,9 @@ import {
   Sun, Moon,
 } from "lucide-react";
 import SchoolSelectedCard from "../../Components/SuperAdmin/SchoolSelectedCard";
-import { getMySchools, getMySchoolStats } from "../../Api/Schools";
+import { getMySchools, getMySchoolStats } from "../../Api/SchoolConfiguration/Schools";
 import dpis from "../../assets/Images/dpis.jpg";
 import { UserContext } from "../../ContextAPI/UserContext";
-
-const borderAccents = [
-  "border-t-blue-500", "border-t-purple-500", "border-t-emerald-500",
-  "border-t-orange-500", "border-t-pink-500", "border-t-teal-500",
-];
 
 const boardBadge = (board) => {
   const map = {

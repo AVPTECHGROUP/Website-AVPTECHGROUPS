@@ -5,18 +5,21 @@ import {
     CheckCircle, XCircle,
     ChevronLeft, ChevronRight,
 } from "lucide-react";
-import AllocateStudentCard    from "./AllocateStudentCards";
+import AllocateStudentCard from "./AllocateStudentCards";
 import EditAllocateStudentCards from "./EditAllocateStudentCards";
-import AllocationTable        from "../../../Components/Transport/StudentAllocation";
-import { getTransportAllocations, deleteTransportAllocation } from "../../../Api/TransportAPI";
-
-const ROWS_OPTIONS = [10, 25, 50, 100];
+import AllocationTable from "../../../Components/Transport/StudentAllocation";
+import { getTransportAllocations, deleteTransportAllocation } from "../../../Api/Transport/TransportAPI";
+import {
+    PAGINATION,
+    TOAST_MESSAGES,
+    ALLOCATION_UI_TEXT
+} from "../../../Constants/StringConstants/TransportConstants"; // Adjust import path as needed
 
 // ─── Toast ────────────────────────────────────────────────────────────────────
 let _setToasts = null;
 const toast = {
     success: (msg) => _setToasts?.((p) => [...p, { id: Date.now(), type: "success", msg }]),
-    error:   (msg) => _setToasts?.((p) => [...p, { id: Date.now(), type: "error",   msg }]),
+    error: (msg) => _setToasts?.((p) => [...p, { id: Date.now(), type: "error", msg }]),
 };
 
 function ToastContainer() {
@@ -32,17 +35,17 @@ function ToastContainer() {
         <div className="fixed bottom-5 right-5 z-[9999] flex flex-col gap-2 items-end pointer-events-none">
             {toasts.map((t) => (
                 <div key={t.id}
-                     className={`flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lg text-sm
+                    className={`flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lg text-sm
                                  font-medium pointer-events-auto min-w-[220px] max-w-xs bg-white
                                  ${t.type === "success"
-                                     ? "border border-green-200 text-green-800"
-                                     : "border border-red-200   text-red-700"}`}>
+                            ? "border border-green-200 text-green-800"
+                            : "border border-red-200   text-red-700"}`}>
                     {t.type === "success"
                         ? <CheckCircle className="w-4 h-4 text-green-500 shrink-0" />
-                        : <XCircle     className="w-4 h-4 text-red-500   shrink-0" />}
+                        : <XCircle className="w-4 h-4 text-red-500   shrink-0" />}
                     <span className="flex-1">{t.msg}</span>
                     <button onClick={() => remove(t.id)}
-                            className="text-gray-400 hover:text-gray-600 ml-1">✕</button>
+                        className="text-gray-400 hover:text-gray-600 ml-1">✕</button>
                 </div>
             ))}
         </div>
@@ -53,8 +56,8 @@ function ToastContainer() {
 function pageNumbers(current, total) {
     if (total <= 7) return Array.from({ length: total }, (_, i) => i);
     const pages = new Set([0, total - 1, current]);
-    if (current > 0)          pages.add(current - 1);
-    if (current < total - 1)  pages.add(current + 1);
+    if (current > 0) pages.add(current - 1);
+    if (current < total - 1) pages.add(current + 1);
     const sorted = [...pages].sort((a, b) => a - b);
     const result = [];
     let prev = -1;
@@ -69,17 +72,17 @@ function pageNumbers(current, total) {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function Student_Allocations() {
     const [allocations, setAllocations] = useState([]);
-    const [pagination,  setPagination]  = useState(null);
-    const [loading,     setLoading]     = useState(true);
-    const [togglingId,  setTogglingId]  = useState(null);
+    const [pagination, setPagination] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [togglingId, setTogglingId] = useState(null);
 
     const [searchInput, setSearchInput] = useState("");
-    const [search,      setSearch]      = useState("");
-    const [page,        setPage]        = useState(0);
-    const [pageSize,    setPageSize]    = useState(10);
+    const [search, setSearch] = useState("");
+    const [page, setPage] = useState(0);
+    const [pageSize, setPageSize] = useState(PAGINATION.ITEMS_PER_PAGE);
 
     const [showCreate, setShowCreate] = useState(false);
-    const [editAlloc,  setEditAlloc]  = useState(null);
+    const [editAlloc, setEditAlloc] = useState(null);
 
     // Debounce search
     useEffect(() => {
@@ -95,7 +98,7 @@ export default function Student_Allocations() {
             setAllocations(result.allocations || []);
             setPagination(result.pagination);
         } catch {
-            toast.error("Failed to load allocations. Please try again.");
+            toast.error(TOAST_MESSAGES.ALLOCATION_LOAD_FAIL);
         } finally {
             setLoading(false);
         }
@@ -109,17 +112,17 @@ export default function Student_Allocations() {
         return (
             a.studentName?.toLowerCase().includes(q) ||
             String(a.admissionNumber ?? "").toLowerCase().includes(q) ||
-            String(a.rollNumber      ?? "").toLowerCase().includes(q)
+            String(a.rollNumber ?? "").toLowerCase().includes(q)
         );
     });
 
     const totalElements = pagination?.totalElements ?? allocations.length;
-    const totalPages    = pagination?.totalPages    ?? 1;
-    const currentPage   = pagination?.currentPage   ?? 0;
-    const isFirst       = pagination?.isFirst       ?? currentPage === 0;
-    const isLast        = pagination?.isLast        ?? currentPage >= totalPages - 1;
-    const startItem     = totalElements === 0 ? 0 : currentPage * pageSize + 1;
-    const endItem       = Math.min((currentPage + 1) * pageSize, totalElements);
+    const totalPages = pagination?.totalPages ?? 1;
+    const currentPage = pagination?.currentPage ?? 0;
+    const isFirst = pagination?.isFirst ?? currentPage === 0;
+    const isLast = pagination?.isLast ?? currentPage >= totalPages - 1;
+    const startItem = totalElements === 0 ? 0 : currentPage * pageSize + 1;
+    const endItem = Math.min((currentPage + 1) * pageSize, totalElements);
 
     const handleAction = async (alloc, value) => {
         if (value === "edit") { setEditAlloc(alloc); return; }
@@ -128,14 +131,14 @@ export default function Student_Allocations() {
                 setTogglingId(alloc.id);
                 if (alloc.isActive) {
                     await deleteTransportAllocation(alloc.id);
-                    toast.success("Student transport deactivated successfully.");
+                    toast.success(TOAST_MESSAGES.ALLOCATION_DEACTIVATE_SUCCESS);
                 } else {
-                    toast.error("Activation API not implemented yet.");
+                    toast.error(TOAST_MESSAGES.API_NOT_IMPLEMENTED);
                 }
                 await fetchAllocations();
             } catch (err) {
                 console.error(err);
-                toast.error("Failed to update allocation status.");
+                toast.error(TOAST_MESSAGES.ALLOCATION_UPDATE_FAIL);
             } finally {
                 setTogglingId(null);
             }
@@ -143,7 +146,7 @@ export default function Student_Allocations() {
     };
 
     const handleSaved = async (isEdit) => {
-        toast.success(isEdit ? "Allocation updated successfully." : "Student allocated successfully.");
+        toast.success(isEdit ? TOAST_MESSAGES.ALLOCATION_UPDATE_SUCCESS : TOAST_MESSAGES.ALLOCATION_CREATE_SUCCESS);
         await fetchAllocations();
     };
 
@@ -164,10 +167,10 @@ export default function Student_Allocations() {
                 <div className="px-4 sm:px-6 xl:px-10 pt-6 pb-2">
                     <h1 className="text-xl sm:text-2xl font-bold text-gray-900 flex items-center gap-2">
                         <GraduationCap className="w-6 h-6 text-purple-600 shrink-0" />
-                        Student Allocation Management
+                        {ALLOCATION_UI_TEXT.PAGE_TITLE}
                     </h1>
                     <p className="text-gray-500 text-xs sm:text-sm mt-1">
-                        Allocate students to transport routes and stops, manage pickup/drop preferences and fee plans.
+                        {ALLOCATION_UI_TEXT.PAGE_SUBTITLE}
                     </p>
                 </div>
 
@@ -182,10 +185,10 @@ export default function Student_Allocations() {
                                 <h2 className="text-base sm:text-lg font-bold text-gray-900
                                                flex items-center gap-2">
                                     <SlidersHorizontal className="w-4 h-4 text-purple-500 shrink-0" />
-                                    Student Transport Allocations
+                                    {ALLOCATION_UI_TEXT.SECTION_TITLE}
                                 </h2>
                                 <p className="text-xs text-gray-400 mt-0.5">
-                                    {totalElements} allocation{totalElements !== 1 ? "s" : ""} total
+                                    {totalElements} {totalElements !== 1 ? ALLOCATION_UI_TEXT.ALLOCATION_PLURAL : ALLOCATION_UI_TEXT.ALLOCATION_SINGULAR} {ALLOCATION_UI_TEXT.TOTAL}
                                 </p>
                             </div>
                             <div className="flex items-center gap-2">
@@ -205,7 +208,7 @@ export default function Student_Allocations() {
                                                text-white text-sm font-semibold px-4 py-2 rounded-xl
                                                transition-colors shadow-sm whitespace-nowrap"
                                 >
-                                    <Plus className="w-4 h-4" /> Allocate Student
+                                    <Plus className="w-4 h-4" /> {ALLOCATION_UI_TEXT.BTN_ALLOCATE}
                                 </button>
                             </div>
                         </div>
@@ -217,7 +220,7 @@ export default function Student_Allocations() {
                                                    w-4 h-4 text-gray-400 pointer-events-none" />
                                 <input
                                     type="text"
-                                    placeholder="Search student name, admission no…"
+                                    placeholder={ALLOCATION_UI_TEXT.SEARCH_PLACEHOLDER}
                                     value={searchInput}
                                     onChange={(e) => setSearchInput(e.target.value)}
                                     className="w-full pl-10 pr-4 py-2.5 text-sm border border-gray-200
@@ -247,11 +250,11 @@ export default function Student_Allocations() {
                                 {/* Count + rows per page */}
                                 <div className="flex items-center gap-3 flex-wrap">
                                     <p className="text-xs text-gray-500 font-medium whitespace-nowrap">
-                                        Showing {startItem}–{endItem} of {totalElements}
+                                        {ALLOCATION_UI_TEXT.SHOWING} {startItem}–{endItem} {ALLOCATION_UI_TEXT.OF} {totalElements}
                                     </p>
                                     <div className="flex items-center gap-1.5">
                                         <span className="text-xs text-gray-400 whitespace-nowrap">
-                                            Rows per page:
+                                            {ALLOCATION_UI_TEXT.ROWS_PER_PAGE}
                                         </span>
                                         <select
                                             value={pageSize}
@@ -260,7 +263,7 @@ export default function Student_Allocations() {
                                                        bg-white text-gray-700 font-medium cursor-pointer
                                                        focus:outline-none focus:ring-2 focus:ring-blue-200"
                                         >
-                                            {ROWS_OPTIONS.map((n) => <option key={n} value={n}>{n}</option>)}
+                                            {PAGINATION.ROWS_OPTIONS.map((n) => <option key={n} value={n}>{n}</option>)}
                                         </select>
                                     </div>
                                 </div>
@@ -281,7 +284,7 @@ export default function Student_Allocations() {
                                         {pageNumbers(currentPage, totalPages).map((p, idx) =>
                                             p === "..." ? (
                                                 <span key={`e-${idx}`}
-                                                      className="w-8 h-8 flex items-center justify-center
+                                                    className="w-8 h-8 flex items-center justify-center
                                                                  text-gray-400 text-xs select-none">…</span>
                                             ) : (
                                                 <button

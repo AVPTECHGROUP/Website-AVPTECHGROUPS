@@ -12,7 +12,7 @@ import {
   Power,
 } from 'lucide-react';
 import { toast } from 'react-toastify';
-import { activateStatus, deactivateStatus } from '../../../Api/TeachersAPI';
+import { activateStatus, deactivateStatus } from '../../../Api/Teachers/TeachersAPI';
 import ActionDropDownComp from '../../CommonComp/ActionDropDownComp';
 import ListLoader from '../../CommonComp/ListLoader';
 
@@ -32,7 +32,7 @@ const NoDataFound = ({ message = 'No data found' }) => (
 const TeachersTable = ({
   selectedTeacherId,
   onRowSelect,
-  assignTeacherId, // Preserved in case it's used by a parent wrapper
+  assignTeacherId,
   teachers,
   setTeachers,
   loading,

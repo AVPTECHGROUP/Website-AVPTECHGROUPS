@@ -3,13 +3,14 @@ import {
     X, BookOpen, Loader2, CheckCircle2, AlertCircle,
     FlaskConical, Save, RefreshCw,
 } from "lucide-react";
-import { bulkUpdateExamSubjects } from "../../Api/Exams";
+import { bulkUpdateExamSubjects } from "../../Api/Academics/Exams";
+import { EXAM_CONSTS } from "../../Constants/StringConstants/AcademicsConstants";
 
 function makeRowFromConfig(subject) {
     return {
-        configId: subject.id,                        // existing config ID — needed for PUT
+        configId: subject.id,
         sectionSubjectId: subject.sectionSubjectId,
-        subjectName: subject.subjectName ?? `Subject #${subject.id}`,
+        subjectName: subject.subjectName ?? `${EXAM_CONSTS.ADD_SUBJECT.SUBJECT} #${subject.id}`,
         subjectCode: subject.subjectCode ?? "",
         sectionName: subject.sectionName ?? "",
         maxMarks: subject.maxMarks != null ? String(subject.maxMarks) : "",
@@ -29,10 +30,10 @@ function validateRow(row) {
     const max = Number(row.maxMarks);
     const pass = Number(row.passingMarks);
 
-    if (!row.maxMarks || isNaN(max) || max < 1) errors.maxMarks = "Required, min 1";
-    if (!row.passingMarks || isNaN(pass) || pass < 1) errors.passingMarks = "Required, min 1";
+    if (!row.maxMarks || isNaN(max) || max < 1) errors.maxMarks = EXAM_CONSTS.VALIDATION.REQ_MIN_1;
+    if (!row.passingMarks || isNaN(pass) || pass < 1) errors.passingMarks = EXAM_CONSTS.VALIDATION.REQ_MIN_1;
     if (!errors.maxMarks && !errors.passingMarks && pass > max)
-        errors.passingMarks = `Cannot exceed ${max}`;
+        errors.passingMarks = EXAM_CONSTS.VALIDATION.EXCEEDS_MAX(max);
 
     if (row.hasTheoryPractical) {
         const th = Number(row.maxTheoryMarks);
@@ -40,12 +41,12 @@ function validateRow(row) {
         const pth = Number(row.passingTheoryMarks || 0);
         const ppr = Number(row.passingPracticalMarks || 0);
 
-        if (!row.maxTheoryMarks || isNaN(th) || th < 0) errors.maxTheoryMarks = "Required";
-        if (!row.maxPracticalMarks || isNaN(pr) || pr < 0) errors.maxPracticalMarks = "Required";
+        if (!row.maxTheoryMarks || isNaN(th) || th < 0) errors.maxTheoryMarks = EXAM_CONSTS.VALIDATION.REQUIRED;
+        if (!row.maxPracticalMarks || isNaN(pr) || pr < 0) errors.maxPracticalMarks = EXAM_CONSTS.VALIDATION.REQUIRED;
         if (!errors.maxTheoryMarks && !errors.maxPracticalMarks && !errors.maxMarks && th + pr !== max)
-            errors.tpSum = `Theory + Practical must = ${max}`;
-        if (!errors.maxTheoryMarks && pth > th) errors.passingTheoryMarks = `Max ${th}`;
-        if (!errors.maxPracticalMarks && ppr > pr) errors.passingPracticalMarks = `Max ${pr}`;
+            errors.tpSum = EXAM_CONSTS.VALIDATION.TP_SUM(max);
+        if (!errors.maxTheoryMarks && pth > th) errors.passingTheoryMarks = EXAM_CONSTS.VALIDATION.MAX_LIMIT(th);
+        if (!errors.maxPracticalMarks && ppr > pr) errors.passingPracticalMarks = EXAM_CONSTS.VALIDATION.MAX_LIMIT(pr);
     }
     return errors;
 }
@@ -81,11 +82,11 @@ function TPPanel({ row, rowIdx, onChange, disabled }) {
     return (
         <div className="mt-2 rounded-xl border border-indigo-100 bg-indigo-50/50 p-3">
             <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest mb-2 flex items-center gap-1">
-                <FlaskConical className="w-3 h-3" /> Theory / Practical Breakdown
+                <FlaskConical className="w-3 h-3" /> {EXAM_CONSTS.ADD_SUBJECT.TP_BREAKDOWN}
             </p>
             <div className="grid grid-cols-2 gap-2">
                 <div>
-                    <p className="text-[10px] text-gray-500 font-semibold mb-1">Max Theory *</p>
+                    <p className="text-[10px] text-gray-500 font-semibold mb-1">{EXAM_CONSTS.ADD_SUBJECT.MAX_THEORY}</p>
                     <NumInput
                         value={row.maxTheoryMarks} disabled={disabled}
                         placeholder="e.g. 70"
@@ -95,7 +96,7 @@ function TPPanel({ row, rowIdx, onChange, disabled }) {
                     {row.errors.maxTheoryMarks && <p className="text-[10px] text-red-500 mt-0.5">{row.errors.maxTheoryMarks}</p>}
                 </div>
                 <div>
-                    <p className="text-[10px] text-gray-500 font-semibold mb-1">Max Practical *</p>
+                    <p className="text-[10px] text-gray-500 font-semibold mb-1">{EXAM_CONSTS.ADD_SUBJECT.MAX_PRACTICAL}</p>
                     <NumInput
                         value={row.maxPracticalMarks} disabled={disabled}
                         placeholder="e.g. 30"
@@ -105,7 +106,7 @@ function TPPanel({ row, rowIdx, onChange, disabled }) {
                     {row.errors.maxPracticalMarks && <p className="text-[10px] text-red-500 mt-0.5">{row.errors.maxPracticalMarks}</p>}
                 </div>
                 <div>
-                    <p className="text-[10px] text-gray-500 font-semibold mb-1">Pass Theory</p>
+                    <p className="text-[10px] text-gray-500 font-semibold mb-1">{EXAM_CONSTS.ADD_SUBJECT.PASS_THEORY}</p>
                     <NumInput
                         value={row.passingTheoryMarks} disabled={disabled}
                         placeholder="e.g. 23"
@@ -115,7 +116,7 @@ function TPPanel({ row, rowIdx, onChange, disabled }) {
                     {row.errors.passingTheoryMarks && <p className="text-[10px] text-red-500 mt-0.5">{row.errors.passingTheoryMarks}</p>}
                 </div>
                 <div>
-                    <p className="text-[10px] text-gray-500 font-semibold mb-1">Pass Practical</p>
+                    <p className="text-[10px] text-gray-500 font-semibold mb-1">{EXAM_CONSTS.ADD_SUBJECT.PASS_PRACTICAL}</p>
                     <NumInput
                         value={row.passingPracticalMarks} disabled={disabled}
                         placeholder="e.g. 10"
@@ -136,7 +137,7 @@ function TPPanel({ row, rowIdx, onChange, disabled }) {
                         ? <CheckCircle2 className="w-3 h-3 shrink-0" />
                         : <AlertCircle className="w-3 h-3 shrink-0" />}
                     <span className="font-mono">{th} + {pr} = {sum}</span>
-                    <span>{sumOk ? "✓ Matches max marks" : `Must equal ${max || "max marks"}`}</span>
+                    <span>{sumOk ? EXAM_CONSTS.ADD_SUBJECT.MATCHES_MAX : EXAM_CONSTS.ADD_SUBJECT.MUST_EQUAL(max)}</span>
                 </div>
             )}
             {row.errors.tpSum && <p className="text-[10px] text-red-500 mt-1">{row.errors.tpSum}</p>}
@@ -214,7 +215,7 @@ function DesktopRow({ row, rowIdx, onChange, onToggleTP, disabled }) {
                             className="w-3.5 h-3.5 accent-indigo-600 cursor-pointer"
                         />
                         <FlaskConical className={["w-3.5 h-3.5", row.hasTheoryPractical ? "text-indigo-500" : "text-gray-400"].join(" ")} />
-                        <span className="text-xs font-semibold text-gray-600">Split</span>
+                        <span className="text-xs font-semibold text-gray-600">{EXAM_CONSTS.ADD_SUBJECT.SPLIT}</span>
                     </label>
                 </td>
             </tr>
@@ -264,7 +265,7 @@ function MobileCard({ row, rowIdx, onChange, onToggleTP, disabled }) {
             <div className="px-3 py-3 space-y-3">
                 <div className="grid grid-cols-2 gap-2">
                     <div>
-                        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-1">Max Marks *</p>
+                        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-1">{EXAM_CONSTS.ADD_SUBJECT.MAX_MARKS}</p>
                         <NumInput
                             value={row.maxMarks}
                             onChange={(e) => onChange(rowIdx, "maxMarks", e.target.value)}
@@ -275,7 +276,7 @@ function MobileCard({ row, rowIdx, onChange, onToggleTP, disabled }) {
                         {row.errors.maxMarks && <p className="text-[10px] text-red-500 mt-0.5">{row.errors.maxMarks}</p>}
                     </div>
                     <div>
-                        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-1">Pass Marks *</p>
+                        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-1">{EXAM_CONSTS.ADD_SUBJECT.PASS_MARKS}</p>
                         <NumInput
                             value={row.passingMarks}
                             onChange={(e) => onChange(rowIdx, "passingMarks", e.target.value)}
@@ -300,7 +301,7 @@ function MobileCard({ row, rowIdx, onChange, onToggleTP, disabled }) {
                         className="w-4 h-4 accent-indigo-600 cursor-pointer flex-shrink-0"
                     />
                     <FlaskConical className="w-3.5 h-3.5 text-indigo-400 flex-shrink-0" />
-                    <span className="text-xs font-semibold text-gray-700">Has Theory + Practical Split</span>
+                    <span className="text-xs font-semibold text-gray-700">{EXAM_CONSTS.ADD_SUBJECT.HAS_TP_SPLIT}</span>
                 </label>
 
                 {row.hasTheoryPractical && (
@@ -386,7 +387,7 @@ export default function UpdateSubjectForm({
 
         if (hasErrors) {
             setRows(validatedRows);
-            setSubmitError("Please fix the errors in the highlighted rows.");
+            setSubmitError(EXAM_CONSTS.ADD_SUBJECT.FIX_HIGHLIGHTED);
             return;
         }
 
@@ -411,7 +412,7 @@ export default function UpdateSubjectForm({
             onSuccess?.();
         } catch (err) {
             console.error("bulkUpdateExamSubjects error:", err);
-            const msg = err?.message || "Failed to update subjects. Please try again.";
+            const msg = err?.message || EXAM_CONSTS.UPDATE_SUBJECT.ERR_UPDATE_FAIL;
             // API rejects if marks already entered — surface that clearly
             setSubmitError(msg);
         } finally {
@@ -434,7 +435,7 @@ export default function UpdateSubjectForm({
                         </div>
                         <div className="min-w-0">
                             <h2 className="text-sm sm:text-base font-bold text-gray-900 leading-tight">
-                                Update Subject Config
+                                {EXAM_CONSTS.UPDATE_SUBJECT.TITLE}
                             </h2>
                             {examName && (
                                 <p className="text-xs text-gray-400 truncate mt-0.5">{examName}</p>
@@ -454,7 +455,7 @@ export default function UpdateSubjectForm({
                 <div className="mx-4 sm:mx-6 mt-3 flex items-start gap-2 px-3 py-2.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-700 flex-shrink-0">
                     <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
                     <span>
-                        Updates are only allowed if <strong>no marks have been entered</strong> for any subject in this exam. All {rows.length} subject{rows.length !== 1 ? "s" : ""} will be updated together.
+                        {EXAM_CONSTS.UPDATE_SUBJECT.INFO_PREFIX}<strong>{EXAM_CONSTS.UPDATE_SUBJECT.INFO_BOLD}</strong>{EXAM_CONSTS.UPDATE_SUBJECT.INFO_SUFFIX}{rows.length} subject{rows.length !== 1 ? "s" : ""}{EXAM_CONSTS.UPDATE_SUBJECT.INFO_END}
                     </span>
                 </div>
 
@@ -472,7 +473,7 @@ export default function UpdateSubjectForm({
                     {rows.length === 0 ? (
                         <div className="text-center py-12 text-gray-400 text-sm">
                             <BookOpen className="w-10 h-10 mx-auto mb-2 opacity-30" />
-                            No subjects configured for this exam yet.
+                            {EXAM_CONSTS.UPDATE_SUBJECT.NO_SUBJECTS}
                         </div>
                     ) : (
                         <>
@@ -481,10 +482,10 @@ export default function UpdateSubjectForm({
                                 <table className="w-full text-sm">
                                     <thead>
                                         <tr className="bg-gray-50 border-b border-gray-100">
-                                            <th className="px-3 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Subject</th>
-                                            <th className="px-3 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider w-28">Max Marks *</th>
-                                            <th className="px-3 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider w-28">Pass Marks *</th>
-                                            <th className="px-3 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider w-36">Theory + Practical</th>
+                                            <th className="px-3 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">{EXAM_CONSTS.ADD_SUBJECT.SUBJECT}</th>
+                                            <th className="px-3 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider w-28">{EXAM_CONSTS.ADD_SUBJECT.MAX_MARKS}</th>
+                                            <th className="px-3 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider w-28">{EXAM_CONSTS.ADD_SUBJECT.PASS_MARKS}</th>
+                                            <th className="px-3 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider w-36">{EXAM_CONSTS.ADD_SUBJECT.TP_COL}</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-50">
@@ -522,14 +523,14 @@ export default function UpdateSubjectForm({
                 {/* ── Footer ───────────────────────────────────────────────── */}
                 <div className="flex items-center justify-between gap-3 px-4 sm:px-6 py-4 border-t border-gray-100 bg-gray-50/50 flex-shrink-0">
                     <div className="text-xs text-gray-400 hidden sm:block">
-                        {rows.length > 0 && `Updating ${rows.length} subject${rows.length !== 1 ? "s" : ""}`}
+                        {rows.length > 0 && `${EXAM_CONSTS.UPDATE_SUBJECT.UPDATING_COUNT}${rows.length} subject${rows.length !== 1 ? "s" : ""}`}
                     </div>
                     <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
                         <button
                             onClick={onClose} disabled={submitting}
                             className="px-4 py-2 text-sm font-semibold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-all disabled:opacity-50"
                         >
-                            Cancel
+                            {EXAM_CONSTS.ADD_SUBJECT.CANCEL}
                         </button>
                         <button
                             onClick={handleSubmit}
@@ -539,7 +540,7 @@ export default function UpdateSubjectForm({
                             {submitting
                                 ? <Loader2 className="w-4 h-4 animate-spin" />
                                 : <Save className="w-4 h-4" />}
-                            {submitting ? "Updating…" : `Update Subject${rows.length !== 1 ? "s" : ""}`}
+                            {submitting ? EXAM_CONSTS.UPDATE_SUBJECT.BTN_UPDATING : `${EXAM_CONSTS.UPDATE_SUBJECT.BTN_UPDATE}${rows.length !== 1 ? "s" : ""}`}
                         </button>
                     </div>
                 </div>

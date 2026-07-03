@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { X, CheckSquare, Store, Package, FileText, AlignLeft, ShoppingCart, Loader2 } from "lucide-react";
-import { getActiveStores, getItemsList, addStockInward, removeStockOutward } from "../../Api/StockApi";
-import { getStoreStock } from "../../Api/StoreApi";
+import { getItemsList, addStockInward, removeStockOutward } from "../../Api/Stock/StockApi";
+import { getStoreStock, getActiveStores } from "../../Api/Stock/StoreApi";
 
 export default function StockManagementCard({
     isOpen,

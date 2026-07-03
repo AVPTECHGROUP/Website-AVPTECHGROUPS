@@ -1,10 +1,15 @@
 import { SendHorizonal } from 'lucide-react'
 import React, { useEffect, useState } from 'react'
-import { createLeaveRequest } from '../../Api/LeavesManagementAPI';
+import { createLeaveRequest } from '../../Api/Leaves/LeavesManagementAPI';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
-import { getListOfValues } from '../../Api/ListOfValues';
-import { getAllLeaveConfigs } from '../../Api/LeaveConfigAPI';
+import { getAllLeaveConfigs } from '../../Api/Leaves/LeaveConfigAPI';
+import {
+  APPLY_LEAVES_TEXT,
+  APPLY_LEAVES_VALIDATION_MESSAGES,
+  APPLY_LEAVES_TOAST_MESSAGES,
+  APPLY_LEAVES_EMPTY_FORM,
+} from '../../Constants/StringConstants/LeavesConstants';
 
 function ApplyLeaves() {
   const [loading, setLoading] = useState(false);
@@ -32,39 +37,6 @@ function ApplyLeaves() {
 
   const [listOfLeaveType, setListofLeavetype] = useState([]);
   const [isHalfDay, setIsHalfDay] = useState(false);
-  // useEffect(() => {
-  //   const currUser = JSON.parse(localStorage.getItem('user'));
-  //   setCurrentUser(currUser);
-  //   // FIX: Use prev state to maintain all fields
-  //   setFormData(prev => ({
-  //     ...prev,
-  //     mobile: currUser.phone || ''
-  //   }));
-  //   //FOR LIST OF VALUES
-  //   let fetchListOfValues = async () => {
-  //     try {
-  //       //const leaveTypeRes = await getListOfValues('LEAVE_TYPE');
-  //       const leaveTypeRes = await getAllLeaveConfigs(true);
-
-  //       leaveTypeRes = leaveTypeRes.data;
-  //       console.log(leaveTypeRes + "=============================================")
-  //       const formattedLeaveType = leaveTypeRes
-  //         .filter(item => item.isActive === true)
-  //         .map(item => ({
-  //           id: item.id,
-  //           value: item.leaveType,
-  //           label: item.leaveName,
-  //         }));
-  //       console.log(formattedLeaveType);
-  //       setListofLeavetype(formattedLeaveType);
-  //     }
-  //     catch (e) {
-  //       console.error("get list of values error error:", e.message);
-  //       throw error;
-  //     }
-  //   }
-  //   fetchListOfValues();
-  // }, []);
 
   useEffect(() => {
     const currUser = JSON.parse(localStorage.getItem('user'));
@@ -97,7 +69,7 @@ function ApplyLeaves() {
 
       } catch (e) {
         console.error('Get leave configurations error:', e);
-        toast.error('Failed to load leave types');
+        toast.error(APPLY_LEAVES_TOAST_MESSAGES.loadLeaveTypesFailed);
       }
     };
 
@@ -134,48 +106,33 @@ function ApplyLeaves() {
   };
 
   const handleDiscardButton = () => {
-    setFormData({
-      leaveType: '',
-      fromDate: '',
-      toDate: '',
-      reason: ''
-    });
-    setErrors({
-      leaveType: '',
-      fromDate: '',
-      toDate: '',
-      reason: ''
-    });
+    setFormData(APPLY_LEAVES_EMPTY_FORM);
+    setErrors(APPLY_LEAVES_EMPTY_FORM);
   }
 
   // Client-side validation
   const validateForm = () => {
-    const newErrors = {
-      leaveType: '',
-      fromDate: '',
-      toDate: '',
-      reason: ''
-    };
+    const newErrors = { ...APPLY_LEAVES_EMPTY_FORM };
 
     let isValid = true;
 
     if (!formData.leaveType) {
-      newErrors.leaveType = 'Leave type is required';
+      newErrors.leaveType = APPLY_LEAVES_VALIDATION_MESSAGES.leaveTypeRequired;
       isValid = false;
     }
 
     if (!formData.fromDate) {
-      newErrors.fromDate = 'From date is required';
+      newErrors.fromDate = APPLY_LEAVES_VALIDATION_MESSAGES.fromDateRequired;
       isValid = false;
     }
 
     if (!formData.toDate) {
-      newErrors.toDate = 'To date is required';
+      newErrors.toDate = APPLY_LEAVES_VALIDATION_MESSAGES.toDateRequired;
       isValid = false;
     }
 
     if (!formData.reason || formData.reason.trim() === '') {
-      newErrors.reason = 'Reason for leave is required';
+      newErrors.reason = APPLY_LEAVES_VALIDATION_MESSAGES.reasonRequired;
       isValid = false;
     }
 
@@ -185,7 +142,7 @@ function ApplyLeaves() {
       const toDate = new Date(formData.toDate);
 
       if (toDate < fromDate) {
-        newErrors.toDate = 'To leave date must be after from leave date';
+        newErrors.toDate = APPLY_LEAVES_VALIDATION_MESSAGES.toBeforeFrom;
         isValid = false;
       }
     }
@@ -199,7 +156,7 @@ function ApplyLeaves() {
 
     // Validate form before submission
     if (!validateForm()) {
-      toast.error('Please fix all validation errors');
+      toast.error(APPLY_LEAVES_VALIDATION_MESSAGES.fixErrors);
       return;
     }
 
@@ -248,12 +205,12 @@ function ApplyLeaves() {
           reason: serverErrors.reason || ''
         };
         setErrors(newErrors);
-        toast.error(error.response.data.message || 'Validation failed');
+        toast.error(error.response.data.message || APPLY_LEAVES_TOAST_MESSAGES.validationFailed);
         return;
       }
 
       // Handle other error formats
-      let errorMessage = 'Failed to create leave request';
+      let errorMessage = APPLY_LEAVES_TOAST_MESSAGES.createRequestFailed;
 
       if (error?.response?.data?.message) {
         errorMessage = error.response.data.message;
@@ -274,10 +231,10 @@ function ApplyLeaves() {
       {/* Header */}
       <div className="mb-3">
         <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
-          New Leave Request
+          {APPLY_LEAVES_TEXT.pageTitle}
         </h1>
         <p className="text-sm sm:text-base text-gray-500">
-          Submit your application for review.
+          {APPLY_LEAVES_TEXT.pageSubtitle}
         </p>
       </div>
       <div className="space-y-4 bg-white px-2 py-2 lg:p-4 rounded-xl shadow-sm ">
@@ -287,13 +244,13 @@ function ApplyLeaves() {
             <div className="grid lg:grid-cols-2 sm:grid-cols-1 gap-4">
               <div>
                 <label htmlFor="name" className='block font-semibold text-gray-600 text-sm mb-2'>
-                  Employee Name
+                  {APPLY_LEAVES_TEXT.labels.employeeName}
                 </label>
                 <input
                   type="text"
                   value={currentUser.fullName}
                   name="name"
-                  placeholder='eg. Sah Jenkins'
+                  placeholder={APPLY_LEAVES_TEXT.placeholders.employeeName}
                   className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-1 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
                   disabled
                 />
@@ -301,7 +258,7 @@ function ApplyLeaves() {
 
               <div>
                 <label htmlFor="leaveType" className='block font-semibold text-gray-600 text-sm mb-2'>
-                  Leave Type<span className="text-red-600 ml-1">*</span>
+                  {APPLY_LEAVES_TEXT.labels.leaveType}<span className="text-red-600 ml-1">*</span>
                 </label>
                 {/* Leave Type */}
                 <select
@@ -313,7 +270,7 @@ function ApplyLeaves() {
                     ? 'border-red-500 bg-red-50'
                     : 'border-gray-200 bg-gray-100'
                     }`}>
-                  <option disabled value='' >Select Leave Type</option>
+                  <option disabled value=''>{APPLY_LEAVES_TEXT.placeholders.leaveTypeSelect}</option>
                   {listOfLeaveType.map((val) => (<option key={val.id} value={val.value}>{val.label}</option>))}
                 </select>
                 {errors.leaveType && (
@@ -324,7 +281,7 @@ function ApplyLeaves() {
               <div className='grid grid-cols-2 gap-2'>
                 <div>
                   <label htmlFor="fromDate" className='block font-semibold text-gray-600 text-sm mb-2'>
-                    From Date<span className="text-red-600 ml-1">*</span>
+                    {APPLY_LEAVES_TEXT.labels.fromDate}<span className="text-red-600 ml-1">*</span>
                   </label>
                   <input
                     required
@@ -343,7 +300,7 @@ function ApplyLeaves() {
                 </div>
                 <div>
                   <label htmlFor="toDate" className='block font-semibold text-gray-600 text-sm mb-2'>
-                    To Date<span className="text-red-600 ml-1">*</span>
+                    {APPLY_LEAVES_TEXT.labels.toDate}<span className="text-red-600 ml-1">*</span>
                   </label>
                   <input
                     required
@@ -364,20 +321,20 @@ function ApplyLeaves() {
 
               <div>
                 <label htmlFor="mobile" className='block font-semibold text-gray-600 text-sm mb-2'>
-                  Mobile Number
+                  {APPLY_LEAVES_TEXT.labels.mobile}
                 </label>
                 <input
                   value={formData.mobile}
                   type="tel"
                   name="mobile"
                   onChange={handleInputChange}
-                  placeholder='Enter mobile number during leave'
+                  placeholder={APPLY_LEAVES_TEXT.placeholders.mobile}
                   className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-1 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500' />
               </div>
 
               <div>
                 <label className="block font-semibold text-gray-600 text-sm mb-2">
-                  Half Day Leave
+                  {APPLY_LEAVES_TEXT.labels.halfDayLeave}
                 </label>
 
                 <div
@@ -388,12 +345,12 @@ function ApplyLeaves() {
                 >
                   <div>
                     <p className="text-sm font-medium text-gray-700">
-                      Enable Half Day
+                      {APPLY_LEAVES_TEXT.labels.enableHalfDay}
                     </p>
 
                     {!isSingleDayLeave && (
                       <p className="text-xs text-gray-500 mt-1">
-                        Select the same From and To date to enable half day leave.
+                        {APPLY_LEAVES_TEXT.helperText.halfDayHint}
                       </p>
                     )}
                   </div>
@@ -415,7 +372,7 @@ function ApplyLeaves() {
 
               <div className="lg:col-span-2">
                 <label htmlFor="reason" className='block font-semibold text-gray-600 text-sm mb-2'>
-                  Reason For Leave<span className="text-red-600 ml-1">*</span>
+                  {APPLY_LEAVES_TEXT.labels.reason}<span className="text-red-600 ml-1">*</span>
                 </label>
                 <textarea
                   value={formData.reason}
@@ -423,7 +380,7 @@ function ApplyLeaves() {
                   rows={3}
                   name="reason"
                   onChange={handleInputChange}
-                  placeholder='Please describe the reason for your absence...'
+                  placeholder={APPLY_LEAVES_TEXT.placeholders.reason}
                   className={`font-normal text-gray-800 border p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.reason
                     ? 'border-red-500 bg-red-50'
                     : 'border-gray-300 bg-gray-100'
@@ -441,7 +398,7 @@ function ApplyLeaves() {
                   type="button"
                   onClick={() => handleDiscardButton()}
                   className="px-2 text-sm cursor-pointer font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
-                  Discard Changes
+                  {APPLY_LEAVES_TEXT.buttons.discard}
                 </button>
                 <button
                   type="submit"
@@ -450,7 +407,7 @@ function ApplyLeaves() {
                     ? 'bg-blue-400 cursor-not-allowed'
                     : 'bg-blue-600 hover:bg-blue-700'
                     } text-white`}>
-                  <p>{loading ? 'Submitting ...' : 'Submit Request'}</p> <SendHorizonal className='p-1' />
+                  <p>{loading ? APPLY_LEAVES_TEXT.buttons.submitting : APPLY_LEAVES_TEXT.buttons.submit}</p> <SendHorizonal className='p-1' />
                 </button>
               </div>
             </div>

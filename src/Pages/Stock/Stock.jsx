@@ -21,43 +21,55 @@ import ListLoader from "../../Components/CommonComp/ListLoader";
 import StockManagementCard from "../../Components/Stock/StockManagementCard";
 import { useNavigate } from "react-router-dom";
 import {
-    getActiveStores,
     getLowStockItems,
     getStockMovementHistory,
     getStockItemsStats,
-} from "../../Api/StockApi";
-import { getStockList } from "../../Api/StoreApi";
+} from "../../Api/Stock/StockApi";
+import { getStockList, getActiveStores } from "../../Api/Stock/StoreApi";
+import { STOCK_SHARED_CONSTS, STOCK_DASHBOARD_CONSTS,MOVEMENT_CONSTS } from "../../Constants/StringConstants/StockAndOrdersConstants";
 
-// ─── Shared helpers (same as Movement.jsx) ────────────────────────────────────
+const MV_PAGE_SIZE = STOCK_DASHBOARD_CONSTS.CONFIG.MV_PAGE_SIZE;
+
+// ─── Shared helpers ───────────────────────────────────────────────────────────
 const mvTypeMeta = {
-    IN: { dot: "bg-green-500", badge: "text-green-700 bg-green-50 border border-green-200", label: "IN" },
-    OUT: { dot: "bg-red-500", badge: "text-red-600 bg-red-50 border border-red-200", label: "OUT" },
-    TRANSFER: { dot: "bg-blue-500", badge: "text-blue-700 bg-blue-50 border border-blue-200", label: "TRANSFER" },
-    ORDER: { dot: "bg-orange-500", badge: "text-orange-700 bg-orange-50 border border-orange-200", label: "ORDER" },
+    [STOCK_SHARED_CONSTS.MOVEMENT_TYPE.IN]: { dot: "bg-green-500", badge: "text-green-700 bg-green-50 border border-green-200", label: STOCK_SHARED_CONSTS.MOVEMENT_TYPE.IN },
+    [STOCK_SHARED_CONSTS.MOVEMENT_TYPE.OUT]: { dot: "bg-red-500", badge: "text-red-600 bg-red-50 border border-red-200", label: STOCK_SHARED_CONSTS.MOVEMENT_TYPE.OUT },
+    [STOCK_SHARED_CONSTS.MOVEMENT_TYPE.TRANSFER]: { dot: "bg-blue-500", badge: "text-blue-700 bg-blue-50 border border-blue-200", label: STOCK_SHARED_CONSTS.MOVEMENT_TYPE.TRANSFER },
+    [STOCK_SHARED_CONSTS.MOVEMENT_TYPE.ORDER]: { dot: "bg-orange-500", badge: "text-orange-700 bg-orange-50 border border-orange-200", label: STOCK_SHARED_CONSTS.MOVEMENT_TYPE.ORDER },
 };
-const mvQtyColor = { IN: "text-green-600", OUT: "text-red-500", TRANSFER: "text-blue-600", ORDER: "text-orange-600" };
-const mvQtyPrefix = { IN: "+", OUT: "-", TRANSFER: "±", ORDER: "-" };
+const mvQtyColor = {
+    [STOCK_SHARED_CONSTS.MOVEMENT_TYPE.IN]: "text-green-600",
+    [STOCK_SHARED_CONSTS.MOVEMENT_TYPE.OUT]: "text-red-500",
+    [STOCK_SHARED_CONSTS.MOVEMENT_TYPE.TRANSFER]: "text-blue-600",
+    [STOCK_SHARED_CONSTS.MOVEMENT_TYPE.ORDER]: "text-orange-600"
+};
+const mvQtyPrefix = {
+    [STOCK_SHARED_CONSTS.MOVEMENT_TYPE.IN]: "+",
+    [STOCK_SHARED_CONSTS.MOVEMENT_TYPE.OUT]: "-",
+    [STOCK_SHARED_CONSTS.MOVEMENT_TYPE.TRANSFER]: "±",
+    [STOCK_SHARED_CONSTS.MOVEMENT_TYPE.ORDER]: "-"
+};
 
 const formatDateTime = (iso) => {
     if (!iso) return { date: "—", time: "—" };
     const d = new Date(iso);
     return {
-        date: d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
-        time: d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: true }),
+        date: d.toLocaleDateString(STOCK_SHARED_CONSTS.LOCALE.DATE_GB, { day: "2-digit", month: "short", year: "numeric" }),
+        time: d.toLocaleTimeString(STOCK_SHARED_CONSTS.LOCALE.DATE_GB, { hour: "2-digit", minute: "2-digit", hour12: true }),
     };
 };
 
 const mapMv = (m) => {
     const { date, time } = formatDateTime(m.createdAt);
-    const type = m.movementType || "IN";
+    const type = m.movementType || STOCK_SHARED_CONSTS.MOVEMENT_TYPE.IN;
     let store = m.storeName || "—";
-    if (type === "TRANSFER" && m.destinationStoreName) {
-        store = `${m.storeName} → ${m.destinationStoreName}`;
+    if (type === STOCK_SHARED_CONSTS.MOVEMENT_TYPE.TRANSFER && m.destinationStoreName) {
+        store = STOCK_DASHBOARD_CONSTS.STORE_TRANSFER_ROUTE(m.storeName, m.destinationStoreName);
     }
     return {
         id: m.id, date, time,
         item: m.itemName || "—",
-        itemId: m.itemCode || `ITM-${m.itemId}`,
+        itemId: m.itemCode || STOCK_DASHBOARD_CONSTS.ITEM_ID_PREFIX(m.itemId),
         type, store,
         qty: m.quantity,
         before: m.quantityBefore,
@@ -70,8 +82,8 @@ const mapMv = (m) => {
 const statusBadge = (available, min) => {
     const isCritical = available <= min / 2;
     if (isCritical)
-        return <span className="px-3 py-1 rounded-full bg-red-100 text-red-600 text-xs font-semibold">Critical</span>;
-    return <span className="px-3 py-1 rounded-full bg-orange-100 text-orange-600 text-xs font-semibold">Low</span>;
+        return <span className="px-3 py-1 rounded-full bg-red-100 text-red-600 text-xs font-semibold">{STOCK_DASHBOARD_CONSTS.STOCK_LEVEL.CRITICAL}</span>;
+    return <span className="px-3 py-1 rounded-full bg-orange-100 text-orange-600 text-xs font-semibold">{STOCK_DASHBOARD_CONSTS.STOCK_LEVEL.LOW}</span>;
 };
 
 const stockBarColor = (available, min) =>
@@ -79,7 +91,6 @@ const stockBarColor = (available, min) =>
 
 const BAR_COLORS = ["bg-blue-500", "bg-purple-500", "bg-orange-400", "bg-teal-500", "bg-pink-500", "bg-indigo-500"];
 
-const MV_PAGE_SIZE = 5;
 
 // ─── Recent Movements Mini-Table ──────────────────────────────────────────────
 function RecentMovementsTable({ stores }) {
@@ -102,10 +113,10 @@ function RecentMovementsTable({ stores }) {
         setLoading(true);
         try {
             const filters = {};
-            if (storeId)    filters.storeId      = Number(storeId);
+            if (storeId) filters.storeId = Number(storeId);
             if (typeFilter) filters.movementType = typeFilter;
-            if (dateFrom)   filters.fromDate     = `${dateFrom}T00:00:00.000Z`;
-            if (dateTo)     filters.toDate       = `${dateTo}T23:59:59.999Z`;
+            if (dateFrom) filters.fromDate = `${dateFrom}T00:00:00.000Z`;
+            if (dateTo) filters.toDate = `${dateTo}T23:59:59.999Z`;
 
             const { movements: raw, pagination: pg } = await getStockMovementHistory(
                 filters,
@@ -131,7 +142,7 @@ function RecentMovementsTable({ stores }) {
 
     const handleApply = () => {
         if (dateFrom && dateTo && dateTo < dateFrom) {
-            setDateError("To Date cannot be earlier than From Date.");
+            setDateError(STOCK_DASHBOARD_CONSTS.TEXT.DATE_ERROR);
             return;
         }
         setDateError("");
@@ -141,7 +152,7 @@ function RecentMovementsTable({ stores }) {
     const handleDateFrom = (val) => {
         setDateFrom(val);
         if (dateTo && val && dateTo < val) {
-            setDateError("To Date cannot be earlier than From Date.");
+            setDateError(STOCK_DASHBOARD_CONSTS.TEXT.DATE_ERROR);
         } else {
             setDateError("");
         }
@@ -150,7 +161,7 @@ function RecentMovementsTable({ stores }) {
     const handleDateTo = (val) => {
         setDateTo(val);
         if (dateFrom && val && val < dateFrom) {
-            setDateError("To Date cannot be earlier than From Date.");
+            setDateError(STOCK_DASHBOARD_CONSTS.TEXT.DATE_ERROR);
         } else {
             setDateError("");
         }
@@ -195,7 +206,7 @@ function RecentMovementsTable({ stores }) {
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
                 <div className="flex items-center gap-2">
                     <Clock className="w-5 h-5 text-blue-500" />
-                    <h2 className="font-semibold text-gray-800">Recent Movements</h2>
+                    <h2 className="font-semibold text-gray-800">{STOCK_DASHBOARD_CONSTS.TEXT.RECENT_MOVEMENTS}</h2>
                 </div>
                 <button
                     onClick={() => navigate("/stock/transactions")}
@@ -214,11 +225,11 @@ function RecentMovementsTable({ stores }) {
                         onChange={(e) => setTypeFilter(e.target.value)}
                         className="flex-1 min-w-0 cursor-pointer text-xs border border-gray-200 rounded-lg px-2 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-300 text-gray-800"
                     >
-                        <option value="">All Types</option>
-                        <option value="IN">IN</option>
-                        <option value="OUT">OUT</option>
-                        <option value="TRANSFER">TRANSFER</option>
-                        <option value="ORDER">ORDER</option>
+                        <option value="">{STOCK_SHARED_CONSTS.MOVEMENT_TYPE.ALL_TYPES}</option>
+                        <option value={STOCK_SHARED_CONSTS.MOVEMENT_TYPE.IN}>{STOCK_SHARED_CONSTS.MOVEMENT_TYPE.IN}</option>
+                        <option value={STOCK_SHARED_CONSTS.MOVEMENT_TYPE.OUT}>{STOCK_SHARED_CONSTS.MOVEMENT_TYPE.OUT}</option>
+                        <option value={STOCK_SHARED_CONSTS.MOVEMENT_TYPE.TRANSFER}>{STOCK_SHARED_CONSTS.MOVEMENT_TYPE.TRANSFER}</option>
+                        <option value={STOCK_SHARED_CONSTS.MOVEMENT_TYPE.ORDER}>{STOCK_SHARED_CONSTS.MOVEMENT_TYPE.ORDER}</option>
                     </select>
 
                     <select
@@ -226,7 +237,7 @@ function RecentMovementsTable({ stores }) {
                         onChange={(e) => setStoreId(e.target.value)}
                         className="flex-1 min-w-0 cursor-pointer text-xs border border-gray-200 rounded-lg px-2 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-300 text-gray-800"
                     >
-                        <option value="">All Stores</option>
+                        <option value="">{MOVEMENT_CONSTS.TEXT.ALL_STORES}</option>
                         {stores.map((s) => (
                             <option key={s.id ?? s.storeId} value={String(s.id ?? s.storeId)}>
                                 {s.storeName ?? s.name}
@@ -238,7 +249,7 @@ function RecentMovementsTable({ stores }) {
                 {/* Row 2: From date + To date + Apply + Clear */}
                 <div className="flex gap-2 items-end">
                     <div className="flex-1 min-w-0">
-                        <p className="text-xs text-gray-400 mb-1 pl-0.5">From</p>
+                        <p className="text-xs text-gray-400 mb-1 pl-0.5">{MOVEMENT_CONSTS.TEXT.FROM}</p>
                         <input
                             type="date"
                             value={dateFrom}
@@ -248,7 +259,7 @@ function RecentMovementsTable({ stores }) {
                         />
                     </div>
                     <div className="flex-1 min-w-0">
-                        <p className="text-xs text-gray-400 text-center mb-1 pl-0.5">To</p>
+                        <p className="text-xs text-gray-400 text-center mb-1 pl-0.5">{MOVEMENT_CONSTS.TEXT.TO}</p>
                         <input
                             type="date"
                             value={dateTo}
@@ -272,7 +283,7 @@ function RecentMovementsTable({ stores }) {
                         <button
                             onClick={clearFilters}
                             disabled={loading}
-                            title="Clear all filters"
+                            title={STOCK_DASHBOARD_CONSTS.TEXT.CLEAR_ALL_FILTERS}
                             className="shrink-0 cursor-pointer border border-gray-200 hover:border-red-300 hover:bg-red-50 hover:text-red-600 text-gray-500 text-xs font-semibold px-3 py-2 rounded-lg transition-colors flex items-center gap-1.5 disabled:opacity-60 whitespace-nowrap"
                         >
                             <X className="w-3 h-3" />
@@ -295,12 +306,16 @@ function RecentMovementsTable({ stores }) {
                 <table className="w-full" style={{ minWidth: "560px" }}>
                     <thead>
                         <tr className="bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-100">
-                            <th className="px-4 py-2.5 text-left whitespace-nowrap">Date & Time</th>
-                            <th className="px-4 py-2.5 text-left whitespace-nowrap">Item</th>
-                            <th className="px-4 py-2.5 text-left whitespace-nowrap">Type</th>
-                            <th className="px-4 py-2.5 text-left whitespace-nowrap">Store</th>
-                            <th className="px-4 py-2.5 text-left whitespace-nowrap">Qty</th>
-                            <th className="px-4 py-2.5 text-left whitespace-nowrap">Before → After</th>
+                            {[
+                                STOCK_DASHBOARD_CONSTS.TABLE_HEADERS.DATE_TIME,
+                                STOCK_DASHBOARD_CONSTS.TABLE_HEADERS.ITEM,
+                                STOCK_DASHBOARD_CONSTS.TABLE_HEADERS.TYPE,
+                                STOCK_DASHBOARD_CONSTS.TABLE_HEADERS.STORE,
+                                STOCK_DASHBOARD_CONSTS.TABLE_HEADERS.QTY,
+                                STOCK_DASHBOARD_CONSTS.TABLE_HEADERS.BEFORE_AFTER
+                            ].map((header) => (
+                                <th key={header} className="px-4 py-2.5 text-left whitespace-nowrap">{header}</th>
+                            ))}
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
@@ -308,17 +323,17 @@ function RecentMovementsTable({ stores }) {
                             <ListLoader rows={5} avatar={false} />
                         ) : movements.length === 0 ? (
                             <tr>
-                                <td colSpan={7} className="py-12 text-center">
+                                <td colSpan={6} className="py-12 text-center">
                                     <div className="flex flex-col items-center gap-2 text-gray-400">
                                         <Inbox className="w-7 h-7 opacity-30" />
-                                        <p className="text-sm font-medium">No movements found</p>
-                                        <p className="text-xs">Try adjusting your filters</p>
+                                        <p className="text-sm font-medium">{STOCK_DASHBOARD_CONSTS.TEXT.NO_MOVEMENTS_FOUND}</p>
+                                        <p className="text-xs">{STOCK_DASHBOARD_CONSTS.TEXT.TRY_ADJUSTING_FILTERS}</p>
                                     </div>
                                 </td>
                             </tr>
                         ) : (
                             movements.map((m) => {
-                                const meta = mvTypeMeta[m.type] || mvTypeMeta["IN"];
+                                const meta = mvTypeMeta[m.type] || mvTypeMeta[STOCK_SHARED_CONSTS.MOVEMENT_TYPE.IN];
                                 return (
                                     <tr key={m.id} className="hover:bg-blue-50/40 transition-colors">
                                         <td className="px-4 py-3 whitespace-nowrap">
@@ -469,7 +484,7 @@ export default function Stock() {
 
     const storeStockMap = {};
     lowStockItems.forEach((item) => {
-        const key = item.storeName || `Store ${item.storeId}`;
+        const key = item.storeName || STOCK_DASHBOARD_CONSTS.STORE_FALLBACK(item.storeId);
         if (!storeStockMap[key]) storeStockMap[key] = { atRisk: 0, qty: 0 };
         storeStockMap[key].atRisk += 1;
         storeStockMap[key].qty += item.quantity;
@@ -484,10 +499,10 @@ export default function Stock() {
     const maxQty = Math.max(...storeSummaryRows.map((s) => s.qty), 1);
 
     const stats = [
-        { key: "Total Stores", val: loadingStats ? "..." : (totalStores ?? 0), icon: Store, txColor: "text-blue-600", bgColor: "bg-blue-50" },
-        { key: "Total Items", val: loadingStats ? "..." : (totalItems ?? 0), icon: Package, txColor: "text-purple-600", bgColor: "bg-purple-50" },
-        { key: "Low Stock Alerts", val: loadingLowStock ? "..." : lowStockCount, icon: AlertTriangle, txColor: "text-orange-500", bgColor: "bg-orange-50" },
-        { key: "Total Movements", val: totalMovements === null ? "..." : totalMovements, icon: ArrowLeftRight, txColor: "text-green-600", bgColor: "bg-green-50" },
+        { key: STOCK_DASHBOARD_CONSTS.STATS.TOTAL_STORES, val: loadingStats ? "..." : (totalStores ?? 0), icon: Store, txColor: "text-blue-600", bgColor: "bg-blue-50" },
+        { key: STOCK_DASHBOARD_CONSTS.STATS.TOTAL_ITEMS, val: loadingStats ? "..." : (totalItems ?? 0), icon: Package, txColor: "text-purple-600", bgColor: "bg-purple-50" },
+        { key: STOCK_DASHBOARD_CONSTS.STATS.LOW_STOCK_ALERTS, val: loadingLowStock ? "..." : lowStockCount, icon: AlertTriangle, txColor: "text-orange-500", bgColor: "bg-orange-50" },
+        { key: STOCK_DASHBOARD_CONSTS.STATS.TOTAL_MOVEMENTS, val: totalMovements === null ? "..." : totalMovements, icon: ArrowLeftRight, txColor: "text-green-600", bgColor: "bg-green-50" },
     ];
 
     const overallLoading = loadingStats && loadingStores && loadingLowStock;
@@ -495,9 +510,9 @@ export default function Stock() {
     return (
         <div className="min-h-screen bg-blue-50 p-4 sm:p-6 lg:p-8 font-sans">
             <div className="mb-6">
-                <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">Stock Management</h1>
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">{STOCK_DASHBOARD_CONSTS.TEXT.TITLE}</h1>
                 <p className="text-gray-500 text-sm mt-1">
-                    Monitor inventory, movements and low-stock alerts across all stores.
+                    {STOCK_DASHBOARD_CONSTS.TEXT.SUBTITLE}
                 </p>
             </div>
 
@@ -516,14 +531,13 @@ export default function Stock() {
                 <div className="mb-6 flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
                     <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" />
                     <p className="text-sm text-amber-800">
-                        <span className="font-bold">{lowStockCount} item{lowStockCount !== 1 ? "s" : ""}</span>{" "}
-                        {lowStockCount === 1 ? "is" : "are"} at or below minimum stock level across your stores.
+                        {STOCK_DASHBOARD_CONSTS.TEXT.LOW_STOCK_BANNER(lowStockCount)}
                     </p>
                     <button
                         onClick={() => navigate("/stock/transactions")}
                         className="ml-auto text-sm text-blue-600 cursor-pointer font-semibold hover:underline whitespace-nowrap"
                     >
-                        View Low Stock →
+                        {STOCK_DASHBOARD_CONSTS.TEXT.VIEW_LOW_STOCK}
                     </button>
                 </div>
             )}
@@ -536,7 +550,7 @@ export default function Stock() {
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
                     <div className="flex items-center gap-2 px-5 py-4 border-b border-gray-100">
                         <BarChart3 className="w-5 h-5 text-purple-500" />
-                        <h2 className="font-semibold text-gray-800">Store-wise Stock Summary</h2>
+                        <h2 className="font-semibold text-gray-800">{STOCK_DASHBOARD_CONSTS.TEXT.STORE_WISE_SUMMARY}</h2>
                     </div>
                     <div className="px-5 py-4 space-y-5">
                         {loadingStores || loadingLowStock ? (
@@ -549,7 +563,7 @@ export default function Stock() {
                         ) : storeSummaryRows.length === 0 ? (
                             <div className="flex flex-col items-center justify-center gap-2 py-8 text-gray-400">
                                 <Store className="w-7 h-7 opacity-30" />
-                                <p className="text-sm">No stores found</p>
+                                <p className="text-sm">{STOCK_DASHBOARD_CONSTS.TEXT.NO_STORES_FOUND}</p>
                             </div>
                         ) : (
                             storeSummaryRows.map((s) => (
@@ -562,10 +576,10 @@ export default function Stock() {
                                         <div className="text-right">
                                             {s.atRisk > 0 ? (
                                                 <span className="text-xs font-semibold text-orange-500">
-                                                    {s.atRisk} low-stock item{s.atRisk !== 1 ? "s" : ""}
+                                                    {STOCK_DASHBOARD_CONSTS.TEXT.LOW_STOCK_ITEM_COUNT(s.atRisk)}
                                                 </span>
                                             ) : (
-                                                <span className="text-xs font-semibold text-green-600">✓ Healthy</span>
+                                                <span className="text-xs font-semibold text-green-600">{STOCK_DASHBOARD_CONSTS.TEXT.HEALTHY}</span>
                                             )}
                                         </div>
                                     </div>
@@ -591,11 +605,11 @@ export default function Stock() {
                 <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
                     <div className="flex items-center gap-2">
                         <TrendingDown className="w-5 h-5 text-red-500" />
-                        <h2 className="font-semibold text-gray-800">Low Stock Items</h2>
+                        <h2 className="font-semibold text-gray-800">{STOCK_DASHBOARD_CONSTS.TEXT.LOW_STOCK_ITEMS}</h2>
                     </div>
                     {!loadingLowStock && lowStockCount > 0 && (
                         <span className="text-xs font-semibold text-orange-600 bg-orange-50 border border-orange-200 px-3 py-1 rounded-full">
-                            {lowStockCount} item{lowStockCount !== 1 ? "s" : ""} need attention
+                            {STOCK_DASHBOARD_CONSTS.TEXT.NEED_ATTENTION(lowStockCount)}
                         </span>
                     )}
                 </div>
@@ -605,12 +619,16 @@ export default function Stock() {
                     <table className="w-full min-w-175">
                         <thead>
                             <tr className="bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                                <th className="px-5 py-3 text-left">Item</th>
-                                <th className="px-5 py-3 text-left">Store</th>
-                                <th className="px-5 py-3 text-left">Available</th>
-                                <th className="px-5 py-3 text-left">Min Level</th>
-                                <th className="px-5 py-3 text-left">Status</th>
-                                <th className="px-5 py-3 text-left">Action</th>
+                                {[
+                                    STOCK_DASHBOARD_CONSTS.TABLE_HEADERS.ITEM,
+                                    STOCK_DASHBOARD_CONSTS.TABLE_HEADERS.STORE,
+                                    STOCK_DASHBOARD_CONSTS.TEXT.AVAILABLE,
+                                    STOCK_DASHBOARD_CONSTS.TEXT.MIN_LEVEL,
+                                    STOCK_DASHBOARD_CONSTS.TABLE_HEADERS.STATUS,
+                                    STOCK_DASHBOARD_CONSTS.TEXT.ACTION
+                                ].map((header) => (
+                                    <th key={header} className="px-5 py-3 text-left">{header}</th>
+                                ))}
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
@@ -630,8 +648,8 @@ export default function Stock() {
                                     <td colSpan={6} className="px-5 py-14 text-center">
                                         <div className="flex flex-col items-center gap-2 text-gray-400">
                                             <TrendingDown className="w-8 h-8 opacity-30" />
-                                            <p className="text-sm font-medium">No low-stock items found</p>
-                                            <p className="text-xs">All items are above minimum stock levels</p>
+                                            <p className="text-sm font-medium">{STOCK_DASHBOARD_CONSTS.TEXT.NO_LOW_STOCK_ITEMS}</p>
+                                            <p className="text-xs">{STOCK_DASHBOARD_CONSTS.TEXT.ALL_ABOVE_MIN}</p>
                                         </div>
                                     </td>
                                 </tr>
@@ -662,7 +680,7 @@ export default function Stock() {
                                                 className="flex cursor-pointer items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors"
                                             >
                                                 <Plus className="w-3.5 h-3.5" />
-                                                Add Stock
+                                                {STOCK_DASHBOARD_CONSTS.TEXT.ADD_STOCK_INWARD.split(" ")[0] + " Stock"}
                                             </button>
                                         </td>
                                     </tr>
@@ -681,7 +699,7 @@ export default function Stock() {
                     ) : lowStockItems.length === 0 ? (
                         <div className="flex flex-col items-center gap-2 text-gray-400 py-12">
                             <TrendingDown className="w-8 h-8 opacity-30" />
-                            <p className="text-sm font-medium">No low-stock items found</p>
+                            <p className="text-sm font-medium">{STOCK_DASHBOARD_CONSTS.TEXT.NO_LOW_STOCK_ITEMS}</p>
                         </div>
                     ) : (
                         lowStockItems.map((item) => (
@@ -696,14 +714,14 @@ export default function Stock() {
                                 <div className="text-xs text-gray-500">{item.storeName}</div>
                                 <div className="flex items-center justify-between">
                                     <span className="text-sm text-gray-600">
-                                        Available: <strong>{item.quantity}</strong> / Min: <strong>{item.minimumStockLevel}</strong>
+                                        {STOCK_DASHBOARD_CONSTS.TEXT.AVAILABLE}: <strong>{item.quantity}</strong> {STOCK_DASHBOARD_CONSTS.TEXT.MIN_SUFFIX} <strong>{item.minimumStockLevel}</strong>
                                     </span>
                                     <button
                                         onClick={() => { setSelectedLowStockItem(item); setIsModalOpen(true); }}
                                         className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
                                     >
                                         <Plus className="w-3 h-3" />
-                                        Add Stock
+                                        {STOCK_DASHBOARD_CONSTS.TEXT.ADD_STOCK_INWARD.split(" ")[0] + " Stock"}
                                     </button>
                                 </div>
                             </div>
@@ -715,16 +733,16 @@ export default function Stock() {
             <StockManagementCard
                 isOpen={isModalOpen}
                 onClose={() => { setIsModalOpen(false); setSelectedLowStockItem(null); }}
-                heading="Add Stock (Inward)"
-                previewLabelText="Current stock:"
+                heading={STOCK_DASHBOARD_CONSTS.TEXT.ADD_STOCK_INWARD}
+                previewLabelText={STOCK_DASHBOARD_CONSTS.TEXT.CURRENT_STOCK_LABEL}
                 previewBgColor="bg-green-50"
                 previewBorderColor="border-green-200"
                 previewTextColor="text-green-700"
-                confirmBtnText="Confirm Stock IN"
+                confirmBtnText={STOCK_DASHBOARD_CONSTS.TEXT.CONFIRM_STOCK_IN}
                 confirmBtnBgColor="bg-green-600"
                 confirmBtnHoverColor="hover:bg-green-700"
                 selectedItem={selectedLowStockItem}
-                onConfirm={(data) => { console.log("Submitted:", data); setIsModalOpen(false); setSelectedLowStockItem(null); }}
+                onConfirm={(data) => { console.log(`${STOCK_DASHBOARD_CONSTS.TEXT.SUBMITTED_LABEL}`, data); setIsModalOpen(false); setSelectedLowStockItem(null); }}
             />
         </div>
     );

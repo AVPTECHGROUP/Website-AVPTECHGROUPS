@@ -8,16 +8,16 @@ import {
 import UnmarkModal from "./UnmarkModel";
 import ManualMarkModal from "./ManualMarkModel";
 import SummaryView from "./SummaryView";
-import { getClasses, getSectionsByClass } from "../../../Api/TeachersAPI";
+import { getClasses, getSectionsByClass } from "../../../Api/Teachers/TeachersAPI";
 import {
     getAttendanceRoster,
     unmarkAttendance,
     bulkManualMarkAttendance,
-} from "../../../Api/AttendanceApi";
-
+} from "../../../Api/Attendance/AttendanceApi";
 import CardComponent from "../../../Components/CommonComp/CardComponent";
 import IndividualFaceScanView from "./IndividualFaceScanView";
 import GroupPhotoView from "./GroupPhotoView";
+
 
 const PAGES_PER_VIEW = 10;
 

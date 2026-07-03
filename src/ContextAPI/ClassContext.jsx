@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from "react";
-import sectionSubjectService from "../Api/SectionSubjectService";
+import sectionSubjectService from "../Api/Academics/SectionSubjectService";
 
 const ClassContext = createContext(null);
 

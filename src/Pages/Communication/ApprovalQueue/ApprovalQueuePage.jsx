@@ -15,7 +15,8 @@ import {
   fetchPendingEvents,
   approveEvent,
   rejectEvent,
-} from '../../../Api/CircularApi';
+} from '../../../Api/Communication/CircularApi';
+import COMMUNICATION_CONSTS from '../../../Constants/StringConstants/CommunicationConstants';
 
 // ─── Toast ─────────────────────────────────────────────────────────────────────
 const useToast = () => {
@@ -23,7 +24,7 @@ const useToast = () => {
   const show = useCallback((type, title, message) => {
     const id = Date.now();
     setToasts((p) => [...p, { id, type, title, message }]);
-    setTimeout(() => setToasts((p) => p.filter((t) => t.id !== id)), 4000);
+    setTimeout(() => setToasts((p) => p.filter((t) => t.id !== id)), COMMUNICATION_CONSTS.APPROVAL_TOAST_DURATION_MS);
   }, []);
   const dismiss = useCallback((id) => setToasts((p) => p.filter((t) => t.id !== id)), []);
   return { toasts, show, dismiss };
@@ -84,7 +85,7 @@ const extractArray = (json) => {
 // ─── Pagination ────────────────────────────────────────────────────────────────
 const Pagination = ({ page, totalPages, rowsPerPage, onPageChange, onRowsChange, totalItems }) => {
   const start = totalItems === 0 ? 0 : (page - 1) * rowsPerPage + 1;
-  const end   = Math.min(page * rowsPerPage, totalItems);
+  const end = Math.min(page * rowsPerPage, totalItems);
 
   const pageNums = Array.from({ length: totalPages }, (_, i) => i + 1)
     .filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
@@ -97,18 +98,20 @@ const Pagination = ({ page, totalPages, rowsPerPage, onPageChange, onRowsChange,
   return (
     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-3 border-t border-gray-100 mt-3">
       <div className="flex items-center gap-3 flex-wrap text-xs text-gray-500">
-        <span>
-          Showing <span className="font-semibold text-gray-700">{start}</span>–<span className="font-semibold text-gray-700">{end}</span> of <span className="font-semibold text-gray-700">{totalItems}</span>
-        </span>
+        <span>{COMMUNICATION_CONSTS.APPROVAL_QUEUE_TEXT.SHOWING_LABEL(
+          <span className="font-semibold text-gray-700">{start}</span>,
+          <span className="font-semibold text-gray-700">{end}</span>,
+          <span className="font-semibold text-gray-700">{totalItems}</span>
+        )}</span>
         <span className="text-gray-300 hidden sm:inline">|</span>
         <div className="flex items-center gap-1.5">
-          <span className="text-gray-400">Rows per page</span>
+          <span className="text-gray-400">{COMMUNICATION_CONSTS.APPROVAL_QUEUE_TEXT.ROWS_PER_PAGE_LABEL}</span>
           <select
             value={rowsPerPage}
             onChange={(e) => { onRowsChange(Number(e.target.value)); onPageChange(1); }}
             className="border border-gray-200 rounded-lg px-2 py-1 text-xs font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-100 bg-white"
           >
-            {[15, 30, 50].map((n) => <option key={n} value={n}>{n}</option>)}
+            {COMMUNICATION_CONSTS.PAGINATION.APPROVAL_QUEUE_ROWS_OPTIONS.map((n) => <option key={n} value={n}>{n}</option>)}
           </select>
         </div>
       </div>
@@ -118,7 +121,7 @@ const Pagination = ({ page, totalPages, rowsPerPage, onPageChange, onRowsChange,
           disabled={page === 1}
           className="flex items-center gap-0.5 px-2.5 py-1.5 rounded-lg border border-gray-200 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
         >
-          <ChevronLeft size={13} /> Prev
+          <ChevronLeft size={13} /> {COMMUNICATION_CONSTS.APPROVAL_QUEUE_TEXT.PREV}
         </button>
         {pageNums.map((p, idx) =>
           p === '…' ? (
@@ -127,9 +130,8 @@ const Pagination = ({ page, totalPages, rowsPerPage, onPageChange, onRowsChange,
             <button
               key={p}
               onClick={() => onPageChange(p)}
-              className={`w-7 h-7 rounded-lg text-xs font-semibold transition ${
-                p === page ? 'bg-[#1e293b] text-white shadow-sm' : 'border border-gray-200 text-gray-600 hover:bg-gray-50'
-              }`}
+              className={`w-7 h-7 rounded-lg text-xs font-semibold transition ${p === page ? 'bg-[#1e293b] text-white shadow-sm' : 'border border-gray-200 text-gray-600 hover:bg-gray-50'
+                }`}
             >
               {p}
             </button>
@@ -140,7 +142,7 @@ const Pagination = ({ page, totalPages, rowsPerPage, onPageChange, onRowsChange,
           disabled={page === totalPages || totalPages === 0}
           className="flex items-center gap-0.5 px-2.5 py-1.5 rounded-lg border border-gray-200 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
         >
-          Next <ChevronRight size={13} />
+          {COMMUNICATION_CONSTS.APPROVAL_QUEUE_TEXT.NEXT} <ChevronRight size={13} />
         </button>
       </div>
     </div>
@@ -149,15 +151,15 @@ const Pagination = ({ page, totalPages, rowsPerPage, onPageChange, onRowsChange,
 
 // ─── Main Page ─────────────────────────────────────────────────────────────────
 const ApprovalQueue = () => {
-  const [activeTab,    setActiveTab]    = useState('all');
-  const [circulars,    setCirculars]    = useState([]);
-  const [events,       setEvents]       = useState([]);
-  const [loading,      setLoading]      = useState(true);
-  const [error,        setError]        = useState(null);
-  const [actingId,     setActingId]     = useState(null);
+  const [activeTab, setActiveTab] = useState(COMMUNICATION_CONSTS.APPROVAL_QUEUE_TABS[0].key);
+  const [circulars, setCirculars] = useState([]);
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [actingId, setActingId] = useState(null);
   const [rejectTarget, setRejectTarget] = useState(null);
-  const [page,         setPage]         = useState(1);
-  const [rowsPerPage,  setRowsPerPage]  = useState(15);
+  const [page, setPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(COMMUNICATION_CONSTS.PAGINATION.APPROVAL_QUEUE_DEFAULT_ROWS);
   const { toasts, show: showToast, dismiss } = useToast();
 
   // ── Fetch ───────────────────────────────────────────────────────────────────
@@ -171,7 +173,7 @@ const ApprovalQueue = () => {
       setCirculars(extractArray(cirRes.data));
       setEvents(extractArray(evtRes.data));
     } catch {
-      setError('Could not load pending items. Please try again.');
+      setError(COMMUNICATION_CONSTS.APPROVAL_QUEUE_TEXT.LOAD_ERROR);
     } finally {
       setLoading(false);
     }
@@ -186,10 +188,10 @@ const ApprovalQueue = () => {
     try {
       const res = type === 'circular' ? await approveCircular(id) : await approveEvent(id);
       if (res.error) throw new Error(res.error);
-      showToast('success', 'Approved', 'Item approved and notifications sent.');
+      showToast('success', COMMUNICATION_CONSTS.APPROVAL_QUEUE_TOAST.APPROVED_TITLE, COMMUNICATION_CONSTS.APPROVAL_QUEUE_TOAST.APPROVED_MESSAGE);
       load();
     } catch {
-      showToast('error', 'Approval Failed', 'Something went wrong. Please try again.');
+      showToast('error', COMMUNICATION_CONSTS.APPROVAL_QUEUE_TOAST.APPROVE_FAILED_TITLE, COMMUNICATION_CONSTS.APPROVAL_QUEUE_TOAST.APPROVE_FAILED_MESSAGE);
     } finally {
       setActingId(null);
     }
@@ -203,11 +205,11 @@ const ApprovalQueue = () => {
     try {
       const res = type === 'circular' ? await rejectCircular(id, reason) : await rejectEvent(id, reason);
       if (res.error) throw new Error(res.error);
-      showToast('success', 'Rejected', 'Item has been rejected.');
+      showToast('success', COMMUNICATION_CONSTS.APPROVAL_QUEUE_TOAST.REJECTED_TITLE, COMMUNICATION_CONSTS.APPROVAL_QUEUE_TOAST.REJECTED_MESSAGE);
       setRejectTarget(null);
       load();
     } catch {
-      showToast('error', 'Rejection Failed', 'Something went wrong. Please try again.');
+      showToast('error', COMMUNICATION_CONSTS.APPROVAL_QUEUE_TOAST.REJECT_FAILED_TITLE, COMMUNICATION_CONSTS.APPROVAL_QUEUE_TOAST.REJECT_FAILED_MESSAGE);
     } finally {
       setActingId(null);
     }
@@ -216,31 +218,33 @@ const ApprovalQueue = () => {
   // ── Tab data ────────────────────────────────────────────────────────────────
   const all = [
     ...circulars.map((c) => ({ ...c, _type: 'circular' })),
-    ...events.map((e)   => ({ ...e, _type: 'event' })),
+    ...events.map((e) => ({ ...e, _type: 'event' })),
   ];
-  const tabs = [
-    { key: 'all',       label: 'All Pending', items: all },
-    { key: 'circulars', label: 'Circulars',   items: circulars.map((c) => ({ ...c, _type: 'circular' })) },
-    { key: 'events',    label: 'Events',      items: events.map((e) => ({ ...e, _type: 'event' })) },
-  ];
+
+  const tabs = COMMUNICATION_CONSTS.APPROVAL_QUEUE_TABS.map((t) => {
+    if (t.key === 'all') return { ...t, items: all };
+    if (t.key === 'circulars') return { ...t, items: circulars.map((c) => ({ ...c, _type: 'circular' })) };
+    if (t.key === 'events') return { ...t, items: events.map((e) => ({ ...e, _type: 'event' })) };
+    return { ...t, items: [] };
+  });
+
   const activeItems = tabs.find((t) => t.key === activeTab)?.items ?? [];
-  const totalItems  = activeItems.length;
-  const totalPages  = Math.max(1, Math.ceil(totalItems / rowsPerPage));
-  const pagedItems  = activeItems.slice((page - 1) * rowsPerPage, page * rowsPerPage);
+  const totalItems = activeItems.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / rowsPerPage));
+  const pagedItems = activeItems.slice((page - 1) * rowsPerPage, page * rowsPerPage);
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
-    // ↓ Exact same outer shell as Timetable: min-h-screen bg-[#f0f4f9] p-4 md:p-6
     <div className="min-h-screen bg-[#f0f4f9] p-4 md:p-6">
       <ToastList toasts={toasts} dismiss={dismiss} />
 
-      {/* ── Header — matches Timetable header style exactly ───────────────── */}
+      {/* ── Header ────────────────────────────────────────────────────────── */}
       <div className="mb-4 sm:mb-6">
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Approval Queue</h1>
-        <p className="text-xs sm:text-sm text-gray-500 mt-0.5">Review and approve pending circulars and events</p>
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{COMMUNICATION_CONSTS.APPROVAL_QUEUE_TEXT.TITLE}</h1>
+        <p className="text-xs sm:text-sm text-gray-500 mt-0.5">{COMMUNICATION_CONSTS.APPROVAL_QUEUE_TEXT.SUBTITLE}</p>
       </div>
 
-      {/* ── Stat cards — CardComponent, same grid as Timetable ───────────── */}
+      {/* ── Stat cards ────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
         {loading ? (
           Array(3).fill(0).map((_, i) => <CardLoader key={i} />)
@@ -248,21 +252,21 @@ const ApprovalQueue = () => {
           <>
             <CardComponent
               IconName={Clock}
-              keyName="Total Pending"
+              keyName={COMMUNICATION_CONSTS.APPROVAL_QUEUE_TEXT.STAT_TOTAL_PENDING}
               val={all.length}
               iconTxColor="text-blue-600"
               iconBgColor="bg-blue-50"
             />
             <CardComponent
               IconName={FileText}
-              keyName="Circulars"
+              keyName={COMMUNICATION_CONSTS.APPROVAL_QUEUE_TEXT.STAT_CIRCULARS}
               val={circulars.length}
               iconTxColor="text-amber-500"
               iconBgColor="bg-amber-50"
             />
             <CardComponent
               IconName={Calendar}
-              keyName="Events"
+              keyName={COMMUNICATION_CONSTS.APPROVAL_QUEUE_TEXT.STAT_EVENTS}
               val={events.length}
               iconTxColor="text-violet-600"
               iconBgColor="bg-violet-50"
@@ -276,11 +280,11 @@ const ApprovalQueue = () => {
         <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 flex items-center gap-3 mb-4">
           <AlertCircle size={15} className="text-red-500 shrink-0" />
           <span className="text-sm text-red-700 flex-1">{error}</span>
-          <button onClick={load} className="text-red-600 hover:text-red-800 font-semibold text-sm shrink-0">Retry</button>
+          <button onClick={load} className="text-red-600 hover:text-red-800 font-semibold text-sm shrink-0">{COMMUNICATION_CONSTS.APPROVAL_QUEUE_TEXT.RETRY}</button>
         </div>
       )}
 
-      {/* ── Main white card — same shadow/border as Timetable table card ─── */}
+      {/* ── Main white card ───────────────────────────────────────────────── */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
 
         {/* Tabs */}
@@ -289,16 +293,14 @@ const ApprovalQueue = () => {
             <button
               key={t.key}
               onClick={() => setActiveTab(t.key)}
-              className={`inline-flex items-center gap-2 px-4 sm:px-5 py-3 text-[12.5px] font-semibold border-b-2 -mb-px transition-colors whitespace-nowrap ${
-                activeTab === t.key
+              className={`inline-flex items-center gap-2 px-4 sm:px-5 py-3 text-[12.5px] font-semibold border-b-2 -mb-px transition-colors whitespace-nowrap ${activeTab === t.key
                   ? 'border-[#2563EB] text-[#2563EB]'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
+                }`}
             >
               {t.label}
-              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
-                activeTab === t.key ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'
-              }`}>
+              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${activeTab === t.key ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'
+                }`}>
                 {loading ? '—' : t.items.length}
               </span>
             </button>
@@ -314,8 +316,8 @@ const ApprovalQueue = () => {
               <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-3">
                 <Inbox size={22} className="text-gray-300" />
               </div>
-              <p className="text-gray-600 font-semibold text-sm">All caught up</p>
-              <p className="text-gray-400 text-xs mt-1">No pending items to review</p>
+              <p className="text-gray-600 font-semibold text-sm">{COMMUNICATION_CONSTS.APPROVAL_QUEUE_TEXT.EMPTY_TITLE}</p>
+              <p className="text-gray-400 text-xs mt-1">{COMMUNICATION_CONSTS.APPROVAL_QUEUE_TEXT.EMPTY_SUBTITLE}</p>
             </div>
           ) : (
             <>

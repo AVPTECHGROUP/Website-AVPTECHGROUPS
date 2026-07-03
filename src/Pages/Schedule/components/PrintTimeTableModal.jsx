@@ -1,5 +1,6 @@
 import { useRef } from 'react';
 import { X, Printer, Download } from 'lucide-react';
+import { TIMETABLE_CONSTS }  from '../../../Constants/StringConstants/TimetableConstants';
 
 /**
  * PrintTimetableModal
@@ -14,15 +15,8 @@ import { X, Printer, Download } from 'lucide-react';
  *  - onClose        : () => void
  */
 
-const SUBJECT_COLORS_PRINT = {
-    MATH: '#3b82f6', ENG: '#22c55e', PHY: '#0ea5e9', CHEM: '#ec4899',
-    BIO: '#10b981', CS: '#06b6d4', HIN: '#a855f7', SST: '#f97316',
-    SCI: '#eab308', PE: '#ef4444', DRAW: '#6366f1', GEO: '#84cc16',
-    HIST: '#f59e0b', COMP: '#14b8a6',
-};
-
 const getSubjectColorHex = (code) =>
-    SUBJECT_COLORS_PRINT[(code || '').toUpperCase()] || '#64748b';
+    TIMETABLE_CONSTS.COLORS.SUBJECT_MAP[(code || '').toUpperCase()]?.hex || '#64748b';
 
 const lighten = (hex) => hex + '18'; // ~10% opacity background
 
@@ -102,13 +96,13 @@ export default function PrintTimetableModal({
                     {/* Modal toolbar */}
                     <div className="flex items-center justify-between px-6 py-3 border-b border-gray-100 bg-gray-50 shrink-0">
                         <div className="flex items-center gap-3">
-                            <span className="text-sm font-semibold text-gray-700">Print Preview</span>
-                            <span className="text-xs text-gray-400 bg-gray-200 px-2 py-0.5 rounded-full">A4 Landscape</span>
+                            <span className="text-sm font-semibold text-gray-700">{TIMETABLE_CONSTS.PRINT_TT.TITLE_PREVIEW}</span>
+                            <span className="text-xs text-gray-400 bg-gray-200 px-2 py-0.5 rounded-full">{TIMETABLE_CONSTS.PRINT_TT.LBL_A4}</span>
                         </div>
                         <div className="flex items-center gap-2">
                             <button onClick={handlePrint}
                                 className="flex items-center gap-2 px-4 py-2 bg-[#1e293b] text-white rounded-lg text-sm font-semibold hover:bg-[#334155] transition">
-                                <Printer size={15} /> Print
+                                <Printer size={15} /> {TIMETABLE_CONSTS.PRINT_TT.BTN_PRINT}
                             </button>
                             <button onClick={onClose}
                                 className="p-2 rounded-lg hover:bg-gray-200 transition">
@@ -140,10 +134,10 @@ export default function PrintTimetableModal({
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                         <div>
                                             <div style={{ fontSize: '18px', fontWeight: 700, letterSpacing: '-0.5px', color: '#0f172a' }}>
-                                                CLASS TIMETABLE
+                                                {TIMETABLE_CONSTS.PRINT_TT.DOC_TITLE}
                                             </div>
                                             <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
-                                                Academic Year: <strong style={{ color: '#0f172a' }}>{yearLabel}</strong>
+                                                {TIMETABLE_CONSTS.PRINT_TT.LBL_YEAR} <strong style={{ color: '#0f172a' }}>{yearLabel}</strong>
                                             </div>
                                         </div>
                                     </div>
@@ -154,17 +148,17 @@ export default function PrintTimetableModal({
                                             {className}
                                         </div>
                                         <div style={{ fontSize: '13px', color: '#475569', marginTop: '2px' }}>
-                                            Section: <strong>{sectionName}</strong>
+                                            {TIMETABLE_CONSTS.PRINT_TT.LBL_SEC} <strong>{sectionName}</strong>
                                         </div>
                                         <div style={{
                                             display: 'inline-block', marginTop: '4px',
                                             padding: '2px 10px', borderRadius: '99px',
                                             fontSize: '10px', fontWeight: 700, letterSpacing: '0.06em',
-                                            background: status?.toUpperCase() === 'PUBLISHED' ? '#dcfce7' : '#fef3c7',
-                                            color: status?.toUpperCase() === 'PUBLISHED' ? '#15803d' : '#92400e',
-                                            border: `1px solid ${status?.toUpperCase() === 'PUBLISHED' ? '#86efac' : '#fde68a'}`,
+                                            background: status?.toUpperCase() === TIMETABLE_CONSTS.STATUS.PUBLISHED.toUpperCase() ? '#dcfce7' : '#fef3c7',
+                                            color: status?.toUpperCase() === TIMETABLE_CONSTS.STATUS.PUBLISHED.toUpperCase() ? '#15803d' : '#92400e',
+                                            border: `1px solid ${status?.toUpperCase() === TIMETABLE_CONSTS.STATUS.PUBLISHED.toUpperCase() ? '#86efac' : '#fde68a'}`,
                                         }}>
-                                            {status?.toUpperCase() || 'DRAFT'}
+                                            {status?.toUpperCase() || TIMETABLE_CONSTS.PRINT_TT.LBL_DRAFT}
                                         </div>
                                     </div>
                                 </div>
@@ -174,11 +168,11 @@ export default function PrintTimetableModal({
                                     display: 'flex', gap: '20px', marginTop: '8px',
                                     fontSize: '10px', color: '#64748b',
                                 }}>
-                                    <span>📅 <strong>{workingDays.length}</strong> Working Days</span>
-                                    <span>⏱ <strong>{periods.filter(p => !p.isBreak).length}</strong> Periods/Day</span>
-                                    <span>🕐 Start: <strong>{config?.startTime || '—'}</strong></span>
-                                    <span>⏳ Duration: <strong>{config?.periodDurationMinutes || '—'} min</strong></span>
-                                    <span>✅ Filled: <strong>{filledSlots}/{totalSlots}</strong> ({pct}%)</span>
+                                    <span>📅 <strong>{workingDays.length}</strong> {TIMETABLE_CONSTS.PRINT_TT.META_DAYS}</span>
+                                    <span>⏱ <strong>{periods.filter(p => !p.isBreak).length}</strong> {TIMETABLE_CONSTS.PRINT_TT.META_PERIODS}</span>
+                                    <span>🕐 {TIMETABLE_CONSTS.PRINT_TT.META_START} <strong>{config?.startTime || '—'}</strong></span>
+                                    <span>⏳ {TIMETABLE_CONSTS.PRINT_TT.META_DUR} <strong>{config?.periodDurationMinutes || '—'} {TIMETABLE_CONSTS.PRINT_TT.META_MIN}</strong></span>
+                                    <span>✅ {TIMETABLE_CONSTS.PRINT_TT.META_FILLED} <strong>{filledSlots}/{totalSlots}</strong> ({pct}%)</span>
                                 </div>
                             </div>
 
@@ -202,7 +196,7 @@ export default function PrintTimetableModal({
                                             border: '1px solid #1e293b', fontSize: '10px',
                                             fontWeight: 700, letterSpacing: '0.04em',
                                         }}>
-                                            PERIOD
+                                            {TIMETABLE_CONSTS.PRINT_TT.TH_PERIOD}
                                         </th>
                                         {workingDays.map(day => (
                                             <th key={day} style={{
@@ -348,7 +342,7 @@ export default function PrintTimetableModal({
                             {/* ── Subject Legend ── */}
                             <div style={{ marginTop: '10px', borderTop: '1px solid #e2e8f0', paddingTop: '8px' }}>
                                 <div style={{ fontSize: '9px', fontWeight: 700, color: '#64748b', letterSpacing: '0.06em', marginBottom: '5px' }}>
-                                    SUBJECT LEGEND
+                                    {TIMETABLE_CONSTS.PRINT_TT.LEGEND_TITLE}
                                 </div>
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                                     {subjectsList.map(s => {
@@ -374,7 +368,7 @@ export default function PrintTimetableModal({
                                                     {s.label}
                                                 </span>
                                                 <span style={{ fontSize: '8px', color: '#94a3b8' }}>
-                                                    ({count} slots)
+                                                    ({count} {TIMETABLE_CONSTS.PRINT_TT.LEGEND_SLOTS})
                                                 </span>
                                             </div>
                                         );
@@ -389,11 +383,11 @@ export default function PrintTimetableModal({
                                 justifyContent: 'space-between', alignItems: 'center',
                                 fontSize: '8px', color: '#94a3b8',
                             }}>
-                                <span>Generated on {new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })}</span>
+                                <span>{TIMETABLE_CONSTS.PRINT_TT.FOOTER_GEN}{new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })}</span>
                                 <span style={{ fontStyle: 'italic' }}>
                                     {className} · {sectionName} · {yearLabel}
                                 </span>
-                                <span>Total: {filledSlots}/{totalSlots} slots ({pct}% complete)</span>
+                                <span>{TIMETABLE_CONSTS.PRINT_TT.FOOTER_TOTAL} {filledSlots}/{totalSlots} slots ({pct}% {TIMETABLE_CONSTS.PRINT_TT.FOOTER_COMP})</span>
                             </div>
                         </div>
                         {/* end A4 paper */}

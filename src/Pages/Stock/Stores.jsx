@@ -9,15 +9,16 @@ import CardLoader from "../../Components/CommonComp/CardLoader";
 import ListLoader from "../../Components/CommonComp/ListLoader";
 import NewStore from "../../Components/Stock/NewStore";
 import ActionDropDownComp from "../../Components/CommonComp/ActionDropDownComp";
-import { getStockList, createStore, updateStore, activateStore, deactivateStore, getStoreStats } from "../../Api/StoreApi";
+import { getStockList, createStore, updateStore, activateStore, deactivateStore, getStoreStats } from "../../Api/Stock/StoreApi";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
+import { STOCK_SHARED_CONSTS, STORES_CONSTS } from "../../Constants/StringConstants/StockAndOrdersConstants";
 
 export default function Stores() {
   // ── Filters & pagination ───────────────────────────────────────
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("Active");
+  const [statusFilter, setStatusFilter] = useState(STOCK_SHARED_CONSTS.STATUS.ACTIVE_LABEL);
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
@@ -54,7 +55,7 @@ export default function Stores() {
       setStats(data);
     } catch (err) {
       console.error("Error fetching store stats:", err);
-      toast.error("Failed to load store stats");
+      toast.error(STORES_CONSTS.MESSAGES.LOAD_STATS_FAILED);
     } finally {
       setStatsLoading(false);
     }
@@ -68,9 +69,8 @@ export default function Stores() {
       setNoStoreFound(false);
 
       const apiStatus =
-
-        statusFilter === "All Status" ? "" :
-          statusFilter === "Active" ? "ACTIVE" : "INACTIVE";
+        statusFilter === STOCK_SHARED_CONSTS.STATUS.ALL ? "" :
+          statusFilter === STOCK_SHARED_CONSTS.STATUS.ACTIVE_LABEL ? STOCK_SHARED_CONSTS.STATUS.ACTIVE_API : STOCK_SHARED_CONSTS.STATUS.INACTIVE_API;
 
       const res = await getStockList(page - 1, rowsPerPage, debouncedSearch, apiStatus);
       const stores = res.stores || [];
@@ -81,9 +81,9 @@ export default function Stores() {
       setNoStoreFound(stores.length === 0);
     } catch (err) {
       console.error("Error fetching stores:", err);
-      setError(err.message || "Something went wrong");
+      setError(err.message || STOCK_SHARED_CONSTS.COMMON.GENERIC_ERROR);
       setStoresData([]);
-      toast.error("Failed to load stores");
+      toast.error(STORES_CONSTS.MESSAGES.LOAD_FAILED);
     } finally {
       setTableLoading(false);
     }
@@ -94,28 +94,28 @@ export default function Stores() {
 
   // ── Derived ────────────────────────────────────────────────────
   const statCards = useMemo(() => [
-    { key: "Total Stores", val: stats?.totalStores ?? 0, icon: Store, txColor: "text-blue-600", bgColor: "bg-blue-50" },
-    { key: "Active Stores", val: stats?.activeStores ?? 0, icon: CheckCircle, txColor: "text-green-600", bgColor: "bg-green-50" },
-    { key: "Inactive Stores", val: stats?.inactiveStores ?? 0, icon: XCircle, txColor: "text-red-500", bgColor: "bg-red-50" },
-    { key: "Total Items", val: stats?.totalItems ?? 0, icon: Layers, txColor: "text-purple-600", bgColor: "bg-purple-50" },
-    { key: "Low Stock", val: stats?.lowStockAlerts ?? 0, icon: AlertTriangle, txColor: "text-orange-500", bgColor: "bg-orange-50" },
+    { key: STORES_CONSTS.STATS.TOTAL_STORES, val: stats?.totalStores ?? 0, icon: Store, txColor: "text-blue-600", bgColor: "bg-blue-50" },
+    { key: STORES_CONSTS.STATS.ACTIVE_STORES, val: stats?.activeStores ?? 0, icon: CheckCircle, txColor: "text-green-600", bgColor: "bg-green-50" },
+    { key: STORES_CONSTS.STATS.INACTIVE_STORES, val: stats?.inactiveStores ?? 0, icon: XCircle, txColor: "text-red-500", bgColor: "bg-red-50" },
+    { key: STORES_CONSTS.STATS.TOTAL_ITEMS, val: stats?.totalItems ?? 0, icon: Layers, txColor: "text-purple-600", bgColor: "bg-purple-50" },
+    { key: STORES_CONSTS.STATS.LOW_STOCK, val: stats?.lowStockAlerts ?? 0, icon: AlertTriangle, txColor: "text-orange-500", bgColor: "bg-orange-50" },
   ], [stats]);
 
   const resetPage = () => setPage(1);
 
   // ── Action options per row ─────────────────────────────────────
   const getActionOptions = (store) => [
-    { value: "edit", label: "Edit", icon: Edit, text: "text-blue-600", bg: "bg-blue-50", hover: "hover:bg-blue-100" },
+    { value: "edit", label: STOCK_SHARED_CONSTS.COMMON.EDIT, icon: Edit, text: "text-blue-600", bg: "bg-blue-50", hover: "hover:bg-blue-100" },
     { value: "stock", label: "Stock", icon: Package, text: "text-orange-600", bg: "bg-orange-50", hover: "hover:bg-orange-100" },
     {
       value: "toggleStatus",
       label: togglingId === store.id
-        ? (store.status === "ACTIVE" ? "Deactivating…" : "Activating…")
-        : (store.status === "ACTIVE" ? "Inactive" : "Activate"),
-      icon: store.status === "ACTIVE" ? MinusCircle : Power,
-      text: store.status === "ACTIVE" ? "text-red-600" : "text-green-600",
-      bg: store.status === "ACTIVE" ? "bg-red-50" : "bg-green-50",
-      hover: store.status === "ACTIVE" ? "hover:bg-red-100" : "hover:bg-green-100",
+        ? (store.status === STOCK_SHARED_CONSTS.STATUS.ACTIVE_API ? STOCK_SHARED_CONSTS.COMMON.DEACTIVATING : STOCK_SHARED_CONSTS.COMMON.ACTIVATING)
+        : (store.status === STOCK_SHARED_CONSTS.STATUS.ACTIVE_API ? STOCK_SHARED_CONSTS.STATUS.INACTIVE_LABEL : STOCK_SHARED_CONSTS.COMMON.ACTIVATE),
+      icon: store.status === STOCK_SHARED_CONSTS.STATUS.ACTIVE_API ? MinusCircle : Power,
+      text: store.status === STOCK_SHARED_CONSTS.STATUS.ACTIVE_API ? "text-red-600" : "text-green-600",
+      bg: store.status === STOCK_SHARED_CONSTS.STATUS.ACTIVE_API ? "bg-red-50" : "bg-green-50",
+      hover: store.status === STOCK_SHARED_CONSTS.STATUS.ACTIVE_API ? "hover:bg-red-100" : "hover:bg-green-100",
       disabled: togglingId === store.id,
     },
   ];
@@ -130,16 +130,16 @@ export default function Stores() {
       if (togglingId) return;
       try {
         setTogglingId(store.id);
-        if (store.status === "ACTIVE") {
+        if (store.status === STOCK_SHARED_CONSTS.STATUS.ACTIVE_API) {
           await deactivateStore(store.id);
-          toast.success("Store deactivated successfully");
+          toast.success(STORES_CONSTS.MESSAGES.DEACTIVATED);
         } else {
           await activateStore(store.id);
-          toast.success("Store activated successfully");
+          toast.success(STORES_CONSTS.MESSAGES.ACTIVATED);
         }
         await Promise.all([fetchStores(), fetchStats()]);
       } catch (err) {
-        toast.error("Failed to update store status");
+        toast.error(STORES_CONSTS.MESSAGES.STATUS_UPDATE_FAILED);
         console.error(err);
       } finally {
         setTogglingId(null);
@@ -151,16 +151,16 @@ export default function Stores() {
     try {
       if (editStoreData) {
         await updateStore(editStoreData.id, payload);
-        toast.success("Store updated successfully");
+        toast.success(STORES_CONSTS.MESSAGES.UPDATED);
       } else {
         await createStore(payload);
-        toast.success("Store created successfully");
+        toast.success(STORES_CONSTS.MESSAGES.CREATED);
       }
       setIsNewStoreOpen(false);
       setEditStoreData(null);
       await Promise.all([fetchStores(), fetchStats()]);
     } catch (err) {
-      toast.error(editStoreData ? "Failed to update store" : "Failed to create store");
+      toast.error(editStoreData ? STORES_CONSTS.MESSAGES.UPDATE_FAILED : STORES_CONSTS.MESSAGES.CREATE_FAILED);
       throw err;
     }
   };
@@ -175,9 +175,9 @@ export default function Stores() {
         {/* Page Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Stores</h2>
+            <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">{STORES_CONSTS.TEXT.TITLE}</h2>
             <p className="text-gray-500 mt-1 font-medium text-sm sm:text-base">
-              Manage store locations, codes and activation status.
+              {STORES_CONSTS.TEXT.SUBTITLE}
             </p>
           </div>
         </div>
@@ -205,14 +205,14 @@ export default function Stores() {
           <div className="flex items-center justify-between gap-3 px-4 md:px-5 py-3 md:py-4 border-b border-gray-100">
             <div className="flex items-center gap-2 min-w-0">
               <Store className="w-5 h-5 text-blue-500 shrink-0" />
-              <h2 className="font-semibold text-gray-800 text-base md:text-lg truncate">Stores</h2>
+              <h2 className="font-semibold text-gray-800 text-base md:text-lg truncate">{STORES_CONSTS.TEXT.TITLE}</h2>
             </div>
             <button
               onClick={() => { setEditStoreData(null); setIsNewStoreOpen(true); }}
               className="flex items-center gap-1.5 cursor-pointer bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs md:text-sm font-semibold px-3 md:px-4 py-2 rounded-lg transition-colors shrink-0"
             >
               <Plus className="w-3.5 h-3.5 md:w-4 md:h-4" />
-              New Store
+              {STORES_CONSTS.TEXT.NEW_STORE_BTN}
             </button>
           </div>
 
@@ -230,7 +230,7 @@ export default function Stores() {
               <input
                 value={search}
                 onChange={(e) => { setSearch(e.target.value); resetPage(); }}
-                placeholder="Search by name or code…"
+                placeholder={STOCK_SHARED_CONSTS.COMMON.SEARCH_BY_NAME_OR_CODE}
                 className="text-sm focus:outline-none text-gray-600 w-full bg-transparent"
               />
             </div>
@@ -239,9 +239,9 @@ export default function Stores() {
               onChange={(e) => { setStatusFilter(e.target.value); resetPage(); }}
               className="px-3 py-2 border border-gray-200 bg-gray-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-200 text-sm text-gray-700 w-40 shrink-0"
             >
-              <option value="All Status">All Status</option>
-              <option value="Active">Active</option>
-              <option value="Inactive">Inactive</option>
+              <option value={STOCK_SHARED_CONSTS.STATUS.ALL}>{STOCK_SHARED_CONSTS.STATUS.ALL}</option>
+              <option value={STOCK_SHARED_CONSTS.STATUS.ACTIVE_LABEL}>{STOCK_SHARED_CONSTS.STATUS.ACTIVE_LABEL}</option>
+              <option value={STOCK_SHARED_CONSTS.STATUS.INACTIVE_LABEL}>{STOCK_SHARED_CONSTS.STATUS.INACTIVE_LABEL}</option>
             </select>
           </div>
 
@@ -251,7 +251,7 @@ export default function Stores() {
               <div className="text-center py-8 col-span-2">
                 <div className="flex flex-col items-center">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-2" />
-                  <span className="text-gray-600">Loading stores…</span>
+                  <span className="text-gray-600">{STORES_CONSTS.TEXT.LOADING}</span>
                 </div>
               </div>
             ) : error ? (
@@ -259,10 +259,10 @@ export default function Stores() {
                 <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <XCircle className="w-6 h-6 text-red-600" />
                 </div>
-                <h3 className="text-lg font-bold text-gray-900 mb-2">Error Loading Stores</h3>
+                <h3 className="text-lg font-bold text-gray-900 mb-2">{STORES_CONSTS.TEXT.ERROR_TITLE}</h3>
                 <p className="text-gray-600 mb-4">{error}</p>
                 <button onClick={() => window.location.reload()} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                  Retry
+                  {STOCK_SHARED_CONSTS.COMMON.RETRY}
                 </button>
               </div>
             ) : noStoreFound ? (
@@ -270,8 +270,8 @@ export default function Stores() {
                 <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Store className="w-6 h-6 text-blue-600" />
                 </div>
-                <h3 className="text-lg font-bold text-gray-900 mb-2">No Stores Found</h3>
-                <p className="text-gray-600">There are no stores to display.</p>
+                <h3 className="text-lg font-bold text-gray-900 mb-2">{STORES_CONSTS.TEXT.EMPTY_TITLE}</h3>
+                <p className="text-gray-600">{STORES_CONSTS.TEXT.EMPTY_SUB}</p>
               </div>
             ) : (
               storesData.map((store, idx) => (
@@ -286,18 +286,18 @@ export default function Stores() {
                         <p className="text-xs text-gray-400 truncate">{store.description}</p>
                       </div>
                     </div>
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold shrink-0 ${store.status === "ACTIVE" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-500"
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold shrink-0 ${store.status === STOCK_SHARED_CONSTS.STATUS.ACTIVE_API ? "bg-green-100 text-green-700" : "bg-red-100 text-red-500"
                       }`}>
-                      {store.status === "ACTIVE" ? "Active" : "Inactive"}
+                      {store.status === STOCK_SHARED_CONSTS.STATUS.ACTIVE_API ? STOCK_SHARED_CONSTS.STATUS.ACTIVE_LABEL : STOCK_SHARED_CONSTS.STATUS.INACTIVE_LABEL}
                     </span>
                   </div>
                   <div className="space-y-2 text-sm">
                     <p>
-                      <span className="font-medium text-gray-600">Code:</span>
+                      <span className="font-medium text-gray-600">{STORES_CONSTS.TEXT.CODE_LABEL}</span>
                       <span className="ml-2 px-2 py-0.5 bg-blue-50 text-blue-700 font-semibold rounded border border-blue-100 text-xs">{store.storeCode}</span>
                     </p>
                     <p>
-                      <span className="font-medium text-gray-600">Location:</span>
+                      <span className="font-medium text-gray-600">{STORES_CONSTS.TEXT.LOCATION_LABEL}</span>
                       <span className="text-gray-800 ml-2">{store.location}</span>
                     </p>
                     <div className="flex justify-start items-center pt-1">
@@ -319,11 +319,11 @@ export default function Stores() {
                 <thead className="border-b border-gray-200">
                   <tr>
                     <th className="px-2 py-3 text-left text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10 w-10">#</th>
-                    <th className="px-2 py-3 text-left text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10">Store Name</th>
-                    <th className="px-2 py-3 text-left text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10">Code</th>
-                    <th className="px-2 py-3 text-left text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10">Location</th>
-                    <th className="px-2 py-3 text-left text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10">Status</th>
-                    <th className="px-6 py-3 text-center text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10">Actions</th>
+                    <th className="px-2 py-3 text-left text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10">{STORES_CONSTS.TABLE_HEADERS.STORE_NAME}</th>
+                    <th className="px-2 py-3 text-left text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10">{STORES_CONSTS.TABLE_HEADERS.CODE}</th>
+                    <th className="px-2 py-3 text-left text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10">{STORES_CONSTS.TABLE_HEADERS.LOCATION}</th>
+                    <th className="px-2 py-3 text-left text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10">{STORES_CONSTS.TABLE_HEADERS.STATUS}</th>
+                    <th className="px-6 py-3 text-center text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10">{STORES_CONSTS.TABLE_HEADERS.ACTIONS}</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200 font-normal">
@@ -335,10 +335,10 @@ export default function Stores() {
                         <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                           <XCircle className="w-6 h-6 text-red-600" />
                         </div>
-                        <h3 className="text-lg font-bold text-gray-900 mb-2">Error Loading Stores</h3>
+                        <h3 className="text-lg font-bold text-gray-900 mb-2">{STORES_CONSTS.TEXT.ERROR_TITLE}</h3>
                         <p className="text-gray-600 mb-4">{error}</p>
                         <button onClick={() => window.location.reload()} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                          Retry
+                          {STOCK_SHARED_CONSTS.COMMON.RETRY}
                         </button>
                       </td>
                     </tr>
@@ -348,7 +348,7 @@ export default function Stores() {
                         <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-1">
                           <Store className="w-6 h-6 text-blue-600" />
                         </div>
-                        <h3 className="text-sm font-bold text-gray-700 mb-2">No Stores Found</h3>
+                        <h3 className="text-sm font-bold text-gray-700 mb-2">{STORES_CONSTS.TEXT.EMPTY_TITLE}</h3>
                       </td>
                     </tr>
                   ) : (
@@ -370,11 +370,11 @@ export default function Stores() {
                           <span className="text-gray-600">{store.location}</span>
                         </td>
                         <td className={tdStyle}>
-                          <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-sm text-xs font-medium ${store.status === "ACTIVE"
-                              ? "bg-green-50 text-green-700"
-                              : "bg-red-50 text-red-700"
+                          <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-sm text-xs font-medium ${store.status === STOCK_SHARED_CONSTS.STATUS.ACTIVE_API
+                            ? "bg-green-50 text-green-700"
+                            : "bg-red-50 text-red-700"
                             }`}>
-                            {store.status === "ACTIVE" ? "Active" : "Inactive"}
+                            {store.status === STOCK_SHARED_CONSTS.STATUS.ACTIVE_API ? STOCK_SHARED_CONSTS.STATUS.ACTIVE_LABEL : STOCK_SHARED_CONSTS.STATUS.INACTIVE_LABEL}
                           </span>
                         </td>
                         <td className={tdStyle}>
@@ -395,11 +395,11 @@ export default function Stores() {
               <div className="flex flex-col sm:flex-row items-center gap-4">
                 <span className="text-sm text-gray-700">
                   {totalStores === 0
-                    ? "No stores"
-                    : `Showing ${(page - 1) * rowsPerPage + 1} to ${Math.min(page * rowsPerPage, totalStores)} of ${totalStores}`}
+                    ? STORES_CONSTS.TEXT.NO_STORES
+                    : STOCK_SHARED_CONSTS.COMMON.SHOWING_RANGE((page - 1) * rowsPerPage + 1, Math.min(page * rowsPerPage, totalStores), totalStores)}
                 </span>
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-700">Rows per page:</span>
+                  <span className="text-sm text-gray-700">{STOCK_SHARED_CONSTS.COMMON.ROWS_PER_PAGE}</span>
                   <select
                     value={rowsPerPage}
                     onChange={(e) => { setRowsPerPage(Number(e.target.value)); resetPage(); }}
@@ -445,11 +445,11 @@ export default function Stores() {
             <div className="flex flex-col gap-4">
               <div className="text-center text-sm text-gray-700">
                 {totalStores === 0
-                  ? "No stores"
-                  : `Showing ${(page - 1) * rowsPerPage + 1} to ${Math.min(page * rowsPerPage, totalStores)} of ${totalStores}`}
+                  ? STORES_CONSTS.TEXT.NO_STORES
+                  : STOCK_SHARED_CONSTS.COMMON.SHOWING_RANGE((page - 1) * rowsPerPage + 1, Math.min(page * rowsPerPage, totalStores), totalStores)}
               </div>
               <div className="flex items-center justify-center gap-2">
-                <span className="text-sm text-gray-700">Rows:</span>
+                <span className="text-sm text-gray-700">{STOCK_SHARED_CONSTS.COMMON.ROWS_SHORT}</span>
                 <select
                   value={rowsPerPage}
                   onChange={(e) => { setRowsPerPage(Number(e.target.value)); resetPage(); }}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useContext, useCallback } from 'react';
 import {
   X, FileDown, AlertCircle, Printer, Search, Plus,
   CheckCircle, CheckCircle2, AlertTriangle, Info,
@@ -10,11 +10,11 @@ import {
   createFeeCollection,
   createBulkFeeCollection,
   getFeeReceiptById,
-} from '../../Api/FeeCollection';
-import { getFeePeriods } from '../../Api/FeePeriods';
-import { getFeeStructures } from '../../Api/FeeStructures';
-import { getStudentByClass } from '../../Api/StudentsApi';
-import { getActiveClasses } from '../../Api/ClassSectionAPI'; // ← NEW: replaces raw authFetch call for classes
+} from '../../Api/FeeManagement/FeeCollection';
+import { getFeePeriods } from '../../Api/FeeManagement/FeePeriods';
+import { getFeeStructures } from '../../Api/FeeManagement/FeeStructures';
+import { getStudentByClass } from '../../Api/Students/StudentsApi';
+import { getActiveClasses } from '../../Api/Teachers/TeachersAPI'; 
 import { authFetch } from '../../Authfetch/Authfetch';
 import { UserContext } from '../../ContextAPI/UserContext';
 import FeeReceiptPrint from '../../Components/FeeModal/FeeReciptPrint';

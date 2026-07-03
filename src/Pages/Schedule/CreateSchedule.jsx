@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
     ChevronLeft, LayoutGrid, BarChart2, Wand2, ArrowLeftRight,
     Settings, Send, Printer, Trash2, Undo2, Redo2, Plus,
@@ -22,8 +22,9 @@ import {
     deleteSlot,
     saveSlot,
     getTimetableConfig,
-} from '../../Api/ScheduleApi';
-import { getSubjectsBySection } from '../../Api/TeachersAPI';
+} from '../../Api/Academics/ScheduleApi';
+import SectionSubjectService from '../../Api/Academics/SectionSubjectService';
+import { TIMETABLE_CONSTS }  from '../../Constants/StringConstants/TimetableConstants';
 
 // ── Helper: generate periods + breaks from config ──
 const generatePeriodsFromConfig = (config) => {
@@ -73,43 +74,9 @@ const generatePeriodsFromConfig = (config) => {
 };
 
 // ── Subject color helpers ──
-const SUBJECT_COLOR_MAP = {
-    MATH: { color: 'text-blue-600', dot: 'bg-blue-500', border: 'border-blue-200', bg: 'bg-blue-50' },
-    ENG: { color: 'text-green-600', dot: 'bg-green-500', border: 'border-green-200', bg: 'bg-green-50' },
-    SCI: { color: 'text-yellow-600', dot: 'bg-yellow-400', border: 'border-yellow-200', bg: 'bg-yellow-50' },
-    HIN: { color: 'text-purple-600', dot: 'bg-purple-500', border: 'border-purple-200', bg: 'bg-purple-50' },
-    SST: { color: 'text-orange-600', dot: 'bg-orange-400', border: 'border-orange-200', bg: 'bg-orange-50' },
-    COMP: { color: 'text-teal-600', dot: 'bg-teal-500', border: 'border-teal-200', bg: 'bg-teal-50' },
-    PE: { color: 'text-red-600', dot: 'bg-red-500', border: 'border-red-200', bg: 'bg-red-50' },
-    DRAW: { color: 'text-indigo-600', dot: 'bg-indigo-500', border: 'border-indigo-200', bg: 'bg-indigo-50' },
-    BIO: { color: 'text-emerald-600', dot: 'bg-emerald-500', border: 'border-emerald-200', bg: 'bg-emerald-50' },
-    CHEM: { color: 'text-pink-600', dot: 'bg-pink-500', border: 'border-pink-200', bg: 'bg-pink-50' },
-    PHY: { color: 'text-sky-600', dot: 'bg-sky-500', border: 'border-sky-200', bg: 'bg-sky-50' },
-    GEO: { color: 'text-lime-600', dot: 'bg-lime-500', border: 'border-lime-200', bg: 'bg-lime-50' },
-    HIST: { color: 'text-amber-600', dot: 'bg-amber-500', border: 'border-amber-200', bg: 'bg-amber-50' },
-};
-const COLOR_POOL = [
-    { color: 'text-blue-600', dot: 'bg-blue-500', border: 'border-blue-200', bg: 'bg-blue-50' },
-    { color: 'text-green-600', dot: 'bg-green-500', border: 'border-green-200', bg: 'bg-green-50' },
-    { color: 'text-purple-600', dot: 'bg-purple-500', border: 'border-purple-200', bg: 'bg-purple-50' },
-    { color: 'text-orange-600', dot: 'bg-orange-400', border: 'border-orange-200', bg: 'bg-orange-50' },
-    { color: 'text-teal-600', dot: 'bg-teal-500', border: 'border-teal-200', bg: 'bg-teal-50' },
-    { color: 'text-red-600', dot: 'bg-red-500', border: 'border-red-200', bg: 'bg-red-50' },
-    { color: 'text-indigo-600', dot: 'bg-indigo-500', border: 'border-indigo-200', bg: 'bg-indigo-50' },
-    { color: 'text-pink-600', dot: 'bg-pink-500', border: 'border-pink-200', bg: 'bg-pink-50' },
-    { color: 'text-sky-600', dot: 'bg-sky-500', border: 'border-sky-200', bg: 'bg-sky-50' },
-    { color: 'text-amber-600', dot: 'bg-amber-500', border: 'border-amber-200', bg: 'bg-amber-50' },
-];
 const getSubjectStyle = (code, index) => {
     const upper = (code || '').toUpperCase();
-    return SUBJECT_COLOR_MAP[upper] || COLOR_POOL[index % COLOR_POOL.length];
-};
-
-const TEACHER_COLORS = {
-    'Kavita Rao': 'bg-pink-500', 'Rajesh Kumar': 'bg-blue-500',
-    'Priya Patel': 'bg-orange-500', 'Meena Sharma': 'bg-green-500',
-    'Suresh Nair': 'bg-purple-500', 'Anjali Singh': 'bg-amber-500',
-    'Amit Joshi': 'bg-cyan-500', 'Vikas Mishra': 'bg-rose-500',
+    return TIMETABLE_CONSTS.COLORS.SUBJECT_MAP[upper] || TIMETABLE_CONSTS.COLORS.SUBJECT_POOL[index % TIMETABLE_CONSTS.COLORS.SUBJECT_POOL.length];
 };
 
 const getInitials = (name) => name ? name.split(' ').map(w => w[0]).join('').toUpperCase() : '?';
@@ -144,8 +111,8 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
     const isViewOnly = mode === 'view';
     const [activeTab, setActiveTab] = useState('planner');
     const [timetableInfo, setTimetableInfo] = useState(timetable);
-    const [status, setStatus] = useState(timetable?.status || 'Draft');
-    const [showDraftBanner, setShowDraftBanner] = useState(timetable?.status === 'Draft');
+    const [status, setStatus] = useState(timetable?.status || TIMETABLE_CONSTS.STATUS.DRAFT);
+    const [showDraftBanner, setShowDraftBanner] = useState(timetable?.status === TIMETABLE_CONSTS.STATUS.DRAFT || timetable?.status === TIMETABLE_CONSTS.STATUS.DRAFT_UPPER);
     const [slots, setSlots] = useState([]);
     const [loadingSlots, setLoadingSlots] = useState(false);
     const [history, setHistory] = useState([[]]);
@@ -168,7 +135,7 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
     const [dragOverCell, setDragOverCell] = useState(null);
 
     const [subjectSearch, setSubjectSearch] = useState('');
-    const [subjectFilter, setSubjectFilter] = useState('All');
+    const [subjectFilter, setSubjectFilter] = useState(TIMETABLE_CONSTS.CREATE_SCHEDULE.FILTER_ALL);
     const [sidebarTab, setSidebarTab] = useState('subjects');
     const [toastMsg, setToastMsg] = useState('');
     const [mobileDay, setMobileDay] = useState('Mon');
@@ -225,7 +192,7 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
     const loadSubjects = async (secId) => {
         if (!secId || subjectsList.length > 0) return;
         try {
-            const data = await getSubjectsBySection(secId);
+            const data = await SectionSubjectService.getSubjectsBySection(secId);
             const enriched = (data || []).map((s, i) => ({
                 id: s.id,
                 code: s.code || s.subjectCode || '',
@@ -248,8 +215,8 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
             ]);
             const resolvedInfo = info || timetable;
             setTimetableInfo(resolvedInfo);
-            setStatus(resolvedInfo?.status || 'Draft');
-            setShowDraftBanner(resolvedInfo?.status === 'Draft' || resolvedInfo?.status === 'DRAFT');
+            setStatus(resolvedInfo?.status || TIMETABLE_CONSTS.STATUS.DRAFT);
+            setShowDraftBanner(resolvedInfo?.status === TIMETABLE_CONSTS.STATUS.DRAFT || resolvedInfo?.status === TIMETABLE_CONSTS.STATUS.DRAFT_UPPER);
             const normalized = (slotsData || []).map(normalizeSlot);
             setSlots(normalized);
             setHistory([normalized]);
@@ -260,7 +227,7 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
             }
         } catch (err) {
             console.error('Failed to load timetable data:', err);
-            showToast('Failed to load timetable data');
+            showToast(TIMETABLE_CONSTS.MESSAGES.ERR_LOAD_DATA);
         } finally {
             setLoadingSlots(false);
         }
@@ -328,9 +295,9 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
             setSlots(newSlots);
             pushHistory(newSlots);
             setAddSlotTarget(null);
-            showToast('Slot saved ✓');
+            showToast(TIMETABLE_CONSTS.MESSAGES.SUCC_SLOT_SAVED);
         } catch (err) {
-            showToast(err.message || 'Failed to save slot');
+            showToast(err.message || TIMETABLE_CONSTS.MESSAGES.ERR_SAVE_SLOT);
         }
     };
 
@@ -345,19 +312,19 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
             if (selectedSlotKey === key) {
                 setSelectedSlotKey(null);
             }
-            showToast('Slot removed');
+            showToast(TIMETABLE_CONSTS.MESSAGES.SUCC_SLOT_REMOVED);
         } catch (err) {
-            showToast(err.message || 'Failed to remove slot');
+            showToast(err.message || TIMETABLE_CONSTS.MESSAGES.ERR_REMOVE_SLOT);
         }
     };
 
     const handleAutoFill = async () => {
         try {
             const result = await autoFillSlots(timetable.id);
-            showToast(`Auto-filled ${result?.filledCount ?? ''} slots`);
+            showToast(TIMETABLE_CONSTS.MESSAGES.SUCC_AUTO_FILL(result?.filledCount));
             await loadTimetableData();
         } catch (err) {
-            showToast(err.message || 'Auto-fill failed');
+            showToast(err.message || TIMETABLE_CONSTS.MESSAGES.ERR_AUTO_FILL);
         }
     };
 
@@ -367,21 +334,21 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
             setSlots([]);
             setSelectedSlotKey(null);
             pushHistory([]);
-            showToast('All slots cleared');
+            showToast(TIMETABLE_CONSTS.MESSAGES.SUCC_CLEAR_ALL);
         } catch (err) {
-            showToast(err.message || 'Failed to clear slots');
+            showToast(err.message || TIMETABLE_CONSTS.MESSAGES.ERR_CLEAR_ALL);
         }
     };
 
     const handlePublish = async () => {
         try {
             await publishTimetable(timetable.id);
-            setStatus('Published');
+            setStatus(TIMETABLE_CONSTS.STATUS.PUBLISHED);
             setShowDraftBanner(false);
             setShowPublishConfirm(false);
-            showToast('Timetable published ✓');
+            showToast(TIMETABLE_CONSTS.MESSAGES.SUCC_PUBLISHED);
         } catch (err) {
-            showToast(err.message || 'Failed to publish');
+            showToast(err.message || TIMETABLE_CONSTS.MESSAGES.ERR_PUBLISH);
         }
     };
 
@@ -390,9 +357,9 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
             setSavingAll(true);
             const apiSlots = slots.map(toApiSlot);
             await bulkSaveSlots(timetable.id, apiSlots);
-            showToast('All slots saved ✓');
+            showToast(TIMETABLE_CONSTS.MESSAGES.SUCC_SAVE_ALL);
         } catch (err) {
-            showToast(err.message || 'Failed to save slots');
+            showToast(err.message || TIMETABLE_CONSTS.MESSAGES.ERR_SAVE_ALL);
         } finally {
             setSavingAll(false);
         }
@@ -410,7 +377,7 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
 
     const filteredSubjects = subjectCounts.filter(s =>
         s.label.toLowerCase().includes(subjectSearch.toLowerCase()) &&
-        (subjectFilter === 'All' || s.code === subjectFilter)
+        (subjectFilter === TIMETABLE_CONSTS.CREATE_SCHEDULE.FILTER_ALL || s.code === subjectFilter)
     );
 
     const uniqueTeacherNames = [...new Set(slots.map(s => s.teacher?.name).filter(Boolean))];
@@ -434,19 +401,19 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
                     {!isViewOnly && (
                         <div className="flex items-center justify-end gap-1.5 mt-1 sm:absolute sm:inset-x-0 sm:bottom-1.5 sm:justify-center sm:opacity-0 sm:group-hover:opacity-100 transition-all duration-150 z-10">
                             <button
-                                title="Edit Slot"
+                                title={TIMETABLE_CONSTS.CREATE_SCHEDULE.TOOLTIP_EDIT}
                                 onClick={() => setAddSlotTarget({ day, period, editSlot: slot })}
                                 className="w-7 h-7 sm:w-6 sm:h-6 rounded bg-white/90 border border-gray-200 cursor-pointer shadow flex items-center justify-center hover:bg-blue-100 hover:border-blue-500 transition">
                                 <Pencil size={12} className="text-gray-600" />
                             </button>
                             <button
-                                title="Change Teacher"
+                                title={TIMETABLE_CONSTS.CREATE_SCHEDULE.TOOLTIP_TEACHER}
                                 onClick={() => setAssignTeacherTarget({ day, period, slot })}
                                 className="w-7 h-7 sm:w-6 sm:h-6 rounded cursor-pointer bg-white/90 border border-gray-200 shadow flex items-center justify-center hover:bg-blue-100 hover:border-blue-500 transition">
                                 <User size={12} className="text-gray-600" />
                             </button>
                             <button
-                                title="Remove Slot"
+                                title={TIMETABLE_CONSTS.CREATE_SCHEDULE.TOOLTIP_REMOVE}
                                 onClick={() => handleRemoveSlot(day, period.id)}
                                 className="w-7 h-7 sm:w-6 sm:h-6 rounded bg-white/90 border border-gray-200 cursor-pointer shadow flex items-center justify-center hover:bg-red-50 hover:border-red-300 transition">
                                 <Trash2 size={12} className="text-red-400" />
@@ -517,7 +484,7 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
                             placeholder="Search subjects..."
                             className="w-full pl-8 pr-3 py-2 sm:py-1.5 text-sm sm:text-xs border border-gray-200 rounded-lg focus:outline-none" />
                     </div>
-                    <p className="text-xs text-gray-400 mb-2">Click empty slot to add subjects</p>
+                    <p className="text-xs text-gray-400 mb-2">{TIMETABLE_CONSTS.CREATE_SCHEDULE.DRAG_EMPTY}</p>
                     <div className="space-y-1">
                         {filteredSubjects.map(s => (
                             <div
@@ -570,20 +537,20 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
             )}
 
             {/* Draft Banner */}
-            {showDraftBanner && status === 'Draft' && !isViewOnly && (
+            {showDraftBanner && status === TIMETABLE_CONSTS.STATUS.DRAFT && !isViewOnly && (
                 <div className="bg-amber-50 border-b border-amber-200 px-3 sm:px-4 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3">
                     <div className="flex items-start sm:items-center gap-2 text-amber-800 text-sm">
                         <AlertTriangle size={16} className="text-amber-500 shrink-0 mt-0.5 sm:mt-0" />
-                        <span>This timetable is in <strong>DRAFT</strong> mode. Review and publish when ready.</span>
+                        <span>{TIMETABLE_CONSTS.CREATE_SCHEDULE.BANNER_DRAFT_TEXT}<strong>{TIMETABLE_CONSTS.CREATE_SCHEDULE.BANNER_DRAFT_STRONG}</strong>{TIMETABLE_CONSTS.CREATE_SCHEDULE.BANNER_DRAFT_END}</span>
                     </div>
                     <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
                         <button onClick={() => setShowPublishConfirm(true)}
                             className="flex-1 sm:flex-none px-3 py-1.5 bg-amber-600 cursor-pointer text-white text-xs font-semibold rounded-lg hover:bg-amber-700 transition">
-                            Publish Now
+                            {TIMETABLE_CONSTS.CREATE_SCHEDULE.BTN_PUBLISH_NOW}
                         </button>
                         <button onClick={() => setShowDraftBanner(false)}
                             className="flex-1 sm:flex-none px-3 py-1.5 bg-white border cursor-pointer border-amber-200 text-amber-700 text-xs font-semibold rounded-lg hover:bg-amber-50 transition">
-                            Dismiss
+                            {TIMETABLE_CONSTS.CREATE_SCHEDULE.BTN_DISMISS}
                         </button>
                     </div>
                 </div>
@@ -593,7 +560,7 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
             <div className="bg-white border-b border-gray-200 px-3 sm:px-4 py-2.5 sm:py-3 space-y-2.5">
                 <div className="flex items-center gap-2 min-w-0">
                     <button onClick={onBack} className="flex items-center cursor-pointer gap-1 text-sm text-gray-600 hover:text-gray-900 font-medium shrink-0">
-                        <ChevronLeft size={16} /> Back
+                        <ChevronLeft size={16} /> {TIMETABLE_CONSTS.CREATE_SCHEDULE.BTN_BACK}
                     </button>
                     <div className="h-5 w-px bg-gray-200 hidden sm:block shrink-0" />
                     <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-wrap">
@@ -604,11 +571,11 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
                             {timetableInfo?.section || timetableInfo?.sectionName}
                         </span>
                         <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border shrink-0
-                            ${status === 'Draft'
+                            ${status === TIMETABLE_CONSTS.STATUS.DRAFT
                                 ? 'bg-amber-50 text-amber-700 border-amber-200'
                                 : 'bg-blue-50 text-blue-700 border-blue-200'
                             }`}>
-                            {isViewOnly ? 'View' : `${status}`}
+                            {isViewOnly ? TIMETABLE_CONSTS.CREATE_SCHEDULE.VIEW_MODE : `${status}`}
                         </span>
                     </div>
                 </div>
@@ -618,12 +585,12 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
                         <button onClick={() => setActiveTab('planner')}
                             className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 cursor-pointer rounded-lg text-xs sm:text-sm font-medium transition
                                 ${activeTab === 'planner' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-600'}`}>
-                            <LayoutGrid size={15} /> Planner
+                            <LayoutGrid size={15} /> {TIMETABLE_CONSTS.CREATE_SCHEDULE.TAB_PLANNER}
                         </button>
                         <button onClick={() => setActiveTab('analytics')}
                             className={`flex items-center cursor-pointer gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition
                                 ${activeTab === 'analytics' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-600'}`}>
-                            <BarChart2 size={15} /> Analytics
+                            <BarChart2 size={15} /> {TIMETABLE_CONSTS.CREATE_SCHEDULE.TAB_ANALYTICS}
                         </button>
                     </div>
 
@@ -640,7 +607,7 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
                                 </button>
                                 <button onClick={handleAutoFill}
                                     className="flex items-center gap-1.5 px-2 sm:px-3 cursor-pointer py-1.5 border border-gray-200 rounded-lg text-xs sm:text-sm text-gray-700 hover:bg-gray-50 transition">
-                                    <Wand2 size={14} /> <span className="hidden sm:inline">Auto-fill</span>
+                                    <Wand2 size={14} /> <span className="hidden sm:inline">{TIMETABLE_CONSTS.CREATE_SCHEDULE.BTN_AUTO_FILL}</span>
                                 </button>
                                 <button
                                     onClick={handleBulkSave}
@@ -649,19 +616,19 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
                                         ? 'bg-blue-400 cursor-not-allowed opacity-80'
                                         : 'bg-blue-600 hover:bg-blue-700 text-white'}`}>
                                     {savingAll ? (
-                                        <><RefreshCw size={14} className="animate-spin" /> <span className="hidden sm:inline">Saving...</span></>
+                                        <><RefreshCw size={14} className="animate-spin" /> <span className="hidden sm:inline">{TIMETABLE_CONSTS.CREATE_SCHEDULE.BTN_SAVING}</span></>
                                     ) : (
-                                        <><span className="sm:hidden">💾</span><span className="hidden sm:inline">💾 Save All</span></>
+                                        <><span className="sm:hidden">💾</span><span className="hidden sm:inline">{TIMETABLE_CONSTS.CREATE_SCHEDULE.BTN_SAVE_ALL}</span></>
                                     )}
                                 </button>
                                 <button onClick={() => setShowSettings(true)}
                                     className="flex items-center gap-1.5 px-2 sm:px-3 cursor-pointer py-1.5 border border-gray-200 rounded-lg text-xs sm:text-sm text-gray-700 hover:bg-gray-50 transition">
-                                    <Settings size={14} /> <span className="hidden sm:inline">Settings</span>
+                                    <Settings size={14} /> <span className="hidden sm:inline">{TIMETABLE_CONSTS.CREATE_SCHEDULE.BTN_SETTINGS}</span>
                                 </button>
-                                {status === 'Draft' && (
+                                {status === TIMETABLE_CONSTS.STATUS.DRAFT && (
                                     <button onClick={() => setShowPublishConfirm(true)}
                                         className="flex items-center gap-1.5 cursor-pointer px-2.5 sm:px-4 py-1.5 bg-blue-600 text-white rounded-lg text-xs sm:text-sm font-semibold hover:bg-blue-700 transition shadow-sm">
-                                        <Send size={14} /> <span className="hidden sm:inline">Publish</span>
+                                        <Send size={14} /> <span className="hidden sm:inline">{TIMETABLE_CONSTS.CREATE_SCHEDULE.BTN_PUBLISH}</span>
                                     </button>
                                 )}
                             </>
@@ -669,7 +636,7 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
                         {isViewOnly && (
                             <button onClick={() => setShowPrint(true)}
                                 className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 border cursor-pointer border-gray-200 rounded-lg text-xs sm:text-sm text-gray-700 hover:bg-gray-50">
-                                <Printer size={14} /> <span className="hidden sm:inline">Print</span>
+                                <Printer size={14} /> <span className="hidden sm:inline">{TIMETABLE_CONSTS.CREATE_SCHEDULE.BTN_PRINT}</span>
                             </button>
                         )}
                     </div>
@@ -699,7 +666,7 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
                             </svg>
                             <div>
                                 <p className="text-[20px] font-bold text-slate-900 leading-none">{workingDays.length}</p>
-                                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mt-0.5">Working Days</p>
+                                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mt-0.5">{TIMETABLE_CONSTS.CREATE_SCHEDULE.LBL_WORKING_DAYS}</p>
                             </div>
                         </div>
 
@@ -710,7 +677,7 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
                             </svg>
                             <div>
                                 <p className="text-[20px] font-bold text-slate-900 leading-none">{timetableConfig?.periodsPerDay || periods.filter(p => !p.isBreak).length || 8}</p>
-                                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mt-0.5">Periods / Day</p>
+                                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mt-0.5">{TIMETABLE_CONSTS.CREATE_SCHEDULE.LBL_PERIODS_DAY}</p>
                             </div>
                         </div>
 
@@ -731,7 +698,7 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
                                     <span className="text-[22px] font-bold text-slate-900">{filledCount}</span>
                                     <span className="text-sm font-medium text-slate-400">/{totalSlots}</span>
                                 </div>
-                                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mt-1">Slots Filled</p>
+                                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mt-1">{TIMETABLE_CONSTS.CREATE_SCHEDULE.LBL_SLOTS_FILLED}</p>
                                 <div className="w-[90px] h-[3px] bg-gray-200 rounded-full mt-1.5">
                                     <div className="h-[3px] bg-blue-600 rounded-full transition-all" style={{ width: `${pct}%` }} />
                                 </div>
@@ -745,7 +712,7 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
                             </svg>
                             <div>
                                 <p className={`text-[20px] font-bold leading-none ${emptyCount > 0 ? 'text-orange-500' : 'text-slate-900'}`}>{emptyCount}</p>
-                                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mt-0.5">Empty Slots</p>
+                                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mt-0.5">{TIMETABLE_CONSTS.CREATE_SCHEDULE.LBL_EMPTY_SLOTS}</p>
                             </div>
                         </div>
 
@@ -760,7 +727,7 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
                                 )}
                                 {uniqueTeacherNames.slice(0, 5).map((n, i) => (
                                     <span key={n}
-                                        className={`w-7 h-7 rounded-full border-2 border-white ${TEACHER_COLORS[n] || 'bg-gray-400'} text-white flex items-center justify-center shrink-0`}
+                                        className={`w-7 h-7 rounded-full border-2 border-white ${TIMETABLE_CONSTS.COLORS.TEACHER_MAP[n] || 'bg-gray-400'} text-white flex items-center justify-center shrink-0`}
                                         style={{ fontSize: '9px', fontWeight: 700, marginLeft: (i === 0 && uniqueTeacherNames.length <= 5) ? 0 : '-8px' }}>
                                         {getInitials(n)}
                                     </span>
@@ -768,7 +735,7 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
                             </div>
                             <div>
                                 <p className="text-[20px] font-bold text-slate-900 leading-none">{uniqueTeacherNames.length}</p>
-                                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mt-0.5">Teachers</p>
+                                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mt-0.5">{TIMETABLE_CONSTS.CREATE_SCHEDULE.LBL_TEACHERS}</p>
                             </div>
 
                             {!isViewOnly && (
@@ -785,8 +752,8 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
                                         <ArrowLeftRight size={13} />
                                         <span className="truncate">
                                             {selectedSlots.length > 0
-                                                ? `Substitute (${selectedSlots.length})`
-                                                : 'Substitute'}
+                                                ? TIMETABLE_CONSTS.CREATE_SCHEDULE.BTN_SUBSTITUTE_COUNT(selectedSlots.length)
+                                                : TIMETABLE_CONSTS.CREATE_SCHEDULE.BTN_SUBSTITUTE}
                                         </span>
                                     </button>
                                     <button
@@ -794,7 +761,7 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
                                         title="View pending substitutions"
                                         className="flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 cursor-pointer transition">
                                         <Clock size={13} />
-                                        <span className="truncate">Pending</span>
+                                        <span className="truncate">{TIMETABLE_CONSTS.CREATE_SCHEDULE.BTN_PENDING}</span>
                                     </button>
                                 </div>
                             )}
@@ -805,7 +772,7 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
                             <button
                                 onClick={() => setShowMobileSidebar(true)}
                                 className="lg:hidden col-span-2 flex items-center justify-center gap-2 px-3 py-2 border border-gray-200 rounded-xl bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition">
-                                <PanelLeft size={16} /> Subjects Panel
+                                <PanelLeft size={16} /> {TIMETABLE_CONSTS.CREATE_SCHEDULE.BTN_SUB_PANEL}
                             </button>
                         )}
 
@@ -813,14 +780,14 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
                         {!isViewOnly && (
                             <div className="col-span-2 xl:col-span-auto xl:ml-auto flex items-center gap-2 flex-wrap w-full xl:w-auto">
                                 <div className="flex gap-1 flex-wrap">
-                                    <button onClick={() => setSubjectFilter('All')}
-                                        className={`px-2.5 py-1 rounded-full text-xs cursor-pointer font-medium transition ${subjectFilter === 'All'
+                                    <button onClick={() => setSubjectFilter(TIMETABLE_CONSTS.CREATE_SCHEDULE.FILTER_ALL)}
+                                        className={`px-2.5 py-1 rounded-full text-xs cursor-pointer font-medium transition ${subjectFilter === TIMETABLE_CONSTS.CREATE_SCHEDULE.FILTER_ALL
                                             ? 'bg-blue-600 text-white shadow-sm'
                                             : 'bg-gray-100 text-gray-600 hover:bg-blue-50 hover:text-blue-600'}`}>
-                                        All
+                                        {TIMETABLE_CONSTS.CREATE_SCHEDULE.FILTER_ALL}
                                     </button>
                                     {subjectCounts.map(s => (
-                                        <button key={s.code} onClick={() => setSubjectFilter(s.code === subjectFilter ? 'All' : s.code)}
+                                        <button key={s.code} onClick={() => setSubjectFilter(s.code === subjectFilter ? TIMETABLE_CONSTS.CREATE_SCHEDULE.FILTER_ALL : s.code)}
                                             className={`px-2.5 py-1 rounded-full cursor-pointer text-xs font-medium transition flex items-center gap-1 ${subjectFilter === s.code
                                                 ? 'bg-blue-600 text-white shadow-sm'
                                                 : 'bg-gray-100 text-gray-600 hover:bg-blue-50 hover:text-blue-600'}`}>
@@ -830,10 +797,10 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
                                     ))}
                                 </div>
                                 <button onClick={() => setShowPrint(true)} className="flex items-center gap-1 px-3 py-1.5 border border-gray-200 rounded-lg text-xs text-gray-600 cursor-pointer hover:bg-gray-50">
-                                    <Printer size={13} /> Print
+                                    <Printer size={13} /> {TIMETABLE_CONSTS.CREATE_SCHEDULE.BTN_PRINT}
                                 </button>
                                 <button onClick={handleClearAll} className="flex items-center gap-1 px-3 py-1.5 border border-red-100 rounded-lg text-xs cursor-pointer text-red-500 hover:bg-red-50">
-                                    <Trash2 size={13} /> Clear All
+                                    <Trash2 size={13} /> {TIMETABLE_CONSTS.CREATE_SCHEDULE.BTN_CLEAR_ALL}
                                 </button>
                             </div>
                         )}
@@ -850,7 +817,7 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
                                 />
                                 <div className="lg:hidden fixed inset-y-0 left-0 z-50 w-72 max-w-[88vw] bg-white border-r border-gray-200 shadow-xl flex flex-col min-h-0">
                                     <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 shrink-0">
-                                        <span className="text-sm font-semibold text-gray-800">Subjects Panel</span>
+                                        <span className="text-sm font-semibold text-gray-800">{TIMETABLE_CONSTS.CREATE_SCHEDULE.BTN_SUB_PANEL}</span>
                                         <button
                                             onClick={() => setShowMobileSidebar(false)}
                                             className="p-1.5 rounded-lg hover:bg-gray-100 transition">
@@ -873,7 +840,7 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
                         <div className="flex-1 overflow-hidden flex flex-col min-h-0 min-w-0">
                             {loadingSlots ? (
                                 <div className="flex items-center justify-center h-64 text-gray-400 text-sm">
-                                    Loading timetable...
+                                    {TIMETABLE_CONSTS.CREATE_SCHEDULE.LOADING_TT}
                                 </div>
                             ) : (
                                 <>
@@ -912,7 +879,7 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
                                                 const subjectMeta = slot
                                                     ? (subjectsList.find(s => s.code === slot.subject?.code || s.id === slot.subject?.id) || null)
                                                     : null;
-                                                const teacherColor = slot?.teacher?.name ? (TEACHER_COLORS[slot.teacher.name] || 'bg-gray-400') : '';
+                                                const teacherColor = slot?.teacher?.name ? (TIMETABLE_CONSTS.COLORS.TEACHER_MAP[slot.teacher.name] || 'bg-gray-400') : '';
                                                 const isSelected = slot ? selectedSlotKey === slotKey(slot) : false;
                                                 return (
                                                     <div key={period.id} className="bg-white border border-gray-200 rounded-xl overflow-hidden">
@@ -939,7 +906,7 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
                                                 <thead>
                                                     <tr>
                                                         <th className="bg-gray-50 border-b border-r border-gray-200 px-4 py-3 text-left text-xs font-semibold text-gray-500 w-36 sticky left-0 top-0 z-20">
-                                                            PERIOD / TIME
+                                                            {TIMETABLE_CONSTS.CREATE_SCHEDULE.TH_PERIOD_TIME}
                                                         </th>
                                                         {workingDays.map(day => (
                                                             <th key={day}
@@ -988,7 +955,7 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
                                                                     const subjectMeta = slot
                                                                         ? (subjectsList.find(s => s.code === slot.subject?.code || s.id === slot.subject?.id) || null)
                                                                         : null;
-                                                                    const teacherColor = slot?.teacher?.name ? (TEACHER_COLORS[slot.teacher.name] || 'bg-gray-400') : '';
+                                                                    const teacherColor = slot?.teacher?.name ? (TIMETABLE_CONSTS.COLORS.TEACHER_MAP[slot.teacher.name] || 'bg-gray-400') : '';
                                                                     const isSelected = slot
                                                                         ? selectedSlotKey === slotKey(slot)
                                                                         : false;
@@ -1015,7 +982,7 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
                     <div className="bg-white border-t border-gray-200 px-3 sm:px-4 py-2 flex items-center gap-2 sm:gap-3 text-xs text-gray-400 flex-wrap">
                         <span className="hidden md:inline">{workingDays.length} days · {timetableConfig?.periodsPerDay || periods.filter(p => !p.isBreak).length || 8} periods/day</span>
                         <span>•</span>
-                        <span className={status === 'Draft' ? 'text-amber-600 font-medium' : 'text-blue-600 font-medium'}>{status}</span>
+                        <span className={status === TIMETABLE_CONSTS.STATUS.DRAFT ? 'text-amber-600 font-medium' : 'text-blue-600 font-medium'}>{status}</span>
                         {selectedSlots.length > 0 && (
                             <>
                                 <span className="hidden sm:inline">•</span>
@@ -1060,9 +1027,9 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
                             });
                             await loadTimetableData();
                             setAssignTeacherTarget(null);
-                            showToast('Teacher assigned ✓');
+                            showToast(TIMETABLE_CONSTS.MESSAGES.SUCC_SAVE_TEACHER);
                         } catch (err) {
-                            showToast(err.message || 'Failed to assign teacher');
+                            showToast(err.message || TIMETABLE_CONSTS.MESSAGES.ERR_SAVE_TEACHER);
                         }
                     }}
                 />
@@ -1115,19 +1082,19 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
             {showPublishConfirm && (
                 <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
                     <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-2">Publish Timetable?</h3>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">{TIMETABLE_CONSTS.CREATE_SCHEDULE.CONFIRM_PUB_TITLE}</h3>
                         <p className="text-sm text-gray-500 mb-5">
-                            This will make the timetable visible to all students and teachers for{' '}
+                            {TIMETABLE_CONSTS.CREATE_SCHEDULE.CONFIRM_PUB_MSG1}
                             <strong>{timetableInfo?.class} — {timetableInfo?.section}</strong>.
                         </p>
                         <div className="flex gap-3 justify-end">
                             <button onClick={() => setShowPublishConfirm(false)}
                                 className="px-4 py-2 border border-gray-200 cursor-pointer rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50">
-                                Cancel
+                                {TIMETABLE_CONSTS.CREATE_SCHEDULE.CONFIRM_PUB_CANCEL}
                             </button>
                             <button onClick={handlePublish}
                                 className="px-4 py-2 bg-blue-600 cursor-pointer text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition shadow-sm">
-                                Yes, Publish
+                                {TIMETABLE_CONSTS.CREATE_SCHEDULE.CONFIRM_PUB_YES}
                             </button>
                         </div>
                     </div>

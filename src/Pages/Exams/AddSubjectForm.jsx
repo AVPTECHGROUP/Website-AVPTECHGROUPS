@@ -3,8 +3,9 @@ import {
     X, BookOpen, Loader2, CheckCircle2, AlertCircle,
     FlaskConical, ChevronDown, ChevronUp, Save
 } from "lucide-react";
-import { addExamSubject, bulkAddExamSubjects, updateExamSubject } from "../../Api/Exams";
-import { getSectionSubjectsByClass } from "../../Api/TeachersAPI";
+import { addExamSubject, bulkAddExamSubjects, updateExamSubject } from "../../Api/Academics/Exams";
+import { getSectionSubjectsByClass } from "../../Api/Teachers/TeachersAPI";
+import { EXAM_CONSTS } from "../../Constants/StringConstants/AcademicsConstants";
 
 // ─── Per-subject row state factory ────────────────────────────────────────────
 function makeRowState(subject, editData = null, alreadyAdded = false) {
@@ -38,10 +39,10 @@ function validateRow(row) {
     const max = Number(row.maxMarks);
     const pass = Number(row.passingMarks);
 
-    if (!row.maxMarks || isNaN(max) || max < 1) errors.maxMarks = "Required, min 1";
-    if (!row.passingMarks || isNaN(pass) || pass < 1) errors.passingMarks = "Required, min 1";
+    if (!row.maxMarks || isNaN(max) || max < 1) errors.maxMarks = EXAM_CONSTS.VALIDATION.REQ_MIN_1;
+    if (!row.passingMarks || isNaN(pass) || pass < 1) errors.passingMarks = EXAM_CONSTS.VALIDATION.REQ_MIN_1;
     if (!errors.maxMarks && !errors.passingMarks && pass > max)
-        errors.passingMarks = `Cannot exceed ${max}`;
+        errors.passingMarks = EXAM_CONSTS.VALIDATION.EXCEEDS_MAX(max);
 
     if (row.hasTheoryPractical) {
         const th = Number(row.maxTheoryMarks);
@@ -49,12 +50,12 @@ function validateRow(row) {
         const pth = Number(row.passingTheoryMarks || 0);
         const ppr = Number(row.passingPracticalMarks || 0);
 
-        if (!row.maxTheoryMarks || isNaN(th) || th < 0) errors.maxTheoryMarks = "Required";
-        if (!row.maxPracticalMarks || isNaN(pr) || pr < 0) errors.maxPracticalMarks = "Required";
+        if (!row.maxTheoryMarks || isNaN(th) || th < 0) errors.maxTheoryMarks = EXAM_CONSTS.VALIDATION.REQUIRED;
+        if (!row.maxPracticalMarks || isNaN(pr) || pr < 0) errors.maxPracticalMarks = EXAM_CONSTS.VALIDATION.REQUIRED;
         if (!errors.maxTheoryMarks && !errors.maxPracticalMarks && !errors.maxMarks && th + pr !== max)
-            errors.tpSum = `Theory+Practical must = ${max}`;
-        if (!errors.maxTheoryMarks && pth > th) errors.passingTheoryMarks = `Max ${th}`;
-        if (!errors.maxPracticalMarks && ppr > pr) errors.passingPracticalMarks = `Max ${pr}`;
+            errors.tpSum = EXAM_CONSTS.VALIDATION.TP_SUM(max);
+        if (!errors.maxTheoryMarks && pth > th) errors.passingTheoryMarks = EXAM_CONSTS.VALIDATION.MAX_LIMIT(th);
+        if (!errors.maxPracticalMarks && ppr > pr) errors.passingPracticalMarks = EXAM_CONSTS.VALIDATION.MAX_LIMIT(pr);
     }
     return errors;
 }
@@ -90,12 +91,12 @@ function TPPanel({ row, rowIdx, onChange, disabled }) {
     return (
         <div className="mt-2 rounded-xl border border-indigo-100 bg-indigo-50/50 p-3">
             <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest mb-2 flex items-center gap-1">
-                <FlaskConical className="w-3 h-3" /> Theory / Practical Breakdown
+                <FlaskConical className="w-3 h-3" /> {EXAM_CONSTS.ADD_SUBJECT.TP_BREAKDOWN}
             </p>
             {/* 2×2 grid */}
             <div className="grid grid-cols-2 gap-2">
                 <div>
-                    <p className="text-[10px] text-gray-500 font-semibold mb-1">Max Theory *</p>
+                    <p className="text-[10px] text-gray-500 font-semibold mb-1">{EXAM_CONSTS.ADD_SUBJECT.MAX_THEORY}</p>
                     <NumInput
                         value={row.maxTheoryMarks} disabled={disabled}
                         placeholder="e.g. 70"
@@ -105,7 +106,7 @@ function TPPanel({ row, rowIdx, onChange, disabled }) {
                     {row.errors.maxTheoryMarks && <p className="text-[10px] text-red-500 mt-0.5">{row.errors.maxTheoryMarks}</p>}
                 </div>
                 <div>
-                    <p className="text-[10px] text-gray-500 font-semibold mb-1">Max Practical *</p>
+                    <p className="text-[10px] text-gray-500 font-semibold mb-1">{EXAM_CONSTS.ADD_SUBJECT.MAX_PRACTICAL}</p>
                     <NumInput
                         value={row.maxPracticalMarks} disabled={disabled}
                         placeholder="e.g. 30"
@@ -115,7 +116,7 @@ function TPPanel({ row, rowIdx, onChange, disabled }) {
                     {row.errors.maxPracticalMarks && <p className="text-[10px] text-red-500 mt-0.5">{row.errors.maxPracticalMarks}</p>}
                 </div>
                 <div>
-                    <p className="text-[10px] text-gray-500 font-semibold mb-1">Pass Theory</p>
+                    <p className="text-[10px] text-gray-500 font-semibold mb-1">{EXAM_CONSTS.ADD_SUBJECT.PASS_THEORY}</p>
                     <NumInput
                         value={row.passingTheoryMarks} disabled={disabled}
                         placeholder="e.g. 23"
@@ -125,7 +126,7 @@ function TPPanel({ row, rowIdx, onChange, disabled }) {
                     {row.errors.passingTheoryMarks && <p className="text-[10px] text-red-500 mt-0.5">{row.errors.passingTheoryMarks}</p>}
                 </div>
                 <div>
-                    <p className="text-[10px] text-gray-500 font-semibold mb-1">Pass Practical</p>
+                    <p className="text-[10px] text-gray-500 font-semibold mb-1">{EXAM_CONSTS.ADD_SUBJECT.PASS_PRACTICAL}</p>
                     <NumInput
                         value={row.passingPracticalMarks} disabled={disabled}
                         placeholder="e.g. 10"
@@ -145,7 +146,7 @@ function TPPanel({ row, rowIdx, onChange, disabled }) {
                         ? <CheckCircle2 className="w-3 h-3 shrink-0" />
                         : <AlertCircle className="w-3 h-3 shrink-0" />}
                     <span className="font-mono">{th} + {pr} = {sum}</span>
-                    <span>{sumOk ? "✓ Matches max marks" : `Must equal ${max || "max marks"}`}</span>
+                    <span>{sumOk ? EXAM_CONSTS.ADD_SUBJECT.MATCHES_MAX : EXAM_CONSTS.ADD_SUBJECT.MUST_EQUAL(max)}</span>
                 </div>
             )}
             {row.errors.tpSum && <p className="text-[10px] text-red-500 mt-1">{row.errors.tpSum}</p>}
@@ -189,7 +190,7 @@ export default function AddSubjectForm({
     // Load subjects
     useEffect(() => {
         if (!classId) {
-            setTopError("No class selected. Please select an exam first.");
+            setTopError(EXAM_CONSTS.ADD_SUBJECT.NO_CLASS_SELECTED);
             setLoadingMeta(false);
             return;
         }
@@ -218,12 +219,12 @@ export default function AddSubjectForm({
                         return makeRowState(s, null, isAlreadyAdded);
                     }));
                     if (list.length === 0) {
-                        setTopError("No subjects mapped to this class yet.");
+                        setTopError(EXAM_CONSTS.ADD_SUBJECT.NO_SUBJECTS_MAPPED);
                     }
                 }
             } catch (err) {
                 console.error("getSectionSubjectsByClass error:", err);
-                setTopError("Failed to load subjects. Please close and try again.");
+                setTopError(EXAM_CONSTS.ADD_SUBJECT.LOAD_FAIL);
             } finally {
                 setLoadingMeta(false);
             }
@@ -313,13 +314,13 @@ export default function AddSubjectForm({
                     return next;
                 });
 
-                setSubmitError("Please fix the errors above.");
+                setSubmitError(EXAM_CONSTS.ADD_SUBJECT.FIX_ERRORS);
                 return;
             }
         } else {
             // Add mode: validate all included rows
             if (!someSelected) {
-                setSubmitError("Please select at least one subject to add.");
+                setSubmitError(EXAM_CONSTS.ADD_SUBJECT.SELECT_AT_LEAST_ONE);
                 return;
             }
 
@@ -339,7 +340,7 @@ export default function AddSubjectForm({
 
             if (hasErrors) {
                 setRows(nextRows);
-                setSubmitError("Please fix the errors in the highlighted rows.");
+                setSubmitError(EXAM_CONSTS.ADD_SUBJECT.FIX_HIGHLIGHTED);
                 return;
             }
         }
@@ -404,9 +405,7 @@ export default function AddSubjectForm({
 
                 // Optional skipped message
                 if (result?.skippedCount > 0) {
-                    setSubmitError(
-                        `${result.skippedCount} subject(s) were already added and skipped.`
-                    );
+                    setSubmitError(EXAM_CONSTS.ADD_SUBJECT.SKIPPED(result.skippedCount));
                 }
             }
 
@@ -414,7 +413,7 @@ export default function AddSubjectForm({
 
         } catch (err) {
             setSubmitError(
-                err?.message || "Failed to save subjects. Please try again."
+                err?.message || EXAM_CONSTS.ADD_SUBJECT.SAVE_FAIL
             );
         } finally {
             setSubmitting(false);
@@ -435,7 +434,7 @@ export default function AddSubjectForm({
                         </div>
                         <div className="min-w-0">
                             <h2 className="text-sm sm:text-base font-bold text-gray-900 leading-tight">
-                                {isEdit ? "Edit Subject Config" : "Add Subjects to Exam"}
+                                {isEdit ? EXAM_CONSTS.ADD_SUBJECT.TITLE_EDIT : EXAM_CONSTS.ADD_SUBJECT.TITLE_ADD}
                             </h2>
                             {examName && (
                                 <p className="text-xs text-gray-400 truncate mt-0.5">{examName}</p>
@@ -471,7 +470,7 @@ export default function AddSubjectForm({
                         </div>
                     ) : rows.length === 0 ? (
                         <div className="text-center py-12 text-gray-400 text-sm">
-                            No subjects available for this class.
+                            {EXAM_CONSTS.ADD_SUBJECT.NO_SUBJECTS_AVAIL}
                         </div>
                     ) : isEdit ? (
                         /* ── EDIT MODE: single subject form ── */
@@ -497,21 +496,21 @@ export default function AddSubjectForm({
                                             disabled={selectableRows.length === 0}
                                             className="w-4 h-4 accent-blue-600 cursor-pointer disabled:cursor-not-allowed"
                                         />
-                                        <span className="text-sm font-semibold text-gray-700">Select All</span>
+                                        <span className="text-sm font-semibold text-gray-700">{EXAM_CONSTS.ADD_SUBJECT.SELECT_ALL}</span>
                                     </label>
                                     {someSelected && (
                                         <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full">
-                                            {includedCount} selected
+                                            {includedCount} {EXAM_CONSTS.ADD_SUBJECT.SELECTED}
                                         </span>
                                     )}
                                     {alreadyAddedCount > 0 && (
                                         <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full flex items-center gap-1">
                                             <CheckCircle2 className="w-3 h-3" />
-                                            {alreadyAddedCount} already added
+                                            {alreadyAddedCount} {EXAM_CONSTS.ADD_SUBJECT.ALREADY_ADDED}
                                         </span>
                                     )}
                                 </div>
-                                <p className="text-xs text-gray-400">{rows.length} subject{rows.length !== 1 ? "s" : ""} total</p>
+                                <p className="text-xs text-gray-400">{rows.length} subject{rows.length !== 1 ? "s" : ""} {EXAM_CONSTS.ADD_SUBJECT.TOTAL}</p>
                             </div>
 
                             {/* ── DESKTOP TABLE (md+) ── */}
@@ -527,10 +526,10 @@ export default function AddSubjectForm({
                                                     className="w-4 h-4 accent-blue-600 cursor-pointer"
                                                 />
                                             </th>
-                                            <th className="px-3 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Subject</th>
-                                            <th className="px-3 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider w-28">Max Marks *</th>
-                                            <th className="px-3 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider w-28">Pass Marks *</th>
-                                            <th className="px-3 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider w-36">Theory + Practical</th>
+                                            <th className="px-3 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">{EXAM_CONSTS.ADD_SUBJECT.SUBJECT}</th>
+                                            <th className="px-3 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider w-28">{EXAM_CONSTS.ADD_SUBJECT.MAX_MARKS}</th>
+                                            <th className="px-3 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider w-28">{EXAM_CONSTS.ADD_SUBJECT.PASS_MARKS}</th>
+                                            <th className="px-3 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider w-36">{EXAM_CONSTS.ADD_SUBJECT.TP_COL}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -632,7 +631,7 @@ export default function AddSubjectForm({
                             onClick={onClose} disabled={submitting}
                             className="px-4 py-2 text-sm font-semibold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-all disabled:opacity-50"
                         >
-                            Cancel
+                            {EXAM_CONSTS.ADD_SUBJECT.CANCEL}
                         </button>
                         <button
                             onClick={handleSubmit}
@@ -643,8 +642,8 @@ export default function AddSubjectForm({
                                 ? <Loader2 className="w-4 h-4 animate-spin" />
                                 : <Save className="w-4 h-4" />}
                             {submitting
-                                ? (isEdit ? "Saving…" : "Adding…")
-                                : (isEdit ? "Save Changes" : `Add Subject${includedCount > 1 ? "s" : ""}`)}
+                                ? (isEdit ? EXAM_CONSTS.ADD_SUBJECT.SAVING : EXAM_CONSTS.ADD_SUBJECT.ADDING)
+                                : (isEdit ? EXAM_CONSTS.ADD_SUBJECT.SAVE_CHANGES : `${EXAM_CONSTS.ADD_SUBJECT.ADD_SUBJECT_BTN}${includedCount > 1 ? "s" : ""}`)}
                         </button>
                     </div>
                 </div>
@@ -671,7 +670,7 @@ function EditSingleRow({ row, rowIdx, onChange, onToggleTP, disabled }) {
             {/* Marks */}
             <div className="grid grid-cols-2 gap-3">
                 <div>
-                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Max Marks *</p>
+                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">{EXAM_CONSTS.ADD_SUBJECT.MAX_MARKS}</p>
                     <NumInput
                         value={row.maxMarks} disabled={disabled}
                         placeholder="e.g. 100"
@@ -681,7 +680,7 @@ function EditSingleRow({ row, rowIdx, onChange, onToggleTP, disabled }) {
                     {row.errors.maxMarks && <p className="text-xs text-red-500 mt-1">{row.errors.maxMarks}</p>}
                 </div>
                 <div>
-                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Passing Marks *</p>
+                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">{EXAM_CONSTS.ADD_SUBJECT.PASS_MARKS}</p>
                     <NumInput
                         value={row.passingMarks} disabled={disabled}
                         placeholder="e.g. 33"
@@ -705,8 +704,8 @@ function EditSingleRow({ row, rowIdx, onChange, onToggleTP, disabled }) {
                     className="w-4 h-4 accent-indigo-600 cursor-pointer flex-shrink-0"
                 />
                 <div>
-                    <p className="text-sm font-semibold text-gray-700">Has Theory + Practical Split</p>
-                    <p className="text-xs text-gray-400">Enable separate breakdown for theory and practical marks</p>
+                    <p className="text-sm font-semibold text-gray-700">{EXAM_CONSTS.ADD_SUBJECT.HAS_TP_SPLIT}</p>
+                    <p className="text-xs text-gray-400">{EXAM_CONSTS.ADD_SUBJECT.ENABLE_TP_SPLIT}</p>
                 </div>
             </label>
 
@@ -720,7 +719,6 @@ function EditSingleRow({ row, rowIdx, onChange, onToggleTP, disabled }) {
 // ─── Desktop table row ────────────────────────────────────────────────────────
 function DesktopRow({ row, rowIdx, onChange, onToggleInclude, onToggleTP, disabled }) {
     const hasRowError = Object.keys(row.errors).length > 0;
-    const isBlocked = row.alreadyAdded || disabled;
 
     // Already-added rows get a distinct muted green treatment
     if (row.alreadyAdded) {
@@ -750,7 +748,7 @@ function DesktopRow({ row, rowIdx, onChange, onToggleInclude, onToggleTP, disabl
                 <td colSpan={3} className="px-3 py-3 align-middle">
                     <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 bg-emerald-100 border border-emerald-200 px-3 py-1.5 rounded-full">
                         <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" />
-                        Already added to this exam
+                        {EXAM_CONSTS.ADD_SUBJECT.ALREADY_ADDED_BADGE}
                     </span>
                 </td>
             </tr>
@@ -833,7 +831,7 @@ function DesktopRow({ row, rowIdx, onChange, onToggleInclude, onToggleTP, disabl
                             className="w-3.5 h-3.5 accent-indigo-600 cursor-pointer"
                         />
                         <FlaskConical className={["w-3.5 h-3.5", row.hasTheoryPractical ? "text-indigo-500" : "text-gray-400"].join(" ")} />
-                        <span className="text-xs font-semibold text-gray-600">Split</span>
+                        <span className="text-xs font-semibold text-gray-600">{EXAM_CONSTS.ADD_SUBJECT.SPLIT}</span>
                     </label>
                 </td>
             </tr>
@@ -873,7 +871,7 @@ function MobileCard({ row, rowIdx, onChange, onToggleInclude, onToggleTP, disabl
                     </div>
                     <span className="text-xs font-semibold text-emerald-600 bg-emerald-100 border border-emerald-200 px-2 py-1 rounded-full shrink-0 flex items-center gap-1">
                         <CheckCircle2 className="w-3 h-3" />
-                        Added
+                        {EXAM_CONSTS.ADD_SUBJECT.ADDED_SHORT}
                     </span>
                 </div>
             </div>
@@ -923,7 +921,7 @@ function MobileCard({ row, rowIdx, onChange, onToggleInclude, onToggleTP, disabl
                     {/* Marks row */}
                     <div className="grid grid-cols-2 gap-2">
                         <div>
-                            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-1">Max Marks *</p>
+                            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-1">{EXAM_CONSTS.ADD_SUBJECT.MAX_MARKS}</p>
                             <NumInput
                                 value={row.maxMarks}
                                 onChange={(e) => onChange(rowIdx, "maxMarks", e.target.value)}
@@ -934,7 +932,7 @@ function MobileCard({ row, rowIdx, onChange, onToggleInclude, onToggleTP, disabl
                             {row.errors.maxMarks && <p className="text-[10px] text-red-500 mt-0.5">{row.errors.maxMarks}</p>}
                         </div>
                         <div>
-                            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-1">Pass Marks *</p>
+                            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-1">{EXAM_CONSTS.ADD_SUBJECT.PASS_MARKS}</p>
                             <NumInput
                                 value={row.passingMarks}
                                 onChange={(e) => onChange(rowIdx, "passingMarks", e.target.value)}
@@ -959,7 +957,7 @@ function MobileCard({ row, rowIdx, onChange, onToggleInclude, onToggleTP, disabl
                             className="w-4 h-4 accent-indigo-600 cursor-pointer flex-shrink-0"
                         />
                         <FlaskConical className="w-3.5 h-3.5 text-indigo-400 flex-shrink-0" />
-                        <span className="text-xs font-semibold text-gray-700">Has Theory + Practical Split</span>
+                        <span className="text-xs font-semibold text-gray-700">{EXAM_CONSTS.ADD_SUBJECT.HAS_TP_SPLIT}</span>
                     </label>
 
                     {row.hasTheoryPractical && (

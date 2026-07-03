@@ -17,9 +17,10 @@ import {
     getReportCards,
     getStudentReportCard,
     updateReportCardRemarks,
-} from "../../Api/Exams";
-import { getExams } from "../../Api/Exams";
-import { getActiveClasses, getActiveSectionsByClass } from "../../Api/TeachersAPI";
+} from "../../Api/Academics/Exams";
+import { getExams } from "../../Api/Academics/Exams";
+import { getActiveClasses, getActiveSectionsByClass } from "../../Api/Teachers/TeachersAPI";
+import { EXAM_CONSTS } from "../../Constants/StringConstants/AcademicsConstants";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function getGrade(pct, absent) {
@@ -41,10 +42,10 @@ function getRowBg(student) {
 }
 
 function getStatus(student) {
-    if (student.isAbsent) return { label: "ABSENT", cls: "bg-gray-100 text-gray-600 border-gray-200" };
+    if (student.isAbsent) return { label: EXAM_CONSTS.REPORT_CARDS.CSV.ABSENT, cls: "bg-gray-100 text-gray-600 border-gray-200" };
     return student.isPassed
-        ? { label: "PASS", cls: "bg-green-100 text-green-700 border-green-200" }
-        : { label: "FAIL", cls: "bg-red-100 text-red-600 border-red-200" };
+        ? { label: EXAM_CONSTS.STUDENT_REPORT.PASS_LBL.toUpperCase(), cls: "bg-green-100 text-green-700 border-green-200" }
+        : { label: EXAM_CONSTS.STUDENT_REPORT.FAIL_LBL.toUpperCase(), cls: "bg-red-100 text-red-600 border-red-200" };
 }
 
 function getRankDisplay(rank) {
@@ -65,16 +66,12 @@ function exportStudentsCSV({ students, examName, sectionLabel }) {
         const esc = (val) => `"${String(val ?? "").replace(/"/g, '""')}"`;
         const row = (arr) => arr.map(esc).join(",");
         const lines = [];
-        lines.push(row(["Report Cards Export"]));
-        if (examName) lines.push(row(["Exam", examName]));
-        if (sectionLabel) lines.push(row(["Section", sectionLabel]));
-        lines.push(row(["Total Students", students.length]));
+        lines.push(row([EXAM_CONSTS.REPORT_CARDS.CSV.TITLE]));
+        if (examName) lines.push(row([EXAM_CONSTS.REPORT_CARDS.CSV.EXAM, examName]));
+        if (sectionLabel) lines.push(row([EXAM_CONSTS.REPORT_CARDS.CSV.SECTION, sectionLabel]));
+        lines.push(row([EXAM_CONSTS.REPORT_CARDS.CSV.TOTAL_STUDENTS, students.length]));
         lines.push("");
-        lines.push(row([
-            "Rank", "Student Name", "Roll No.", "Admission No.",
-            "Section", "Marks Obtained", "Max Marks",
-            "Percentage", "Grade", "Status"
-        ]));
+        lines.push(row(EXAM_CONSTS.REPORT_CARDS.CSV.HEADERS));
         students.forEach((s) => {
             const pct = s.percentage ?? 0;
             const grade = getGrade(pct, s.isAbsent);
@@ -87,8 +84,8 @@ function exportStudentsCSV({ students, examName, sectionLabel }) {
                 s.sectionName ?? "",
                 s.totalMarksObtained ?? "",
                 s.totalMaxMarks ?? "",
-                s.isAbsent ? "ABSENT" : `${pct.toFixed(1)}%`,
-                s.isAbsent ? "AB" : (s.overallGrade || grade.label),
+                s.isAbsent ? EXAM_CONSTS.REPORT_CARDS.CSV.ABSENT : `${pct.toFixed(1)}%`,
+                s.isAbsent ? EXAM_CONSTS.REPORT_CARDS.CSV.AB : (s.overallGrade || grade.label),
                 status.label,
             ]));
         });
@@ -143,7 +140,7 @@ function StudentCard({ student, onView }) {
                     <div className="min-w-0">
                         <p className="text-sm font-semibold text-gray-800 truncate">{student.studentName}</p>
                         <p className="text-xs text-gray-400">
-                            Roll {student.rollNumber || "—"} · {student.admissionNumber || "—"}
+                            {EXAM_CONSTS.REPORT_CARDS.LBL_ROLL} {student.rollNumber || "—"} · {student.admissionNumber || "—"}
                         </p>
                     </div>
                 </div>
@@ -152,7 +149,7 @@ function StudentCard({ student, onView }) {
                     className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 transition-all shrink-0"
                 >
                     <Eye className="w-3 h-3" />
-                    View
+                    {EXAM_CONSTS.REPORT_CARDS.BTN_VIEW}
                 </button>
             </div>
             <div className="flex flex-wrap gap-1.5 items-center">
@@ -213,10 +210,10 @@ export default function ReportCards() {
     const absent = students.filter((s) => s.isAbsent).length;
 
     const STATS = [
-        { key: "Total Students", val: students.length, icon: Users, iconBgColor: "bg-blue-50", iconTxColor: "text-blue-600" },
-        { key: "Passed", val: students.length ? `${passed} — ${((passed / students.length) * 100).toFixed(1)}%` : "0", icon: CheckSquare, iconBgColor: "bg-green-50", iconTxColor: "text-green-600" },
-        { key: "Failed", val: failed, icon: XCircle, iconBgColor: "bg-red-50", iconTxColor: "text-red-500" },
-        { key: "Absent (All)", val: absent, icon: UserMinus, iconBgColor: "bg-gray-100", iconTxColor: "text-gray-500" },
+        { key: EXAM_CONSTS.REPORT_CARDS.STATS.TOTAL, val: students.length, icon: Users, iconBgColor: "bg-blue-50", iconTxColor: "text-blue-600" },
+        { key: EXAM_CONSTS.REPORT_CARDS.STATS.PASSED, val: students.length ? `${passed} — ${((passed / students.length) * 100).toFixed(1)}%` : "0", icon: CheckSquare, iconBgColor: "bg-green-50", iconTxColor: "text-green-600" },
+        { key: EXAM_CONSTS.REPORT_CARDS.STATS.FAILED, val: failed, icon: XCircle, iconBgColor: "bg-red-50", iconTxColor: "text-red-500" },
+        { key: EXAM_CONSTS.REPORT_CARDS.STATS.ABSENT, val: absent, icon: UserMinus, iconBgColor: "bg-gray-100", iconTxColor: "text-gray-500" },
     ];
 
     const filteredSections = sections;
@@ -373,7 +370,7 @@ export default function ReportCards() {
             setCardsLoaded(true);
         } catch (err) {
             console.error("loadReportCards error:", err);
-            setCardsError("Failed to load report cards. Click Generate All first if not yet generated.");
+            setCardsError(EXAM_CONSTS.REPORT_CARDS.ERR_LOAD_CARDS);
         } finally {
             setLoadingCards(false);
         }
@@ -398,10 +395,10 @@ export default function ReportCards() {
         setGenerateMsg(null);
         try {
             await generateReportCards(Number(selectedExamId));
-            setGenerateMsg("Report cards generated successfully!");
+            setGenerateMsg(EXAM_CONSTS.REPORT_CARDS.SUCC_GENERATE);
             await loadReportCards();
         } catch (err) {
-            setGenerateError(err.message ?? "Failed to generate report cards.");
+            setGenerateError(err.message ?? EXAM_CONSTS.REPORT_CARDS.ERR_GENERATE);
         } finally {
             setGenerating(false);
         }
@@ -417,7 +414,7 @@ export default function ReportCards() {
             const data = await getStudentReportCard(Number(selectedExamId), student.studentId);
             setSelectedStudent(data);
         } catch (err) {
-            setStudentCardError(`Failed to load report card for ${student.studentName}.`);
+            setStudentCardError(EXAM_CONSTS.REPORT_CARDS.ERR_LOAD_SINGLE(student.studentName));
         } finally {
             setLoadingStudentCard(false);
         }
@@ -452,28 +449,18 @@ export default function ReportCards() {
     const selectedExamObj = exams.find((e) => String(e.id) === selectedExamId);
 
     return (
-        // FIX 1: Root container — overflow-x-hidden prevents any child from blowing out the page width
         <div className="min-h-screen bg-[#f3f6fb] p-2 sm:p-3 lg:p-6 space-y-3 sm:space-y-4 lg:space-y-6 w-full max-w-full overflow-x-hidden">
 
             {/* Page Title */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <h2 className="text-lg sm:text-xl lg:text-3xl font-bold text-gray-900">
-                    <TooltipComponent message="Efficiently manage report cards." direction="right" color="nocolor">
-                        Manage Report Cards
+                    <TooltipComponent message={EXAM_CONSTS.REPORT_CARDS.TOOLTIP} direction="right" color="nocolor">
+                        {EXAM_CONSTS.REPORT_CARDS.TITLE}
                     </TooltipComponent>
                 </h2>
             </div>
 
             {/* ── 1. Stats Cards ── */}
-            {/*
-                FIX 2: Stats cards grid
-                - was: grid-cols-2 lg:grid-cols-4  → at 1024px (lg) all 4 cards squeezed into a row that's too narrow
-                - now: grid-cols-1 sm:grid-cols-2 xl:grid-cols-4
-                  · mobile  (< 640px)  → 1 column   — full width, no squeezing
-                  · tablet  (640–1279px) → 2 columns — comfortable on 768 and 1024px
-                  · desktop (≥ 1280px) → 4 columns  — original look on large screens
-                  Each card also gets min-w-0 so text truncates instead of blowing out the cell.
-            */}
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2 sm:gap-3">
                 {loadingCards || loadingMeta
                     ? Array(4).fill(0).map((_, i) => <CardLoader key={i} />)
@@ -491,14 +478,6 @@ export default function ReportCards() {
             </div>
 
             {/* ── 2. Top Filter Bar ── */}
-            {/*
-                FIX 3: Filter bar layout
-                - was: flex-col lg:flex-row  → at 1024px (lg) it goes single-row but all selects + buttons
-                  crammed horizontally, causing the exam select and action buttons to overflow.
-                - now: flex-col xl:flex-row  → stays stacked until 1280px, comfortable at 1024px.
-                  Left side inputs stay flex-col sm:flex-row (they wrap nicely on tablet).
-                  Action buttons stay flex-row with shrink-0 so they never collapse.
-            */}
             <div className="bg-white rounded-xl sm:rounded-2xl border border-gray-200 shadow-sm px-3 sm:px-4 lg:px-5 py-3.5">
                 <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3">
 
@@ -509,7 +488,7 @@ export default function ReportCards() {
                             value={selectedClassId}
                             onChange={(v) => { setSelectedClassId(v); setCardsLoaded(false); }}
                             options={[
-                                ...(loadingMeta ? [{ value: "", label: "Loading..." }] : []),
+                                ...(loadingMeta ? [{ value: "", label: EXAM_CONSTS.REPORT_CARDS.LOADING }] : []),
                                 ...classes.map((c) => ({ value: String(c.id), label: c.name }))
                             ]}
                             disabled={loadingMeta}
@@ -521,7 +500,7 @@ export default function ReportCards() {
                             value={selectedSectionId}
                             onChange={(v) => { setSelectedSectionId(v); }}
                             options={[
-                                { value: "", label: "All Sections" },
+                                { value: "", label: EXAM_CONSTS.REPORT_CARDS.SELECT_ALL_SEC },
                                 ...filteredSections.map((s) => ({ value: String(s.id), label: sectionLabel(s) }))
                             ]}
                             disabled={loadingMeta}
@@ -533,10 +512,10 @@ export default function ReportCards() {
                             value={selectedExamId}
                             onChange={(v) => setSelectedExamId(v)}
                             options={[
-                                { value: "", label: loadingExams ? "Loading exams..." : "Select Exam" },
+                                { value: "", label: loadingExams ? EXAM_CONSTS.REPORT_CARDS.LOADING_EXAMS : EXAM_CONSTS.REPORT_CARDS.SELECT_EXAM },
                                 ...exams.map((e) => ({
                                     value: String(e.id),
-                                    label: e.resultDeclared ? e.name : `${e.name} (Pending)`
+                                    label: e.resultDeclared ? e.name : `${e.name} (${EXAM_CONSTS.REPORT_CARDS.PENDING})`
                                 }))
                             ]}
                             disabled={loadingExams || !selectedClassId}
@@ -547,7 +526,7 @@ export default function ReportCards() {
                         <button
                             onClick={loadReportCards}
                             disabled={!selectedExamId || loadingCards}
-                            title="Reload Data"
+                            title={EXAM_CONSTS.REPORT_CARDS.RELOAD_TITLE}
                             className="flex items-center justify-center h-[38px] w-full sm:w-[38px] text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 active:scale-95 transition-all disabled:opacity-60 shrink-0"
                         >
                             {loadingCards ? (
@@ -559,13 +538,6 @@ export default function ReportCards() {
                     </div>
 
                     {/* Right side: Action Buttons */}
-                    {/*
-                        FIX 4: Action buttons
-                        - was: flex-col sm:flex-row  — at 1024px these stacked under selects when
-                          the parent was still in flex-col mode, then overflowed when parent went flex-row.
-                        - now: always flex-row with shrink-0 on each button so they never collapse.
-                          On mobile they stretch full-width via w-full; on sm+ they auto-size.
-                    */}
                     <div className="flex flex-row items-stretch gap-2 sm:gap-3 shrink-0">
                         {/* Generate All */}
                         <button
@@ -578,7 +550,7 @@ export default function ReportCards() {
                             ) : (
                                 <Sparkles className="w-4 h-4 shrink-0" />
                             )}
-                            <span>{generating ? "Generating..." : "Generate All"}</span>
+                            <span>{generating ? EXAM_CONSTS.REPORT_CARDS.BTN_GENERATING : EXAM_CONSTS.REPORT_CARDS.BTN_GENERATE}</span>
                         </button>
 
                         {/* Export CSV */}
@@ -588,7 +560,7 @@ export default function ReportCards() {
                             className="flex flex-1 sm:flex-none items-center justify-center gap-2 px-3 lg:px-4 h-[38px] text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-all shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
                         >
                             <Download className="w-4 h-4 shrink-0" />
-                            <span>Export CSV</span>
+                            <span>{EXAM_CONSTS.REPORT_CARDS.BTN_EXPORT}</span>
                         </button>
                     </div>
 
@@ -618,7 +590,7 @@ export default function ReportCards() {
             {loadingStudentCard && (
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm px-4 py-6 flex items-center justify-center gap-3 text-sm text-gray-500">
                     <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
-                    Loading report card...
+                    {EXAM_CONSTS.REPORT_CARDS.LOADING_CARD}
                 </div>
             )}
 
@@ -628,7 +600,7 @@ export default function ReportCards() {
                     <div className="flex items-center gap-2 min-w-0">
                         <Medal className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-500 shrink-0" />
                         <h2 className="text-xs sm:text-sm lg:text-base font-semibold text-gray-800 truncate">
-                            Class Rank
+                            {EXAM_CONSTS.REPORT_CARDS.CLASS_RANK}
                             {selectedSectionObj && (
                                 <> — <span className="text-blue-600">{sectionLabel(selectedSectionObj)}</span></>
                             )}
@@ -640,7 +612,7 @@ export default function ReportCards() {
                         </h2>
                     </div>
                     <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded-full shrink-0">
-                        {students.length} students
+                        {students.length} {EXAM_CONSTS.REPORT_CARDS.STUDENTS}
                     </span>
                 </div>
 
@@ -651,12 +623,6 @@ export default function ReportCards() {
                     </div>
                 )}
 
-                {/*
-                    FIX 5: Mobile/tablet card list breakpoint
-                    - was: block lg:hidden  → card list hidden at 1024px, desktop table shown instead (but overflows)
-                    - now: block xl:hidden  → card list shown up to 1279px (covers 768 and 1024px safely),
-                      desktop table only kicks in at 1280px where there's enough room.
-                */}
                 <div className="block xl:hidden">
                     {loadingCards ? (
                         <div className="p-4 space-y-3">
@@ -666,7 +632,7 @@ export default function ReportCards() {
                         </div>
                     ) : students.length === 0 ? (
                         <p className="text-sm text-gray-400 text-center py-10">
-                            {cardsLoaded ? "No report cards found." : "Select an exam and click Generate All or Reload."}
+                            {cardsLoaded ? EXAM_CONSTS.REPORT_CARDS.NO_CARDS_FOUND : EXAM_CONSTS.REPORT_CARDS.PROMPT_GENERATE}
                         </p>
                     ) : (
                         <div className="divide-y divide-gray-100">
@@ -677,24 +643,16 @@ export default function ReportCards() {
                     )}
                 </div>
 
-                {/*
-                    FIX 6: Desktop table breakpoint + scroll containment
-                    - was: hidden lg:block overflow-x-auto  → shown at 1024px, table min-w-[720px] overflowed the page
-                    - now: hidden xl:block                  → only shown at ≥ 1280px
-                      Inner wrapper gets overflow-x-auto + w-full so the scroll stays inside the card,
-                      not the whole page. min-w raised to 800px to give columns enough room.
-                */}
                 <div className="hidden xl:block">
                     <div className="overflow-x-auto w-full">
                         <table className="w-full min-w-[800px] text-sm">
                             <thead>
                                 <tr className="bg-gray-50 border-b border-gray-100">
-                                    {["Rank", "Student Name", "Roll No.", "Adm. No.", "Section",
-                                        "Total", "%", "Grade", "Status", "Action"].map((h) => (
-                                            <th key={h} className="text-left px-2 xl:px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                                                {h}
-                                            </th>
-                                        ))}
+                                    {EXAM_CONSTS.REPORT_CARDS.HEADERS.map((h) => (
+                                        <th key={h} className="text-left px-2 xl:px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                                            {h}
+                                        </th>
+                                    ))}
                                 </tr>
                             </thead>
                             <tbody>
@@ -704,8 +662,8 @@ export default function ReportCards() {
                                     <tr>
                                         <td colSpan={10} className="text-center text-sm text-gray-400 py-12">
                                             {cardsLoaded
-                                                ? "No report cards found for this selection."
-                                                : "Select an exam and click Generate All or Reload."}
+                                                ? EXAM_CONSTS.REPORT_CARDS.NO_CARDS_SELECTION
+                                                : EXAM_CONSTS.REPORT_CARDS.PROMPT_GENERATE}
                                         </td>
                                     </tr>
                                 ) : students.map((student) => {
@@ -745,7 +703,7 @@ export default function ReportCards() {
                                                     className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 transition-all whitespace-nowrap"
                                                 >
                                                     <Eye className="w-3.5 h-3.5" />
-                                                    View
+                                                    {EXAM_CONSTS.REPORT_CARDS.BTN_VIEW}
                                                 </button>
                                             </td>
                                         </tr>

@@ -1,42 +1,15 @@
 import { useState, useEffect } from 'react';
 import { X, Loader2, Search, ChevronRight, AlertCircle } from 'lucide-react';
 import { toast } from 'react-toastify';
-import { getAvailableTeachersForSlot } from '../../../Api/ScheduleApi';
-import { getSubjectsBySection } from '../../../Api/TeachersAPI';
+import { getAvailableTeachersForSlot } from '../../../Api/Academics/ScheduleApi';
+import SectionSubjectService from "../../../Api/Academics/SectionSubjectService";
+import { TIMETABLE_CONSTS } from '../../../Constants/StringConstants/TimetableConstants';
 
-/* ─── subject colour map ─────────────────────────────────────── */
-const SUBJECT_COLOR_MAP = {
-    MATH: { color: '#2563eb', bg: '#eff6ff', dot: '#3b82f6' },
-    ENG: { color: '#16a34a', bg: '#f0fdf4', dot: '#22c55e' },
-    SCI: { color: '#ca8a04', bg: '#fefce8', dot: '#eab308' },
-    HIN: { color: '#7c3aed', bg: '#f5f3ff', dot: '#8b5cf6' },
-    SST: { color: '#ea580c', bg: '#fff7ed', dot: '#f97316' },
-    COMP: { color: '#0d9488', bg: '#f0fdfa', dot: '#14b8a6' },
-    CS: { color: '#0d9488', bg: '#f0fdfa', dot: '#14b8a6' },
-    PE: { color: '#dc2626', bg: '#fef2f2', dot: '#ef4444' },
-    DRAW: { color: '#4f46e5', bg: '#eef2ff', dot: '#6366f1' },
-    BIO: { color: '#059669', bg: '#ecfdf5', dot: '#10b981' },
-    CHEM: { color: '#db2777', bg: '#fdf2f8', dot: '#ec4899' },
-    PHY: { color: '#0284c7', bg: '#f0f9ff', dot: '#0ea5e9' },
-    GEO: { color: '#65a30d', bg: '#f7fee7', dot: '#84cc16' },
-    HIST: { color: '#b45309', bg: '#fffbeb', dot: '#f59e0b' },
-};
-const COLOR_POOL = [
-    { color: '#2563eb', bg: '#eff6ff', dot: '#3b82f6' },
-    { color: '#16a34a', bg: '#f0fdf4', dot: '#22c55e' },
-    { color: '#7c3aed', bg: '#f5f3ff', dot: '#8b5cf6' },
-    { color: '#ea580c', bg: '#fff7ed', dot: '#f97316' },
-    { color: '#0d9488', bg: '#f0fdfa', dot: '#14b8a6' },
-    { color: '#dc2626', bg: '#fef2f2', dot: '#ef4444' },
-    { color: '#db2777', bg: '#fdf2f8', dot: '#ec4899' },
-    { color: '#0284c7', bg: '#f0f9ff', dot: '#0ea5e9' },
-];
+/* ─── Helpers (rely on constants now) ────────────────────────── */
 const getSubjectColor = (code, index) => {
     const upper = (code || '').toUpperCase();
-    return SUBJECT_COLOR_MAP[upper] || COLOR_POOL[index % COLOR_POOL.length];
+    return TIMETABLE_CONSTS.COLORS.SUBJECT_MAP[upper] || TIMETABLE_CONSTS.COLORS.SUBJECT_POOL[index % TIMETABLE_CONSTS.COLORS.SUBJECT_POOL.length];
 };
-
-const ROOMS = ['101', '102', 'Lab 1', 'Art', 'GRD'];
 
 const normalizeTeacher = (t) => ({
     id: t.teacherId,
@@ -46,17 +19,7 @@ const normalizeTeacher = (t) => ({
 });
 
 /* ─── avatar colours (cycle by id) ──────────────────────────── */
-const AVATAR_COLORS = [
-    { bg: '#e0f2fe', text: '#0369a1' },
-    { bg: '#dcfce7', text: '#15803d' },
-    { bg: '#ede9fe', text: '#6d28d9' },
-    { bg: '#fef3c7', text: '#92400e' },
-    { bg: '#fce7f3', text: '#9d174d' },
-    { bg: '#f0fdf4', text: '#166534' },
-    { bg: '#fff1f2', text: '#be123c' },
-    { bg: '#f0f9ff', text: '#0c4a6e' },
-];
-const avatarColor = (id) => AVATAR_COLORS[(id || 0) % AVATAR_COLORS.length];
+const avatarColor = (id) => TIMETABLE_CONSTS.COLORS.AVATAR_POOL[(id || 0) % TIMETABLE_CONSTS.COLORS.AVATAR_POOL.length];
 
 /* ─── SearchBar ──────────────────────────────────────────────── */
 function SearchBar({ value, onChange, placeholder, disabled }) {
@@ -185,7 +148,7 @@ export default function AddSlotModal({
     const [selectedTeacher, setSelectedTeacher] = useState(
         editSlot?.teacherId ?? editSlot?.teacher?.id ?? null
     );
-    const [selectedRoom, setSelectedRoom] = useState(editSlot?.room || '101');
+    const [selectedRoom, setSelectedRoom] = useState(editSlot?.room || TIMETABLE_CONSTS.ADD_SLOT.ROOMS[0]);
     const [subjectSearch, setSubjectSearch] = useState('');
     const [teacherSearch, setTeacherSearch] = useState('');
     const [formError, setFormError] = useState('');
@@ -193,7 +156,7 @@ export default function AddSlotModal({
 
     /* load subjects on mount */
     useEffect(() => {
-        if (!sectionId) { setSubjectError('sectionId not provided'); return; }
+        if (!sectionId) { setSubjectError(TIMETABLE_CONSTS.MESSAGES.ERR_LOAD_SUBJ); return; }
         loadSubjects();
     }, [sectionId]);
 
@@ -201,7 +164,7 @@ export default function AddSlotModal({
         try {
             setLoadingSubjects(true);
             setSubjectError('');
-            const data = await getSubjectsBySection(sectionId);
+            const data = await SectionSubjectService.getSubjectsBySection(sectionId);
             const enriched = (data || []).map((s, i) => ({
                 id: s.id,
                 code: s.code || s.subjectCode || '',
@@ -217,7 +180,7 @@ export default function AddSlotModal({
                 if (matched) setSelectedSubject(matched);
             }
         } catch {
-            setSubjectError('Failed to load subjects.');
+            setSubjectError(TIMETABLE_CONSTS.ADD_SLOT.ERR_LOAD_SUBJ);
         } finally {
             setLoadingSubjects(false);
         }
@@ -273,7 +236,7 @@ export default function AddSlotModal({
        When selectedTeacher is null, teacher is intentionally unassigned.
     ──────────────────────────────────────────────────────────────────── */
     const handleSave = async () => {
-        if (!selectedSubject) { setFormError('Please select a subject.'); return; }
+        if (!selectedSubject) { setFormError(TIMETABLE_CONSTS.ADD_SLOT.ERR_NO_SUBJ); return; }
         try {
             setSaving(true);
             const allTeachers = [...teachers.bestMatch, ...teachers.others, ...teachers.busy];
@@ -295,12 +258,12 @@ export default function AddSlotModal({
 
             // Toast on success
             if (teacher) {
-                toast.success(`Assigned to ${teacher.name}`, { position: 'top-right' });
+                toast.success(TIMETABLE_CONSTS.ADD_SLOT.SUCC_ASSIGNED(teacher.name), { position: 'top-right' });
             } else {
-                toast.success('Teacher unassigned', { position: 'top-right' });
+                toast.success(TIMETABLE_CONSTS.ADD_SLOT.SUCC_UNASSIGNED, { position: 'top-right' });
             }
         } catch {
-            toast.error('Failed to save. Please try again.', { position: 'top-right' });
+            toast.error(TIMETABLE_CONSTS.ADD_SLOT.ERR_SAVE_FAIL, { position: 'top-right' });
         } finally {
             setSaving(false);
         }
@@ -314,7 +277,7 @@ export default function AddSlotModal({
                 <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
                     <div className="flex items-center gap-3">
                         <h2 className="text-base font-semibold text-gray-900">
-                            {isEdit ? 'Edit Slot' : 'Add Slot'}
+                            {isEdit ? TIMETABLE_CONSTS.ADD_SLOT.TITLE_EDIT : TIMETABLE_CONSTS.ADD_SLOT.TITLE_ADD}
                         </h2>
                         <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1">
                             <span className="bg-slate-800 text-white text-[10px] font-semibold px-1.5 py-0.5 rounded">
@@ -340,7 +303,7 @@ export default function AddSlotModal({
 
                         <div className="px-5 pt-4 pb-2 flex items-center justify-between shrink-0">
                             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                                Subject <span className="text-red-400 normal-case">*</span>
+                                {TIMETABLE_CONSTS.ADD_SLOT.LBL_SUBJECT} <span className="text-red-400 normal-case">*</span>
                             </p>
                             {formError && (
                                 <p className="text-[11px] text-red-500">{formError}</p>
@@ -351,7 +314,7 @@ export default function AddSlotModal({
                             <SearchBar
                                 value={subjectSearch}
                                 onChange={setSubjectSearch}
-                                placeholder="Search subject…"
+                                placeholder={TIMETABLE_CONSTS.ADD_SLOT.PH_SEARCH_SUBJ}
                                 disabled={loadingSubjects || !!subjectError}
                             />
                         </div>
@@ -359,17 +322,17 @@ export default function AddSlotModal({
                         <div className="flex-1 overflow-y-auto px-4 min-h-0">
                             {loadingSubjects ? (
                                 <div className="flex items-center justify-center gap-2 text-sm text-gray-400 py-12">
-                                    <Loader2 size={15} className="animate-spin" /> Loading…
+                                    <Loader2 size={15} className="animate-spin" /> {TIMETABLE_CONSTS.ADD_SLOT.LBL_LOADING}
                                 </div>
                             ) : subjectError ? (
                                 <div className="flex items-center justify-between text-xs text-red-500 bg-red-50 px-3 py-2.5 rounded-xl border border-red-100 mt-2">
                                     <span>{subjectError}</span>
-                                    <button onClick={loadSubjects} className="underline ml-2 shrink-0">Retry</button>
+                                    <button onClick={loadSubjects} className="underline ml-2 shrink-0">{TIMETABLE_CONSTS.ADD_SLOT.BTN_RETRY}</button>
                                 </div>
                             ) : subjects.length === 0 ? (
-                                <p className="text-xs text-gray-400 text-center py-12 italic">No subjects found</p>
+                                <p className="text-xs text-gray-400 text-center py-12 italic">{TIMETABLE_CONSTS.ADD_SLOT.NO_SUBJECTS}</p>
                             ) : filteredSubjects.length === 0 ? (
-                                <p className="text-xs text-gray-400 text-center py-8 italic">No match for "{subjectSearch}"</p>
+                                <p className="text-xs text-gray-400 text-center py-8 italic">{TIMETABLE_CONSTS.ADD_SLOT.NO_MATCH(subjectSearch)}</p>
                             ) : (
                                 <div className="flex flex-col gap-1.5 pb-2">
                                     {filteredSubjects.map(s => {
@@ -403,16 +366,16 @@ export default function AddSlotModal({
                         {/* room picker */}
                         <div className="px-4 py-4 border-t border-gray-100 shrink-0">
                             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                                Room / Venue
+                                {TIMETABLE_CONSTS.ADD_SLOT.LBL_ROOM}
                             </p>
                             <div className="flex items-center gap-2 flex-wrap">
                                 <input
                                     value={selectedRoom}
                                     onChange={e => setSelectedRoom(e.target.value)}
-                                    placeholder="Room…"
+                                    placeholder={TIMETABLE_CONSTS.ADD_SLOT.PH_ROOM}
                                     className="w-20 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-gray-400 text-gray-700 transition"
                                 />
-                                {ROOMS.map(r => (
+                                {TIMETABLE_CONSTS.ADD_SLOT.ROOMS.map(r => (
                                     <button key={r}
                                         onClick={() => setSelectedRoom(r)}
                                         className={`px-3 py-2 rounded-xl text-xs font-medium border transition
@@ -430,14 +393,14 @@ export default function AddSlotModal({
                     <div className="flex-1 flex flex-col overflow-hidden min-h-0">
 
                         <div className="px-5 pt-4 pb-2 shrink-0">
-                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Teacher</p>
+                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{TIMETABLE_CONSTS.ADD_SLOT.LBL_TEACHER}</p>
                         </div>
 
                         <div className="px-4 pb-2 shrink-0">
                             <SearchBar
                                 value={teacherSearch}
                                 onChange={setTeacherSearch}
-                                placeholder="Search by name…"
+                                placeholder={TIMETABLE_CONSTS.ADD_SLOT.PH_SEARCH_TEACHER}
                                 disabled={!selectedSubject}
                             />
                         </div>
@@ -454,25 +417,25 @@ export default function AddSlotModal({
                                     ${selectedTeacher === null ? 'border-slate-800' : 'border-gray-300'}`}>
                                     {selectedTeacher === null && <span className="w-2 h-2 rounded-full bg-slate-800 block" />}
                                 </span>
-                                <span className="text-sm text-gray-400 italic">Not Assigned</span>
+                                <span className="text-sm text-gray-400 italic">{TIMETABLE_CONSTS.ADD_SLOT.LBL_NOT_ASSIGNED}</span>
                             </button>
 
                             {/* ── states ── */}
                             {!selectedSubject ? (
-                                <p className="text-xs text-gray-400 text-center py-10 italic">Select a subject first</p>
+                                <p className="text-xs text-gray-400 text-center py-10 italic">{TIMETABLE_CONSTS.ADD_SLOT.LBL_SELECT_SUBJ_FIRST}</p>
                             ) : loadingTeachers ? (
                                 <div className="flex items-center justify-center gap-2 text-xs text-gray-400 py-10">
-                                    <Loader2 size={13} className="animate-spin" /> Loading teachers…
+                                    <Loader2 size={13} className="animate-spin" /> {TIMETABLE_CONSTS.ADD_SLOT.LOADING_TEACHERS}
                                 </div>
                             ) : !hasAny ? (
-                                <p className="text-xs text-gray-400 text-center py-10 italic">No teachers found</p>
+                                <p className="text-xs text-gray-400 text-center py-10 italic">{TIMETABLE_CONSTS.ADD_SLOT.NO_TEACHERS}</p>
                             ) : totalFiltered === 0 ? (
-                                <p className="text-xs text-gray-400 text-center py-10 italic">No match for "{teacherSearch}"</p>
+                                <p className="text-xs text-gray-400 text-center py-10 italic">{TIMETABLE_CONSTS.ADD_SLOT.NO_MATCH(teacherSearch)}</p>
                             ) : (
                                 <>
                                     {filteredBest.length > 0 && (
                                         <>
-                                            <SectionLabel className="text-emerald-600">Best Match</SectionLabel>
+                                            <SectionLabel className="text-emerald-600">{TIMETABLE_CONSTS.ADD_SLOT.LBL_BEST_MATCH}</SectionLabel>
                                             {filteredBest.map(t => (
                                                 <TeacherRow key={t.id} t={t}
                                                     selected={selectedTeacher === t.id}
@@ -483,7 +446,7 @@ export default function AddSlotModal({
                                     )}
                                     {filteredOthers.length > 0 && (
                                         <>
-                                            <SectionLabel className="text-gray-400">Others</SectionLabel>
+                                            <SectionLabel className="text-gray-400">{TIMETABLE_CONSTS.ADD_SLOT.LBL_OTHERS}</SectionLabel>
                                             {filteredOthers.map(t => (
                                                 <TeacherRow key={t.id} t={t}
                                                     selected={selectedTeacher === t.id}
@@ -492,10 +455,10 @@ export default function AddSlotModal({
                                             ))}
                                         </>
                                     )}
-                                    {/* ── FIX: Busy teachers are READ-ONLY — no radio, no selection ── */}
+                                    {/* ── Busy teachers are READ-ONLY — no radio, no selection ── */}
                                     {filteredBusy.length > 0 && (
                                         <>
-                                            <SectionLabel className="text-red-400">Busy / Conflict</SectionLabel>
+                                            <SectionLabel className="text-red-400">{TIMETABLE_CONSTS.ADD_SLOT.LBL_BUSY}</SectionLabel>
                                             {filteredBusy.map(t => (
                                                 <TeacherRow key={t.id} t={t}
                                                     selected={false}
@@ -515,11 +478,11 @@ export default function AddSlotModal({
                 <div className="flex justify-end gap-2.5 px-6 py-4 border-t border-gray-100 bg-gray-50/50 shrink-0">
                     <button onClick={onClose}
                         className="px-5 py-2 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-100 transition">
-                        Cancel
+                        {TIMETABLE_CONSTS.ADD_SLOT.BTN_CANCEL}
                     </button>
                     <button onClick={handleSave} disabled={saving || loadingSubjects}
                         className="px-6 py-2 bg-slate-800 text-white rounded-xl text-sm font-medium hover:bg-slate-700 transition disabled:opacity-50">
-                        {saving ? 'Saving…' : isEdit ? 'Update Slot' : 'Add Slot'}
+                        {saving ? TIMETABLE_CONSTS.ADD_SLOT.BTN_SAVING : isEdit ? TIMETABLE_CONSTS.ADD_SLOT.BTN_UPDATE : TIMETABLE_CONSTS.ADD_SLOT.BTN_ADD}
                     </button>
                 </div>
             </div>

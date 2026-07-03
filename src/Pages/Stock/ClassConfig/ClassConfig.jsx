@@ -13,45 +13,46 @@ import {
     getClassItemConfigStats,
     getClassItemConfigs,
     deleteClassItemConfig,
-} from "../../../Api/StudentStoreApi";
-import { getClasses } from "../../../Api/TeachersAPI";
+} from "../../../Api/Stock/StudentStoreApi";
+import { getClasses } from "../../../Api/Teachers/TeachersAPI";
 import { toast } from "react-toastify";
-import { saveClassItemConfigsBulk } from "../../../Api/StudentOrder";
+import { saveClassItemConfigsBulk } from "../../../Api/Stock/StudentOrder";
+import { STOCK_SHARED_CONSTS, CLASS_CONFIG_CONSTS } from "../../../Constants/StringConstants/StockAndOrdersConstants";
 
 const categoryColors = {
-    BOOKS:      "bg-blue-100 text-blue-700",
+    BOOKS: "bg-blue-100 text-blue-700",
     STATIONERY: "bg-gray-100 text-gray-700",
-    LAB:        "bg-purple-100 text-purple-700",
-    SPORTS:     "bg-green-100 text-green-700",
+    LAB: "bg-purple-100 text-purple-700",
+    SPORTS: "bg-green-100 text-green-700",
 };
 
 const actionOptions = [
-    { value: "edit",   label: "Edit",   icon: Edit,   text: "text-blue-600", bg: "bg-white", hover: "hover:bg-blue-50" },
-    { value: "delete", label: "Delete", icon: Trash2, text: "text-red-600",  bg: "bg-white", hover: "hover:bg-red-50"  },
+    { value: "edit", label: CLASS_CONFIG_CONSTS.ACTIONS.EDIT, icon: Edit, text: "text-blue-600", bg: "bg-white", hover: "hover:bg-blue-50" },
+    { value: "delete", label: CLASS_CONFIG_CONSTS.ACTIONS.DELETE, icon: Trash2, text: "text-red-600", bg: "bg-white", hover: "hover:bg-red-50" },
 ];
 
 export default function ClassConfig() {
     // ── Classes list ──
-    const [classes, setClasses]           = useState([]);
+    const [classes, setClasses] = useState([]);
     const [loadingClasses, setLoadingClasses] = useState(true);
-    const [selectedClass, setSelectedClass]   = useState(null);
+    const [selectedClass, setSelectedClass] = useState(null);
 
     // ── Config items for selected class ──
-    const [configItems, setConfigItems]   = useState([]);
+    const [configItems, setConfigItems] = useState([]);
     const [loadingItems, setLoadingItems] = useState(false);
-    const [deletingId, setDeletingId]     = useState(null);
+    const [deletingId, setDeletingId] = useState(null);
 
     // ── Stats ──
     const [statsData, setStatsData] = useState({
-        classesConfigured:  0,
+        classesConfigured: 0,
         totalConfigEntries: 0,
-        totalActiveItems:   0,
+        totalActiveItems: 0,
     });
     const [loadingStats, setLoadingStats] = useState(true);
 
     // ── Modal ──
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editRow, setEditRow]         = useState(null);
+    const [editRow, setEditRow] = useState(null);
 
     // ── Fetch classes ──
     useEffect(() => {
@@ -59,11 +60,11 @@ export default function ClassConfig() {
             setLoadingClasses(true);
             try {
                 const data = await getClasses();
-console.log("API called", data);
+                console.log("API called", data);
                 setClasses(data || []);
                 if (data?.length > 0) setSelectedClass(data[0]);
             } catch {
-                toast.error("Failed to load classes.");
+                toast.error(CLASS_CONFIG_CONSTS.MESSAGES.LOAD_CLASSES_FAILED);
             } finally {
                 setLoadingClasses(false);
             }
@@ -90,7 +91,7 @@ console.log("API called", data);
             const data = await getClassItemConfigs(classId);
             setConfigItems(Array.isArray(data) ? data : []);
         } catch {
-            toast.error("Failed to load items for this class.");
+            toast.error(CLASS_CONFIG_CONSTS.MESSAGES.LOAD_ITEMS_FAILED);
         } finally {
             setLoadingItems(false);
         }
@@ -113,11 +114,11 @@ console.log("API called", data);
             setDeletingId(row.id);
             try {
                 await deleteClassItemConfig(row.id);
-                toast.success(`"${row.itemName}" removed from ${selectedClass?.name}.`);
+                toast.success(CLASS_CONFIG_CONSTS.MESSAGES.ITEM_REMOVED(row.itemName, selectedClass?.name));
                 await fetchItems(selectedClass.id);
                 await fetchStats();
             } catch {
-                toast.error("Failed to delete item.");
+                toast.error(CLASS_CONFIG_CONSTS.MESSAGES.DELETE_FAILED);
             } finally {
                 setDeletingId(null);
             }
@@ -129,7 +130,7 @@ console.log("API called", data);
     const handleSave = async (payload) => {
         const items = payload?.items;
         if (!items || items.length === 0) {
-            toast.error("No items to save.");
+            toast.error(CLASS_CONFIG_CONSTS.MESSAGES.NO_ITEMS_TO_SAVE);
             return;
         }
         try {
@@ -144,8 +145,8 @@ console.log("API called", data);
             const count = items.length;
             toast.success(
                 editRow
-                    ? `"${editRow.itemName}" updated successfully.`
-                    : `${count} item${count > 1 ? "s" : ""} added to ${selectedClass?.name}.`
+                    ? CLASS_CONFIG_CONSTS.MESSAGES.ITEM_UPDATED(editRow.itemName)
+                    : CLASS_CONFIG_CONSTS.MESSAGES.ITEMS_ADDED(count, selectedClass?.name)
             );
 
             setEditRow(null);
@@ -153,7 +154,7 @@ console.log("API called", data);
             await fetchItems(selectedClass.id);
             await fetchStats();
         } catch {
-            toast.error(editRow ? "Failed to update item." : "Failed to add items.");
+            toast.error(editRow ? CLASS_CONFIG_CONSTS.MESSAGES.UPDATE_FAILED : CLASS_CONFIG_CONSTS.MESSAGES.ADD_FAILED);
         }
     };
 
@@ -163,21 +164,21 @@ console.log("API called", data);
 
     const stats = [
         {
-            key: "Classes Configured",
+            key: CLASS_CONFIG_CONSTS.STATS.CLASSES_CONFIGURED,
             val: statsData.classesConfigured,
             icon: School,
             txColor: "text-blue-600",
             bgColor: "bg-blue-50",
         },
         {
-            key: "Total Config Entries",
+            key: CLASS_CONFIG_CONSTS.STATS.TOTAL_CONFIG_ENTRIES,
             val: statsData.totalConfigEntries,
             icon: LayoutGrid,
             txColor: "text-orange-500",
             bgColor: "bg-orange-50",
         },
         {
-            key: "Items Available",
+            key: CLASS_CONFIG_CONSTS.STATS.ITEMS_AVAILABLE,
             val: statsData.totalActiveItems,
             icon: Package,
             txColor: "text-yellow-600",
@@ -201,9 +202,9 @@ console.log("API called", data);
 
                 {/* ── Page Header ── */}
                 <div className="mb-6">
-                    <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">Class Config</h1>
+                    <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">{CLASS_CONFIG_CONSTS.TEXT.TITLE}</h1>
                     <p className="text-gray-500 text-sm mt-1">
-                        Configure default items for each class. Items are auto-loaded when creating a student order.
+                        {CLASS_CONFIG_CONSTS.TEXT.SUBTITLE}
                     </p>
                 </div>
 
@@ -231,7 +232,7 @@ console.log("API called", data);
                         <div className="flex items-center justify-between px-4 py-4 border-b border-gray-100">
                             <div className="flex items-center gap-2">
                                 <School className="w-5 h-5 text-blue-500" />
-                                <h2 className="font-semibold text-gray-800">Classes</h2>
+                                <h2 className="font-semibold text-gray-800">{CLASS_CONFIG_CONSTS.TEXT.CLASSES_PANEL_TITLE}</h2>
                             </div>
                             <span className="text-xs text-gray-400">{classes.length} classes</span>
                         </div>
@@ -244,7 +245,7 @@ console.log("API called", data);
                                     </div>
                                 ))
                             ) : classes.length === 0 ? (
-                                <div className="px-4 py-8 text-center text-gray-400 text-sm">No classes found.</div>
+                                <div className="px-4 py-8 text-center text-gray-400 text-sm">{CLASS_CONFIG_CONSTS.TEXT.NO_CLASSES_FOUND}</div>
                             ) : (
                                 classes.map((cls) => {
                                     const isSelected = selectedClass?.id === cls.id;
@@ -289,7 +290,7 @@ console.log("API called", data);
                                 <BookOpen className="w-5 h-5 text-blue-500 shrink-0" />
                                 <div className="min-w-0">
                                     <h2 className="font-semibold text-gray-800 truncate">
-                                        {selectedClass ? `${selectedClass.name} — Default Item Configuration` : "Default Item Configuration"}
+                                        {selectedClass ? CLASS_CONFIG_CONSTS.TEXT.DEFAULT_CONFIG_TITLE(selectedClass.name) : CLASS_CONFIG_CONSTS.TEXT.DEFAULT_CONFIG_TITLE_FALLBACK}
                                     </h2>
                                     {selectedClass?.description && (
                                         <p className="text-xs text-gray-400 truncate">{selectedClass.description}</p>
@@ -311,11 +312,11 @@ console.log("API called", data);
                             <table className="w-full">
                                 <thead>
                                     <tr className="bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-100">
-                                        <th className="px-5 py-3 text-left">Item</th>
-                                        <th className="px-5 py-3 text-left">Category</th>
-                                        <th className="px-5 py-3 text-center text-nowrap">Default Quantity</th>
-                                        <th className="px-5 py-3 text-center">Remarks</th>
-                                        <th className="px-5 py-3 text-center">Actions</th>
+                                        <th className="px-5 py-3 text-left">{CLASS_CONFIG_CONSTS.TABLE_HEADERS.ITEM}</th>
+                                        <th className="px-5 py-3 text-left">{CLASS_CONFIG_CONSTS.TABLE_HEADERS.CATEGORY}</th>
+                                        <th className="px-5 py-3 text-center text-nowrap">{CLASS_CONFIG_CONSTS.TABLE_HEADERS.DEFAULT_QUANTITY}</th>
+                                        <th className="px-5 py-3 text-center">{CLASS_CONFIG_CONSTS.TABLE_HEADERS.REMARKS}</th>
+                                        <th className="px-5 py-3 text-center">{CLASS_CONFIG_CONSTS.TABLE_HEADERS.ACTIONS}</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
@@ -326,12 +327,12 @@ console.log("API called", data);
                                             <td colSpan={5} className="px-5 py-14 text-center">
                                                 <div className="flex flex-col items-center gap-2">
                                                     <Package className="w-10 h-10 text-gray-200" />
-                                                    <p className="text-sm text-gray-400">No items configured for this class.</p>
+                                                    <p className="text-sm text-gray-400">{CLASS_CONFIG_CONSTS.TEXT.NO_ITEMS_FOR_CLASS}</p>
                                                     <button
                                                         onClick={() => { setEditRow(null); setIsModalOpen(true); }}
                                                         className="mt-1 text-sm cursor-pointer text-blue-600 font-semibold hover:underline"
                                                     >
-                                                        + Add first item
+                                                        {CLASS_CONFIG_CONSTS.TEXT.ADD_FIRST_ITEM}
                                                     </button>
                                                 </div>
                                             </td>
@@ -386,12 +387,12 @@ console.log("API called", data);
                             ) : configItems.length === 0 ? (
                                 <div className="flex flex-col items-center gap-2 py-12">
                                     <Package className="w-10 h-10 text-gray-200" />
-                                    <p className="text-sm text-gray-400">No items configured.</p>
+                                    <p className="text-sm text-gray-400">{CLASS_CONFIG_CONSTS.TEXT.NO_ITEMS_CONFIGURED}</p>
                                     <button
                                         onClick={() => { setEditRow(null); setIsModalOpen(true); }}
                                         className="mt-1 text-sm text-blue-600 cursor-pointer font-semibold hover:underline"
                                     >
-                                        + Add first item
+                                        {CLASS_CONFIG_CONSTS.TEXT.ADD_FIRST_ITEM}
                                     </button>
                                 </div>
                             ) : (

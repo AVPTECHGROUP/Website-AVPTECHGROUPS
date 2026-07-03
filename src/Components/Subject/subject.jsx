@@ -2,8 +2,8 @@ import { useState, useEffect, useCallback } from "react";
 import {
   getSubjectsWithFilters,
   deleteSubject,
-} from "../../Api/subject";
-import { getSubjectCategoryLov } from "../../Api/ListOfValues";
+} from "../../Api/Academics/subject";
+import { getSubjectCategoryLov } from "../../Api/Lov/ListOfValues";
 import AddNewSubject from "./AddnewSubject";
 import SectionSubjectAssignment from "../../Pages/SubjectManagement/SectionSubjectAssignment";
 import { Eye } from "lucide-react";

@@ -19,7 +19,7 @@ export function jwtDecode(token) {
 const clearSessionAndRedirect = () => {
   localStorage.removeItem('token');
   localStorage.removeItem('user');
-  window.location.href = '/login'; // ✅ redirect instead of reload
+  window.location.href = '/login';
 };
 
 export const getCurrUserDetails = () => {

@@ -1,23 +1,20 @@
 import { useState, useEffect, useCallback } from "react";
 import { RefreshCw, Download, AlertTriangle, LocateFixedIcon } from "lucide-react";
 import { toast } from "react-toastify";
-import { getVehicleCapacityUtilizationReport } from "../../../Api/TransportAPI";
+import { getVehicleCapacityReport } from "../../../Api/Transport/TransportAPI";
 import ListLoader from "../../../Components/CommonComp/ListLoader";
-
-const typeColors = {
-  BUS:      "bg-blue-100 text-blue-700",
-  MINI_BUS: "bg-teal-100 text-teal-700",
-  VAN:      "bg-orange-100 text-orange-700",
-};
-
-const typeLabel = {
-  BUS:      "BUS",
-  MINI_BUS: "MINI BUS",
-  VAN:      "VAN",
-};
+import {
+  VEHICLE_TYPE_COLORS,
+  VEHICLE_TYPE_LABELS,
+  VEHICLE_CAPACITY_COLUMNS,
+  REPORT_UI_TEXT,
+  EXPORT_CONSTANTS,
+  CSV_HEADERS,
+  TOAST_MESSAGES
+} from "../../../Constants/StringConstants/TransportConstants";
 
 function UtilBar({ alloc, cap }) {
-  const pct   = cap > 0 ? Math.round((alloc / cap) * 100) : 0;
+  const pct = cap > 0 ? Math.round((alloc / cap) * 100) : 0;
   const color = pct >= 100 ? "bg-red-500" : pct >= 80 ? "bg-orange-400" : pct > 0 ? "bg-blue-500" : "bg-gray-200";
   return (
     <div className="flex items-center gap-2">
@@ -36,32 +33,26 @@ function exportToCSV(data) {
   if (!data?.length) return;
 
   const rows = [];
-  rows.push(["Vehicle Capacity Utilisation Report"]);
+  rows.push([EXPORT_CONSTANTS.CAPACITY_REPORT_TITLE]);
   rows.push([]);
-  rows.push([
-    "Vehicle No.", "Type", "Make/Model", "Total Capacity",
-    "Allocated", "Available", "Utilisation %",
-    "Insurance Expiry", "Insurance Expiring Soon",
-    "Fitness Expiry", "Fitness Expiring Soon",
-    "GPS Enabled", "Status", "Routes Assigned",
-  ]);
+  rows.push(CSV_HEADERS.VEHICLE_CAPACITY);
 
   data.forEach((v) => {
     rows.push([
       v.vehicleNumber,
-      typeLabel[v.vehicleType] || v.vehicleType,
+      VEHICLE_TYPE_LABELS[v.vehicleType] || v.vehicleType,
       v.makeModel,
       v.totalCapacity,
       v.totalStudentsAllocated,
       v.availableSeats,
       `${Math.round(v.utilizationPercent)}%`,
-      v.insuranceExpiryDate    || "N/A",
-      v.insuranceExpiringSoon  ? "Yes" : "No",
-      v.fitnessCertExpiryDate  || "N/A",
-      v.fitnessExpiringSoon    ? "Yes" : "No",
-      v.gpsEnabled ? "Yes" : "No",
+      v.insuranceExpiryDate || REPORT_UI_TEXT.N_A,
+      v.insuranceExpiringSoon ? REPORT_UI_TEXT.YES : REPORT_UI_TEXT.NO,
+      v.fitnessCertExpiryDate || REPORT_UI_TEXT.N_A,
+      v.fitnessExpiringSoon ? REPORT_UI_TEXT.YES : REPORT_UI_TEXT.NO,
+      v.gpsEnabled ? REPORT_UI_TEXT.YES : REPORT_UI_TEXT.NO,
       v.status,
-      v.routeBreakdown?.map((r) => r.routeCode).join(", ") || "Unassigned",
+      v.routeBreakdown?.map((r) => r.routeCode).join(", ") || REPORT_UI_TEXT.UNASSIGNED,
     ]);
   });
 
@@ -70,17 +61,17 @@ function exportToCSV(data) {
     .join("\n");
 
   const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-  const url  = URL.createObjectURL(blob);
+  const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
-  link.href     = url;
-  link.download = "vehicle_capacity_report.csv";
+  link.href = url;
+  link.download = EXPORT_CONSTANTS.CAPACITY_FILE_NAME;
   link.click();
   URL.revokeObjectURL(url);
 }
 
 // ─── Expiry date formatter ────────────────────────────────────────
 function fmtDate(dateStr) {
-  if (!dateStr) return "N/A";
+  if (!dateStr) return REPORT_UI_TEXT.N_A;
   const d = new Date(dateStr);
   return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
 }
@@ -98,26 +89,25 @@ function VehicleCard({ v }) {
             </span>
           )}
         </div>
-        <span className={`text-xs font-semibold px-2.5 py-1 rounded-full shrink-0 ${typeColors[v.vehicleType] ?? "bg-gray-100 text-gray-600"}`}>
-          {typeLabel[v.vehicleType] || v.vehicleType}
+        <span className={`text-xs font-semibold px-2.5 py-1 rounded-full shrink-0 ${VEHICLE_TYPE_COLORS[v.vehicleType] ?? "bg-gray-100 text-gray-600"}`}>
+          {VEHICLE_TYPE_LABELS[v.vehicleType] || v.vehicleType}
         </span>
       </div>
 
       <p className="text-xs text-gray-400 truncate">{v.makeModel}</p>
-
       <UtilBar alloc={v.totalStudentsAllocated} cap={v.totalCapacity} />
 
       <div className="grid grid-cols-3 gap-2 bg-gray-50/70 p-2.5 rounded-xl text-xs border border-gray-100">
         <div>
-          <span className="text-gray-400 block mb-0.5">Capacity</span>
+          <span className="text-gray-400 block mb-0.5">{REPORT_UI_TEXT.LBL_CAPACITY}</span>
           <span className="font-bold text-gray-700">{v.totalCapacity}</span>
         </div>
         <div>
-          <span className="text-gray-400 block mb-0.5">Allocated</span>
+          <span className="text-gray-400 block mb-0.5">{REPORT_UI_TEXT.LBL_ALLOCATED}</span>
           <span className="font-bold text-gray-700">{v.totalStudentsAllocated}</span>
         </div>
         <div>
-          <span className="text-gray-400 block mb-0.5">Available</span>
+          <span className="text-gray-400 block mb-0.5">{REPORT_UI_TEXT.LBL_AVAILABLE}</span>
           <span className={`font-bold flex items-center gap-1 ${v.availableSeats === 0 ? "text-orange-500" : v.availableSeats < 0 ? "text-red-500" : "text-green-600"}`}>
             {v.availableSeats}
             {v.availableSeats === 0 && <AlertTriangle className="w-3.5 h-3.5 shrink-0" />}
@@ -128,22 +118,22 @@ function VehicleCard({ v }) {
       <div className="flex flex-wrap gap-3 text-xs">
         <span className={v.insuranceExpiringSoon ? "text-orange-500 font-semibold flex items-center gap-1" : "text-gray-500 flex items-center gap-1"}>
           {v.insuranceExpiringSoon && <AlertTriangle className="w-3.5 h-3.5 shrink-0" />}
-          Ins: {fmtDate(v.insuranceExpiryDate)}
+          {REPORT_UI_TEXT.LBL_INS} {fmtDate(v.insuranceExpiryDate)}
         </span>
         <span className={v.fitnessExpiringSoon ? "text-orange-500 font-semibold flex items-center gap-1" : "text-gray-500 flex items-center gap-1"}>
           {v.fitnessExpiringSoon && <AlertTriangle className="w-3.5 h-3.5 shrink-0" />}
-          Fit: {fmtDate(v.fitnessCertExpiryDate)}
+          {REPORT_UI_TEXT.LBL_FIT} {fmtDate(v.fitnessCertExpiryDate)}
         </span>
       </div>
 
       <div className="flex flex-wrap gap-1 pt-0.5">
         {v.routeBreakdown?.length > 0
           ? v.routeBreakdown.map((r) => (
-              <span key={r.routeId} className="bg-blue-50 border border-blue-200 text-blue-700 font-bold text-xs px-2 py-0.5 rounded-full whitespace-nowrap">
-                {r.routeCode}
-              </span>
-            ))
-          : <span className="italic text-gray-400 text-xs">Unassigned</span>
+            <span key={r.routeId} className="bg-blue-50 border border-blue-200 text-blue-700 font-bold text-xs px-2 py-0.5 rounded-full whitespace-nowrap">
+              {r.routeCode}
+            </span>
+          ))
+          : <span className="italic text-gray-400 text-xs">{REPORT_UI_TEXT.UNASSIGNED}</span>
         }
       </div>
     </div>
@@ -151,22 +141,22 @@ function VehicleCard({ v }) {
 }
 
 export default function VehicleCapacityTab() {
-  const [data, setData]             = useState([]);
-  const [loading, setLoading]       = useState(true);
-  const [onlyOver, setOnlyOver]     = useState(false);
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [onlyOver, setOnlyOver] = useState(false);
   const [expiryDays, setExpiryDays] = useState(30);
 
   const fetchReport = useCallback(async () => {
     try {
       setLoading(true);
-      const result = await getVehicleCapacityUtilizationReport({
+      const result = await getVehicleCapacityReport({
         onlyOverCapacity: onlyOver,
         expiringSoonDays: Number(expiryDays),
       });
       setData(result);
     } catch (err) {
       console.error(err);
-      toast.error("Failed to load vehicle capacity report.");
+      toast.error(TOAST_MESSAGES.VEHICLE_REPORT_LOAD_FAIL);
     } finally {
       setLoading(false);
     }
@@ -174,25 +164,24 @@ export default function VehicleCapacityTab() {
 
   useEffect(() => {
     fetchReport();
-  }, []);
+  }, [fetchReport]);
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden w-full min-w-0 max-w-full">
-
       {/* Header */}
       <div className="px-4 sm:px-6 py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100">
         <h2 className="font-bold text-gray-900 flex items-center gap-2 text-base">
-          🚌 Vehicle Capacity Utilisation Report
+          {REPORT_UI_TEXT.CAPACITY_TAB_TITLE}
         </h2>
         <button
           onClick={() => {
-            if (!data.length) return toast.info("No data to export.");
+            if (!data.length) return toast.info(TOAST_MESSAGES.EXPORT_NO_DATA);
             exportToCSV(data);
-            toast.success("CSV exported successfully!");
+            toast.success(TOAST_MESSAGES.EXPORT_SUCCESS);
           }}
           className="inline-flex items-center justify-center gap-1.5 border cursor-pointer border-gray-200 text-gray-600 text-xs font-semibold px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors w-full sm:w-fit"
         >
-          <Download className="w-3.5 h-3.5" /> Export CSV
+          <Download className="w-3.5 h-3.5" /> {REPORT_UI_TEXT.BTN_EXPORT_CSV}
         </button>
       </div>
 
@@ -205,10 +194,10 @@ export default function VehicleCapacityTab() {
             onChange={(e) => setOnlyOver(e.target.checked)}
             className="w-4 h-4 rounded border-gray-300 accent-blue-600"
           />
-          <span className="whitespace-nowrap">Show only over-capacity vehicles</span>
+          <span className="whitespace-nowrap">{REPORT_UI_TEXT.SHOW_OVER_CAPACITY}</span>
         </label>
         <div className="flex items-center gap-2 text-sm text-gray-600">
-          <span className="whitespace-nowrap">Expiry alert within</span>
+          <span className="whitespace-nowrap">{REPORT_UI_TEXT.EXPIRY_ALERT_WITHIN}</span>
           <input
             type="number"
             value={expiryDays}
@@ -216,7 +205,7 @@ export default function VehicleCapacityTab() {
             min={1}
             className="w-16 border border-gray-200 rounded-lg px-2 py-1 text-sm text-center focus:outline-none focus:ring-2 focus:ring-blue-200"
           />
-          days
+          {REPORT_UI_TEXT.DAYS}
         </div>
         <button
           onClick={fetchReport}
@@ -224,42 +213,32 @@ export default function VehicleCapacityTab() {
           className="inline-flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed text-white text-xs font-semibold px-4 py-2 rounded-lg transition-colors w-full sm:w-auto sm:ml-auto"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
-          {loading ? "Loading…" : "Refresh"}
+          {loading ? REPORT_UI_TEXT.LBL_LOADING : REPORT_UI_TEXT.BTN_REFRESH}
         </button>
       </div>
 
-      {/* ── Full data table — only on very wide screens (2xl: 1536px+) ── */}
-      {/* Tablet, 1024px and 1440px laptops all get the card-grid below instead, so nothing gets cut off */}
+      {/* Main Table */}
       <div className="hidden 2xl:block overflow-x-auto w-full max-w-full">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-100">
-              {["Vehicle No.", "Type", "Make/Model", "Capacity", "Allocated", "Available", "Utilisation", "Insurance Expiry", "Fitness Expiry", "Routes"].map((h) => (
+              {VEHICLE_CAPACITY_COLUMNS.map((h) => (
                 <th key={h} className="px-4 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wider text-left whitespace-nowrap">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
-
-            {/* ListLoader while fetching */}
-            {loading && (
-              <ListLoader rows={4} avatar={false} colSpanSet={10} />
-            )}
-
-            {/* Empty state */}
+            {loading && <ListLoader rows={4} avatar={false} colSpanSet={10} />}
             {!loading && data.length === 0 && (
               <tr>
                 <td colSpan={10} className="py-16 text-center text-gray-400">
                   <span className="text-4xl block mb-3">🚌</span>
-                  <p className="font-medium text-sm">No vehicles found.</p>
+                  <p className="font-medium text-sm">{REPORT_UI_TEXT.NO_VEHICLES_FOUND}</p>
                 </td>
               </tr>
             )}
-
-            {/* Data rows */}
             {!loading && data.map((v) => (
               <tr key={v.vehicleId} className="hover:bg-blue-50/30 transition-colors">
-                {/* Vehicle No */}
                 <td className="px-4 py-4">
                   <div className="font-bold text-gray-900">{v.vehicleNumber}</div>
                   {v.gpsEnabled && (
@@ -268,90 +247,74 @@ export default function VehicleCapacityTab() {
                     </span>
                   )}
                 </td>
-                {/* Type */}
                 <td className="px-4 py-4">
-                  <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${typeColors[v.vehicleType] ?? "bg-gray-100 text-gray-600"}`}>
-                    {typeLabel[v.vehicleType] || v.vehicleType}
+                  <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${VEHICLE_TYPE_COLORS[v.vehicleType] ?? "bg-gray-100 text-gray-600"}`}>
+                    {VEHICLE_TYPE_LABELS[v.vehicleType] || v.vehicleType}
                   </span>
                 </td>
-                {/* Make/Model */}
                 <td className="px-4 py-4 text-gray-500 text-xs">{v.makeModel}</td>
-                {/* Capacity */}
                 <td className="px-4 py-4 text-gray-700 font-medium">{v.totalCapacity}</td>
-                {/* Allocated */}
                 <td className="px-4 py-4 text-gray-700">{v.totalStudentsAllocated}</td>
-                {/* Available */}
                 <td className="px-4 py-4">
                   <span className={`font-semibold flex items-center gap-1 ${v.availableSeats === 0 ? "text-orange-500" : v.availableSeats < 0 ? "text-red-500" : "text-green-600"}`}>
                     {v.availableSeats}
                     {v.availableSeats === 0 && <AlertTriangle className="w-3.5 h-3.5" />}
                   </span>
                 </td>
-                {/* Utilisation */}
                 <td className="px-4 py-4">
                   <UtilBar alloc={v.totalStudentsAllocated} cap={v.totalCapacity} />
                 </td>
-                {/* Insurance Expiry */}
                 <td className="px-4 py-4">
                   <span className={v.insuranceExpiringSoon ? "text-orange-500 font-semibold flex items-center gap-1" : "text-gray-600"}>
                     {v.insuranceExpiringSoon && <AlertTriangle className="w-3.5 h-3.5 shrink-0" />}
                     {fmtDate(v.insuranceExpiryDate)}
                   </span>
                 </td>
-                {/* Fitness Expiry */}
                 <td className="px-4 py-4">
                   <span className={v.fitnessExpiringSoon ? "text-orange-500 font-semibold flex items-center gap-1" : "text-gray-600"}>
                     {v.fitnessExpiringSoon && <AlertTriangle className="w-3.5 h-3.5 shrink-0" />}
                     {fmtDate(v.fitnessCertExpiryDate)}
                   </span>
                 </td>
-                {/* Routes */}
                 <td className="px-4 py-4">
                   {v.routeBreakdown?.length > 0
                     ? <div className="flex flex-wrap gap-1">
-                        {v.routeBreakdown.map((r) => (
-                          <span key={r.routeId} className="bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold px-2.5 py-0.5 rounded-full">
-                            {r.routeCode}
-                          </span>
-                        ))}
-                      </div>
-                    : <span className="text-gray-400 italic text-xs">Unassigned</span>
+                      {v.routeBreakdown.map((r) => (
+                        <span key={r.routeId} className="bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold px-2.5 py-0.5 rounded-full">
+                          {r.routeCode}
+                        </span>
+                      ))}
+                    </div>
+                    : <span className="text-gray-400 italic text-xs">{REPORT_UI_TEXT.UNASSIGNED}</span>
                   }
                 </td>
               </tr>
             ))}
-
           </tbody>
         </table>
       </div>
 
-      {/* ── Card grid — phone (1 col), tablet (2 col), laptop / laptop L (3 col) ── */}
-      {/* Covers everything below 1536px, including the 768px tablet, 1024px and 1440px laptop cases */}
+      {/* Mobile Cards */}
       <div className="2xl:hidden w-full">
         {loading && (
           <div className="py-4 px-4">
             <table className="w-full">
-              <tbody>
-                <ListLoader rows={4} avatar={false} colSpanSet={1} />
-              </tbody>
+              <tbody><ListLoader rows={4} avatar={false} colSpanSet={1} /></tbody>
             </table>
           </div>
         )}
-
         {!loading && data.length === 0 && (
           <div className="py-16 text-center text-gray-400">
             <span className="text-4xl block mb-3">🚌</span>
-            <p className="font-medium text-sm">No vehicles found.</p>
+            <p className="font-medium text-sm">{REPORT_UI_TEXT.NO_VEHICLES_FOUND}</p>
           </div>
         )}
-
         {!loading && data.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 p-4 sm:p-5">
             {data.map((v) => <VehicleCard key={v.vehicleId} v={v} />)}
           </div>
         )}
       </div>
-
     </div>
   );
 }
