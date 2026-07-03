@@ -25,11 +25,17 @@ const Navbar = () => {
                 navigate("/#features-section");
             }
         } else if (link === "Pricing") {
-            /* ── Added Pricing Scroll Logic ── */
             if (location.pathname === "/") {
                 document.getElementById('pricing-section')?.scrollIntoView({ behavior: 'smooth' });
             } else {
                 navigate("/#pricing-section");
+            }
+        } else if (link === "Get Free Demo") {
+            /* ── Added Demo Section Scroll Logic ── */
+            if (location.pathname === "/") {
+                document.getElementById('demo')?.scrollIntoView({ behavior: 'smooth' });
+            } else {
+                navigate("/#demo");
             }
         } else if (link === "Blog") {
             navigate("/blog");
@@ -116,7 +122,8 @@ const Navbar = () => {
                             <span className="text-sm xl:text-base relative z-10">Login</span>
                         </button>
 
-                        <button className="group relative overflow-hidden flex items-center gap-2 px-4 xl:px-5 py-2.5 rounded-xl font-bold tracking-wide text-slate-950 cursor-pointer bg-gradient-to-r from-[#00C9B1] via-[#00C9B1] to-[#F5A623] shadow-[0_4px_20px_rgba(0,201,177,0.25)] hover:shadow-[0_6px_24px_rgba(245,166,35,0.35)] hover:-translate-y-0.5 transition-all duration-300 active:scale-[0.98]">
+                        {/* Desktop: Get Free Demo Trigger */}
+                        <button onClick={() => handleNavLinkClick("Get Free Demo")} className="group relative overflow-hidden flex items-center gap-2 px-4 xl:px-5 py-2.5 rounded-xl font-bold tracking-wide text-slate-950 cursor-pointer bg-gradient-to-r from-[#00C9B1] via-[#00C9B1] to-[#F5A623] shadow-[0_4px_20px_rgba(0,201,177,0.25)] hover:shadow-[0_6px_24px_rgba(245,166,35,0.35)] hover:-translate-y-0.5 transition-all duration-300 active:scale-[0.98]">
                             <div className="shimmer-effect" />
                             <span className="text-sm xl:text-base relative z-10">Get Free Demo</span>
                         </button>
@@ -169,7 +176,8 @@ const Navbar = () => {
                             <span className="relative z-10">Login</span>
                         </button>
                         
-                        <button className='w-full py-3 text-sm relative overflow-hidden flex items-center justify-center gap-2 text-slate-950 bg-gradient-to-r from-[#00C9B1] to-[#F5A623] rounded-xl font-bold cursor-pointer transition-transform duration-200 shadow-md'>
+                        {/* Mobile: Get Free Demo Trigger */}
+                        <button onClick={() => handleNavLinkClick("Get Free Demo")} className='w-full py-3 text-sm relative overflow-hidden flex items-center justify-center gap-2 text-slate-950 bg-gradient-to-r from-[#00C9B1] to-[#F5A623] rounded-xl font-bold cursor-pointer transition-transform duration-200 shadow-md'>
                             <div className="shimmer-effect" />
                             <span className="relative z-10">Get Free Demo</span>
                             <div className="relative z-10 bg-slate-950/10 rounded-md p-0.5 flex items-center justify-center">

@@ -7,7 +7,7 @@ export const UserContext = createContext();
 
 function showForegroundNotification(payload) {
   const title = payload?.notification?.title ?? "New Notification";
-  const body  = payload?.notification?.body  ?? "";
+  const body = payload?.notification?.body ?? "";
   if (Notification.permission !== "granted") return;
   navigator.serviceWorker.ready.then(reg => {
     reg.showNotification(title, { body, icon: "/logo.png" });
@@ -20,11 +20,11 @@ function decodeToken(token) {
   const payload = jwtDecode(token);
   if (!payload) return null;
   return {
-    id:          payload.userId,
-    userType:    payload.roles?.[0] ?? null,
-    email:       payload.sub,
+    id: payload.userId,
+    userType: payload.roles?.[0] ?? null,
+    email: payload.sub,
     permissions: payload.permissions ?? [],
-    schoolId:    payload.schoolId ?? null,
+    schoolId: payload.schoolId ?? null,
   };
 }
 
