@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Bell, RefreshCw, CheckCheck, AlertCircle, Inbox } from "lucide-react";
 import CardComponent from "../../../Components/CommonComp/CardComponent";
 import CardLoader from "../../../Components/CommonComp/CardLoader";
-import { getNotifications } from "../../../Api/Notification";
+import { getNotifications } from "../../../Api/Communication/Notification";
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 function kindIcon(type) {

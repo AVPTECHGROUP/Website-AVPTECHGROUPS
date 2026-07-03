@@ -15,7 +15,7 @@ import {
   ShoppingCart,
   MessageSquare,
 } from "lucide-react";
-import { getItemsList } from "../../../Api/StockApi";
+import { getItemsList } from "../../../Api/Stock/StockApi";
 
 const catColors = {
   BOOKS:      "bg-blue-100 text-blue-700",

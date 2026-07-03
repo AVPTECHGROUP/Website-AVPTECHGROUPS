@@ -6,7 +6,7 @@ import {
   Download, Eye, EyeOff, AlignLeft, ArrowLeft, ArrowRight,
 } from "lucide-react";
 import { toast } from "react-toastify";
-import { getAcademicYears } from "../../Api/AcademicYear";
+import { getAcademicYears } from "../../Api/AcademicYears/AcademicYear";
 
 // ── Resolve existing attachment URL / type ────────────────────────────────────
 function getExistingAttachUrl(hw) {

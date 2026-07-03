@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import CardComponent from '../../../Components/CommonComp/CardComponent';
 import ListLoader from '../../../Components/CommonComp/ListLoader';
-import { fetchCirculars, approveCircular, rejectCircular, deleteCircular } from '../../../Api/CircularApi.js';
+import { fetchCirculars, approveCircular, rejectCircular, deleteCircular } from '../../../Api/Communication/CircularApi.js';
 import CircularDetailModal from '../../../Components/CircularDetailsPopup/CircularDetailModel.jsx';
 import { useAuth } from '../../../hooks/useAuth';
 import { PERMISSIONS as P } from '../../../Constants/Permission';

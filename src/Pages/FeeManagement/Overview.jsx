@@ -18,14 +18,14 @@ import {
   getOverdueAlerts,
   getRecentPayments,
   getFeeDashboardStats,
-} from '../../Api/FeeDashboard';
-import { getFeePeriods }     from '../../Api/FeePeriods';
-import { getFeeStructures }  from '../../Api/FeeStructures';
-import { getStudentByClass } from '../../Api/StudentsApi';
+} from '../../Api/FeeManagement/FeeDashboard';
+import { getFeePeriods }     from '../../Api/FeeManagement/FeePeriods';
+import { getFeeStructures }  from '../../Api/FeeManagement/FeeStructures';
+import { getStudentByClass } from '../../Api/Students/StudentsApi';
 import {
   getOutstandingFees, createFeeCollection,
   createBulkFeeCollection, getFeeCollectionHistory,
-} from '../../Api/FeeCollection';
+} from '../../Api/FeeManagement/FeeCollection';
 import { UserContext } from '../../ContextAPI/UserContext';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -1111,7 +1111,7 @@ const Overview = ({ onNavigate }) => {
             Active Fee Periods
             <span className="ml-1 px-2 py-0.5 bg-blue-50 text-blue-600 text-[11px] font-bold rounded-full border border-blue-100">{activePeriods.length}</span>
           </h3>
-          <button onClick={() => navigate('/feemanagement/config')}
+          <button onClick={() => navigate('/feeManagement/config')}
             className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-[#1E3A5F] border border-blue-200 rounded-lg bg-blue-50 hover:bg-blue-100 transition-colors">
             Manage Periods <ArrowRight size={11} />
           </button>

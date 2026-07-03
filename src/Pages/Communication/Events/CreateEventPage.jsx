@@ -5,7 +5,7 @@ import {
   CheckCircle2, ChevronDown, Loader2, AlertCircle, X, FileText,
   Globe, BookOpen, GraduationCap
 } from 'lucide-react';
-import { createEvent, uploadEventAttachment } from '../../../Api/CircularApi';
+import { createEvent, uploadEventAttachment } from '../../../Api/Communication/CircularApi';
 import { useClasses } from '../../../ContextAPI/ClassContext.jsx';
 
 // ── Constants ──────────────────────────────────────────────────────────────────

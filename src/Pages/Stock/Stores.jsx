@@ -9,7 +9,7 @@ import CardLoader from "../../Components/CommonComp/CardLoader";
 import ListLoader from "../../Components/CommonComp/ListLoader";
 import NewStore from "../../Components/Stock/NewStore";
 import ActionDropDownComp from "../../Components/CommonComp/ActionDropDownComp";
-import { getStockList, createStore, updateStore, activateStore, deactivateStore, getStoreStats } from "../../Api/StoreApi";
+import { getStockList, createStore, updateStore, activateStore, deactivateStore, getStoreStats } from "../../Api/Stock/StoreApi";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 

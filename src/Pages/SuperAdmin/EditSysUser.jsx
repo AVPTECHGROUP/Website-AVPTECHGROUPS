@@ -4,7 +4,8 @@ import { ChevronLeft, User, Camera, X } from 'lucide-react';
 import { toast } from 'react-toastify';
 import UserPersonalDetailsTab from '../../Components/SuperAdmin/EditTabComponents/UserPersonalDetailsTab';
 import ParentPersonalDetailsTab from '../../Components/SuperAdmin/EditTabComponents/ParentPersonalDetailsTab';
-import { getUserById, updateUserById } from '../../Api/userManagementAPI';
+import { getUserById, updateUserById } from '../../Api/StaffManagement/UserManagementAPI';
+import USER_MANAGEMENT_STRINGS from '../../Constants/StringConstants/UserManagemetConstant';
 
 const VALID_GENDERS = ['MALE', 'FEMALE', 'OTHER'];
 const VALID_ROLES = ['SUPER_ADMIN','ADMIN','PRINCIPAL','TEACHER','ACCOUNTANT','PARENT','RECEPTIONIST','STORE_ACCOUNTANT','STORE_SELLER'];
@@ -85,6 +86,8 @@ const validateFormData = (formData, activeRole) => {
 };
 
 function EditSysUser() {
+    const strings = USER_MANAGEMENT_STRINGS.EDIT_USER;
+    const commonStrings = USER_MANAGEMENT_STRINGS.COMMON;
     const { id } = useParams();
     const navigate = useNavigate();
     const [sysUser, setsysUser] = useState(null);
@@ -276,7 +279,7 @@ function EditSysUser() {
                     <p className="text-gray-700 font-medium mb-4">{fetchError}</p>
                     {/* ✅ FIXED: was '/dashboard/manageUsers' */}
                     <button onClick={() => navigate('/manageUsers')} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                        Back to Users
+                        {commonStrings.BACK_TO_USERS}
                     </button>
                 </div>
             </div>
@@ -292,7 +295,7 @@ function EditSysUser() {
                 <div className="flex items-center justify-center py-8 relative">
                     <div className="flex items-center gap-3 absolute lg:top-80">
                         <div className="w-7 h-7 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
-                        <p className="text-gray-600 lg:text-xl font-medium">Loading User...</p>
+                        <p className="text-gray-600 lg:text-xl font-medium">{strings.LOADING}</p>
                     </div>
                 </div>
             </div>
@@ -308,8 +311,8 @@ function EditSysUser() {
                     <ChevronLeft className="w-5 h-5" /><span className="hidden sm:inline">Back to List</span>
                 </button>
                 <div className="mb-6">
-                    <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Edit User: {formData.name || '—'}</h1>
-                    <p className="text-sm sm:text-base text-gray-500">Manage personal information and account status for users.</p>
+                    <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">{strings.PAGE_TITLE.replace('{name}', formData.name || '—')}</h1>
+                    <p className="text-sm sm:text-base text-gray-500">{strings.PAGE_SUBTITLE}</p>
                 </div>
                 <form onSubmit={handle_updateDetails} noValidate>
                     <div className="bg-white rounded-lg shadow">
@@ -318,15 +321,15 @@ function EditSysUser() {
                                 <button type="button" onClick={() => setActiveTab('personal')}
                                     className={`${isParentRole ? 'hidden' : 'flex'} items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'personal' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
                                     <User size={20} />
-                                    <span className="hidden sm:inline">Personal Details</span>
-                                    <span className="sm:hidden">Personal</span>
+                                    <span className="hidden sm:inline">{strings.PERSONAL_DETAILS}</span>
+                                    <span className="sm:hidden">{strings.PERSONAL_SHORT}</span>
                                 </button>
                             </nav>
                         </div>
 
                         <div className="px-4 sm:px-6 lg:px-8 pt-6">
                             <label className="block font-semibold text-gray-600 text-sm mb-3">
-                                Profile Photo <span className="text-gray-400 text-xs font-normal ml-1">(optional)</span>
+                                {strings.PROFILE_PHOTO} <span className="text-gray-400 text-xs font-normal ml-1">{strings.PROFILE_PHOTO_HELP}</span>
                             </label>
                             <div className="flex items-center gap-5 mb-6">
                                 <div className="relative shrink-0">
@@ -347,8 +350,8 @@ function EditSysUser() {
                                         <button type="button" onClick={() => fileInputRef.current?.click()}
                                             className="w-full border-2 border-dashed border-blue-300 hover:border-blue-500 bg-blue-50 hover:bg-blue-100 rounded-lg p-4 text-center transition-colors cursor-pointer">
                                             <Camera className="w-5 h-5 text-blue-400 mx-auto mb-1" />
-                                            <p className="text-sm font-medium text-blue-600">Click to upload photo</p>
-                                            <p className="text-xs text-gray-400 mt-0.5">JPEG or PNG, max 10 MB</p>
+                                            <p className="text-sm font-medium text-blue-600">{strings.CLICK_TO_UPLOAD}</p>
+                                            <p className="text-xs text-gray-400 mt-0.5">{strings.UPLOAD_HELP}</p>
                                         </button>
                                     ) : (
                                         <div className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-lg">
@@ -360,15 +363,15 @@ function EditSysUser() {
                                                     </>
                                                 ) : (
                                                     <>
-                                                        <p className="text-sm font-medium text-green-700">Current profile photo</p>
-                                                        <p className="text-xs text-green-500 mt-0.5">Click "Change" to replace</p>
+                                                        <p className="text-sm font-medium text-green-700">{strings.CURRENT_PROFILE}</p>
+                                                        <p className="text-xs text-green-500 mt-0.5">Click "{strings.CHANGE}" to replace</p>
                                                     </>
                                                 )}
                                             </div>
                                             <div className="flex gap-2 shrink-0">
                                                 <button type="button" onClick={() => fileInputRef.current?.click()}
                                                     className="text-xs px-2.5 py-1 bg-white border border-green-300 text-green-700 rounded-md hover:bg-green-50 transition-colors">
-                                                    Change
+                                                    {strings.CHANGE}
                                                 </button>
                                                 <button type="button" onClick={handleRemoveImage}
                                                     className="w-7 h-7 flex items-center justify-center bg-white border border-red-200 text-red-500 rounded-md hover:bg-red-50 transition-colors">
@@ -399,16 +402,16 @@ function EditSysUser() {
                                 {/* ✅ FIXED: was '/dashboard/manageUsers' */}
                                 <button type="button" onClick={() => navigate('/manageUsers')}
                                     className="px-6 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
-                                    Discard Changes
+                                    {strings.DISCARD_CHANGES}
                                 </button>
                                 <button disabled={isLoading} type="submit"
                                     className={`mt-1 px-4 py-3 font-semibold rounded-lg transition-all ${isLoading ? 'bg-blue-300 cursor-not-allowed text-white' : 'bg-blue-500 hover:bg-blue-600 cursor-pointer text-white'}`}>
                                     {isLoading ? (
                                         <span className="flex items-center justify-center gap-2">
                                             <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                            Saving...
+                                            {commonStrings.SAVING}
                                         </span>
-                                    ) : 'Save Changes'}
+                                    ) : strings.SAVE_CHANGES}
                                 </button>
                             </div>
                         </div>

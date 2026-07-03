@@ -19,28 +19,20 @@ import {
   approoveRejLeaveReq,
   getAllLeaveRequest,
   getALLLeavesStatistics,
-} from '../../Api/LeavesManagementAPI';
+} from '../../Api/Leaves/LeavesManagementAPI';
 import { toast } from 'react-toastify';
-import { getListOfValues } from '../../Api/ListOfValues';
+import { getListOfValues } from '../../Api/Lov/ListOfValues';
 import ListLoader from '../../Components/CommonComp/ListLoader';
 import { useDecodedUser } from '../../ContextAPI/UserContext';
+import {
+  ROLE_HIERARCHY,
+  STATUS_STYLES,
+  AVATAR_COLORS,
+  LEAVES_TEXT,
+  LEAVES_TOAST_MESSAGES,
+} from '../../Constants/StringConstants/LeavesConstants';
 
-// ── Hierarchy ──────────────────────────────────────────────────────────────────
-// Lower index  = higher authority.
-// Any role NOT in this list gets rank Infinity (can approve nobody).
-const ROLE_HIERARCHY = [
-  'GLOBAL_ADMIN',
-  'SUPER_ADMIN',
-  'ADMIN',
-  'PRINCIPAL',
-  'VICE_PRINCIPAL',
-  'HOD',
-  'TEACHER',
-  'ACCOUNTANT',
-  'RECEPTIONIST',
-  'STAFF',
-  'STUDENT',
-];
+// ── Hierarchy — imported from leavesConstants ─────────────────────────────
 
 function getRoleRank(role) {
   const idx = ROLE_HIERARCHY.indexOf((role ?? '').toUpperCase());
@@ -221,7 +213,7 @@ const Leaves = () => {
 
   // ── Helpers ───────────────────────────────────────────────────────────────────
   const getAvatarColor = (name) => {
-    const colors = ['bg-blue-500', 'bg-emerald-500', 'bg-violet-500', 'bg-pink-500', 'bg-indigo-500', 'bg-amber-500'];
+    const colors = AVATAR_COLORS;
     return colors[(name?.charCodeAt(0) || 0) % colors.length];
   };
 
@@ -256,46 +248,41 @@ const Leaves = () => {
   const cardsArray = [
     {
       IconName: ClockIcon,
-      keyName: 'Pending Requests',
+      keyName: LEAVES_TEXT.statCards.pendingRequests,
       val: statistics.pendingApproval,
       iconTxColor: 'text-orange-600',
       iconBgColor: 'bg-orange-50',
     },
     {
       IconName: ThumbsUpIcon,
-      keyName: 'Approved This Month',
+      keyName: LEAVES_TEXT.statCards.approvedThisMonth,
       val: statistics.approvedThisMonth,
       iconTxColor: 'text-green-600',
       iconBgColor: 'bg-green-50',
     },
     {
       IconName: CalendarX2,
-      keyName: 'Rejected This Month',
+      keyName: LEAVES_TEXT.statCards.rejectedThisMonth,
       val: statistics.rejectedThisMonth,
       iconTxColor: 'text-red-600',
       iconBgColor: 'bg-red-50',
     },
     {
       IconName: CalendarRange,
-      keyName: 'Applied This Month',
+      keyName: LEAVES_TEXT.statCards.appliedThisMonth,
       val: statistics.appliedThisMonth,
       iconTxColor: 'text-blue-600',
       iconBgColor: 'bg-blue-50',
     },
   ];
 
-  const statusStyles = {
-    PENDING:   'bg-amber-50   text-amber-800  border border-amber-200',
-    APPROVED:  'bg-emerald-50 text-emerald-800 border border-emerald-200',
-    REJECTED:  'bg-red-50     text-red-800    border border-red-200',
-    CANCELLED: 'bg-orange-50  text-orange-800 border border-orange-200',
-    WITHDRAWN: 'bg-gray-50    text-gray-700   border border-gray-200',
-  };
+  // statusStyles imported from leavesConstants as STATUS_STYLES
+  const statusStyles = STATUS_STYLES;
 
   // ── Popup state ───────────────────────────────────────────────────────────────
   const [selectedUser, setSelectedUser] = useState(null);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
-  const [remarkVal, setRemarksVal] = useState('As per the policy');
+  const [remarkVal, setRemarksVal] = useState(LEAVES_TEXT.defaultRemark);
 
   const handleViewClick = (user) => {
     setRemarksVal(user.reviewRemarks || '');
@@ -317,7 +304,7 @@ const Leaves = () => {
       fetchLeaveRequests();
       setRefreshStat((p) => p + 1);
     } catch (error) {
-      toast.error(error.message || 'Leave Approval failed');
+      toast.error(error.message || LEAVES_TOAST_MESSAGES.approvalFailed);
     }
   };
 
@@ -329,7 +316,7 @@ const Leaves = () => {
       fetchLeaveRequests();
       setRefreshStat((p) => p + 1);
     } catch (error) {
-      toast.error(error.message || 'Leave Rejection failed');
+      toast.error(error.message || LEAVES_TOAST_MESSAGES.rejectionFailed);
     }
   };
 
@@ -338,11 +325,11 @@ const Leaves = () => {
     const isHalfDay =
       emp.isHalfDay === true || emp.isHalfDay === 'true' || emp.isHalfDay === 'TRUE';
 
-    if (days === 0 && isHalfDay) return 'Half Day';
-    if (days === 0 && !isHalfDay) return 'Weekend / Holiday';
+    if (days === 0 && isHalfDay) return LEAVES_TEXT.duration.halfDay;
+    if (days === 0 && !isHalfDay) return LEAVES_TEXT.duration.weekendOrHoliday;
 
     const totalDuration = isHalfDay ? days + 0.5 : days;
-    return `${totalDuration} ${totalDuration === 1 ? 'Day' : 'Days'}`;
+    return `${totalDuration} ${totalDuration === 1 ? LEAVES_TEXT.duration.day : LEAVES_TEXT.duration.days}`;
   };
 
   // ── Pagination helpers ────────────────────────────────────────────────────────
@@ -531,7 +518,7 @@ const Leaves = () => {
                   </colgroup>
                   <thead className="bg-gray-50 sticky top-0 z-10 border-b border-gray-200">
                     <tr>
-                      {['Employee', 'Leave Type', 'From', 'To', 'Days', 'Status', 'Action'].map((h) => (
+                      {LEAVES_TEXT.table.headers.map((h) => (
                         <th key={h} className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                           {h}
                         </th>
@@ -547,7 +534,7 @@ const Leaves = () => {
                           <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
                             <UserRoundXIcon className="w-5 h-5 text-red-400" />
                           </div>
-                          <p className="text-sm font-semibold text-gray-800 mb-1">Error Loading Requests</p>
+                          <p className="text-sm font-semibold text-gray-800 mb-1">{LEAVES_TEXT.emptyStates.errorTitle}</p>
                           <p className="text-xs text-gray-500 mb-3">{error}</p>
                           <button onClick={fetchLeaveRequests} className="px-4 py-1.5 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
                             Retry
@@ -560,7 +547,7 @@ const Leaves = () => {
                           <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-2">
                             <SearchX className="w-5 h-5 text-blue-400" />
                           </div>
-                          <p className="text-sm font-semibold text-gray-600">No requests found</p>
+                          <p className="text-sm font-semibold text-gray-600">{LEAVES_TEXT.emptyStates.noRequests}</p>
                           {hasActiveFilters && (
                             <button onClick={clearAllFilters} className="mt-2 text-xs text-blue-600 hover:underline">
                               Clear all filters
@@ -608,13 +595,13 @@ const Leaves = () => {
                                   onClick={() => handleViewClick(emp)}
                                   className="px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-md text-xs font-medium hover:bg-emerald-100 transition-colors border border-emerald-200"
                                 >
-                                  Approve
+                                  {LEAVES_TEXT.buttons.approve}
                                 </button>
                                 <button
                                   onClick={() => handleViewClick(emp)}
                                   className="px-2.5 py-1 bg-red-50 text-red-600 rounded-md text-xs font-medium hover:bg-red-100 transition-colors border border-red-200"
                                 >
-                                  Reject
+                                  {LEAVES_TEXT.buttons.reject}
                                 </button>
                               </div>
                             ) : (
@@ -622,7 +609,7 @@ const Leaves = () => {
                                 onClick={() => handleViewClick(emp)}
                                 className="px-2.5 py-1 bg-blue-50 text-blue-700 rounded-md text-xs font-medium hover:bg-blue-100 transition-colors border border-blue-200"
                               >
-                                View
+                                {LEAVES_TEXT.buttons.view}
                               </button>
                             )}
                           </td>
@@ -649,7 +636,7 @@ const Leaves = () => {
                   <p className="text-sm font-semibold text-gray-800 mb-1">Error Loading Requests</p>
                   <p className="text-xs text-gray-500 mb-3">{error}</p>
                   <button onClick={fetchLeaveRequests} className="px-4 py-1.5 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
-                    Retry
+                    {LEAVES_TEXT.buttons.retry}
                   </button>
                 </div>
               ) : noUserFound ? (
@@ -703,13 +690,13 @@ const Leaves = () => {
                             onClick={() => handleViewClick(emp)}
                             className="flex-1 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-lg text-xs font-medium hover:bg-emerald-100 transition-colors border border-emerald-200"
                           >
-                            Approve
+                            {LEAVES_TEXT.buttons.approve}
                           </button>
                           <button
                             onClick={() => handleViewClick(emp)}
                             className="flex-1 px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-xs font-medium hover:bg-red-100 transition-colors border border-red-200"
                           >
-                            Reject
+                            {LEAVES_TEXT.buttons.reject}
                           </button>
                         </div>
                       ) : (
@@ -717,7 +704,7 @@ const Leaves = () => {
                           onClick={() => handleViewClick(emp)}
                           className="w-full px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-xs font-medium hover:bg-blue-100 transition-colors border border-blue-200"
                         >
-                          View Details
+                          {LEAVES_TEXT.buttons.viewDetails}
                         </button>
                       )}
                     </div>

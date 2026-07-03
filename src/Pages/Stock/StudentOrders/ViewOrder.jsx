@@ -4,7 +4,7 @@ import {
   CheckCircle, Clock, XCircle, Truck, Loader2,
   FileText, Printer, CreditCard,
 } from "lucide-react";
-import { getStudentOrderById } from "../../../Api/StudentOrder";
+import { getStudentOrderById } from "../../../Api/Stock/StudentOrder";
 import { printOrder } from "../../../Components/CommonComp/Print/Printorderutil";
 
 /* ─── Status config ──────────────────────────────────────────────────────── */

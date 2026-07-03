@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { toast } from "react-toastify";
-import { createSubject, updateSubject } from "../../Api/subject";
-import { getSubjectCategoryLov } from "../../Api/ListOfValues";
+import { createSubject, updateSubject } from "../../Api/Academics/Subject";
+import { getSubjectCategoryLov } from "../../Api/Lov/ListOfValues";
 
 export default function AddnewSubject({ subject, onSaved, onClose }) {
   const isEditMode = Boolean(subject?.id);

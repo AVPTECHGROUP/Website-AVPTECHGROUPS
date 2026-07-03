@@ -13,7 +13,7 @@ import {
   getVehicleCapacityReport,
   activateVehicle,
   deactivateVehicle,
-} from "../../Api/TransportAPI";
+} from "../../Api/Transport/TransportAPI";
 import { toast } from "react-toastify";
 
 // ─── Constants ────────────────────────────────────────────────────

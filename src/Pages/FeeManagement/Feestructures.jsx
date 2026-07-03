@@ -12,9 +12,9 @@ import {
   getFeeStructureById,
   updateFeeStructure,
   deleteFeeStructure,
-} from '../../Api/FeeStructures';
-import { getFeePeriods } from '../../Api/FeePeriods';
-import { getActiveClasses } from '../../Api/ClassSectionAPI';
+} from '../../Api/FeeManagement/FeeStructures';
+import { getFeePeriods } from '../../Api/FeeManagement/FeePeriods';
+import { getActiveClasses } from '../../Api/Academics/ClassSectionAPI';
 import { UserContext } from '../../ContextAPI/UserContext';
 
 // ─── Toast ────────────────────────────────────────────────────────────────────

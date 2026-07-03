@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { RefreshCw, Download, AlertTriangle, LocateFixedIcon } from "lucide-react";
 import { toast } from "react-toastify";
-import { getVehicleCapacityUtilizationReport } from "../../../Api/TransportAPI";
+import { getVehicleCapacityReport } from "../../../Api/Transport/TransportAPI";
 import ListLoader from "../../../Components/CommonComp/ListLoader";
 
 const typeColors = {
@@ -159,7 +159,7 @@ export default function VehicleCapacityTab() {
   const fetchReport = useCallback(async () => {
     try {
       setLoading(true);
-      const result = await getVehicleCapacityUtilizationReport({
+      const result = await getVehicleCapacityReport({
         onlyOverCapacity: onlyOver,
         expiringSoonDays: Number(expiryDays),
       });

@@ -230,10 +230,10 @@ export const dismissNotification = async (id) => {
 export const routeForType = (type) => {
   switch (type) {
     case "FEE_PAYMENT_RECEIVED":
-      return "/feemanagement";
+      return "/feeManagement";
 
     case "FEE_OVERDUE":
-      return "/feemanagement/collections";
+      return "/feeManagement/collections";
 
     case "STUDENT_ENROLLED":
       return "/students";

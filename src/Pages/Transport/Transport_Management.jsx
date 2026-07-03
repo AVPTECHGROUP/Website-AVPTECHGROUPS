@@ -13,7 +13,7 @@ import {
   getTransportAllocations,
   getTransportStaff,
   getVehicleCapacityReport,
-} from "../../Api/TransportAPI";
+} from "../../Api/Transport/TransportAPI";
 
 const typeColors = {
   BUS: "bg-blue-100 text-blue-700",

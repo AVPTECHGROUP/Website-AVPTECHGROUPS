@@ -3,9 +3,9 @@ import {
   X, ClipboardList, Loader2, Check, ChevronRight, ChevronLeft,
   AlertCircle, Rocket,
 } from "lucide-react";
-import { createExamEvent } from "../../Api/Exams";
-import { getSectionSubjectsByClass, getSectionsByClass } from "../../Api/TeachersAPI";
-
+import { createExamEvent } from "../../Api/Academics/Exams";
+import { getSectionSubjectsByClass, getSectionsByClass } from "../../Api/Teachers/TeachersAPI";
+import { EXAM_CONSTS } from "../../Constants/StringConstants/AcademicsConstants";
 // Builds [{ sectionId, sectionName, subjects:[{sectionSubjectId, subjectId, subjectName, subjectCode}] }]
 async function getClassSectionsWithSubjects(classId) {
   const [mappings, sections] = await Promise.all([

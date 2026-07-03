@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { X, CreditCard, Save, Loader2 } from "lucide-react";
 import { toast } from "react-toastify";
-import { getActiveRoutes, addTransportFeePlan } from "../../../Api/TransportAPI";
+import { getActiveRoutes, addTransportFeePlan } from "../../../Api/Transport/TransportAPI";
 
 const FREQUENCIES = ["MONTHLY", "QUARTERLY", "ANNUALLY", "ONE-TIME"];
 

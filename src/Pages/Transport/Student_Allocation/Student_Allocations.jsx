@@ -8,7 +8,7 @@ import {
 import AllocateStudentCard    from "./AllocateStudentCards";
 import EditAllocateStudentCards from "./EditAllocateStudentCards";
 import AllocationTable        from "../../../Components/Transport/StudentAllocation";
-import { getTransportAllocations, deleteTransportAllocation } from "../../../Api/TransportAPI";
+import { getTransportAllocations, deleteTransportAllocation } from "../../../Api/Transport/TransportAPI";
 
 const ROWS_OPTIONS = [10, 25, 50, 100];
 
