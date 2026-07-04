@@ -3,12 +3,16 @@ import {
     PenLine, X, CheckCircle2, XCircle, Clock, Search,
     Users, Loader2, CheckCheck, Lock, AlertCircle
 } from "lucide-react";
+import {
+    STATUS_PRESENT, STATUS_LATE, STATUS_ABSENT, STATUS_NOT_MARKED,
+    AVATAR_INITIALS_COLORS, UI_STRINGS, BTN_MARK_ATTENDANCE,
+} from "../../../Constants/StringConstants/AttendanceConstants";
 
 // ─── Status config ─────────────────────────────────────────────────────────────
 const STATUS_OPTIONS = [
     {
         value: "PRESENT",
-        label: "Present",
+        label: STATUS_PRESENT,
         icon: CheckCircle2,
         activeBg: "bg-green-600",
         activeText: "text-white",
@@ -18,7 +22,7 @@ const STATUS_OPTIONS = [
     },
     {
         value: "ABSENT",
-        label: "Absent",
+        label: STATUS_ABSENT,
         icon: XCircle,
         activeBg: "bg-red-500",
         activeText: "text-white",
@@ -28,7 +32,7 @@ const STATUS_OPTIONS = [
     },
     {
         value: "LATE",
-        label: "Late",
+        label: STATUS_LATE,
         icon: Clock,
         activeBg: "bg-yellow-500",
         activeText: "text-white",
@@ -46,11 +50,7 @@ const getInitials = (name = "") => {
 };
 
 const avatarColor = (initials = "??") => {
-    const colors = [
-        "bg-blue-100 text-blue-700", "bg-green-100 text-green-700",
-        "bg-purple-100 text-purple-700", "bg-orange-100 text-orange-700",
-        "bg-pink-100 text-pink-700", "bg-teal-100 text-teal-700",
-    ];
+    const colors = AVATAR_INITIALS_COLORS;
     return colors[((initials.charCodeAt(0) || 0) + (initials.charCodeAt(1) || 0)) % colors.length];
 };
 
@@ -139,12 +139,12 @@ export default function ManualMarkModal({
 
     // Identify if any baseline attendance records exist in DB
     const hasExistingAttendance = useMemo(() => {
-        return students.some((s) => s.status && s.status !== "Not Marked");
+        return students.some((s) => s.status && s.status !== STATUS_NOT_MARKED);
     }, [students]);
 
     // Check if ALL students are fully locked out
     const isAllLocked = useMemo(() => {
-        return students.length > 0 && students.every((s) => s.status && s.status !== "Not Marked");
+        return students.length > 0 && students.every((s) => s.status && s.status !== STATUS_NOT_MARKED);
     }, [students]);
 
     // Track state mapping from current synchronized store 
@@ -153,9 +153,9 @@ export default function ManualMarkModal({
         students.forEach((s) => {
             let initialStatus = "PRESENT";
             if (s.status) {
-                if (s.status.includes("Present")) initialStatus = "PRESENT";
-                else if (s.status === "Late") initialStatus = "LATE";
-                else if (s.status === "Absent") initialStatus = "ABSENT";
+                if (s.status.includes(STATUS_PRESENT)) initialStatus = "PRESENT";
+                else if (s.status === STATUS_LATE) initialStatus = "LATE";
+                else if (s.status === STATUS_ABSENT) initialStatus = "ABSENT";
             }
             map[s.id] = { status: initialStatus, remarks: s.remarks || "" };
         });
@@ -170,8 +170,8 @@ export default function ManualMarkModal({
 
     const handleChange = (studentId, field, value) => {
         const targetStudent = students.find(s => s.id === studentId);
-        if (targetStudent && targetStudent.status && targetStudent.status !== "Not Marked") return; // Protection block
-        
+        if (targetStudent && targetStudent.status && targetStudent.status !== STATUS_NOT_MARKED) return; // Protection block
+
         setEntries((prev) => ({
             ...prev,
             [studentId]: { ...prev[studentId], [field]: value },
@@ -215,7 +215,7 @@ export default function ManualMarkModal({
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-3 py-4">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[92vh] overflow-hidden relative">
-                
+
                 {/* Loader Screen Layer */}
                 {submitting && (
                     <div className="absolute inset-0 z-20 bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center gap-3">
@@ -278,7 +278,7 @@ export default function ManualMarkModal({
                         <div className="py-12 text-center text-gray-400 text-sm">No match profiles located.</div>
                     ) : (
                         filtered.map((s) => {
-                            const isLocked = s.status && s.status !== "Not Marked";
+                            const isLocked = s.status && s.status !== STATUS_NOT_MARKED;
                             return (
                                 <StudentRow
                                     key={s.id}
@@ -294,7 +294,7 @@ export default function ManualMarkModal({
 
                 {/* Modal Footer Controls */}
                 <div className="px-5 py-4 border-t border-gray-100 flex gap-3 shrink-0 bg-white rounded-b-2xl">
-                    <button onClick={onClose} className="border border-gray-200 rounded-xl py-2.5 px-6 text-sm font-semibold text-gray-700 hover:bg-gray-50">Cancel</button>
+                    <button onClick={onClose} className="border border-gray-200 rounded-xl py-2.5 px-6 text-sm font-semibold text-gray-700 hover:bg-gray-50">{UI_STRINGS.COMMON.CANCEL}</button>
                     <button
                         onClick={handleSubmit}
                         disabled={submitting || isAllLocked || students.length === 0}
@@ -303,7 +303,7 @@ export default function ManualMarkModal({
                         {isAllLocked ? (
                             <><Lock className="w-4 h-4" /> Attendance Registry Locked</>
                         ) : (
-                            <><CheckCheck className="w-4 h-4" /> Mark Attendance</>
+                            <><CheckCheck className="w-4 h-4" /> {BTN_MARK_ATTENDANCE}</>
                         )}
                     </button>
                 </div>
