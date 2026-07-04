@@ -389,16 +389,10 @@ const About = () => {
                             boxShadow: "0 4px 20px rgba(0, 201, 177, 0.25)",
                         }}
                     >
-                        <MessageCircle size={18} /> Book a Free 30-Minute Live Demo <ArrowRight size={18} />
+                        <MessageCircle size={18} /> Book a 30-Minute Live Demo <ArrowRight size={18} />
                     </motion.a>
 
-                    <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 mt-8">
-                        {["Zero-trust architecture", "AES-256 encryption", "500+ schools trust us"].map((tag, i) => (
-                            <span key={i} className={`inline-flex items-center gap-1.5 text-xs sm:text-sm ${isDark ? "text-slate-400" : "text-slate-600"}`}>
-                                <CheckCircle2 size={14} className="text-[#00C9B1]" /> {tag}
-                            </span>
-                        ))}
-                    </div>
+                    
                 </div>
             </motion.section>
         </div>

@@ -1,6 +1,8 @@
 import { useRef, useState, useContext } from 'react'
-import { motion, useInView} from 'framer-motion'
+import { motion, useInView } from 'framer-motion'
 import { UserContext } from '../../../ContextAPI/UserContext'
+import { useNavigate } from 'react-router-dom'
+import BookaDemo from '../../../assets/Images/Demo/BookaDemo.png'
 
 // ─── School-themed Floating SVGs ──────────────────────────────────────────────
 const SchoolSVGs = {
@@ -105,35 +107,29 @@ export default function TransformSchool() {
     const isDark = theme === 'dark'
 
     const ref = useRef(null)
+    const navigate = useNavigate();
     const inView = useInView(ref, { once: true, margin: '-80px' })
-    const [form, setForm] = useState({ name: '', school: '', phone: '', strength: '' })
-    const [submitted, setSubmitted] = useState(false)
+    const [menuOpen, setMenuOpen] = useState(false);
 
-    const handleSubmit = (e) => {
-        e.preventDefault()
-        if (form.name && form.school && form.phone) setSubmitted(true)
-    }
+    const handleNavLinkClick = (link) => {
+        setMenuOpen(false); // Instantly close mobile drawer if open
+        if (link === "Book A Demo") {
+            navigate("/contact");
+        }
+    };
 
-    const inputStyle = {
-        width: '100%',
-        padding: '14px 18px',
-        borderRadius: '10px',
-        background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
-        border: isDark ? '1.5px solid rgba(0,201,177,0.22)' : '1.5px solid rgba(0,201,177,0.35)',
-        color: isDark ? 'white' : '#0f172a',
-        fontSize: '14px',
-        fontFamily: '"DM Sans", sans-serif',
-        outline: 'none',
-        transition: 'border-color 0.2s, background-color 0.2s',
-    }
+    // Two intersecting linear-gradient masks fade only the thin outer border of the
+    // image on every side — corners aren't singled out, and the center stays fully sharp.
+    const imageFadeMaskX = 'linear-gradient(to right, transparent 0%, #000 6%, #000 94%, transparent 100%)'
+    const imageFadeMaskY = 'linear-gradient(to bottom, transparent 0%, #000 6%, #000 94%, transparent 100%)'
 
     return (
         <section
             id="demo"
             className="relative overflow-hidden transition-colors duration-300"
             style={{
-                background: isDark 
-                    ? 'linear-gradient(to right, #102130, #132939, #152F3F, #173343)' 
+                background: isDark
+                    ? 'linear-gradient(to right, #102130, #132939, #152F3F, #173343)'
                     : 'linear-gradient(to right, #f8fafc, #f1f5f9, #e2e8f0)',
                 minHeight: '100vh',
             }}
@@ -163,26 +159,39 @@ export default function TransformSchool() {
                         initial={{ opacity: 0, x: -50 }}
                         animate={inView ? { opacity: 1, x: 0 } : {}}
                         transition={{ duration: 0.7 }}
+                        className="flex flex-col items-center text-center lg:items-start lg:text-left"
                     >
                         {/* Badge */}
                         <motion.span
                             initial={{ opacity: 0, y: -10 }}
                             animate={inView ? { opacity: 1, y: 0 } : {}}
                             transition={{ delay: 0.15 }}
-                            className="inline-block px-4 py-1.5 rounded-full text-sm font-semibold mb-6 animate-pulse"
+                            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-semibold mb-6"
                             style={{
-                                background: 'rgba(0,201,177,0.1)',
-                                color: isDark ? '#00C9B1' : '#00a693',
+                                background: isDark ? 'rgba(0,201,177,0.1)' : 'rgba(0,201,177,0.08)',
+                                color: isDark ? '#00C9B1' : '#00967f',
                                 border: '1px solid rgba(0,201,177,0.28)',
                                 fontFamily: '"DM Sans", sans-serif',
                                 letterSpacing: '0.03em',
+                                boxShadow: isDark ? '0 0 0 4px rgba(0,201,177,0.04)' : '0 0 0 4px rgba(0,201,177,0.05)',
                             }}
                         >
+                            <motion.span
+                                animate={{ opacity: [1, 0.35, 1] }}
+                                transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+                                style={{
+                                    width: 6,
+                                    height: 6,
+                                    borderRadius: '50%',
+                                    background: '#00C9B1',
+                                    display: 'inline-block',
+                                }}
+                            />
                             Free Demo
                         </motion.span>
 
                         {/* Heading */}
-                        <div className="flex flex-col items-start gap-0.5 mb-6">
+                        <div className="flex flex-col items-center lg:items-start gap-0.5 mb-6">
                             <h1
                                 className="font-extrabold text-4xl sm:text-5xl md:text-6xl leading-tight transition-colors"
                                 style={{ fontFamily: '"Syne", sans-serif', color: isDark ? 'white' : '#0f172a' }}
@@ -209,12 +218,12 @@ export default function TransformSchool() {
                             style={{ color: isDark ? '#8A9BB0' : '#475569', fontFamily: '"DM Sans", sans-serif' }}
                         >
                             Join{' '}
-                            <strong style={{ color: '#00C9B1', fontWeight: 600 }}>500+ schools</strong>{' '}
+                            <strong style={{ color: isDark ? '#00C9B1' : '#00967f', fontWeight: 600 }}>500+ schools</strong>{' '}
                             that have already modernised their administration with SchoolSpine. Book a free 30-minute live demo today.
                         </p>
 
                         {/* Bullet points */}
-                        <ul className="space-y-4 mb-10">
+                        <ul className="flex flex-col items-center lg:items-start space-y-4 mb-10">
                             {demoPoints.map((point, i) => (
                                 <motion.li
                                     key={i}
@@ -227,12 +236,13 @@ export default function TransformSchool() {
                                     <span
                                         className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
                                         style={{
-                                            background: 'rgba(0,201,177,0.12)',
-                                            border: '1px solid rgba(0,201,177,0.35)',
+                                            background: isDark ? 'rgba(0,201,177,0.12)' : 'rgba(0,201,177,0.1)',
+                                            border: isDark ? '1px solid rgba(0,201,177,0.35)' : '1px solid rgba(0,201,177,0.4)',
+                                            boxShadow: isDark ? 'none' : '0 1px 2px rgba(0,150,127,0.08)',
                                         }}
                                     >
                                         <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                                            <path d="M2 6 L5 9 L10 3" stroke={isDark ? "#00C9B1" : "#00a693"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                                            <path d="M2 6 L5 9 L10 3" stroke={isDark ? "#00C9B1" : "#00967f"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                                         </svg>
                                     </span>
                                     {point}
@@ -241,9 +251,10 @@ export default function TransformSchool() {
                         </ul>
 
                         {/* Buttons */}
-                        <div className="flex flex-col sm:flex-row items-start gap-4">
+                        <div className="flex flex-col sm:flex-row items-center lg:items-start gap-4">
                             <motion.button
-                                whileHover={{ opacity: 0.88, scale: 1.03 }}
+                                onClick={() => handleNavLinkClick("Book A Demo")}
+                                whileHover={{ scale: 1.03, boxShadow: isDark ? '0 10px 32px rgba(0,201,177,0.32)' : '0 10px 28px rgba(0,150,127,0.28)' }}
                                 whileTap={{ scale: 0.97 }}
                                 className="px-8 py-3.5 rounded-full font-semibold text-slate-950 text-base cursor-pointer"
                                 style={{
@@ -251,21 +262,24 @@ export default function TransformSchool() {
                                     border: 'none',
                                     fontFamily: '"DM Sans", sans-serif',
                                     fontWeight: 700,
-                                    boxShadow: '0 8px 24px rgba(0,201,177,0.18)',
+                                    boxShadow: isDark
+                                        ? '0 8px 24px rgba(0,201,177,0.22)'
+                                        : '0 8px 24px rgba(0,150,127,0.18)',
+                                    transition: 'box-shadow 0.2s',
                                 }}
                             >
-                                Start Free Trial
+                                Book A Demo
                             </motion.button>
 
                             <motion.a
                                 href="https://wa.me/919511117450?text=Hi%2C%20I%20want%20to%20know%20more%20about%20SchoolSpine"
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                whileHover={{ backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)', scale: 1.03 }}
+                                whileHover={{ backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(15,23,42,0.04)', scale: 1.03 }}
                                 whileTap={{ scale: 0.97 }}
                                 className="inline-flex items-center gap-2 px-8 py-3.5 rounded-full font-semibold text-base cursor-pointer"
                                 style={{
-                                    border: isDark ? '1px solid rgba(255,255,255,0.28)' : '1px solid rgba(0,0,0,0.2)',
+                                    border: isDark ? '1px solid rgba(255,255,255,0.28)' : '1px solid rgba(15,23,42,0.18)',
                                     color: isDark ? 'white' : '#1e293b',
                                     textDecoration: 'none',
                                     fontFamily: '"DM Sans", sans-serif',
@@ -278,130 +292,33 @@ export default function TransformSchool() {
                         </div>
                     </motion.div>
 
-                    {/* ── Right: Demo Form ── */}
+                    {/* ── Right: Responsive Demo Graphic/Image ── */}
                     <motion.div
                         initial={{ opacity: 0, x: 50 }}
                         animate={inView ? { opacity: 1, x: 0 } : {}}
                         transition={{ duration: 0.7, delay: 0.2 }}
+                        className="hidden sm:flex relative w-full justify-center items-center"
+                        style={{ minHeight: 480 }}
                     >
+                        {/* Ambient color glow sitting behind the image — visible through the faded edges */}
                         <div
-                            className="rounded-2xl p-8 transition-all"
+                            className="absolute pointer-events-none"
                             style={{
-                                background: isDark ? 'rgba(255,255,255,0.05)' : '#ffffff',
-                                backdropFilter: 'blur(24px)',
-                                WebkitBackdropFilter: 'blur(24px)',
-                                border: isDark ? '1.5px solid rgba(0,201,177,0.18)' : '1.5px solid rgba(0,201,177,0.25)',
-                                boxShadow: isDark 
-                                    ? '0 0 56px rgba(0,201,177,0.07), 0 2px 32px rgba(0,0,0,0.3)'
-                                    : '0 10px 40px rgba(148,163,184,0.12), 0 1px 3px rgba(0,0,0,0.05)',
+                                width: '78%',
+                                height: '78%',
+                                borderRadius: '50%',
+                                background: 'radial-gradient(circle, rgba(0,201,177,0.28) 0%, rgba(245,166,35,0.16) 45%, transparent 72%)',
+                                filter: 'blur(60px)',
+                                opacity: isDark ? 0.9 : 0.5,
                             }}
-                        >
-                            {submitted ? (
-                                <motion.div
-                                    initial={{ opacity: 0, scale: 0.9 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    className="text-center py-10"
-                                >
-                                    <div className="text-5xl mb-4">🎉</div>
-                                    <h3
-                                        className="text-2xl font-bold mb-3"
-                                        style={{ fontFamily: '"Syne", sans-serif', color: isDark ? 'white' : '#0f172a' }}
-                                    >
-                                        Demo Booked!
-                                    </h3>
-                                    <p style={{ color: isDark ? '#8A9BB0' : '#64748b', fontFamily: '"DM Sans", sans-serif' }}>
-                                        Our team will reach out within 24 hours to confirm your demo slot.
-                                    </p>
-                                </motion.div>
-                            ) : (
-                                <>
-                                    <h3
-                                        className="text-xl font-bold mb-1.5"
-                                        style={{ fontFamily: '"Syne", sans-serif', color: isDark ? 'white' : '#0f172a' }}
-                                    >
-                                        Book Your Free Demo
-                                    </h3>
-                                    <p
-                                        className="text-sm mb-7"
-                                        style={{ color: isDark ? '#8A9BB0' : '#64748b', fontFamily: '"DM Sans", sans-serif' }}
-                                    >
-                                        Fill in your details and our education specialist will set up a personalised demo.
-                                    </p>
+                        />
 
-                                    <form onSubmit={handleSubmit} className="space-y-4">
-                                        <input
-                                            type="text"
-                                            placeholder="Your Full Name *"
-                                            value={form.name}
-                                            onChange={(e) => setForm({ ...form, name: e.target.value })}
-                                            style={inputStyle}
-                                            required
-                                            onFocus={(e) => (e.target.style.borderColor = '#00C9B1')}
-                                            onBlur={(e) => (e.target.style.borderColor = isDark ? 'rgba(0,201,177,0.22)' : 'rgba(0,201,177,0.35)')}
-                                        />
-                                        <input
-                                            type="text"
-                                            placeholder="School / Institution Name *"
-                                            value={form.school}
-                                            onChange={(e) => setForm({ ...form, school: e.target.value })}
-                                            style={inputStyle}
-                                            required
-                                            onFocus={(e) => (e.target.style.borderColor = '#00C9B1')}
-                                            onBlur={(e) => (e.target.style.borderColor = isDark ? 'rgba(0,201,177,0.22)' : 'rgba(0,201,177,0.35)')}
-                                        />
-                                        <input
-                                            type="tel"
-                                            placeholder="Phone Number *"
-                                            value={form.phone}
-                                            onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                                            style={inputStyle}
-                                            required
-                                            onFocus={(e) => (e.target.style.borderColor = '#00C9B1')}
-                                            onBlur={(e) => (e.target.style.borderColor = isDark ? 'rgba(0,201,177,0.22)' : 'rgba(0,201,177,0.35)')}
-                                        />
-                                        <select
-                                            value={form.strength}
-                                            onChange={(e) => setForm({ ...form, strength: e.target.value })}
-                                            style={{
-                                                ...inputStyle,
-                                                color: form.strength ? (isDark ? 'white' : '#0f172a') : '#8A9BB0',
-                                            }}
-                                            onFocus={(e) => (e.target.style.borderColor = '#00C9B1')}
-                                            onBlur={(e) => (e.target.style.borderColor = isDark ? 'rgba(0,201,177,0.22)' : 'rgba(0,201,177,0.35)')}
-                                        >
-                                            <option value="" disabled style={{ background: isDark ? '#152F3F' : '#ffffff', color: '#8A9BB0' }}>Student Strength</option>
-                                            <option value="<200" style={{ background: isDark ? '#152F3F' : '#ffffff', color: isDark ? 'white' : '#0f172a' }}>Below 200 Students</option>
-                                            <option value="200-500" style={{ background: isDark ? '#152F3F' : '#ffffff', color: isDark ? 'white' : '#0f172a' }}>200–500 Students</option>
-                                            <option value="500-1000" style={{ background: isDark ? '#152F3F' : '#ffffff', color: isDark ? 'white' : '#0f172a' }}>500–1000 Students</option>
-                                            <option value="1000+" style={{ background: isDark ? '#152F3F' : '#ffffff', color: isDark ? 'white' : '#0f172a' }}>1000+ Students</option>
-                                        </select>
-
-                                        <motion.button
-                                            type="submit"
-                                            whileHover={{ scale: 1.02, boxShadow: '0 0 28px rgba(0,201,177,0.3)' }}
-                                            whileTap={{ scale: 0.98 }}
-                                            className="w-full py-4 rounded-xl font-bold text-slate-950 text-base mt-2 cursor-pointer"
-                                            style={{
-                                                background: 'linear-gradient(to right, #00C9B1, #F5A623)',
-                                                border: 'none',
-                                                fontFamily: '"DM Sans", sans-serif',
-                                                fontWeight: 700,
-                                                letterSpacing: '0.02em',
-                                            }}
-                                        >
-                                            Book Free Demo →
-                                        </motion.button>
-                                    </form>
-
-                                    <p
-                                        className="text-center text-xs mt-4"
-                                        style={{ color: isDark ? 'rgba(138,155,176,0.6)' : '#64748b', fontFamily: '"DM Sans", sans-serif' }}
-                                    >
-                                        No credit card required · 100% free · Response within 24hrs
-                                    </p>
-                                </>
-                            )}
-                        </div>
+                        <img
+                            src={BookaDemo}
+                            alt="Book a Demo"
+                            className="relative w-full rounded-xl h-auto max-h-[580px] object-contain transition-all duration-300"
+                           
+                        />
                     </motion.div>
 
                 </div>

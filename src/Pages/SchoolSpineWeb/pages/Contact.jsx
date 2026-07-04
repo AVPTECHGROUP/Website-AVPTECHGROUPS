@@ -47,7 +47,11 @@ const CAMPUS_MAP_EMBED_SRC = "https://www.google.com/maps?q=Royal+Plaza,+Sushant
 
 const faqLinks = [
     { title: "Setting up the mobile app?", label: "Help & Support", path: "/support" },
-    { title: "Curious about pricing plans?", label: "Pricing Guide", path: "/#pricing-section" },
+    {
+        title: "Explore Our Latest Blog Articles",
+        label: "Visit Blog",
+        path: "/blog"
+    },
     { title: "Quick questions on features?", label: "FAQ Section", path: "/faqs" },
 ];
 
@@ -57,10 +61,10 @@ const MotionLink = motion(Link);
 // Animation Configuration Variants
 const fadeInUp = {
     hidden: { opacity: 0, y: 30 },
-    visible: { 
-        opacity: 1, 
-        y: 0, 
-        transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] } 
+    visible: {
+        opacity: 1,
+        y: 0,
+        transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] }
     }
 };
 
@@ -98,20 +102,17 @@ const Contact = () => {
         setTimeout(() => setSubmitted(false), 5000);
     };
 
-    const inputClasses = `w-full h-12 px-4 rounded-xl border outline-none transition-all text-sm ${
-        isDark
+    const inputClasses = `w-full h-12 px-4 rounded-xl border outline-none transition-all text-sm ${isDark
             ? "bg-white/[0.04] border-white/10 text-white placeholder-slate-500 focus:border-[#00C9B1]/50"
             : "bg-white border-slate-200 text-slate-900 placeholder-slate-400 focus:border-[#00C9B1]/60"
-    }`;
-    const labelClasses = `text-xs font-semibold uppercase tracking-wide mb-2 block ${
-        isDark ? "text-slate-400" : "text-slate-500"
-    }`;
+        }`;
+    const labelClasses = `text-xs font-semibold uppercase tracking-wide mb-2 block ${isDark ? "text-slate-400" : "text-slate-500"
+        }`;
 
     return (
         <div
-            className={`relative min-h-screen overflow-hidden transition-colors duration-500 ${
-                isDark ? "bg-[#030712] text-slate-100" : "bg-slate-50 text-slate-900"
-            }`}
+            className={`relative min-h-screen overflow-hidden transition-colors duration-500 ${isDark ? "bg-[#030712] text-slate-100" : "bg-slate-50 text-slate-900"
+                }`}
         >
             {/* Ambient Glows */}
             <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
@@ -126,7 +127,7 @@ const Contact = () => {
             </div>
 
             {/* Hero Section */}
-            <motion.header 
+            <motion.header
                 initial="hidden"
                 animate="visible"
                 variants={staggerContainer}
@@ -146,18 +147,16 @@ const Contact = () => {
 
                 <motion.h1
                     variants={fadeInUp}
-                    className={`text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-6 ${
-                        isDark ? "text-white" : "text-slate-900"
-                    }`}
+                    className={`text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-6 ${isDark ? "text-white" : "text-slate-900"
+                        }`}
                 >
                     Get in <span className="bg-gradient-to-r from-[#00C9B1] to-[#00E5CC] bg-clip-text text-transparent">Touch</span> With Us
                 </motion.h1>
 
                 <motion.p
                     variants={fadeInUp}
-                    className={`text-base sm:text-lg max-w-3xl mx-auto leading-relaxed ${
-                        isDark ? "text-slate-400" : "text-slate-600"
-                    }`}
+                    className={`text-base sm:text-lg max-w-3xl mx-auto leading-relaxed ${isDark ? "text-slate-400" : "text-slate-600"
+                        }`}
                 >
                     Whether it's admissions, technical support, or school fees — our team is ready to
                     assist. Reach out below, or fill the form and we'll reply within 24 hours.
@@ -166,7 +165,7 @@ const Contact = () => {
 
             {/* Quick Contact Strip */}
             <section className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 mb-16">
-                <motion.div 
+                <motion.div
                     initial="hidden"
                     animate="visible"
                     variants={staggerContainer}
@@ -175,17 +174,16 @@ const Contact = () => {
                     {[
                         { icon: Phone, label: "Main Office", value: "+91 9511117450", sub: "Alt: +91 9511117451" },
                         { icon: Mail, label: "General Inquiries", value: "info@computesofttech.com" },
-                        { icon: Clock, label: "Working Hours", value: "Mon – Sat, 8AM – 4PM", sub: "Closed Sundays & holidays" },
+                        { icon: Clock, label: "Working Hours", value: "Mon – Sat, 9AM – 6PM", sub: "Closed Sundays & holidays" },
                     ].map(({ icon: Icon, label, value, sub }, i) => (
                         <motion.div
                             key={i}
                             variants={fadeInUp}
                             whileHover={{ y: -4, transition: { duration: 0.2 } }}
-                            className={`rounded-2xl p-5 border backdrop-blur-md flex items-start gap-4 transition-colors duration-300 ${
-                                isDark
+                            className={`rounded-2xl p-5 border backdrop-blur-md flex items-start gap-4 transition-colors duration-300 ${isDark
                                     ? "bg-slate-950/40 border-slate-800/60 hover:border-[#00C9B1]/40"
                                     : "bg-white/80 border-slate-200/80 hover:border-teal-400/50 shadow-sm"
-                            }`}
+                                }`}
                         >
                             <div className="w-11 h-11 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-[#00C9B1] flex-shrink-0">
                                 <Icon size={18} />
@@ -211,11 +209,10 @@ const Contact = () => {
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true, margin: "-100px" }}
                     transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-                    className={`rounded-3xl border backdrop-blur-md overflow-hidden shadow-2xl ${
-                        isDark
+                    className={`rounded-3xl border backdrop-blur-md overflow-hidden shadow-2xl ${isDark
                             ? "bg-slate-950/40 border-slate-800/60 shadow-black/30"
                             : "bg-white/80 border-slate-200/80 shadow-slate-200/60"
-                    }`}
+                        }`}
                 >
                     <div className="grid grid-cols-1 lg:grid-cols-2">
                         {/* Left Image Column */}
@@ -251,7 +248,7 @@ const Contact = () => {
                             </p>
 
                             {submitted && (
-                                <motion.div 
+                                <motion.div
                                     initial={{ opacity: 0, scale: 0.95 }}
                                     animate={{ opacity: 1, scale: 1 }}
                                     className="mb-6 flex items-center gap-2 px-4 py-3 rounded-xl border border-[#00C9B1]/30 bg-[#00C9B1]/10 text-[#00C9B1] text-sm font-medium"
@@ -308,21 +305,20 @@ const Contact = () => {
                                                 name="inquiry"
                                                 value={form.inquiry}
                                                 onChange={handleChange}
-                                                className={`${inputClasses} appearance-none pr-10 cursor-pointer ${
-                                                    !form.inquiry ? (isDark ? "text-slate-500" : "text-slate-400") : ""
-                                                }`}
+                                                className={`${inputClasses} appearance-none pr-10 cursor-pointer ${!form.inquiry ? (isDark ? "text-slate-500" : "text-slate-400") : ""
+                                                    }`}
                                                 required
                                             >
-                                                <option 
-                                                    value="" 
-                                                    disabled 
+                                                <option
+                                                    value=""
+                                                    disabled
                                                     className={isDark ? "bg-slate-900 text-slate-500" : "bg-white text-slate-400"}
                                                 >
                                                     Select an inquiry type
                                                 </option>
                                                 {inquiryTypes.map((t) => (
-                                                    <option 
-                                                        key={t} 
+                                                    <option
+                                                        key={t}
                                                         value={t}
                                                         className={isDark ? "bg-slate-950 text-slate-100" : "bg-white text-slate-900"}
                                                     >
@@ -367,7 +363,7 @@ const Contact = () => {
 
             {/* Department Helpdesks */}
             <section className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 mb-16">
-                <motion.div 
+                <motion.div
                     initial={{ opacity: 0, y: 25 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
@@ -382,7 +378,7 @@ const Contact = () => {
                     </p>
                 </motion.div>
 
-                <motion.div 
+                <motion.div
                     initial="hidden"
                     whileInView="visible"
                     viewport={{ once: true, margin: "-50px" }}
@@ -393,11 +389,10 @@ const Contact = () => {
                         <motion.div
                             key={i}
                             variants={fadeInUp}
-                            className={`rounded-2xl p-6 sm:p-7 border backdrop-blur-md transition-colors duration-300 ${
-                                isDark
+                            className={`rounded-2xl p-6 sm:p-7 border backdrop-blur-md transition-colors duration-300 ${isDark
                                     ? "bg-slate-950/40 border-slate-800/60 hover:border-[#00C9B1]/40"
                                     : "bg-white/80 border-slate-200/80 hover:border-teal-400/50 shadow-sm"
-                            }`}
+                                }`}
                         >
                             <div className="w-11 h-11 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-[#00C9B1] mb-4">
                                 <Icon size={20} />
@@ -428,16 +423,14 @@ const Contact = () => {
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true, margin: "-60px" }}
                     transition={{ duration: 0.6 }}
-                    className={`rounded-3xl border backdrop-blur-md overflow-hidden shadow-xl ${
-                        isDark
+                    className={`rounded-3xl border backdrop-blur-md overflow-hidden shadow-xl ${isDark
                             ? "bg-slate-950/40 border-slate-800/60 shadow-black/30"
                             : "bg-white/80 border-slate-200/80 shadow-slate-200/60"
-                    }`}
+                        }`}
                 >
                     <div
-                        className={`p-6 sm:p-8 flex flex-col sm:flex-row sm:items-center justify-between gap-5 border-b ${
-                            isDark ? "border-slate-800/60" : "border-slate-200/70"
-                        }`}
+                        className={`p-6 sm:p-8 flex flex-col sm:flex-row sm:items-center justify-between gap-5 border-b ${isDark ? "border-slate-800/60" : "border-slate-200/70"
+                            }`}
                     >
                         <div className="flex items-start sm:items-center gap-5">
                             <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-[#F5A623] flex-shrink-0">
@@ -498,7 +491,7 @@ const Contact = () => {
                     </h2>
                 </div>
 
-                <motion.div 
+                <motion.div
                     initial="hidden"
                     whileInView="visible"
                     viewport={{ once: true }}
@@ -511,11 +504,10 @@ const Contact = () => {
                             to={path}
                             variants={fadeInUp}
                             whileHover={{ y: -5, transition: { duration: 0.2 } }}
-                            className={`group rounded-2xl p-6 border backdrop-blur-md transition-shadow duration-300 ${
-                                isDark
+                            className={`group rounded-2xl p-6 border backdrop-blur-md transition-shadow duration-300 ${isDark
                                     ? "bg-slate-950/40 border-slate-800/60 hover:border-[#F5A623]/40"
                                     : "bg-white/80 border-slate-200/80 hover:border-amber-400/50 shadow-sm"
-                            }`}
+                                }`}
                         >
                             <BadgeCheck size={18} className="text-[#F5A623] mb-3" />
                             <p className={`text-sm mb-3 ${isDark ? "text-slate-400" : "text-slate-600"}`}>{title}</p>

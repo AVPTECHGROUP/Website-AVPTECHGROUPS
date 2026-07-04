@@ -15,8 +15,8 @@ const parseStatValue = (raw) => {
 };
 
 const statsData = [
-    { value: "500+", label: "Schools Onboarded" },
-    { value: "2M+", label: "Students Managed" },
+    { value: "5", label: "Schools Onboarded" },
+    { value: "3000+", label: "Students Managed" },
     { value: "99.9%", label: "Uptime" },
     { value: "4.9★", label: "Average Rating" },
 ];

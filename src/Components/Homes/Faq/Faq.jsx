@@ -278,9 +278,6 @@ const FAQ = () => {
                     className="group inline-flex items-center gap-3 px-7 py-3.5 rounded-full bg-teal-dark text-white font-body font-semibold text-sm sm:text-base shadow-md hover:bg-teal transition-all duration-200 cursor-pointer"
                 >
                     View All FAQs
-                    <span className="text-white/60 font-normal text-sm">
-                        +{remaining} more
-                    </span>
                     <ArrowRight
                         size={17}
                         className="group-hover:translate-x-1 transition-transform duration-200"
