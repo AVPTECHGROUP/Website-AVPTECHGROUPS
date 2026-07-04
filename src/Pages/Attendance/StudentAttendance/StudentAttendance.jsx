@@ -17,6 +17,12 @@ import {
 import CardComponent from "../../../Components/CommonComp/CardComponent";
 import IndividualFaceScanView from "./IndividualFaceScanView";
 import GroupPhotoView from "./GroupPhotoView";
+import {
+    STATUS_NOT_MARKED, STATUS_PRESENT, STATUS_LATE, STATUS_PRESENT_MANUAL, STATUS_ABSENT,
+    SOURCE_MAP, SOURCE_MANUAL_LABEL, SOURCE_EMPTY_PLACEHOLDER, DASH_PLACEHOLDER,
+    STATUS_COLOR_MAP, CONFIDENCE_HIGH_THRESHOLD, CONFIDENCE_MEDIUM_THRESHOLD, CONFIDENCE_COLOR_MAP,
+    AVATAR_INITIALS_COLORS, FILTER_ALL_STUDENTS, FILTER_OPTIONS, UI_STRINGS,
+} from "../../../Constants/StringConstants/AttendanceConstants";
 
 
 const PAGES_PER_VIEW = 10;
@@ -30,27 +36,27 @@ const getInitials = (fullName = "") => {
 };
 
 const mapStatus = (apiStatus) => {
-    if (!apiStatus) return "Not Marked";
+    if (!apiStatus) return STATUS_NOT_MARKED;
     const s = apiStatus.toUpperCase();
-    if (s === "PRESENT") return "Present";
-    if (s === "LATE") return "Late";
-    if (s === "PRESENT_MANUAL" || s === "MANUAL") return "Present (Manual)";
-    if (s === "ABSENT") return "Absent";
-    return "Not Marked";
+    if (s === "PRESENT") return STATUS_PRESENT;
+    if (s === "LATE") return STATUS_LATE;
+    if (s === "PRESENT_MANUAL" || s === "MANUAL") return STATUS_PRESENT_MANUAL;
+    if (s === "ABSENT") return STATUS_ABSENT;
+    return STATUS_NOT_MARKED;
 };
 
 const shapeRosterStudent = (st) => {
-    const name = st.studentName || "Unknown";
+    const name = st.studentName || UI_STRINGS.COMMON.UNKNOWN;
     const confidence = st.confidenceScore ? Math.round(st.confidenceScore) : null;
-    const sourceMap = { GROUP_PHOTO: "Group Photo", FACE_SCAN: "Face Scan", MANUAL: "Manual" };
+    const sourceMap = SOURCE_MAP;
     const source = st.status
-        ? st.isManual ? "Manual" : (sourceMap[st.attendanceSource] || st.attendanceSource || null)
+        ? st.isManual ? SOURCE_MANUAL_LABEL : (sourceMap[st.attendanceSource] || st.attendanceSource || null)
         : null;
     return {
         id: st.studentId,
         name,
         initials: getInitials(name),
-        rollNo: st.rollNumber || st.admissionNumber || "—",
+        rollNo: st.rollNumber || st.admissionNumber || DASH_PLACEHOLDER,
         status: mapStatus(st.status),
         checkIn: st.checkInTime ? st.checkInTime.slice(0, 5) : null,
         source,
@@ -63,30 +69,30 @@ const shapeRosterStudent = (st) => {
 
 // ─── Style helpers ────────────────────────────────────────────────────────────
 const statusColor = (s) => {
-    if (!s || s === "Not Marked") return "bg-purple-100 text-purple-700";
-    if (s.includes("Present (Manual)")) return "bg-orange-100 text-orange-700";
-    if (s.includes("Present")) return "bg-green-100 text-green-700";
-    if (s === "Late") return "bg-yellow-100 text-yellow-700";
-    if (s === "Absent") return "bg-red-100 text-red-600";
-    return "bg-gray-100 text-gray-600";
+    if (!s || s === STATUS_NOT_MARKED) return STATUS_COLOR_MAP.NOT_MARKED;
+    if (s.includes(STATUS_PRESENT_MANUAL)) return STATUS_COLOR_MAP.PRESENT_MANUAL;
+    if (s.includes(STATUS_PRESENT)) return STATUS_COLOR_MAP.PRESENT;
+    if (s === STATUS_LATE) return STATUS_COLOR_MAP.LATE;
+    if (s === STATUS_ABSENT) return "bg-red-100 text-red-600";
+    return STATUS_COLOR_MAP.DEFAULT;
 };
 
 const statusIcon = (s) => {
-    if (!s || s === "Not Marked") return <BookOpen className="w-3.5 h-3.5" />; // 
-    if (s.includes("Present")) return <CheckCircle2 className="w-3.5 h-3.5" />;
-    if (s === "Late") return <Clock className="w-3.5 h-3.5" />;
-    if (s === "Absent") return <XCircle className="w-3.5 h-3.5" />;
+    if (!s || s === STATUS_NOT_MARKED) return <BookOpen className="w-3.5 h-3.5" />; // 
+    if (s.includes(STATUS_PRESENT)) return <CheckCircle2 className="w-3.5 h-3.5" />;
+    if (s === STATUS_LATE) return <Clock className="w-3.5 h-3.5" />;
+    if (s === STATUS_ABSENT) return <XCircle className="w-3.5 h-3.5" />;
     return null;
 };
 
 const confidenceColor = (c) => {
-    if (!c) return "bg-gray-200";
-    if (c >= 80) return "bg-green-500";
-    if (c >= 60) return "bg-yellow-500";
-    return "bg-red-500";
+    if (!c) return CONFIDENCE_COLOR_MAP.NONE;
+    if (c >= CONFIDENCE_HIGH_THRESHOLD) return CONFIDENCE_COLOR_MAP.HIGH;
+    if (c >= CONFIDENCE_MEDIUM_THRESHOLD) return CONFIDENCE_COLOR_MAP.MEDIUM;
+    return CONFIDENCE_COLOR_MAP.LOW;
 };
 const avatarColor = (initials = "??") => {
-    const colors = ["bg-blue-100 text-blue-700", "bg-green-100 text-green-700", "bg-purple-100 text-purple-700", "bg-orange-100 text-orange-700", "bg-pink-100 text-pink-700", "bg-teal-100 text-teal-700"];
+    const colors = AVATAR_INITIALS_COLORS;
     return colors[((initials.charCodeAt(0) || 0) + (initials.charCodeAt(1) || 0)) % colors.length];
 };
 
@@ -137,16 +143,16 @@ function RosterView({
     selectedClass, selectedSection, handleClassChange, handleSectionChange,
     date, setDate,
 }) {
-    const [filter, setFilter] = useState("All Students");
+    const [filter, setFilter] = useState(FILTER_ALL_STUDENTS);
     const [search, setSearch] = useState("");
     const [page, setPage] = useState(1);
 
     const filtered = students.filter((s) => {
         const matchFilter =
-            filter === "All Students" ||
-            (filter === "Present" && s.status.includes("Present")) ||
-            (filter === "Late" && s.status === "Late") ||
-            (filter === "Not Marked" && s.status === "Not Marked");
+            filter === FILTER_ALL_STUDENTS ||
+            (filter === STATUS_PRESENT && s.status.includes(STATUS_PRESENT)) ||
+            (filter === STATUS_LATE && s.status === STATUS_LATE) ||
+            (filter === STATUS_NOT_MARKED && s.status === STATUS_NOT_MARKED);
         const matchSearch =
             s.name.toLowerCase().includes(search.toLowerCase()) ||
             (s.rollNo || "").includes(search);
@@ -197,11 +203,11 @@ function RosterView({
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
             <div className="flex flex-col sm:flex-row gap-3 p-4 border-b border-gray-100 flex-wrap">
                 <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold text-gray-600">Filter:</span>
+                    <span className="text-sm font-semibold text-gray-600">{UI_STRINGS.ROSTER.FILTER}</span>
                     <div className="relative">
                         <select value={filter} onChange={(e) => { setFilter(e.target.value); setPage(1); }}
                             className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm appearance-none pr-8 focus:outline-none focus:ring-2 focus:ring-blue-200 cursor-pointer bg-white">
-                            {["All Students", "Present", "Late", "Not Marked"].map((f) => <option key={f}>{f}</option>)}
+                            {FILTER_OPTIONS.map((f) => <option key={f}>{f}</option>)}
                         </select>
                         <ChevronDown className="w-3.5 h-3.5 text-gray-400 absolute right-2 top-2.5 pointer-events-none" />
                     </div>
@@ -209,7 +215,7 @@ function RosterView({
                 <div className="relative flex-1 sm:max-w-xs">
                     <Search className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
                     <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                        placeholder="Search by name or roll no..."
+                        placeholder={UI_STRINGS.ROSTER.SEARCH_PLACEHOLDER}
                         className="w-full border border-gray-200 rounded-lg pl-9 pr-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200" />
                 </div>
                 <div className="flex flex-wrap items-center gap-2 ml-auto">
@@ -217,7 +223,7 @@ function RosterView({
                         <div className="relative">
                             <select value={selectedClass?.id ?? ""} onChange={(e) => handleClassChange(e.target.value)}
                                 className="border border-gray-200 bg-white rounded-lg px-3 py-2 text-sm appearance-none pr-8 focus:outline-none focus:ring-2 focus:ring-blue-200 cursor-pointer shadow-sm">
-                                {classes.length === 0 && <option value="">No classes</option>}
+                                {classes.length === 0 && <option value="">{UI_STRINGS.ROSTER.NO_CLASSES}</option>}
                                 {classes.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                             </select>
                             <ChevronDown className="w-3.5 h-3.5 text-gray-400 absolute right-2 top-2.5 pointer-events-none" />
@@ -228,7 +234,7 @@ function RosterView({
                             <select value={selectedSection?.id ?? ""} onChange={(e) => handleSectionChange(e.target.value)}
                                 disabled={sections.length === 0}
                                 className="border border-gray-200 bg-white rounded-lg px-3 py-2 text-sm appearance-none pr-8 focus:outline-none focus:ring-2 focus:ring-blue-200 cursor-pointer shadow-sm disabled:opacity-60">
-                                {sections.length === 0 && <option value="">No sections</option>}
+                                {sections.length === 0 && <option value="">{UI_STRINGS.ROSTER.NO_SECTIONS}</option>}
                                 {sections.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
                             </select>
                             <ChevronDown className="w-3.5 h-3.5 text-gray-400 absolute right-2 top-2.5 pointer-events-none" />
@@ -245,14 +251,14 @@ function RosterView({
                         <table className="w-full">
                             <thead>
                                 <tr className="bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                                    <th className="px-4 py-3 text-left w-10">#</th>
-                                    <th className="px-4 py-3 text-left">Student</th>
-                                    <th className="px-4 py-3 text-left">Roll No.</th>
-                                    <th className="px-4 py-3 text-left">Status</th>
-                                    <th className="px-4 py-3 text-left">Check-In</th>
-                                    <th className="px-4 py-3 text-left">Source</th>
-                                    <th className="px-4 py-3 text-left">Confidence</th>
-                                    <th className="px-4 py-3 text-center">Actions</th>
+                                    <th className="px-4 py-3 text-left w-10">{UI_STRINGS.ROSTER.HEADERS[0]}</th>
+                                    <th className="px-4 py-3 text-left">{UI_STRINGS.ROSTER.HEADERS[1]}</th>
+                                    <th className="px-4 py-3 text-left">{UI_STRINGS.ROSTER.HEADERS[2]}</th>
+                                    <th className="px-4 py-3 text-left">{UI_STRINGS.ROSTER.HEADERS[3]}</th>
+                                    <th className="px-4 py-3 text-left">{UI_STRINGS.ROSTER.HEADERS[4]}</th>
+                                    <th className="px-4 py-3 text-left">{UI_STRINGS.ROSTER.HEADERS[5]}</th>
+                                    <th className="px-4 py-3 text-left">{UI_STRINGS.ROSTER.HEADERS[6]}</th>
+                                    <th className="px-4 py-3 text-center">{UI_STRINGS.ROSTER.HEADERS[7]}</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
@@ -265,21 +271,21 @@ function RosterView({
                     </div>
                 </>
             ) : students.length === 0 ? (
-                <div className="p-10 text-center text-gray-400 text-sm">No students found for this section.</div>
+                <div className="p-10 text-center text-gray-400 text-sm">{UI_STRINGS.ROSTER.NO_STUDENTS}</div>
             ) : (
                 <>
                     <div className="hidden md:block overflow-x-auto">
                         <table className="w-full">
                             <thead>
                                 <tr className="bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                                    <th className="px-4 py-3 text-left w-10">#</th>
-                                    <th className="px-4 py-3 text-left">Student</th>
-                                    <th className="px-4 py-3 text-left">Roll No.</th>
-                                    <th className="px-4 py-3 text-left">Status</th>
-                                    <th className="px-4 py-3 text-left">Check-In</th>
-                                    <th className="px-4 py-3 text-left">Source</th>
-                                    <th className="px-4 py-3 text-left">Confidence</th>
-                                    <th className="px-4 py-3 text-center">Actions</th>
+                                    <th className="px-4 py-3 text-left w-10">{UI_STRINGS.ROSTER.HEADERS[0]}</th>
+                                    <th className="px-4 py-3 text-left">{UI_STRINGS.ROSTER.HEADERS[1]}</th>
+                                    <th className="px-4 py-3 text-left">{UI_STRINGS.ROSTER.HEADERS[2]}</th>
+                                    <th className="px-4 py-3 text-left">{UI_STRINGS.ROSTER.HEADERS[3]}</th>
+                                    <th className="px-4 py-3 text-left">{UI_STRINGS.ROSTER.HEADERS[4]}</th>
+                                    <th className="px-4 py-3 text-left">{UI_STRINGS.ROSTER.HEADERS[5]}</th>
+                                    <th className="px-4 py-3 text-left">{UI_STRINGS.ROSTER.HEADERS[6]}</th>
+                                    <th className="px-4 py-3 text-center">{UI_STRINGS.ROSTER.HEADERS[7]}</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
@@ -291,7 +297,7 @@ function RosterView({
                                                 <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${avatarColor(s.initials)}`}>{s.initials}</div>
                                                 <div>
                                                     <p className="text-sm font-semibold text-gray-800">{s.name}</p>
-                                                    <p className="text-xs text-gray-400">ID: {s.id}</p>
+                                                    <p className="text-xs text-gray-400">{UI_STRINGS.COMMON.ID_LABEL} {s.id}</p>
                                                 </div>
                                             </div>
                                         </td>
@@ -301,11 +307,11 @@ function RosterView({
                                                 {statusIcon(s.status)}{s.status}
                                             </span>
                                         </td>
-                                        <td className="px-4 py-3 text-sm text-gray-600">{s.checkIn || "—"}</td>
+                                        <td className="px-4 py-3 text-sm text-gray-600">{s.checkIn || DASH_PLACEHOLDER}</td>
                                         <td className="px-4 py-3">
                                             {s.source ? (
-                                                <span className={`text-xs px-2 py-0.5 rounded-full font-medium border ${s.source === "Group Photo" ? "bg-blue-50 text-blue-600 border-blue-100" : s.source === "Face Scan" ? "bg-green-50 text-green-600 border-green-100" : "bg-purple-50 text-purple-600 border-purple-100"}`}>{s.source}</span>
-                                            ) : "—"}
+                                                <span className={`text-xs px-2 py-0.5 rounded-full font-medium border ${s.source === SOURCE_MAP.GROUP_PHOTO ? "bg-blue-50 text-blue-600 border-blue-100" : s.source === SOURCE_MAP.FACE_SCAN ? "bg-green-50 text-green-600 border-green-100" : "bg-purple-50 text-purple-600 border-purple-100"}`}>{s.source}</span>
+                                            ) : SOURCE_EMPTY_PLACEHOLDER}
                                         </td>
                                         <td className="px-4 py-3">
                                             {s.confidence ? (
@@ -315,15 +321,15 @@ function RosterView({
                                                     </div>
                                                     <span className="text-xs text-gray-600 font-mono">{s.confidence}%</span>
                                                 </div>
-                                            ) : <span className="text-xs text-gray-400">N/A</span>}
+                                            ) : <span className="text-xs text-gray-400">{UI_STRINGS.COMMON.N_A}</span>}
                                         </td>
                                         <td className="px-4 py-3">
                                             <ActionDropDownComp
                                                 onAction={(val) => val === "unmark" ? onUnmark(s) : onMark(s)}
                                                 actionOptions={
-                                                    s.status === "Not Marked"
-                                                        ? [{ label: actionLoadingId === s.id ? "Marking..." : "Mark", value: "mark", icon: actionLoadingId === s.id ? Loader2 : PenLine, bg: "bg-white", text: "text-orange-600", hover: "hover:bg-orange-50", disabled: actionLoadingId === s.id }]
-                                                        : [{ label: actionLoadingId === s.id ? "Unmarking..." : "Unmark", value: "unmark", icon: actionLoadingId === s.id ? Loader2 : Trash2, bg: "bg-white", text: "text-red-500", hover: "hover:bg-red-50", disabled: actionLoadingId === s.id }]
+                                                    s.status === STATUS_NOT_MARKED
+                                                        ? [{ label: actionLoadingId === s.id ? UI_STRINGS.COMMON.MARKING : UI_STRINGS.COMMON.MARK, value: "mark", icon: actionLoadingId === s.id ? Loader2 : PenLine, bg: "bg-white", text: "text-orange-600", hover: "hover:bg-orange-50", disabled: actionLoadingId === s.id }]
+                                                        : [{ label: actionLoadingId === s.id ? UI_STRINGS.COMMON.UNMARKING : UI_STRINGS.COMMON.UNMARK, value: "unmark", icon: actionLoadingId === s.id ? Loader2 : Trash2, bg: "bg-white", text: "text-red-500", hover: "hover:bg-red-50", disabled: actionLoadingId === s.id }]
                                                 }
                                             />
                                         </td>
@@ -357,9 +363,9 @@ function RosterView({
                                     <ActionDropDownComp
                                         onAction={(val) => val === "unmark" ? onUnmark(s) : onMark(s)}
                                         actionOptions={
-                                            s.status === "Not Marked"
-                                                ? [{ label: "Mark", value: "mark", icon: PenLine, bg: "bg-white", text: "text-orange-600", hover: "hover:bg-orange-50", disabled: false }]
-                                                : [{ label: "Unmark", value: "unmark", icon: Trash2, bg: "bg-white", text: "text-red-500", hover: "hover:bg-red-50", disabled: false }]
+                                            s.status === STATUS_NOT_MARKED
+                                                ? [{ label: UI_STRINGS.COMMON.MARK, value: "mark", icon: PenLine, bg: "bg-white", text: "text-orange-600", hover: "hover:bg-orange-50", disabled: false }]
+                                                : [{ label: UI_STRINGS.COMMON.UNMARK, value: "unmark", icon: Trash2, bg: "bg-white", text: "text-red-500", hover: "hover:bg-red-50", disabled: false }]
                                         }
                                     />
                                 </div>
@@ -369,12 +375,12 @@ function RosterView({
 
                     <div className="flex flex-col sm:flex-row items-center justify-between gap-2 px-4 py-3 border-t border-gray-100 bg-gray-50">
                         <p className="text-xs text-gray-500">
-                            Showing {filtered.length === 0 ? 0 : (page - 1) * PAGES_PER_VIEW + 1}–{Math.min(page * PAGES_PER_VIEW, filtered.length)} of {filtered.length} students
+                            {UI_STRINGS.ROSTER.SHOWING}{filtered.length === 0 ? 0 : (page - 1) * PAGES_PER_VIEW + 1}–{Math.min(page * PAGES_PER_VIEW, filtered.length)}{UI_STRINGS.ROSTER.OF}{filtered.length}{UI_STRINGS.ROSTER.STUDENTS_LOWER}
                         </p>
                         <div className="flex items-center gap-1">
                             <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
                                 className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-medium text-gray-600 hover:bg-white disabled:opacity-40 cursor-pointer transition-colors flex items-center gap-1">
-                                <ChevronLeft className="w-3.5 h-3.5" /> Prev
+                                <ChevronLeft className="w-3.5 h-3.5" /> {UI_STRINGS.ROSTER.PREV}
                             </button>
                             {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
                                 <button key={p} onClick={() => setPage(p)}
@@ -384,7 +390,7 @@ function RosterView({
                             ))}
                             <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages || totalPages === 0}
                                 className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-medium text-gray-600 hover:bg-white disabled:opacity-40 cursor-pointer transition-colors flex items-center gap-1">
-                                Next <ChevronRight className="w-3.5 h-3.5" />
+                                {UI_STRINGS.ROSTER.NEXT} <ChevronRight className="w-3.5 h-3.5" />
                             </button>
                         </div>
                     </div>
@@ -407,28 +413,28 @@ function exportAttendanceCSV({ students, selectedClass, selectedSection, date, r
     });
 
     const total = rosterMeta?.totalStudents ?? students.length;
-    const present = rosterMeta?.totalPresent ?? students.filter(s => s.status.includes("Present")).length;
-    const late = rosterMeta?.totalLate ?? students.filter(s => s.status === "Late").length;
-    const absent = rosterMeta?.totalNotMarked ?? students.filter(s => s.status === "Not Marked").length;
+    const present = rosterMeta?.totalPresent ?? students.filter(s => s.status.includes(STATUS_PRESENT)).length;
+    const late = rosterMeta?.totalLate ?? students.filter(s => s.status === STATUS_LATE).length;
+    const absent = rosterMeta?.totalNotMarked ?? students.filter(s => s.status === STATUS_NOT_MARKED).length;
     const attendanceRate = total > 0 ? (((present + late) / total) * 100).toFixed(1) : "0.0";
 
     const cell = (val) => `"${String(val ?? "").replace(/"/g, '""')}"`;
     const rows = [];
 
-    rows.push([cell("ATTENDANCE REPORT"), "", "", "", "", "", "", ""]);
-    rows.push([cell(`Class:`), cell(className), cell(`Section:`), cell(sectionName), "", "", "", ""]);
-    rows.push([cell(`Date:`), cell(formattedDate), "", "", "", "", "", ""]);
-    rows.push([cell(`Exported At:`), cell(exportedAt), "", "", "", "", "", ""]);
+    rows.push([cell(UI_STRINGS.EXPORT.REPORT_TITLE), "", "", "", "", "", "", ""]);
+    rows.push([cell(UI_STRINGS.EXPORT.CLASS), cell(className), cell(UI_STRINGS.EXPORT.SECTION), cell(sectionName), "", "", "", ""]);
+    rows.push([cell(UI_STRINGS.EXPORT.DATE), cell(formattedDate), "", "", "", "", "", ""]);
+    rows.push([cell(UI_STRINGS.EXPORT.EXPORTED_AT), cell(exportedAt), "", "", "", "", "", ""]);
     rows.push(["", "", "", "", "", "", "", ""]);
-    rows.push([cell("─── SUMMARY ───"), "", "", "", "", "", "", ""]);
-    rows.push([cell("Total Students"), cell(total), cell("Attendance Rate"), cell(`${attendanceRate}%`), "", "", "", ""]);
-    rows.push([cell("Present"), cell(present), cell("Late"), cell(late), "", "", "", ""]);
+    rows.push([cell(UI_STRINGS.EXPORT.SUMMARY), "", "", "", "", "", "", ""]);
+    rows.push([cell(UI_STRINGS.EXPORT.TOTAL_STUDENTS), cell(total), cell(UI_STRINGS.EXPORT.ATTENDANCE_RATE), cell(`${attendanceRate}%`), "", "", "", ""]);
+    rows.push([cell(STATUS_PRESENT), cell(present), cell(STATUS_LATE), cell(late), "", "", "", ""]);
     rows.push([cell("Absent/Unmarked"), cell(absent), "", "", "", "", "", ""]);
     rows.push(["", "", "", "", "", "", "", ""]);
-    rows.push([cell("#"), cell("Student Name"), cell("Roll No."), cell("Student ID"), cell("Status"), cell("Check-In Time"), cell("Source"), cell("Confidence (%)")]);
+    rows.push([cell(UI_STRINGS.EXPORT.HEADERS[0]), cell(UI_STRINGS.EXPORT.HEADERS[1]), cell(UI_STRINGS.EXPORT.HEADERS[2]), cell(UI_STRINGS.EXPORT.HEADERS[3]), cell(UI_STRINGS.EXPORT.HEADERS[4]), cell(UI_STRINGS.EXPORT.HEADERS[5]), cell(UI_STRINGS.EXPORT.HEADERS[6]), cell(UI_STRINGS.EXPORT.HEADERS[7])]);
 
     students.forEach((s, index) => {
-        rows.push([cell(index + 1), cell(s.name), cell(s.rollNo), cell(s.id), cell(s.status), cell(s.checkIn || "—"), cell(s.source || "—"), cell(s.confidence ?? "—")]);
+        rows.push([cell(index + 1), cell(s.name), cell(s.rollNo), cell(s.id), cell(s.status), cell(s.checkIn || DASH_PLACEHOLDER), cell(s.source || SOURCE_EMPTY_PLACEHOLDER), cell(s.confidence ?? DASH_PLACEHOLDER)]);
     });
 
     const csvContent = rows.map(r => r.join(",")).join("\n");
@@ -517,10 +523,10 @@ export default function StudentAttendance() {
 
     const stats = {
         total: mergedStudents.length,
-        present: mergedStudents.filter((s) => s.status.includes("Present")).length,
-        late: mergedStudents.filter((s) => s.status === "Late").length,
+        present: mergedStudents.filter((s) => s.status.includes(STATUS_PRESENT)).length,
+        late: mergedStudents.filter((s) => s.status === STATUS_LATE).length,
         absent: mergedStudents.filter(
-            (s) => s.status === "Absent" || s.status === "Not Marked"
+            (s) => s.status === STATUS_ABSENT || s.status === STATUS_NOT_MARKED
         ).length,
         enrolled: mergedStudents.filter((s) => s.enrolled).length,
     };
@@ -563,7 +569,7 @@ export default function StudentAttendance() {
 
     const handleExportCSV = () => {
         if (mergedStudents.length === 0) {
-            alert("No student data to export. Please select a class and section first.");
+            alert(UI_STRINGS.ALERTS.NO_STUDENT_DATA_EXPORT);
             return;
         }
         setExportingCSV(true);
@@ -571,7 +577,7 @@ export default function StudentAttendance() {
             exportAttendanceCSV({ students: mergedStudents, selectedClass, selectedSection, date, rosterMeta });
         } catch (err) {
             console.error("CSV export error:", err);
-            alert("Failed to export CSV. Please try again.");
+            alert(UI_STRINGS.ALERTS.EXPORT_FAILED);
         } finally {
             setTimeout(() => setExportingCSV(false), 1000);
         }
@@ -581,7 +587,7 @@ export default function StudentAttendance() {
 
     const openSubView = (viewName) => {
         if (!selectedClass?.id || !selectedSection?.id) {
-            alert("Please wait for class and section to load before proceeding.");
+            alert(UI_STRINGS.ALERTS.WAIT_BEFORE_PROCEEDING);
             return;
         }
         setSubViewClass({ ...selectedClass });
@@ -605,8 +611,8 @@ export default function StudentAttendance() {
 
                 <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                     <div>
-                        <h1 className="text-xl sm:text-3xl font-bold text-gray-900">Student Attendance</h1>
-                        <p className="text-sm text-gray-500 mt-0.5">Mark and manage attendance for your class sections</p>
+                        <h1 className="text-xl sm:text-3xl font-bold text-gray-900">{UI_STRINGS.ROSTER.TITLE}</h1>
+                        <p className="text-sm text-gray-500 mt-0.5">{UI_STRINGS.ROSTER.SUBTITLE}</p>
                     </div>
                 </div>
 
@@ -616,14 +622,14 @@ export default function StudentAttendance() {
                     </div>
                 ) : (
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-5 gap-3">
-                        <CardComponent IconName={Users} keyName="Total Students" val={stats.total} iconBgColor="bg-blue-100" iconTxColor="text-blue-600" />
-                        <CardComponent IconName={CheckCircle2} keyName="Present"
+                        <CardComponent IconName={Users} keyName={UI_STRINGS.SUMMARY.TOTAL_STUDENTS} val={stats.total} iconBgColor="bg-blue-100" iconTxColor="text-blue-600" />
+                        <CardComponent IconName={CheckCircle2} keyName={STATUS_PRESENT}
                             val={stats.total > 0 ? `${stats.present} · ${((stats.present / stats.total) * 100).toFixed(1)}%` : "0"}
                             iconBgColor="bg-green-100" iconTxColor="text-green-600" />
-                        <CardComponent IconName={Clock} keyName="Late" val={stats.late} iconBgColor="bg-orange-100" iconTxColor="text-orange-500" />
-                        <CardComponent IconName={XCircle} keyName="Absent / Unmarked" val={stats.absent} iconBgColor="bg-red-100" iconTxColor="text-red-500" />
-                        <CardComponent IconName={UserCheck} keyName="Enrolled in Face"
-                            val={`${stats.enrolled} · ${stats.total - stats.enrolled} not`}
+                        <CardComponent IconName={Clock} keyName={STATUS_LATE} val={stats.late} iconBgColor="bg-orange-100" iconTxColor="text-orange-500" />
+                        <CardComponent IconName={XCircle} keyName={UI_STRINGS.SUMMARY.ABSENT_UNMARKED} val={stats.absent} iconBgColor="bg-red-100" iconTxColor="text-red-500" />
+                        <CardComponent IconName={UserCheck} keyName={UI_STRINGS.SUMMARY.ENROLLED}
+                            val={`${stats.enrolled} · ${stats.total - stats.enrolled}${UI_STRINGS.SUMMARY.NOT_ENROLLED}`}
                             iconBgColor="bg-sky-100" iconTxColor="text-sky-600" />
                     </div>
                 )}
@@ -634,10 +640,10 @@ export default function StudentAttendance() {
                         <button
                             onClick={() => openSubView("groupPhoto")}
                             disabled={!sectionReady}
-                            title={!sectionReady ? "Please wait for sections to load" : ""}
+                            title={!sectionReady ? UI_STRINGS.ALERTS.WAIT_FOR_SECTIONS : ""}
                             className="flex items-center gap-2 bg-blue-700 hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer transition-colors shadow-sm">
                             <Camera className="w-4 h-4" />
-                            Group Photo Attendance
+                            {UI_STRINGS.ROSTER.GROUP_BTN}
                             {sectionReady && (
                                 <span className="text-blue-200 text-xs font-normal hidden sm:inline">
                                     · {selectedSection?.name}
@@ -648,32 +654,32 @@ export default function StudentAttendance() {
                         <button
                             onClick={() => openSubView("faceScan")}
                             disabled={!sectionReady}
-                            title={!sectionReady ? "Please wait for sections to load" : ""}
+                            title={!sectionReady ? UI_STRINGS.ALERTS.WAIT_FOR_SECTIONS : ""}
                             className="flex items-center gap-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer transition-colors shadow-sm">
-                            <ScanFace className="w-4 h-4" /> Individual Face Scan
+                            <ScanFace className="w-4 h-4" /> {UI_STRINGS.ROSTER.FACE_BTN}
                         </button>
 
                         <button onClick={() => setShowManualMark(true)}
                             className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer transition-colors shadow-sm">
-                            <PenLine className="w-4 h-4" /> Manual Mark
+                            <PenLine className="w-4 h-4" /> {UI_STRINGS.ROSTER.MANUAL_BTN}
                         </button>
                     </div>
                     <div className="flex flex-wrap gap-2">
                         <button onClick={() => { setView("roster"); setActiveTab("roster"); }}
                             className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer transition-colors border ${activeTab === "roster" && !isSubView ? "bg-blue-600 text-white border-blue-600 shadow-sm" : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"}`}>
-                            <List className="w-4 h-4" /> Roster
+                            <List className="w-4 h-4" /> {UI_STRINGS.ROSTER.BTN_ROSTER}
                         </button>
                         <button onClick={() => { setView("summary"); setActiveTab("summary"); }}
                             className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer transition-colors border ${activeTab === "summary" && !isSubView ? "bg-blue-600 text-white border-blue-600 shadow-sm" : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"}`}>
-                            <BarChart2 className="w-4 h-4" /> Summary
+                            <BarChart2 className="w-4 h-4" /> {UI_STRINGS.ROSTER.BTN_SUMMARY}
                         </button>
                         <button
                             onClick={handleExportCSV}
                             disabled={exportingCSV || mergedStudents.length === 0 || loadingRoster}
                             className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer transition-colors border bg-white text-gray-700 border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
                             {exportingCSV
-                                ? <><Loader2 className="w-4 h-4 animate-spin" /> Exporting...</>
-                                : <><Download className="w-4 h-4" /> Export CSV</>
+                                ? <><Loader2 className="w-4 h-4 animate-spin" /> {UI_STRINGS.ROSTER.EXPORTING}</>
+                                : <><Download className="w-4 h-4" /> {UI_STRINGS.ROSTER.EXPORT_CSV}</>
                             }
                         </button>
                     </div>

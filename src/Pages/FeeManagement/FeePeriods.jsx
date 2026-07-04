@@ -13,6 +13,17 @@ import {
 } from '../../Api/FeeManagement/FeePeriods';
 import { UserContext } from '../../ContextAPI/UserContext';
 
+// Import Constants
+import {
+  STATUSES,
+  PERIOD_TYPES,
+  PERIOD_TYPE_LABELS,
+  PERIOD_TYPE_GRADIENT,
+  PERIOD_TYPE_BADGE_STYLE,
+  STATUS_CONFIG_ADVANCED,
+  FEE_PERIOD_STRINGS
+} from '../../Constants/StringConstants/FeeManagementConstants';
+
 // ─── Toast (self-contained, matches FeeStructures) ────────────────────────────
 let _dispatch = null;
 
@@ -29,9 +40,9 @@ const ToastContainer = () => {
 
   const icons = {
     success: <CheckCircle2 size={15} className="flex-shrink-0 text-emerald-400" />,
-    error:   <AlertCircle  size={15} className="flex-shrink-0 text-red-400" />,
+    error: <AlertCircle size={15} className="flex-shrink-0 text-red-400" />,
     warning: <AlertTriangle size={15} className="flex-shrink-0 text-amber-400" />,
-    info:    <Info          size={15} className="flex-shrink-0 text-blue-400" />,
+    info: <Info size={15} className="flex-shrink-0 text-blue-400" />,
   };
 
   return (
@@ -42,7 +53,7 @@ const ToastContainer = () => {
           style={{ animation: 'fpToastIn .22s ease-out' }}>
           {icons[t.type] || icons.info}
           <div className="flex-1 min-w-0">
-            {t.title   && <div className="text-[13px] font-semibold">{t.title}</div>}
+            {t.title && <div className="text-[13px] font-semibold">{t.title}</div>}
             {t.message && <div className="text-[12px] text-white/70 mt-0.5">{t.message}</div>}
           </div>
           <button onClick={() => setToasts((p) => p.filter((x) => x.id !== t.id))}
@@ -58,9 +69,9 @@ const ToastContainer = () => {
 
 const toast = {
   success: (title, message) => _dispatch?.({ type: 'success', title, message }),
-  error:   (title, message) => _dispatch?.({ type: 'error',   title, message }),
+  error: (title, message) => _dispatch?.({ type: 'error', title, message }),
   warning: (title, message) => _dispatch?.({ type: 'warning', title, message }),
-  info:    (title, message) => _dispatch?.({ type: 'info',    title, message }),
+  info: (title, message) => _dispatch?.({ type: 'info', title, message }),
 };
 
 // ─── Delete Confirm Modal ─────────────────────────────────────────────────────
@@ -75,22 +86,21 @@ const DeleteConfirmModal = ({ open, onClose, onConfirm, loading, periodName }) =
             <Trash2 size={18} className="text-red-600" />
           </div>
           <div>
-            <h3 className="text-base font-bold text-gray-900">Delete Fee Period?</h3>
+            <h3 className="text-base font-bold text-gray-900">{FEE_PERIOD_STRINGS.DELETE_TITLE}</h3>
             <p className="text-sm text-gray-500 mt-1">
-              <strong className="text-gray-700">{periodName}</strong> will be permanently removed.
-              This cannot be undone.
+              <strong className="text-gray-700">{periodName}</strong> {FEE_PERIOD_STRINGS.DELETE_WARNING}
             </p>
           </div>
         </div>
         <div className="flex gap-2 justify-end">
           <button onClick={onClose} disabled={loading}
             className="px-4 py-2 text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors">
-            Cancel
+            {FEE_PERIOD_STRINGS.CANCEL}
           </button>
           <button onClick={onConfirm} disabled={loading}
             className="px-4 py-2 text-sm font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors flex items-center gap-2">
             {loading && <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />}
-            {loading ? 'Deleting…' : 'Yes, Delete'}
+            {loading ? FEE_PERIOD_STRINGS.DELETING : FEE_PERIOD_STRINGS.DELETE_BTN}
           </button>
         </div>
       </div>
@@ -98,46 +108,15 @@ const DeleteConfirmModal = ({ open, onClose, onConfirm, loading, periodName }) =
   );
 };
 
-// ─── Constants ────────────────────────────────────────────────────────────────
-const TYPE_ACCENT = {
-  QUARTERLY:   'from-[#1A3A5C] to-[#2563EB]',
-  MONTHLY:     'from-[#0369A1] to-[#0EA5E9]',
-  YEARLY:      'from-[#0D7A55] to-[#10B981]',
-  HALF_YEARLY: 'from-[#7C3AED] to-[#A78BFA]',
-  CUSTOM:      'from-[#92400E] to-[#F59E0B]',
-};
-
-const TYPE_BADGE_STYLE = {
-  QUARTERLY:   'bg-blue-50 text-blue-700 border-blue-200',
-  MONTHLY:     'bg-sky-50 text-sky-700 border-sky-200',
-  YEARLY:      'bg-emerald-50 text-emerald-700 border-emerald-200',
-  HALF_YEARLY: 'bg-violet-50 text-violet-700 border-violet-200',
-  CUSTOM:      'bg-amber-50 text-amber-700 border-amber-200',
-};
-
-const typeLabels = {
-  QUARTERLY:   'Quarterly',
-  MONTHLY:     'Monthly',
-  YEARLY:      'Yearly',
-  HALF_YEARLY: 'Half-Yearly',
-  CUSTOM:      'Custom',
-};
-
-const STATUS_CONFIG = {
-  PAID:    { label: 'Closed',   bg: 'bg-gray-100 text-gray-500 border-gray-200',         dot: 'bg-gray-400'    },
-  OVERDUE: { label: 'Overdue',  bg: 'bg-red-50 text-red-700 border-red-200',             dot: 'bg-red-500'     },
-  PARTIAL: { label: 'Active',   bg: 'bg-emerald-50 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500' },
-  PENDING: { label: 'Upcoming', bg: 'bg-amber-50 text-amber-700 border-amber-200',       dot: 'bg-amber-500'   },
-};
-
+// ─── Constants & Helpers ──────────────────────────────────────────────────────
 const getStatusInfo = (period) => {
   const dueDate = new Date(period.dueDate);
-  const today   = new Date();
+  const today = new Date();
   if (period.collectedAmount && period.totalAmount && period.collectedAmount >= period.totalAmount)
-    return 'PAID';
-  if (dueDate < today) return 'OVERDUE';
-  if (period.collectedAmount && period.collectedAmount > 0) return 'PARTIAL';
-  return 'PENDING';
+    return STATUSES.PAID;
+  if (dueDate < today) return STATUSES.OVERDUE;
+  if (period.collectedAmount && period.collectedAmount > 0) return STATUSES.PARTIAL;
+  return STATUSES.PENDING;
 };
 
 const formatDate = (dateString) => {
@@ -148,14 +127,14 @@ const formatDate = (dateString) => {
 const formatCurrency = (amount) => {
   if (!amount || amount === 0) return '₹0';
   if (amount >= 10000000) return '₹' + (amount / 10000000).toFixed(1) + 'Cr';
-  if (amount >= 100000)   return '₹' + (amount / 100000).toFixed(1) + 'L';
-  if (amount >= 1000)     return '₹' + (amount / 1000).toFixed(1) + 'K';
+  if (amount >= 100000) return '₹' + (amount / 100000).toFixed(1) + 'L';
+  if (amount >= 1000) return '₹' + (amount / 1000).toFixed(1) + 'K';
   return '₹' + amount.toLocaleString('en-IN');
 };
 
 // ─── Status Pill ──────────────────────────────────────────────────────────────
 const StatusPill = ({ statusKey }) => {
-  const cfg = STATUS_CONFIG[statusKey] || STATUS_CONFIG.PENDING;
+  const cfg = STATUS_CONFIG_ADVANCED[statusKey] || STATUS_CONFIG_ADVANCED[STATUSES.PENDING];
   return (
     <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-[11.5px] font-semibold ${cfg.bg}`}>
       <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
@@ -166,10 +145,10 @@ const StatusPill = ({ statusKey }) => {
 
 // ─── Type Badge ───────────────────────────────────────────────────────────────
 const TypeBadge = ({ type }) => {
-  const style = TYPE_BADGE_STYLE[type] || 'bg-gray-50 text-gray-600 border-gray-200';
+  const style = PERIOD_TYPE_BADGE_STYLE[type] || 'bg-gray-50 text-gray-600 border-gray-200';
   return (
     <span className={`inline-flex items-center px-2 py-0.5 rounded-md border text-[11px] font-semibold ${style}`}>
-      {typeLabels[type] || type}
+      {PERIOD_TYPE_LABELS[type] || type}
     </span>
   );
 };
@@ -179,52 +158,52 @@ function PeriodModal({ isOpen, onClose, period, academicYear, onSuccess }) {
   const isEdit = !!period;
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
-    name: '', type: 'QUARTERLY', academicYearLabel: '', dueDate: '', notes: '',
+    name: '', type: PERIOD_TYPES.QUARTERLY, academicYearLabel: '', dueDate: '', notes: '',
   });
 
   useEffect(() => {
     if (!isOpen) return;
     if (period) {
       setForm({
-        name:              period.name || '',
-        type:              period.type || 'QUARTERLY',
+        name: period.name || '',
+        type: period.type || PERIOD_TYPES.QUARTERLY,
         academicYearLabel: academicYear?.label || period.academicYearLabel || '',
-        dueDate:           period.dueDate ? period.dueDate.split('T')[0] : '',
-        notes:             period.notes || '',
+        dueDate: period.dueDate ? period.dueDate.split('T')[0] : '',
+        notes: period.notes || '',
       });
     } else {
-      setForm({ name: '', type: 'QUARTERLY', academicYearLabel: academicYear?.label || '', dueDate: '', notes: '' });
+      setForm({ name: '', type: PERIOD_TYPES.QUARTERLY, academicYearLabel: academicYear?.label || '', dueDate: '', notes: '' });
     }
   }, [isOpen, period, academicYear]);
 
   const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
 
   const handleSubmit = async () => {
-    if (!form.name.trim()) { toast.error('Validation', 'Period name is required');   return; }
-    if (!form.type)        { toast.error('Validation', 'Period type is required');   return; }
-    if (!form.dueDate)     { toast.error('Validation', 'Due date is required');      return; }
+    if (!form.name.trim()) { toast.error(FEE_PERIOD_STRINGS.TOAST_VALIDATION, FEE_PERIOD_STRINGS.TOAST_VALIDATION_NAME); return; }
+    if (!form.type) { toast.error(FEE_PERIOD_STRINGS.TOAST_VALIDATION, FEE_PERIOD_STRINGS.TOAST_VALIDATION_TYPE); return; }
+    if (!form.dueDate) { toast.error(FEE_PERIOD_STRINGS.TOAST_VALIDATION, FEE_PERIOD_STRINGS.TOAST_VALIDATION_DATE); return; }
 
     setLoading(true);
     try {
       const payload = {
-        name:              form.name.trim(),
-        type:              form.type,
-        academicYearId:    academicYear.id,
+        name: form.name.trim(),
+        type: form.type,
+        academicYearId: academicYear.id,
         academicYearLabel: academicYear.label,
-        dueDate:           form.dueDate,
-        notes:             form.notes.trim(),
+        dueDate: form.dueDate,
+        notes: form.notes.trim(),
       };
       if (isEdit) {
         await updateFeePeriod(period.id, payload);
-        toast.success('Period Updated', 'Fee period has been updated successfully.');
+        toast.success(FEE_PERIOD_STRINGS.TOAST_UPDATED_TITLE, FEE_PERIOD_STRINGS.TOAST_UPDATED_MSG);
       } else {
         await createFeePeriod(payload);
-        toast.success('Period Created', 'Fee period has been created successfully.');
+        toast.success(FEE_PERIOD_STRINGS.TOAST_CREATED_TITLE, FEE_PERIOD_STRINGS.TOAST_CREATED_MSG);
       }
       onSuccess();
       onClose();
     } catch (error) {
-      toast.error('Save Failed', error.message || `Failed to ${isEdit ? 'update' : 'create'} fee period`);
+      toast.error(FEE_PERIOD_STRINGS.TOAST_SAVE_FAILED, error.message || `Failed to ${isEdit ? 'update' : 'create'} fee period`);
     } finally {
       setLoading(false);
     }
@@ -239,7 +218,7 @@ function PeriodModal({ isOpen, onClose, period, academicYear, onSuccess }) {
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <div>
-            <h2 className="text-[15px] font-bold text-gray-900">{isEdit ? 'Edit Fee Period' : 'New Fee Period'}</h2>
+            <h2 className="text-[15px] font-bold text-gray-900">{isEdit ? FEE_PERIOD_STRINGS.MODAL_EDIT_TITLE : FEE_PERIOD_STRINGS.MODAL_NEW_TITLE}</h2>
             <p className="text-xs text-gray-400 mt-0.5">AY {academicYear?.label}</p>
           </div>
           <button onClick={onClose} className="w-7 h-7 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-colors">
@@ -250,42 +229,39 @@ function PeriodModal({ isOpen, onClose, period, academicYear, onSuccess }) {
         <div className="px-6 py-5 space-y-4">
           <div>
             <Input
-              label="Period Name"
+              label={FEE_PERIOD_STRINGS.LABEL_NAME}
               value={form.name}
               onChange={(v) => set('name', v)}
-              placeholder="e.g. Q1, Q3, October, Term 1, Annual…"
+              placeholder={FEE_PERIOD_STRINGS.PLACEHOLDER_NAME}
               required
             />
-            <div className="text-xs text-gray-400 mt-1">A clear name visible to staff when collecting payments.</div>
+            <div className="text-xs text-gray-400 mt-1">{FEE_PERIOD_STRINGS.HELP_NAME}</div>
           </div>
 
           <div>
             <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-              Type <span className="text-red-500">*</span>
+              {FEE_PERIOD_STRINGS.LABEL_TYPE} <span className="text-red-500">*</span>
             </label>
             <Select
               value={form.type}
               onChange={(v) => set('type', v)}
-              options={[
-                { value: 'MONTHLY',     label: 'Monthly'           },
-                { value: 'QUARTERLY',   label: 'Quarterly'         },
-                { value: 'HALF_YEARLY', label: 'Half-Yearly'       },
-                { value: 'YEARLY',      label: 'Yearly'            },
-                { value: 'CUSTOM',      label: 'Custom / One-time' },
-              ]}
+              options={Object.keys(PERIOD_TYPES).map(key => ({
+                value: PERIOD_TYPES[key],
+                label: PERIOD_TYPE_LABELS[PERIOD_TYPES[key]]
+              }))}
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <Input
-              label="Due Date"
+              label={FEE_PERIOD_STRINGS.LABEL_DUE_DATE}
               type="date"
               value={form.dueDate}
               onChange={(v) => set('dueDate', v)}
               required
             />
             <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1.5">Academic Year</label>
+              <label className="block text-xs font-semibold text-gray-700 mb-1.5">{FEE_PERIOD_STRINGS.LABEL_ACADEMIC_YEAR}</label>
               <div className="px-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 text-gray-700 font-semibold">
                 {form.academicYearLabel || '—'}
               </div>
@@ -293,11 +269,11 @@ function PeriodModal({ isOpen, onClose, period, academicYear, onSuccess }) {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1.5">Notes (optional)</label>
+            <label className="block text-xs font-semibold text-gray-700 mb-1.5">{FEE_PERIOD_STRINGS.LABEL_NOTES}</label>
             <textarea
               value={form.notes}
               onChange={(e) => set('notes', e.target.value)}
-              placeholder="e.g. Second quarter of the academic year…"
+              placeholder={FEE_PERIOD_STRINGS.PLACEHOLDER_NOTES}
               rows={2}
               className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all resize-none"
             />
@@ -308,12 +284,12 @@ function PeriodModal({ isOpen, onClose, period, academicYear, onSuccess }) {
         <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
           <button onClick={onClose} disabled={loading}
             className="px-4 py-2 text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors">
-            Cancel
+            {FEE_PERIOD_STRINGS.CANCEL}
           </button>
           <button onClick={handleSubmit} disabled={loading}
             className="px-4 py-2 text-sm font-semibold text-white bg-[#2563EB] rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center gap-2">
             {loading && <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />}
-            {loading ? 'Saving…' : isEdit ? 'Update Period' : 'Save Period'}
+            {loading ? FEE_PERIOD_STRINGS.BTN_SAVING : isEdit ? FEE_PERIOD_STRINGS.BTN_UPDATE : FEE_PERIOD_STRINGS.BTN_SAVE}
           </button>
         </div>
       </div>
@@ -323,9 +299,9 @@ function PeriodModal({ isOpen, onClose, period, academicYear, onSuccess }) {
 
 // ─── Period Card ──────────────────────────────────────────────────────────────
 const PeriodCard = ({ p, onEdit, onDelete, onGoToStructures }) => {
-  const statusKey   = getStatusInfo(p);
-  const accentGrad  = TYPE_ACCENT[p.type] || 'from-gray-400 to-gray-500';
-  const canDelete   = p.structureCount === 0 && statusKey !== 'PAID';
+  const statusKey = getStatusInfo(p);
+  const accentGrad = PERIOD_TYPE_GRADIENT[p.type] || 'from-gray-400 to-gray-500';
+  const canDelete = p.structureCount === 0 && statusKey !== STATUSES.PAID;
 
   return (
     <div className="bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden flex flex-col group">
@@ -354,20 +330,20 @@ const PeriodCard = ({ p, onEdit, onDelete, onGoToStructures }) => {
         {/* Due date */}
         <div className="flex items-center gap-2 text-xs text-gray-500">
           <Clock size={12} className="text-gray-400 flex-shrink-0" />
-          <span>Due <strong className="text-gray-700">{formatDate(p.dueDate)}</strong></span>
+          <span>{FEE_PERIOD_STRINGS.CARD_DUE} <strong className="text-gray-700">{formatDate(p.dueDate)}</strong></span>
         </div>
 
         {/* Stats row */}
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-gray-50 rounded-lg px-3 py-2 border border-gray-100">
             <div className="flex items-center gap-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">
-              <Layers size={10} /> Structures
+              <Layers size={10} /> {FEE_PERIOD_STRINGS.CARD_STRUCTURES}
             </div>
             <div className="text-sm font-bold text-gray-800">{p.structureCount || 0}</div>
           </div>
           <div className="bg-gray-50 rounded-lg px-3 py-2 border border-gray-100">
             <div className="flex items-center gap-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">
-              <Users size={10} /> Students
+              <Users size={10} /> {FEE_PERIOD_STRINGS.CARD_STUDENTS}
             </div>
             <div className="text-sm font-bold text-gray-800">{p.studentCount || 0}</div>
           </div>
@@ -377,7 +353,7 @@ const PeriodCard = ({ p, onEdit, onDelete, onGoToStructures }) => {
         {(p.totalAmount > 0) && (
           <div>
             <div className="flex justify-between text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">
-              <span>Collected</span>
+              <span>{FEE_PERIOD_STRINGS.CARD_COLLECTED}</span>
               <span>{formatCurrency(p.collectedAmount || 0)} / {formatCurrency(p.totalAmount)}</span>
             </div>
             <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
@@ -396,11 +372,11 @@ const PeriodCard = ({ p, onEdit, onDelete, onGoToStructures }) => {
         <button
           onClick={() => onGoToStructures(p.id)}
           className="flex items-center gap-1 px-2.5 py-1.5 text-[11.5px] font-semibold text-[#2563EB] border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors whitespace-nowrap">
-          <Layers size={12} /> Structures <ArrowRight size={11} />
+          <Layers size={12} /> {FEE_PERIOD_STRINGS.CARD_STRUCTURES} <ArrowRight size={11} />
         </button>
 
         <div className="flex items-center gap-1.5">
-          {statusKey !== 'PAID' && (
+          {statusKey !== STATUSES.PAID && (
             <button onClick={(e) => { e.stopPropagation(); onEdit(p); }}
               className="flex items-center gap-1 px-2.5 py-1.5 text-[11.5px] font-semibold text-[#1E3A5F] border border-[#1E3A5F]/20 rounded-lg hover:bg-blue-50 transition-colors whitespace-nowrap">
               <Pencil size={12} /> Edit
@@ -421,13 +397,13 @@ const PeriodCard = ({ p, onEdit, onDelete, onGoToStructures }) => {
 // ─── FeePeriods ───────────────────────────────────────────────────────────────
 const FeePeriods = ({ onGoToStructures }) => {
   const { currentAcademicYear } = useContext(UserContext);
-  const academicYearId    = currentAcademicYear?.id;
+  const academicYearId = currentAcademicYear?.id;
   const academicYearLabel = currentAcademicYear?.label;
 
-  const [modal,      setModal]      = useState(false);
+  const [modal, setModal] = useState(false);
   const [editPeriod, setEditPeriod] = useState(null);
-  const [periods,    setPeriods]    = useState([]);
-  const [loading,    setLoading]    = useState(false);
+  const [periods, setPeriods] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [deleteModal, setDeleteModal] = useState({ open: false, period: null, loading: false });
 
   const fetchPeriods = async () => {
@@ -437,7 +413,7 @@ const FeePeriods = ({ onGoToStructures }) => {
       const data = await getFeePeriods(academicYearId);
       setPeriods(Array.isArray(data) ? data : []);
     } catch {
-      toast.error('Fetch Failed', 'Failed to fetch fee periods');
+      toast.error(FEE_PERIOD_STRINGS.TOAST_FETCH_FAILED, FEE_PERIOD_STRINGS.TOAST_FETCH_FAILED_MSG);
     } finally {
       setLoading(false);
     }
@@ -448,10 +424,10 @@ const FeePeriods = ({ onGoToStructures }) => {
     fetchPeriods();
   }, [academicYearId]);
 
-  const openNew       = ()  => { setEditPeriod(null); setModal(true); };
-  const openEdit      = (p) => { setEditPeriod(p);    setModal(true); };
-  const close         = ()  => { setModal(false);     setEditPeriod(null); };
-  const handleSuccess = ()  => fetchPeriods();
+  const openNew = () => { setEditPeriod(null); setModal(true); };
+  const openEdit = (p) => { setEditPeriod(p); setModal(true); };
+  const close = () => { setModal(false); setEditPeriod(null); };
+  const handleSuccess = () => fetchPeriods();
 
   const goToStructures = (periodId) => {
     if (onGoToStructures) onGoToStructures(periodId);
@@ -466,12 +442,12 @@ const FeePeriods = ({ onGoToStructures }) => {
     setDeleteModal((prev) => ({ ...prev, loading: true }));
     try {
       await deleteFeePeriod(p.id);
-      toast.success('Period Deleted', `"${p.name}" has been permanently removed.`);
+      toast.success(FEE_PERIOD_STRINGS.TOAST_DELETED_TITLE, `"${p.name}" has been permanently removed.`);
       cancelDelete();
       fetchPeriods();
     } catch (error) {
       setDeleteModal((prev) => ({ ...prev, loading: false }));
-      toast.error('Delete Failed', error.message || 'Could not delete the fee period. Please try again.');
+      toast.error(FEE_PERIOD_STRINGS.TOAST_DELETE_FAILED, error.message || 'Could not delete the fee period. Please try again.');
     }
   };
 
@@ -501,12 +477,12 @@ const FeePeriods = ({ onGoToStructures }) => {
       {/* ── Page header ───────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">Fee Periods</h1>
-          <p className="text-sm text-gray-400 mt-0.5">Define named installment periods · AY {academicYearLabel}</p>
+          <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">{FEE_PERIOD_STRINGS.HEADER_TITLE}</h1>
+          <p className="text-sm text-gray-400 mt-0.5">{FEE_PERIOD_STRINGS.HEADER_SUBTITLE} {academicYearLabel}</p>
         </div>
         <button onClick={openNew}
           className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-[#2563EB] rounded-lg hover:bg-blue-700 transition-colors shadow-sm">
-          <Plus size={15} /> New Fee Period
+          <Plus size={15} /> {FEE_PERIOD_STRINGS.BTN_NEW_PERIOD}
         </button>
       </div>
 
@@ -514,8 +490,7 @@ const FeePeriods = ({ onGoToStructures }) => {
       <div className="flex items-start gap-3 bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 text-sm text-blue-700">
         <Info size={15} className="flex-shrink-0 mt-0.5 text-blue-500" />
         <span>
-          Fee Periods define <strong>when</strong> fee is due. After creating a period, attach class-wise fee
-          structures from the <strong>Fee Structures</strong> tab.
+          {FEE_PERIOD_STRINGS.INFO_BANNER}
         </span>
       </div>
 
@@ -525,7 +500,7 @@ const FeePeriods = ({ onGoToStructures }) => {
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <h2 className="text-sm font-bold text-gray-800 flex items-center gap-2">
             <span className="w-1 h-4 rounded-full bg-[#2563EB] inline-block" />
-            Fee Periods
+            {FEE_PERIOD_STRINGS.HEADER_TITLE}
             {periods.length > 0 && (
               <span className="ml-1 px-2 py-0.5 bg-blue-50 text-blue-600 text-[11px] font-bold rounded-full border border-blue-100">
                 {periods.length}
@@ -546,11 +521,11 @@ const FeePeriods = ({ onGoToStructures }) => {
             <div className="w-12 h-12 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
               <Calendar size={20} className="text-gray-400" />
             </div>
-            <div className="text-sm font-semibold text-gray-500">No fee periods yet</div>
-            <div className="text-xs text-gray-400 mt-1 mb-4">Get started by creating your first fee period.</div>
+            <div className="text-sm font-semibold text-gray-500">{FEE_PERIOD_STRINGS.EMPTY_TITLE}</div>
+            <div className="text-xs text-gray-400 mt-1 mb-4">{FEE_PERIOD_STRINGS.EMPTY_DESC}</div>
             <button onClick={openNew}
               className="px-4 py-2 text-sm font-semibold text-white bg-[#2563EB] rounded-lg hover:bg-blue-700 transition-colors">
-              New Fee Period
+              {FEE_PERIOD_STRINGS.BTN_NEW_PERIOD}
             </button>
           </div>
         ) : (
@@ -573,7 +548,7 @@ const FeePeriods = ({ onGoToStructures }) => {
                 <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center">
                   <Plus size={18} className="text-gray-400" />
                 </div>
-                <div className="text-sm font-semibold text-gray-500">New Fee Period</div>
+                <div className="text-sm font-semibold text-gray-500">{FEE_PERIOD_STRINGS.BTN_NEW_PERIOD}</div>
                 <div className="text-[11px] text-gray-400">Add Q3, October, etc.</div>
               </div>
             </div>

@@ -3,9 +3,9 @@ import { X, ClipboardEdit, FileText, Search, Loader2, Check } from 'lucide-react
 import { toast } from 'react-toastify';
 import { getUsersSummary } from '../../Api/StaffManagement/UserManagementAPI';
 import { bulkManualStaffAttendance } from '../../Api/Attendance/AttendanceApi';
+import { REMARKS_MAX, UI_STRINGS } from '../../Constants/StringConstants/AttendanceConstants';
 
 const TODAY = new Date().toISOString().split('T')[0];
-const REMARKS_MAX = 200;
 
 /* Display helpers for raw list items */
 const getDisplayName = (raw) => {
@@ -125,7 +125,7 @@ const ManualStaffAttendance = ({ onClose, onSuccess }) => {
             return;
         }
         if (invalidSelections.length > 0) {
-            toast.error('Fill check-in time & remarks (within 200 chars) for all selected staff');
+            toast.error(`Fill check-in time & remarks (within ${REMARKS_MAX} chars) for all selected staff`);
             return;
         }
 
@@ -180,7 +180,7 @@ const ManualStaffAttendance = ({ onClose, onSuccess }) => {
                 <div className="px-6 py-4 border-b border-gray-100 shrink-0 space-y-3">
                     <div className="flex items-center gap-3">
                         <label className="text-xs font-bold text-gray-700 uppercase tracking-wide shrink-0">
-                            Attendance Date <span className="text-red-500">*</span>
+                            {UI_STRINGS.MANUAL_STAFF.ATTENDANCE_DATE} <span className="text-red-500">*</span>
                         </label>
                         <input type="date" value={attendanceDate} max={TODAY}
                             onChange={(e) => setAttendanceDate(e.target.value)}
@@ -206,10 +206,10 @@ const ManualStaffAttendance = ({ onClose, onSuccess }) => {
                     {staffLoading ? (
                         <div className="flex items-center justify-center py-10 gap-2 text-gray-400">
                             <Loader2 className="w-4 h-4 animate-spin" />
-                            <span className="text-sm">Loading staff...</span>
+                            <span className="text-sm">{UI_STRINGS.MANUAL_STAFF.LOADING_STAFF}</span>
                         </div>
                     ) : filteredStaff.length === 0 ? (
-                        <div className="py-10 text-center text-sm text-gray-400">No staff members found</div>
+                        <div className="py-10 text-center text-sm text-gray-400">{UI_STRINGS.MANUAL_STAFF.NO_STAFF}</div>
                     ) : (
                         filteredStaff.map((raw, idx) => {
                             const userId = getUserId(raw, idx);
@@ -233,7 +233,7 @@ const ManualStaffAttendance = ({ onClose, onSuccess }) => {
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <p className="text-sm font-semibold text-gray-800 truncate">{name}</p>
-                                            <p className="text-xs text-gray-400">ID: {userId}</p>
+                                            <p className="text-xs text-gray-400">{UI_STRINGS.COMMON.ID_LABEL} {userId}</p>
                                         </div>
                                         <span className="shrink-0 px-2 py-0.5 bg-slate-100 text-slate-600 text-xs font-semibold rounded-md">
                                             {role}
@@ -245,7 +245,7 @@ const ManualStaffAttendance = ({ onClose, onSuccess }) => {
                                         <div className="px-4 pb-4 pt-1 grid grid-cols-1 sm:grid-cols-[140px_1fr] gap-3">
                                             <div>
                                                 <label className="block text-[11px] font-bold text-gray-600 uppercase tracking-wide mb-1">
-                                                    Check-In Time <span className="text-red-500">*</span>
+                                                    {UI_STRINGS.MANUAL_STAFF.CHECK_IN_TIME} <span className="text-red-500">*</span>
                                                 </label>
                                                 <input type="time" value={entry.checkInTime}
                                                     onChange={(e) => updateSelection(userId, 'checkInTime', e.target.value)}
@@ -280,12 +280,12 @@ const ManualStaffAttendance = ({ onClose, onSuccess }) => {
                 <div className="flex gap-3 px-6 py-4 border-t border-gray-100 bg-gray-50 shrink-0">
                     <button onClick={onClose}
                         className="flex-1 px-4 py-2.5 border border-gray-300 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-100 transition-all">
-                        Cancel
+                        {UI_STRINGS.COMMON.CANCEL}
                     </button>
                     <button onClick={handleSubmit} disabled={submitting || selectedCount === 0}
                         className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-amber-500 hover:bg-amber-600 disabled:opacity-60 rounded-xl text-sm font-semibold text-white transition-all">
                         {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
-                        {submitting ? 'Submitting...' : `Submit ${selectedCount > 0 ? `(${selectedCount})` : ''}`}
+                        {submitting ? UI_STRINGS.MANUAL_STAFF.BTN_SUBMITTING : `Submit ${selectedCount > 0 ? `(${selectedCount})` : ''}`}
                     </button>
                 </div>
             </div>

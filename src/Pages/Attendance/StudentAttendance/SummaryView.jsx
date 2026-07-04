@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import { getAttendanceSummary } from "../../../Api/Attendance/AttendanceApi";
 import { useDecodedUser } from "../../../ContextAPI/UserContext";
+import { AVATAR_INITIALS_COLORS, UI_STRINGS, STATUS_PRESENT, STATUS_LATE } from "../../../Constants/StringConstants/AttendanceConstants";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const getInitials = (fullName = "") => {
@@ -15,14 +16,7 @@ const getInitials = (fullName = "") => {
 };
 
 const defaultAvatarColor = (initials = "??") => {
-    const colors = [
-        "bg-blue-100 text-blue-700",
-        "bg-green-100 text-green-700",
-        "bg-purple-100 text-purple-700",
-        "bg-orange-100 text-orange-700",
-        "bg-pink-100 text-pink-700",
-        "bg-teal-100 text-teal-700",
-    ];
+    const colors = AVATAR_INITIALS_COLORS;
     return colors[((initials.charCodeAt(0) || 0) + (initials.charCodeAt(1) || 0)) % colors.length];
 };
 
@@ -247,10 +241,10 @@ export default function SummaryView({ selectedClass, selectedSection, date, avat
             {/* ── Today's Rate + Breakdown ── */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 flex flex-col items-center justify-center text-center">
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Today's Rate</p>
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">{UI_STRINGS.SUMMARY.TODAY_RATE}</p>
                     <p className="text-5xl font-black text-green-600">{attendanceRate}%</p>
                     <p className="text-sm text-gray-500 mt-1">
-                        {presentCount + lateCount} of {totalStudents} marked
+                        {presentCount + lateCount} of {totalStudents}{UI_STRINGS.SUMMARY.OF_MARKED}
                     </p>
                     <div className="w-full mt-3">
                         <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
@@ -266,12 +260,12 @@ export default function SummaryView({ selectedClass, selectedSection, date, avat
                 <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
                     <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
                         <BarChart2 className="w-4 h-4 text-blue-600" />
-                        Status Breakdown — {selectedClass?.name} {selectedSection?.name} · {formattedDate}
+                        {UI_STRINGS.SUMMARY.BREAKDOWN}{selectedClass?.name} {selectedSection?.name} · {formattedDate}
                     </h3>
                     <div className="space-y-3">
                         {[
-                            { label: "Present", pct: presentPct, count: presentCount, color: "bg-green-500", textColor: "text-green-600" },
-                            { label: "Late", pct: latePct, count: lateCount, color: "bg-orange-400", textColor: "text-orange-500" },
+                            { label: STATUS_PRESENT, pct: presentPct, count: presentCount, color: "bg-green-500", textColor: "text-green-600" },
+                            { label: STATUS_LATE, pct: latePct, count: lateCount, color: "bg-orange-400", textColor: "text-orange-500" },
                             { label: "Absent / Not Marked", pct: absentPct, count: unmarkedOrAbsent, color: "bg-red-400", textColor: "text-red-500" },
                         ].map((item) => (
                             <div key={item.label}>
@@ -300,7 +294,7 @@ export default function SummaryView({ selectedClass, selectedSection, date, avat
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
                     <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
-                        <TrendingUp className="w-4 h-4 text-blue-600" /> This Week's Daily Trend
+                        <TrendingUp className="w-4 h-4 text-blue-600" /> {UI_STRINGS.SUMMARY.WEEKLY_TREND}
                     </h3>
                     {weeklyTrend.length === 0 ? (
                         <div className="h-32 flex items-center justify-center text-gray-400 text-sm">

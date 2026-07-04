@@ -107,7 +107,7 @@ function MobileCircularCard({ c, actionId, canApprove, onApprove, onReject, onDe
             : '—'}
         </span>
         <span style={{ fontWeight: 500, color: '#6b7280' }}>
-          {c.authorName ?? c.author ?? `User #${c.createdById}` ?? '—'}
+          { c.authorName ?? c.author ?? `User #${c.createdById}` ?? '—' }
         </span>
         {c.attachments?.length > 0 && (
           <span style={{ color: '#7c3aed' }}>📎 {c.attachments.length} {c.attachments.length > 1 ? COMMUNICATION_CONSTS.CIRCULARS_PAGE_TEXT.ATTACHMENTS_SUFFIX : COMMUNICATION_CONSTS.CIRCULARS_PAGE_TEXT.ATTACHMENT_SUFFIX}</span>
