@@ -14,19 +14,23 @@ import {
 import { getFeePeriods } from '../../Api/FeeManagement/FeePeriods';
 import { getFeeStructures } from '../../Api/FeeManagement/FeeStructures';
 import { getStudentByClass } from '../../Api/Students/StudentsApi';
-import { getActiveClasses } from '../../Api/Teachers/TeachersAPI'; 
+import { getActiveClasses } from '../../Api/Teachers/TeachersAPI';
 import { authFetch } from '../../Authfetch/Authfetch';
 import { UserContext } from '../../ContextAPI/UserContext';
 import FeeReceiptPrint from '../../Components/FeeModal/FeeReciptPrint';
 
-// ─── Constants ────────────────────────────────────────────────────────────────
-// SCHOOL_ID hardcoded constant REMOVED — schoolId now comes from UserContext (JWT / school switcher)
-const BASE_URL = import.meta.env.VITE_API_BASE_V1;
-const PAGE_SIZE = 10;
-const TODAY = new Date().toISOString().split('T')[0];
-const ONE_MONTH_AGO = (() => {
-  const d = new Date(); d.setMonth(d.getMonth() - 1); return d.toISOString().split('T')[0];
-})();
+// Import Constants
+import {
+  BASE_URL,
+  PAGE_SIZE,
+  getTodayDate,
+  getOneMonthAgoDate,
+  STATUS_PILL_STYLES,
+  PAYMENT_MODES_WITH_ICON,
+  PAYMENT_MODE_OPTIONS,
+  STATUSES,
+  COLLECTION_HISTORY_STRINGS
+} from '../../Constants/StringConstants/FeeManagementConstants';
 
 // ─── Formatters ───────────────────────────────────────────────────────────────
 const fmt = (n) => '₹' + (Number(n) || 0).toLocaleString('en-IN');
@@ -87,7 +91,7 @@ const toast = {
 // ─── Shared primitives ────────────────────────────────────────────────────────
 const Av = ({ name, status, size = 'md' }) => {
   const sz = { sm: 'w-7 h-7 text-[10px]', md: 'w-9 h-9 text-xs', lg: 'w-12 h-12 text-base' }[size];
-  const bg = status === 'OVERDUE' ? 'bg-orange-700' : status === 'PARTIAL' ? 'bg-amber-700' : 'bg-[#1E3A5F]';
+  const bg = status === STATUSES.OVERDUE ? 'bg-orange-700' : status === STATUSES.PARTIAL ? 'bg-amber-700' : 'bg-[#1E3A5F]';
   return (
     <div className={`${sz} ${bg} rounded-full flex items-center justify-center text-white font-bold flex-shrink-0`}>
       {initials(name)}
@@ -96,21 +100,8 @@ const Av = ({ name, status, size = 'md' }) => {
 };
 
 const StatusPill = ({ status, label }) => {
-  const map = {
-    PAID: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    PARTIAL: 'bg-amber-50 text-amber-700 border-amber-200',
-    OVERDUE: 'bg-orange-50 text-orange-700 border-orange-200',
-    PENDING: 'bg-gray-100 text-gray-500 border-gray-200',
-    UNPAID: 'bg-gray-100 text-gray-500 border-gray-200',
-    Pending: 'bg-gray-100 text-gray-500 border-gray-200',
-    Completed: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    CASH: 'bg-gray-100 text-gray-600 border-gray-200',
-    ONLINE: 'bg-blue-50 text-blue-700 border-blue-200',
-    CHEQUE: 'bg-slate-50 text-slate-600 border-slate-200',
-    DD: 'bg-slate-50 text-slate-600 border-slate-200',
-  };
-  const cls = map[status] || 'bg-gray-100 text-gray-500 border-gray-200';
-  const display = status === 'UNPAID' ? 'Pending' : (label || status);
+  const cls = STATUS_PILL_STYLES[status] || STATUS_PILL_STYLES[STATUSES.PENDING];
+  const display = status === STATUSES.UNPAID ? 'Pending' : (label || status);
   return (
     <span className={`inline-flex gap-1.5 px-2 py-0.5 rounded-full border text-[10px] font-semibold ${cls}`}>
       {display}
@@ -177,12 +168,10 @@ const Sel = ({ options = [], placeholder, value, onChange, className = '', disab
 );
 
 // ─── Collect Fee Modal ────────────────────────────────────────────────────────
-// NOTE: this component is unchanged here — you said you'll share it separately.
-// It's included as-is so this file stays complete and drop-in runnable.
 const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions, onSuccess }) => {
   const [selectedPeriodId, setSelectedPeriodId] = useState('');
   const [form, setForm] = useState({
-    amountPaid: '', paymentMode: 'CASH', paymentDate: TODAY,
+    amountPaid: '', paymentMode: STATUSES.CASH, paymentDate: getTodayDate(),
     referenceNo: '', discount: '', discountReason: '', lateFine: '', remarks: '',
   });
   const [loading, setLoading] = useState(false);
@@ -218,12 +207,12 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
       setSelectedPeriodId(matched ? String(matched.value) : '');
       setForm({
         amountPaid: initialStudent.balance > 0 ? String(initialStudent.balance) : '',
-        paymentMode: 'CASH', paymentDate: TODAY,
+        paymentMode: STATUSES.CASH, paymentDate: getTodayDate(),
         referenceNo: '', discount: '', discountReason: '', lateFine: '', remarks: '',
       });
     } else {
       setActiveStudent(null); setSelectedPeriodId('');
-      setForm({ amountPaid: '', paymentMode: 'CASH', paymentDate: TODAY, referenceNo: '', discount: '', discountReason: '', lateFine: '', remarks: '' });
+      setForm({ amountPaid: '', paymentMode: STATUSES.CASH, paymentDate: getTodayDate(), referenceNo: '', discount: '', discountReason: '', lateFine: '', remarks: '' });
     }
   }, [open, initialStudent, periodOptions]);
 
@@ -244,7 +233,7 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
         }));
         setPeriodClasses(classes);
       } catch {
-        toast.error('Load Failed', 'Could not fetch classes for this period.');
+        toast.error(COLLECTION_HISTORY_STRINGS.TOAST_LOAD_FAILED, COLLECTION_HISTORY_STRINGS.TOAST_COULD_NOT_FETCH_CLASSES);
       } finally { setClassesLoading(false); }
     };
     load();
@@ -265,7 +254,7 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
         }
         setStudents(Array.isArray(list) ? list : []);
       } catch {
-        toast.error('Load Failed', 'Could not fetch students for this class.');
+        toast.error(COLLECTION_HISTORY_STRINGS.TOAST_LOAD_FAILED, COLLECTION_HISTORY_STRINGS.TOAST_COULD_NOT_FETCH_STUDENTS);
         setStudents([]);
       } finally { setStudentsLoading(false); }
     };
@@ -274,8 +263,7 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
 
   if (!open) return null;
 
-  const isOverdue = activeStudent?.status === 'OVERDUE';
-  const MODES = [['CASH', '💵', 'Cash'], ['ONLINE', '🌐', 'Online'], ['CHEQUE', '📝', 'Cheque'], ['DD', '🏦', 'DD']];
+  const isOverdue = activeStudent?.status === STATUSES.OVERDUE;
 
   const filteredStudents = students.filter((s) => {
     const q = studentSearch.toLowerCase();
@@ -303,30 +291,30 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
       dueDate: s.dueDate,
       daysLate: s.overdueDays || 0,
       status:
-        s.overdueDays > 0 && studentBalance > 0 ? 'OVERDUE'
-          : s.paidAmount > 0 && studentBalance > 0 ? 'PARTIAL'
-            : studentBalance <= 0 ? 'PAID'
-              : 'PENDING',
+        s.overdueDays > 0 && studentBalance > 0 ? STATUSES.OVERDUE
+          : s.paidAmount > 0 && studentBalance > 0 ? STATUSES.PARTIAL
+            : studentBalance <= 0 ? STATUSES.PAID
+              : STATUSES.PENDING,
       parentName: s.parentName,
       parentPhone: s.parentPhone,
     });
 
     if (studentBalance <= 0) {
       setForm((p) => ({ ...p, amountPaid: '' }));
-      toast.info('Fees Already Paid', `${fullName} has no outstanding balance.`);
+      toast.info(COLLECTION_HISTORY_STRINGS.TOAST_FEES_ALREADY_PAID, `${fullName} has no outstanding balance.`);
     } else {
       setForm((p) => ({ ...p, amountPaid: String(studentBalance) }));
     }
   };
 
   const handleSubmit = async () => {
-    if (!activeStudent) { toast.warning('No Student Selected', 'Please select a student.'); return; }
-    if (isFullyPaid) { toast.info('No Balance Due', `${activeStudent.studentName} has no outstanding balance.`); return; }
-    if (!form.amountPaid || amountNum <= 0) { toast.warning('Invalid Amount', 'Please enter a valid amount.'); return; }
-    if (amountExceedsBalance) { toast.warning('Amount Too High', `Amount cannot exceed ${fmt(balanceDue)}.`); return; }
-    if (discountExceedsAmount) { toast.warning('Discount Too High', 'Discount cannot exceed the amount being collected.'); return; }
-    if (!selectedPeriodId) { toast.warning('No Period Selected', 'Please select a fee period.'); return; }
-    if (!activeStudent.feeStructureId) { toast.error('Fee Structure Missing', 'No fee structure found for this class and period.'); return; }
+    if (!activeStudent) { toast.warning(COLLECTION_HISTORY_STRINGS.TOAST_NO_STUDENT_SELECTED, COLLECTION_HISTORY_STRINGS.TOAST_PLEASE_SELECT_STUDENT); return; }
+    if (isFullyPaid) { toast.info(COLLECTION_HISTORY_STRINGS.TOAST_NO_BALANCE_DUE, `${activeStudent.studentName} has no outstanding balance.`); return; }
+    if (!form.amountPaid || amountNum <= 0) { toast.warning(COLLECTION_HISTORY_STRINGS.TOAST_INVALID_AMOUNT, COLLECTION_HISTORY_STRINGS.TOAST_PLEASE_ENTER_VALID_AMOUNT); return; }
+    if (amountExceedsBalance) { toast.warning(COLLECTION_HISTORY_STRINGS.TOAST_AMOUNT_TOO_HIGH, `Amount cannot exceed ${fmt(balanceDue)}.`); return; }
+    if (discountExceedsAmount) { toast.warning(COLLECTION_HISTORY_STRINGS.TOAST_DISCOUNT_TOO_HIGH, COLLECTION_HISTORY_STRINGS.TOAST_DISCOUNT_EXCEEDS); return; }
+    if (!selectedPeriodId) { toast.warning(COLLECTION_HISTORY_STRINGS.TOAST_NO_PERIOD_SELECTED, COLLECTION_HISTORY_STRINGS.TOAST_PLEASE_SELECT_PERIOD); return; }
+    if (!activeStudent.feeStructureId) { toast.error(COLLECTION_HISTORY_STRINGS.TOAST_FEE_STRUCTURE_MISSING, COLLECTION_HISTORY_STRINGS.TOAST_NO_FEE_STRUCTURE_FOUND); return; }
 
     try {
       setLoading(true);
@@ -342,10 +330,10 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
         referenceNo: form.referenceNo || null,
         remarks: form.remarks || null,
       });
-      toast.success('Payment Recorded', `Receipt generated for ${activeStudent.studentName}.`);
+      toast.success(COLLECTION_HISTORY_STRINGS.TOAST_PAYMENT_RECORDED, `Receipt generated for ${activeStudent.studentName}.`);
       onSuccess(res, activeStudent);
     } catch (e) {
-      toast.error('Payment Failed', e.message || 'Could not record the payment. Please try again.');
+      toast.error(COLLECTION_HISTORY_STRINGS.TOAST_PAYMENT_FAILED, e.message || COLLECTION_HISTORY_STRINGS.TOAST_COULD_NOT_RECORD_PAYMENT);
     } finally { setLoading(false); }
   };
 
@@ -356,20 +344,20 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
 
   return (
     <Modal open={open} onClose={onClose}
-      title="Collect Fee Payment"
-      subtitle="Record a student fee payment and generate receipt"
+      title={COLLECTION_HISTORY_STRINGS.BTN_COLLECT_FEE}
+      subtitle={COLLECTION_HISTORY_STRINGS.HEADER_SUBTITLE}
       wide
       footer={
         <>
-          <Btn variant="secondary" onClick={onClose} className="w-full sm:w-auto">Cancel</Btn>
+          <Btn variant="secondary" onClick={onClose} className="w-full sm:w-auto">{COLLECTION_HISTORY_STRINGS.BTN_CANCEL}</Btn>
           <div className="relative group w-full sm:w-auto">
             <Btn variant="success" onClick={handleSubmit} disabled={submitDisabled} className="w-full sm:w-auto">
               {loading && <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />}
-              {loading ? 'Recording…' : '✓ Record & Generate Receipt'}
+              {loading ? COLLECTION_HISTORY_STRINGS.BTN_RECORDING : COLLECTION_HISTORY_STRINGS.BTN_RECORD_RECEIPT}
             </Btn>
             {activeStudent && isFullyPaid && (
               <div className="absolute bottom-full right-0 mb-2 px-3 py-1.5 bg-gray-800 text-white text-xs rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                ✓ Fees fully paid — no balance due
+                ✓ {COLLECTION_HISTORY_STRINGS.MSG_NO_OUTSTANDING_BAL}
               </div>
             )}
           </div>
@@ -396,18 +384,18 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
               </label>
               {!classesLoading && periodClasses.length === 0 ? (
                 <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 px-3 py-2 rounded-lg">
-                  No classes linked to this period. Add a fee structure first.
+                  {COLLECTION_HISTORY_STRINGS.MSG_NO_CLASSES}
                 </div>
               ) : (
                 <div className="flex flex-wrap gap-2 p-3 border border-gray-200 rounded-lg bg-gray-50/50 max-h-32 overflow-y-auto">
                   {classesLoading
-                    ? <div className="text-xs text-gray-400">Loading classes…</div>
+                    ? <div className="text-xs text-gray-400">{COLLECTION_HISTORY_STRINGS.MSG_LOADING_CLASSES}</div>
                     : periodClasses.map((c) => (
                       <button key={c.id} type="button"
                         onClick={() => { setSelectedClassId(String(c.id)); setStudentSearch(''); setActiveStudent(null); }}
                         className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${selectedClassId === String(c.id)
-                            ? 'bg-blue-950 text-white border-blue-950'
-                            : 'bg-white text-gray-700 border-gray-200 hover:border-blue-950/50 hover:text-blue-950'
+                          ? 'bg-blue-950 text-white border-blue-950'
+                          : 'bg-white text-gray-700 border-gray-200 hover:border-blue-950/50 hover:text-blue-950'
                           }`}>
                         {c.name}
                       </button>
@@ -427,18 +415,18 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
               <div className="relative mb-2">
                 <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input value={studentSearch} onChange={(e) => setStudentSearch(e.target.value)}
-                  placeholder="Search by name or admission no…"
+                  placeholder={COLLECTION_HISTORY_STRINGS.PLACEHOLDER_SEARCH_STUDENT}
                   className="w-full pl-8 pr-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 bg-white" />
               </div>
               <div className="border border-gray-200 rounded-xl overflow-hidden max-h-52 overflow-y-auto">
                 {studentsLoading ? (
                   <div className="flex items-center justify-center py-8 gap-2">
                     <span className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-                    <span className="text-xs text-gray-400">Loading students…</span>
+                    <span className="text-xs text-gray-400">{COLLECTION_HISTORY_STRINGS.MSG_LOADING_STUDENTS}</span>
                   </div>
                 ) : filteredStudents.length === 0 ? (
                   <div className="text-center py-8 text-sm text-gray-400">
-                    {studentSearch ? 'No students match your search' : 'No students found in this class'}
+                    {studentSearch ? COLLECTION_HISTORY_STRINGS.MSG_NO_STUDENT_MATCH : COLLECTION_HISTORY_STRINGS.MSG_NO_STUDENTS_CLASS}
                   </div>
                 ) : filteredStudents.map((s) => {
                   const fullName = `${s.firstName || ''} ${s.lastName || ''}`.trim();
@@ -448,8 +436,8 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
                   return (
                     <div key={s.id || s.studentId} onClick={() => selectStudent(s)}
                       className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-colors border-b border-gray-50 last:border-0 ${isSelected ? 'bg-blue-50 border-l-4 border-l-[#1E3A5F]'
-                          : isPaid ? 'bg-emerald-50/50 hover:bg-emerald-50'
-                            : 'hover:bg-gray-50'
+                        : isPaid ? 'bg-emerald-50/50 hover:bg-emerald-50'
+                          : 'hover:bg-gray-50'
                         }`}>
                       <Av name={fullName} size="sm" />
                       <div className="flex-1 min-w-0">
@@ -480,7 +468,7 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
                 {isFullyPaid && (
                   <div className="flex items-center gap-1 mt-1">
                     <CheckCircle size={12} className="text-emerald-600" />
-                    <span className="text-[11px] font-bold text-emerald-700">Fees fully paid</span>
+                    <span className="text-[11px] font-bold text-emerald-700">{COLLECTION_HISTORY_STRINGS.LBL_FEES_FULLY_PAID}</span>
                   </div>
                 )}
               </div>
@@ -490,12 +478,12 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
           {activeStudent && (
             <div className="grid grid-cols-2 gap-2">
               <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2 text-center">
-                <div className="text-[10px] font-bold text-emerald-700 uppercase truncate">Already Paid</div>
+                <div className="text-[10px] font-bold text-emerald-700 uppercase truncate">{COLLECTION_HISTORY_STRINGS.LBL_ALREADY_PAID}</div>
                 <div className="text-base sm:text-lg font-extrabold text-emerald-600 break-all">{fmt(activeStudent.paidAmount || 0)}</div>
               </div>
               <div className={`border border-gray-200 rounded-xl px-3 py-2 text-center ${isFullyPaid ? 'bg-emerald-50 border-emerald-200' : 'bg-orange-50 border-orange-200'}`}>
                 <div className={`text-[10px] font-bold uppercase truncate ${isFullyPaid ? 'text-emerald-700' : 'text-orange-700'}`}>
-                  Balance Due
+                  {COLLECTION_HISTORY_STRINGS.LBL_BALANCE_DUE}
                 </div>
                 <div className={`text-base sm:text-lg font-extrabold break-all ${isFullyPaid ? 'text-emerald-600' : 'text-orange-600'}`}>
                   {fmt(balanceDue)}
@@ -508,8 +496,8 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
             <div className="flex items-start gap-2 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2.5">
               <CheckCircle size={15} className="text-emerald-600 mt-0.5 flex-shrink-0" />
               <div>
-                <div className="text-sm font-bold text-emerald-800">No payment required</div>
-                <div className="text-[11px] text-emerald-700 mt-0.5">This student has no outstanding balance.</div>
+                <div className="text-sm font-bold text-emerald-800">{COLLECTION_HISTORY_STRINGS.MSG_NO_PAYMENT_REQD}</div>
+                <div className="text-[11px] text-emerald-700 mt-0.5">{COLLECTION_HISTORY_STRINGS.MSG_NO_OUTSTANDING_BAL}</div>
               </div>
             </div>
           )}
@@ -522,14 +510,14 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
             <div className="flex items-start gap-2 bg-blue-50 border border-blue-100 rounded-xl px-3 py-2">
               <Info size={13} className="text-blue-500 mt-0.5 flex-shrink-0" />
               <div className="text-[11px] text-blue-700">
-                You can collect a <strong>partial amount</strong>. Enter any amount up to {fmt(balanceDue)}.
+                {COLLECTION_HISTORY_STRINGS.MSG_PARTIAL_INFO} {fmt(balanceDue)}.
               </div>
             </div>
           )}
 
           <div>
             <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-              Amount to Collect <span className="text-gray-400">*</span>
+              {COLLECTION_HISTORY_STRINGS.LBL_AMOUNT_TO_COLLECT} <span className="text-gray-400">*</span>
             </label>
             <div className="relative">
               <Inp
@@ -550,26 +538,26 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
             </div>
             {amountExceedsBalance && (
               <p className="text-[11px] text-orange-600 font-medium mt-1 flex items-center gap-1">
-                <AlertCircle size={11} /> Net amount ({fmt(netAmount)}) exceeds balance due ({fmt(balanceDue)})
+                <AlertCircle size={11} /> {COLLECTION_HISTORY_STRINGS.MSG_EXCEEDS_BALANCE} ({fmt(balanceDue)})
               </p>
             )}
             {activeStudent && !isFullyPaid && netAmount > 0 && netAmount < balanceDue && !amountExceedsBalance && (
               <p className="text-[11px] text-amber-600 font-medium mt-1 flex items-center gap-1">
-                <Info size={11} /> Partial payment — {fmt(balanceDue - netAmount)} will remain outstanding
+                <Info size={11} /> {COLLECTION_HISTORY_STRINGS.MSG_PARTIAL_REMAIN}
               </p>
             )}
           </div>
 
           <div>
             <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-              Payment Mode <span className="text-gray-400">*</span>
+              {COLLECTION_HISTORY_STRINGS.LBL_PAYMENT_MODE} <span className="text-gray-400">*</span>
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {MODES.map(([mode, icon, label]) => (
+              {PAYMENT_MODES_WITH_ICON.map(([mode, icon, label]) => (
                 <button key={mode} type="button" onClick={() => setForm((p) => ({ ...p, paymentMode: mode }))}
                   className={`flex flex-col items-center gap-1 sm:gap-1.5 px-2 py-2 sm:py-2.5 rounded-xl border-2 transition-all ${form.paymentMode === mode
-                      ? 'border-[#1E3A5F] bg-blue-50 text-[#1E3A5F]'
-                      : 'border-gray-200 bg-white text-gray-600 hover:border-[#1E3A5F]/40'
+                    ? 'border-[#1E3A5F] bg-blue-50 text-[#1E3A5F]'
+                    : 'border-gray-200 bg-white text-gray-600 hover:border-[#1E3A5F]/40'
                     }`}>
                   <span className="text-lg sm:text-xl">{icon}</span>
                   <span className="text-[10px] sm:text-[11px] font-bold">{label}</span>
@@ -581,13 +569,13 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                Payment Date <span className="text-gray-400">*</span>
+                {COLLECTION_HISTORY_STRINGS.LBL_PAYMENT_DATE} <span className="text-gray-400">*</span>
               </label>
               <Inp type="date" value={form.paymentDate}
                 onChange={(e) => setForm((p) => ({ ...p, paymentDate: e.target.value }))} />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1.5">Reference No.</label>
+              <label className="block text-xs font-semibold text-gray-700 mb-1.5">{COLLECTION_HISTORY_STRINGS.LBL_REFERENCE_NO}</label>
               <Inp value={form.referenceNo} placeholder="TXN / Cheque no."
                 onChange={(e) => setForm((p) => ({ ...p, referenceNo: e.target.value }))} />
             </div>
@@ -595,7 +583,7 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
 
           <div>
             <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-              Discount <span className="text-gray-400 font-normal">(optional)</span>
+              {COLLECTION_HISTORY_STRINGS.LBL_DISCOUNT} <span className="text-gray-400 font-normal">(optional)</span>
             </label>
             <Inp
               type="number" value={form.discount} placeholder="Discount amount"
@@ -604,7 +592,7 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
             />
             {discountExceedsAmount && (
               <p className="text-[11px] text-orange-600 font-medium mt-1 flex items-center gap-1">
-                <AlertCircle size={11} /> Discount cannot exceed collected amount ({fmt(amountNum)})
+                <AlertCircle size={11} /> {COLLECTION_HISTORY_STRINGS.MSG_DISCOUNT_EXCEEDS}
               </p>
             )}
             {discountNum > 0 && !discountExceedsAmount && (
@@ -614,7 +602,7 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
             )}
             <textarea value={form.discountReason} rows={2}
               onChange={(e) => setForm((p) => ({ ...p, discountReason: e.target.value }))}
-              placeholder="Reason e.g. Sibling discount, scholarship…"
+              placeholder={COLLECTION_HISTORY_STRINGS.LBL_REASON}
               className="w-full mt-2 px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 resize-none" />
           </div>
 
@@ -623,7 +611,7 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
               <div className="flex items-start gap-2 mb-2">
                 <AlertTriangle size={14} className="text-amber-600 mt-0.5" />
                 <div>
-                  <div className="text-sm font-bold text-amber-800">Past Due — Add Late Fine?</div>
+                  <div className="text-sm font-bold text-amber-800">{COLLECTION_HISTORY_STRINGS.MSG_LATE_FINE_PROMPT}</div>
                   <div className="text-[11px] text-amber-700 mt-0.5">
                     Due: {fmtDate(activeStudent?.dueDate)} · {activeStudent?.daysLate} day{activeStudent?.daysLate !== 1 ? 's' : ''} overdue
                   </div>
@@ -635,20 +623,20 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
           )}
 
           <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1.5">Remarks</label>
+            <label className="block text-xs font-semibold text-gray-700 mb-1.5">{COLLECTION_HISTORY_STRINGS.LBL_REMARKS}</label>
             <textarea value={form.remarks} rows={2}
               onChange={(e) => setForm((p) => ({ ...p, remarks: e.target.value }))}
-              placeholder="Optional note…"
+              placeholder={COLLECTION_HISTORY_STRINGS.LBL_OPTIONAL_NOTE}
               className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 resize-none" />
           </div>
 
           <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center bg-[#1E3A5F] rounded-xl px-4 py-3 gap-2">
             <div>
-              <div className="text-[10px] text-white/50 uppercase tracking-wider">Receipt No.</div>
-              <div className="text-white font-bold text-sm mt-0.5">Auto-generated</div>
+              <div className="text-[10px] text-white/50 uppercase tracking-wider">{COLLECTION_HISTORY_STRINGS.LBL_RECEIPT_NO}</div>
+              <div className="text-white font-bold text-sm mt-0.5">{COLLECTION_HISTORY_STRINGS.LBL_AUTO_GENERATED}</div>
             </div>
             <div className="text-left sm:text-right">
-              <div className="text-[10px] text-white/50 uppercase tracking-wider">Net Collected</div>
+              <div className="text-[10px] text-white/50 uppercase tracking-wider">{COLLECTION_HISTORY_STRINGS.LBL_NET_COLLECTED}</div>
               <div className={`font-extrabold text-xl ${netTotal > 0 ? 'text-white' : 'text-white/30'}`}>
                 {netTotal > 0 ? fmt(netTotal) : '—'}
               </div>
@@ -667,21 +655,21 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
 
 // ─── Bulk Collect Modal ───────────────────────────────────────────────────────
 const BulkCollectModal = ({ open, onClose, students, onSuccess }) => {
-  const [commonMode, setCommonMode] = useState('CASH');
-  const [commonDate, setCommonDate] = useState(TODAY);
+  const [commonMode, setCommonMode] = useState(STATUSES.CASH);
+  const [commonDate, setCommonDate] = useState(getTodayDate());
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (open && students.length > 0) {
-      setCommonMode('CASH'); setCommonDate(TODAY);
+      setCommonMode(STATUSES.CASH); setCommonDate(getTodayDate());
       setRows(students.map((s) => ({
         id: s.id, studentId: s.studentId, studentName: s.studentName,
         studentCode: s.studentCode, class: s.class, period: s.period,
         balanceDue: s.balance, feeStructureId: s.feeStructureId,
         collectAmount: s.balance, discount: 0,
-        lateFine: s.status === 'OVERDUE' ? '' : null,
-        daysLate: s.daysLate || 0, paymentMode: 'CASH', paymentDate: TODAY,
+        lateFine: s.status === STATUSES.OVERDUE ? '' : null,
+        daysLate: s.daysLate || 0, paymentMode: STATUSES.CASH, paymentDate: getTodayDate(),
       })));
     }
   }, [open, students]);
@@ -689,13 +677,12 @@ const BulkCollectModal = ({ open, onClose, students, onSuccess }) => {
   const update = (id, field, val) => setRows((p) => p.map((r) => r.id === id ? { ...r, [field]: val } : r));
   const applyAll = () => setRows((p) => p.map((r) => ({ ...r, paymentMode: commonMode, paymentDate: commonDate })));
   const grandTotal = rows.reduce((s, r) => s + (parseFloat(r.collectAmount) || 0), 0);
-  const MODES = [{ value: 'CASH', label: 'Cash' }, { value: 'ONLINE', label: 'Online' }, { value: 'CHEQUE', label: 'Cheque' }, { value: 'DD', label: 'DD' }];
 
   const handleSubmit = async () => {
     const bad = rows.find((r) => !r.collectAmount || parseFloat(r.collectAmount) <= 0);
-    if (bad) { toast.warning('Missing Amount', `Please fill in collect amount for ${bad.studentName}.`); return; }
+    if (bad) { toast.warning(COLLECTION_HISTORY_STRINGS.TOAST_MISSING_AMOUNT, `Please fill in collect amount for ${bad.studentName}.`); return; }
     const over = rows.find((r) => parseFloat(r.collectAmount) > parseFloat(r.balanceDue));
-    if (over) { toast.warning('Amount Exceeds Balance', `${over.studentName}: exceeds balance of ${fmt(over.balanceDue)}.`); return; }
+    if (over) { toast.warning(COLLECTION_HISTORY_STRINGS.TOAST_AMOUNT_EXCEEDS_BALANCE, `${over.studentName}: exceeds balance of ${fmt(over.balanceDue)}.`); return; }
     try {
       setLoading(true);
       const res = await createBulkFeeCollection({
@@ -708,24 +695,24 @@ const BulkCollectModal = ({ open, onClose, students, onSuccess }) => {
           referenceNo: null, remarks: null,
         })),
       });
-      toast.success('Bulk Payment Processed', `${Array.isArray(res) ? res.length : rows.length} receipts generated.`);
+      toast.success(COLLECTION_HISTORY_STRINGS.TOAST_BULK_PROCESSED, `${Array.isArray(res) ? res.length : rows.length} receipts generated.`);
       onSuccess(res);
     } catch (e) {
-      toast.error('Bulk Payment Failed', e.message || 'Could not process bulk payments.');
+      toast.error(COLLECTION_HISTORY_STRINGS.TOAST_BULK_FAILED, e.message || COLLECTION_HISTORY_STRINGS.TOAST_COULD_NOT_PROCESS_BULK);
     } finally { setLoading(false); }
   };
 
   return (
     <Modal open={open} onClose={onClose}
-      title="Bulk Fee Collection"
+      title={COLLECTION_HISTORY_STRINGS.BTN_COLLECT_FEE}
       subtitle={`${students.length} students selected`}
       wide
       footer={
         <>
-          <Btn variant="secondary" onClick={onClose} className="w-full sm:w-auto">Cancel</Btn>
+          <Btn variant="secondary" onClick={onClose} className="w-full sm:w-auto">{COLLECTION_HISTORY_STRINGS.BTN_CANCEL}</Btn>
           <Btn variant="success" onClick={handleSubmit} disabled={loading} className="w-full sm:w-auto">
             {loading && <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />}
-            {loading ? 'Processing…' : `Process ${rows.length} Payments`}
+            {loading ? COLLECTION_HISTORY_STRINGS.BTN_PROCESSING : `${COLLECTION_HISTORY_STRINGS.BTN_PROCESS_PAYMENTS} ${rows.length}`}
           </Btn>
         </>
       }>
@@ -735,20 +722,20 @@ const BulkCollectModal = ({ open, onClose, students, onSuccess }) => {
       </div>
       <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 mb-4 flex flex-col sm:flex-row sm:items-end gap-3">
         <div className="w-full sm:w-auto">
-          <label className="block text-xs font-semibold text-gray-700 mb-1.5">Common Payment Mode</label>
-          <Sel value={commonMode} onChange={setCommonMode} options={MODES} className="w-full sm:w-32" />
+          <label className="block text-xs font-semibold text-gray-700 mb-1.5">{COLLECTION_HISTORY_STRINGS.LBL_PAYMENT_MODE}</label>
+          <Sel value={commonMode} onChange={setCommonMode} options={PAYMENT_MODE_OPTIONS} className="w-full sm:w-32" />
         </div>
         <div className="w-full sm:w-auto">
-          <label className="block text-xs font-semibold text-gray-700 mb-1.5">Payment Date</label>
+          <label className="block text-xs font-semibold text-gray-700 mb-1.5">{COLLECTION_HISTORY_STRINGS.LBL_PAYMENT_DATE}</label>
           <Inp type="date" value={commonDate} onChange={(e) => setCommonDate(e.target.value)} className="w-full sm:w-40" />
         </div>
-        <Btn variant="ghost" size="sm" onClick={applyAll} className="w-full sm:w-auto mt-2 sm:mt-0">Apply to All Rows</Btn>
+        <Btn variant="ghost" size="sm" onClick={applyAll} className="w-full sm:w-auto mt-2 sm:mt-0">{COLLECTION_HISTORY_STRINGS.BTN_APPLY_ALL}</Btn>
       </div>
       <div className="overflow-x-auto rounded-xl border border-gray-200">
         <table className="w-full text-sm min-w-[600px]">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-200">
-              {['Student', 'Balance Due', 'Collect Amount', 'Discount', 'Late Fine', 'Mode'].map((h) => (
+              {COLLECTION_HISTORY_STRINGS.TABLE_BULK_HEADERS.map((h) => (
                 <th key={h} className="px-3 py-2.5 text-left text-[10.5px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
               ))}
             </tr>
@@ -787,7 +774,7 @@ const BulkCollectModal = ({ open, onClose, students, onSuccess }) => {
                 <td className="px-3 py-2.5">
                   <select value={row.paymentMode} onChange={(e) => update(row.id, 'paymentMode', e.target.value)}
                     className="w-24 px-2 py-1 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-blue-400">
-                    {MODES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    {PAYMENT_MODE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                   </select>
                 </td>
               </tr>
@@ -796,8 +783,8 @@ const BulkCollectModal = ({ open, onClose, students, onSuccess }) => {
         </table>
       </div>
       <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center bg-[#1E3A5F] rounded-xl px-4 py-3 mt-4 gap-2">
-        <div className="text-sm text-white/60 text-center sm:text-left">{rows.length} receipts will be generated</div>
-        <div className="text-white font-extrabold text-base text-center sm:text-right">Grand Total: {fmt(grandTotal)}</div>
+        <div className="text-sm text-white/60 text-center sm:text-left">{rows.length} {COLLECTION_HISTORY_STRINGS.MSG_RECEIPTS_GENERATED}</div>
+        <div className="text-white font-extrabold text-base text-center sm:text-right">{COLLECTION_HISTORY_STRINGS.LBL_GRAND_TOTAL}: {fmt(grandTotal)}</div>
       </div>
     </Modal>
   );
@@ -836,20 +823,20 @@ const OutstandingCard = ({ s, selected, onToggle, onCollect }) => {
           <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100 gap-2">
             <div className="flex gap-3 min-w-0">
               <div className="min-w-0">
-                <div className="text-[10px] text-gray-400 uppercase truncate">Paid</div>
+                <div className="text-[10px] text-gray-400 uppercase truncate">{COLLECTION_HISTORY_STRINGS.LBL_ALREADY_PAID}</div>
                 <div className={`text-sm font-semibold ${s.paidAmount > 0 ? 'text-emerald-600' : 'text-gray-400'}`}>
                   {fmt(s.paidAmount)}
                 </div>
               </div>
               <div className="min-w-0">
-                <div className="text-[10px] text-gray-400 uppercase truncate">Balance</div>
+                <div className="text-[10px] text-gray-400 uppercase truncate">{COLLECTION_HISTORY_STRINGS.LBL_BALANCE_DUE}</div>
                 <div className="text-sm font-bold text-gray-900">{fmt(s.balance)}</div>
-                {s.status === 'OVERDUE' && (
+                {s.status === STATUSES.OVERDUE && (
                   <div className="text-[10px] text-orange-600 font-medium truncate">{s.daysLate}d overdue</div>
                 )}
               </div>
             </div>
-            <Btn variant="primary" size="xs" onClick={onCollect}>Collect</Btn>
+            <Btn variant="primary" size="xs" onClick={onCollect}>{COLLECTION_HISTORY_STRINGS.BTN_COLLECT}</Btn>
           </div>
         </div>
       </div>
@@ -880,14 +867,13 @@ const HistoryCard = ({ h, onView }) => (
       {h.referenceNo && <span className="text-gray-400 truncate"><span className="text-gray-400">Ref: </span>{h.referenceNo}</span>}
     </div>
     <div className="flex justify-end pt-1 border-t border-gray-50">
-      <Btn variant="ghost" size="xs" onClick={onView}>View Receipt</Btn>
+      <Btn variant="ghost" size="xs" onClick={onView}>{COLLECTION_HISTORY_STRINGS.BTN_VIEW_RECEIPT}</Btn>
     </div>
   </div>
 );
 
 // ─── Main: CollectionsHistory ─────────────────────────────────────────────────
 const CollectionsHistory = () => {
-  // CHANGED: pull schoolId out of context alongside currentAcademicYear
   const { currentAcademicYear, schoolId } = useContext(UserContext);
   const academicYearId = currentAcademicYear?.id || null;
   const academicYearLabel = currentAcademicYear?.label || null;
@@ -919,11 +905,10 @@ const CollectionsHistory = () => {
   const [totalPages, setTotalPages] = useState(1);
 
   useEffect(() => {
-    setFromDate(ONE_MONTH_AGO);
-    setToDate(TODAY);
+    setFromDate(getOneMonthAgoDate());
+    setToDate(getTodayDate());
   }, []);
 
-  // CHANGED: gate on schoolId too, use getActiveClasses(schoolId) instead of raw authFetch + hardcoded SCHOOL_ID
   useEffect(() => {
     if (!academicYearId || !schoolId) { setOptionsLoading(false); return; }
     const loadOptions = async () => {
@@ -957,10 +942,10 @@ const CollectionsHistory = () => {
       const records = Array.isArray(raw) ? raw : [];
       setOutstanding(
         records.map((r, i) => {
-          let status = 'PENDING';
-          if ((r.paidAmount || 0) > 0 && r.balanceDue > 0) status = 'PARTIAL';
-          if (r.balanceDue <= 0) status = 'PAID';
-          if (r.overdueDays > 0 && r.balanceDue > 0) status = 'OVERDUE';
+          let status = STATUSES.PENDING;
+          if ((r.paidAmount || 0) > 0 && r.balanceDue > 0) status = STATUSES.PARTIAL;
+          if (r.balanceDue <= 0) status = STATUSES.PAID;
+          if (r.overdueDays > 0 && r.balanceDue > 0) status = STATUSES.OVERDUE;
           return {
             id: i + 1,
             studentId: r.studentId,
@@ -981,7 +966,7 @@ const CollectionsHistory = () => {
         })
       );
     } catch (e) {
-      setError(e.message || 'Failed to load outstanding fees.');
+      setError(e.message || COLLECTION_HISTORY_STRINGS.ERR_LOAD_OUTSTANDING);
       setOutstanding([]);
     } finally { setLoading(false); }
   }, [classF, periodF]);
@@ -1001,11 +986,11 @@ const CollectionsHistory = () => {
         class: `${r.className}${r.sectionName ? ' ' + r.sectionName : ''}`,
         period: r.feePeriodName, amount: r.amountPaid, discount: r.discount || 0,
         lateFine: r.lateFine || 0, mode: r.paymentMode, referenceNo: r.referenceNo,
-        recordedBy: r.collectedBy, status: 'Completed',
+        recordedBy: r.collectedBy, status: STATUSES.COMPLETED,
       })));
       setTotalPages(res?.data?.totalPages || res?.pagination?.totalPages || 1);
     } catch (e) {
-      setError(e.message || 'Failed to load history');
+      setError(e.message || COLLECTION_HISTORY_STRINGS.ERR_LOAD_HISTORY);
       setHistory([]);
     } finally { setLoading(false); }
   }, [fromDate, toDate, classF, periodF, modeF, page]);
@@ -1016,13 +1001,12 @@ const CollectionsHistory = () => {
     else if (fromDate && toDate) fetchHistory();
   }, [tab, fromDate, toDate, classF, periodF, modeF, page, optionsLoading, fetchOutstanding, fetchHistory]);
 
-  // CHANGED: also wait for schoolId before rendering the main UI
   if (!academicYearId || !schoolId || optionsLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-3">
         <span className="w-6 h-6 border-2 border-[#2563EB] border-t-transparent rounded-full animate-spin" />
         <div className="text-sm text-gray-500">
-          {!academicYearId || !schoolId ? '⏳ Waiting for school/academic year…' : 'Loading fee periods and classes…'}
+          {!academicYearId || !schoolId ? COLLECTION_HISTORY_STRINGS.MSG_WAITING : COLLECTION_HISTORY_STRINGS.MSG_LOADING_OPTIONS}
         </div>
       </div>
     );
@@ -1042,7 +1026,7 @@ const CollectionsHistory = () => {
 
   const pagedOut = filteredOut.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const totalOutPages = Math.max(1, Math.ceil(filteredOut.length / PAGE_SIZE));
-  const overdueCount = outstanding.filter((s) => s.status === 'OVERDUE').length;
+  const overdueCount = outstanding.filter((s) => s.status === STATUSES.OVERDUE).length;
 
   const toggleRow = (id) => setSelected((p) => p.includes(id) ? p.filter((x) => x !== id) : [...p, id]);
   const toggleAll = () => {
@@ -1080,7 +1064,7 @@ const CollectionsHistory = () => {
 
   const handleBulkSuccess = (responses) => {
     setBulkModal({ open: false, students: [] });
-    toast.success('Bulk Payment Done', `${Array.isArray(responses) ? responses.length : '?'} payments processed successfully.`);
+    toast.success(COLLECTION_HISTORY_STRINGS.TOAST_BULK_PROCESSED, `${Array.isArray(responses) ? responses.length : '?'} receipts generated.`);
     fetchOutstanding(); setSelected([]);
   };
 
@@ -1128,20 +1112,20 @@ const CollectionsHistory = () => {
       {/* ── Header ── */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-gray-100 pb-3">
         <div className="min-w-0 flex-1">
-          <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900 tracking-tight">Collections & History</h1>
+          <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900 tracking-tight">{COLLECTION_HISTORY_STRINGS.HEADER_TITLE}</h1>
           <p className="text-xs sm:text-sm text-gray-400 mt-0.5 truncate">
-            Academic Year {academicYearLabel} · Fee payments and history
+            Academic Year {academicYearLabel} · {COLLECTION_HISTORY_STRINGS.HEADER_SUBTITLE}
           </p>
         </div>
         <div className="flex gap-2 w-full sm:w-auto flex-shrink-0">
           <button className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 text-xs sm:text-sm font-semibold text-gray-700 bg-white border border-gray-200 cursor-pointer rounded-lg hover:bg-gray-50 transition-colors">
             <FileDown size={13} />
-            <span>Export</span>
+            <span>{COLLECTION_HISTORY_STRINGS.BTN_EXPORT}</span>
           </button>
           <button onClick={() => setCollectModal({ open: true, student: null })}
             className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold text-white bg-[#2563EB] rounded-lg cursor-pointer hover:bg-blue-700 transition-colors shadow-sm">
             <Plus size={13} />
-            <span>Collect Fee</span>
+            <span>{COLLECTION_HISTORY_STRINGS.BTN_COLLECT_FEE}</span>
           </button>
         </div>
       </div>
@@ -1162,14 +1146,14 @@ const CollectionsHistory = () => {
       {/* ── Tabs ── */}
       <div className="flex border-b border-gray-200 ">
         {[
-          { key: 'outstanding', label: 'Outstanding & Overdue', badge: overdueCount },
-          { key: 'history', label: 'Payment History', badge: 0 },
+          { key: 'outstanding', label: COLLECTION_HISTORY_STRINGS.TAB_OUTSTANDING, badge: overdueCount },
+          { key: 'history', label: COLLECTION_HISTORY_STRINGS.TAB_HISTORY, badge: 0 },
         ].map((t) => (
           <button key={t.key}
             onClick={() => { setTab(t.key); resetTab(); }}
             className={`inline-flex items-center gap-2 px-4 py-3 text-[12px] sm:text-[13px] font-semibold border-b-2 -mb-px transition-colors whitespace-nowrap flex-shrink-0 ${tab === t.key
-                ? 'text-[#2563EB] border-[#2563EB]'
-                : 'text-gray-500 border-transparent hover:text-gray-700 hover:border-gray-300'
+              ? 'text-[#2563EB] border-[#2563EB]'
+              : 'text-gray-500 border-transparent hover:text-gray-700 hover:border-gray-300'
               }`}>
             {t.label}
             {t.badge > 0 && (
@@ -1189,16 +1173,16 @@ const CollectionsHistory = () => {
               <div className="relative flex-1">
                 <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                  placeholder="Student name or ID…"
+                  placeholder={COLLECTION_HISTORY_STRINGS.PLACEHOLDER_SEARCH_STUDENT}
                   className="w-full pl-8 pr-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all bg-white" />
               </div>
               <button onClick={() => setShowFilters(!showFilters)}
                 className={`flex items-center gap-1.5 px-3 py-2 text-sm font-semibold rounded-lg border transition-colors flex-shrink-0 ${showFilters || classF || periodF || statusF
-                    ? 'bg-blue-50 text-[#1E3A5F] border-blue-200'
-                    : 'bg-white text-gray-700 border-gray-200'
+                  ? 'bg-blue-50 text-[#1E3A5F] border-blue-200'
+                  : 'bg-white text-gray-700 border-gray-200'
                   }`}>
                 <Filter size={13} />
-                <span>Filters</span>
+                <span>{COLLECTION_HISTORY_STRINGS.BTN_FILTERS}</span>
                 {(classF || periodF || statusF) && (
                   <span className="w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0" />
                 )}
@@ -1214,9 +1198,9 @@ const CollectionsHistory = () => {
                   options={classOptions} placeholder="All Classes" className="w-full" />
                 <Sel value={statusF} onChange={(v) => { setStatusF(v); setPage(1); }}
                   options={[
-                    { value: 'OVERDUE', label: 'Overdue' },
-                    { value: 'PARTIAL', label: 'Partial' },
-                    { value: 'PENDING', label: 'Pending' },
+                    { value: STATUSES.OVERDUE, label: 'Overdue' },
+                    { value: STATUSES.PARTIAL, label: 'Partial' },
+                    { value: STATUSES.PENDING, label: 'Pending' },
                   ]}
                   placeholder="All Status" className="w-full" />
               </div>
@@ -1227,7 +1211,7 @@ const CollectionsHistory = () => {
               <div className="relative flex-1 min-w-[150px] lg:min-w-[200px]">
                 <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                  placeholder="Student name or ID…"
+                  placeholder={COLLECTION_HISTORY_STRINGS.PLACEHOLDER_SEARCH_STUDENT}
                   className="w-full pl-8 pr-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all bg-white" />
               </div>
               <Sel value={periodF} onChange={(v) => { setPeriodF(v); setPage(1); setSelected([]); }}
@@ -1236,9 +1220,9 @@ const CollectionsHistory = () => {
                 options={classOptions} placeholder="All Classes" className="w-full md:w-36 flex-shrink-0" />
               <Sel value={statusF} onChange={(v) => { setStatusF(v); setPage(1); }}
                 options={[
-                  { value: 'OVERDUE', label: 'Overdue' },
-                  { value: 'PARTIAL', label: 'Partial' },
-                  { value: 'PENDING', label: 'Pending' },
+                  { value: STATUSES.OVERDUE, label: 'Overdue' },
+                  { value: STATUSES.PARTIAL, label: 'Partial' },
+                  { value: STATUSES.PENDING, label: 'Pending' },
                 ]}
                 placeholder="All Status" className="w-full md:w-36 flex-shrink-0" />
             </div>
@@ -1258,11 +1242,11 @@ const CollectionsHistory = () => {
               <div className="flex gap-1.5 flex-shrink-0">
                 <Btn variant="secondary" size="sm" onClick={() => setSelected([])}
                   className="!bg-white/10 hover:!bg-white/20 !border-white/30 !text-white text-xs px-2.5">
-                  Clear
+                  {COLLECTION_HISTORY_STRINGS.BTN_CLEAR}
                 </Btn>
                 <Btn variant="success" size="sm" className="text-xs px-3"
                   onClick={() => setBulkModal({ open: true, students: selStudents })}>
-                  Collect ({selected.length})
+                  {COLLECTION_HISTORY_STRINGS.BTN_COLLECT} ({selected.length})
                 </Btn>
               </div>
             </div>
@@ -1280,7 +1264,7 @@ const CollectionsHistory = () => {
                         checked={filteredOut.length > 0 && filteredOut.every((s) => selected.includes(s.id))}
                         onChange={toggleAll} />
                     </th>
-                    {['Student', 'Class', 'Period', 'Total Fee', 'Paid', 'Balance Due', 'Due Date', 'Status', 'Action'].map((h) => (
+                    {COLLECTION_HISTORY_STRINGS.TABLE_OUTSTANDING_HEADERS.map((h) => (
                       <th key={h} className="px-3 py-2.5 text-left text-[10.5px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -1290,11 +1274,11 @@ const CollectionsHistory = () => {
                     <tr>
                       <td colSpan={10} className="text-center py-14">
                         <span className="w-7 h-7 border-2 border-[#2563EB] border-t-transparent rounded-full animate-spin inline-block mb-2" />
-                        <div className="text-sm text-gray-400">Loading outstanding fees…</div>
+                        <div className="text-sm text-gray-400">{COLLECTION_HISTORY_STRINGS.MSG_LOADING_OUTSTANDING}</div>
                       </td>
                     </tr>
                   ) : pagedOut.length === 0 ? (
-                    <tr><td colSpan={10} className="text-center py-14 text-sm text-gray-400">No records found</td></tr>
+                    <tr><td colSpan={10} className="text-center py-14 text-sm text-gray-400">{COLLECTION_HISTORY_STRINGS.MSG_NO_OUTSTANDING_RECORDS}</td></tr>
                   ) : pagedOut.map((s) => {
                     const isSel = selected.includes(s.id);
                     return (
@@ -1321,7 +1305,7 @@ const CollectionsHistory = () => {
                         </td>
                         <td className="px-3 py-3">
                           <span className="font-semibold text-gray-900 text-sm">{fmt(s.balance)}</span>
-                          {s.status === 'OVERDUE' && (
+                          {s.status === STATUSES.OVERDUE && (
                             <div className="text-[10.5px] text-orange-600 mt-0.5 font-medium">{s.daysLate}d overdue</div>
                           )}
                         </td>
@@ -1332,7 +1316,7 @@ const CollectionsHistory = () => {
                         <td className="px-3 py-3">
                           <Btn variant="primary" size="xs"
                             onClick={() => setCollectModal({ open: true, student: s })}>
-                            Collect
+                            {COLLECTION_HISTORY_STRINGS.BTN_COLLECT}
                           </Btn>
                         </td>
                       </tr>
@@ -1349,11 +1333,11 @@ const CollectionsHistory = () => {
               <div className="flex gap-2">
                 <Btn variant="secondary" size="sm"
                   onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>
-                  ← Prev
+                  {COLLECTION_HISTORY_STRINGS.BTN_PREV}
                 </Btn>
                 <Btn variant="primary" size="sm"
                   onClick={() => setPage((p) => Math.min(totalOutPages, p + 1))} disabled={page >= totalOutPages}>
-                  Next →
+                  {COLLECTION_HISTORY_STRINGS.BTN_NEXT}
                 </Btn>
               </div>
             </div>
@@ -1380,10 +1364,10 @@ const CollectionsHistory = () => {
             {loading ? (
               <div className="text-center py-14">
                 <span className="w-7 h-7 border-2 border-[#2563EB] border-t-transparent rounded-full animate-spin inline-block mb-2" />
-                <div className="text-sm text-gray-400">Loading outstanding fees…</div>
+                <div className="text-sm text-gray-400">{COLLECTION_HISTORY_STRINGS.MSG_LOADING_OUTSTANDING}</div>
               </div>
             ) : pagedOut.length === 0 ? (
-              <div className="text-center py-14 text-sm text-gray-400">No records found</div>
+              <div className="text-center py-14 text-sm text-gray-400">{COLLECTION_HISTORY_STRINGS.MSG_NO_OUTSTANDING_RECORDS}</div>
             ) : pagedOut.map((s) => (
               <OutstandingCard
                 key={s.id}
@@ -1399,12 +1383,12 @@ const CollectionsHistory = () => {
               <div className="flex items-center justify-between pt-2">
                 <Btn variant="secondary" size="sm"
                   onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>
-                  ← Prev
+                  {COLLECTION_HISTORY_STRINGS.BTN_PREV}
                 </Btn>
                 <span className="text-xs text-gray-500">Page {page} of {totalOutPages}</span>
                 <Btn variant="primary" size="sm"
                   onClick={() => setPage((p) => Math.min(totalOutPages, p + 1))} disabled={page >= totalOutPages}>
-                  Next →
+                  {COLLECTION_HISTORY_STRINGS.BTN_NEXT}
                 </Btn>
               </div>
             )}
@@ -1420,16 +1404,16 @@ const CollectionsHistory = () => {
             <div className="relative flex-1">
               <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
               <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                placeholder="Receipt no. or student…"
+                placeholder={COLLECTION_HISTORY_STRINGS.PLACEHOLDER_SEARCH_HISTORY}
                 className="w-full pl-8 pr-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all bg-white" />
             </div>
             <button onClick={() => setShowFilters(!showFilters)}
               className={`flex items-center gap-1.5 px-3 py-2 text-sm font-semibold rounded-lg border transition-colors flex-shrink-0 ${showFilters || classF || periodF || modeF
-                  ? 'bg-blue-50 text-[#1E3A5F] border-blue-200'
-                  : 'bg-white text-gray-700 border-gray-200'
+                ? 'bg-blue-50 text-[#1E3A5F] border-blue-200'
+                : 'bg-white text-gray-700 border-gray-200'
                 }`}>
               <Filter size={13} />
-              <span>Filters</span>
+              <span>{COLLECTION_HISTORY_STRINGS.BTN_FILTERS}</span>
             </button>
           </div>
 
@@ -1444,12 +1428,7 @@ const CollectionsHistory = () => {
               <Sel value={classF} onChange={(v) => { setClassF(v); setPage(1); }}
                 options={classOptions} placeholder="All Classes" className="w-full" />
               <Sel value={modeF} onChange={(v) => { setModeF(v); setPage(1); }}
-                options={[
-                  { value: 'CASH', label: 'Cash' },
-                  { value: 'ONLINE', label: 'Online' },
-                  { value: 'CHEQUE', label: 'Cheque' },
-                  { value: 'DD', label: 'DD' },
-                ]}
+                options={PAYMENT_MODE_OPTIONS}
                 placeholder="All Modes" className="w-full" />
             </div>
           )}
@@ -1459,7 +1438,7 @@ const CollectionsHistory = () => {
             <div className="relative flex-1 min-w-[150px] lg:min-w-[200px]">
               <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
               <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                placeholder="Receipt no. or student…"
+                placeholder={COLLECTION_HISTORY_STRINGS.PLACEHOLDER_SEARCH_HISTORY}
                 className="w-full pl-8 pr-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all bg-white" />
             </div>
             <div className="w-full md:w-36 lg:w-40 flex-shrink-0">
@@ -1473,12 +1452,7 @@ const CollectionsHistory = () => {
             <Sel value={classF} onChange={(v) => { setClassF(v); setPage(1); }}
               options={classOptions} placeholder="All Classes" className="w-full md:w-32 flex-shrink-0" />
             <Sel value={modeF} onChange={(v) => { setModeF(v); setPage(1); }}
-              options={[
-                { value: 'CASH', label: 'Cash' },
-                { value: 'ONLINE', label: 'Online' },
-                { value: 'CHEQUE', label: 'Cheque' },
-                { value: 'DD', label: 'DD' },
-              ]}
+              options={PAYMENT_MODE_OPTIONS}
               placeholder="All Modes" className="w-full md:w-32 flex-shrink-0" />
           </div>
 
@@ -1488,7 +1462,7 @@ const CollectionsHistory = () => {
               <table className="w-full">
                 <thead>
                   <tr className="bg-gray-50/80 border-b border-gray-100">
-                    {['Receipt No.', 'Date', 'Student', 'Class', 'Period', 'Collected', 'Discount', 'Late Fine', 'Mode', 'Ref. No.', 'Recorded By', ''].map((h) => (
+                    {COLLECTION_HISTORY_STRINGS.TABLE_HISTORY_HEADERS.map((h) => (
                       <th key={h} className="px-3 py-2.5 text-left text-[10.5px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -1498,11 +1472,11 @@ const CollectionsHistory = () => {
                     <tr>
                       <td colSpan={12} className="text-center py-14">
                         <span className="w-7 h-7 border-2 border-[#2563EB] border-t-transparent rounded-full animate-spin inline-block mb-2" />
-                        <div className="text-sm text-gray-400">Loading history…</div>
+                        <div className="text-sm text-gray-400">{COLLECTION_HISTORY_STRINGS.MSG_LOADING_HISTORY}</div>
                       </td>
                     </tr>
                   ) : filteredHist.length === 0 ? (
-                    <tr><td colSpan={12} className="text-center py-14 text-sm text-gray-400">No payment records found</td></tr>
+                    <tr><td colSpan={12} className="text-center py-14 text-sm text-gray-400">{COLLECTION_HISTORY_STRINGS.MSG_NO_HISTORY_RECORDS}</td></tr>
                   ) : filteredHist.map((h) => (
                     <tr key={h.id} className="hover:bg-gray-50/60 transition-colors">
                       <td className="px-3 py-3">
@@ -1525,7 +1499,7 @@ const CollectionsHistory = () => {
                       <td className="px-3 py-3 text-xs text-gray-500">{h.recordedBy || '—'}</td>
                       <td className="px-3 py-3">
                         <Btn variant="ghost" size="xs" onClick={() => handleViewReceipt(h)}>
-                          Receipt
+                          {COLLECTION_HISTORY_STRINGS.BTN_VIEW_RECEIPT}
                         </Btn>
                       </td>
                     </tr>
@@ -1538,11 +1512,11 @@ const CollectionsHistory = () => {
               <div className="flex gap-2">
                 <Btn variant="secondary" size="sm"
                   onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>
-                  ← Prev
+                  {COLLECTION_HISTORY_STRINGS.BTN_PREV}
                 </Btn>
                 <Btn variant="primary" size="sm"
                   onClick={() => setPage((p) => p + 1)} disabled={filteredHist.length < PAGE_SIZE}>
-                  Next →
+                  {COLLECTION_HISTORY_STRINGS.BTN_NEXT}
                 </Btn>
               </div>
             </div>
@@ -1553,10 +1527,10 @@ const CollectionsHistory = () => {
             {loading ? (
               <div className="text-center py-14">
                 <span className="w-7 h-7 border-2 border-[#2563EB] border-t-transparent rounded-full animate-spin inline-block mb-2" />
-                <div className="text-sm text-gray-400">Loading history…</div>
+                <div className="text-sm text-gray-400">{COLLECTION_HISTORY_STRINGS.MSG_LOADING_HISTORY}</div>
               </div>
             ) : filteredHist.length === 0 ? (
-              <div className="text-center py-14 text-sm text-gray-400">No payment records found</div>
+              <div className="text-center py-14 text-sm text-gray-400">{COLLECTION_HISTORY_STRINGS.MSG_NO_HISTORY_RECORDS}</div>
             ) : filteredHist.map((h) => (
               <HistoryCard key={h.id} h={h} onView={() => handleViewReceipt(h)} />
             ))}
@@ -1565,12 +1539,12 @@ const CollectionsHistory = () => {
               <div className="flex items-center justify-between pt-2">
                 <Btn variant="secondary" size="sm"
                   onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>
-                  ← Prev
+                  {COLLECTION_HISTORY_STRINGS.BTN_PREV}
                 </Btn>
                 <span className="text-xs text-gray-500">Page {page}</span>
                 <Btn variant="primary" size="sm"
                   onClick={() => setPage((p) => p + 1)} disabled={filteredHist.length < PAGE_SIZE}>
-                  Next →
+                  {COLLECTION_HISTORY_STRINGS.BTN_NEXT}
                 </Btn>
               </div>
             )}

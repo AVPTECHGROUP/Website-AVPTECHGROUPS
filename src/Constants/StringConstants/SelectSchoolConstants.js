@@ -103,4 +103,4 @@ export const UI_TEXT = {
     PAGE: "Page ",
     OF: " of "
   }
-};
+}; 
