@@ -13,7 +13,7 @@ import {
     PAGINATION,
     TOAST_MESSAGES,
     ALLOCATION_UI_TEXT
-} from "../../../Constants/StringConstants/TransportConstants"; // Adjust import path as needed
+} from "../../../Constants/StringConstants/TransportConstants";
 
 // ─── Toast ────────────────────────────────────────────────────────────────────
 let _setToasts = null;
@@ -200,11 +200,11 @@ export default function Student_Allocations() {
                                                text-gray-500 border border-gray-200 hover:bg-gray-50
                                                rounded-xl transition-colors disabled:opacity-40"
                                 >
-                                    <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+                                    <RefreshCw className={`w-4 cursor-pointer h-4 ${loading ? "animate-spin" : ""}`} />
                                 </button>
                                 <button
                                     onClick={() => setShowCreate(true)}
-                                    className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700
+                                    className="inline-flex items-center cursor-pointer gap-2 bg-blue-600 hover:bg-blue-700
                                                text-white text-sm font-semibold px-4 py-2 rounded-xl
                                                transition-colors shadow-sm whitespace-nowrap"
                                 >

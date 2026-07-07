@@ -14,9 +14,8 @@ import {
   deleteFeeStructure,
 } from '../../Api/FeeManagement/FeeStructures';
 import { getFeePeriods } from '../../Api/FeeManagement/FeePeriods';
-import { getActiveClasses } from '../../Api/Academics/ClassSectionAPI';
 import { UserContext } from '../../ContextAPI/UserContext';
-
+import SectionSubjectService from '../../Api/Academics/SectionSubjectService';
 // Import Constants
 import {
   STATUSES,
@@ -625,7 +624,7 @@ const FeeStructures = ({ initialPeriodId: initialPeriodIdProp }) => {
   const fetchClasses = useCallback(async () => {
     try {
       const schoolId = getSchoolId();
-      const classesData = await getActiveClasses(schoolId);
+      const classesData = await SectionSubjectService.getActiveClasses();
       const normalized =
         Array.isArray(classesData) ? classesData :
           Array.isArray(classesData?.data) ? classesData.data :

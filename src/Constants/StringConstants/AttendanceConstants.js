@@ -638,7 +638,7 @@ export const UI_STRINGS = {
     STUDENT_ENROLL: {
         HEADER: "Student Face Enrollment",
         SUBTITLE: "Register student faces for automated attendance recognition",
-        STAT_REG: "Total RegisteredStudents",
+        STAT_REG: "Total Registered Students",
         STAT_ENROLLED: "Students Enrolled",
         STAT_NOT_ENROLLED: "Not Enrolled",
         STAT_COMPLETED: "Enrollment completed",
