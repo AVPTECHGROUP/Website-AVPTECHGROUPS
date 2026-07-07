@@ -9,7 +9,7 @@ const Navbar = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const { theme, toggleTheme } = useContext(UserContext);
-    const navLinks = ['Home', 'Features', 'Blog', 'Pricing', "About Us", 'Contact Us'];
+    const navLinks = ['Home', 'Features', 'Blog', "About Us", 'Contact Us'];
 
     // Unified link click handler for flawless smooth sliding
     const handleNavLinkClick = (link) => {
@@ -24,20 +24,18 @@ const Navbar = () => {
             } else {
                 navigate("/#features-section");
             }
-        } else if (link === "Pricing") {
-            if (location.pathname === "/") {
-                document.getElementById('pricing-section')?.scrollIntoView({ behavior: 'smooth' });
-            } else {
-                navigate("/#pricing-section");
-            }
-        } else if (link === "Get Free Demo") {
-            /* ── Added Demo Section Scroll Logic ── */
-            if (location.pathname === "/") {
-                document.getElementById('demo')?.scrollIntoView({ behavior: 'smooth' });
-            } else {
-                navigate("/#demo");
-            }
-        } else if (link === "Blog") {
+        }
+        // else if (link === "Pricing") {
+        //     if (location.pathname === "/") {
+        //         document.getElementById('pricing-section')?.scrollIntoView({ behavior: 'smooth' });
+        //     } else {
+        //         navigate("/#pricing-section");
+        //     }
+        // }
+        else if (link === "Book A Demo") {
+            navigate("/contact");
+        } 
+        else if (link === "Blog") {
             navigate("/blog");
         } else if (link === "About Us") {
             navigate("/about");
@@ -89,7 +87,7 @@ const Navbar = () => {
 
             {/* ── Main Navbar ── */}
             <div className='flex items-center justify-between px-4 sm:px-8 lg:px-12 xl:px-16 py-3 relative max-w-7xl mx-auto w-full'>
-                
+
                 {/* Logo */}
                 <div className="flex-shrink-0 cursor-pointer" onClick={() => navigate('/')}>
                     <img className="h-12 sm:h-14 lg:h-16 xl:h-20 w-auto object-contain drop-shadow-md hover:drop-shadow-xl transition duration-300 ease-in-out hover:scale-105" src={ss_logo_2} alt="SchoolSpine Logo" />
@@ -122,10 +120,10 @@ const Navbar = () => {
                             <span className="text-sm xl:text-base relative z-10">Login</span>
                         </button>
 
-                        {/* Desktop: Get Free Demo Trigger */}
-                        <button onClick={() => handleNavLinkClick("Get Free Demo")} className="group relative overflow-hidden flex items-center gap-2 px-4 xl:px-5 py-2.5 rounded-xl font-bold tracking-wide text-slate-950 cursor-pointer bg-gradient-to-r from-[#00C9B1] via-[#00C9B1] to-[#F5A623] shadow-[0_4px_20px_rgba(0,201,177,0.25)] hover:shadow-[0_6px_24px_rgba(245,166,35,0.35)] hover:-translate-y-0.5 transition-all duration-300 active:scale-[0.98]">
+                        {/* Desktop: Book A Demo Trigger */}
+                        <button onClick={() => handleNavLinkClick("Book A Demo")} className="group relative overflow-hidden flex items-center gap-2 px-4 xl:px-5 py-2.5 rounded-xl font-bold tracking-wide text-slate-950 cursor-pointer bg-gradient-to-r from-[#00C9B1] via-[#00C9B1] to-[#F5A623] shadow-[0_4px_20px_rgba(0,201,177,0.25)] hover:shadow-[0_6px_24px_rgba(245,166,35,0.35)] hover:-translate-y-0.5 transition-all duration-300 active:scale-[0.98]">
                             <div className="shimmer-effect" />
-                            <span className="text-sm xl:text-base relative z-10">Get Free Demo</span>
+                            <span className="text-sm xl:text-base relative z-10">Book A Demo</span>
                         </button>
                     </div>
                 </div>
@@ -175,11 +173,11 @@ const Navbar = () => {
                             <User size={16} className="text-slate-950 relative z-10" />
                             <span className="relative z-10">Login</span>
                         </button>
-                        
-                        {/* Mobile: Get Free Demo Trigger */}
-                        <button onClick={() => handleNavLinkClick("Get Free Demo")} className='w-full py-3 text-sm relative overflow-hidden flex items-center justify-center gap-2 text-slate-950 bg-gradient-to-r from-[#00C9B1] to-[#F5A623] rounded-xl font-bold cursor-pointer transition-transform duration-200 shadow-md'>
+
+                        {/* Mobile: Book A Demo Trigger */}
+                        <button onClick={() => handleNavLinkClick("Book A Demo")} className='w-full py-3 text-sm relative overflow-hidden flex items-center justify-center gap-2 text-slate-950 bg-gradient-to-r from-[#00C9B1] to-[#F5A623] rounded-xl font-bold cursor-pointer transition-transform duration-200 shadow-md'>
                             <div className="shimmer-effect" />
-                            <span className="relative z-10">Get Free Demo</span>
+                            <span className="relative z-10">Book A Demo</span>
                             <div className="relative z-10 bg-slate-950/10 rounded-md p-0.5 flex items-center justify-center">
                                 <ArrowRight size={12} className="text-slate-950 stroke-[2.5]" />
                             </div>

@@ -1,5 +1,5 @@
 import React, { useState, useContext } from 'react'
-import { FaLinkedinIn, FaYoutube, FaInstagram } from 'react-icons/fa'
+import { FaFacebookF, FaWhatsapp } from 'react-icons/fa';
 import { FaXTwitter } from 'react-icons/fa6'
 import { FiMail, FiPhone, FiMapPin, FiSend, FiArrowUp } from 'react-icons/fi'
 import Logo from '../../../assets/Images/SS_logo_3.png'
@@ -11,13 +11,13 @@ const footerLinks = {
     Product: [
         'Features',
         'Pricing',
+        { name: 'Blog', path: '/blog' },
     ],
     Company: [
         { name: 'About Us', path: '/about' },
         { name: 'Reviews', path: '/reviews' },
         { name: 'Contact Us', path: '/contact' },
         { name: 'Help & support', path: '/support' },
-        { name: 'Blog', path: '/blog' },
         { name: 'FAQ', path: '/faqs' }
     ],
     Legal: [
@@ -28,11 +28,9 @@ const footerLinks = {
 }
 
 const socialIcons = [
-    { icon: <FaLinkedinIn size={16} />, label: 'LinkedIn', href: '#' },
-    { icon: <FaXTwitter size={16} />, label: 'Twitter', href: '#' },
-    { icon: <FaYoutube size={16} />, label: 'YouTube', href: '#' },
-    { icon: <FaInstagram size={16} />, label: 'Instagram', href: '#' },
-]
+    { icon: <FaFacebookF size={16} />, label: 'Facebook', href: 'https://www.facebook.com/profile.php?id=61591045064391' },
+    { icon: <FaWhatsapp size={16} />, label: 'WhatsApp', href: 'https://wa.me/919511117450' },
+];
 
 const Footer = () => {
     const { theme } = useContext(UserContext)
@@ -155,12 +153,12 @@ const Footer = () => {
                             {footerLinks.Product.map((link, idx) => (
                                 <li key={idx}>
                                     <a
-                                        href="#"
+                                        href={typeof link === 'object' ? link.path : '#'}
                                         onClick={(e) => handleFooterLinkClick(e, link)}
                                         className="text-sm hover:text-[#00C9B1] transition-all duration-200 hover:translate-x-1 inline-block cursor-pointer"
                                         style={{ color: isDark ? '#94a3b8' : '#475569' }}
                                     >
-                                        {link}
+                                        {typeof link === 'object' ? link.name : link}
                                     </a>
                                 </li>
                             ))}
@@ -229,17 +227,17 @@ const Footer = () => {
                 <div className="w-full my-4 border-t" style={{ borderColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)' }} />
 
                 {/* ─── ROW 3: FOOTER BOTTOM BAR WITH BACK TO TOP TRIGGER ─── */}
-                <div className="flex flex-col md:flex-row items-center justify-between gap-6 pt-4 text-center md:text-left">
+                <div className="flex flex-col md:flex-row-reverse items-center justify-between gap-6 pt-4 text-center md:text-left">
 
                     {/* Left Section: Back to top interface matching image structures */}
-                    <div
+                    <div onClick={handleScrollToTop}
                         className="group flex items-center gap-3 cursor-pointer"
                     >
                         <div className="w-12 h-12 rounded-full border border-[#00C9B1]/30 flex items-center justify-center relative overflow-hidden">
 
-                            <div onClick={handleScrollToTop} className="absolute inset-0 bg-[#00C9B1] scale-0 group-hover:scale-100 transition duration-500 rounded-full" />
+                            <div className="absolute inset-0 bg-[#00C9B1] scale-0 group-hover:scale-100 transition duration-500 rounded-full" />
 
-                            <FiArrowUp 
+                            <FiArrowUp
                                 size={20}
                                 className="relative z-10 text-[#00C9B1] group-hover:text-white transition"
                             />
@@ -247,13 +245,6 @@ const Footer = () => {
                         </div>
 
                         <div>
-                            <h4
-                                className={`font-semibold ${isDark ? "text-white" : "text-slate-900"
-                                    }`}
-                            >
-                                Back to Top
-                            </h4>
-
                         </div>
                     </div>
                     {/* Middle Section: Copyright parameters */}

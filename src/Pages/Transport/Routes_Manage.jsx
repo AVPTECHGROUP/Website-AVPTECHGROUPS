@@ -25,36 +25,7 @@ import {
   COMMON_UI_TEXT,
   ACTION_MESSAGES
 } from "../../Constants/StringConstants/TransportConstants";
-
-let _setToasts = null;
-const toast = {
-  success: (msg) => _setToasts?.((p) => [...p, { id: Date.now() + Math.random(), type: "success", msg }]),
-  error: (msg) => _setToasts?.((p) => [...p, { id: Date.now() + Math.random(), type: "error", msg }]),
-};
-function ToastContainer() {
-  const [toasts, setToasts] = useState([]);
-  _setToasts = setToasts;
-  const remove = (id) => setToasts((p) => p.filter((t) => t.id !== id));
-  useEffect(() => {
-    if (!toasts.length) return;
-    const t = setTimeout(() => remove(toasts[0].id), 3500);
-    return () => clearTimeout(t);
-  }, [toasts]);
-  return (
-    <div className="fixed bottom-5 right-5 z-[9999] flex flex-col gap-2 items-end pointer-events-none">
-      {toasts.map((t) => (
-        <div key={t.id} className={`flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lg text-sm font-medium pointer-events-auto min-w-55 max-w-xs bg-white
-          ${t.type === "success" ? "border border-green-200 text-green-800" : "border border-red-200 text-red-700"}`}>
-          {t.type === "success"
-            ? <CheckCircle className="w-4 h-4 text-green-500 shrink-0" />
-            : <XCircleIcon className="w-4 h-4 text-red-500 shrink-0" />}
-          <span className="flex-1">{t.msg}</span>
-          <button onClick={() => remove(t.id)} className="text-gray-400 hover:text-gray-600 ml-1 text-xs">✕</button>
-        </div>
-      ))}
-    </div>
-  );
-}
+import { toast } from "react-toastify";
 
 // ─── Helpers ──────────────────────────────────────────────────────
 function fmtTime(t) {
@@ -89,7 +60,7 @@ export default function Routes_Manage() {
 
   // ── Route modal ──
   const [showCreateRoute, setShowCreateRoute] = useState(false);
-  const [editRoute, setEditRoute] = useState(null); // null=add, object=edit
+  const [editRoute, setEditRoute] = useState(null);
 
   // ── Stops panel state ──
   const [activeRoutes, setActiveRoutes] = useState([]);   // for dropdown
@@ -101,7 +72,7 @@ export default function Routes_Manage() {
 
   // ── Stop modal ──
   const [showAddStop, setShowAddStop] = useState(false);
-  const [editStop, setEditStop] = useState(null); // null=add, object=edit
+  const [editStop, setEditStop] = useState(null);
 
   // ── Debounce search ──
   useEffect(() => {
@@ -211,7 +182,9 @@ export default function Routes_Manage() {
     try {
       await deleteRouteStop(selectedRouteId, stopId);
       toast.success(TOAST_MESSAGES.STOP_DELETE_SUCCESS);
+      // Trigger instant dynamic list updates 
       await fetchStops(selectedRouteId);
+      await fetchRoutes();
     } catch {
       toast.error(TOAST_MESSAGES.STOP_DELETE_FAIL);
     } finally {
@@ -234,13 +207,26 @@ export default function Routes_Manage() {
   const handleStopSaved = async (isEdit) => {
     setShowAddStop(false);
     setEditStop(null);
-    toast.success(isEdit ? TOAST_MESSAGES.STOP_UPDATE_SUCCESS : TOAST_MESSAGES.STOP_ADD_SUCCESS);
-    if (selectedRouteId) await fetchStops(selectedRouteId);
-  };
 
+    if (isEdit) {
+      toast.success("Stop updated successfully!");
+    } else {
+      toast.success("Stop added successfully!");
+    }
+
+    if (selectedRouteId) {
+      // Reload Route Stops section
+      await fetchStops(selectedRouteId);
+
+      // Reload Route list (updates totalStops count)
+      await fetchRoutes();
+
+      // Reload active routes (updates dropdown summary if needed)
+      await fetchActiveRoutes();
+    }
+  };
   return (
     <>
-      <ToastContainer />
 
       <div className="min-h-screen bg-[#f0f2f8] font-sans">
 
@@ -344,8 +330,8 @@ export default function Routes_Manage() {
                             <span className="text-xs font-bold px-2.5 py-1 rounded-full shrink-0 bg-gray-100 text-gray-400 border border-gray-200 animate-pulse">{COMMON_UI_TEXT.WAIT}</span>
                           ) : (
                             <span className={`text-xs font-bold px-2.5 py-1 rounded-full shrink-0 ${route.status === STATUS.ACTIVE
-                                ? "bg-green-100 text-green-700 border border-green-200"
-                                : "bg-gray-100 text-gray-500 border border-gray-200"
+                              ? "bg-green-100 text-green-700 border border-green-200"
+                              : "bg-gray-100 text-gray-500 border border-gray-200"
                               }`}>
                               {route.status}
                             </span>
@@ -508,7 +494,7 @@ export default function Routes_Manage() {
                         const isLast = idx === arr.length - 1;
                         const isDeleting = deletingStopId === stop.id;
                         return (
-                          <div key={stop.id} className="flex gap-4">
+                          <div key={stop.id} className="flex gap-4 items-start">
                             {/* Timeline column */}
                             <div className="flex flex-col items-center shrink-0" style={{ width: 34 }}>
                               <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold z-10 border-2 shrink-0
@@ -522,31 +508,53 @@ export default function Routes_Manage() {
                                 {stop.stopOrder}
                               </div>
                               {!isLast && (
-                                <div className="w-px bg-gray-200 flex-1 my-1" style={{ minHeight: 36 }} />
+                                <div className="w-px bg-gray-200 flex-1 my-1" style={{ minHeight: 48 }} />
                               )}
                             </div>
 
-                            {/* Stop content */}
-                            <div className={`flex-1 flex items-start justify-between gap-3 ${isLast ? "pb-0" : "pb-5"}`}>
-                              <div className="flex-1 min-w-0">
-                                <p className={`font-bold text-sm leading-tight ${isDeleting ? "text-gray-400" : "text-gray-900"}`}>
+                            {/* Stop Content: Optimized for flexible layouts and laptop displays */}
+                            <div className={`flex-1 flex flex-col xl:flex-row xl:items-start justify-between gap-4 ${isLast ? "pb-0" : "pb-6"}`}>
+
+                              {/* Left detail card content panel block */}
+                              <div className="flex-1 min-w-0 space-y-1.5">
+                                <p className={`font-bold text-gray-900 text-sm sm:text-base tracking-tight leading-snug break-words ${isDeleting ? "text-gray-400" : ""}`}>
                                   {stop.stopName}
                                 </p>
-                                <div className="flex items-center gap-1 text-xs text-gray-500 mt-1 flex-wrap">
-                                  <Clock className="w-3 h-3 text-gray-400 shrink-0" />
-                                  <span>{ROUTES_UI_TEXT.LBL_PICKUP} {fmtTime(stop.pickupTime)}</span>
-                                  <span className="text-gray-300 mx-1">|</span>
-                                  <span>{ROUTES_UI_TEXT.LBL_DROP} {fmtTime(stop.dropTime)}</span>
+
+                                {/* Timeline details */}
+                                <div className="flex items-center gap-1.5 text-xs text-gray-500 flex-wrap pt-0.5">
+                                  <Clock className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                                  <span className="font-semibold text-gray-700 bg-gray-100 px-2 py-0.5 rounded whitespace-nowrap">
+                                    Pickup: {fmtTime(stop.pickupTime)}
+                                  </span>
+                                  <span className="text-gray-300">|</span>
+                                  <span className="font-semibold text-gray-700 bg-gray-100 px-2 py-0.5 rounded whitespace-nowrap">
+                                    Drop: {fmtTime(stop.dropTime)}
+                                  </span>
                                 </div>
-                                <div className="flex items-start gap-1 mt-0.5">
-                                  <MapPin className="w-3 h-3 text-red-400 shrink-0 mt-0.5" />
-                                  <p className="text-xs text-gray-400 leading-relaxed">
+
+                                {/* Address description details mapping block container */}
+                                <div className="flex items-start gap-1 pt-1">
+                                  <MapPin className="w-3.5 h-3.5 text-red-500 shrink-0 mt-0.5" />
+                                  <p className="text-xs text-gray-500 font-medium leading-relaxed break-words max-w-full">
                                     {stop.locationAddress}
-                                    {stop.landmark && ` · ${stop.landmark}`}
+                                    {stop.landmark && <span className="text-gray-400 font-normal"> · {stop.landmark}</span>}
                                   </p>
                                 </div>
                               </div>
-                              <div className="shrink-0 mt-0.5">
+
+                              {/* Right side alignment: Fee tag badges alongside operations dropdown configurations */}
+                              <div className="flex items-center justify-between xl:justify-end gap-3 shrink-0 mt-1 xl:mt-0 pt-0.5 border-t border-gray-100 xl:border-none w-full xl:w-auto">
+                                {stop.monthlyFee && Number(stop.monthlyFee) > 0 ? (
+                                  <span className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-3 py-1 rounded-full whitespace-nowrap shadow-sm">
+                                    ₹{Number(stop.monthlyFee).toLocaleString("en-IN")}/mo
+                                  </span>
+                                ) : (
+                                  <span className="text-[11px] font-semibold text-gray-500 bg-gray-50 border border-gray-200 px-2.5 py-1 rounded-full whitespace-nowrap">
+                                    No fee · uses fee plan
+                                  </span>
+                                )}
+
                                 {isDeleting ? (
                                   <Loader2 className="w-4 h-4 text-gray-400 animate-spin" />
                                 ) : (
@@ -559,6 +567,7 @@ export default function Routes_Manage() {
                                   />
                                 )}
                               </div>
+
                             </div>
                           </div>
                         );

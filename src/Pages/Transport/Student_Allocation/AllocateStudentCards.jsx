@@ -42,7 +42,6 @@ function SelectInput({ value, onChange, options = [], placeholder = ALLOCATION_U
   const selectedLabel = options.find((o) => String(o.value) === String(value))?.label ?? "";
   const isDisabled = disabled || loading;
 
-  // Close on outside click
   useEffect(() => {
     const handler = (e) => {
       if (containerRef.current && !containerRef.current.contains(e.target)) {
@@ -55,7 +54,6 @@ function SelectInput({ value, onChange, options = [], placeholder = ALLOCATION_U
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  // Auto-focus search & scroll selected into view
   useEffect(() => {
     if (!open) return;
     if (showSearch) setTimeout(() => searchRef.current?.focus(), 30);
@@ -63,7 +61,6 @@ function SelectInput({ value, onChange, options = [], placeholder = ALLOCATION_U
     setFocused(idx >= 0 ? idx : -1);
   }, [open, showSearch, value, filtered]);
 
-  // Scroll focused item
   useEffect(() => {
     if (focused >= 0 && listRef.current) {
       listRef.current.children[focused]?.scrollIntoView({ block: "nearest" });
@@ -90,7 +87,6 @@ function SelectInput({ value, onChange, options = [], placeholder = ALLOCATION_U
 
   return (
     <div ref={containerRef} className="relative" onKeyDown={handleKeyDown}>
-      {/* Trigger */}
       <button
         type="button"
         onClick={() => !isDisabled && setOpen((o) => !o)}
@@ -112,7 +108,6 @@ function SelectInput({ value, onChange, options = [], placeholder = ALLOCATION_U
         }
       </button>
 
-      {/* Dropdown panel */}
       {open && !isDisabled && (
         <div className="absolute left-0 right-0 z-[9999] mt-1.5 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden"
           style={{ animation: "dropIn 0.14s ease-out forwards", transformOrigin: "top" }}>
@@ -123,7 +118,6 @@ function SelectInput({ value, onChange, options = [], placeholder = ALLOCATION_U
             }
           `}</style>
 
-          {/* Search */}
           {showSearch && (
             <div className="px-2.5 pt-2.5 pb-1.5 border-b border-gray-100">
               <div className="relative">
@@ -146,7 +140,6 @@ function SelectInput({ value, onChange, options = [], placeholder = ALLOCATION_U
             </div>
           )}
 
-          {/* List */}
           <ul ref={listRef} className="overflow-y-auto overscroll-contain" style={{ maxHeight: "220px" }} role="listbox">
             {!query && (
               <li onClick={() => select("")}
@@ -176,7 +169,6 @@ function SelectInput({ value, onChange, options = [], placeholder = ALLOCATION_U
             }
           </ul>
 
-          {/* Footer count */}
           {filtered.length > 0 && (
             <div className="px-3 py-1.5 border-t border-gray-100 text-xs text-gray-400 text-right">
               {filtered.length} {filtered.length !== 1 ? ALLOCATION_UI_TEXT.OPTION_PLURAL : ALLOCATION_UI_TEXT.OPTION_SINGULAR}
@@ -190,7 +182,7 @@ function SelectInput({ value, onChange, options = [], placeholder = ALLOCATION_U
 
 // ─── Main Component ───────────────────────────────────────────────
 export default function AllocateStudentCard({ isOpen, onClose, onSave }) {
-  const [form, setForm] = useState(EMPTY_ALLOCATION);
+  const [form, setForm] = useState({ ...EMPTY_ALLOCATION, monthlyFee: "", feePlanId: "" });
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState({});
   const [apiError, setApiError] = useState("");
@@ -198,7 +190,7 @@ export default function AllocateStudentCard({ isOpen, onClose, onSave }) {
   const [students, setStudents] = useState([]);
   const [routes, setRoutes] = useState([]);
   const [feePlans, setFeePlans] = useState([]);
-  const [stops, setStops] = useState([]);
+  const [stops, setStops] = useState([]); // carries monthlyFee too
 
   const [loadingStudents, setLoadingStudents] = useState(false);
   const [loadingRoutes, setLoadingRoutes] = useState(false);
@@ -207,7 +199,7 @@ export default function AllocateStudentCard({ isOpen, onClose, onSave }) {
   // Fetch on open
   useEffect(() => {
     if (!isOpen) return;
-    setForm(EMPTY_ALLOCATION);
+    setForm({ ...EMPTY_ALLOCATION, monthlyFee: "", feePlanId: "" });
     setErrors({});
     setApiError("");
     setStops([]);
@@ -239,6 +231,7 @@ export default function AllocateStudentCard({ isOpen, onClose, onSave }) {
         setFeePlans((feeRes.value || []).map((f) => ({
           value: f.id,
           label: `${f.planName} — ₹${f.feeAmount} / ${f.frequency}`,
+          feeAmount: f.feeAmount,
         })));
       }
       setLoadingFeePlans(false);
@@ -247,13 +240,14 @@ export default function AllocateStudentCard({ isOpen, onClose, onSave }) {
     fetchAll();
   }, [isOpen]);
 
-  // Derive stops from selected route
+  // Derive stops (with monthlyFee) from selected route
   useEffect(() => {
     if (!form.routeId) { setStops([]); return; }
     const route = routes.find((r) => String(r.id) === String(form.routeId));
     setStops((route?.stops || []).map((s) => ({
       value: s.id,
       label: `${s.stopName}${s.locationAddress ? ` — ${s.locationAddress}` : ""}`,
+      monthlyFee: s.monthlyFee,
     })));
   }, [form.routeId, routes]);
 
@@ -265,10 +259,38 @@ export default function AllocateStudentCard({ isOpen, onClose, onSave }) {
   if (!isOpen) return null;
 
   const set = (k, v) => {
-    setForm((p) => ({ ...p, [k]: v, ...(k === "routeId" ? { stopId: "" } : {}) }));
+    setForm((p) => {
+      const next = { ...p, [k]: v };
+      if (k === "routeId") {
+        next.stopId = "";
+        next.monthlyFee = "";
+        next.feePlanId = "";
+      }
+      if (k === "stopId") {
+        const stop = stops.find((s) => String(s.value) === String(v));
+        next.monthlyFee = stop?.monthlyFee != null ? String(stop.monthlyFee) : "";
+        next.feePlanId = "";
+      }
+      return next;
+    });
     setErrors((p) => ({ ...p, [k]: "" }));
     setApiError("");
   };
+
+  // Fee plan selection also fills the Monthly Fee field
+  const selectFeePlan = (planId) => {
+    const plan = feePlans.find((f) => String(f.value) === String(planId));
+    setForm((p) => ({
+      ...p,
+      feePlanId: planId,
+      monthlyFee: plan?.feeAmount != null ? String(plan.feeAmount) : p.monthlyFee,
+    }));
+    setErrors((p) => ({ ...p, monthlyFee: "", feePlanId: "" }));
+    setApiError("");
+  };
+
+  // Monthly Fee at 0 → reveal Fee Plan dropdown
+  const showFeePlanDropdown = form.monthlyFee !== "" && Number(form.monthlyFee) === 0;
 
   const validate = () => {
     const e = {};
@@ -277,7 +299,7 @@ export default function AllocateStudentCard({ isOpen, onClose, onSave }) {
     if (!form.stopId) e.stopId = VALIDATION_MESSAGES.REQ_STOP;
     if (!form.pickupDropType) e.pickupDropType = VALIDATION_MESSAGES.REQ_PICKUP_DROP;
     if (!form.effectiveFrom) e.effectiveFrom = VALIDATION_MESSAGES.REQ_EFFECTIVE_FROM;
-    if (!form.feePlanId) e.feePlanId = VALIDATION_MESSAGES.REQ_FEE_PLAN;
+    if (showFeePlanDropdown && !form.feePlanId) e.feePlanId = VALIDATION_MESSAGES.REQ_FEE_PLAN;
 
     if (form.effectiveFrom && form.effectiveTo) {
       const fromDate = new Date(form.effectiveFrom).setHours(0, 0, 0, 0);
@@ -303,7 +325,8 @@ export default function AllocateStudentCard({ isOpen, onClose, onSave }) {
         pickupDropType: form.pickupDropType,
         effectiveFrom: form.effectiveFrom,
         effectiveTo: form.effectiveTo || null,
-        feePlanId: Number(form.feePlanId),
+        monthlyFee: form.monthlyFee !== "" ? Number(form.monthlyFee) : null,
+        feePlanId: form.feePlanId ? Number(form.feePlanId) : null,
         remarks: form.remarks || null,
       });
       onSave?.();
@@ -350,13 +373,11 @@ export default function AllocateStudentCard({ isOpen, onClose, onSave }) {
         {/* Scrollable body */}
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5" style={{ overflowX: "visible" }}>
 
-          {/* Info banner */}
           <div className="flex items-start gap-2.5 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-xs text-blue-700">
             <Info className="w-4 h-4 shrink-0 mt-0.5 text-blue-500" />
             <span>{ALLOCATION_UI_TEXT.INFO_BANNER_ADD}</span>
           </div>
 
-          {/* API error */}
           {apiError && (
             <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-xs text-red-700">
               <Info className="w-4 h-4 shrink-0 mt-0.5 text-red-500" />
@@ -415,19 +436,38 @@ export default function AllocateStudentCard({ isOpen, onClose, onSave }) {
             </Field>
           </div>
 
-          {/* Fee Plan | Remarks */}
+          {/* Monthly Fee (editable, auto from stop) | Remarks */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label={ALLOCATION_UI_TEXT.LBL_FEE_PLAN} required>
-              <SelectInput value={form.feePlanId} onChange={(e) => set("feePlanId", e.target.value)}
-                options={feePlans} placeholder={ALLOCATION_UI_TEXT.PH_FEE_PLAN}
-                hasError={!!errors.feePlanId} loading={loadingFeePlans} />
-              {errors.feePlanId && <p className="text-xs text-red-500 mt-0.5">{errors.feePlanId}</p>}
+            <Field label={ALLOCATION_UI_TEXT.LBL_MONTHLY_FEE || "Monthly Fee"}>
+              <input
+                type="number"
+                min="0"
+                value={form.monthlyFee}
+                onChange={(e) => set("monthlyFee", e.target.value)}
+                placeholder={form.stopId ? "Auto-filled from stop" : "Select a stop first"}
+                className={SHARED_INPUT_STYLES.base}
+              />
+              <p className="text-[11px] text-gray-400 mt-0.5">
+                Set to 0 to pick a fee plan instead.
+              </p>
             </Field>
             <Field label={ALLOCATION_UI_TEXT.LBL_REMARKS}>
               <input type="text" placeholder={ALLOCATION_UI_TEXT.PH_OPTIONAL} value={form.remarks}
                 onChange={(e) => set("remarks", e.target.value)} className={SHARED_INPUT_STYLES.base} />
             </Field>
           </div>
+
+          {/* Fee Plan dropdown — only shows when Monthly Fee is 0 */}
+          {showFeePlanDropdown && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Field label={ALLOCATION_UI_TEXT.LBL_FEE_PLAN || "Fee Plan"} required>
+                <SelectInput value={form.feePlanId} onChange={(e) => selectFeePlan(e.target.value)}
+                  options={feePlans} placeholder={ALLOCATION_UI_TEXT.PH_FEE_PLAN || "Select fee plan"}
+                  hasError={!!errors.feePlanId} loading={loadingFeePlans} />
+                {errors.feePlanId && <p className="text-xs text-red-500 mt-0.5">{errors.feePlanId}</p>}
+              </Field>
+            </div>
+          )}
 
           <div className="h-2" />
         </div>

@@ -136,7 +136,7 @@ const formatCurrency = (amount) => {
 const StatusPill = ({ statusKey }) => {
   const cfg = STATUS_CONFIG_ADVANCED[statusKey] || STATUS_CONFIG_ADVANCED[STATUSES.PENDING];
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-[11.5px] font-semibold ${cfg.bg}`}>
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-[11px] font-semibold ${cfg.bg}`}>
       <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
       {cfg.label}
     </span>
@@ -145,9 +145,27 @@ const StatusPill = ({ statusKey }) => {
 
 // ─── Type Badge ───────────────────────────────────────────────────────────────
 const TypeBadge = ({ type }) => {
-  const style = PERIOD_TYPE_BADGE_STYLE[type] || 'bg-gray-50 text-gray-600 border-gray-200';
+  const style =
+    PERIOD_TYPE_BADGE_STYLE[type] ||
+    "bg-gray-50 text-gray-700 border-gray-200";
+
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-md border text-[11px] font-semibold ${style}`}>
+    <span
+      className={`
+        inline-flex
+        items-center
+        justify-center
+        px-2.5
+        py-0.5
+        rounded-md
+        border
+        text-[11px]
+        font-semibold
+        whitespace-nowrap
+        shadow-sm
+        ${style}
+      `}
+    >
       {PERIOD_TYPE_LABELS[type] || type}
     </span>
   );
@@ -310,18 +328,20 @@ const PeriodCard = ({ p, onEdit, onDelete, onGoToStructures }) => {
 
       {/* Card body */}
       <div className="p-5 flex-1 flex flex-col gap-4">
-        {/* Header: type badge + status */}
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex items-center gap-2 min-w-0">
-            <div className="w-8 h-8 rounded-lg bg-[#1E3A5F]/8 flex items-center justify-center flex-shrink-0">
-              <Calendar size={14} className="text-[#1E3A5F]" />
+        {/* Header: Name on top, type badge + status below it */}
+        <div className="flex items-start gap-2.5 min-w-0">
+          <div className="w-8 h-8 rounded-lg bg-[#1E3A5F]/5 flex items-center justify-center flex-shrink-0 mt-0.5">
+            <Calendar size={14} className="text-[#1E3A5F]" />
+          </div>
+          <div className="flex-1 min-w-0 space-y-2.5">
+            <div className="text-[14px] font-bold text-gray-900 break-words tracking-tight leading-snug" title={p.name}>
+              {p.name}
             </div>
-            <div className="min-w-0">
-              <div className="text-[13px] font-bold text-gray-900 truncate">{p.name}</div>
+            <div className="flex flex-wrap items-center gap-1.5">
               <TypeBadge type={p.type} />
+              <StatusPill statusKey={statusKey} />
             </div>
           </div>
-          <StatusPill statusKey={statusKey} />
         </div>
 
         {/* Divider */}
@@ -367,25 +387,30 @@ const PeriodCard = ({ p, onEdit, onDelete, onGoToStructures }) => {
       </div>
 
       {/* Footer: actions */}
-      <div className="border-t border-gray-100 bg-gray-50/60 px-4 py-3 flex items-center justify-between gap-2">
+      <div className="border-t border-gray-100 bg-gray-50/60 px-3 py-2.5 flex items-center justify-between gap-1">
         {/* View structures */}
         <button
           onClick={() => onGoToStructures(p.id)}
-          className="flex items-center gap-1 px-2.5 py-1.5 text-[11.5px] font-semibold text-[#2563EB] border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors whitespace-nowrap">
-          <Layers size={12} /> {FEE_PERIOD_STRINGS.CARD_STRUCTURES} <ArrowRight size={11} />
+          className="flex items-center gap-1 px-2 py-1 text-[10.5px] sm:text-xs font-semibold text-[#2563EB] border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors whitespace-nowrap">
+          <Layers size={11} /> {FEE_PERIOD_STRINGS.CARD_STRUCTURES} <ArrowRight size={10} />
         </button>
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1">
           {statusKey !== STATUSES.PAID && (
             <button onClick={(e) => { e.stopPropagation(); onEdit(p); }}
-              className="flex items-center gap-1 px-2.5 py-1.5 text-[11.5px] font-semibold text-[#1E3A5F] border border-[#1E3A5F]/20 rounded-lg hover:bg-blue-50 transition-colors whitespace-nowrap">
-              <Pencil size={12} /> Edit
+              className="flex items-center gap-1 px-2 py-1 text-[10.5px] sm:text-xs font-semibold text-[#1E3A5F] border border-[#1E3A5F]/20 rounded-lg hover:bg-blue-50 transition-colors whitespace-nowrap">
+              <Pencil size={11} /> Edit
             </button>
           )}
           {canDelete && (
-            <button onClick={(e) => { e.stopPropagation(); onDelete(p); }}
-              className="flex items-center gap-1 px-2.5 py-1.5 text-[11.5px] font-semibold text-red-500 border border-red-200 rounded-lg hover:bg-red-50 transition-colors whitespace-nowrap">
-              <Trash2 size={12} />
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(p);
+              }}
+              className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg border border-red-200 bg-white flex items-center justify-center text-red-500 hover:bg-red-50 hover:border-red-300 hover:text-red-600 transition-all duration-200 flex-shrink-0"
+            >
+              <Trash2 size={13} />
             </button>
           )}
         </div>
