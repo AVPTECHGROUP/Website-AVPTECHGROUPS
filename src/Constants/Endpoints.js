@@ -35,7 +35,7 @@ export const API_ENDPOINTS = {
 
   // ─── Attendance 
   ATTENDANCE_ENROLL: `${BASE_URL}/attendance/enroll`,
-  ATTENDANCE_SUMMARY_CARD : `${BASE_URL}/attendance/students/summary?`,
+  ATTENDANCE_SUMMARY_CARD: `${BASE_URL}/attendance/students/summary?`,
   ATTENDANCE_MARK: `${BASE_URL}/attendance/mark`,
   ATTENDANCE_MANUAL_REVIEW: `${BASE_URL}/attendance/manual-review`,
   ATTENDANCE_PENDING: `${BASE_URL}/attendance/pending-approvals`,
@@ -308,6 +308,9 @@ export const API_ENDPOINTS = {
   TRANSPORT_STAFF_ASSIGNMENT_REPORT: `${BASE_URL_V1}/transport/reports/staff/assignments`,
   TRANSPORT_VEHICLE_CAPACITY_REPORT: `${BASE_URL_V1}/transport/reports/vehicles/capacity`,
   TRANSPORT_FEE_REPORT: `${BASE_URL_V1}/transport/reports/fees`,
+  TRANSPORT_BILLING: `${BASE_URL_V1}/fee/transport-billing`,
+  TRANSPORT_BILLING_CONFIG: `${BASE_URL_V1}/fee/transport-billing/config`,
+  TRANSPORT_BILLING_GENERATE: `${BASE_URL_V1}/fee/transport-billing/generate`,
 
   transportRouteById: (id) => `${BASE_URL_V1}/transport/routes/${id}`,
   transportRouteActivate: (id) => `${BASE_URL_V1}/transport/routes/${id}/activate`,
@@ -326,6 +329,18 @@ export const API_ENDPOINTS = {
   transportFeePlanDeactivate: (id) => `${BASE_URL_V1}/transport/fee-plans/${id}/deactivate`,
   transportFeePlansByRoute: (routeId) => `${BASE_URL_V1}/transport/fee-plans/route/${routeId}`,
   transportRouteStudentsReportByRoute: (routeId) => `${BASE_URL_V1}/transport/reports/routes/${routeId}/students`,
+
+  transportBillingByStudent: (studentId) =>
+    `${BASE_URL_V1}/fee/transport-billing/student/${studentId}`,
+
+  transportBillingFlatOverride: (billingId) =>
+    `${BASE_URL_V1}/fee/transport-billing/${billingId}/flat-override`,
+
+  transportBillingMonthOverride: (billingId) =>
+    `${BASE_URL_V1}/fee/transport-billing/${billingId}/month-override`,
+
+  transportBillingPay: (billingId) =>
+    `${BASE_URL_V1}/fee/transport-billing/${billingId}/pay`,
 
   // ─── User Management ───
   USERS: `${BASE_URL_V1}/users`,
