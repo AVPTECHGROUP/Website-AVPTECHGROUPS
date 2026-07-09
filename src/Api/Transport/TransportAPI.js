@@ -1,5 +1,5 @@
 import { authFetch } from "../../Authfetch/Authfetch";
-import {API_ENDPOINTS} from "../../Constants/Endpoints";
+import { API_ENDPOINTS } from "../../Constants/Endpoints";
 
 // ==================== ROUTES ====================
 
@@ -270,3 +270,174 @@ export const getTransportFeeReport = async ({ routeId } = {}) => {
   return (await res.json()).data || {};
 };
 
+// ==================== TRANSPORT BILLING ====================
+
+export const getTransportBilling = async ({
+  feePeriodId,
+  page = 0,
+  size = 10,
+  routeId,
+  status,
+} = {}) => {
+  const params = new URLSearchParams({
+    feePeriodId,
+    page,
+    size,
+  });
+
+  if (routeId) params.append("routeId", routeId);
+  if (status) params.append("status", status);
+
+  const res = await authFetch(
+    `${API_ENDPOINTS.TRANSPORT_BILLING}?${params.toString()}`,
+    { method: "GET" }
+  );
+
+  if (!res.ok) throw new Error("Failed to fetch transport billing");
+
+  const data = await res.json();
+
+  return {
+    billing: data.data?.content || [],
+    pagination: {
+      page: data.data?.number,
+      size: data.data?.size,
+      totalPages: data.data?.totalPages,
+      totalElements: data.data?.totalElements,
+      first: data.data?.first,
+      last: data.data?.last,
+    },
+  };
+};
+
+export const getStudentTransportBilling = async (
+  studentId,
+  feePeriodId
+) => {
+  const res = await authFetch(
+    `${API_ENDPOINTS.transportBillingByStudent(
+      studentId
+    )}?feePeriodId=${feePeriodId}`,
+    {
+      method: "GET",
+    }
+  );
+
+  if (!res.ok) throw new Error("Failed to fetch student transport billing");
+
+  return (await res.json()).data;
+};
+
+export const updateTransportFlatOverride = async (
+  billingId,
+  payload
+) => {
+  const res = await authFetch(
+    API_ENDPOINTS.transportBillingFlatOverride(billingId),
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    }
+  );
+
+  if (!res.ok) throw new Error("Failed to update flat override");
+
+  return await res.json();
+};
+
+export const updateTransportMonthOverride = async (
+  billingId,
+  payload
+) => {
+  const res = await authFetch(
+    API_ENDPOINTS.transportBillingMonthOverride(billingId),
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    }
+  );
+
+  if (!res.ok) throw new Error("Failed to update month override");
+
+  return await res.json();
+};
+
+export const payTransportBilling = async (
+  billingId,
+  paymentData
+) => {
+  const res = await authFetch(
+    API_ENDPOINTS.transportBillingPay(billingId),
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(paymentData),
+    }
+  );
+
+  if (!res.ok) throw new Error("Failed to record payment");
+
+  return await res.json();
+};
+
+export const getTransportBillingConfig = async () => {
+  const res = await authFetch(
+    API_ENDPOINTS.TRANSPORT_BILLING_CONFIG,
+    {
+      method: "GET",
+    }
+  );
+
+  if (!res.ok)
+    throw new Error("Failed to fetch transport billing config");
+
+  return (await res.json()).data;
+};
+
+export const updateTransportBillingConfig = async (
+  config
+) => {
+  const res = await authFetch(
+    API_ENDPOINTS.TRANSPORT_BILLING_CONFIG,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(config),
+    }
+  );
+
+  if (!res.ok)
+    throw new Error("Failed to update transport billing config");
+
+  return await res.json();
+};
+
+export const generateTransportBilling = async (
+  payload
+) => {
+  const res = await authFetch(
+    API_ENDPOINTS.TRANSPORT_BILLING_GENERATE,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    }
+  );
+
+  if (!res.ok)
+    throw new Error("Failed to generate transport billing");
+
+  return await res.json();
+};
