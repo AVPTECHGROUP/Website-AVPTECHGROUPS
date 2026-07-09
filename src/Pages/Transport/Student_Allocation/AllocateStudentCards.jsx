@@ -210,7 +210,7 @@ export default function AllocateStudentCard({ isOpen, onClose, onSave }) {
       setLoadingFeePlans(true);
 
       const [studRes, routeRes, feeRes] = await Promise.allSettled([
-        getStudents(0, 200, "id"),
+        getStudents(0, 3000, "id"),
         getActiveRoutes(),
         getTransportFeePlans(),
       ]);
@@ -219,7 +219,7 @@ export default function AllocateStudentCard({ isOpen, onClose, onSave }) {
         const list = studRes.value?.data || studRes.value || [];
         setStudents(list.map((s) => ({
           value: s.id,
-          label: `${s.admissionNumber ? `[${s.admissionNumber}] ` : ""}${s.fullName || `${s.firstName} ${s.lastName}`}${s.className ? ` — ${s.className}${s.sectionName ? " " + s.sectionName : ""}` : ""}`,
+          label: `${s.fullName || `${s.firstName} ${s.lastName}`}${s.className ? ` — ${s.className}${s.sectionName ? " " + s.sectionName : ""}` : ""}`,
         })));
       }
       setLoadingStudents(false);

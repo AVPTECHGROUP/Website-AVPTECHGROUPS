@@ -52,21 +52,41 @@ function ToastContainer() {
     );
 }
 
-// ─── Pagination helper ────────────────────────────────────────────────────────
+// ─── Standard Pagination Helper (1, 2, 3 ... 6 Format) ────────────────────────
 function pageNumbers(current, total) {
-    if (total <= 7) return Array.from({ length: total }, (_, i) => i);
-    const pages = new Set([0, total - 1, current]);
-    if (current > 0) pages.add(current - 1);
-    if (current < total - 1) pages.add(current + 1);
-    const sorted = [...pages].sort((a, b) => a - b);
-    const result = [];
-    let prev = -1;
-    for (const p of sorted) {
-        if (p - prev > 1) result.push("...");
-        result.push(p);
-        prev = p;
+    const siblingCount = 1;
+
+    if (total <= 5) {
+        return Array.from({ length: total }, (_, i) => i);
     }
-    return result;
+
+    const leftSiblingIndex = Math.max(current - siblingCount, 0);
+    const rightSiblingIndex = Math.min(current + siblingCount, total - 1);
+
+    const shouldShowLeftDots = leftSiblingIndex > 1;
+    const shouldShowRightDots = rightSiblingIndex < total - 2;
+
+    const firstPageIndex = 0;
+    const lastPageIndex = total - 1;
+
+    if (!shouldShowLeftDots && shouldShowRightDots) {
+        let leftItemCount = 4;
+        let leftRange = Array.from({ length: leftItemCount }, (_, i) => i);
+        return [...leftRange, "...", lastPageIndex];
+    }
+
+    if (shouldShowLeftDots && !shouldShowRightDots) {
+        let rightItemCount = 4;
+        let rightRange = Array.from({ length: rightItemCount }, (_, i) => total - rightItemCount + i);
+        return [firstPageIndex, "...", ...rightRange];
+    }
+
+    if (shouldShowLeftDots && shouldShowRightDots) {
+        let middleRange = [current - 1, current, current + 1];
+        return [firstPageIndex, "...", ...middleRange, "...", lastPageIndex];
+    }
+
+    return Array.from({ length: total }, (_, i) => i);
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -154,13 +174,6 @@ export default function Student_Allocations() {
         <>
             <ToastContainer />
 
-            {/*
-                LAYOUT ROOT
-                ───────────
-                min-w-0 is mandatory — this component is a flex/grid child of the
-                sidebar layout. Without min-w-0, CSS refuses to shrink a flex child
-                below its intrinsic content width, causing overflow regardless of w-full.
-            */}
             <div className="min-h-screen bg-[#f0f2f8] w-full min-w-0">
 
                 {/* Page header */}
@@ -178,7 +191,7 @@ export default function Student_Allocations() {
                 <div className="px-4 sm:px-6 xl:px-10 py-4 sm:py-6 min-w-0">
                     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm w-full min-w-0">
 
-                        {/* Card header — flex row that wraps on tiny screens */}
+                        {/* Card header */}
                         <div className="px-4 sm:px-6 py-4 flex flex-wrap items-center
                                         justify-between gap-3 border-b border-gray-100">
                             <div className="min-w-0">
@@ -230,11 +243,7 @@ export default function Student_Allocations() {
                             </div>
                         </div>
 
-                        {/*
-                            Grid table — AllocationTable uses CSS Grid internally.
-                            No overflow-hidden here so the grid can breathe.
-                            The grid itself handles all responsive reflow.
-                        */}
+                        {/* Table */}
                         <AllocationTable
                             data={filtered}
                             loading={loading}
@@ -243,7 +252,7 @@ export default function Student_Allocations() {
                             togglingId={togglingId}
                         />
 
-                        {/* Pagination */}
+                        {/* Pagination UI */}
                         {!loading && (
                             <div className="px-4 sm:px-6 py-4 border-t border-gray-100
                                             flex flex-wrap items-center justify-between gap-3">
@@ -268,52 +277,50 @@ export default function Student_Allocations() {
                                     </div>
                                 </div>
 
-                                {/* Page buttons */}
-                                {totalPages > 1 && (
-                                    <div className="flex items-center gap-1 flex-wrap">
-                                        <button
-                                            onClick={() => setPage((p) => Math.max(0, p - 1))}
-                                            disabled={isFirst || loading}
-                                            className="w-8 h-8 flex items-center justify-center rounded-lg
-                                                       border border-gray-200 text-gray-500 hover:bg-gray-50
-                                                       disabled:opacity-40 disabled:cursor-not-allowed"
-                                        >
-                                            <ChevronLeft className="w-4 h-4" />
-                                        </button>
+                                {/* Dynamic Standard Page Buttons (Condition removed so it always shows) */}
+                                <div className="flex items-center gap-1 flex-wrap">
+                                    <button
+                                        onClick={() => setPage((p) => Math.max(0, p - 1))}
+                                        disabled={isFirst || loading}
+                                        className="w-8 h-8 flex items-center justify-center rounded-lg
+                                                   border border-gray-200 text-gray-500 hover:bg-gray-50
+                                                   disabled:opacity-40 disabled:cursor-not-allowed"
+                                    >
+                                        <ChevronLeft className="w-4 h-4" />
+                                    </button>
 
-                                        {pageNumbers(currentPage, totalPages).map((p, idx) =>
-                                            p === "..." ? (
-                                                <span key={`e-${idx}`}
-                                                    className="w-8 h-8 flex items-center justify-center
-                                                                 text-gray-400 text-xs select-none">…</span>
-                                            ) : (
-                                                <button
-                                                    key={p}
-                                                    onClick={() => setPage(p)}
-                                                    disabled={loading}
-                                                    className={`w-8 h-8 flex items-center justify-center
-                                                        rounded-lg text-xs font-semibold transition-colors
-                                                        disabled:cursor-not-allowed
-                                                        ${currentPage === p
-                                                            ? "bg-blue-600 text-white shadow-sm"
-                                                            : "border border-gray-200 text-gray-600 hover:bg-gray-50"}`}
-                                                >
-                                                    {p + 1}
-                                                </button>
-                                            )
-                                        )}
+                                    {pageNumbers(currentPage, totalPages).map((p, idx) =>
+                                        p === "..." ? (
+                                            <span key={`dots-${idx}`}
+                                                className="w-8 h-8 flex items-center justify-center
+                                                             text-gray-400 text-xs select-none">…</span>
+                                        ) : (
+                                            <button
+                                                key={p}
+                                                onClick={() => setPage(p)}
+                                                disabled={loading}
+                                                className={`w-8 h-8 flex items-center justify-center
+                                                    rounded-lg text-xs font-semibold transition-colors
+                                                    disabled:cursor-not-allowed
+                                                    ${currentPage === p
+                                                        ? "bg-blue-600 text-white shadow-sm"
+                                                        : "border border-gray-200 text-gray-600 hover:bg-gray-50"}`}
+                                            >
+                                                {p + 1}
+                                            </button>
+                                        )
+                                    )}
 
-                                        <button
-                                            onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-                                            disabled={isLast || loading}
-                                            className="w-8 h-8 flex items-center justify-center rounded-lg
-                                                       border border-gray-200 text-gray-500 hover:bg-gray-50
-                                                       disabled:opacity-40 disabled:cursor-not-allowed"
-                                        >
-                                            <ChevronRight className="w-4 h-4" />
-                                        </button>
-                                    </div>
-                                )}
+                                    <button
+                                        onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                                        disabled={isLast || loading}
+                                        className="w-8 h-8 flex items-center justify-center rounded-lg
+                                                   border border-gray-200 text-gray-500 hover:bg-gray-50
+                                                   disabled:opacity-40 disabled:cursor-not-allowed"
+                                    >
+                                        <ChevronRight className="w-4 h-4" />
+                                    </button>
+                                </div>
                             </div>
                         )}
 
