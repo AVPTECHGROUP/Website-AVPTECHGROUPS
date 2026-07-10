@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import { Settings, Check, Plus, X } from "lucide-react";
 import { toast } from "react-toastify";
 import {
-  getTransportBillingConfig,
-  updateTransportBillingConfig,
+  getTransportbillingconfig,
+  updateTransportbillingconfig,
 } from "../../../Api/Transport/TransportAPI";
 
 const DEFAULT_CONFIG = {
@@ -58,7 +58,7 @@ export default function Fee_Config() {
     (async () => {
       try {
         setLoading(true);
-        const data = await getTransportBillingConfig();
+        const data = await getTransportbillingconfig();
         if (data) setConfig({ ...DEFAULT_CONFIG, ...data });
       } catch (err) {
         console.error(err);
@@ -86,7 +86,7 @@ export default function Fee_Config() {
   const save = async () => {
     try {
       setSaving(true);
-      await updateTransportBillingConfig(config);
+      await updateTransportbillingconfig(config);
       toast.success("Configuration saved");
     } catch (err) {
       console.error(err);

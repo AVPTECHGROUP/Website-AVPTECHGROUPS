@@ -9,9 +9,9 @@
 // import {
 //   getStudentTransportBilling,
 //   payTransportBilling,
-//   getTransportBillingConfig,
+//   getTransportbillingconfig,
 // } from "../../../Api/Transport/TransportAPI";
-// import { normalizeTransportConfig, DEFAULT_TRANSPORT_CONFIG } from "./TransportBillingConfig";
+// import { normalizeTransportConfig, DEFAULT_TRANSPORT_CONFIG } from "./Transportbillingconfig";
 
 // const fmt = (n) => `₹${Number(n || 0).toLocaleString("en-IN")}`;
 // const MONTH_NAMES = ["", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -90,7 +90,7 @@
 //         console.error(err);
 //       }
 //       try {
-//         const rawConfig = await getTransportBillingConfig();
+//         const rawConfig = await getTransportbillingconfig();
 //         setConfig(normalizeTransportConfig(rawConfig));
 //       } catch (err) {
 //         console.error(err);

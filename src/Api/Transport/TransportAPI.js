@@ -388,7 +388,7 @@ export const payTransportBilling = async (
   return await res.json();
 };
 
-export const getTransportBillingConfig = async () => {
+export const getTransportbillingconfig = async () => {
   const res = await authFetch(
     API_ENDPOINTS.TRANSPORT_BILLING_CONFIG,
     {
@@ -402,7 +402,7 @@ export const getTransportBillingConfig = async () => {
   return (await res.json()).data;
 };
 
-export const updateTransportBillingConfig = async (
+export const updateTransportbillingconfig = async (
   config
 ) => {
   const res = await authFetch(
