@@ -17,9 +17,9 @@ import {
   updateTransportMonthOverride,
   getActiveRoutes,
   payTransportBilling,
-  getTransportBillingConfig,
+  getTransportbillingconfig,
 } from "../../../Api/Transport/TransportAPI";
-import { normalizeTransportConfig, DEFAULT_TRANSPORT_CONFIG } from "./TransportBillingConfig";
+import { normalizeTransportConfig, DEFAULT_TRANSPORT_CONFIG } from "./Transportbillingconfig";
 
 /* ---------------------------------------------------------------- */
 /* Helpers                                                         */
@@ -123,7 +123,7 @@ export default function TransportBilling() {
         console.error(err);
       }
       try {
-        const rawConfig = await getTransportBillingConfig();
+        const rawConfig = await getTransportbillingconfig();
         setConfig(normalizeTransportConfig(rawConfig));
       } catch (err) {
         console.error(err);

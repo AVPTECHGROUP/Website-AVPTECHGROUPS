@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import { Settings, Check, Info } from "lucide-react";
 import { toast } from "react-toastify";
 import {
-    getTransportBillingConfig,
-    updateTransportBillingConfig,
+    getTransportbillingconfig,
+    updateTransportbillingconfig,
 } from "../../../Api/Transport/TransportAPI";
 
 /* ---------------------------------------------------------------- */
@@ -94,7 +94,7 @@ function SettingRow({ title, desc, checked, onChange }) {
 /* Main Component                                                   */
 /* ---------------------------------------------------------------- */
 
-export default function TransportBillingConfig() {
+export default function Transportbillingconfig() {
     const [config, setConfig] = useState(DEFAULT_TRANSPORT_CONFIG);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -103,7 +103,7 @@ export default function TransportBillingConfig() {
         (async () => {
             try {
                 setLoading(true);
-                const data = await getTransportBillingConfig();
+                const data = await getTransportbillingconfig();
                 setConfig(normalizeTransportConfig(data));
             } catch (err) {
                 console.error(err);
@@ -119,7 +119,7 @@ export default function TransportBillingConfig() {
     const save = async () => {
         try {
             setSaving(true);
-            await updateTransportBillingConfig(buildConfigPayload(config));
+            await updateTransportbillingconfig(buildConfigPayload(config));
             toast.success("Config updated");
         } catch (err) {
             console.error(err);
