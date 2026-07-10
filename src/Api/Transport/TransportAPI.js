@@ -422,22 +422,20 @@ export const updateTransportBillingConfig = async (
   return await res.json();
 };
 
-export const generateTransportBilling = async (
-  payload
-) => {
-  const res = await authFetch(
-    API_ENDPOINTS.TRANSPORT_BILLING_GENERATE,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    }
-  );
+export const generateTransportBilling = async (payload) => {
+  const res = await authFetch(API_ENDPOINTS.TRANSPORT_BILLING_GENERATE, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
 
-  if (!res.ok)
-    throw new Error("Failed to generate transport billing");
+  if (!res.ok) {
+    // Read the explicit JSON error response payload from the backend
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.message || "Failed to generate transport billing");
+  }
 
   return await res.json();
 };
