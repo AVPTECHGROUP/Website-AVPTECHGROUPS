@@ -11,7 +11,7 @@ import ListLoader from "../../../Components/CommonComp/ListLoader";
 
 // 1. Import your other tab components here (Adjust paths if necessary)
 import TransportBilling from "./TransportBilling";
-import CollectionView from "./Collection_View";
+// import CollectionView from "./Collection_View";
 import FeeConfig from "./Fee_Config";
 
 import {
@@ -135,7 +135,7 @@ export default function Fee_Plans() {
           {[
             { id: "fee-plan", label: "Fee Plan" },
             { id: "billing", label: "Transport Billing" },
-            { id: "collection", label: "Collection View" },
+            // { id: "collection", label: "Collection View" },
             { id: "config", label: "Fee Config" },
           ].map((tab) => (
             <button

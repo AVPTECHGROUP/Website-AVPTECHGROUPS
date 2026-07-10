@@ -60,7 +60,6 @@ function AddNewTeacher() {
     const handleInputChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
-        // Clear error on change
         setErrors(prev => ({ ...prev, [name]: '' }));
         setSalaryErrors(prev => ({ ...prev, [name]: '' }));
     };
@@ -89,37 +88,31 @@ function AddNewTeacher() {
         if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
-    // ─── Personal Details Validation ─────────────────────────────────────────────
     const validatePersonalDetails = () => {
         const newErrors = {};
 
-        // Name
         if (!formData.name.trim()) {
             newErrors.name = strings.ADD_TEACHER.VALIDATION.FULL_NAME_REQUIRED;
         } else if (formData.name.trim().length < 2) {
             newErrors.name = strings.ADD_TEACHER.VALIDATION.NAME_MIN_LENGTH;
         }
 
-        // Gender
         if (!formData.gender) {
             newErrors.gender = strings.ADD_TEACHER.VALIDATION.GENDER_REQUIRED;
         }
 
-        // Mobile
         if (!formData.mobile) {
             newErrors.mobile = strings.ADD_TEACHER.VALIDATION.MOBILE_REQUIRED;
         } else if (!/^\d{10}$/.test(formData.mobile)) {
             newErrors.mobile = strings.ADD_TEACHER.VALIDATION.MOBILE_INVALID;
         }
 
-        // Email
         if (!formData.email) {
             newErrors.email = strings.ADD_TEACHER.VALIDATION.EMAIL_REQUIRED;
         } else if (!EMAIL_REGEX.test(formData.email)) {
             newErrors.email = strings.ADD_TEACHER.VALIDATION.EMAIL_INVALID;
         }
 
-        // Date of Birth
         if (!formData.dob) {
             newErrors.dob = strings.ADD_TEACHER.VALIDATION.DOB_REQUIRED;
         } else {
@@ -131,19 +124,16 @@ function AddNewTeacher() {
             }
         }
 
-        // Joining Date
         if (!formData.joiningDate) {
             newErrors.joiningDate = strings.ADD_TEACHER.VALIDATION.JOINING_REQUIRED;
         }
 
-        // Login Email
         if (!formData.loginEmail) {
             newErrors.loginEmail = strings.ADD_TEACHER.VALIDATION.LOGIN_EMAIL_REQUIRED;
         } else if (!EMAIL_REGEX.test(formData.loginEmail)) {
             newErrors.loginEmail = strings.ADD_TEACHER.VALIDATION.LOGIN_EMAIL_INVALID;
         }
 
-        // Account Status
         if (!formData.accountStatus) {
             newErrors.accountStatus = strings.ADD_TEACHER.VALIDATION.ACCOUNT_STATUS_REQUIRED;
         }
@@ -152,7 +142,6 @@ function AddNewTeacher() {
         return Object.keys(newErrors).length === 0;
     };
 
-    // ─── Salary Details Validation ────────────────────────────────────────────────
     const validateSalaryDetails = () => {
         const newErrors = {};
 
@@ -168,7 +157,6 @@ function AddNewTeacher() {
         return Object.keys(newErrors).length === 0;
     };
 
-    // ─── Next (Personal → Salary) ─────────────────────────────────────────────────
     const handleNext = () => {
         const isValid = validatePersonalDetails();
         if (!isValid) {
@@ -181,11 +169,9 @@ function AddNewTeacher() {
         }, 100);
     };
 
-    // ─── Submit ───────────────────────────────────────────────────────────────────
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        // Re-validate personal details in case user navigated back and changed something
         const isPersonalValid = validatePersonalDetails();
         if (!isPersonalValid) {
             toast.error(strings.ADD_TEACHER.ERRORS.PERSONAL_INCOMPLETE);
@@ -193,7 +179,6 @@ function AddNewTeacher() {
             return;
         }
 
-        // Validate salary details
         const isSalaryValid = validateSalaryDetails();
         if (!isSalaryValid) {
             toast.error(strings.ADD_TEACHER.ERRORS.SALARY_INCOMPLETE);
@@ -278,8 +263,24 @@ function AddNewTeacher() {
                         const salaryResponse = await upsertTeacherSalary(teacherId, salaryPayload);
                         console.log("Salary Update Response:", salaryResponse);
                     } catch (salaryError) {
-                        console.error("Salary update failed:", salaryError);
-                        toast.warn("Teacher created but salary update failed");
+                        console.error("Salary update catch block:", salaryError);
+                        
+                        // Handle validation deep error paths
+                        const validationData = salaryError?.response?.data?.data || salaryError?.data?.data || salaryError?.errorData?.data;
+                        let salaryMsg = "";
+
+                        if (validationData && typeof validationData === 'object') {
+                            const firstFieldError = Object.values(validationData)[0];
+                            if (firstFieldError && typeof firstFieldError === 'string') {
+                                salaryMsg = `Teacher created, but salary validation failed: ${firstFieldError}`;
+                            }
+                        }
+
+                        if (!salaryMsg) {
+                            salaryMsg = `Teacher created but salary configuration failed: ${salaryError?.message || "Internal Error"}`;
+                        }
+
+                        toast.warn(salaryMsg);
                     }
                 }
             }
@@ -305,7 +306,6 @@ function AddNewTeacher() {
     return (
         <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-4">
             <div className="mx-auto">
-                {/* Back Button */}
                 <button
                     onClick={() => navigate(-1)}
                     className="flex items-center cursor-pointer bg-gray-600 p-2 rounded-xl text-white gap-2 hover:bg-gray-900 transition-colors mb-4"
@@ -314,7 +314,6 @@ function AddNewTeacher() {
                     <span className="hidden sm:inline">{strings.COMMON.BACK_TO_LIST}</span>
                 </button>
 
-                {/* Header */}
                 <div className="mb-6">
                     <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">{strings.ADD_TEACHER.PAGE_TITLE}</h1>
                     <p className="text-sm sm:text-base text-gray-500">
@@ -324,7 +323,6 @@ function AddNewTeacher() {
 
                 <form onSubmit={handleSubmit}>
                     <div className="bg-white rounded-lg shadow">
-                        {/* Tabs */}
                         <div className="border-b border-gray-200">
                             <nav className="flex flex-wrap -mb-px">
                                 <button
@@ -342,7 +340,6 @@ function AddNewTeacher() {
                                 <button
                                     type="button"
                                     onClick={() => {
-                                        // Validate before allowing tab switch to salary
                                         const isValid = validatePersonalDetails();
                                         if (!isValid) {
                                             toast.error(strings.ADD_TEACHER.COMPLETE_PERSONAL);
@@ -362,11 +359,9 @@ function AddNewTeacher() {
                             </nav>
                         </div>
 
-                        {/* Content */}
                         <div className="p-4 sm:p-6 lg:p-8">
                             {activeTab === 'personal' && (
                                 <>
-                                    {/* Profile Photo Upload */}
                                     <div className="mb-6">
                                         <label className="block font-semibold text-gray-600 text-sm mb-3">
                                             {strings.ADD_TEACHER.UPLOAD.LABEL}{' '}
@@ -461,7 +456,6 @@ function AddNewTeacher() {
                             )}
                         </div>
 
-                        {/* Footer Buttons */}
                         <div className="border-t border-gray-200 px-4 sm:px-6 lg:px-8 py-4 bg-gray-50 rounded-b-lg">
                             <div className="flex flex-col sm:flex-row justify-end gap-3">
                                 <button

@@ -17,10 +17,12 @@ import {
   updateTransportMonthOverride,
   getActiveRoutes,
   payTransportBilling,
+  getTransportBillingConfig,
 } from "../../../Api/Transport/TransportAPI";
+import { normalizeTransportConfig, DEFAULT_TRANSPORT_CONFIG } from "./TransportBillingConfig";
 
 /* ---------------------------------------------------------------- */
-/*  Helpers                                                          */
+/* Helpers                                                         */
 /* ---------------------------------------------------------------- */
 
 const fmt = (n) => `₹${Number(n || 0).toLocaleString("en-IN")}`;
@@ -39,7 +41,15 @@ const STATUS_STYLES = {
 
 const STATUS_OPTIONS = ["All Statuses", "PENDING", "PAID", "PARTIAL", "HAS_OVERRIDE"];
 
-/** Fetch fee periods directly (no wrapper exists yet in TransportAPI.js) */
+const PAYMENT_MODES = [
+  { value: "CASH", label: "Cash" },
+  { value: "CARD", label: "Debit/Credit Card" },
+  { value: "UPI", label: "UPI / QR Code" },
+  { value: "NET_BANKING", label: "Net Banking" },
+  { value: "CHEQUE", label: "Cheque" },
+];
+
+/** Fetch fee periods directly */
 const getFeePeriods = async () => {
   const res = await authFetch(API_ENDPOINTS.FEE_PERIODS, { method: "GET" });
   if (!res.ok) throw new Error("Failed to fetch fee periods");
@@ -65,7 +75,7 @@ const getMonthCols = (record) => {
 };
 
 /* ---------------------------------------------------------------- */
-/*  Main Component                                                   */
+/* Main Component                                                  */
 /* ---------------------------------------------------------------- */
 
 export default function TransportBilling() {
@@ -84,11 +94,18 @@ export default function TransportBilling() {
   const [generateModal, setGenerateModal] = useState(false);
   const [flatModal, setFlatModal] = useState({ open: false, mode: "add", record: null });
   const [detailModal, setDetailModal] = useState({ open: false, record: null });
+  const [payModal, setPayModal] = useState({ open: false, record: null });
   const [exporting, setExporting] = useState(false);
+
+  const [config, setConfig] = useState(DEFAULT_TRANSPORT_CONFIG);
 
   const selectedPeriod = feePeriods.find((p) => p.id === selectedPeriodId);
 
-  /* ---------------- Load fee periods + routes once ---------------- */
+  const reasonOptions = config.adjustmentReasonOptions?.length
+    ? config.adjustmentReasonOptions
+    : ["School Closure", "Partial Month (mid-period allocation)", "Discount / Concession", "Holiday Period"];
+
+  /* ---------------- Load fee periods + routes + config once ---------------- */
   useEffect(() => {
     (async () => {
       try {
@@ -105,6 +122,12 @@ export default function TransportBilling() {
       } catch (err) {
         console.error(err);
       }
+      try {
+        const rawConfig = await getTransportBillingConfig();
+        setConfig(normalizeTransportConfig(rawConfig));
+      } catch (err) {
+        console.error(err);
+      }
     })();
   }, []);
 
@@ -113,12 +136,14 @@ export default function TransportBilling() {
     if (!selectedPeriodId) return;
     try {
       setLoading(true);
+      const isCustomStatusFilter = statusFilter !== STATUS_OPTIONS[0] && statusFilter !== "HAS_OVERRIDE";
+
       const { billing: rows, pagination: p } = await getTransportBilling({
         feePeriodId: selectedPeriodId,
         page,
         size: 20,
         routeId: routeFilter || undefined,
-        status: statusFilter !== STATUS_OPTIONS[0] ? statusFilter : undefined,
+        status: isCustomStatusFilter ? statusFilter : undefined,
       });
       setBilling(rows);
       setPagination(p);
@@ -133,16 +158,28 @@ export default function TransportBilling() {
   useEffect(() => { fetchBilling(0); }, [fetchBilling]);
 
   const filtered = useMemo(() => {
+    let rows = billing;
     const q = search.toLowerCase();
-    if (!q) return billing;
-    return billing.filter(
-      (r) =>
-        r.studentName?.toLowerCase().includes(q) ||
-        r.admissionNumber?.toLowerCase().includes(q)
-    );
-  }, [billing, search]);
 
-  /* ---------------- Stat cards (derived from loaded page) ---------------- */
+    if (q) {
+      rows = rows.filter(
+        (r) =>
+          r.studentName?.toLowerCase().includes(q) ||
+          r.admissionNumber?.toLowerCase().includes(q)
+      );
+    }
+
+    if (statusFilter !== STATUS_OPTIONS[0]) {
+      if (statusFilter === "HAS_OVERRIDE") {
+        rows = rows.filter((r) => r.calcMode === "FLAT" || r.finalTotal !== r.computedTotal);
+      } else {
+        rows = rows.filter((r) => r.paymentStatus === statusFilter);
+      }
+    }
+    return rows;
+  }, [billing, search, statusFilter]);
+
+  /* ---------------- Stat Cards ---------------- */
   const stats = useMemo(() => {
     const total = billing.reduce((s, r) => s + Number(r.finalTotal || 0), 0);
     const adjustments = billing.reduce((s, r) => {
@@ -166,8 +203,9 @@ export default function TransportBilling() {
       setGenerateModal(false);
       fetchBilling(0);
     } catch (err) {
-      console.error(err);
-      toast.error("Failed to generate transport billing");
+      console.error("Backend Error Response:", err);
+      const errorMessage = err?.response?.data?.message || err?.data?.message || err?.message || "Failed to generate transport billing.";
+      toast.error(errorMessage);
     }
   };
 
@@ -230,13 +268,11 @@ export default function TransportBilling() {
       toast.success("Exported successfully");
     } catch (err) {
       console.error(err);
-      toast.error("Export failed. Make sure the 'xlsx' package is installed.");
+      toast.error("Export failed.");
     } finally {
       setExporting(false);
     }
   };
-
-  /* ---------------------------------------------------------------- */
 
   return (
     <div className="w-full max-w-full min-w-0">
@@ -266,36 +302,6 @@ export default function TransportBilling() {
             <RefreshCcw className="w-4 h-4" /> Generate / Refresh
           </button>
         </div>
-      </div>
-
-      {/* Fee Period selector */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-6">
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Select Fee Period</p>
-        <div className="flex flex-wrap gap-2">
-          {feePeriods.map((p) => (
-            <button
-              key={p.id}
-              onClick={() => setSelectedPeriodId(p.id)}
-              className={`px-4 py-2 rounded-xl text-sm font-semibold border transition-colors ${selectedPeriodId === p.id
-                  ? "bg-[#1A1A2E] text-white border-[#1A1A2E]"
-                  : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
-                }`}
-            >
-              {p.name || p.label}
-            </button>
-          ))}
-        </div>
-        {selectedPeriod && (
-          <div className="flex flex-wrap gap-x-6 gap-y-1 mt-3 text-xs text-gray-500">
-            <span>📅 Months covered: {selectedPeriod.monthsCovered || selectedPeriod.months || "—"}</span>
-            <span>Due date: <b className="text-gray-700">{selectedPeriod.dueDate || "—"}</b></span>
-            {selectedPeriod.billingType && (
-              <span className="bg-gray-100 px-2 py-0.5 rounded-full font-semibold text-gray-600">
-                {selectedPeriod.billingType}
-              </span>
-            )}
-          </div>
-        )}
       </div>
 
       {/* Stat Cards */}
@@ -339,7 +345,7 @@ export default function TransportBilling() {
         </p>
       </div>
 
-      {/* Filters */}
+      {/* Filters Box */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="px-4 sm:px-6 py-3.5 border-b border-gray-50 flex flex-col md:flex-row gap-3 items-center">
           <div className="relative flex-1 w-full">
@@ -352,12 +358,28 @@ export default function TransportBilling() {
               className="w-full pl-10 pr-4 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-200 bg-gray-50"
             />
           </div>
-          <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-3 w-full md:w-auto">
+          <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+            {/* Fee Period Dropdown */}
+            <div className="relative flex-1 sm:flex-none">
+              <select
+                value={selectedPeriodId || ""}
+                onChange={(e) => setSelectedPeriodId(Number(e.target.value) || e.target.value)}
+                className="appearance-none w-full pl-3 pr-8 py-2 text-sm border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-200 cursor-pointer sm:min-w-[160px] font-semibold text-gray-700"
+              >
+                <option value="" disabled>Select Fee Period</option>
+                {feePeriods.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name || p.label}</option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+            </div>
+
+            {/* Route Filter Dropdown */}
             <div className="relative flex-1 sm:flex-none">
               <select
                 value={routeFilter}
                 onChange={(e) => setRouteFilter(e.target.value)}
-                className="appearance-none w-full pl-3 pr-8 py-2 text-sm border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-200 cursor-pointer sm:min-w-[150px]"
+                className="appearance-none w-full pl-3 pr-8 py-2 text-sm border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-200 cursor-pointer sm:min-w-[140px]"
               >
                 <option value="">All Routes</option>
                 {routes.map((r) => (
@@ -366,11 +388,13 @@ export default function TransportBilling() {
               </select>
               <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
             </div>
+
+            {/* Status Filter Dropdown */}
             <div className="relative flex-1 sm:flex-none">
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="appearance-none w-full pl-3 pr-8 py-2 text-sm border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-200 cursor-pointer sm:min-w-[150px]"
+                className="appearance-none w-full pl-3 pr-8 py-2 text-sm border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-200 cursor-pointer sm:min-w-[140px]"
               >
                 {STATUS_OPTIONS.map((s) => (
                   <option key={s} value={s}>{s}</option>
@@ -381,12 +405,25 @@ export default function TransportBilling() {
           </div>
         </div>
 
+        {/* Selected Period Metadata Banner */}
+        {selectedPeriod && (
+          <div className="px-4 sm:px-6 py-2 bg-gray-50 border-b border-gray-100 flex flex-wrap gap-x-6 gap-y-1 text-xs text-gray-500">
+            <span>📅 Months covered: <b className="text-gray-700">{selectedPeriod.monthsCovered || selectedPeriod.months || "—"}</b></span>
+            <span>Due date: <b className="text-gray-700">{selectedPeriod.dueDate || "—"}</b></span>
+            {selectedPeriod.billingType && (
+              <span className="bg-gray-200 px-2 py-0.5 rounded-full font-semibold text-gray-600 text-[10px]">
+                {selectedPeriod.billingType}
+              </span>
+            )}
+          </div>
+        )}
+
         {/* Desktop Table */}
         <div className="hidden xl:block w-full overflow-x-auto">
           <table className="w-full text-sm border-collapse table-auto min-w-[1100px]">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200">
-                {["Student", "Route · Stop", "Base/Mo", "Months", "Calc Mode", "Total", "Status", "Actions"].map((h) => (
+                {["Student", "Route · Stop", "Base/Mo", "Months", "Calc Mode", "Total Ledger", "Status", "Actions"].map((h) => (
                   <th key={h} className={`px-4 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wider whitespace-nowrap ${h === "Actions" ? "text-center" : "text-left"}`}>
                     {h}
                   </th>
@@ -407,7 +444,6 @@ export default function TransportBilling() {
                 filtered.map((r) => {
                   const months = getMonthCols(r);
                   const isFlat = r.calcMode === "FLAT";
-                  const isPaid = r.paymentStatus === "PAID";
                   return (
                     <tr key={r.id} className="hover:bg-blue-50/30 transition-colors align-top">
                       <td className="px-4 py-4 whitespace-nowrap">
@@ -426,17 +462,15 @@ export default function TransportBilling() {
                           {months.map((m) => (
                             <button
                               key={m.idx}
-                              disabled={isFlat || isPaid}
-                              onClick={() =>
-                                setDetailModal({ open: true, record: r })
-                              }
+                              disabled={isFlat || r.paymentStatus === "PAID" || !config.allowMonthlyAdjustments}
+                              onClick={() => setDetailModal({ open: true, record: r })}
                               className={`px-2 py-1 rounded-lg text-xs font-semibold border whitespace-nowrap transition-colors ${isFlat
-                                  ? "bg-gray-50 text-gray-400 border-gray-100 cursor-not-allowed"
-                                  : m.amount === 0
-                                    ? "bg-red-50 text-red-600 border-red-200"
-                                    : m.adjusted
-                                      ? "bg-amber-50 text-amber-700 border-amber-200"
-                                      : "bg-white text-gray-700 border-gray-200 hover:border-blue-300"
+                                ? "bg-gray-50 text-gray-400 border-gray-100 cursor-not-allowed"
+                                : m.amount === 0
+                                  ? "bg-red-50 text-red-600 border-red-200"
+                                  : m.adjusted
+                                    ? "bg-amber-50 text-amber-700 border-amber-200"
+                                    : "bg-white text-gray-700 border-gray-200 hover:border-blue-300"
                                 }`}
                             >
                               {MONTH_NAMES[m.month]}: {fmt(m.amount)}
@@ -449,11 +483,15 @@ export default function TransportBilling() {
                           {isFlat ? "⊞ Flat" : "Σ Computed"}
                         </span>
                       </td>
-                      <td className="px-4 py-4 whitespace-nowrap">
-                        <p className="font-bold text-gray-900">{fmt(r.finalTotal)}</p>
+                      <td className="px-4 py-4 whitespace-nowrap text-xs">
+                        <p className="font-bold text-gray-950 text-sm">{fmt(r.finalTotal)}</p>
                         {r.finalTotal !== r.computedTotal && (
-                          <p className="text-xs text-gray-400 line-through">{fmt(r.computedTotal)}</p>
+                          <p className="text-[11px] text-gray-400 line-through">{fmt(r.computedTotal)}</p>
                         )}
+                        <div className="space-y-0.5 mt-1 font-medium text-[11px]">
+                          <p className="text-green-600">Paid: {fmt(r.paidAmount)}</p>
+                          <p className="text-amber-600 font-semibold">Due: {fmt(r.outstandingAmount)}</p>
+                        </div>
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full border ${STATUS_STYLES[r.paymentStatus] || "bg-gray-100 text-gray-500 border-gray-200"}`}>
@@ -461,23 +499,33 @@ export default function TransportBilling() {
                         </span>
                       </td>
                       <td className="px-4 py-4">
-                        <div className="flex items-center justify-center gap-2">
-                          <button
-                            onClick={() =>
-                              setFlatModal({
-                                open: true,
-                                mode: r.flatOverrideAmount != null ? "edit" : "add",
-                                record: r,
-                              })
-                            }
-                            className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:bg-blue-50 border border-blue-100 px-2.5 py-1.5 rounded-lg transition-colors"
-                          >
-                            {r.flatOverrideAmount != null ? (
-                              <><Pencil className="w-3.5 h-3.5" /> Edit Flat</>
-                            ) : (
-                              <><CreditCard className="w-3.5 h-3.5" /> Flat</>
-                            )}
-                          </button>
+                        <div className="flex items-center justify-center gap-1.5">
+                          {r.paymentStatus !== "PAID" && (
+                            <button
+                              onClick={() => setPayModal({ open: true, record: r })}
+                              className="inline-flex items-center gap-1 text-xs font-bold bg-green-600 text-white hover:bg-green-700 px-2.5 py-1.5 rounded-lg shadow-sm transition-colors"
+                            >
+                              <CreditCard className="w-3.5 h-3.5" /> Pay
+                            </button>
+                          )}
+                          {config.allowFlatOverride && (
+                            <button
+                              onClick={() =>
+                                setFlatModal({
+                                  open: true,
+                                  mode: r.flatOverrideAmount != null ? "edit" : "add",
+                                  record: r,
+                                })
+                              }
+                              className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:bg-blue-50 border border-blue-100 px-2.5 py-1.5 rounded-lg transition-colors"
+                            >
+                              {r.flatOverrideAmount != null ? (
+                                <><Pencil className="w-3.5 h-3.5" /> Edit Flat</>
+                              ) : (
+                                <><CreditCard className="w-3.5 h-3.5" /> Flat</>
+                              )}
+                            </button>
+                          )}
                           <button
                             onClick={() => setDetailModal({ open: true, record: r })}
                             className="inline-flex items-center gap-1 text-xs font-semibold text-gray-600 hover:bg-gray-50 border border-gray-200 px-2.5 py-1.5 rounded-lg transition-colors"
@@ -494,7 +542,7 @@ export default function TransportBilling() {
           </table>
         </div>
 
-        {/* Mobile Cards */}
+        {/* Mobile Cards View */}
         <div className="xl:hidden divide-y divide-gray-100 bg-gray-50/30">
           {loading ? (
             <MobileSkeletonRows rows={4} />
@@ -521,23 +569,41 @@ export default function TransportBilling() {
                   <div className="flex flex-wrap gap-2">
                     {months.map((m) => (
                       <span key={m.idx} className={`px-2 py-1 rounded-lg text-xs font-semibold border ${isFlat ? "bg-gray-50 text-gray-400 border-gray-100" : m.amount === 0 ? "bg-red-50 text-red-600 border-red-200" : m.adjusted ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-gray-50 text-gray-700 border-gray-200"}`}>
-                        {MONTH_NAMES[m.month]}: {fmt(m.amount)}
+                        {MONTH_NAMES[m.month]} : {fmt(m.amount)}
                       </span>
                     ))}
                   </div>
-                  <div className="flex items-center justify-between bg-gray-50 rounded-xl p-2.5">
-                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${isFlat ? "bg-purple-50 text-purple-700" : "bg-white text-gray-600"}`}>
-                      {isFlat ? "⊞ Flat" : "Σ Computed"}
-                    </span>
-                    <span className="font-bold text-gray-900 text-sm">{fmt(r.finalTotal)}</span>
+                  <div className="bg-gray-50 border border-gray-100 rounded-xl p-3 grid grid-cols-3 gap-2 text-center text-xs">
+                    <div>
+                      <p className="text-gray-400 font-medium">Total Bill</p>
+                      <p className="font-bold text-gray-900 mt-0.5">{fmt(r.finalTotal)}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-400 font-medium">Paid</p>
+                      <p className="font-bold text-green-600 mt-0.5">{fmt(r.paidAmount)}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-400 font-medium">Outstanding</p>
+                      <p className="font-bold text-amber-600 mt-0.5">{fmt(r.outstandingAmount)}</p>
+                    </div>
                   </div>
                   <div className="flex justify-end gap-2 pt-1">
-                    <button
-                      onClick={() => setFlatModal({ open: true, mode: r.flatOverrideAmount != null ? "edit" : "add", record: r })}
-                      className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:bg-blue-50 border border-blue-100 px-2.5 py-1.5 rounded-lg"
-                    >
-                      {r.flatOverrideAmount != null ? <><Pencil className="w-3.5 h-3.5" /> Edit Flat</> : <><CreditCard className="w-3.5 h-3.5" /> Flat</>}
-                    </button>
+                    {r.paymentStatus !== "PAID" && (
+                      <button
+                        onClick={() => setPayModal({ open: true, record: r })}
+                        className="inline-flex items-center gap-1 text-xs font-bold bg-green-600 text-white hover:bg-green-700 px-2.5 py-1.5 rounded-lg shadow-sm"
+                      >
+                        <CreditCard className="w-3.5 h-3.5" /> Pay
+                      </button>
+                    )}
+                    {config.allowFlatOverride && (
+                      <button
+                        onClick={() => setFlatModal({ open: true, mode: r.flatOverrideAmount != null ? "edit" : "add", record: r })}
+                        className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:bg-blue-50 border border-blue-100 px-2.5 py-1.5 rounded-lg"
+                      >
+                        {r.flatOverrideAmount != null ? <><Pencil className="w-3.5 h-3.5" /> Edit Flat</> : <><CreditCard className="w-3.5 h-3.5" /> Flat</>}
+                      </button>
+                    )}
                     <button
                       onClick={() => setDetailModal({ open: true, record: r })}
                       className="inline-flex items-center gap-1 text-xs font-semibold text-gray-600 hover:bg-gray-50 border border-gray-200 px-2.5 py-1.5 rounded-lg"
@@ -577,7 +643,7 @@ export default function TransportBilling() {
         )}
       </div>
 
-      {/* Modals */}
+      {/* Modals Container */}
       {generateModal && (
         <GenerateBillingModal
           feePeriods={feePeriods}
@@ -593,6 +659,8 @@ export default function TransportBilling() {
           record={flatModal.record}
           onClose={() => setFlatModal({ open: false, mode: "add", record: null })}
           onSave={handleSaveFlat}
+          reasonOptions={reasonOptions}
+          requireReason={config.requireAdjustmentReason}
         />
       )}
 
@@ -605,6 +673,21 @@ export default function TransportBilling() {
             setFlatModal({ open: true, mode: r.flatOverrideAmount != null ? "edit" : "add", record: r });
           }}
           onMonthOverride={handleMonthOverride}
+          reasonOptions={reasonOptions}
+          requireReason={config.requireAdjustmentReason}
+          allowMonthlyAdjustments={config.allowMonthlyAdjustments}
+          allowFlatOverride={config.allowFlatOverride}
+        />
+      )}
+
+      {payModal.open && (
+        <PayTransportBillingModal
+          record={payModal.record}
+          onClose={() => setPayModal({ open: false, record: null })}
+          onSuccess={() => {
+            setPayModal({ open: false, record: null });
+            fetchBilling(pagination.page || 0);
+          }}
         />
       )}
     </div>
@@ -612,7 +695,146 @@ export default function TransportBilling() {
 }
 
 /* ---------------------------------------------------------------- */
-/*  Generate / Refresh Modal (Image 2)                                */
+/* Record Payment Modal Component                                  */
+/* ---------------------------------------------------------------- */
+
+function PayTransportBillingModal({ record, onClose, onSuccess }) {
+  const defaultAmount = record?.outstandingAmount ?? record?.finalTotal ?? "";
+  const [amount, setAmount] = useState(defaultAmount);
+  const [paymentMode, setPaymentMode] = useState("CASH");
+  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split("T")[0]);
+  const [referenceNo, setReferenceNo] = useState("");
+  const [remarks, setRemarks] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const handlePaySubmit = async () => {
+    if (!amount || Number(amount) <= 0) {
+      return toast.error("Please enter a valid payment amount.");
+    }
+    if (record?.outstandingAmount && Number(amount) > record.outstandingAmount) {
+      return toast.error(`Payment amount cannot exceed remaining outstanding balance of ${fmt(record.outstandingAmount)}`);
+    }
+
+    try {
+      setSubmitting(true);
+      await payTransportBilling(record.id, {
+        amount: Number(amount),
+        paymentMode,
+        paymentDate,
+        referenceNo: referenceNo.trim() || undefined,
+        remarks: remarks.trim() || undefined,
+      });
+      toast.success("Payment recorded successfully!");
+      onSuccess();
+    } catch (err) {
+      console.error(err);
+      toast.error(err?.message || "Failed to submit transport fee collection record.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <ModalShell onClose={onClose} title={`Collect Transport Fee — ${record.studentName}`} icon={CreditCard}>
+      <div className="bg-gray-50 rounded-xl p-4 mb-5 grid grid-cols-2 gap-4 text-sm border border-gray-100">
+        <div>
+          <p className="text-gray-400 text-xs uppercase font-medium">Admission Number</p>
+          <p className="font-bold text-gray-800 mt-0.5">#{record.admissionNumber}</p>
+        </div>
+        <div>
+          <p className="text-gray-400 text-xs uppercase font-medium">Route Details</p>
+          <p className="font-bold text-indigo-700 mt-0.5 truncate">{record.routeName}</p>
+        </div>
+        <div>
+          <p className="text-gray-400 text-xs uppercase font-medium">Billable Total</p>
+          <p className="font-bold text-gray-800 mt-0.5">{fmt(record.finalTotal)}</p>
+        </div>
+        <div>
+          <p className="text-gray-400 text-xs uppercase font-medium">Current Paid Amount</p>
+          <p className="font-bold text-green-700 mt-0.5">{fmt(record.paidAmount)}</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-1.5">Collection Amount (₹) *</label>
+          <input
+            type="number"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder="e.g. 1200"
+            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-200 font-semibold"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-1.5">Payment Mode *</label>
+          <select
+            value={paymentMode}
+            onChange={(e) => setPaymentMode(e.target.value)}
+            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-200 cursor-pointer font-medium text-gray-700"
+          >
+            {PAYMENT_MODES.map((mode) => (
+              <option key={mode.value} value={mode.value}>{mode.label}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-1.5">Payment Date *</label>
+          <input
+            type="date"
+            value={paymentDate}
+            onChange={(e) => setPaymentDate(e.target.value)}
+            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-200"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-1.5">Reference / Txn Number</label>
+          <input
+            type="text"
+            value={referenceNo}
+            onChange={(e) => setReferenceNo(e.target.value)}
+            placeholder="e.g. Chq / UTID code (optional)"
+            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-200"
+          />
+        </div>
+      </div>
+
+      <div className="mb-6">
+        <label className="block text-sm font-semibold text-gray-700 mb-1.5">Remarks / Office Notes</label>
+        <input
+          type="text"
+          value={remarks}
+          onChange={(e) => setRemarks(e.target.value)}
+          placeholder="Add situational notes here (optional)"
+          className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-200"
+        />
+      </div>
+
+      <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+        <button
+          onClick={onClose}
+          disabled={submitting}
+          className="px-4 py-2.5 text-sm font-semibold text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={handlePaySubmit}
+          disabled={submitting}
+          className="inline-flex items-center gap-2 px-6 py-2.5 text-sm font-bold text-white bg-green-600 hover:bg-green-700 rounded-xl shadow transition-colors disabled:opacity-60"
+        >
+          <Check className="w-4 h-4" /> {submitting ? "Processing..." : "Confirm Payment"}
+        </button>
+      </div>
+    </ModalShell>
+  );
+}
+
+/* ---------------------------------------------------------------- */
+/* Generate / Refresh Modal Component                              */
 /* ---------------------------------------------------------------- */
 
 function GenerateBillingModal({ feePeriods, routes, defaultPeriodId, onClose, onGenerate }) {
@@ -624,6 +846,7 @@ function GenerateBillingModal({ feePeriods, routes, defaultPeriodId, onClose, on
 
   const submit = async () => {
     if (!feePeriodId) return toast.error("Please select a fee period");
+    if (!routeId) return toast.error("Please select a route");
     setSubmitting(true);
     await onGenerate({ feePeriodId, routeId });
     setSubmitting(false);
@@ -654,13 +877,13 @@ function GenerateBillingModal({ feePeriods, routes, defaultPeriodId, onClose, on
           </select>
         </div>
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-1.5">Route (blank = all routes)</label>
+          <label className="block text-sm font-semibold text-gray-700 mb-1.5">Route *</label>
           <select
             value={routeId}
             onChange={(e) => setRouteId(e.target.value)}
             className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-200"
           >
-            <option value="">All Routes</option>
+            <option value="">Select a Route</option>
             {routes.map((r) => (
               <option key={r.id} value={r.id}>{r.routeName || r.name}</option>
             ))}
@@ -673,7 +896,7 @@ function GenerateBillingModal({ feePeriods, routes, defaultPeriodId, onClose, on
         <Row label="Fee period" value={period?.name || period?.label || "—"} />
         <Row label="Months covered" value={period?.monthsCovered || period?.months || "—"} />
         <Row label="Base rate source" value="allocation.resolvedFeeAmount" />
-        <Row label="Existing override preservation" value="✓ Yes" green />
+        <Row label="Existing override preservation" value="✓ Yes" colorClass="text-green-600" />
       </div>
 
       <div className="flex justify-end gap-3">
@@ -682,8 +905,8 @@ function GenerateBillingModal({ feePeriods, routes, defaultPeriodId, onClose, on
         </button>
         <button
           onClick={submit}
-          disabled={submitting}
-          className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-green-700 hover:bg-green-800 rounded-xl disabled:opacity-60"
+          disabled={submitting || !feePeriodId || !routeId}
+          className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-5 py-2.5 rounded-xl disabled:opacity-60 transition-colors"
         >
           <RefreshCcw className="w-4 h-4" /> {submitting ? "Generating..." : "Generate Billing"}
         </button>
@@ -692,34 +915,20 @@ function GenerateBillingModal({ feePeriods, routes, defaultPeriodId, onClose, on
   );
 }
 
-function Row({ label, value, green }) {
-  return (
-    <div className="flex items-center justify-between">
-      <span className="text-gray-500">{label}</span>
-      <span className={`font-semibold ${green ? "text-green-600" : "text-gray-800"}`}>{value}</span>
-    </div>
-  );
-}
-
 /* ---------------------------------------------------------------- */
-/*  Flat Override Modal (Image 3) — used for Add & Edit                */
+/* Flat Override Modal Component                                   */
 /* ---------------------------------------------------------------- */
 
-const REASON_OPTIONS = [
-  "Negotiated rate", "Sibling discount", "Partial month", "School closure",
-  "Discount / Concession", "Other",
-];
-
-function FlatOverrideModal({ record, onClose, onSave }) {
+function FlatOverrideModal({ record, onClose, onSave, reasonOptions, requireReason = true }) {
   const isEdit = record?.flatOverrideAmount != null;
   const [amount, setAmount] = useState(isEdit ? record.flatOverrideAmount : "");
-  const [reason, setReason] = useState(isEdit ? record.flatOverrideReason || REASON_OPTIONS[0] : REASON_OPTIONS[0]);
+  const [reason, setReason] = useState(isEdit ? record.flatOverrideReason || reasonOptions[0] || "" : reasonOptions[0] || "");
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const save = async () => {
     if (amount === "") return toast.error("Enter a flat amount");
-    if (!reason) return toast.error("Select a reason");
+    if (requireReason && !reason) return toast.error("Select a reason");
     setSubmitting(true);
     await onSave(record.id, amount, reason);
     setSubmitting(false);
@@ -765,13 +974,14 @@ function FlatOverrideModal({ record, onClose, onSave }) {
       </div>
 
       <div className="mb-4">
-        <label className="block text-sm font-semibold text-gray-700 mb-1.5">Reason *</label>
+        <label className="block text-sm font-semibold text-gray-700 mb-1.5">Reason {requireReason && "*"}</label>
         <select
           value={reason}
           onChange={(e) => setReason(e.target.value)}
           className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-200"
         >
-          {REASON_OPTIONS.map((r) => <option key={r} value={r}>{r}</option>)}
+          {!requireReason && <option value="">No reason</option>}
+          {reasonOptions.map((r) => <option key={r} value={r}>{r}</option>)}
         </select>
       </div>
 
@@ -813,22 +1023,30 @@ function FlatOverrideModal({ record, onClose, onSave }) {
 }
 
 /* ---------------------------------------------------------------- */
-/*  Billing Detail Modal (Image 4)                                    */
+/* Billing Detail Modal Component                                  */
 /* ---------------------------------------------------------------- */
 
-function BillingDetailModal({ record, onClose, onOpenFlat, onMonthOverride }) {
-  const [editingMonth, setEditingMonth] = useState(null); // month col idx
+function BillingDetailModal({
+  record, onClose, onOpenFlat, onMonthOverride,
+  reasonOptions,
+  requireReason = true,
+  allowMonthlyAdjustments = true,
+  allowFlatOverride = true,
+}) {
+  const [editingMonth, setEditingMonth] = useState(null);
   const [amount, setAmount] = useState("");
-  const [reason, setReason] = useState(REASON_OPTIONS[0]);
+  const [reason, setReason] = useState(reasonOptions[0] || "");
   const months = getMonthCols(record);
   const isFlat = record.calcMode === "FLAT";
 
   const startEdit = (m) => {
     setEditingMonth(m.idx);
     setAmount(m.amount);
+    setReason(reasonOptions[0] || "");
   };
 
   const saveMonth = async (m) => {
+    if (requireReason && !reason) return toast.error("Select a reason");
     await onMonthOverride(record.id, m.month, m.year, amount === "" ? null : Number(amount), reason);
     setEditingMonth(null);
   };
@@ -876,7 +1094,8 @@ function BillingDetailModal({ record, onClose, onOpenFlat, onMonthOverride }) {
                   onChange={(e) => setReason(e.target.value)}
                   className="w-full text-xs px-2 py-1.5 border border-gray-200 rounded-lg"
                 >
-                  {REASON_OPTIONS.map((r) => <option key={r} value={r}>{r}</option>)}
+                  {!requireReason && <option value="">No reason</option>}
+                  {reasonOptions.map((r) => <option key={r} value={r}>{r}</option>)}
                 </select>
                 <div className="flex gap-2 justify-center">
                   <button onClick={() => saveMonth(m)} className="text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded-lg">Save</button>
@@ -890,7 +1109,7 @@ function BillingDetailModal({ record, onClose, onOpenFlat, onMonthOverride }) {
                   {m.adjusted ? (m.reason || "Adjusted") : "Base rate"}
                 </span>
                 <button
-                  disabled={isFlat}
+                  disabled={isFlat || record.paymentStatus === "PAID" || !allowMonthlyAdjustments}
                   onClick={() => startEdit(m)}
                   className="w-full inline-flex items-center justify-center gap-1 text-xs font-semibold text-blue-600 hover:bg-blue-50 border border-blue-100 px-2.5 py-1.5 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed"
                 >
@@ -902,22 +1121,27 @@ function BillingDetailModal({ record, onClose, onOpenFlat, onMonthOverride }) {
         ))}
       </div>
 
-      <div className="bg-gray-50 rounded-xl p-4 space-y-2 text-sm mb-6">
-        <Row label="Computed total (sum of months)" value={fmt(record.computedTotal)} />
-        <Row label="Flat override amount" value={record.flatOverrideAmount != null ? fmt(record.flatOverrideAmount) : "None — using computed"} />
+      <div className="bg-gray-50 rounded-xl p-4 space-y-2 text-sm mb-6 border border-gray-100">
+        <Row label="Computed sum of months" value={fmt(record.computedTotal)} />
+        <Row label="Flat override adjustment" value={record.flatOverrideAmount != null ? fmt(record.flatOverrideAmount) : "None — using computed"} />
+        <div className="border-t border-gray-200 my-2" />
+        <Row label="Final total billable amount" value={fmt(record.finalTotal)} colorClass="text-gray-900 font-bold" />
+        <Row label="Paid amount collected" value={fmt(record.paidAmount)} colorClass="text-green-600 font-bold" />
         <div className="border-t border-gray-200 pt-2 flex items-center justify-between">
-          <span className="font-bold text-gray-800">Final total</span>
-          <span className="font-bold text-gray-900 text-lg">{fmt(record.finalTotal)}</span>
+          <span className="font-bold text-gray-800">Net Outstanding Balance</span>
+          <span className="font-bold text-amber-600 text-lg">{fmt(record.outstandingAmount)}</span>
         </div>
       </div>
 
       <div className="flex flex-col sm:flex-row justify-between gap-3">
-        <button
-          onClick={() => onOpenFlat(record)}
-          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-xl"
-        >
-          <CreditCard className="w-4 h-4" /> Set Flat Override
-        </button>
+        {allowFlatOverride ? (
+          <button
+            onClick={() => onOpenFlat(record)}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-xl"
+          >
+            <CreditCard className="w-4 h-4" /> Set Flat Override
+          </button>
+        ) : <span />}
         <button
           onClick={onClose}
           className="px-4 py-2.5 text-sm font-semibold text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50"
@@ -930,9 +1154,17 @@ function BillingDetailModal({ record, onClose, onOpenFlat, onMonthOverride }) {
 }
 
 /* ---------------------------------------------------------------- */
-/*  Div-based skeleton for mobile cards (ListLoader renders <tr>/<td>  */
-/*  and is only valid inside an actual <table>, not a plain <div>)     */
+/* Shared Helpers & Skeletons Components                            */
 /* ---------------------------------------------------------------- */
+
+function Row({ label, value, colorClass = "text-gray-800" }) {
+  return (
+    <div className="flex items-center justify-between py-0.5">
+      <span className="text-gray-500">{label}</span>
+      <span className={`font-semibold ${colorClass}`}>{value}</span>
+    </div>
+  );
+}
 
 function MobileSkeletonRows({ rows = 4 }) {
   return (
@@ -957,10 +1189,6 @@ function MobileSkeletonRows({ rows = 4 }) {
     </div>
   );
 }
-
-/* ---------------------------------------------------------------- */
-/*  Shared modal shell                                                */
-/* ---------------------------------------------------------------- */
 
 function ModalShell({ title, icon: Icon, onClose, children }) {
   return (

@@ -92,7 +92,11 @@ export const upsertTeacherSalary = async (teacherId, salaryData) => {
     body: JSON.stringify(salaryData),
   });
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message || "Failed to save salary structure");
+  if (!res.ok) {
+    const error = new Error(data.message || "Failed to save salary structure");
+    error.errorData = data;
+    throw error;
+  }
   return data;
 };
 
