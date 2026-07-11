@@ -158,23 +158,23 @@ function EditTeachersDetails() {
         setIsLoading(true);
         const loadingToast = toast.loading(strings.EDIT_TEACHER.SALARY_SAVE_LOADING);
         try {
-            const baseSalary     = Number(formData.baseSalary) || 0;
-            const hra            = Number(formData.houseRentAllowance) || 0;
-            const ta             = Number(formData.travelAllowance) || 0;
-            const da             = Number(formData.dearnessAllowance) || 0;
-            const sa             = Number(formData.specialAllowance) || 0;
-            const oa             = Number(formData.otherAllowances) || 0;
-            const pf             = Number(formData.providentFund) || 0;
-            const profTax        = Number(formData.professionalTax) || 0;
-            const incomeTax      = Number(formData.incomeTax) || 0;
-            const otherDed       = Number(formData.otherDeductions) || 0;
+            const baseSalary = Number(formData.baseSalary) || 0;
+            const hra = Number(formData.houseRentAllowance) || 0;
+            const ta = Number(formData.travelAllowance) || 0;
+            const da = Number(formData.dearnessAllowance) || 0;
+            const sa = Number(formData.specialAllowance) || 0;
+            const oa = Number(formData.otherAllowances) || 0;
+            const pf = Number(formData.providentFund) || 0;
+            const profTax = Number(formData.professionalTax) || 0;
+            const incomeTax = Number(formData.incomeTax) || 0;
+            const otherDed = Number(formData.otherDeductions) || 0;
             const leaveDeduction = Number(formData.leaveDeductionPerDay) || 0;
 
-            const grossSalary    = baseSalary + hra + ta + da + sa + oa + pf;
+            const grossSalary = baseSalary + hra + ta + da + sa + oa + pf;
             const totalDeductions = profTax + incomeTax + otherDed + leaveDeduction;
-            const netSalary      = grossSalary - totalDeductions;
+            const netSalary = grossSalary - totalDeductions;
 
-            const today      = new Date().toISOString().split('T')[0];
+            const today = new Date().toISOString().split('T')[0];
             const effectiveTo = `${new Date().getFullYear()}-12-31`;
 
             const salaryPayload = {
@@ -206,18 +206,18 @@ function EditTeachersDetails() {
                 const d = salaryRes.data;
                 setFormData(prev => ({
                     ...prev,
-                    salaryId:            d.id,
-                    salaryType:          d.salaryType          || '',
-                    baseSalary:          d.baseSalary          || '',
-                    houseRentAllowance:  d.houseRentAllowance  || 0,
-                    travelAllowance:     d.travelAllowance     || 0,
-                    dearnessAllowance:   d.dearnessAllowance   || 0,
-                    specialAllowance:    d.specialAllowance    || 0,
-                    otherAllowances:     d.otherAllowances     || 0,
-                    providentFund:       d.providentFund       || 0,
-                    professionalTax:     d.professionalTax     || 0,
-                    incomeTax:           d.incomeTax           || 0,
-                    otherDeductions:     d.otherDeductions     || 0,
+                    salaryId: d.id,
+                    salaryType: d.salaryType || '',
+                    baseSalary: d.baseSalary || '',
+                    houseRentAllowance: d.houseRentAllowance || 0,
+                    travelAllowance: d.travelAllowance || 0,
+                    dearnessAllowance: d.dearnessAllowance || 0,
+                    specialAllowance: d.specialAllowance || 0,
+                    otherAllowances: d.otherAllowances || 0,
+                    providentFund: d.providentFund || 0,
+                    professionalTax: d.professionalTax || 0,
+                    incomeTax: d.incomeTax || 0,
+                    otherDeductions: d.otherDeductions || 0,
                     leaveDeductionPerDay: d.leaveDeductionPerDay || 0,
                 }));
             }
@@ -226,9 +226,25 @@ function EditTeachersDetails() {
             toast.success(strings.EDIT_TEACHER.SALARY_SAVE_SUCCESS);
             navigate('/teachers');
         } catch (err) {
-            console.error(err);
+            console.error("Salary Catch Error:", err);
             toast.dismiss(loadingToast);
-            toast.error(strings.EDIT_TEACHER.SALARY_SAVE_ERROR);
+
+            // API validation mapping checks
+            const validationData = err?.response?.data?.data || err?.data?.data || err?.errorData?.data;
+            let errorMessage = "";
+
+            if (validationData && typeof validationData === 'object') {
+                const firstFieldError = Object.values(validationData)[0];
+                if (firstFieldError && typeof firstFieldError === 'string') {
+                    errorMessage = firstFieldError;
+                }
+            }
+
+            if (!errorMessage) {
+                errorMessage = err?.response?.data?.message || err?.data?.message || err?.message || strings.EDIT_TEACHER.SALARY_SAVE_ERROR;
+            }
+
+            toast.error(errorMessage);
         } finally {
             setIsLoading(false);
         }
@@ -312,11 +328,10 @@ function EditTeachersDetails() {
                             <button
                                 type="button"
                                 onClick={() => setActiveTab('personal')}
-                                className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${
-                                    activeTab === 'personal'
+                                className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'personal'
                                         ? 'border-blue-600 text-blue-600'
                                         : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                                }`}
+                                    }`}
                             >
                                 <User size={20} />
                                 <span className="hidden sm:inline">{strings.ADD_TEACHER.TABS.PERSONAL}</span>
@@ -325,11 +340,10 @@ function EditTeachersDetails() {
                             <button
                                 type="button"
                                 onClick={() => setActiveTab('salary')}
-                                className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${
-                                    activeTab === 'salary'
+                                className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'salary'
                                         ? 'border-blue-600 text-blue-600'
                                         : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                                }`}
+                                    }`}
                             >
                                 <IndianRupee size={18} />
                                 <span className="hidden sm:inline">{strings.ADD_TEACHER.TABS.SALARY}</span>
@@ -428,7 +442,7 @@ function EditTeachersDetails() {
                                     />
                                 </div>
 
-                                {/* Personal Details Tab — has its own Save / Save & Next buttons */}
+                                {/* Personal Details Tab */}
                                 <PersonalDetailsTab
                                     formData={formData}
                                     setFormData={setFormData}
@@ -465,11 +479,10 @@ function EditTeachersDetails() {
                                     type="button"
                                     onClick={handleSaveSalary}
                                     disabled={isLoading}
-                                    className={`px-6 py-2.5 text-sm font-semibold rounded-lg transition-all flex items-center justify-center gap-2 ${
-                                        isLoading
+                                    className={`px-6 py-2.5 text-sm font-semibold rounded-lg transition-all flex items-center justify-center gap-2 ${isLoading
                                             ? 'bg-blue-300 cursor-not-allowed text-white'
                                             : 'bg-blue-500 hover:bg-blue-600 cursor-pointer text-white'
-                                    }`}
+                                        }`}
                                 >
                                     {isLoading ? (
                                         <>
