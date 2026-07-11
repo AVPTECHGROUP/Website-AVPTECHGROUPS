@@ -1,5 +1,5 @@
 import { authFetch } from "../../Authfetch/Authfetch";
-import {API_ENDPOINTS} from "../../Constants/Endpoints";
+import { API_ENDPOINTS } from "../../Constants/Endpoints";
 
 /** Filters out undefined, null, and empty string values to build params */
 const buildQueryParams = (params) => {
@@ -54,8 +54,19 @@ export const getFeeCollectionHistory = async ({ fromDate, toDate, classId, perio
   };
 };
 
-export const getOutstandingFees = async ({ classId, periodId } = {}) => {
-  const qs = buildQueryParams({ classId, periodId });
+/**
+ * FIX: previously only accepted { classId, periodId } — `status`, `page`,
+ * `size` passed in by callers were silently dropped since they weren't
+ * destructured or appended to the query string. This is why filtering by
+ * status (OVERDUE/PARTIAL/PENDING) and pagination appeared to "not load all
+ * data" — every call actually hit the backend's default page regardless of
+ * what the UI had selected. Now matches the documented Swagger contract:
+ * classId, periodId, status (query) + page/size (pageable, sent as flat
+ * query params — Spring's Pageable binds page/size/sort from query string,
+ * the "pageable" object in Swagger UI is just its editor representation).
+ */
+export const getOutstandingFees = async ({ classId, periodId, status, page = 0, size = 20 } = {}) => {
+  const qs = buildQueryParams({ classId, periodId, status, page, size });
   const res = await authFetch(`${API_ENDPOINTS.FEE_COLLECTIONS_OUTSTANDING}${qs ? '?' + qs : ''}`, { method: "GET" });
 
   if (!res.ok) throw new Error(await res.text() || "Failed to fetch outstanding fees");
@@ -68,8 +79,8 @@ export const getOutstandingFees = async ({ classId, periodId } = {}) => {
     pagination: {
       totalPages: pageObj.totalPages || 0,
       totalElements: pageObj.totalElements || 0,
-      size: pageObj.size || 20,
-      number: pageObj.number || 0,
+      size: pageObj.size || size,
+      number: pageObj.number || page,
     },
   };
 };

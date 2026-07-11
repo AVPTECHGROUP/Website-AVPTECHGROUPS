@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { KeyIcon } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { getTeachers, getTeacherStatistics, searchTeachers } from '../../Api/Teachers/TeachersAPI';
-import { getClasses } from '../../Api/Teachers/TeachersAPI';
+import { getActiveClasses } from '../../Api/Teachers/TeachersAPI';
 import TeachersHeader from '../../Components/Teacher/ManagementComponents/TeachersHeader';
 import QuickActions from '../../Components/Teacher/ManagementComponents/QuickActions';
 import TeachersFilters from '../../Components/Teacher/ManagementComponents/TeachersFilters';
@@ -78,7 +78,7 @@ const Teachers = () => {
   // FETCH CLASSES FROM API
   const fetchClasses = async () => {
     try {
-      const data = await getClasses();
+      const data = await getActiveClasses();
       setClasses(data);
     } catch (e) {
       console.error('fetchClasses error:', e.message);
