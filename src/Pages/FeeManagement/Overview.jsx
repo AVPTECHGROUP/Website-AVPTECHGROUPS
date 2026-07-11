@@ -895,13 +895,13 @@ const Overview = ({ onNavigate }) => {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <button className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-            <Download size={14} /> {OVERVIEW_STRINGS.BTN_EXPORT}
-          </button>
-          <button onClick={() => setCollectModal({ open: true, student: null })}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-[#2563EB] rounded-lg hover:bg-blue-700 transition-colors shadow-sm">
-            <Plus size={15} /> {OVERVIEW_STRINGS.BTN_COLLECT}
-          </button>
+          {/*<button className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">*/}
+          {/*  <Download size={14} /> {OVERVIEW_STRINGS.BTN_EXPORT}*/}
+          {/*</button>*/}
+          {/*<button onClick={() => setCollectModal({ open: true, student: null })}*/}
+          {/*  className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-[#2563EB] rounded-lg hover:bg-blue-700 transition-colors shadow-sm">*/}
+          {/*  <Plus size={15} /> {OVERVIEW_STRINGS.BTN_COLLECT}*/}
+          {/*</button>*/}
         </div>
       </div>
 

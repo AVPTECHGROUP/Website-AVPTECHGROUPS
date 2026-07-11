@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext, useCallback } from 'react';
+import React, { useState, useEffect, useContext, useCallback, useMemo, useRef } from 'react';
 import {
   X, FileDown, AlertCircle, Printer, Search, Plus,
   CheckCircle, CheckCircle2, AlertTriangle, Info,
@@ -13,14 +13,9 @@ import {
 } from '../../Api/FeeManagement/FeeCollection';
 import { getFeePeriods } from '../../Api/FeeManagement/FeePeriods';
 import { getFeeStructures } from '../../Api/FeeManagement/FeeStructures';
-// FIX: was '../../Api/Students/StudentsApi' (lowercase Api) — inconsistent
-// casing vs '../../Api/Students/StudentsAPI' used elsewhere. Matches your
-// own documented past incident: Linux build failures from case-sensitive
-// filename mismatches that don't show up on a case-insensitive dev machine.
 import { getStudentByClass } from '../../Api/Students/StudentsAPI';
-// FIX: was '../../Api/Teachers/TeachersAPI' — getActiveClasses is a class
-// list, not a teacher endpoint. Copy-paste residue; sourced correctly here.
 import { getActiveClasses } from '../../Api/Academics/ClassSectionAPI';
+import { getTransportBilling, getStudentTransportBilling } from '../../Api/Transport/TransportApi';
 import { authFetch } from '../../Authfetch/Authfetch';
 import { UserContext } from '../../ContextAPI/UserContext';
 
@@ -38,39 +33,6 @@ import {
   COLLECTION_HISTORY_STRINGS
 } from '../../Constants/StringConstants/FeeManagementConstants';
 
-// ─── Transport Billing (display-only) ──────────────────────────────────────
-// NOTE: no dedicated API module exists for these two endpoints yet (they
-// weren't in any Api/ file you've shared) — the mockup documents them as:
-//   GET /v1/fee/transport-billing?feePeriodId={id}&page=0&size=100      (bulk, per period)
-//   GET /v1/fee/transport-billing/student/{studentId}?feePeriodId={id} (single student)
-// Both require TRANSPORT_FEE_VIEW. Kept local to this file for now — worth
-// promoting to Api/FeeManagement/TransportBilling.js once confirmed working
-// against your real backend, so other screens can reuse it.
-const getTransportBillingByPeriod = async (feePeriodId) => {
-  if (!feePeriodId) return [];
-  try {
-    const res = await authFetch(`${BASE_URL}/fee/transport-billing?feePeriodId=${feePeriodId}&page=0&size=100`, { method: 'GET' });
-    if (!res.ok) return [];
-    const data = await res.json();
-    const content = data?.data?.content ?? data?.data ?? [];
-    return Array.isArray(content) ? content : [];
-  } catch {
-    return [];
-  }
-};
-
-const getTransportBillingForStudent = async (studentId, feePeriodId) => {
-  if (!studentId || !feePeriodId) return null;
-  try {
-    const res = await authFetch(`${BASE_URL}/fee/transport-billing/student/${studentId}?feePeriodId=${feePeriodId}`, { method: 'GET' });
-    if (!res.ok) return null;
-    const data = await res.json();
-    return data?.data ?? null;
-  } catch {
-    return null;
-  }
-};
-
 // ─── Formatters ───────────────────────────────────────────────────────────────
 const fmt = (n) => '₹' + (Number(n) || 0).toLocaleString('en-IN');
 const fmtDate = (d) => {
@@ -80,6 +42,57 @@ const fmtDate = (d) => {
 };
 const initials = (name = '') =>
     name.split(' ').slice(0, 2).map((w) => w[0] || '').join('').toUpperCase() || '??';
+
+const MONTH_NAMES = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const EPS = 0.01;
+
+const reconcilePaidAmount = (totalFee, balanceDue, reportedPaid) => {
+  const total = Number(totalFee) || 0;
+  const balance = Number(balanceDue) || 0;
+  const derived = Math.max(0, total - balance);
+  const reported = reportedPaid != null ? Number(reportedPaid) : null;
+  return (reported != null && Math.abs(reported - derived) < 1) ? reported : derived;
+};
+
+const getAcademicLineItems = (structure, fallbackAmount) => {
+  const comps = structure?.components || structure?.feeComponents || [];
+  if (Array.isArray(comps) && comps.length > 0) {
+    return comps.map((c, i) => ({
+      key: c.id ?? i,
+      label: c.customName || c.componentType?.replaceAll('_', ' ') || c.name || 'Fee Component',
+      amount: Number(c.amount) || 0,
+    }));
+  }
+  return [{ key: 'lump', label: structure?.name || structure?.structureName || 'Academic Fee', amount: Number(fallbackAmount) || 0 }];
+};
+
+const getTransportLineItems = (rec) => {
+  if (!rec) return [];
+  if (rec.flatOverrideAmount != null) {
+    return [{
+      key: 'flat',
+      label: `Flat Transport Fee${rec.flatOverrideReason ? ` (${rec.flatOverrideReason})` : ''}`,
+      amount: Number(rec.flatOverrideAmount) || 0,
+    }];
+  }
+  const items = [];
+  for (let i = 1; i <= 3; i++) {
+    const m = rec[`month${i}Month`];
+    const y = rec[`month${i}Year`];
+    const amt = rec[`month${i}Amount`];
+    if (m && amt != null) {
+      items.push({
+        key: `m${i}`,
+        label: `${MONTH_NAMES[m]} ${y}${rec[`month${i}Adjusted`] ? ' (adjusted)' : ''}`,
+        amount: Number(amt) || 0,
+      });
+    }
+  }
+  if (items.length === 0 && rec.finalTotal != null) {
+    return [{ key: 'lump', label: 'Transport Fee', amount: Number(rec.finalTotal) || 0 }];
+  }
+  return items;
+};
 
 // ─── Toast ────────────────────────────────────────────────────────────────────
 let _toastDispatch = null;
@@ -148,12 +161,6 @@ const StatusPill = ({ status, label }) => {
   );
 };
 
-// FIX (mockup): overdue rows in the Outstanding table/cards don't use the
-// boxed StatusPill at all — the mockup renders a distinct "od-pill": plain
-// red dot + "Nd overdue" text, no background box. Partial/Pending rows keep
-// the normal boxed badge. This is almost certainly the real source of the
-// "82d Overdue" text seen much earlier in this project — it's this table's
-// status cell, not the Fee Periods page badge fixed previously.
 const StatusCell = ({ status, daysLate }) => {
   if (status === STATUSES.OVERDUE) {
     return (
@@ -224,11 +231,52 @@ const Sel = ({ options = [], placeholder, value, onChange, className = '', disab
     </select>
 );
 
-// ─── Collect Fee Modal ────────────────────────────────────────────────────────
+const LineItemBlock = ({ title, icon, items, subtotal, tone = 'slate', extra }) => {
+  const tones = {
+    slate: { wrap: 'bg-gray-50 border-gray-200', label: 'text-gray-500', amt: 'text-gray-900', total: 'text-gray-900' },
+    sky: { wrap: 'bg-sky-50 border-sky-200', label: 'text-sky-600', amt: 'text-sky-800', total: 'text-sky-800' },
+  }[tone];
+  return (
+      <div className={`border rounded-xl p-3 ${tones.wrap}`}>
+        <div className={`flex items-center gap-1.5 text-[10.5px] font-bold uppercase tracking-wider mb-2 ${tones.label}`}>
+          {icon} {title}
+        </div>
+        {items.length === 0 ? (
+            <div className="text-xs text-gray-400">No components found.</div>
+        ) : (
+            <div className="space-y-1">
+              {items.map((it) => (
+                  <div key={it.key} className="flex justify-between items-center text-xs">
+                    <span className="text-gray-600 truncate pr-2">{it.label}</span>
+                    <span className={`font-semibold ${tones.amt} flex-shrink-0`}>{fmt(it.amount)}</span>
+                  </div>
+              ))}
+            </div>
+        )}
+        <div className="flex justify-between items-center text-sm font-bold mt-2 pt-2 border-t border-black/5">
+          <span className={tones.label}>Subtotal</span>
+          <span className={tones.total}>{fmt(subtotal)}</span>
+        </div>
+        {extra}
+      </div>
+  );
+};
+
+// ─── Collect Fee Modal — two independent columns ───────────────────────────
+// FIX (confirmed from Swagger): POST /v1/fee/collections accepts a
+// `transportAmount` field alongside `amountPaid`. The backend validates
+// `amountPaid` against the ACADEMIC balance only — that's exactly why
+// sending a combined total as a single `amountPaid` failed with "Amount
+// paid exceeds balance due". Rebuilt around two independent amount fields,
+// each capped at and validated against its own due, each supporting
+// partial payment on its own.
 const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions, onSuccess, canCollect, canViewTransport }) => {
+  const isManualMode = !initialStudent;
+
   const [selectedPeriodId, setSelectedPeriodId] = useState('');
   const [form, setForm] = useState({
-    amountPaid: '', paymentMode: STATUSES.CASH, paymentDate: getTodayDate(),
+    academicAmount: '', transportAmount: '',
+    paymentMode: STATUSES.CASH, paymentDate: getTodayDate(),
     referenceNo: '', discount: '', discountReason: '', lateFine: '', remarks: '',
   });
   const [loading, setLoading] = useState(false);
@@ -241,46 +289,82 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
   const [studentSearch, setStudentSearch] = useState('');
   const [activeStudent, setActiveStudent] = useState(null);
 
-  // Transport (display-only, per mockup)
   const [transportInfo, setTransportInfo] = useState(null);
   const [transportLoading, setTransportLoading] = useState(false);
 
-  const balanceDue = Number(activeStudent?.balance) || 0;
-  const isFullyPaid = activeStudent !== null && balanceDue <= 0;
-  const amountNum = parseFloat(form.amountPaid) || 0;
+  const academicTouchedRef = useRef(false);
+  const transportTouchedRef = useRef(false);
+
+  const academicBalance = Number(activeStudent?.balance) || 0;
+  const transportDue = transportInfo?.outstandingAmount
+      ?? Math.max(0, (transportInfo?.finalTotal || 0) - (transportInfo?.paidAmount || 0));
+
+  const hasAcademicStructure = !!activeStudent?.feeStructureId;
+  const academicSettled = academicBalance <= 0;
+  const transportSettled = transportDue <= 0;
+  const isFullyPaid = activeStudent !== null && academicSettled && (!canViewTransport || transportSettled);
+  const isTransportOnlyStudent = activeStudent !== null && !hasAcademicStructure && transportDue > 0;
+
+  const academicAmountNum = parseFloat(form.academicAmount) || 0;
+  const transportAmountNum = parseFloat(form.transportAmount) || 0;
   const discountNum = parseFloat(form.discount) || 0;
   const lateFineNum = parseFloat(form.lateFine) || 0;
-  const netAmount = Math.max(0, amountNum - discountNum);
-  const netTotal = netAmount + lateFineNum;
-  const amountExceedsBalance = netAmount > balanceDue && balanceDue > 0;
-  const discountExceedsAmount = discountNum > amountNum;
-  const transportDue = transportInfo?.finalTotal ?? transportInfo?.totalAmount ?? 0;
+
+  const netAcademicAmount = Math.max(0, academicAmountNum - discountNum);
+  const netTotal = netAcademicAmount + lateFineNum + transportAmountNum;
+
+  const academicExceedsBalance = netAcademicAmount > academicBalance + EPS && academicBalance > 0;
+  const transportExceedsBalance = transportAmountNum > transportDue + EPS && transportDue > 0;
+  const discountExceedsAmount = discountNum > academicAmountNum + EPS;
+
+  const activeStructure = useMemo(() => {
+    if (!periodStructures.length) return null;
+    if (activeStudent?.feeStructureId) {
+      const byId = periodStructures.find((s) => s.id === activeStudent.feeStructureId);
+      if (byId) return byId;
+    }
+    return periodStructures.find((s) => (s.classes || []).some((c) => String(c.id) === selectedClassId)) || null;
+  }, [periodStructures, activeStudent, selectedClassId]);
+
+  const academicItems = useMemo(
+      () => (activeStudent && hasAcademicStructure ? getAcademicLineItems(activeStructure, activeStudent.totalFee || academicBalance) : []),
+      [activeStructure, activeStudent, academicBalance, hasAcademicStructure]
+  );
+  const academicSubtotal = academicItems.reduce((s, it) => s + it.amount, 0);
+  const transportItems = useMemo(() => getTransportLineItems(transportInfo), [transportInfo]);
 
   useEffect(() => {
     if (!open) return;
     setPeriodStructures([]); setPeriodClasses([]); setSelectedClassId('');
     setStudents([]); setStudentSearch(''); setTransportInfo(null);
+    academicTouchedRef.current = false; transportTouchedRef.current = false;
     if (initialStudent) {
-      setActiveStudent(initialStudent);
+      const totalFee = Number(initialStudent.totalFee) || 0;
+      const balance = Number(initialStudent.balance) || 0;
+      const paidAmount = reconcilePaidAmount(totalFee, balance, initialStudent.paidAmount);
+
+      setActiveStudent({ ...initialStudent, totalFee, balance, paidAmount });
       const matched =
           periodOptions.find((p) => String(p.value) === String(initialStudent.feePeriodId)) ||
           periodOptions.find((p) => p.label?.trim().toLowerCase() === initialStudent.period?.trim().toLowerCase()) ||
           periodOptions[0];
       setSelectedPeriodId(matched ? String(matched.value) : '');
       setForm({
-        amountPaid: initialStudent.balance > 0 ? String(initialStudent.balance) : '',
+        academicAmount: balance > 0 ? String(balance) : '',
+        transportAmount: '',
         paymentMode: STATUSES.CASH, paymentDate: getTodayDate(),
         referenceNo: '', discount: '', discountReason: '', lateFine: '', remarks: '',
       });
     } else {
       setActiveStudent(null); setSelectedPeriodId('');
-      setForm({ amountPaid: '', paymentMode: STATUSES.CASH, paymentDate: getTodayDate(), referenceNo: '', discount: '', discountReason: '', lateFine: '', remarks: '' });
+      setForm({ academicAmount: '', transportAmount: '', paymentMode: STATUSES.CASH, paymentDate: getTodayDate(), referenceNo: '', discount: '', discountReason: '', lateFine: '', remarks: '' });
     }
   }, [open, initialStudent, periodOptions]);
 
   useEffect(() => {
     if (!selectedPeriodId) {
-      setPeriodStructures([]); setPeriodClasses([]); setSelectedClassId(''); setStudents([]); setActiveStudent(null);
+      setPeriodStructures([]); setPeriodClasses([]); setSelectedClassId(''); setStudents([]);
+      if (isManualMode) setActiveStudent(null);
       return;
     }
     const load = async () => {
@@ -302,42 +386,108 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
   }, [selectedPeriodId]);
 
   useEffect(() => {
-    if (!selectedClassId) { setStudents([]); return; }
+    if (!selectedClassId || !selectedPeriodId) { setStudents([]); return; }
+    let cancelled = false;
     const load = async () => {
       setStudentsLoading(true);
       try {
-        let list = [];
+        let roster = [];
         try {
-          list = await getStudentByClass(selectedClassId);
+          roster = await getStudentByClass(selectedClassId);
         } catch {
           const res = await authFetch(`${BASE_URL}/students/class/${selectedClassId}?status=ACTIVE`);
           const data = await res.json();
-          list = Array.isArray(data) ? data : (data?.data || []);
+          roster = Array.isArray(data) ? data : (data?.data || []);
         }
-        setStudents(Array.isArray(list) ? list : []);
+        roster = Array.isArray(roster) ? roster : [];
+
+        let feeRecordsByStudent = new Map();
+        try {
+          const res = await getOutstandingFees({ periodId: selectedPeriodId, classId: selectedClassId, page: 0, size: 500 });
+          (res?.records || []).forEach((r) => feeRecordsByStudent.set(String(r.studentId), r));
+        } catch { /* falls through */ }
+
+        let paidByStudent = new Map();
+        try {
+          const hist = await getFeeCollectionHistory({ classId: selectedClassId, periodId: selectedPeriodId, page: 0, size: 500 });
+          (hist?.records || []).forEach((h) => {
+            const sid = String(h.studentId ?? h.student?.id ?? '');
+            if (!sid) return;
+            paidByStudent.set(sid, (paidByStudent.get(sid) || 0) + (Number(h.amountPaid) || 0));
+          });
+        } catch { /* falls through */ }
+
+        const matchedStructure = periodStructures.find((st) => (st.classes || []).some((c) => String(c.id) === selectedClassId));
+        const structureComponents = matchedStructure?.components || matchedStructure?.feeComponents || [];
+        const structureTotal = Array.isArray(structureComponents) && structureComponents.length > 0
+            ? structureComponents.reduce((sum, c) => sum + (Number(c.amount) || 0), 0)
+            : Number(matchedStructure?.totalAmount || matchedStructure?.amount) || 0;
+
+        const merged = roster.map((s) => {
+          const sid = String(s.id || s.studentId);
+          const rec = feeRecordsByStudent.get(sid);
+          if (rec) {
+            const totalFee = Number(rec.totalFee) || 0;
+            const balanceDueVal = Number(rec.balanceDue) || 0;
+            return {
+              ...s,
+              balanceDue: balanceDueVal,
+              paidAmount: reconcilePaidAmount(totalFee, balanceDueVal, rec.paidAmount),
+              totalFee,
+              feeStructureId: rec.feeStructureId ?? matchedStructure?.id ?? null,
+              overdueDays: rec.overdueDays || 0,
+              dueDate: rec.dueDate,
+            };
+          }
+          const historyPaid = paidByStudent.get(sid) || 0;
+          const resolvedBalance = Math.max(0, structureTotal - historyPaid);
+          return {
+            ...s,
+            balanceDue: resolvedBalance,
+            paidAmount: Math.min(historyPaid, structureTotal),
+            totalFee: structureTotal,
+            feeStructureId: matchedStructure?.id ?? s.feeStructureId ?? null,
+            overdueDays: 0,
+            dueDate: null,
+          };
+        });
+
+        if (!cancelled) setStudents(merged);
       } catch {
-        toast.error(COLLECTION_HISTORY_STRINGS.TOAST_LOAD_FAILED, COLLECTION_HISTORY_STRINGS.TOAST_COULD_NOT_FETCH_STUDENTS);
-        setStudents([]);
-      } finally { setStudentsLoading(false); }
+        if (!cancelled) {
+          toast.error(COLLECTION_HISTORY_STRINGS.TOAST_LOAD_FAILED, COLLECTION_HISTORY_STRINGS.TOAST_COULD_NOT_FETCH_STUDENTS);
+          setStudents([]);
+        }
+      } finally { if (!cancelled) setStudentsLoading(false); }
     };
     load();
-  }, [selectedClassId]);
+    return () => { cancelled = true; };
+  }, [selectedClassId, selectedPeriodId, periodStructures]);
 
-  // Transport fetch — display-only, per mockup GET /v1/fee/transport-billing/student/{id}
   useEffect(() => {
     if (!canViewTransport || !activeStudent?.studentId || !selectedPeriodId) { setTransportInfo(null); return; }
     let cancelled = false;
     (async () => {
       setTransportLoading(true);
       try {
-        const info = await getTransportBillingForStudent(activeStudent.studentId, selectedPeriodId);
+        const info = await getStudentTransportBilling(activeStudent.studentId, selectedPeriodId);
         if (!cancelled) setTransportInfo(info);
+      } catch {
+        if (!cancelled) setTransportInfo(null);
       } finally {
         if (!cancelled) setTransportLoading(false);
       }
     })();
     return () => { cancelled = true; };
   }, [canViewTransport, activeStudent, selectedPeriodId]);
+
+  useEffect(() => {
+    if (!activeStudent || transportLoading || transportTouchedRef.current) return;
+    if (transportDue > 0) {
+      setForm((p) => (p.transportAmount === String(transportDue) ? p : { ...p, transportAmount: String(transportDue) }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [transportLoading, transportDue, activeStudent]);
 
   if (!open) return null;
 
@@ -352,64 +502,51 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
   const selectStudent = (s) => {
     const fullName = `${s.firstName || ''} ${s.lastName || ''}`.trim();
     const classObj = periodClasses.find((c) => String(c.id) === selectedClassId);
-    const matchedStr = periodStructures.find((st) => (st.classes || []).some((c) => String(c.id) === selectedClassId));
-    const feeStructureId = matchedStr?.id ?? s.feeStructureId ?? null;
-    const studentBalance = s.balanceDue ?? s.balance ?? 0;
+    const studentBalance = Number(s.balanceDue) || 0;
+    const paidSoFar = Number(s.paidAmount) || 0;
+    academicTouchedRef.current = false; transportTouchedRef.current = false;
 
     setActiveStudent({
       studentId: s.id || s.studentId,
       studentName: fullName,
       studentCode: s.admissionNumber || s.studentCode,
       class: s.className || s.class || classObj?.name || '',
-      feeStructureId,
+      feeStructureId: s.feeStructureId,
       feePeriodId: selectedPeriodId,
       balance: studentBalance,
-      paidAmount: s.paidAmount || 0,
-      totalFee: s.totalFee || 0,
+      paidAmount: paidSoFar,
+      totalFee: Number(s.totalFee) || 0,
       dueDate: s.dueDate,
       daysLate: s.overdueDays || 0,
       status:
           s.overdueDays > 0 && studentBalance > 0 ? STATUSES.OVERDUE
-              : s.paidAmount > 0 && studentBalance > 0 ? STATUSES.PARTIAL
+              : paidSoFar > 0 && studentBalance > 0 ? STATUSES.PARTIAL
                   : studentBalance <= 0 ? STATUSES.PAID
                       : STATUSES.PENDING,
       parentName: s.parentName,
       parentPhone: s.parentPhone,
     });
 
-    if (studentBalance <= 0) {
-      setForm((p) => ({ ...p, amountPaid: '' }));
-      toast.info(COLLECTION_HISTORY_STRINGS.TOAST_FEES_ALREADY_PAID, `${fullName} has no outstanding balance.`);
-    } else {
-      setForm((p) => ({ ...p, amountPaid: String(studentBalance) }));
-    }
+    setForm((p) => ({ ...p, academicAmount: studentBalance > 0 ? String(studentBalance) : '' }));
   };
 
   const handleSubmit = async () => {
-
     if (!activeStudent) { toast.warning(COLLECTION_HISTORY_STRINGS.TOAST_NO_STUDENT_SELECTED, COLLECTION_HISTORY_STRINGS.TOAST_PLEASE_SELECT_STUDENT); return; }
+    if (isTransportOnlyStudent) { toast.warning('Transport-only fee', 'This student has no academic fee for this period — collect the transport fee via Transport → Billing.'); return; }
     if (isFullyPaid) { toast.info(COLLECTION_HISTORY_STRINGS.TOAST_NO_BALANCE_DUE, `${activeStudent.studentName} has no outstanding balance.`); return; }
-    if (!form.amountPaid || amountNum <= 0) { toast.warning(COLLECTION_HISTORY_STRINGS.TOAST_INVALID_AMOUNT, COLLECTION_HISTORY_STRINGS.TOAST_PLEASE_ENTER_VALID_AMOUNT); return; }
-    if (amountExceedsBalance) { toast.warning(COLLECTION_HISTORY_STRINGS.TOAST_AMOUNT_TOO_HIGH, `Amount cannot exceed ${fmt(balanceDue)}.`); return; }
+    if (academicAmountNum <= 0 && transportAmountNum <= 0) { toast.warning(COLLECTION_HISTORY_STRINGS.TOAST_INVALID_AMOUNT, 'Enter an academic and/or transport amount to collect.'); return; }
+    if (academicExceedsBalance) { toast.warning(COLLECTION_HISTORY_STRINGS.TOAST_AMOUNT_TOO_HIGH, `Academic amount cannot exceed ${fmt(academicBalance)}.`); return; }
+    if (transportExceedsBalance) { toast.warning(COLLECTION_HISTORY_STRINGS.TOAST_AMOUNT_TOO_HIGH, `Transport amount cannot exceed ${fmt(transportDue)}.`); return; }
     if (discountExceedsAmount) { toast.warning(COLLECTION_HISTORY_STRINGS.TOAST_DISCOUNT_TOO_HIGH, COLLECTION_HISTORY_STRINGS.TOAST_DISCOUNT_EXCEEDS); return; }
     if (!selectedPeriodId) { toast.warning(COLLECTION_HISTORY_STRINGS.TOAST_NO_PERIOD_SELECTED, COLLECTION_HISTORY_STRINGS.TOAST_PLEASE_SELECT_PERIOD); return; }
-    if (!activeStudent.feeStructureId) { toast.error(COLLECTION_HISTORY_STRINGS.TOAST_FEE_STRUCTURE_MISSING, COLLECTION_HISTORY_STRINGS.TOAST_NO_FEE_STRUCTURE_FOUND); return; }
+    if (academicAmountNum > 0 && !activeStudent.feeStructureId) { toast.error(COLLECTION_HISTORY_STRINGS.TOAST_FEE_STRUCTURE_MISSING, COLLECTION_HISTORY_STRINGS.TOAST_NO_FEE_STRUCTURE_FOUND); return; }
 
     try {
       setLoading(true);
-      // FIX (pending confirmation): this submits ACADEMIC fee only, matching
-      // the documented POST /v1/fee/collections body exactly. The mockup's
-      // visual total (₹9,600 academic + ₹2,400 transport = ₹12,000) implies
-      // a single combined collection, but no transport field exists in the
-      // documented payload. Left academic-only until you confirm whether
-      // the real backend accepts a transport field or needs a second call —
-      // see conversation. Do NOT add transportDue into amountPaid below
-      // without that confirmation; it would misattribute transport revenue
-      // to an academic feeStructureId.
       const res = await createFeeCollection({
         studentId: activeStudent.studentId,
-        feeStructureId: activeStudent.feeStructureId,
-        amountPaid: netAmount,
+        feeStructureId: activeStudent.feeStructureId ?? 0,
+        amountPaid: netAcademicAmount,
         discount: discountNum || 0,
         discountReason: form.discountReason || null,
         lateFine: lateFineNum || 0,
@@ -417,18 +554,29 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
         paymentDate: form.paymentDate,
         referenceNo: form.referenceNo || null,
         remarks: form.remarks || null,
+        transportAmount: transportAmountNum || 0,
       });
-      toast.success(COLLECTION_HISTORY_STRINGS.TOAST_PAYMENT_RECORDED, `Receipt generated for ${activeStudent.studentName}.`);
-      onSuccess(res, activeStudent);
+      toast.success(
+          COLLECTION_HISTORY_STRINGS.TOAST_PAYMENT_RECORDED,
+          transportAmountNum > 0
+              ? `Receipt generated for ${activeStudent.studentName} (Academic ${fmt(netAcademicAmount)} + Transport ${fmt(transportAmountNum)}).`
+              : `Receipt generated for ${activeStudent.studentName}.`
+      );
+      onSuccess(res, activeStudent, {
+        transportPaid: transportAmountNum,
+        transportInfo,
+        academicItems,
+        transportItems,
+      });
     } catch (e) {
       toast.error(COLLECTION_HISTORY_STRINGS.TOAST_PAYMENT_FAILED, e.message || COLLECTION_HISTORY_STRINGS.TOAST_COULD_NOT_RECORD_PAYMENT);
     } finally { setLoading(false); }
   };
 
   const submitDisabled =
-      loading || !activeStudent  || isFullyPaid ||
-      !form.amountPaid || amountNum <= 0 || netAmount <= 0 ||
-      amountExceedsBalance || discountExceedsAmount;
+      loading || !activeStudent || isFullyPaid || isTransportOnlyStudent ||
+      (academicAmountNum <= 0 && transportAmountNum <= 0) ||
+      academicExceedsBalance || transportExceedsBalance || discountExceedsAmount;
 
   return (
       <Modal open={open} onClose={onClose}
@@ -445,16 +593,15 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
                    </Btn>
                    {activeStudent && isFullyPaid && (
                        <div className="absolute bottom-full right-0 mb-2 px-3 py-1.5 bg-gray-800 text-white text-xs rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                         ✓ {COLLECTION_HISTORY_STRINGS.MSG_NO_OUTSTANDING_BAL}
+                         ✓ Fully paid
                        </div>
                    )}
-
                  </div>
                </>
              }>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
 
-          {/* ── LEFT: Period → Class → Student ── */}
+          {/* ── LEFT: Period → Class → Student (manual mode only) ── */}
           <div className="space-y-4">
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1.5">Fee Period <span className="text-gray-400">*</span></label>
@@ -465,7 +612,7 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
               </select>
             </div>
 
-            {selectedPeriodId && (
+            {isManualMode && selectedPeriodId && (
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1.5">
                     Class <span className="text-gray-400">*</span>
@@ -495,7 +642,7 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
                 </div>
             )}
 
-            {selectedClassId && (
+            {isManualMode && selectedClassId && (
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1.5">
                     Student <span className="text-gray-400">*</span>
@@ -548,7 +695,7 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
             )}
 
             {activeStudent && (
-                <div className={`border rounded-xl p-3 flex items-center gap-3 ${isFullyPaid ? 'bg-emerald-50 border-emerald-200' : 'bg-blue-50 border-blue-200'}`}>
+                <div className={`border rounded-xl p-3 flex items-center gap-3 ${isFullyPaid ? 'bg-emerald-50 border-emerald-200' : isTransportOnlyStudent ? 'bg-sky-50 border-sky-200' : 'bg-blue-50 border-blue-200'}`}>
                   <Av name={activeStudent.studentName} status={activeStudent.status} size="lg" />
                   <div className="min-w-0 flex-1">
                     <div className="font-bold text-gray-900 truncate">{activeStudent.studentName}</div>
@@ -557,111 +704,134 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
                     {isFullyPaid && (
                         <div className="flex items-center gap-1 mt-1">
                           <CheckCircle size={12} className="text-emerald-600" />
-                          <span className="text-[11px] font-bold text-emerald-700">{COLLECTION_HISTORY_STRINGS.LBL_FEES_FULLY_PAID}</span>
+                          <span className="text-[11px] font-bold text-emerald-700">Fully paid</span>
+                        </div>
+                    )}
+                    {isTransportOnlyStudent && (
+                        <div className="flex items-center gap-1 mt-1">
+                          <Bus size={12} className="text-sky-600" />
+                          <span className="text-[11px] font-bold text-sky-700">Transport fee only — use Transport module</span>
                         </div>
                     )}
                   </div>
                 </div>
             )}
 
-            {activeStudent && (
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2 text-center">
-                    <div className="text-[10px] font-bold text-emerald-700 uppercase truncate">{COLLECTION_HISTORY_STRINGS.LBL_ALREADY_PAID}</div>
-                    <div className="text-base sm:text-lg font-extrabold text-emerald-600 break-all">{fmt(activeStudent.paidAmount || 0)}</div>
-                  </div>
-                  <div className={`border border-gray-200 rounded-xl px-3 py-2 text-center ${isFullyPaid ? 'bg-emerald-50 border-emerald-200' : 'bg-orange-50 border-orange-200'}`}>
-                    <div className={`text-[10px] font-bold uppercase truncate ${isFullyPaid ? 'text-emerald-700' : 'text-orange-700'}`}>
-                      {COLLECTION_HISTORY_STRINGS.LBL_BALANCE_DUE}
-                    </div>
-                    <div className={`text-base sm:text-lg font-extrabold break-all ${isFullyPaid ? 'text-emerald-600' : 'text-orange-600'}`}>
-                      {fmt(balanceDue)}
-                    </div>
-                  </div>
-                </div>
-            )}
+            {/* ── Fee Breakdown: itemized Academic + Transport ── */}
+            {activeStudent && selectedPeriodId && (
+                <div className="space-y-2">
+                  <div className="text-[10.5px] font-bold text-gray-400 uppercase tracking-wider">Fee Breakdown</div>
 
-            {/* Transport (display-only) — per mockup, separate module, not
-              collected via this form pending confirmation of the payload */}
-            {canViewTransport && activeStudent && selectedPeriodId && (
-                <div className="bg-sky-50 border border-sky-200 rounded-xl p-3">
-                  <div className="flex items-center gap-1.5 text-[10.5px] font-bold text-sky-700 uppercase tracking-wider mb-2">
-                    <Bus size={12} /> Transport Fee — reference only
-                  </div>
-                  {transportLoading ? (
-                      <div className="text-xs text-sky-600 flex items-center gap-2">
-                        <span className="w-3 h-3 border-2 border-sky-400 border-t-transparent rounded-full animate-spin" /> Loading…
-                      </div>
-                  ) : !transportInfo ? (
-                      <div className="text-xs text-sky-600">No transport allocation for this student/period.</div>
-                  ) : (
-                      <>
-                        <div className="flex justify-between items-center text-sm">
-                          <span className="text-sky-700">{transportInfo.routeCode || transportInfo.routeName || 'Route'} · {transportInfo.stopName || '—'}</span>
-                          <span className="font-bold text-sky-800">{fmt(transportDue)}</span>
-                        </div>
-                        <div className="text-[11px] text-sky-500 mt-2">
-                          Not collected here — use the Transport Billing module to record transport payments separately until the combined-payment flow is confirmed.
-                        </div>
-                      </>
+                  {hasAcademicStructure && (
+                      <LineItemBlock
+                          title="Academic Fee"
+                          icon={<IndianRupee size={12} />}
+                          items={academicItems}
+                          subtotal={academicSubtotal}
+                          tone="slate"
+                      />
                   )}
-                </div>
-            )}
 
-            {isFullyPaid && (
-                <div className="flex items-start gap-2 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2.5">
-                  <CheckCircle size={15} className="text-emerald-600 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <div className="text-sm font-bold text-emerald-800">{COLLECTION_HISTORY_STRINGS.MSG_NO_PAYMENT_REQD}</div>
-                    <div className="text-[11px] text-emerald-700 mt-0.5">{COLLECTION_HISTORY_STRINGS.MSG_NO_OUTSTANDING_BAL}</div>
-                  </div>
+                  {canViewTransport && (
+                      <LineItemBlock
+                          title="Transport Fee"
+                          icon={<Bus size={12} />}
+                          items={transportLoading ? [] : transportItems}
+                          subtotal={transportDue}
+                          tone="sky"
+                          extra={
+                            transportLoading ? (
+                                <div className="text-xs text-sky-600 flex items-center gap-2 mt-2">
+                                  <span className="w-3 h-3 border-2 border-sky-400 border-t-transparent rounded-full animate-spin" /> Loading…
+                                </div>
+                            ) : !transportInfo ? (
+                                <div className="text-xs text-sky-600 mt-2">No transport allocation for this student/period.</div>
+                            ) : (
+                                <div className="text-[11px] text-sky-500 mt-2">
+                                  {transportInfo.routeName || transportInfo.routeCode || 'Route'} · {transportInfo.stopName || '—'}
+                                </div>
+                            )
+                          }
+                      />
+                  )}
                 </div>
             )}
           </div>
 
-          {/* ── RIGHT: Payment form (unchanged from your version) ── */}
-          <div className={`space-y-4 ${isFullyPaid ? 'opacity-40 pointer-events-none select-none' : ''}`}>
-            {activeStudent && !isFullyPaid && (
-                <div className="flex items-start gap-2 bg-blue-50 border border-blue-100 rounded-xl px-3 py-2">
-                  <Info size={13} className="text-blue-500 mt-0.5 flex-shrink-0" />
-                  <div className="text-[11px] text-blue-700">
-                    {COLLECTION_HISTORY_STRINGS.MSG_PARTIAL_INFO} {fmt(balanceDue)}.
-                  </div>
-                </div>
-            )}
+          {/* ── RIGHT: Payment form — two independent amount columns ── */}
+          <div className={`space-y-4 ${(isFullyPaid || isTransportOnlyStudent) ? 'opacity-40 pointer-events-none select-none' : ''}`}>
 
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                {COLLECTION_HISTORY_STRINGS.LBL_AMOUNT_TO_COLLECT} <span className="text-gray-400">*</span>
-              </label>
-              <div className="relative">
-                <Inp
-                    type="number"
-                    value={form.amountPaid}
-                    className={`pr-24 sm:pr-28 ${amountExceedsBalance ? 'border-orange-400 bg-orange-50' : ''}`}
-                    onChange={(e) => setForm((p) => ({ ...p, amountPaid: e.target.value }))}
-                    max={balanceDue} min={1}
-                    placeholder={`Max ${fmt(balanceDue)}`}
-                />
-                {activeStudent && balanceDue > 0 && (
-                    <button type="button"
-                            onClick={() => setForm((p) => ({ ...p, amountPaid: String(balanceDue) }))}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] sm:text-[11px] font-semibold text-[#1E3A5F] bg-blue-50 hover:bg-blue-100 border border-blue-200 px-2 py-1 rounded">
-                      Full {fmt(balanceDue)}
-                    </button>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Academic column */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                  Academic Amount <span className="text-gray-400">*</span>
+                </label>
+                <div className="relative">
+                  <Inp
+                      type="number"
+                      value={form.academicAmount}
+                      disabled={!hasAcademicStructure}
+                      className={`pr-16 ${academicExceedsBalance ? 'border-orange-400 bg-orange-50' : ''}`}
+                      onChange={(e) => { academicTouchedRef.current = true; setForm((p) => ({ ...p, academicAmount: e.target.value })); }}
+                      max={academicBalance} min={0}
+                      placeholder={hasAcademicStructure ? `Max ${fmt(academicBalance)}` : 'N/A'}
+                  />
+                  {hasAcademicStructure && academicBalance > 0 && (
+                      <button type="button"
+                              onClick={() => { academicTouchedRef.current = true; setForm((p) => ({ ...p, academicAmount: String(academicBalance) })); }}
+                              className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-[#1E3A5F] bg-blue-50 hover:bg-blue-100 border border-blue-200 px-1.5 py-1 rounded">
+                        Full
+                      </button>
+                  )}
+                </div>
+                {academicExceedsBalance && (
+                    <p className="text-[10.5px] text-orange-600 font-medium mt-1">Exceeds academic due ({fmt(academicBalance)})</p>
+                )}
+                {!hasAcademicStructure && (
+                    <p className="text-[10.5px] text-gray-400 mt-1">No academic fee this period</p>
                 )}
               </div>
-              {amountExceedsBalance && (
-                  <p className="text-[11px] text-orange-600 font-medium mt-1 flex items-center gap-1">
-                    <AlertCircle size={11} /> {COLLECTION_HISTORY_STRINGS.MSG_EXCEEDS_BALANCE} ({fmt(balanceDue)})
-                  </p>
-              )}
-              {activeStudent && !isFullyPaid && netAmount > 0 && netAmount < balanceDue && !amountExceedsBalance && (
-                  <p className="text-[11px] text-amber-600 font-medium mt-1 flex items-center gap-1">
-                    <Info size={11} /> {COLLECTION_HISTORY_STRINGS.MSG_PARTIAL_REMAIN}
-                  </p>
+
+              {/* Transport column */}
+              {canViewTransport && (
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1.5 flex items-center gap-1">
+                      <Bus size={11} className="text-sky-600" /> Transport Amount
+                    </label>
+                    <div className="relative">
+                      <Inp
+                          type="number"
+                          value={form.transportAmount}
+                          disabled={transportDue <= 0}
+                          className={`pr-16 ${transportExceedsBalance ? 'border-orange-400 bg-orange-50' : ''}`}
+                          onChange={(e) => { transportTouchedRef.current = true; setForm((p) => ({ ...p, transportAmount: e.target.value })); }}
+                          max={transportDue} min={0}
+                          placeholder={transportDue > 0 ? `Max ${fmt(transportDue)}` : 'None due'}
+                      />
+                      {transportDue > 0 && (
+                          <button type="button"
+                                  onClick={() => { transportTouchedRef.current = true; setForm((p) => ({ ...p, transportAmount: String(transportDue) })); }}
+                                  className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-sky-700 bg-sky-50 hover:bg-sky-100 border border-sky-200 px-1.5 py-1 rounded">
+                            Full
+                          </button>
+                      )}
+                    </div>
+                    {transportExceedsBalance && (
+                        <p className="text-[10.5px] text-orange-600 font-medium mt-1">Exceeds transport due ({fmt(transportDue)})</p>
+                    )}
+                  </div>
               )}
             </div>
+
+            {(academicAmountNum > 0 && academicAmountNum < academicBalance) || (transportAmountNum > 0 && transportAmountNum < transportDue) ? (
+                <div className="flex items-start gap-2 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2">
+                  <Info size={13} className="text-amber-500 mt-0.5 flex-shrink-0" />
+                  <div className="text-[11px] text-amber-700">
+                    Partial payment — the remainder will stay outstanding for that column.
+                  </div>
+                </div>
+            ) : null}
 
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1.5">
@@ -698,7 +868,7 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
 
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                {COLLECTION_HISTORY_STRINGS.LBL_DISCOUNT} <span className="text-gray-400 font-normal">(optional)</span>
+                {COLLECTION_HISTORY_STRINGS.LBL_DISCOUNT} <span className="text-gray-400 font-normal">(academic only, optional)</span>
               </label>
               <Inp
                   type="number" value={form.discount} placeholder="Discount amount"
@@ -755,11 +925,10 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
                 <div className={`font-extrabold text-xl ${netTotal > 0 ? 'text-white' : 'text-white/30'}`}>
                   {netTotal > 0 ? fmt(netTotal) : '—'}
                 </div>
-                {discountNum > 0 && amountNum > 0 && !discountExceedsAmount && (
-                    <div className="text-[10px] text-white/50 mt-0.5">
-                      {fmt(amountNum)} − {fmt(discountNum)} discount{lateFineNum > 0 ? ` + ${fmt(lateFineNum)} fine` : ''}
-                    </div>
-                )}
+                <div className="text-[10px] text-white/50 mt-0.5">
+                  Academic {fmt(netAcademicAmount)}{lateFineNum > 0 ? ` + ${fmt(lateFineNum)} fine` : ''}
+                  {transportAmountNum > 0 ? ` + Transport ${fmt(transportAmountNum)}` : ''}
+                </div>
               </div>
             </div>
           </div>
@@ -768,7 +937,14 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
   );
 };
 
-// ─── Bulk Collect Modal ───────────────────────────────────────────────────────
+// ─── Bulk Collect Modal — two independent columns per row ──────────────────
+// FIX: previously one "Collect Amount" column capped at academic balance
+// only, transport shown read-only. Now each row has its own Academic and
+// Transport amount fields, each independently validated against its own
+// due and independently supporting partial payment — matching the single
+// Collect modal's behavior. ASSUMPTION (flagged): sending `transportAmount`
+// per bulk row assumes the bulk endpoint accepts the same field the single
+// endpoint's Swagger confirmed — untested for bulk specifically.
 const BulkCollectModal = ({ open, onClose, students, onSuccess, canCollect }) => {
   const [commonMode, setCommonMode] = useState(STATUSES.CASH);
   const [commonDate, setCommonDate] = useState(getTodayDate());
@@ -781,9 +957,11 @@ const BulkCollectModal = ({ open, onClose, students, onSuccess, canCollect }) =>
       setRows(students.map((s) => ({
         id: s.id, studentId: s.studentId, studentName: s.studentName,
         studentCode: s.studentCode, class: s.class, period: s.period,
-        balanceDue: s.balance, feeStructureId: s.feeStructureId,
+        academicDue: s.balance, feeStructureId: s.feeStructureId,
         transportDue: s.transportDue || 0,
-        collectAmount: s.balance, discount: 0,
+        academicCollect: s.balance > 0 ? s.balance : '',
+        transportCollect: (s.transportDue || 0) > 0 ? s.transportDue : '',
+        discount: 0,
         lateFine: s.status === STATUSES.OVERDUE ? '' : null,
         daysLate: s.daysLate || 0, paymentMode: STATUSES.CASH, paymentDate: getTodayDate(),
       })));
@@ -792,29 +970,41 @@ const BulkCollectModal = ({ open, onClose, students, onSuccess, canCollect }) =>
 
   const update = (id, field, val) => setRows((p) => p.map((r) => r.id === id ? { ...r, [field]: val } : r));
   const applyAll = () => setRows((p) => p.map((r) => ({ ...r, paymentMode: commonMode, paymentDate: commonDate })));
-  const grandTotal = rows.reduce((s, r) => s + (parseFloat(r.collectAmount) || 0), 0);
-  const transportTotal = rows.reduce((s, r) => s + (r.transportDue || 0), 0);
+
+  const academicGrandTotal = rows.reduce((s, r) => s + (parseFloat(r.academicCollect) || 0), 0);
+  const transportGrandTotal = rows.reduce((s, r) => s + (parseFloat(r.transportCollect) || 0), 0);
+  const combinedGrandTotal = academicGrandTotal + transportGrandTotal;
 
   const handleSubmit = async () => {
+    const bad = rows.find((r) => (parseFloat(r.academicCollect) || 0) <= 0 && (parseFloat(r.transportCollect) || 0) <= 0);
+    if (bad) { toast.warning(COLLECTION_HISTORY_STRINGS.TOAST_MISSING_AMOUNT, `Enter an academic and/or transport amount for ${bad.studentName}.`); return; }
+    const overAcademic = rows.find((r) => (parseFloat(r.academicCollect) || 0) > (parseFloat(r.academicDue) || 0) + EPS);
+    if (overAcademic) { toast.warning(COLLECTION_HISTORY_STRINGS.TOAST_AMOUNT_EXCEEDS_BALANCE, `${overAcademic.studentName}: academic amount exceeds due of ${fmt(overAcademic.academicDue)}.`); return; }
+    const overTransport = rows.find((r) => (parseFloat(r.transportCollect) || 0) > (parseFloat(r.transportDue) || 0) + EPS);
+    if (overTransport) { toast.warning(COLLECTION_HISTORY_STRINGS.TOAST_AMOUNT_EXCEEDS_BALANCE, `${overTransport.studentName}: transport amount exceeds due of ${fmt(overTransport.transportDue)}.`); return; }
 
-    const bad = rows.find((r) => !r.collectAmount || parseFloat(r.collectAmount) <= 0);
-    if (bad) { toast.warning(COLLECTION_HISTORY_STRINGS.TOAST_MISSING_AMOUNT, `Please fill in collect amount for ${bad.studentName}.`); return; }
-    const over = rows.find((r) => parseFloat(r.collectAmount) > parseFloat(r.balanceDue));
-    if (over) { toast.warning(COLLECTION_HISTORY_STRINGS.TOAST_AMOUNT_EXCEEDS_BALANCE, `${over.studentName}: exceeds balance of ${fmt(over.balanceDue)}.`); return; }
     try {
       setLoading(true);
       const res = await createBulkFeeCollection({
-        payments: rows.map((r) => ({
-          studentId: r.studentId, feeStructureId: r.feeStructureId,
-          amountPaid: parseFloat(r.collectAmount), discount: parseFloat(r.discount) || 0,
-          discountReason: null,
-          lateFine: r.lateFine !== null && r.lateFine !== '' ? parseFloat(r.lateFine) : null,
-          paymentMode: r.paymentMode, paymentDate: r.paymentDate,
-          referenceNo: null, remarks: null,
-        })),
+        payments: rows
+            .filter((r) => (parseFloat(r.academicCollect) || 0) > 0 || (parseFloat(r.transportCollect) || 0) > 0)
+            .map((r) => {
+              const academicAmt = parseFloat(r.academicCollect) || 0;
+              const discountAmt = parseFloat(r.discount) || 0;
+              return {
+                studentId: r.studentId, feeStructureId: r.feeStructureId ?? 0,
+                amountPaid: Math.max(0, academicAmt - discountAmt),
+                discount: discountAmt,
+                discountReason: null,
+                lateFine: r.lateFine !== null && r.lateFine !== '' ? parseFloat(r.lateFine) : null,
+                paymentMode: r.paymentMode, paymentDate: r.paymentDate,
+                referenceNo: null, remarks: null,
+                transportAmount: parseFloat(r.transportCollect) || 0,
+              };
+            }),
       });
       toast.success(COLLECTION_HISTORY_STRINGS.TOAST_BULK_PROCESSED, `${Array.isArray(res) ? res.length : rows.length} receipts generated.`);
-      onSuccess(res);
+      onSuccess(res, rows);
     } catch (e) {
       toast.error(COLLECTION_HISTORY_STRINGS.TOAST_BULK_FAILED, e.message || COLLECTION_HISTORY_STRINGS.TOAST_COULD_NOT_PROCESS_BULK);
     } finally { setLoading(false); }
@@ -828,16 +1018,15 @@ const BulkCollectModal = ({ open, onClose, students, onSuccess, canCollect }) =>
              footer={
                <>
                  <Btn variant="secondary" onClick={onClose} className="w-full sm:w-auto">{COLLECTION_HISTORY_STRINGS.BTN_CANCEL}</Btn>
-                 <Btn variant="success" onClick={handleSubmit} disabled={loading } className="w-full sm:w-auto">
+                 <Btn variant="success" onClick={handleSubmit} disabled={loading} className="w-full sm:w-auto">
                    {loading && <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />}
                    {loading ? COLLECTION_HISTORY_STRINGS.BTN_PROCESSING : `${COLLECTION_HISTORY_STRINGS.BTN_PROCESS_PAYMENTS} ${rows.length}`}
                  </Btn>
                </>
              }>
-        {/* FIX (mockup): clarifies that only academic payments are recorded here */}
         <div className="flex items-start gap-3 bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-3 mb-4 text-sm text-emerald-800">
           <CheckCircle2 size={15} className="text-emerald-600 mt-0.5 flex-shrink-0" />
-          Academic payments will be recorded for all {students.length} selected students. Transport due is shown for reference — collect it individually via each student's Collect button.
+          Enter Academic and/or Transport amounts per student — both accept partial payment independently. Students with transport-only dues (no academic fee) should be collected via Transport → Billing instead.
         </div>
         <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 mb-4 flex flex-col sm:flex-row sm:items-end gap-3">
           <div className="w-full sm:w-auto">
@@ -851,69 +1040,85 @@ const BulkCollectModal = ({ open, onClose, students, onSuccess, canCollect }) =>
           <Btn variant="ghost" size="sm" onClick={applyAll} className="w-full sm:w-auto mt-2 sm:mt-0">{COLLECTION_HISTORY_STRINGS.BTN_APPLY_ALL}</Btn>
         </div>
         <div className="overflow-x-auto rounded-xl border border-gray-200">
-          <table className="w-full text-sm min-w-[680px]">
+          <table className="w-full text-sm min-w-[820px]">
             <thead>
             <tr className="bg-gray-50 border-b border-gray-200">
               <th className="px-3 py-2.5 text-left text-[10.5px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Student</th>
               <th className="px-3 py-2.5 text-left text-[10.5px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Academic Due</th>
+              <th className="px-3 py-2.5 text-left text-[10.5px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Academic Collect</th>
               <th className="px-3 py-2.5 text-left text-[10.5px] font-bold text-sky-700 uppercase tracking-wider whitespace-nowrap">🚌 Transport Due</th>
-              <th className="px-3 py-2.5 text-left text-[10.5px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Collect Amount</th>
+              <th className="px-3 py-2.5 text-left text-[10.5px] font-bold text-sky-700 uppercase tracking-wider whitespace-nowrap">🚌 Transport Collect</th>
               <th className="px-3 py-2.5 text-left text-[10.5px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Discount</th>
               <th className="px-3 py-2.5 text-left text-[10.5px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Late Fine</th>
               <th className="px-3 py-2.5 text-left text-[10.5px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Mode</th>
             </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-            {rows.map((row) => (
-                <tr key={row.id} className={row.daysLate > 0 ? 'bg-orange-50/60' : 'hover:bg-gray-50/60'}>
-                  <td className="px-3 py-2.5">
-                    <div className="font-semibold text-gray-900">{row.studentName}</div>
-                    <div className="text-xs text-gray-400">{row.studentCode} · {row.class}</div>
-                  </td>
-                  <td className="px-3 py-2.5">
-                    {row.daysLate > 0
-                        ? <span className="text-red-700 text-xs font-bold">{fmt(row.balanceDue)}<br /><span className="text-[10px]">{row.daysLate}d late</span></span>
-                        : <span className="font-semibold text-gray-800">{fmt(row.balanceDue)}</span>
-                    }
-                  </td>
-                  <td className="px-3 py-2.5">
-                    <span className="text-sky-700 font-semibold text-xs">{row.transportDue > 0 ? fmt(row.transportDue) : '—'}</span>
-                  </td>
-                  <td className="px-3 py-2.5">
-                    <input type="number" value={row.collectAmount}
-                           onChange={(e) => update(row.id, 'collectAmount', e.target.value)}
-                           className="w-24 px-2 py-1 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-blue-400" />
-                  </td>
-                  <td className="px-3 py-2.5">
-                    <input type="number" value={row.discount} placeholder="0"
-                           onChange={(e) => update(row.id, 'discount', e.target.value)}
-                           className="w-20 px-2 py-1 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-blue-400" />
-                  </td>
-                  <td className="px-3 py-2.5">
-                    {row.lateFine !== null
-                        ? <input type="number" value={row.lateFine} placeholder="Fine"
-                                 onChange={(e) => update(row.id, 'lateFine', e.target.value)}
-                                 className="w-20 px-2 py-1 text-sm border border-amber-200 rounded-lg bg-amber-50" />
-                        : <span className="text-xs text-gray-300">N/A</span>
-                    }
-                  </td>
-                  <td className="px-3 py-2.5">
-                    <select value={row.paymentMode} onChange={(e) => update(row.id, 'paymentMode', e.target.value)}
-                            className="w-24 px-2 py-1 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-blue-400">
-                      {PAYMENT_MODE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                    </select>
-                  </td>
-                </tr>
-            ))}
+            {rows.map((row) => {
+              const acadOver = (parseFloat(row.academicCollect) || 0) > (parseFloat(row.academicDue) || 0) + EPS;
+              const transOver = (parseFloat(row.transportCollect) || 0) > (parseFloat(row.transportDue) || 0) + EPS;
+              return (
+                  <tr key={row.id} className={row.daysLate > 0 ? 'bg-orange-50/60' : 'hover:bg-gray-50/60'}>
+                    <td className="px-3 py-2.5">
+                      <div className="font-semibold text-gray-900">{row.studentName}</div>
+                      <div className="text-xs text-gray-400">{row.studentCode} · {row.class}</div>
+                    </td>
+                    <td className="px-3 py-2.5">
+                      {row.daysLate > 0
+                          ? <span className="text-red-700 text-xs font-bold">{fmt(row.academicDue)}<br /><span className="text-[10px]">{row.daysLate}d late</span></span>
+                          : <span className="font-semibold text-gray-800">{fmt(row.academicDue)}</span>
+                      }
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <input type="number" value={row.academicCollect}
+                             disabled={!row.academicDue}
+                             onChange={(e) => update(row.id, 'academicCollect', e.target.value)}
+                             className={`w-24 px-2 py-1 text-sm border rounded-lg focus:outline-none disabled:bg-gray-50 disabled:text-gray-300 ${acadOver ? 'border-orange-400 bg-orange-50' : 'border-gray-200 focus:border-blue-400'}`} />
+                      {acadOver && <div className="text-[10px] text-orange-600 mt-0.5">Exceeds due</div>}
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <span className="text-sky-700 font-semibold text-xs">{row.transportDue > 0 ? fmt(row.transportDue) : '—'}</span>
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <input type="number" value={row.transportCollect}
+                             disabled={!row.transportDue}
+                             onChange={(e) => update(row.id, 'transportCollect', e.target.value)}
+                             className={`w-24 px-2 py-1 text-sm border rounded-lg focus:outline-none disabled:bg-gray-50 disabled:text-gray-300 ${transOver ? 'border-orange-400 bg-orange-50' : 'border-sky-200 focus:border-sky-400'}`} />
+                      {transOver && <div className="text-[10px] text-orange-600 mt-0.5">Exceeds due</div>}
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <input type="number" value={row.discount} placeholder="0"
+                             onChange={(e) => update(row.id, 'discount', e.target.value)}
+                             className="w-20 px-2 py-1 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-blue-400" />
+                    </td>
+                    <td className="px-3 py-2.5">
+                      {row.lateFine !== null
+                          ? <input type="number" value={row.lateFine} placeholder="Fine"
+                                   onChange={(e) => update(row.id, 'lateFine', e.target.value)}
+                                   className="w-20 px-2 py-1 text-sm border border-amber-200 rounded-lg bg-amber-50" />
+                          : <span className="text-xs text-gray-300">N/A</span>
+                      }
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <select value={row.paymentMode} onChange={(e) => update(row.id, 'paymentMode', e.target.value)}
+                              className="w-24 px-2 py-1 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-blue-400">
+                        {PAYMENT_MODE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                      </select>
+                    </td>
+                  </tr>
+              );
+            })}
             </tbody>
           </table>
         </div>
         <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center bg-[#1E3A5F] rounded-xl px-4 py-3 mt-4 gap-2">
           <div className="text-sm text-white/60 text-center sm:text-left">
             {rows.length} {COLLECTION_HISTORY_STRINGS.MSG_RECEIPTS_GENERATED}
-            {transportTotal > 0 && <span> · 🚌 Transport {fmt(transportTotal)} shown for reference only</span>}
           </div>
-          <div className="text-white font-extrabold text-base text-center sm:text-right">{COLLECTION_HISTORY_STRINGS.LBL_GRAND_TOTAL}: {fmt(grandTotal)}</div>
+          <div className="text-right">
+            <div className="text-white font-extrabold text-base">Academic: {fmt(academicGrandTotal)} · 🚌 Transport: {fmt(transportGrandTotal)}</div>
+            <div className="text-white/50 text-[11px]">Combined: {fmt(combinedGrandTotal)}</div>
+          </div>
         </div>
       </Modal>
   );
@@ -949,8 +1154,8 @@ const OutstandingCard = ({ s, selected, onToggle, onCollect, canCollect, canView
                 <span className="text-gray-400">Due: </span>{fmtDate(s.dueDate)}
               </div>
             </div>
-            <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100 gap-2">
-              <div className="flex gap-3 min-w-0">
+            <div className="flex flex-wrap items-center justify-between mt-2 pt-2 border-t border-gray-100 gap-2">
+              <div className="flex flex-wrap gap-3 min-w-0">
                 <div className="min-w-0">
                   <div className="text-[10px] text-gray-400 uppercase truncate">{COLLECTION_HISTORY_STRINGS.LBL_ALREADY_PAID}</div>
                   <div className={`text-sm font-semibold ${s.paidAmount > 0 ? 'text-emerald-600' : 'text-gray-400'}`}>
@@ -968,7 +1173,7 @@ const OutstandingCard = ({ s, selected, onToggle, onCollect, canCollect, canView
                     </div>
                 )}
               </div>
-              <Btn variant="primary" size="xs" onClick={onCollect} >
+              <Btn variant="primary" size="xs" onClick={onCollect}>
                 {COLLECTION_HISTORY_STRINGS.BTN_COLLECT}
               </Btn>
             </div>
@@ -1011,8 +1216,6 @@ const CollectionsHistory = () => {
   const { currentAcademicYear, schoolId } = useContext(UserContext);
   const academicYearId = currentAcademicYear?.id || null;
   const academicYearLabel = currentAcademicYear?.label || null;
-
-  // FIX: no permission gating existed at all previously.
 
   const canCollect = true;
   const canViewTransport = true;
@@ -1075,65 +1278,72 @@ const CollectionsHistory = () => {
   const fetchOutstanding = useCallback(async () => {
     try {
       setLoading(true); setError(null);
-      // FIX: previously called with no page/size, so only the backend's
-      // default page loaded, then the UI re-sliced that partial set into
-      // fake 10-row pages. Now the real page is requested and the backend's
-      // own pagination metadata is trusted.
-      const params = { page: page - 1, size: PAGE_SIZE };
+      const usingClientPaging = !!statusF;
+      const params = usingClientPaging
+          ? { page: 0, size: 500 }
+          : { page: page - 1, size: PAGE_SIZE };
       if (classF) params.classId = classF;
       if (periodF) params.periodId = periodF;
-      if (statusF) params.status = statusF;
       const res = await getOutstandingFees(params);
-      const raw = res?.records ?? res?.content ?? res?.data?.content ?? [];
+      const raw = res?.records ?? [];
       let records = Array.isArray(raw) ? raw : [];
 
-      // FIX (mockup): Transport Due column — parallel-fetched per distinct
-      // feePeriodId present in this page of results, merged in by
-      // studentId. Skipped entirely if the user lacks TRANSPORT_FEE_VIEW,
-      // so schools without transport billing enabled don't take a failed
-      // network hit for it.
       let transportMap = new Map();
       if (canViewTransport) {
         const periodIds = [...new Set(records.map((r) => r.feePeriodId || r.periodId).filter(Boolean))];
-        const results = await Promise.all(periodIds.map((pid) => getTransportBillingByPeriod(pid)));
-        results.forEach((list, i) => {
+        const results = await Promise.all(
+            periodIds.map((pid) =>
+                getTransportBilling({ feePeriodId: pid, page: 0, size: 200 }).catch(() => ({ billing: [] }))
+            )
+        );
+        results.forEach(({ billing }, i) => {
           const pid = periodIds[i];
-          list.forEach((t) => {
-            const amt = t.finalTotal ?? t.totalAmount ?? t.amount ?? 0;
-            transportMap.set(`${t.studentId}-${pid}`, amt);
+          (billing || []).forEach((t) => {
+            const due = t.outstandingAmount ?? Math.max(0, (t.finalTotal || 0) - (t.paidAmount || 0));
+            transportMap.set(`${t.studentId}-${pid}`, due);
           });
         });
       }
 
-      setOutstanding(
-          records.map((r, i) => {
-            let status = STATUSES.PENDING;
-            if ((r.paidAmount || 0) > 0 && r.balanceDue > 0) status = STATUSES.PARTIAL;
-            if (r.balanceDue <= 0) status = STATUSES.PAID;
-            if (r.overdueDays > 0 && r.balanceDue > 0) status = STATUSES.OVERDUE;
-            const feePeriodId = r.feePeriodId || r.periodId;
-            return {
-              id: i + 1,
-              studentId: r.studentId,
-              studentName: r.studentName,
-              studentCode: r.admissionNumber,
-              class: r.className,
-              section: r.sectionName,
-              period: r.feePeriodName,
-              feePeriodId,
-              balance: r.balanceDue,
-              totalFee: r.totalFee,
-              paidAmount: r.paidAmount,
-              daysLate: r.overdueDays || 0,
-              feeStructureId: r.feeStructureId,
-              dueDate: r.dueDate,
-              status,
-              transportDue: transportMap.get(`${r.studentId}-${feePeriodId}`) || 0,
-            };
-          })
-      );
-      setOutstandingTotalPages(res?.pagination?.totalPages || 1);
-      setOutstandingTotalElements(res?.pagination?.totalElements ?? records.length);
+      const mapped = records.map((r, i) => {
+        const totalFee = Number(r.totalFee) || 0;
+        const balanceDue = Number(r.balanceDue) || 0;
+        const paidAmount = reconcilePaidAmount(totalFee, balanceDue, r.paidAmount);
+
+        let status = STATUSES.PENDING;
+        if (paidAmount > 0 && balanceDue > 0) status = STATUSES.PARTIAL;
+        if (balanceDue <= 0) status = STATUSES.PAID;
+        if (r.overdueDays > 0 && balanceDue > 0) status = STATUSES.OVERDUE;
+        const feePeriodId = r.feePeriodId || r.periodId;
+        return {
+          id: i + 1,
+          studentId: r.studentId,
+          studentName: r.studentName,
+          studentCode: r.admissionNumber,
+          class: r.className,
+          section: r.sectionName,
+          period: r.feePeriodName,
+          feePeriodId,
+          balance: balanceDue,
+          totalFee,
+          paidAmount,
+          daysLate: r.overdueDays || 0,
+          feeStructureId: r.feeStructureId,
+          dueDate: r.dueDate,
+          status,
+          transportDue: transportMap.get(`${r.studentId}-${feePeriodId}`) || 0,
+        };
+      });
+
+      setOutstanding(mapped);
+      if (usingClientPaging) {
+        const matchCount = mapped.filter((s) => s.status === statusF).length;
+        setOutstandingTotalPages(Math.max(1, Math.ceil(matchCount / PAGE_SIZE)));
+        setOutstandingTotalElements(matchCount);
+      } else {
+        setOutstandingTotalPages(res?.pagination?.totalPages || 1);
+        setOutstandingTotalElements(res?.pagination?.totalElements ?? records.length);
+      }
     } catch (e) {
       setError(e.message || COLLECTION_HISTORY_STRINGS.ERR_LOAD_OUTSTANDING);
       setOutstanding([]);
@@ -1181,36 +1391,47 @@ const CollectionsHistory = () => {
     );
   }
 
-  // NOTE: search now only filters within the currently-loaded backend page
-  // for Outstanding, since getOutstandingFees has no search param in the
-  // API file or the mockup's documented query string. Full-dataset search
-  // needs a backend `search`/`q` param added.
   const filteredOut = outstanding.filter((s) => {
     const q = search.toLowerCase();
-    return (!q || s.studentName.toLowerCase().includes(q) || (s.studentCode || '').toLowerCase().includes(q));
+    const matchesSearch = !q || s.studentName.toLowerCase().includes(q) || (s.studentCode || '').toLowerCase().includes(q);
+    const matchesStatus = !statusF || s.status === statusF;
+    return matchesSearch && matchesStatus;
   });
   const filteredHist = history.filter((h) => {
     const q = search.toLowerCase();
     return !q || h.studentName.toLowerCase().includes(q) || (h.receiptNo || '').toLowerCase().includes(q);
   });
 
-  const pagedOut = filteredOut;
+  const pagedOut = statusF ? filteredOut.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE) : filteredOut;
   const totalOutPages = outstandingTotalPages;
   const overdueCount = outstanding.filter((s) => s.status === STATUSES.OVERDUE).length;
 
   const toggleRow = (id) => setSelected((p) => p.includes(id) ? p.filter((x) => x !== id) : [...p, id]);
   const toggleAll = () => {
-    const ids = filteredOut.map((s) => s.id);
+    const ids = pagedOut.map((s) => s.id);
     const allSel = ids.every((id) => selected.includes(id));
     setSelected(allSel ? (p) => p.filter((id) => !ids.includes(id)) : (p) => [...new Set([...p, ...ids])]);
   };
   const selStudents = outstanding.filter((s) => selected.includes(s.id));
+
+  // FIX: display "selected" totals reflect what would actually be
+  // collectible (academic due + transport due) — unchanged shape from
+  // before, still informational only in this summary bar.
   const selTotal = selStudents.reduce((a, s) => a + s.balance, 0);
   const selTransportTotal = selStudents.reduce((a, s) => a + (s.transportDue || 0), 0);
 
-  const handleCollectSuccess = (response, student) => {
+  // FIX: receipt now carries Academic and Transport as separate itemized
+  // sections (academicComponents / transportComponents) plus the actual
+  // amounts collected in each (academicCollected / transportCollected),
+  // instead of one merged `components` list — matches the two-column
+  // collection that was just recorded.
+  const handleCollectSuccess = (response, student, extra = {}) => {
     setCollectModal({ open: false, student: null });
     const data = response?.data || response;
+    const transportPaid = extra.transportPaid || 0;
+    const academicItems = (extra.academicItems || []).map((it) => ({ name: it.label, amount: it.amount }));
+    const transportItems = (extra.transportItems || []).map((it) => ({ name: it.label, amount: it.amount }));
+
     setReceiptModal({
       open: true,
       receipt: {
@@ -1220,8 +1441,10 @@ const CollectionsHistory = () => {
         studentCode: data.admissionNumber || student.studentCode,
         class: data.className || student.class,
         period: data.feePeriodName || student.period,
-        components: data.components || [{ name: 'Fee Payment', amount: data.amountPaid }],
-        amountPaid: data.amountPaid,
+        academicComponents: academicItems.length ? academicItems : (data.components || [{ name: 'Academic Fee', amount: data.amountPaid }]),
+        academicCollected: data.amountPaid ?? 0,
+        transportComponents: transportItems,
+        transportCollected: transportPaid,
         discount: data.discount || 0,
         lateFine: data.lateFine || 0,
         paymentMode: data.paymentMode,
@@ -1233,7 +1456,7 @@ const CollectionsHistory = () => {
     fetchOutstanding(); setSelected([]);
   };
 
-  const handleBulkSuccess = (responses) => {
+  const handleBulkSuccess = (responses, rows) => {
     setBulkModal({ open: false, students: [] });
     toast.success(COLLECTION_HISTORY_STRINGS.TOAST_BULK_PROCESSED, `${Array.isArray(responses) ? responses.length : '?'} receipts generated.`);
     fetchOutstanding(); setSelected([]);
@@ -1248,8 +1471,11 @@ const CollectionsHistory = () => {
           receiptNo: data.receiptNo, date: data.paymentDate,
           studentName: data.studentName, studentCode: data.studentCode,
           class: data.className, period: data.periodName,
-          components: data.components || [{ name: 'Fee Payment', amount: item.amount }],
-          amountPaid: data.amountPaid, discount: data.discount || 0,
+          academicComponents: data.components || [{ name: 'Academic Fee', amount: item.amount }],
+          academicCollected: data.amountPaid ?? item.amount,
+          transportComponents: [],
+          transportCollected: data.transportAmount || 0,
+          discount: data.discount || 0,
           lateFine: data.lateFine || 0, paymentMode: data.paymentMode,
           referenceNo: data.referenceNo, balanceAfter: data.balanceAfter,
           recordedBy: data.recordedBy,
@@ -1262,8 +1488,11 @@ const CollectionsHistory = () => {
           receiptNo: item.receiptNo, date: item.date,
           studentName: item.studentName, studentCode: item.studentCode,
           class: item.class, period: item.period,
-          components: [{ name: 'Fee Payment', amount: item.amount }],
-          amountPaid: item.amount, discount: item.discount || 0,
+          academicComponents: [{ name: 'Academic Fee', amount: item.amount }],
+          academicCollected: item.amount,
+          transportComponents: [],
+          transportCollected: 0,
+          discount: item.discount || 0,
           lateFine: item.lateFine || 0, paymentMode: item.mode,
           referenceNo: item.referenceNo, balanceAfter: 0, recordedBy: item.recordedBy,
         },
@@ -1274,46 +1503,6 @@ const CollectionsHistory = () => {
   const resetTab = () => {
     setSearch(''); setClassF(''); setPeriodF(''); setStatusF('');
     setModeF(''); setPage(1); setSelected([]); setError(null);
-  };
-
-  // FIX: Export button previously had no onClick — implemented as
-  // client-side CSV export of whatever's currently loaded/filtered, since
-  // no export endpoint exists in the API file or the mockup's API reference.
-  const handleExport = () => {
-    const rows = tab === 'outstanding'
-        ? filteredOut.map((s) => ({
-          'Student': s.studentName, 'Admission No': s.studentCode, 'Class': s.class,
-          'Period': s.period, 'Academic Fee': s.totalFee, 'Paid': s.paidAmount,
-          'Academic Due': s.balance, 'Transport Due': s.transportDue, 'Due Date': s.dueDate, 'Status': s.status,
-        }))
-        : filteredHist.map((h) => ({
-          'Receipt No': h.receiptNo, 'Date': h.date, 'Student': h.studentName,
-          'Admission No': h.studentCode, 'Class': h.class, 'Period': h.period,
-          'Collected': h.amount, 'Discount': h.discount, 'Late Fine': h.lateFine,
-          'Mode': h.mode, 'Reference No': h.referenceNo, 'Recorded By': h.recordedBy,
-        }));
-
-    if (rows.length === 0) { toast.warning('Nothing to Export', 'No records in the current view.'); return; }
-
-    const headers = Object.keys(rows[0]);
-    const escapeCell = (val) => {
-      const s = val === null || val === undefined ? '' : String(val);
-      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-    };
-    const csv = [
-      headers.join(','),
-      ...rows.map((r) => headers.map((h) => escapeCell(r[h])).join(',')),
-    ].join('\n');
-
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${tab === 'outstanding' ? 'outstanding-fees' : 'payment-history'}-${getTodayDate()}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
   };
 
   return (
@@ -1329,11 +1518,6 @@ const CollectionsHistory = () => {
             </p>
           </div>
           <div className="flex gap-2 w-full sm:w-auto flex-shrink-0">
-            <button onClick={handleExport}
-                    className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 text-xs sm:text-sm font-semibold text-gray-700 bg-white border border-gray-200 cursor-pointer rounded-lg hover:bg-gray-50 transition-colors">
-              <FileDown size={13} />
-              <span>{COLLECTION_HISTORY_STRINGS.BTN_EXPORT}</span>
-            </button>
             <button
                 onClick={() => setCollectModal({ open: true, student: null })}
                 className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold rounded-lg transition-colors shadow-sm
@@ -1359,7 +1543,7 @@ const CollectionsHistory = () => {
             </div>
         )}
 
-        <div className="flex border-b border-gray-200 ">
+        <div className="flex border-b border-gray-200 overflow-x-auto">
           {[
             { key: 'outstanding', label: COLLECTION_HISTORY_STRINGS.TAB_OUTSTANDING, badge: overdueCount },
             { key: 'history', label: COLLECTION_HISTORY_STRINGS.TAB_HISTORY, badge: 0 },
@@ -1440,10 +1624,9 @@ const CollectionsHistory = () => {
               </div>
 
               {selected.length > 0 && (
-                  <div className="bg-[#1E3A5F] rounded-xl px-4 py-3 flex flex-row items-center justify-between gap-3 shadow-md">
+                  <div className="bg-[#1E3A5F] rounded-xl px-4 py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-md">
                     <div className="min-w-0">
                       <div className="text-white font-bold text-xs sm:text-sm">{selected.length} selected</div>
-                      {/* FIX (mockup): split Academic vs Transport totals instead of one combined number */}
                       <div className="text-white/60 text-xs truncate">
                         Academic: <span className="font-bold text-white">{fmt(selTotal)}</span>
                         {canViewTransport && selTransportTotal > 0 && (
@@ -1451,12 +1634,12 @@ const CollectionsHistory = () => {
                         )}
                       </div>
                     </div>
-                    <div className="flex gap-1.5 flex-shrink-0">
+                    <div className="flex gap-1.5 flex-shrink-0 w-full sm:w-auto">
                       <Btn variant="secondary" size="sm" onClick={() => setSelected([])}
-                           className="!bg-white/10 hover:!bg-white/20 !border-white/30 !text-white text-xs px-2.5">
+                           className="!bg-white/10 hover:!bg-white/20 !border-white/30 !text-white text-xs px-2.5 flex-1 sm:flex-none">
                         {COLLECTION_HISTORY_STRINGS.BTN_CLEAR}
                       </Btn>
-                      <Btn variant="success" size="sm" className="text-xs px-3"
+                      <Btn variant="success" size="sm" className="text-xs px-3 flex-1 sm:flex-none"
                            onClick={() => setBulkModal({ open: true, students: selStudents })}>
                         {COLLECTION_HISTORY_STRINGS.BTN_COLLECT} ({selected.length})
                       </Btn>
@@ -1473,7 +1656,7 @@ const CollectionsHistory = () => {
                       <th className="px-3 py-2.5 w-8">
                         <input type="checkbox"
                                className="w-3.5 h-3.5 cursor-pointer accent-[#2563EB] rounded"
-                               checked={filteredOut.length > 0 && filteredOut.every((s) => selected.includes(s.id))}
+                               checked={pagedOut.length > 0 && pagedOut.every((s) => selected.includes(s.id))}
                                onChange={toggleAll} />
                       </th>
                       <th className="px-3 py-2.5 text-left text-[10.5px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Student</th>
@@ -1482,7 +1665,6 @@ const CollectionsHistory = () => {
                       <th className="px-3 py-2.5 text-left text-[10.5px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Academic Fee</th>
                       <th className="px-3 py-2.5 text-left text-[10.5px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Paid</th>
                       <th className="px-3 py-2.5 text-left text-[10.5px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Academic Due</th>
-                      {/* FIX (mockup): new Transport Due column, gated behind TRANSPORT_FEE_VIEW */}
                       {canViewTransport && (
                           <th className="px-3 py-2.5 text-left text-[10.5px] font-bold text-sky-700 uppercase tracking-wider whitespace-nowrap">🚌 Transport Due</th>
                       )}
@@ -1548,7 +1730,7 @@ const CollectionsHistory = () => {
                     </tbody>
                   </table>
                 </div>
-                <div className="flex items-center justify-between px-4 py-3 bg-gray-50/80 border-t border-gray-100">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 px-4 py-3 bg-gray-50/80 border-t border-gray-100">
               <span className="text-xs text-gray-500">
                 Showing {pagedOut.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1}–{(page - 1) * PAGE_SIZE + pagedOut.length} of {outstandingTotalElements} records
               </span>
@@ -1567,14 +1749,14 @@ const CollectionsHistory = () => {
 
               {/* ── Tablet/Mobile Cards ── */}
               <div className="lg:hidden space-y-3">
-                {filteredOut.length > 0 && (
+                {pagedOut.length > 0 && (
                     <div className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-xl px-3 py-2">
                       <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-gray-700">
                         <input type="checkbox"
                                className="w-3.5 h-3.5 cursor-pointer accent-[#2563EB] rounded"
-                               checked={filteredOut.length > 0 && filteredOut.every((s) => selected.includes(s.id))}
+                               checked={pagedOut.length > 0 && pagedOut.every((s) => selected.includes(s.id))}
                                onChange={toggleAll} />
-                        Select All ({filteredOut.length})
+                        Select All ({pagedOut.length})
                       </label>
                       <span className="text-xs text-gray-400">Total: {filteredOut.length}</span>
                     </div>
@@ -1599,7 +1781,7 @@ const CollectionsHistory = () => {
                     />
                 ))}
 
-                {filteredOut.length > 0 && (
+                {pagedOut.length > 0 && (
                     <div className="flex items-center justify-between pt-2">
                       <Btn variant="secondary" size="sm"
                            onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>
@@ -1616,7 +1798,7 @@ const CollectionsHistory = () => {
             </>
         )}
 
-        {/* ══ HISTORY TAB — unchanged from your version ══ */}
+        {/* ══ HISTORY TAB ══ */}
         {tab === 'history' && (
             <>
               <div className="flex gap-2 md:hidden mb-2">
@@ -1652,7 +1834,7 @@ const CollectionsHistory = () => {
                   </div>
               )}
 
-              <div className="hidden md:flex  flex-wrap items-center gap-2 w-full">
+              <div className="hidden md:flex flex-wrap items-center gap-2 w-full">
                 <div className="relative flex-1 min-w-[150px] lg:min-w-[200px]">
                   <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                   <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }}
