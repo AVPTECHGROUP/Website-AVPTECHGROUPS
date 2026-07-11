@@ -13,9 +13,9 @@ import {
 } from '../../Api/FeeManagement/FeeCollection';
 import { getFeePeriods } from '../../Api/FeeManagement/FeePeriods';
 import { getFeeStructures } from '../../Api/FeeManagement/FeeStructures';
-import { getStudentByClass } from '../../Api/Students/StudentsAPI';
+import { getStudentByClass } from '../../Api/Students/StudentsApi';
 import { getActiveClasses } from '../../Api/Academics/ClassSectionAPI';
-import { getTransportBilling, getStudentTransportBilling } from '../../Api/Transport/TransportApi';
+import { getTransportBilling, getStudentTransportBilling } from '../../Api/Transport/TransportAPI';
 import { authFetch } from '../../Authfetch/Authfetch';
 import { UserContext } from '../../ContextAPI/UserContext';
 

@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback, useContext } from 'react';
 import { useLocation } from 'react-router-dom';
-import Button from '../../Components/FeeModal/Button';
-import Badge from '../../Components/FeeModal/Badge';
-import Modal from '../../Components/FeeModal/Modal';
-import Select from '../../Components/FeeModal/Select';
-import Input from '../../Components/FeeModal/Input';
+import Button from '../../Components/FeeModal/Button.jsx';
+import Badge from '../../Components/FeeModal/Badge.jsx';
+import Modal from '../../Components/FeeModal/Modal.jsx';
+import Select from '../../Components/FeeModal/Select.jsx';
+import Input from '../../Components/FeeModal/Input.jsx';
 import { Plus, X, Pencil, Eye, Trash2, AlertTriangle, CheckCircle2, Info, AlertCircle, Calendar, Users, Layers, IndianRupee } from 'lucide-react';
 import {
   getFeeStructures,
@@ -12,15 +12,15 @@ import {
   getFeeStructureById,
   updateFeeStructure,
   deleteFeeStructure,
-} from '../../Api/FeeManagement/FeeStructures';
-import { getFeePeriods } from '../../Api/FeeManagement/FeePeriods';
+} from '../../Api/FeeManagement/FeeStructures.js';
+import { getFeePeriods } from '../../Api/FeeManagement/FeePeriods.js';
 // NOTE: confirm this path — I've placed it alongside ClassSectionAPI since
 // both are Academics-domain APIs, but please confirm the exact filename.
 import { getAcademicYears, getCurrentAcademicYear } from '../../Api/AcademicYears/AcademicYear.js';
-import { UserContext } from '../../ContextAPI/UserContext';
-import SectionSubjectService from '../../Api/Academics/SectionSubjectService';
+import { UserContext } from '../../ContextAPI/UserContext.jsx';
+import SectionSubjectService from '../../Api/Academics/SectionSubjectService.js';
 // NOTE: confirm this path matches where you actually export getStudentByClass.
-import { getStudentByClass } from '../../Api/Students/StudentsAPI';
+import { getStudentByClass } from '../../Api/Students/StudentsApi.js';
 // Import Constants
 import {
   STATUSES,
@@ -28,7 +28,7 @@ import {
   COMPONENT_TYPE_OPTIONS,
   REQUIRES_CUSTOM_NAME,
   FEE_STRUCTURE_STRINGS
-} from '../../Constants/StringConstants/FeeManagementConstants';
+} from '../../Constants/StringConstants/FeeManagementConstants.js';
 
 // Transport is billed/tracked separately (see the transport-due integration
 // in Collections & History), so it's never an option when building a
