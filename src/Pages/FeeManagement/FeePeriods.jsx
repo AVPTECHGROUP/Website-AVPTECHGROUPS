@@ -275,7 +275,9 @@ function PeriodModal({ isOpen, onClose, period, academicYear, onSuccess }) {
               label={FEE_PERIOD_STRINGS.LABEL_DUE_DATE}
               type="date"
               value={form.dueDate}
+              min={new Date().toISOString().split("T")[0]}
               onChange={(v) => set('dueDate', v)}
+
               required
             />
             <div>
