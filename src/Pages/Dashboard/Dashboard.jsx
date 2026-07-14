@@ -124,7 +124,7 @@ function PeopleStatCard({ label, val, active, inactive, inactivePercent, accent:
 const quickActions = [
   { label: "Review Attendance", sub: DASHBOARD_CONST.LABELS.PENDING, icon: Eye, bg: "bg-orange-50", iconColor: "text-orange-500", key: "pendingAttendanceApprovals", route: "/attendance/usersAttendance" },
   { label: "Approve Leaves", sub: DASHBOARD_CONST.LABELS.PENDING, icon: CheckSquare, bg: "bg-green-50", iconColor: "text-green-600", key: "pendingLeaveRequests", route: "/leaves" },
-  { label: "Add New User", sub: DASHBOARD_CONST.LABELS.NEW_STAFF, icon: UserPlus, bg: "bg-blue-50", iconColor: "text-blue-600", key: null, route: "/manageUsers/adduser" },
+  { label: "Add New Staff", sub: DASHBOARD_CONST.LABELS.NEW_STAFF, icon: UserPlus, bg: "bg-blue-50", iconColor: "text-blue-600", key: null, route: "/manageUsers/adduser" },
   { label: "Add New Teacher", sub: DASHBOARD_CONST.LABELS.NEW_TEACHER, icon: UserPlus, bg: "bg-blue-50", iconColor: "text-blue-600", key: null, route: "/teachers/addTeacher" },
   { label: "Admit Student", sub: DASHBOARD_CONST.LABELS.NEW_REGISTRATION, icon: GraduationCap, bg: "bg-purple-50", iconColor: "text-purple-600", key: null, route: "/students/addStudents" },
   { label: "Manage Stock", sub: DASHBOARD_CONST.LABELS.INVENTORY, icon: Package, bg: "bg-yellow-50", iconColor: "text-yellow-600", key: null, route: "/stock" },
