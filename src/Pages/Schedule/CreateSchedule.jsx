@@ -621,10 +621,10 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
                                         <><span className="sm:hidden">💾</span><span className="hidden sm:inline">{TIMETABLE_CONSTS.CREATE_SCHEDULE.BTN_SAVE_ALL}</span></>
                                     )}
                                 </button>
-                                <button onClick={() => setShowSettings(true)}
-                                    className="flex items-center gap-1.5 px-2 sm:px-3 cursor-pointer py-1.5 border border-gray-200 rounded-lg text-xs sm:text-sm text-gray-700 hover:bg-gray-50 transition">
-                                    <Settings size={14} /> <span className="hidden sm:inline">{TIMETABLE_CONSTS.CREATE_SCHEDULE.BTN_SETTINGS}</span>
-                                </button>
+                                {/*<button onClick={() => setShowSettings(true)}*/}
+                                {/*    className="flex items-center gap-1.5 px-2 sm:px-3 cursor-pointer py-1.5 border border-gray-200 rounded-lg text-xs sm:text-sm text-gray-700 hover:bg-gray-50 transition">*/}
+                                {/*    <Settings size={14} /> <span className="hidden sm:inline">{TIMETABLE_CONSTS.CREATE_SCHEDULE.BTN_SETTINGS}</span>*/}
+                                {/*</button>*/}
                                 {status === TIMETABLE_CONSTS.STATUS.DRAFT && (
                                     <button onClick={() => setShowPublishConfirm(true)}
                                         className="flex items-center gap-1.5 cursor-pointer px-2.5 sm:px-4 py-1.5 bg-blue-600 text-white rounded-lg text-xs sm:text-sm font-semibold hover:bg-blue-700 transition shadow-sm">

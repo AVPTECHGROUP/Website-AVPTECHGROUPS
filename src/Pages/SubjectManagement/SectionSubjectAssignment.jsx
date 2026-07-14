@@ -146,12 +146,18 @@ const AssignModal = ({ sectionId, allSubjects, assignedSubjectIds, onClose, onAs
 
               <div className="flex items-center justify-between gap-2 border-t border-slate-100 pt-2.5">
                 <div className="flex items-center gap-2">
-                  <div className="w-16">
+                  <div className="w-20 relative">
                     <input
-                      type="number" min={1} max={40} value={row.weeklyHours}
-                      onChange={e => setRow(i, "weeklyHours", Number(e.target.value))}
-                      className="h-7 border border-slate-200 rounded-md px-2 text-xs text-slate-700 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 w-full"
+                        type="number"
+                        min={1}
+                        max={40}
+                        value={row.weeklyHours}
+                        onChange={e => setRow(i, "weeklyHours", Number(e.target.value))}
+                        className="h-7 w-full border border-slate-200 rounded-md pl-2 pr-8 text-xs text-slate-700 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
                     />
+                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-500 pointer-events-none">
+    /hr
+  </span>
                   </div>
                   <button type="button" onClick={() => setRow(i, "isMandatory", !row.isMandatory)}
                     className={`h-7 px-2.5 rounded-md border text-[11px] font-medium ${row.isMandatory ? "bg-violet-50 border-violet-200 text-violet-700" : "bg-white border-slate-200 text-slate-400"}`}>
