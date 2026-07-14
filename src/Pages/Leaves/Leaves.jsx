@@ -13,6 +13,7 @@ import {
   SearchX,
   UserRoundXIcon,
   XIcon,
+  Download, // ── ADDED: icon for export button ──
 } from 'lucide-react';
 import LeavesReqInfoComponent from '../../Components/LeavesComponents/LeaveReqInfoComponent';
 import {
@@ -67,6 +68,7 @@ const Leaves = () => {
   const [loading, setLoading] = useState(false);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [noUserFound, setNoUserFound] = useState(null);
+  const [exporting, setExporting] = useState(false); // ── ADDED: export loading state ──
 
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -107,16 +109,16 @@ const Leaves = () => {
       try {
         const leaveTypeRes = await getListOfValues('LEAVE_TYPE');
         setListOfLeaveType(
-          leaveTypeRes
-            .filter((i) => i.isActive)
-            .map(({ id, value, label }) => ({ id, value, label }))
+            leaveTypeRes
+                .filter((i) => i.isActive)
+                .map(({ id, value, label }) => ({ id, value, label }))
         );
 
         const leaveStatusRes = await getListOfValues('LEAVE_STATUS');
         setListOfLeaveStatus(
-          leaveStatusRes
-            .filter((i) => i.isActive && i.value !== 'WITHDRAWN')
-            .map(({ id, value, label }) => ({ id, value, label }))
+            leaveStatusRes
+                .filter((i) => i.isActive && i.value !== 'WITHDRAWN')
+                .map(({ id, value, label }) => ({ id, value, label }))
         );
       } catch (e) {
         console.error('get list of values error:', e.message);
@@ -155,45 +157,45 @@ const Leaves = () => {
 
     try {
       const res = await getAllLeaveRequest(
-        page - 1,
-        rowsPerPage,
-        'id',
-        leaveStatusFilter,
-        leaveType === 'All Types' ? '' : leaveType,
-        debouncedSearch.trim(),
-        fromDateFilter,
-        toDateFilter
+          page - 1,
+          rowsPerPage,
+          'id',
+          leaveStatusFilter,
+          leaveType === 'All Types' ? '' : leaveType,
+          debouncedSearch.trim(),
+          fromDateFilter,
+          toDateFilter
       );
 
       const leaveRequests = res.data || [];
       setNoUserFound(leaveRequests.length === 0);
 
       setLeaveReq(
-        leaveRequests.map((employee) => ({
-          leaveId:        employee.id,
-          id:             employee.userId,           // applicant's user ID
-          applicantRole:  employee.userType || '',   // applicant's role — used for hierarchy check
-          name:           employee.userName || 'Unknown',
-          leaveType:      employee.leaveType,
-          fromDate:       employee.fromDate,
-          toDate:         employee.toDate,
-          totalDays:      employee.totalDays,
-          reason:         employee.reason,
-          reviewRemarks:  employee.reviewRemarks,
-          status:         employee.status,
-          empCode:        employee.employeeCode,
-          avatar:         (employee.userName || 'U')[0].toUpperCase(),
-          isHalfDay:
-            employee.isHalfDay === true ||
-            employee.isHalfDay === 'true' ||
-            employee.isHalfDay === 'TRUE',
-          image:
-            employee.imageUrl ||
-            employee.profileImage ||
-            `https://ui-avatars.com/api/?name=${encodeURIComponent(employee.userName)}&background=random`,
-          role:           employee.userType || 'N/A',
-          currEmpstatus:  employee.status,
-        }))
+          leaveRequests.map((employee) => ({
+            leaveId:        employee.id,
+            id:             employee.userId,           // applicant's user ID
+            applicantRole:  employee.userType || '',   // applicant's role — used for hierarchy check
+            name:           employee.userName || 'Unknown',
+            leaveType:      employee.leaveType,
+            fromDate:       employee.fromDate,
+            toDate:         employee.toDate,
+            totalDays:      employee.totalDays,
+            reason:         employee.reason,
+            reviewRemarks:  employee.reviewRemarks,
+            status:         employee.status,
+            empCode:        employee.employeeCode,
+            avatar:         (employee.userName || 'U')[0].toUpperCase(),
+            isHalfDay:
+                employee.isHalfDay === true ||
+                employee.isHalfDay === 'true' ||
+                employee.isHalfDay === 'TRUE',
+            image:
+                employee.imageUrl ||
+                employee.profileImage ||
+                `https://ui-avatars.com/api/?name=${encodeURIComponent(employee.userName)}&background=random`,
+            role:           employee.userType || 'N/A',
+            currEmpstatus:  employee.status,
+          }))
       );
 
       setTotalElements(res.pagination?.totalElements || 0);
@@ -222,7 +224,7 @@ const Leaves = () => {
   }
 
   const hasActiveFilters =
-    search || leaveStatusFilter || (leaveType && leaveType !== 'All Types') || fromDateFilter || toDateFilter;
+      search || leaveStatusFilter || (leaveType && leaveType !== 'All Types') || fromDateFilter || toDateFilter;
 
   const clearAllFilters = () => {
     setSearch('');
@@ -243,6 +245,96 @@ const Leaves = () => {
       applicantRole:  emp.applicantRole,
     });
   }
+
+  const getLeaveDurationText = (emp) => {
+    const days = Number(emp.totalDays || 0);
+    const isHalfDay =
+        emp.isHalfDay === true || emp.isHalfDay === 'true' || emp.isHalfDay === 'TRUE';
+
+    if (days === 0 && isHalfDay) return LEAVES_TEXT.duration.halfDay;
+    if (days === 0 && !isHalfDay) return LEAVES_TEXT.duration.weekendOrHoliday;
+
+    const totalDuration = isHalfDay ? days + 0.5 : days;
+    return `${totalDuration} ${totalDuration === 1 ? LEAVES_TEXT.duration.day : LEAVES_TEXT.duration.days}`;
+  };
+
+  // ── Export to CSV ─────────────────────────────────────────────────────────────
+  // ── ADDED: exports ALL records matching current filters (not just the loaded page) ──
+  const escapeCsvValue = (val) => {
+    const str = String(val ?? '');
+    if (/[",\n]/.test(str)) return `"${str.replace(/"/g, '""')}"`;
+    return str;
+  };
+
+  const handleExportCSV = async () => {
+    setExporting(true);
+    try {
+      const exportSize = safeTotalElements > 0 ? safeTotalElements : 1000;
+      const res = await getAllLeaveRequest(
+          0,
+          exportSize,
+          'id',
+          leaveStatusFilter,
+          leaveType === 'All Types' ? '' : leaveType,
+          debouncedSearch.trim(),
+          fromDateFilter,
+          toDateFilter
+      );
+
+      const rows = res.data || [];
+      if (rows.length === 0) {
+        toast.info('No data available to export');
+        return;
+      }
+
+      const headers = [
+        'Employee Name',
+        'Employee Code',
+        'Role',
+        'Leave Type',
+        'From Date',
+        'To Date',
+        'Duration',
+        'Status',
+        'Reason',
+        'Review Remarks',
+      ];
+
+      const csvRows = rows.map((r) => [
+        r.userName || 'Unknown',
+        r.employeeCode || '',
+        r.userType || '',
+        getLabelFromValue(listOfLeaveType, r.leaveType),
+        r.fromDate || '',
+        r.toDate || '',
+        getLeaveDurationText(r),
+        r.status || '',
+        r.reason || '',
+        r.reviewRemarks || '',
+      ]);
+
+      const csvContent = [headers, ...csvRows]
+          .map((row) => row.map(escapeCsvValue).join(','))
+          .join('\n');
+
+      const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `leave_requests_${new Date().toISOString().slice(0, 10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast.success(`Exported ${rows.length} record${rows.length > 1 ? 's' : ''} successfully`);
+    } catch (err) {
+      console.error('Error exporting leave requests:', err);
+      toast.error(err.message || 'Failed to export data');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   // ── Cards config ──────────────────────────────────────────────────────────────
   const cardsArray = [
@@ -320,18 +412,6 @@ const Leaves = () => {
     }
   };
 
-  const getLeaveDurationText = (emp) => {
-    const days = Number(emp.totalDays || 0);
-    const isHalfDay =
-      emp.isHalfDay === true || emp.isHalfDay === 'true' || emp.isHalfDay === 'TRUE';
-
-    if (days === 0 && isHalfDay) return LEAVES_TEXT.duration.halfDay;
-    if (days === 0 && !isHalfDay) return LEAVES_TEXT.duration.weekendOrHoliday;
-
-    const totalDuration = isHalfDay ? days + 0.5 : days;
-    return `${totalDuration} ${totalDuration === 1 ? LEAVES_TEXT.duration.day : LEAVES_TEXT.duration.days}`;
-  };
-
   // ── Pagination helpers ────────────────────────────────────────────────────────
   const safeTotalElements = Number(totalElements) || 0;
   const safeRowsPerPage   = Number(rowsPerPage) || 10;
@@ -353,438 +433,451 @@ const Leaves = () => {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      <div className="flex-1 flex flex-col overflow-hidden w-full">
-        <div className="flex-1 bg-gradient-to-b from-sky-50 to-slate-100 overflow-auto p-4 pt-2 lg:pt-4 sm:p-6 lg:p-8">
+      <div className="flex h-screen overflow-hidden">
+        <div className="flex-1 flex flex-col overflow-hidden w-full">
+          <div className="flex-1 bg-gradient-to-b from-sky-50 to-slate-100 overflow-auto p-4 pt-2 lg:pt-4 sm:p-6 lg:p-8">
 
-          {/* ── Page Title ── */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-5 gap-3">
-            <div>
-              <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
-                Leave Management
-              </h2>
-              <p className="text-gray-500 mt-0.5 text-sm">
-                Review and manage employee leave requests for the current academic session.
-              </p>
-            </div>
-            <button className="self-start sm:self-auto px-3 py-1.5 border bg-white border-gray-200 rounded-lg flex items-center gap-2 hover:bg-gray-50 transition-all text-sm shadow-sm whitespace-nowrap">
-              <LucideCalendarDays className="w-4 h-4 text-blue-400" />
-              <span className="text-gray-600 font-medium">{date}</span>
-            </button>
-          </div>
-
-          {/* ── Stats Cards ── */}
-          <div className="grid sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 text-sm mt-4 mb-4">
-            {statLoading
-              ? cardsArray.map((_, i) => <CardLoader key={i} />)
-              : cardsArray.map((card) => (
-                <CardComponent
-                  key={card.keyName}
-                  IconName={card.IconName}
-                  keyName={card.keyName.toUpperCase()}
-                  val={card.val}
-                  iconTxColor={card.iconTxColor}
-                  iconBgColor={card.iconBgColor}
-                />
-              ))}
-          </div>
-
-          {/* ── Filters ── */}
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm px-4 py-3 mb-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5 items-center">
-              {/* Search */}
-              <div className="sm:col-span-2 lg:col-span-2 flex items-center gap-2 border rounded-lg border-gray-200 bg-gray-50 px-3 py-2 focus-within:ring-2 focus-within:ring-blue-200 focus-within:border-blue-300 transition-all">
-                <SearchIcon className="w-4 h-4 text-gray-400 shrink-0" />
-                <input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search by employee name…"
-                  className="text-sm focus:outline-none text-gray-600 w-full bg-transparent placeholder-gray-400"
-                />
-                {search && (
-                  <button onClick={() => setSearch('')} className="text-gray-400 hover:text-gray-600">
-                    <XIcon className="w-3.5 h-3.5" />
-                  </button>
-                )}
+            {/* ── Page Title ── */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-5 gap-3">
+              <div>
+                <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
+                  Leave Management
+                </h2>
+                <p className="text-gray-500 mt-0.5 text-sm">
+                  Review and manage employee leave requests for the current academic session.
+                </p>
               </div>
-
-              {/* Leave Type */}
-              <select
-                value={leaveType}
-                onChange={(e) => setLeaveType(e.target.value)}
-                className="px-3 py-2 border border-gray-200 bg-gray-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-200 text-sm text-gray-600 w-full"
-              >
-                <option value="">All Leave Types</option>
-                <option value="All Types">All Types</option>
-                {listOfLeaveType.map((v) => (
-                  <option key={v.id} value={v.value}>{v.label}</option>
-                ))}
-              </select>
-
-              {/* Status */}
-              <select
-                value={leaveStatusFilter}
-                onChange={(e) => setLeaveStatusFilter(e.target.value)}
-                className="px-3 py-2 border border-gray-200 bg-gray-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-200 text-sm text-gray-600 w-full"
-              >
-                <option value="">All Status</option>
-                {listOfLeaveStatus.map((v) => (
-                  <option key={v.id} value={v.value}>{v.label}</option>
-                ))}
-              </select>
-
-              {/* Clear filters pill */}
-              {hasActiveFilters ? (
+              {/* ── ADDED: Export button alongside the date badge ── */}
+              <div className="flex items-center gap-2 self-start sm:self-auto">
                 <button
-                  onClick={clearAllFilters}
-                  className="flex items-center justify-center gap-1.5 px-3 py-2 bg-red-50 text-red-600 border border-red-200 rounded-lg text-sm font-medium hover:bg-red-100 transition-all"
+                    onClick={handleExportCSV}
+                    disabled={exporting || loading || safeTotalElements === 0}
+                    className="px-3 py-1.5 border bg-white border-gray-200 rounded-lg flex items-center gap-2 hover:bg-gray-50 transition-all text-sm shadow-sm whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <XIcon className="w-3.5 h-3.5" /> Clear filters
+                  <Download className="w-4 h-4 text-blue-500" />
+                  <span className="text-gray-600 font-medium">
+                  {exporting ? 'Exporting…' : 'Export'}
+                </span>
                 </button>
-              ) : (
-                <div />
-              )}
-
-              {/* Date range */}
-              <div className="sm:col-span-2 lg:col-span-2 flex items-center gap-2">
-                <input
-                  value={fromDateFilter}
-                  onChange={(e) => setFromDateFilter(e.target.value)}
-                  type="date"
-                  className="px-3 py-2 border border-gray-200 bg-gray-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-200 text-sm w-full text-gray-600"
-                />
-                <span className="text-gray-400 text-xs font-medium">to</span>
-                <input
-                  value={toDateFilter}
-                  onChange={(e) => setToDateFilter(e.target.value)}
-                  type="date"
-                  className="px-3 py-2 border border-gray-200 bg-gray-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-200 text-sm w-full text-gray-600"
-                />
+                <button className="px-3 py-1.5 border bg-white border-gray-200 rounded-lg flex items-center gap-2 hover:bg-gray-50 transition-all text-sm shadow-sm whitespace-nowrap">
+                  <LucideCalendarDays className="w-4 h-4 text-blue-400" />
+                  <span className="text-gray-600 font-medium">{date}</span>
+                </button>
               </div>
             </div>
 
-            {/* Active filter chips */}
-            {hasActiveFilters && (
-              <div className="flex flex-wrap gap-1.5 mt-2.5 pt-2.5 border-t border-gray-100">
-                {search && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full text-xs font-medium border border-blue-200">
-                    Search: {search}
-                    <button onClick={() => setSearch('')}><XIcon className="w-3 h-3" /></button>
-                  </span>
+            {/* ── Stats Cards ── */}
+            <div className="grid sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 text-sm mt-4 mb-4">
+              {statLoading
+                  ? cardsArray.map((_, i) => <CardLoader key={i} />)
+                  : cardsArray.map((card) => (
+                      <CardComponent
+                          key={card.keyName}
+                          IconName={card.IconName}
+                          keyName={card.keyName.toUpperCase()}
+                          val={card.val}
+                          iconTxColor={card.iconTxColor}
+                          iconBgColor={card.iconBgColor}
+                      />
+                  ))}
+            </div>
+
+            {/* ── Filters ── */}
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm px-4 py-3 mb-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5 items-center">
+                {/* Search */}
+                <div className="sm:col-span-2 lg:col-span-2 flex items-center gap-2 border rounded-lg border-gray-200 bg-gray-50 px-3 py-2 focus-within:ring-2 focus-within:ring-blue-200 focus-within:border-blue-300 transition-all">
+                  <SearchIcon className="w-4 h-4 text-gray-400 shrink-0" />
+                  <input
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      placeholder="Search by employee name…"
+                      className="text-sm focus:outline-none text-gray-600 w-full bg-transparent placeholder-gray-400"
+                  />
+                  {search && (
+                      <button onClick={() => setSearch('')} className="text-gray-400 hover:text-gray-600">
+                        <XIcon className="w-3.5 h-3.5" />
+                      </button>
+                  )}
+                </div>
+
+                {/* Leave Type */}
+                <select
+                    value={leaveType}
+                    onChange={(e) => setLeaveType(e.target.value)}
+                    className="px-3 py-2 border border-gray-200 bg-gray-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-200 text-sm text-gray-600 w-full"
+                >
+                  <option value="">All Leave Types</option>
+                  <option value="All Types">All Types</option>
+                  {listOfLeaveType.map((v) => (
+                      <option key={v.id} value={v.value}>{v.label}</option>
+                  ))}
+                </select>
+
+                {/* Status */}
+                <select
+                    value={leaveStatusFilter}
+                    onChange={(e) => setLeaveStatusFilter(e.target.value)}
+                    className="px-3 py-2 border border-gray-200 bg-gray-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-200 text-sm text-gray-600 w-full"
+                >
+                  <option value="">All Status</option>
+                  {listOfLeaveStatus.map((v) => (
+                      <option key={v.id} value={v.value}>{v.label}</option>
+                  ))}
+                </select>
+
+                {/* Clear filters pill */}
+                {hasActiveFilters ? (
+                    <button
+                        onClick={clearAllFilters}
+                        className="flex items-center justify-center gap-1.5 px-3 py-2 bg-red-50 text-red-600 border border-red-200 rounded-lg text-sm font-medium hover:bg-red-100 transition-all"
+                    >
+                      <XIcon className="w-3.5 h-3.5" /> Clear filters
+                    </button>
+                ) : (
+                    <div />
                 )}
-                {leaveType && leaveType !== 'All Types' && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full text-xs font-medium border border-blue-200">
-                    Type: {getLabelFromValue(listOfLeaveType, leaveType)}
-                    <button onClick={() => setLeaveType('')}><XIcon className="w-3 h-3" /></button>
-                  </span>
-                )}
-                {leaveStatusFilter && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full text-xs font-medium border border-blue-200">
-                    Status: {getLabelFromValue(listOfLeaveStatus, leaveStatusFilter)}
-                    <button onClick={() => setLeaveStatusFilter('')}><XIcon className="w-3 h-3" /></button>
-                  </span>
-                )}
-                {fromDateFilter && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full text-xs font-medium border border-blue-200">
-                    From: {fromDateFilter}
-                    <button onClick={() => setFromDateFilter('')}><XIcon className="w-3 h-3" /></button>
-                  </span>
-                )}
-                {toDateFilter && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full text-xs font-medium border border-blue-200">
-                    To: {toDateFilter}
-                    <button onClick={() => setToDateFilter('')}><XIcon className="w-3 h-3" /></button>
-                  </span>
-                )}
+
+                {/* Date range */}
+                <div className="sm:col-span-2 lg:col-span-2 flex items-center gap-2">
+                  <input
+                      value={fromDateFilter}
+                      onChange={(e) => setFromDateFilter(e.target.value)}
+                      type="date"
+                      className="px-3 py-2 border border-gray-200 bg-gray-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-200 text-sm w-full text-gray-600"
+                  />
+                  <span className="text-gray-400 text-xs font-medium">to</span>
+                  <input
+                      value={toDateFilter}
+                      onChange={(e) => setToDateFilter(e.target.value)}
+                      type="date"
+                      className="px-3 py-2 border border-gray-200 bg-gray-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-200 text-sm w-full text-gray-600"
+                  />
+                </div>
               </div>
-            )}
-          </div>
 
-          {/* ── Table ── */}
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+              {/* Active filter chips */}
+              {hasActiveFilters && (
+                  <div className="flex flex-wrap gap-1.5 mt-2.5 pt-2.5 border-t border-gray-100">
+                    {search && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full text-xs font-medium border border-blue-200">
+                    Search: {search}
+                          <button onClick={() => setSearch('')}><XIcon className="w-3 h-3" /></button>
+                  </span>
+                    )}
+                    {leaveType && leaveType !== 'All Types' && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full text-xs font-medium border border-blue-200">
+                    Type: {getLabelFromValue(listOfLeaveType, leaveType)}
+                          <button onClick={() => setLeaveType('')}><XIcon className="w-3 h-3" /></button>
+                  </span>
+                    )}
+                    {leaveStatusFilter && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full text-xs font-medium border border-blue-200">
+                    Status: {getLabelFromValue(listOfLeaveStatus, leaveStatusFilter)}
+                          <button onClick={() => setLeaveStatusFilter('')}><XIcon className="w-3 h-3" /></button>
+                  </span>
+                    )}
+                    {fromDateFilter && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full text-xs font-medium border border-blue-200">
+                    From: {fromDateFilter}
+                          <button onClick={() => setFromDateFilter('')}><XIcon className="w-3 h-3" /></button>
+                  </span>
+                    )}
+                    {toDateFilter && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full text-xs font-medium border border-blue-200">
+                    To: {toDateFilter}
+                          <button onClick={() => setToDateFilter('')}><XIcon className="w-3 h-3" /></button>
+                  </span>
+                    )}
+                  </div>
+              )}
+            </div>
 
-            {/* DESKTOP TABLE */}
-            <div className="hidden lg:block overflow-hidden rounded-t-xl">
-              <div className="overflow-y-auto overflow-x-auto max-h-[calc(100vh-380px)]">
-                <table className="w-full table-fixed">
-                  <colgroup>
-                    <col className="w-[22%]" />
-                    <col className="w-[16%]" />
-                    <col className="w-[11%]" />
-                    <col className="w-[11%]" />
-                    <col className="w-[8%]" />
-                    <col className="w-[14%]" />
-                    <col className="w-[18%]" />
-                  </colgroup>
-                  <thead className="bg-gray-50 sticky top-0 z-10 border-b border-gray-200">
+            {/* ── Table ── */}
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+
+              {/* DESKTOP TABLE */}
+              <div className="hidden lg:block overflow-hidden rounded-t-xl">
+                <div className="overflow-y-auto overflow-x-auto max-h-[calc(100vh-380px)]">
+                  <table className="w-full table-fixed">
+                    <colgroup>
+                      <col className="w-[22%]" />
+                      <col className="w-[16%]" />
+                      <col className="w-[11%]" />
+                      <col className="w-[11%]" />
+                      <col className="w-[8%]" />
+                      <col className="w-[14%]" />
+                      <col className="w-[18%]" />
+                    </colgroup>
+                    <thead className="bg-gray-50 sticky top-0 z-10 border-b border-gray-200">
                     <tr>
                       {LEAVES_TEXT.table.headers.map((h) => (
-                        <th key={h} className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                          {h}
-                        </th>
+                          <th key={h} className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                            {h}
+                          </th>
                       ))}
                     </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-100">
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-100">
                     {loading ? (
-                      <ListLoader />
+                        <ListLoader />
                     ) : error ? (
-                      <tr>
-                        <td colSpan="7" className="px-6 py-10 text-center">
-                          <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                            <UserRoundXIcon className="w-5 h-5 text-red-400" />
-                          </div>
-                          <p className="text-sm font-semibold text-gray-800 mb-1">{LEAVES_TEXT.emptyStates.errorTitle}</p>
-                          <p className="text-xs text-gray-500 mb-3">{error}</p>
-                          <button onClick={fetchLeaveRequests} className="px-4 py-1.5 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
-                            Retry
-                          </button>
-                        </td>
-                      </tr>
-                    ) : noUserFound ? (
-                      <tr>
-                        <td colSpan="7" className="px-6 py-10 text-center">
-                          <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                            <SearchX className="w-5 h-5 text-blue-400" />
-                          </div>
-                          <p className="text-sm font-semibold text-gray-600">{LEAVES_TEXT.emptyStates.noRequests}</p>
-                          {hasActiveFilters && (
-                            <button onClick={clearAllFilters} className="mt-2 text-xs text-blue-600 hover:underline">
-                              Clear all filters
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    ) : (
-                      leaveReq.map((emp) => (
-                        <tr key={emp.leaveId} className="hover:bg-slate-50 transition-colors">
-                          {/* Employee */}
-                          <td className="px-3 py-2">
-                            <div className="flex items-center gap-2.5">
-                              <div className={`w-7 h-7 rounded-full ${getAvatarColor(emp.name)} flex items-center justify-center text-white text-xs font-semibold shrink-0`}>
-                                {emp.avatar}
-                              </div>
-                              <div className="min-w-0">
-                                <p className="text-sm font-medium text-gray-900 truncate">{emp.name}</p>
-                                <p className="text-xs text-gray-400 truncate">{emp.empCode}</p>
-                              </div>
+                        <tr>
+                          <td colSpan="7" className="px-6 py-10 text-center">
+                            <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                              <UserRoundXIcon className="w-5 h-5 text-red-400" />
                             </div>
+                            <p className="text-sm font-semibold text-gray-800 mb-1">{LEAVES_TEXT.emptyStates.errorTitle}</p>
+                            <p className="text-xs text-gray-500 mb-3">{error}</p>
+                            <button onClick={fetchLeaveRequests} className="px-4 py-1.5 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
+                              Retry
+                            </button>
                           </td>
-                          {/* Leave Type */}
-                          <td className="px-3 py-2 text-xs text-gray-600 truncate">
-                            {getLabelFromValue(listOfLeaveType, emp.leaveType)}
-                          </td>
-                          {/* Dates */}
-                          <td className="px-3 py-2 text-xs text-gray-600 tabular-nums">{emp.fromDate}</td>
-                          <td className="px-3 py-2 text-xs text-gray-600 tabular-nums">{emp.toDate}</td>
-                          {/* Days */}
-                          <td className="px-2 py-1 text-[11px] font-semibold text-gray-800 tabular-nums">
-                            {getLeaveDurationText(emp)}
-                          </td>
-                          {/* Status */}
-                          <td className="px-3 py-2">
-                            <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${statusStyles[emp.currEmpstatus] ?? 'bg-gray-100 text-gray-700'}`}>
-                              {emp.currEmpstatus}
-                            </span>
-                          </td>
-                          {/* Action — hierarchy + self-approval guard applied here */}
-                          <td className="px-3 py-2">
-                            {showApproveReject(emp) ? (
-                              <div className="flex gap-1.5">
-                                <button
-                                  onClick={() => handleViewClick(emp)}
-                                  className="px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-md text-xs font-medium hover:bg-emerald-100 transition-colors border border-emerald-200"
-                                >
-                                  {LEAVES_TEXT.buttons.approve}
+                        </tr>
+                    ) : noUserFound ? (
+                        <tr>
+                          <td colSpan="7" className="px-6 py-10 text-center">
+                            <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                              <SearchX className="w-5 h-5 text-blue-400" />
+                            </div>
+                            <p className="text-sm font-semibold text-gray-600">{LEAVES_TEXT.emptyStates.noRequests}</p>
+                            {hasActiveFilters && (
+                                <button onClick={clearAllFilters} className="mt-2 text-xs text-blue-600 hover:underline">
+                                  Clear all filters
                                 </button>
-                                <button
-                                  onClick={() => handleViewClick(emp)}
-                                  className="px-2.5 py-1 bg-red-50 text-red-600 rounded-md text-xs font-medium hover:bg-red-100 transition-colors border border-red-200"
-                                >
-                                  {LEAVES_TEXT.buttons.reject}
-                                </button>
-                              </div>
-                            ) : (
-                              <button
-                                onClick={() => handleViewClick(emp)}
-                                className="px-2.5 py-1 bg-blue-50 text-blue-700 rounded-md text-xs font-medium hover:bg-blue-100 transition-colors border border-blue-200"
-                              >
-                                {LEAVES_TEXT.buttons.view}
-                              </button>
                             )}
                           </td>
                         </tr>
-                      ))
+                    ) : (
+                        leaveReq.map((emp) => (
+                            <tr key={emp.leaveId} className="hover:bg-slate-50 transition-colors">
+                              {/* Employee */}
+                              <td className="px-3 py-2">
+                                <div className="flex items-center gap-2.5">
+                                  <div className={`w-7 h-7 rounded-full ${getAvatarColor(emp.name)} flex items-center justify-center text-white text-xs font-semibold shrink-0`}>
+                                    {emp.avatar}
+                                  </div>
+                                  <div className="min-w-0">
+                                    <p className="text-sm font-medium text-gray-900 truncate">{emp.name}</p>
+                                    <p className="text-xs text-gray-400 truncate">{emp.empCode}</p>
+                                  </div>
+                                </div>
+                              </td>
+                              {/* Leave Type */}
+                              <td className="px-3 py-2 text-xs text-gray-600 truncate">
+                                {getLabelFromValue(listOfLeaveType, emp.leaveType)}
+                              </td>
+                              {/* Dates */}
+                              <td className="px-3 py-2 text-xs text-gray-600 tabular-nums">{emp.fromDate}</td>
+                              <td className="px-3 py-2 text-xs text-gray-600 tabular-nums">{emp.toDate}</td>
+                              {/* Days */}
+                              <td className="px-2 py-1 text-[11px] font-semibold text-gray-800 tabular-nums">
+                                {getLeaveDurationText(emp)}
+                              </td>
+                              {/* Status */}
+                              <td className="px-3 py-2">
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${statusStyles[emp.currEmpstatus] ?? 'bg-gray-100 text-gray-700'}`}>
+                              {emp.currEmpstatus}
+                            </span>
+                              </td>
+                              {/* Action — hierarchy + self-approval guard applied here */}
+                              <td className="px-3 py-2">
+                                {showApproveReject(emp) ? (
+                                    <div className="flex gap-1.5">
+                                      <button
+                                          onClick={() => handleViewClick(emp)}
+                                          className="px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-md text-xs font-medium hover:bg-emerald-100 transition-colors border border-emerald-200"
+                                      >
+                                        {LEAVES_TEXT.buttons.approve}
+                                      </button>
+                                      <button
+                                          onClick={() => handleViewClick(emp)}
+                                          className="px-2.5 py-1 bg-red-50 text-red-600 rounded-md text-xs font-medium hover:bg-red-100 transition-colors border border-red-200"
+                                      >
+                                        {LEAVES_TEXT.buttons.reject}
+                                      </button>
+                                    </div>
+                                ) : (
+                                    <button
+                                        onClick={() => handleViewClick(emp)}
+                                        className="px-2.5 py-1 bg-blue-50 text-blue-700 rounded-md text-xs font-medium hover:bg-blue-100 transition-colors border border-blue-200"
+                                    >
+                                      {LEAVES_TEXT.buttons.view}
+                                    </button>
+                                )}
+                              </td>
+                            </tr>
+                        ))
                     )}
-                  </tbody>
-                </table>
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
 
-            {/* MOBILE CARDS */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:hidden p-3">
-              {loading ? (
-                <div className="col-span-full text-center py-8">
-                  <div className="animate-spin rounded-full h-7 w-7 border-b-2 border-blue-600 mx-auto mb-2" />
-                  <span className="text-sm text-gray-500">Loading requests…</span>
-                </div>
-              ) : error ? (
-                <div className="col-span-full flex flex-col items-center py-10 text-center">
-                  <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center mb-3">
-                    <UserRoundXIcon className="w-5 h-5 text-red-500" />
-                  </div>
-                  <p className="text-sm font-semibold text-gray-800 mb-1">Error Loading Requests</p>
-                  <p className="text-xs text-gray-500 mb-3">{error}</p>
-                  <button onClick={fetchLeaveRequests} className="px-4 py-1.5 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
-                    {LEAVES_TEXT.buttons.retry}
-                  </button>
-                </div>
-              ) : noUserFound ? (
-                <div className="col-span-full text-center py-10">
-                  <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                    <SearchX className="w-5 h-5 text-blue-500" />
-                  </div>
-                  <p className="text-sm font-semibold text-gray-600">No requests found</p>
-                </div>
-              ) : (
-                leaveReq.map((emp) => (
-                  <div key={emp.leaveId} className="bg-white border border-gray-200 rounded-xl p-3.5 shadow-sm hover:shadow-md transition-shadow">
-                    <div className="flex items-center gap-3 mb-3 pb-3 border-b border-gray-100">
-                      <div className={`w-9 h-9 rounded-full ${getAvatarColor(emp.name)} flex items-center justify-center text-white text-sm font-semibold`}>
-                        {emp.avatar}
+              {/* MOBILE CARDS */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:hidden p-3">
+                {loading ? (
+                    <div className="col-span-full text-center py-8">
+                      <div className="animate-spin rounded-full h-7 w-7 border-b-2 border-blue-600 mx-auto mb-2" />
+                      <span className="text-sm text-gray-500">Loading requests…</span>
+                    </div>
+                ) : error ? (
+                    <div className="col-span-full flex flex-col items-center py-10 text-center">
+                      <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center mb-3">
+                        <UserRoundXIcon className="w-5 h-5 text-red-500" />
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-gray-900 text-sm truncate">{emp.name}</p>
-                        <p className="text-xs text-gray-400">{emp.empCode}</p>
+                      <p className="text-sm font-semibold text-gray-800 mb-1">Error Loading Requests</p>
+                      <p className="text-xs text-gray-500 mb-3">{error}</p>
+                      <button onClick={fetchLeaveRequests} className="px-4 py-1.5 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
+                        {LEAVES_TEXT.buttons.retry}
+                      </button>
+                    </div>
+                ) : noUserFound ? (
+                    <div className="col-span-full text-center py-10">
+                      <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                        <SearchX className="w-5 h-5 text-blue-500" />
                       </div>
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold shrink-0 ${statusStyles[emp.currEmpstatus] ?? ''}`}>
+                      <p className="text-sm font-semibold text-gray-600">No requests found</p>
+                    </div>
+                ) : (
+                    leaveReq.map((emp) => (
+                        <div key={emp.leaveId} className="bg-white border border-gray-200 rounded-xl p-3.5 shadow-sm hover:shadow-md transition-shadow">
+                          <div className="flex items-center gap-3 mb-3 pb-3 border-b border-gray-100">
+                            <div className={`w-9 h-9 rounded-full ${getAvatarColor(emp.name)} flex items-center justify-center text-white text-sm font-semibold`}>
+                              {emp.avatar}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold text-gray-900 text-sm truncate">{emp.name}</p>
+                              <p className="text-xs text-gray-400">{emp.empCode}</p>
+                            </div>
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-semibold shrink-0 ${statusStyles[emp.currEmpstatus] ?? ''}`}>
                         {emp.currEmpstatus}
                       </span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 mb-3 text-xs">
-                      <div>
-                        <p className="text-gray-400 mb-0.5">Leave Type</p>
-                        <p className="font-medium text-gray-800">{getLabelFromValue(listOfLeaveType, emp.leaveType)}</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-400 mb-0.5">Duration</p>
-                        <p className="font-medium text-gray-800">{getLeaveDurationText(emp)}</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-400 mb-0.5">From</p>
-                        <p className="text-gray-700">{emp.fromDate}</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-400 mb-0.5">To</p>
-                        <p className="text-gray-700">{emp.toDate}</p>
-                      </div>
-                    </div>
-                    {emp.reason && (
-                      <p className="text-xs text-gray-500 mb-3 line-clamp-2">{emp.reason}</p>
-                    )}
-                    {/* Action — hierarchy + self-approval guard applied here */}
-                    <div className="w-full">
-                      {showApproveReject(emp) ? (
-                        <div className="flex gap-2 w-full">
-                          <button
-                            onClick={() => handleViewClick(emp)}
-                            className="flex-1 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-lg text-xs font-medium hover:bg-emerald-100 transition-colors border border-emerald-200"
-                          >
-                            {LEAVES_TEXT.buttons.approve}
-                          </button>
-                          <button
-                            onClick={() => handleViewClick(emp)}
-                            className="flex-1 px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-xs font-medium hover:bg-red-100 transition-colors border border-red-200"
-                          >
-                            {LEAVES_TEXT.buttons.reject}
-                          </button>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2 mb-3 text-xs">
+                            <div>
+                              <p className="text-gray-400 mb-0.5">Leave Type</p>
+                              <p className="font-medium text-gray-800">{getLabelFromValue(listOfLeaveType, emp.leaveType)}</p>
+                            </div>
+                            <div>
+                              <p className="text-gray-400 mb-0.5">Duration</p>
+                              <p className="font-medium text-gray-800">{getLeaveDurationText(emp)}</p>
+                            </div>
+                            <div>
+                              <p className="text-gray-400 mb-0.5">From</p>
+                              <p className="text-gray-700">{emp.fromDate}</p>
+                            </div>
+                            <div>
+                              <p className="text-gray-400 mb-0.5">To</p>
+                              <p className="text-gray-700">{emp.toDate}</p>
+                            </div>
+                          </div>
+                          {emp.reason && (
+                              <p className="text-xs text-gray-500 mb-3 line-clamp-2">{emp.reason}</p>
+                          )}
+                          {/* Action — hierarchy + self-approval guard applied here */}
+                          <div className="w-full">
+                            {showApproveReject(emp) ? (
+                                <div className="flex gap-2 w-full">
+                                  <button
+                                      onClick={() => handleViewClick(emp)}
+                                      className="flex-1 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-lg text-xs font-medium hover:bg-emerald-100 transition-colors border border-emerald-200"
+                                  >
+                                    {LEAVES_TEXT.buttons.approve}
+                                  </button>
+                                  <button
+                                      onClick={() => handleViewClick(emp)}
+                                      className="flex-1 px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-xs font-medium hover:bg-red-100 transition-colors border border-red-200"
+                                  >
+                                    {LEAVES_TEXT.buttons.reject}
+                                  </button>
+                                </div>
+                            ) : (
+                                <button
+                                    onClick={() => handleViewClick(emp)}
+                                    className="w-full px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-xs font-medium hover:bg-blue-100 transition-colors border border-blue-200"
+                                >
+                                  {LEAVES_TEXT.buttons.viewDetails}
+                                </button>
+                            )}
+                          </div>
                         </div>
-                      ) : (
-                        <button
-                          onClick={() => handleViewClick(emp)}
-                          className="w-full px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-xs font-medium hover:bg-blue-100 transition-colors border border-blue-200"
-                        >
-                          {LEAVES_TEXT.buttons.viewDetails}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-
-            {/* ── Pagination ── */}
-            <div className="px-4 py-3 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-3">
-              <div className="flex items-center gap-4 text-sm text-gray-500">
-                <span>
-                  {safeTotalElements > 0
-                    ? `${showingFrom}–${showingTo} of ${safeTotalElements}`
-                    : '0 results'}
-                </span>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs">Rows:</span>
-                  <select
-                    value={rowsPerPage}
-                    onChange={(e) => { setRowsPerPage(Number(e.target.value)); setPage(1); }}
-                    className="px-2 py-1 border border-gray-200 rounded text-xs focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
-                  >
-                    <option value={10}>10</option>
-                    <option value={25}>25</option>
-                    <option value={50}>50</option>
-                  </select>
-                </div>
+                    ))
+                )}
               </div>
 
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={page === 1 || loading}
-                  className="p-1.5 text-gray-500 hover:bg-gray-100 rounded disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-
-                {pageNumbers().map((pNum, idx, arr) => (
-                  <React.Fragment key={pNum}>
-                    {idx > 0 && arr[idx - 1] !== pNum - 1 && (
-                      <span className="px-1 text-gray-400 text-xs">…</span>
-                    )}
-                    <button
-                      onClick={() => setPage(pNum)}
-                      className={`w-7 h-7 text-xs rounded font-medium transition-all ${
-                        page === pNum ? 'bg-blue-500 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-100'
-                      }`}
+              {/* ── Pagination ── */}
+              <div className="px-4 py-3 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="flex items-center gap-4 text-sm text-gray-500">
+                <span>
+                  {safeTotalElements > 0
+                      ? `${showingFrom}–${showingTo} of ${safeTotalElements}`
+                      : '0 results'}
+                </span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs">Rows:</span>
+                    <select
+                        value={rowsPerPage}
+                        onChange={(e) => { setRowsPerPage(Number(e.target.value)); setPage(1); }}
+                        className="px-2 py-1 border border-gray-200 rounded text-xs focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
                     >
-                      {pNum}
-                    </button>
-                  </React.Fragment>
-                ))}
+                      <option value={10}>10</option>
+                      <option value={25}>25</option>
+                      <option value={50}>50</option>
+                    </select>
+                  </div>
+                </div>
 
-                <button
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={page === totalPages || loading || totalPages === 0}
-                  className="p-1.5 text-gray-500 hover:bg-gray-100 rounded disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      disabled={page === 1 || loading}
+                      className="p-1.5 text-gray-500 hover:bg-gray-100 rounded disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+
+                  {pageNumbers().map((pNum, idx, arr) => (
+                      <React.Fragment key={pNum}>
+                        {idx > 0 && arr[idx - 1] !== pNum - 1 && (
+                            <span className="px-1 text-gray-400 text-xs">…</span>
+                        )}
+                        <button
+                            onClick={() => setPage(pNum)}
+                            className={`w-7 h-7 text-xs rounded font-medium transition-all ${
+                                page === pNum ? 'bg-blue-500 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-100'
+                            }`}
+                        >
+                          {pNum}
+                        </button>
+                      </React.Fragment>
+                  ))}
+
+                  <button
+                      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                      disabled={page === totalPages || loading || totalPages === 0}
+                      className="p-1.5 text-gray-500 hover:bg-gray-100 rounded disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Popup */}
-      <LeavesReqInfoComponent
-        isOpen={isPopupOpen}
-        onClose={handleClosePopup}
-        userData={selectedUser}
-        handleLeaveApprove={handleLeaveApproveReq}
-        handleLeaveReject={handleLeaveRejectReq}
-        setRemarks={setRemarksVal}
-        remarks={remarkVal}
-        listLeavetype={listOfLeaveType}
-      />
-    </div>
+        {/* Popup */}
+        <LeavesReqInfoComponent
+            isOpen={isPopupOpen}
+            onClose={handleClosePopup}
+            userData={selectedUser}
+            handleLeaveApprove={handleLeaveApproveReq}
+            handleLeaveReject={handleLeaveRejectReq}
+            setRemarks={setRemarksVal}
+            remarks={remarkVal}
+            listLeavetype={listOfLeaveType}
+        />
+      </div>
   );
 };
 
