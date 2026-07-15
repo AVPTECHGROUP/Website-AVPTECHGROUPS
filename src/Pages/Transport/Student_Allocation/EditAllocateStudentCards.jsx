@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef } from "react";
 import { X, Pencil, Save, Loader2, Info, ChevronDown, Search, X as XIcon } from "lucide-react";
-import { updateTransportAllocation, getActiveRoutes, getTransportFeePlans } from "../../../Api/Transport/TransportAPI";
+import { toast } from "react-toastify";
+import { updateTransportAllocation, getActiveRoutes, getTransportAllocationById } from "../../../Api/Transport/TransportAPI";
 import {
   PICKUP_TYPES_OPTIONS,
   SHARED_INPUT_STYLES,
   VALIDATION_MESSAGES,
   ALLOCATION_UI_TEXT
-} from "../../../Constants/StringConstants/TransportConstants"; // Adjust import path as needed
+} from "../../../Constants/StringConstants/TransportConstants";
 
 // ─── Styles ───────────────────────────────────────────────────────
 const disCls = "opacity-50 cursor-not-allowed bg-gray-50";
@@ -108,7 +109,7 @@ function SelectInput({ value, onChange, options = [], placeholder = ALLOCATION_U
 
       {open && !isDisabled && (
         <div
-          className="absolute left-0 right-0 z-9999 mt-1.5 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden"
+          className="absolute left-0 right-0 z-[9999] mt-1.5 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden"
           style={{ animation: "dropIn 0.14s ease-out forwards", transformOrigin: "top" }}
         >
           <style>{`
@@ -181,61 +182,79 @@ function SelectInput({ value, onChange, options = [], placeholder = ALLOCATION_U
 
 // ─── Main Component ───────────────────────────────────────────────
 export default function EditAllocateStudentCards({ isOpen, onClose, onUpdate, editData }) {
-  const [form, setForm] = useState({});
+  const [form, setForm] = useState({
+    studentId: "",
+    routeId: "",
+    stopId: "",
+    pickupDropType: "BOTH",
+    effectiveFrom: "",
+    effectiveTo: "",
+    monthlyFee: "",
+    overrideReason: "",
+    remarks: ""
+  });
+
   const [saving, setSaving] = useState(false);
+  const [loadingData, setLoadingData] = useState(false);
   const [errors, setErrors] = useState({});
-  const [apiError, setApiError] = useState("");
-
   const [routes, setRoutes] = useState([]);
-  const [feePlans, setFeePlans] = useState([]);
-  const [stops, setStops] = useState([]); // carries monthlyFee too
-
+  const [stops, setStops] = useState([]);
   const [loadingRoutes, setLoadingRoutes] = useState(false);
-  const [loadingFeePlans, setLoadingFeePlans] = useState(false);
 
-  // Populate + fetch on open
+  // Deep structural configuration fetch on modal mounting open
   useEffect(() => {
-    if (!isOpen || !editData) return;
+    if (!isOpen || !editData?.id) return;
     setErrors({});
-    setApiError("");
-    setForm({
-      studentId: editData.studentId ?? "",
-      routeId: editData.routeId ?? "",
-      stopId: editData.stopId ?? "",
-      pickupDropType: editData.pickupDropType ?? "BOTH",
-      effectiveFrom: editData.effectiveFrom ?? "",
-      effectiveTo: editData.effectiveTo ?? "",
-      monthlyFee: editData.monthlyFee != null ? String(editData.monthlyFee) : "",
-      feePlanId: editData.feePlanId ?? "",
-      remarks: editData.remarks ?? "",
-    });
+    setStops([]);
 
-    const fetchDropdowns = async () => {
+    const loadFreshAllocationDetails = async () => {
+      setLoadingData(true);
       setLoadingRoutes(true);
-      setLoadingFeePlans(true);
 
-      const [routeRes, feeRes] = await Promise.allSettled([
-        getActiveRoutes(),
-        getTransportFeePlans(),
-      ]);
+      try {
+        const [allocationResponse, activeRoutesResponse] = await Promise.all([
+          getTransportAllocationById(editData.id),
+          getActiveRoutes()
+        ]);
 
-      if (routeRes.status === "fulfilled") setRoutes(routeRes.value || []);
-      setLoadingRoutes(false);
+        const fullDetail = allocationResponse?.data || allocationResponse || {};
+        const availableRoutes = activeRoutesResponse || [];
+        setRoutes(availableRoutes);
 
-      if (feeRes.status === "fulfilled") {
-        setFeePlans((feeRes.value || []).map((f) => ({
-          value: f.id,
-          label: `${f.planName} — ₹${f.feeAmount} / ${f.frequency}`,
-          feeAmount: f.feeAmount,
-        })));
+        // Map through structural variable fallbacks to lock matching response values
+        let initializedFee = "";
+        if (fullDetail.overrideFeeAmount !== null && fullDetail.overrideFeeAmount !== undefined) {
+          initializedFee = String(fullDetail.overrideFeeAmount);
+        } else if (fullDetail.resolvedFeeAmount !== null && fullDetail.resolvedFeeAmount !== undefined) {
+          initializedFee = String(fullDetail.resolvedFeeAmount);
+        } else if (fullDetail.feeAmount !== null && fullDetail.feeAmount !== undefined) {
+          initializedFee = String(fullDetail.feeAmount);
+        }
+
+        setForm({
+          studentId: fullDetail.studentId ?? "",
+          routeId: fullDetail.routeId ?? "",
+          stopId: fullDetail.stopId ?? "",
+          pickupDropType: fullDetail.pickupDropType ?? "BOTH",
+          effectiveFrom: fullDetail.effectiveFrom ?? "",
+          effectiveTo: fullDetail.effectiveTo ?? "",
+          monthlyFee: initializedFee,
+          overrideReason: fullDetail.overrideReason ?? "",
+          remarks: fullDetail.remarks ?? "",
+        });
+
+      } catch (err) {
+        toast.error(err?.message || "Failed to load comprehensive allocation records.");
+      } finally {
+        setLoadingData(false);
+        setLoadingRoutes(false);
       }
-      setLoadingFeePlans(false);
     };
 
-    fetchDropdowns();
+    loadFreshAllocationDetails();
   }, [isOpen, editData]);
 
-  // Derive stops (with monthlyFee) when route changes
+  // Derive stops when route structural index values pivot
   useEffect(() => {
     if (!form.routeId || routes.length === 0) return;
     const route = routes.find((r) => String(r.id) === String(form.routeId));
@@ -259,31 +278,25 @@ export default function EditAllocateStudentCards({ isOpen, onClose, onUpdate, ed
       if (k === "routeId") {
         next.stopId = "";
         next.monthlyFee = "";
-        next.feePlanId = "";
+        next.overrideReason = "";
       }
       if (k === "stopId") {
         const stop = stops.find((s) => String(s.value) === String(v));
         next.monthlyFee = stop?.monthlyFee != null ? String(stop.monthlyFee) : "";
-        next.feePlanId = "";
+        next.overrideReason = "";
       }
       return next;
     });
     setErrors((p) => ({ ...p, [k]: "" }));
-    setApiError("");
   };
 
-  const selectFeePlan = (planId) => {
-    const plan = feePlans.find((f) => String(f.value) === String(planId));
-    setForm((p) => ({
-      ...p,
-      feePlanId: planId,
-      monthlyFee: plan?.feeAmount != null ? String(plan.feeAmount) : p.monthlyFee,
-    }));
-    setErrors((p) => ({ ...p, monthlyFee: "", feePlanId: "" }));
-    setApiError("");
-  };
+  // Determine deviation state against core reference pricing structure
+  const currentStopObj = stops.find((s) => String(s.value) === String(form.stopId));
+  const baselineStopFee = currentStopObj?.monthlyFee != null
+    ? String(currentStopObj.monthlyFee)
+    : (editData?.feeAmount != null ? String(editData.feeAmount) : "");
 
-  const showFeePlanDropdown = form.monthlyFee !== "" && Number(form.monthlyFee) === 0;
+  const isFeeOverridden = form.stopId && form.monthlyFee !== "" && Number(form.monthlyFee) !== Number(baselineStopFee);
 
   const validate = () => {
     const e = {};
@@ -291,7 +304,10 @@ export default function EditAllocateStudentCards({ isOpen, onClose, onUpdate, ed
     if (!form.stopId) e.stopId = VALIDATION_MESSAGES.REQ_STOP;
     if (!form.pickupDropType) e.pickupDropType = VALIDATION_MESSAGES.REQ_PICKUP_DROP;
     if (!form.effectiveFrom) e.effectiveFrom = VALIDATION_MESSAGES.REQ_EFFECTIVE_FROM;
-    if (showFeePlanDropdown && !form.feePlanId) e.feePlanId = VALIDATION_MESSAGES.REQ_FEE_PLAN;
+
+    if (isFeeOverridden && !form.overrideReason.trim()) {
+      e.overrideReason = "Override reason is required when the fee amount is changed.";
+    }
 
     if (form.effectiveFrom && form.effectiveTo) {
       const fromDate = new Date(form.effectiveFrom).setHours(0, 0, 0, 0);
@@ -308,7 +324,6 @@ export default function EditAllocateStudentCards({ isOpen, onClose, onUpdate, ed
   const handleSubmit = async () => {
     if (!validate()) return;
     setSaving(true);
-    setApiError("");
     try {
       await updateTransportAllocation(editData.id, {
         studentId: Number(form.studentId),
@@ -317,14 +332,15 @@ export default function EditAllocateStudentCards({ isOpen, onClose, onUpdate, ed
         pickupDropType: form.pickupDropType,
         effectiveFrom: form.effectiveFrom,
         effectiveTo: form.effectiveTo || null,
-        monthlyFee: form.monthlyFee !== "" ? Number(form.monthlyFee) : null,
-        feePlanId: form.feePlanId ? Number(form.feePlanId) : null,
+        overrideFeeAmount: form.monthlyFee !== "" ? Number(form.monthlyFee) : null,
+        overrideReason: isFeeOverridden ? form.overrideReason : null,
         remarks: form.remarks || null,
       });
+      toast.success("Transport allocation updated successfully!");
       onUpdate?.();
       onClose();
     } catch (err) {
-      setApiError(err?.message || VALIDATION_MESSAGES.ERR_GENERIC);
+      toast.error(err?.message || VALIDATION_MESSAGES.ERR_GENERIC);
     } finally {
       setSaving(false);
     }
@@ -372,96 +388,99 @@ export default function EditAllocateStudentCards({ isOpen, onClose, onUpdate, ed
             <span>{ALLOCATION_UI_TEXT.INFO_BANNER_EDIT}</span>
           </div>
 
-          {apiError && (
-            <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-xs text-red-700">
-              <Info className="w-4 h-4 shrink-0 mt-0.5 text-red-500" />
-              <span>{apiError}</span>
+          {loadingData ? (
+            <div className="flex flex-col items-center justify-center py-12 gap-2 text-gray-400">
+              <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
+              <span className="text-xs font-medium">Fetching record details...</span>
             </div>
-          )}
-
-          {/* Student (read-only) | Route */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label={ALLOCATION_UI_TEXT.LBL_STUDENT}>
-              <div className={`${SHARED_INPUT_STYLES.base} ${disCls} flex flex-col justify-center min-h-10.5`}>
-                <span className="font-semibold text-gray-700">{editData.studentName}</span>
-                {editData.admissionNumber && (
-                  <span className="text-xs text-gray-400 mt-0.5">{ALLOCATION_UI_TEXT.LBL_ADM} {editData.admissionNumber}</span>
-                )}
+          ) : (
+            <>
+              {/* Student (read-only) | Route */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Field label={ALLOCATION_UI_TEXT.LBL_STUDENT}>
+                  <div className={`${SHARED_INPUT_STYLES.base} ${disCls} flex flex-col justify-center min-h-10.5`}>
+                    <span className="font-semibold text-gray-700">{editData.studentName}</span>
+                    {editData.admissionNumber && (
+                      <span className="text-xs text-gray-400 mt-0.5">{ALLOCATION_UI_TEXT.LBL_ADM} {editData.admissionNumber}</span>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-400 mt-0.5">{ALLOCATION_UI_TEXT.LBL_READONLY_STUDENT}</p>
+                </Field>
+                <Field label={ALLOCATION_UI_TEXT.LBL_ROUTE} required>
+                  <SelectInput value={form.routeId} onChange={(e) => set("routeId", e.target.value)}
+                    options={routeOptions} placeholder={ALLOCATION_UI_TEXT.PH_ROUTE}
+                    hasError={!!errors.routeId} loading={loadingRoutes} />
+                  {errors.routeId && <p className="text-xs text-red-500 mt-0.5">{errors.routeId}</p>}
+                </Field>
               </div>
-              <p className="text-xs text-gray-400 mt-0.5">{ALLOCATION_UI_TEXT.LBL_READONLY_STUDENT}</p>
-            </Field>
-            <Field label={ALLOCATION_UI_TEXT.LBL_ROUTE} required>
-              <SelectInput value={form.routeId} onChange={(e) => set("routeId", e.target.value)}
-                options={routeOptions} placeholder={ALLOCATION_UI_TEXT.PH_ROUTE}
-                hasError={!!errors.routeId} loading={loadingRoutes} />
-              {errors.routeId && <p className="text-xs text-red-500 mt-0.5">{errors.routeId}</p>}
-            </Field>
-          </div>
 
-          {/* Stop | Pickup/Drop Type */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label={ALLOCATION_UI_TEXT.LBL_STOP} required>
-              <SelectInput value={form.stopId} onChange={(e) => set("stopId", e.target.value)}
-                options={stops}
-                placeholder={form.routeId ? ALLOCATION_UI_TEXT.PH_STOP : ALLOCATION_UI_TEXT.PH_STOP_DISABLED}
-                hasError={!!errors.stopId} disabled={!form.routeId} />
-              {errors.stopId && <p className="text-xs text-red-500 mt-0.5">{errors.stopId}</p>}
-            </Field>
-            <Field label={ALLOCATION_UI_TEXT.LBL_PICKUP_DROP} required>
-              <SelectInput value={form.pickupDropType} onChange={(e) => set("pickupDropType", e.target.value)}
-                options={PICKUP_TYPES_OPTIONS} placeholder={ALLOCATION_UI_TEXT.PH_TYPE}
-                hasError={!!errors.pickupDropType} />
-              {errors.pickupDropType && <p className="text-xs text-red-500 mt-0.5">{errors.pickupDropType}</p>}
-            </Field>
-          </div>
+              {/* Stop | Pickup/Drop Type */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Field label={ALLOCATION_UI_TEXT.LBL_STOP} required>
+                  <SelectInput value={form.stopId} onChange={(e) => set("stopId", e.target.value)}
+                    options={stops}
+                    placeholder={form.routeId ? ALLOCATION_UI_TEXT.PH_STOP : ALLOCATION_UI_TEXT.PH_STOP_DISABLED}
+                    hasError={!!errors.stopId} disabled={!form.routeId} />
+                  {errors.stopId && <p className="text-xs text-red-500 mt-0.5">{errors.stopId}</p>}
+                </Field>
+                <Field label={ALLOCATION_UI_TEXT.LBL_PICKUP_DROP} required>
+                  <SelectInput value={form.pickupDropType} onChange={(e) => set("pickupDropType", e.target.value)}
+                    options={PICKUP_TYPES_OPTIONS} placeholder={ALLOCATION_UI_TEXT.PH_TYPE}
+                    hasError={!!errors.pickupDropType} />
+                  {errors.pickupDropType && <p className="text-xs text-red-500 mt-0.5">{errors.pickupDropType}</p>}
+                </Field>
+              </div>
 
-          {/* Effective From | Effective To */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label={ALLOCATION_UI_TEXT.LBL_EFFECTIVE_FROM} required>
-              <input type="date" value={form.effectiveFrom}
-                onChange={(e) => set("effectiveFrom", e.target.value)}
-                className={`${SHARED_INPUT_STYLES.base} ${errors.effectiveFrom ? SHARED_INPUT_STYLES.errCls : ""}`} />
-              {errors.effectiveFrom && <p className="text-xs text-red-500 mt-0.5">{errors.effectiveFrom}</p>}
-            </Field>
-            <Field label={ALLOCATION_UI_TEXT.LBL_EFFECTIVE_TO}>
-              <input type="date" value={form.effectiveTo ?? ""}
-                onChange={(e) => set("effectiveTo", e.target.value)}
-                className={`${SHARED_INPUT_STYLES.base} ${errors.effectiveTo ? SHARED_INPUT_STYLES.errCls : ""}`} />
-              {errors.effectiveTo && <p className="text-xs text-red-500 mt-0.5">{errors.effectiveTo}</p>}
-            </Field>
-          </div>
+              {/* Effective From | Effective To */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Field label={ALLOCATION_UI_TEXT.LBL_EFFECTIVE_FROM} required>
+                  <input type="date" value={form.effectiveFrom}
+                    onChange={(e) => set("effectiveFrom", e.target.value)}
+                    className={`${SHARED_INPUT_STYLES.base} ${errors.effectiveFrom ? SHARED_INPUT_STYLES.errCls : ""}`} />
+                  {errors.effectiveFrom && <p className="text-xs text-red-500 mt-0.5">{errors.effectiveFrom}</p>}
+                </Field>
+                <Field label={ALLOCATION_UI_TEXT.LBL_EFFECTIVE_TO}>
+                  <input type="date" value={form.effectiveTo ?? ""}
+                    onChange={(e) => set("effectiveTo", e.target.value)}
+                    className={`${SHARED_INPUT_STYLES.base} ${errors.effectiveTo ? SHARED_INPUT_STYLES.errCls : ""}`} />
+                  {errors.effectiveTo && <p className="text-xs text-red-500 mt-0.5">{errors.effectiveTo}</p>}
+                </Field>
+              </div>
 
-          {/* Monthly Fee (editable, auto from stop) | Remarks */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label={ALLOCATION_UI_TEXT.LBL_MONTHLY_FEE || "Monthly Fee"}>
-              <input
-                type="number"
-                min="0"
-                value={form.monthlyFee ?? ""}
-                onChange={(e) => set("monthlyFee", e.target.value)}
-                placeholder={form.stopId ? "Auto-filled from stop" : "Select a stop first"}
-                className={SHARED_INPUT_STYLES.base}
-              />
-              <p className="text-[11px] text-gray-400 mt-0.5">
-                Set to 0 to pick a fee plan instead.
-              </p>
-            </Field>
-            <Field label={ALLOCATION_UI_TEXT.LBL_REMARKS}>
-              <input type="text" placeholder={ALLOCATION_UI_TEXT.PH_OPTIONAL} value={form.remarks ?? ""}
-                onChange={(e) => set("remarks", e.target.value)} className={SHARED_INPUT_STYLES.base} />
-            </Field>
-          </div>
+              {/* Monthly Fee (editable, auto from stop) | Remarks */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Field label={ALLOCATION_UI_TEXT.LBL_MONTHLY_FEE || "Monthly Fee"}>
+                  <input
+                    type="number"
+                    min="0"
+                    value={form.monthlyFee ?? ""}
+                    onChange={(e) => set("monthlyFee", e.target.value)}
+                    placeholder={form.stopId ? "Auto-filled from stop" : "Select a stop first"}
+                    className={SHARED_INPUT_STYLES.base}
+                  />
+                </Field>
+                <Field label={ALLOCATION_UI_TEXT.LBL_REMARKS}>
+                  <input type="text" placeholder={ALLOCATION_UI_TEXT.PH_OPTIONAL} value={form.remarks ?? ""}
+                    onChange={(e) => set("remarks", e.target.value)} className={SHARED_INPUT_STYLES.base} />
+                </Field>
+              </div>
 
-          {/* Fee Plan dropdown — only shows when Monthly Fee is 0 */}
-          {showFeePlanDropdown && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field label={ALLOCATION_UI_TEXT.LBL_FEE_PLAN || "Fee Plan"} required>
-                <SelectInput value={form.feePlanId} onChange={(e) => selectFeePlan(e.target.value)}
-                  options={feePlans} placeholder={ALLOCATION_UI_TEXT.PH_FEE_PLAN || "Select fee plan"}
-                  hasError={!!errors.feePlanId} loading={loadingFeePlans} />
-                {errors.feePlanId && <p className="text-xs text-red-500 mt-0.5">{errors.feePlanId}</p>}
-              </Field>
-            </div>
+              {/* Conditional Override Reason Input Row */}
+              {isFeeOverridden && (
+                <div className="grid grid-cols-1 gap-4">
+                  <Field label="Override Reason" required>
+                    <input
+                      type="text"
+                      placeholder="Explain why the predefined stop fee is being changed..."
+                      value={form.overrideReason}
+                      onChange={(e) => set("overrideReason", e.target.value)}
+                      className={`${SHARED_INPUT_STYLES.base} ${errors.overrideReason ? SHARED_INPUT_STYLES.errCls : ""}`}
+                    />
+                    {errors.overrideReason && <p className="text-xs text-red-500 mt-0.5">{errors.overrideReason}</p>}
+                  </Field>
+                </div>
+              )}
+            </>
           )}
 
           <div className="h-2" />
@@ -469,11 +488,11 @@ export default function EditAllocateStudentCards({ isOpen, onClose, onUpdate, ed
 
         {/* Footer */}
         <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100 bg-gray-50/80 shrink-0 rounded-b-2xl">
-          <button onClick={!saving ? onClose : undefined} disabled={saving}
+          <button onClick={!saving ? onClose : undefined} disabled={saving || loadingData}
             className="px-5 py-2 text-sm font-semibold text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
             Cancel
           </button>
-          <button onClick={handleSubmit} disabled={saving}
+          <button onClick={handleSubmit} disabled={saving || loadingData}
             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed text-white text-sm font-semibold px-5 py-2 rounded-lg transition-colors shadow-sm">
             {saving
               ? <><Loader2 className="w-4 h-4 animate-spin" /> {ALLOCATION_UI_TEXT.BTN_UPDATING}</>

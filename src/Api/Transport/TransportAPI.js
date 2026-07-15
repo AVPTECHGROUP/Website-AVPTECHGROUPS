@@ -175,8 +175,17 @@ export const getTransportAllocationById = async (id) => {
 };
 
 export const addTransportAllocation = async (allocationData) => {
-  const res = await authFetch(API_ENDPOINTS.TRANSPORT_ALLOCATIONS, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(allocationData) });
-  if (!res.ok) throw new Error("Failed to allocate student");
+  const res = await authFetch(API_ENDPOINTS.TRANSPORT_ALLOCATIONS, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(allocationData)
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.message || "Failed to allocate student");
+  }
+
   return await res.json();
 };
 

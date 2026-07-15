@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { X, GraduationCap, Save, Loader2, Info, ChevronDown, Search, XIcon } from "lucide-react";
-import { addTransportAllocation, getActiveRoutes, getTransportFeePlans } from "../../../Api/Transport/TransportAPI";
+import { toast } from "react-toastify";
+import { addTransportAllocation, updateTransportAllocation, getActiveRoutes } from "../../../Api/Transport/TransportAPI";
 import { getStudents } from "../../../Api/Students/StudentsApi";
 import {
   PICKUP_TYPES_OPTIONS,
@@ -8,10 +9,10 @@ import {
   SHARED_INPUT_STYLES,
   VALIDATION_MESSAGES,
   ALLOCATION_UI_TEXT
-} from "../../../Constants/StringConstants/TransportConstants"; // Adjust import path as needed
+} from "../../../Constants/StringConstants/TransportConstants";
 
 // ─── Styles ───────────────────────────────────────────────────────
-const disCls = "opacity-50 cursor-not-allowed bg-gray-50";
+const disCls = "opacity-50 cursor-allowed bg-gray-50";
 
 // ─── Field wrapper ────────────────────────────────────────────────
 function Field({ label, required, children }) {
@@ -181,64 +182,73 @@ function SelectInput({ value, onChange, options = [], placeholder = ALLOCATION_U
 }
 
 // ─── Main Component ───────────────────────────────────────────────
-export default function AllocateStudentCard({ isOpen, onClose, onSave }) {
-  const [form, setForm] = useState({ ...EMPTY_ALLOCATION, monthlyFee: "", feePlanId: "" });
+export default function AllocateStudentCard({ isOpen, onClose, onSave, allocationData = null }) {
+  const isEditMode = !!allocationData;
+
+  const [form, setForm] = useState({ ...EMPTY_ALLOCATION, monthlyFee: "", overrideReason: "" });
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState({});
-  const [apiError, setApiError] = useState("");
 
   const [students, setStudents] = useState([]);
   const [routes, setRoutes] = useState([]);
-  const [feePlans, setFeePlans] = useState([]);
-  const [stops, setStops] = useState([]); // carries monthlyFee too
+  const [stops, setStops] = useState([]);
 
   const [loadingStudents, setLoadingStudents] = useState(false);
   const [loadingRoutes, setLoadingRoutes] = useState(false);
-  const [loadingFeePlans, setLoadingFeePlans] = useState(false);
 
-  // Fetch on open
+  // Fetch on open & set initial edit data if present
   useEffect(() => {
     if (!isOpen) return;
-    setForm({ ...EMPTY_ALLOCATION, monthlyFee: "", feePlanId: "" });
     setErrors({});
-    setApiError("");
     setStops([]);
+
+    if (isEditMode) {
+      // Prioritize explicit override value, fallback to normal base feeAmount
+      const initialFee = allocationData.overrideFeeAmount !== null && allocationData.overrideFeeAmount !== undefined
+        ? String(allocationData.overrideFeeAmount)
+        : allocationData.feeAmount !== null && allocationData.feeAmount !== undefined
+          ? String(allocationData.feeAmount)
+          : "";
+
+      setForm({
+        studentId: allocationData.studentId || "",
+        routeId: allocationData.routeId || "",
+        stopId: allocationData.stopId || "",
+        pickupDropType: allocationData.pickupDropType || "",
+        effectiveFrom: allocationData.effectiveFrom || "",
+        effectiveTo: allocationData.effectiveTo || "",
+        monthlyFee: initialFee,
+        overrideReason: allocationData.overrideReason || "",
+        remarks: allocationData.remarks || ""
+      });
+    } else {
+      setForm({ ...EMPTY_ALLOCATION, monthlyFee: "", overrideReason: "" });
+    }
 
     const fetchAll = async () => {
       setLoadingStudents(true);
       setLoadingRoutes(true);
-      setLoadingFeePlans(true);
 
-      const [studRes, routeRes, feeRes] = await Promise.allSettled([
+      const [studRes, routeRes] = await Promise.allSettled([
         getStudents(0, 3000, "id"),
         getActiveRoutes(),
-        getTransportFeePlans(),
       ]);
 
       if (studRes.status === "fulfilled") {
         const list = studRes.value?.data || studRes.value || [];
         setStudents(list.map((s) => ({
           value: s.id,
-          label: `${s.fullName || `${s.firstName} ${s.lastName}`}${s.className ? ` — ${s.className}${s.sectionName ? " " + s.sectionName : ""}` : ""}`,
+          label: `Roll No. ${s.rollNumber} - ${s.fullName || `${s.firstName} ${s.lastName}`}${s.className ? ` — ${s.className}${s.sectionName ? " " + s.sectionName : ""}` : ""}`,
         })));
       }
       setLoadingStudents(false);
 
       if (routeRes.status === "fulfilled") setRoutes(routeRes.value || []);
       setLoadingRoutes(false);
-
-      if (feeRes.status === "fulfilled") {
-        setFeePlans((feeRes.value || []).map((f) => ({
-          value: f.id,
-          label: `${f.planName} — ₹${f.feeAmount} / ${f.frequency}`,
-          feeAmount: f.feeAmount,
-        })));
-      }
-      setLoadingFeePlans(false);
     };
 
     fetchAll();
-  }, [isOpen]);
+  }, [isOpen, allocationData, isEditMode]);
 
   // Derive stops (with monthlyFee) from selected route
   useEffect(() => {
@@ -264,33 +274,25 @@ export default function AllocateStudentCard({ isOpen, onClose, onSave }) {
       if (k === "routeId") {
         next.stopId = "";
         next.monthlyFee = "";
-        next.feePlanId = "";
+        next.overrideReason = "";
       }
       if (k === "stopId") {
         const stop = stops.find((s) => String(s.value) === String(v));
         next.monthlyFee = stop?.monthlyFee != null ? String(stop.monthlyFee) : "";
-        next.feePlanId = "";
+        next.overrideReason = "";
       }
       return next;
     });
     setErrors((p) => ({ ...p, [k]: "" }));
-    setApiError("");
   };
 
-  // Fee plan selection also fills the Monthly Fee field
-  const selectFeePlan = (planId) => {
-    const plan = feePlans.find((f) => String(f.value) === String(planId));
-    setForm((p) => ({
-      ...p,
-      feePlanId: planId,
-      monthlyFee: plan?.feeAmount != null ? String(plan.feeAmount) : p.monthlyFee,
-    }));
-    setErrors((p) => ({ ...p, monthlyFee: "", feePlanId: "" }));
-    setApiError("");
-  };
+  // Determine if the fee differs from the base price structure
+  const currentStop = stops.find((s) => String(s.value) === String(form.stopId));
+  const defaultFee = currentStop?.monthlyFee != null
+    ? String(currentStop.monthlyFee)
+    : (isEditMode && allocationData ? String(allocationData.feeAmount) : "");
 
-  // Monthly Fee at 0 → reveal Fee Plan dropdown
-  const showFeePlanDropdown = form.monthlyFee !== "" && Number(form.monthlyFee) === 0;
+  const isFeeOverridden = form.stopId && Number(form.monthlyFee) !== Number(defaultFee);
 
   const validate = () => {
     const e = {};
@@ -299,7 +301,10 @@ export default function AllocateStudentCard({ isOpen, onClose, onSave }) {
     if (!form.stopId) e.stopId = VALIDATION_MESSAGES.REQ_STOP;
     if (!form.pickupDropType) e.pickupDropType = VALIDATION_MESSAGES.REQ_PICKUP_DROP;
     if (!form.effectiveFrom) e.effectiveFrom = VALIDATION_MESSAGES.REQ_EFFECTIVE_FROM;
-    if (showFeePlanDropdown && !form.feePlanId) e.feePlanId = VALIDATION_MESSAGES.REQ_FEE_PLAN;
+
+    if (isFeeOverridden && !form.overrideReason.trim()) {
+      e.overrideReason = "Override reason is required when the fee amount is changed.";
+    }
 
     if (form.effectiveFrom && form.effectiveTo) {
       const fromDate = new Date(form.effectiveFrom).setHours(0, 0, 0, 0);
@@ -316,29 +321,39 @@ export default function AllocateStudentCard({ isOpen, onClose, onSave }) {
   const handleSubmit = async () => {
     if (!validate()) return;
     setSaving(true);
-    setApiError("");
+
+    const payload = {
+      studentId: Number(form.studentId),
+      routeId: Number(form.routeId),
+      stopId: Number(form.stopId),
+      pickupDropType: form.pickupDropType,
+      effectiveFrom: form.effectiveFrom,
+      effectiveTo: form.effectiveTo || null,
+      overrideFeeAmount: form.monthlyFee !== "" ? Number(form.monthlyFee) : null,
+      overrideReason: isFeeOverridden ? form.overrideReason : null,
+      remarks: form.remarks || null,
+    };
+
     try {
-      await addTransportAllocation({
-        studentId: Number(form.studentId),
-        routeId: Number(form.routeId),
-        stopId: Number(form.stopId),
-        pickupDropType: form.pickupDropType,
-        effectiveFrom: form.effectiveFrom,
-        effectiveTo: form.effectiveTo || null,
-        monthlyFee: form.monthlyFee !== "" ? Number(form.monthlyFee) : null,
-        feePlanId: form.feePlanId ? Number(form.feePlanId) : null,
-        remarks: form.remarks || null,
-      });
+      if (isEditMode) {
+        await updateTransportAllocation(allocationData.id, payload);
+        toast.success("Transport allocation updated successfully!");
+      } else {
+        await addTransportAllocation(payload);
+        toast.success("Transport allocation created successfully!");
+      }
       onSave?.();
       onClose();
     } catch (err) {
-      setApiError(err?.message || VALIDATION_MESSAGES.ERR_GENERIC);
+      const serverMessage = err?.response?.data?.message || err?.message || VALIDATION_MESSAGES.ERR_GENERIC;
+      toast.error(serverMessage);
     } finally {
       setSaving(false);
     }
   };
 
   const routeOptions = routes.map((r) => ({ value: r.id, label: `${r.routeCode} – ${r.routeName}` }));
+  const selectedStudentObj = students.find((s) => String(s.value) === String(form.studentId));
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -360,8 +375,12 @@ export default function AllocateStudentCard({ isOpen, onClose, onSave }) {
               <GraduationCap className="w-5 h-5 text-purple-600" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-gray-900">{ALLOCATION_UI_TEXT.ADD_MODAL_TITLE}</h2>
-              <p className="text-xs text-gray-400 mt-0.5">{ALLOCATION_UI_TEXT.ADD_MODAL_SUBTITLE}</p>
+              <h2 className="text-base font-bold text-gray-900">
+                {isEditMode ? "Edit Transport Allocation" : ALLOCATION_UI_TEXT.ADD_MODAL_TITLE}
+              </h2>
+              <p className="text-xs text-gray-400 mt-0.5">
+                {isEditMode && selectedStudentObj ? `Editing allocation for ${selectedStudentObj.label.split(' — ')[0]}` : ALLOCATION_UI_TEXT.ADD_MODAL_SUBTITLE}
+              </p>
             </div>
           </div>
           <button onClick={!saving ? onClose : undefined} disabled={saving}
@@ -375,22 +394,16 @@ export default function AllocateStudentCard({ isOpen, onClose, onSave }) {
 
           <div className="flex items-start gap-2.5 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-xs text-blue-700">
             <Info className="w-4 h-4 shrink-0 mt-0.5 text-blue-500" />
-            <span>{ALLOCATION_UI_TEXT.INFO_BANNER_ADD}</span>
+            <span>{isEditMode ? "Changes to route or stop will take effect immediately. Student cannot be changed after allocation." : ALLOCATION_UI_TEXT.INFO_BANNER_ADD}</span>
           </div>
-
-          {apiError && (
-            <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-xs text-red-700">
-              <Info className="w-4 h-4 shrink-0 mt-0.5 text-red-500" />
-              <span>{apiError}</span>
-            </div>
-          )}
 
           {/* Student | Route */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label={ALLOCATION_UI_TEXT.LBL_STUDENT} required>
+            <Field label={ALLOCATION_UI_TEXT.LBL_STUDENT} required={!isEditMode}>
               <SelectInput value={form.studentId} onChange={(e) => set("studentId", e.target.value)}
                 options={students} placeholder={ALLOCATION_UI_TEXT.PH_STUDENT}
-                hasError={!!errors.studentId} loading={loadingStudents} />
+                hasError={!!errors.studentId} loading={loadingStudents} disabled={isEditMode} />
+              {isEditMode && <p className="text-[11px] text-gray-400 mt-1">Student cannot be changed after allocation</p>}
               {errors.studentId && <p className="text-xs text-red-500 mt-0.5">{errors.studentId}</p>}
             </Field>
             <Field label={ALLOCATION_UI_TEXT.LBL_ROUTE} required>
@@ -447,9 +460,6 @@ export default function AllocateStudentCard({ isOpen, onClose, onSave }) {
                 placeholder={form.stopId ? "Auto-filled from stop" : "Select a stop first"}
                 className={SHARED_INPUT_STYLES.base}
               />
-              <p className="text-[11px] text-gray-400 mt-0.5">
-                Set to 0 to pick a fee plan instead.
-              </p>
             </Field>
             <Field label={ALLOCATION_UI_TEXT.LBL_REMARKS}>
               <input type="text" placeholder={ALLOCATION_UI_TEXT.PH_OPTIONAL} value={form.remarks}
@@ -457,14 +467,18 @@ export default function AllocateStudentCard({ isOpen, onClose, onSave }) {
             </Field>
           </div>
 
-          {/* Fee Plan dropdown — only shows when Monthly Fee is 0 */}
-          {showFeePlanDropdown && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field label={ALLOCATION_UI_TEXT.LBL_FEE_PLAN || "Fee Plan"} required>
-                <SelectInput value={form.feePlanId} onChange={(e) => selectFeePlan(e.target.value)}
-                  options={feePlans} placeholder={ALLOCATION_UI_TEXT.PH_FEE_PLAN || "Select fee plan"}
-                  hasError={!!errors.feePlanId} loading={loadingFeePlans} />
-                {errors.feePlanId && <p className="text-xs text-red-500 mt-0.5">{errors.feePlanId}</p>}
+          {/* Conditional Override Reason Input Row */}
+          {isFeeOverridden && (
+            <div className="grid grid-cols-1 gap-4">
+              <Field label="Override Reason" required>
+                <input
+                  type="text"
+                  placeholder="Explain why the predefined stop fee is being changed..."
+                  value={form.overrideReason}
+                  onChange={(e) => set("overrideReason", e.target.value)}
+                  className={`${SHARED_INPUT_STYLES.base} ${errors.overrideReason ? SHARED_INPUT_STYLES.errCls : ""}`}
+                />
+                {errors.overrideReason && <p className="text-xs text-red-500 mt-0.5">{errors.overrideReason}</p>}
               </Field>
             </div>
           )}
@@ -481,8 +495,8 @@ export default function AllocateStudentCard({ isOpen, onClose, onSave }) {
           <button onClick={handleSubmit} disabled={saving}
             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed text-white text-sm font-semibold px-5 py-2 rounded-lg transition-colors shadow-sm">
             {saving
-              ? <><Loader2 className="w-4 h-4 animate-spin" /> {ALLOCATION_UI_TEXT.BTN_ALLOCATING}</>
-              : <><Save className="w-4 h-4" /> {ALLOCATION_UI_TEXT.BTN_ALLOCATE_SAVE}</>
+              ? <><Loader2 className="w-4 h-4 animate-spin" /> {isEditMode ? "Updating..." : ALLOCATION_UI_TEXT.BTN_ALLOCATING}</>
+              : <><Save className="w-4 h-4" /> {isEditMode ? "Update Allocation" : ALLOCATION_UI_TEXT.BTN_ALLOCATE_SAVE}</>
             }
           </button>
         </div>
