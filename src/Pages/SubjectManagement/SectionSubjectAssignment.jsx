@@ -420,11 +420,11 @@ export default function SectionSubjectAssignment() {
           </Select>
 
           <div className="relative flex-1 max-w-[260px]">
-            <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-            <input
-              value={search} onChange={e => setSearch(e.target.value)} placeholder={SEC_SUB_CONSTS.TEXT.SEARCH_PLACEHOLDER}
-              className="w-full pl-7 pr-2.5 py-1 text-xs border border-gray-200 rounded-lg bg-white outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-100"
-            />
+            {/*<Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />*/}
+            {/*<input*/}
+            {/*  value={search} onChange={e => setSearch(e.target.value)} placeholder={SEC_SUB_CONSTS.TEXT.SEARCH_PLACEHOLDER}*/}
+            {/*  className="w-full pl-7 pr-2.5 py-1 text-xs border border-gray-200 rounded-lg bg-white outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-100"*/}
+            {/*/>*/}
           </div>
         </div>
 
