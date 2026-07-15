@@ -9,12 +9,12 @@ const USER_MANAGEMENT_STRINGS = {
     SAVE_CHANGES: 'Save Changes',
     ADDING: 'Adding...',
     SAVING: 'Saving...',
-    LOADING_USER: 'Loading User...',
+    LOADING_USER: 'Loading Staff...',
     RETRY: 'Retry',
-    LOADING: 'Loading User...',
-    LOADING_PROFILE: 'Loading user profile details...',
-    PROFILE_ERROR: 'User profiles could not be loaded or do not exist.',
-    NO_USERS_TO_DISPLAY: 'There are no users to display.',
+    LOADING: 'Loading Staff...',
+    LOADING_PROFILE: 'Loading staff profile details...',
+    PROFILE_ERROR: 'Staff profiles could not be loaded or do not exist.',
+    NO_USERS_TO_DISPLAY: 'There are no staffs to display.',
     CONTACT: 'Contact:',
     STATUS: 'Status:',
     N_A: 'N/A',
@@ -28,7 +28,7 @@ const USER_MANAGEMENT_STRINGS = {
   },
 
   MANAGE_USERS: {
-    PAGE_TITLE: 'Manage All Users',
+    PAGE_TITLE: 'Manage All Staff',
     PAGE_TOOLTIP: 'Efficiently manage system roles, permissions and account status.',
     SEARCH_PLACEHOLDER: 'Search by name, email or ID..',
     FILTERS: {
@@ -40,7 +40,7 @@ const USER_MANAGEMENT_STRINGS = {
       INACTIVE_LABEL: 'Inactive',
     },
     ACTIONS: {
-      ADD_USER: 'Add User',
+      ADD_USER: 'Add Staff',
       EXPORT_CSV: 'Export CSV',
       VIEW: 'View',
       EDIT: 'Edit',
@@ -56,7 +56,7 @@ const USER_MANAGEMENT_STRINGS = {
       OF_TOTAL: 'of',
     },
     TABLE_HEADERS: {
-      USER_NAME: 'User Name',
+      USER_NAME: 'Staff Name',
       EMP_ID: 'Employee Id',
       EMAIL: 'Email',
       MOBILE: 'Mobile Number',
@@ -64,19 +64,19 @@ const USER_MANAGEMENT_STRINGS = {
       ACTIONS: 'Actions',
     },
     CARDS: {
-      TOTAL_USERS: 'Total Users',
-      ACTIVE_USERS: 'Active Users',
-      INACTIVE_USERS: 'Inactive Users',
+      TOTAL_USERS: 'Total Staffs',
+      ACTIVE_USERS: 'Active Staffs',
+      INACTIVE_USERS: 'Inactive Staffs',
     },
     MESSAGES: {
-      NO_USERS_FOUND: 'No Users Found',
-      LOADING_USERS: 'Loading users ...',
-      ERROR_LOADING: 'Error Loading Users',
-      EXPORT_INFO: 'No users on this page to export.',
+      NO_USERS_FOUND: 'No Staffs Found',
+      LOADING_USERS: 'Loading staffs ...',
+      ERROR_LOADING: 'Error Loading Staffs',
+      EXPORT_INFO: 'No staffs on this page to export.',
       RESET_FAILED: 'Reset password failed',
       STATUS_FAILED: 'Status update failed',
-      EXPORT_SUCCESS: '✓ Exported {count} user{plural} — CSV {page} of {totalPages}',
-      NO_USERS_DISPLAY: 'There are no users to display.',
+      EXPORT_SUCCESS: '✓ Exported {count} staff{plural} — CSV {page} of {totalPages}',
+      NO_USERS_DISPLAY: 'There are no staffs to display.',
     },
     CONFIRMATION: {
       TITLE: 'Redirect to Teachers Module',
@@ -87,7 +87,7 @@ const USER_MANAGEMENT_STRINGS = {
   },
 
   USER_VIEW: {
-    PAGE_TITLE: 'User Profile',
+    PAGE_TITLE: 'Staff Profile',
     BACK_TO_LIST: 'Back to List',
     EMPLOYEE_ID: 'Employee ID',
     PERSONAL_DETAILS: 'Personal Details',
@@ -111,8 +111,8 @@ const USER_MANAGEMENT_STRINGS = {
   },
 
   EDIT_USER: {
-    PAGE_TITLE: 'Edit User: {name}',
-    PAGE_SUBTITLE: 'Manage personal information and account status for users.',
+    PAGE_TITLE: 'Edit Staff: {name}',
+    PAGE_SUBTITLE: 'Manage personal information and account status for staff.',
     PROFILE_PHOTO: 'Profile Photo',
     PROFILE_PHOTO_HELP: '(optional)',
     CLICK_TO_UPLOAD: 'Click to upload photo',
@@ -124,8 +124,8 @@ const USER_MANAGEMENT_STRINGS = {
     PERSONAL_SHORT: 'Personal',
     SAVE_BUTTON: 'Save Details',
     BACK_TO_LIST: 'Back to List',
-    LOADING: 'Loading User...',
-    UPDATE_LOADING: 'Updating user...',
+    LOADING: 'Loading Staff...',
+    UPDATE_LOADING: 'Updating staff...',
     SUCCESS_MESSAGE: "{name}'s details updated successfully! ✅",
     PHOTO_REFLECT: 'Profile photo may take a few seconds to reflect.',
     DISCARD_CHANGES: 'Discard Changes',
@@ -133,8 +133,8 @@ const USER_MANAGEMENT_STRINGS = {
   },
 
   ADD_USER: {
-    PAGE_TITLE: 'Add New User',
-    PAGE_SUBTITLE: 'Enter the details below to onboard a new user into the system.',
+    PAGE_TITLE: 'Add New Staff',
+    PAGE_SUBTITLE: 'Enter the details below to onboard a new staff member into the system.',
     PROFILE_PHOTO: 'Profile Photo',
     PROFILE_PHOTO_HELP: '(optional)',
     CLICK_TO_UPLOAD: 'Click to upload photo',
