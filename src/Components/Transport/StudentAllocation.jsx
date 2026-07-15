@@ -116,19 +116,19 @@ function MobileCard({ a, isBusy, onAction }) {
                     </span>
                 </div>
 
-                <div>
+                {/* <div>
                     <p className="text-xs text-gray-400 mb-1 flex items-center gap-1">
                         <CreditCard className="w-3 h-3" /> Fee Plan
                     </p>
                     <p className="text-xs text-gray-700 font-medium truncate" title={a.feePlanName}>{a.feePlanName || "—"}</p>
-                </div>
+                </div> */}
 
                 <div>
                     <p className="text-xs text-gray-400 mb-1">Amount</p>
                     <p className="text-sm font-bold text-gray-800">
-                        {a.feeAmount != null ? `₹${a.feeAmount.toLocaleString()}` : "—"}
+                        {a.resolvedFeeAmount != null ? `₹${a.resolvedFeeAmount.toLocaleString()}` : "—"}
                     </p>
-                    {a.feeFrequency && <p className="text-xs text-gray-400">{a.feeFrequency}</p>}
+                    {/* {a.feeFrequency && <p className="text-xs text-gray-400">{a.feeFrequency}</p>} */}
                 </div>
 
                 <div className="col-span-2">
@@ -180,16 +180,16 @@ function TabletRow({ a, isBusy, onAction }) {
 
             <td className="px-3 py-3 align-middle">
                 <p className="font-bold text-gray-800 text-sm">
-                    {a.feeAmount != null ? `₹${a.feeAmount.toLocaleString()}` : "—"}
+                    {a.resolvedFeeAmount != null ? `₹${a.resolvedFeeAmount.toLocaleString()}` : "—"}
                 </p>
-                {a.feeFrequency && <p className="text-xs text-gray-400">{a.feeFrequency}</p>}
+                {/* {a.feeFrequency && <p className="text-xs text-gray-400">{a.feeFrequency}</p>} */}
                 {/* 🆔 FIX: Removed cursor-help */}
-                <p 
+                {/* <p 
                     className="text-xs text-gray-500 mt-0.5 max-w-[140px] truncate"
                     title={a.feePlanName}
                 >
                     {a.feePlanName || "—"}
-                </p>
+                </p> */}
                 <p className="text-xs text-gray-400 mt-0.5">{formattedDate}</p>
             </td>
 
@@ -238,20 +238,20 @@ function DesktopRow({ a, isBusy, onAction }) {
             </td>
             
             {/* 🆔 FIX: Removed cursor-help from layout template triggers */}
-            <td className="px-4 py-4 text-gray-600 text-sm whitespace-nowrap">
+            {/* <td className="px-4 py-4 text-gray-600 text-sm whitespace-nowrap">
                 <div 
                     className="max-w-[150px] truncate font-medium" 
                     title={a.feePlanName}
                 >
                     {a.feePlanName || "—"}
                 </div>
-            </td>
+            </td> */}
 
             <td className="px-4 py-4 whitespace-nowrap">
                 <p className="font-semibold text-gray-800">
-                    {a.feeAmount != null ? `₹${a.feeAmount.toLocaleString()}` : "—"}
+                    {a.resolvedFeeAmount != null ? `₹${a.resolvedFeeAmount.toLocaleString()}` : "—"}
                 </p>
-                {a.feeFrequency && <p className="text-xs text-gray-400 mt-0.5">{a.feeFrequency}</p>}
+                {/* {a.feeFrequency && <p className="text-xs text-gray-400 mt-0.5">{a.feeFrequency}</p>} */}
             </td>
             <td className="px-4 py-4 text-gray-600 text-sm whitespace-nowrap">{formattedDate}</td>
             <td className="px-4 py-4 whitespace-nowrap">
@@ -362,8 +362,8 @@ export default function AllocationTable({ data, loading, pageSize, onAction, tog
                     <thead>
                         <tr className="bg-gray-50 border-b border-gray-100">
                             {[
-                                "Student Name", "Class / Section", "Route", "Stop",
-                                "Type", "Fee Plan", "Amount", "Effective From", "Status", "Actions"
+                                "Student Name", "Class / Section", "Route", "Stop Name",
+                                "Type", "Amount", "Effective From", "Status", "Actions"
                             ].map((h) => (
                                 <th key={h}
                                     className={`px-4 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wider text-left whitespace-nowrap ${h === "Actions" ? "min-w-[170px]" : ""}`}>
