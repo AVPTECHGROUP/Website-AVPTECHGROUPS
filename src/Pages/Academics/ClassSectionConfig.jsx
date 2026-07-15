@@ -718,13 +718,11 @@ export default function ClassSectionConfig() {
             </button>
           </div>
 
-          {/* Desktop table */}
           <div className="hidden lg:block overflow-x-auto overflow-y-auto max-h-130 w-full">
             <table className="w-full min-w-[700px]">
               <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
                 <tr className="text-sm">
                   <th className="px-3 lg:px-4 py-4 text-left font-semibold text-gray-600 uppercase tracking-wide">{CLASS_SEC_CONSTS.TEXT.TH_CLASS_NAME}</th>
-                  <th className="px-3 lg:px-4 py-4 text-center font-semibold text-gray-600 uppercase tracking-wide">{CLASS_SEC_CONSTS.TEXT.TH_GRADE}</th>
                   <th className="px-3 lg:px-4 py-4 text-center font-semibold text-gray-600 uppercase tracking-wide hidden xl:table-cell">{CLASS_SEC_CONSTS.TEXT.TH_DESC}</th>
                   <th className="px-3 lg:px-4 py-4 text-center font-semibold text-gray-600 uppercase tracking-wide">{CLASS_SEC_CONSTS.TEXT.TH_SECTIONS}</th>
                   <th className="px-3 lg:px-4 py-4 text-center font-semibold text-gray-600 uppercase tracking-wide">{CLASS_SEC_CONSTS.TEXT.TH_STATUS}</th>
@@ -732,11 +730,11 @@ export default function ClassSectionConfig() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {classLoading && <ListLoader avatar={false} colSpanSet={7} />}
+                {classLoading && <ListLoader avatar={false} colSpanSet={6} />}
 
                 {!classLoading && classes.length === 0 && (
                   <tr>
-                    <td colSpan="7" className="py-16 text-center">
+                    <td colSpan="6" className="py-16 text-center">
                       <div className="flex flex-col items-center gap-2">
                         <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto">
                           <SearchX className="w-6 h-6 text-blue-500" />
@@ -750,13 +748,14 @@ export default function ClassSectionConfig() {
 
                 {!classLoading && classes.map((cls, idx) => (
                   <tr key={cls.id} className="hover:bg-gray-50 transition-colors text-sm">
-                    <td className="px-3 lg:px-4 py-4">
-                      <p className="font-semibold text-gray-900">{cls.name}</p>
-                    </td>
-                    <td className="px-3 lg:px-4 py-4 text-center">
-                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${gradeColor(cls.gradeLevel)}`}>
-                        {gradeLabelOf(cls.gradeLevel)}
-                      </span>
+                    {/* Combined Class Name & Grade Level View */}
+                    <td className="px-3 lg:px-4 py-3.5">
+                      <div className="flex flex-col items-start gap-1">
+                        <p className="font-semibold text-gray-900 leading-tight">{cls.name}</p>
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium tracking-wide ${gradeColor(cls.gradeLevel)}`}>
+                          Grade: {gradeLabelOf(cls.gradeLevel)}
+                        </span>
+                      </div>
                     </td>
                     <td className="px-3 lg:px-4 py-4 text-center hidden xl:table-cell">
                       <p className="text-gray-500 truncate max-w-[220px] mx-auto">{cls.description || CLASS_SEC_CONSTS.TEXT.FALLBACK_DASH}</p>

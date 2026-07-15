@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, Settings } from 'lucide-react';
 import { getTimetableById, updateTimetable } from '../../../Api/Academics/ScheduleApi';
-import { TIMETABLE_CONSTS }  from '../../../Constants/StringConstants/TimetableConstants';
+import { TIMETABLE_CONSTS } from '../../../Constants/StringConstants/TimetableConstants';
 
 export default function TimetableSettings({ timetable, timetableId, onClose, onApply }) {
     const [form, setForm] = useState({
@@ -12,7 +12,7 @@ export default function TimetableSettings({ timetable, timetableId, onClose, onA
         academicYear: timetable?.year || timetable?.academicYear || timetable?.academicYearLabel || '2025-2026',
         status: timetable?.status || TIMETABLE_CONSTS.TT_SETTINGS.DEF_STATUS,
         notes: timetable?.notes || '',
-        workingDays: TIMETABLE_CONSTS.CONFIG.DAYS, // Mon-Sat from central config
+        workingDays: TIMETABLE_CONSTS?.CONFIG?.DAYS || ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
     });
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -146,18 +146,16 @@ export default function TimetableSettings({ timetable, timetableId, onClose, onA
                                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 resize-none"
                             />
                         </div>
-
-                        {/* Working Days */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
                                 {TIMETABLE_CONSTS.TT_SETTINGS.LBL_DAYS}
                                 <span className="text-xs text-gray-400 font-normal ml-2">{TIMETABLE_CONSTS.TT_SETTINGS.LBL_DAYS_DESC}</span>
                             </label>
                             <div className="flex flex-wrap gap-2">
-                                {TIMETABLE_CONSTS.CONFIG.DAYS.map(day => (
+                                {(TIMETABLE_CONSTS?.CONFIG?.DAYS || ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']).map(day => (
                                     <button key={day} onClick={() => toggleDay(day)}
                                         className={`px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition
-                                            ${form.workingDays.includes(day)
+                    ${(form.workingDays || []).includes(day)
                                                 ? 'bg-[#1e293b] text-white'
                                                 : 'bg-gray-100 text-gray-400 hover:bg-gray-200'}`}>
                                         {day}

@@ -5,12 +5,14 @@ import Webcam from 'react-webcam';
 import { markAttendanceByStafffFace } from '../../Api/Attendance/AttendanceApi';
 import { useNavigate } from 'react-router-dom';
 import { getSchoolLocation } from "../../utils/getSchoolLocation";
+
+import { ROUTE_PATHS } from '../../Constants/RoutesConstants/RoutesConst';
 import {
-    TOAST_CAPTURE_FAILED, TOAST_FACE_NOT_RECOGNIZED,
-    TOAST_GENERIC_ERROR, TOAST_CAMERA_ACCESS_FAILED,
-    MEDIAPIPE_CDN, WASM_BASE, MODEL_URL,
-    BLINK_THRESHOLD, BLINK_MIN_FRAMES, BLINK_OPEN_RESET, BLINK_PEAK_MIN,
-    UI_STRINGS
+  TOAST_CAPTURE_FAILED, TOAST_FACE_NOT_RECOGNIZED,
+  TOAST_GENERIC_ERROR, TOAST_CAMERA_ACCESS_FAILED,
+  MEDIAPIPE_CDN, WASM_BASE, MODEL_URL,
+  BLINK_THRESHOLD, BLINK_MIN_FRAMES, BLINK_OPEN_RESET, BLINK_PEAK_MIN,
+  UI_STRINGS
 } from "../../Constants/StringConstants/AttendanceConstants";
 
 const MarkUserAttendance = () => {
@@ -21,15 +23,15 @@ const MarkUserAttendance = () => {
   const [alreadyName, setAlreadyName] = useState("");
   const [isCapturing, setIsCapturing] = useState(false);
 
-  // ── Blink liveness ─────────────────────────────────────────────────────────
+  // Blink liveness
   const [blinkPhase, setBlinkPhase] = useState("idle");
-  const landmarkerRef = useRef(null); 
+  const landmarkerRef = useRef(null);
   const rafRef = useRef(null);
   const blinkCapturedRef = useRef(false);
-  const faceSeenRef = useRef(false); 
-  const blinkFrameCountRef = useRef(0);     
-  const blinkPeakRef = useRef(false); 
-  const blinkPeakScoreRef = useRef(0);     
+  const faceSeenRef = useRef(false);
+  const blinkFrameCountRef = useRef(0);
+  const blinkPeakRef = useRef(false);
+  const blinkPeakScoreRef = useRef(0);
 
   useEffect(() => () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); }, []);
 
@@ -77,7 +79,7 @@ const MarkUserAttendance = () => {
 
       if (!response?.success || !response?.data?.verified) {
         toast.error(TOAST_FACE_NOT_RECOGNIZED);
-        navigate("/attendance/usersAttendance/warning");
+        navigate(ROUTE_PATHS.ATTENDANCE_USERS_WARNING);
         return;
       }
 
@@ -100,9 +102,9 @@ const MarkUserAttendance = () => {
     } catch (error) {
       console.error("Attendance error:", error);
       toast.error(TOAST_GENERIC_ERROR);
-      navigate("/attendance/usersAttendance/warning");
+      navigate(ROUTE_PATHS.ATTENDANCE_USERS_WARNING);
     } finally {
-      setIsCapturing(false); 
+      setIsCapturing(false);
       setBlinkPhase("idle");
       setActive(false);
     }
@@ -138,7 +140,7 @@ const MarkUserAttendance = () => {
     setBlinkPhase("loading");
     try {
       const lm = await loadLandmarker();
-      setBlinkPhase("scanning"); 
+      setBlinkPhase("scanning");
 
       const loop = () => {
         if (blinkCapturedRef.current) return;
@@ -192,7 +194,7 @@ const MarkUserAttendance = () => {
     } catch (err) {
       console.error("Blink detection error:", err);
       setBlinkPhase("idle");
-      captureImage(); 
+      captureImage();
     }
   }, [loadLandmarker, captureImage]);
 
