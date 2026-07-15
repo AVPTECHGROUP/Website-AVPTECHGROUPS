@@ -7,15 +7,14 @@ import { TIMETABLE_CONSTS } from '../../../Constants/StringConstants/TimetableCo
 
 /* ─── subject colour map (hex values, sourced from constants) ──── */
 const SUBJECT_COLOR_MAP = Object.fromEntries(
-    Object.entries(TIMETABLE_CONSTS.COLORS.SUBJECT_MAP).map(([code, c]) => [
+    Object.entries(TIMETABLE_CONSTS?.COLORS?.SUBJECT_MAP || {}).map(([code, c]) => [
         code,
-        { color: c.hex, bg: c.hexBg, dot: c.hexDot },
-    ])
-);
-const COLOR_POOL = TIMETABLE_CONSTS.COLORS.SUBJECT_POOL.map(c => ({
-    color: c.hex,
-    bg: c.hexBg,
-    dot: c.hexDot,
+        { color: c?.hex || '#475569', bg: c?.hexBg || '#f8fafc', dot: c?.hexDot || '#475569' },
+    ]));
+const COLOR_POOL = (TIMETABLE_CONSTS?.COLORS?.SUBJECT_POOL || []).map(c => ({
+    color: c?.hex || '#3b82f6',
+    bg: c?.hexBg || '#eff6ff',
+    dot: c?.hexDot || '#3b82f6',
 }));
 const getSubjectColor = (code, index) => {
     const upper = (code || '').toUpperCase();

@@ -10,7 +10,7 @@ import { UserContext } from '../../../ContextAPI/UserContext'
 const footerLinks = {
     Product: [
         'Features',
-        'Pricing',
+        // 'Pricing',
         { name: 'Blog', path: '/blog' },
     ],
     Company: [
@@ -59,14 +59,14 @@ const Footer = () => {
                 navigate('/#features-section');
             }
         }
-        else if (label === 'Pricing') {
-            e.preventDefault();
-            if (location.pathname === '/') {
-                document.getElementById('pricing-section')?.scrollIntoView({ behavior: 'smooth' });
-            } else {
-                navigate('/#pricing-section');
-            }
-        }
+        // else if (label === 'Pricing') {
+        //     e.preventDefault();
+        //     if (location.pathname === '/') {
+        //         document.getElementById('pricing-section')?.scrollIntoView({ behavior: 'smooth' });
+        //     } else {
+        //         navigate('/#pricing-section');
+        //     }
+        // }
         else if (label === 'Our Clients') {
             e.preventDefault();
             if (location.pathname === '/') {
