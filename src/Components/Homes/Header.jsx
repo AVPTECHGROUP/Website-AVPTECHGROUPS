@@ -48,7 +48,6 @@ export default function Header() {
         { name: "RAV Public School" },
         { name: "St. Xavier's School" },
         { name: "RLB School" },
-        { name: "Avadh Collegiate" },
         { name: "Shyam Children Public School" },
         { name: "Rama Public School" },
         { name: "KBMA School" }
@@ -83,28 +82,30 @@ export default function Header() {
             <div className="relative z-10 flex flex-col w-full max-w-350 mx-auto px-6 sm:px-10 xl:px-16 pt-10 sm:pt-8 pb-0">
 
                 {/* TOP HERO ROW: Content Split */}
-                <div className="flex flex-col lg:flex-row items-center justify-between gap-8 lg:gap-4 w-full">
+                <div className="flex flex-col lg:flex-row items-center justify-between gap-8 lg:gap-6 w-full">
 
                     {/* LEFT: Text Block */}
-                    <div className="flex flex-col items-center lg:items-start text-center lg:text-left shrink-0 w-full lg:w-[46%] xl:w-[44%]">
+                    <div className="flex flex-col items-center lg:items-start text-center lg:text-left shrink-0 w-full lg:w-[48%] xl:w-[44%]">
                         <div className="animate-[fadeUp_0.9s_0.1s_ease_both]">
                             <span className="inline-flex items-center gap-2 bg-theme-card border border-theme-border backdrop-blur-md rounded-full px-4 py-1.5 text-gold text-[11px] font-semibold tracking-widest uppercase">
                                 <Star size={12} fill="currentColor" className="text-gold" /> Recognized by Startup India
                             </span>
                         </div>
 
-                        <div className="mt-3 animate-[fadeUp_0.9s_0.2s_ease_both]">
-                            <h1 className="font-heading font-bold text-4xl text-nowrap sm:text-5xl lg:text-5xl xl:text-6xl leading-tight">
+                        {/* MOBILE OPTIMIZED HEADLINE & SPACING */}
+                        <div className="mt-4 w-full animate-[fadeUp_0.9s_0.2s_ease_both]">
+                            <h1 className="font-heading font-bold text-[28px] leading-[1.25] sm:text-5xl lg:text-4xl xl:text-5xl sm:leading-tight lg:leading-tight xl:leading-tight">
                                 <span className="block text-theme-text">The Operating System</span>
                                 <span className="text-theme-text"> for</span> <span className='text-grad-teal-gold'> Modern Schools.</span>
                             </h1>
-                            <div className="flex items-center justify-center lg:justify-start mt-1">
+                            {/* Adjusted padding/margin spacing on mobile to prevent overlapping */}
+                            <div className="flex items-center justify-center lg:justify-start mt-4 min-h-[32px]">
                                 <Text_animate />
                             </div>
                         </div>
 
-                        <p className="mt-2 text-[14px] sm:text-[15px] md:text-[18px] font-medium leading-relaxed text-theme-subtext max-w-sm lg:max-w-none animate-[fadeUp_0.9s_0.28s_ease_both]">
-                            Manage everything. Connect everyone. <span className='block'>Grow beyond limits.</span>
+                        <p className="mt-4 text-[14px] sm:text-[15px] md:text-[18px] lg:text-[15px] xl:text-[18px] font-medium leading-relaxed text-theme-subtext max-w-sm lg:max-w-none animate-[fadeUp_0.9s_0.28s_ease_both]">
+                            Manage everything. Connect everyone. <span className='block lg:inline xl:block'>Grow beyond limits.</span>
                         </p>
 
                         {/* Responsive 4-Point Feature Grid */}
@@ -112,9 +113,9 @@ export default function Header() {
                             {features.map((feature) => (
                                 <div
                                     key={feature}
-                                    className="flex items-center gap-2 text-theme-subtext text-[13px] sm:text-[14px] md:text-[15px] font-medium"
+                                    className="flex items-center gap-2 text-theme-subtext text-[13px] sm:text-[14px] md:text-[15px] lg:text-[13px] xl:text-[15px] font-medium"
                                 >
-                                    <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-teal-dark flex items-center justify-center shrink-0 shadow-sm">
+                                    <div className="w-5 h-5 sm:w-6 sm:h-6 lg:w-5 lg:h-5 xl:w-6 xl:h-6 rounded-full bg-teal-dark flex items-center justify-center shrink-0 shadow-sm">
                                         <svg
                                             className="w-3 h-3 text-white"
                                             fill="none"
@@ -203,7 +204,7 @@ export default function Header() {
                 </div>
 
                 {/* Premium Glass Showcase Container with Hidden Overflow */}
-                <div className="w-full relative overflow-hidden bg-gradient-to-r from-theme-card/10 via-theme-card/40 to-theme-card/10 border border-theme-border/60 backdrop-blur-xl rounded-2xl py-6 shadow-[0_12px_40px_-12px_rgba(0,0,0,0.25)] dark:shadow-[0_16px_48px_-16px_rgba(0,0,0,0.65)] hover:border-theme-border/90 transition-all duration-300">
+                <div className="w-full relative overflow-hidden bg-gradient-to-r from-theme-card/10 via-theme-card/40 to-theme-card/10 border border-theme-border/60 backdrop-blur-xl rounded-2xl py-6 shadow-[0_12px_40px_-12px_rgba(0,0,0,0.25)] dark:shadow-[0_16px_48px_-16px_rgba(0,0,0,0.15)] hover:border-theme-border/90 transition-all duration-300">
 
                     {/* Premium Edge Fades Overlay (Left/Right Blur Mask) */}
                     <div className="absolute inset-y-0 left-0 w-16 sm:w-28 bg-gradient-to-r from-theme-bg via-theme-bg/40 to-transparent z-10 pointer-events-none transition-colors duration-300" />
