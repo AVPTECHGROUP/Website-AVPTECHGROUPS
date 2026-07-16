@@ -3,11 +3,12 @@ import { useEffect, useRef, useState } from 'react'
 const BAR_DATA = [62, 78, 55, 88, 70, 45, 92, 67, 80, 58, 75, 83, 60, 90]
 const LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb']
 
+// CSS variables inject kiye hain taaki left/right positions responsive custom behavior follow karein
 const FLOAT_CARDS = [
-    { id: 'attendance', emoji: '📋', label: 'Attendance', value: '94.2%', sub: '+2.1% wk', color: '#00D2B9', pos: { top: '2%', left: '-88px' }, delay: '0s', anim: 'f1' },
-    { id: 'students', emoji: '🎓', label: 'Admissions', value: '24', sub: '↑ 8 today', color: '#7C6AF7', pos: { bottom: '12%', left: '-88px' }, delay: '0.8s', anim: 'f3' },
-    { id: 'fees', emoji: '💰', label: 'Fees', value: '₹2.4L', sub: '92% done', color: '#F5A623', pos: { top: '2%', right: '-88px' }, delay: '1.4s', anim: 'f2' },
-    { id: 'transport', emoji: '🚌', label: 'Buses Live', value: '12/14', sub: 'On route', color: '#38BDF8', pos: { bottom: '12%', right: '-88px' }, delay: '2s', anim: 'f4' },
+    { id: 'attendance', emoji: '📋', label: 'Attendance', value: '94.2%', sub: '+2.1% wk', color: '#00D2B9', pos: { top: '2%', left: 'var(--card-left-pos)' }, delay: '0s', anim: 'f1' },
+    { id: 'students', emoji: '🎓', label: 'Admissions', value: '24', sub: '↑ 8 today', color: '#7C6AF7', pos: { bottom: '12%', left: 'var(--card-left-pos)' }, delay: '0.8s', anim: 'f3' },
+    { id: 'fees', emoji: '💰', label: 'Fees', value: '₹2.4L', sub: '92% done', color: '#F5A623', pos: { top: '2%', right: 'var(--card-right-pos)' }, delay: '1.4s', anim: 'f2' },
+    { id: 'transport', emoji: '🚌', label: 'Buses Live', value: '12/14', sub: 'On route', color: '#38BDF8', pos: { bottom: '12%', right: 'var(--card-right-pos)' }, delay: '2s', anim: 'f4' },
 ]
 
 const ACTIVITY_DATA = [
@@ -32,8 +33,8 @@ export default function Dashboard_anim() {
         if (!canvas) return
         const ctx = canvas.getContext('2d')
         const W = canvas.width, H = canvas.height
-        
-        const paddingBottom = 16 
+
+        const paddingBottom = 16
         const chartH = H - paddingBottom
         const gap = 8
         const barW = (W - gap * (BAR_DATA.length + 1)) / BAR_DATA.length
@@ -100,7 +101,7 @@ export default function Dashboard_anim() {
 
             if (progress < 1) raf = requestAnimationFrame(draw)
         }
-        
+
         // Timeout ensures execution happens cleanly after layout stabilization
         const timer = setTimeout(() => {
             raf = requestAnimationFrame(draw)
@@ -110,7 +111,7 @@ export default function Dashboard_anim() {
             clearTimeout(timer)
             cancelAnimationFrame(raf)
         }
-    }, [isMobile]) // Redraws perfectly when scaling layout viewports
+    }, [isMobile])
 
     const sharedCardBg = {
         background: 'linear-gradient(150deg, #0e2836 0%, #091e2a 60%, #060f18 100%)',
@@ -118,7 +119,6 @@ export default function Dashboard_anim() {
         boxShadow: '0 40px 30px rgba(0,0,0,0.6), inset 0 1.5px 0 rgba(255,255,255,0.08), 0 0 0 1px rgba(0,210,185,0.06)',
     }
 
-    // Consolidated layout element to guarantee DOM node persistence
     const dashboardLayoutContent = (
         <>
             {/* TOP BAR */}
@@ -159,7 +159,6 @@ export default function Dashboard_anim() {
                     <span style={{ fontSize: 8.5, color: '#2e6a7a', fontWeight: 700, letterSpacing: '.11em', textTransform: 'uppercase' }}>Monthly Attendance</span>
                     <span style={{ fontSize: 8.5, color: '#00D2B9' }}>This Year →</span>
                 </div>
-                {/* The Canvas now features persistent rendering and integrated structural grid line assets */}
                 <canvas ref={canvasRef} width={440} height={100} style={{ width: '100%', height: 'auto', display: 'block' }} />
             </div>
 
@@ -169,11 +168,11 @@ export default function Dashboard_anim() {
                     <span style={{ fontSize: 8.5, color: '#2e6a7a', fontWeight: 700, letterSpacing: '.11em', textTransform: 'uppercase' }}>Recent Activity</span>
                     <span style={{ fontSize: 8, color: 'rgba(255,255,255,0.3)', fontWeight: 500 }}>Real-time Feed</span>
                 </div>
-                
+
                 <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 10 }}>
                     <div style={{ position: 'absolute', left: '7px', top: '8px', bottom: '8px', width: '1px', background: 'linear-gradient(to bottom, rgba(0,210,185,0.3), rgba(255,255,255,0.05))', zIndex: 1 }} />
                     {ACTIVITY_DATA.map((item, i) => (
-                        <div key={item.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative', zIndex: 2 }}>
+                        <div key={item.id} style={{ display: 'flex', alignItems: 'center', justifyBox: 'center', justifyContent: 'space-between', position: 'relative', zIndex: 2 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                                 <div style={{ width: 16, height: 16, borderRadius: '50%', background: 'rgba(6,15,24,0.9)', border: `1.5px solid ${item.color}`, boxShadow: i === 0 ? `0 0 10px ${item.color}80` : 'none', display: 'flex', alignItems: 'center', justifyBox: 'center', justifyContent: 'center', fontSize: 8, flexShrink: 0 }}>
                                     <span style={{ transform: 'scale(0.85)', color: item.color }}>{item.icon}</span>
@@ -193,7 +192,6 @@ export default function Dashboard_anim() {
         </>
     )
 
-    /* ══════════════ MOBILE LAYOUT ══════════════ */
     if (isMobile) {
         return (
             <div style={{ position: 'relative', width: '100%', padding: '8px 0 4px' }}>
@@ -244,10 +242,21 @@ export default function Dashboard_anim() {
         )
     }
 
-    /* ══════════════ DESKTOP LAYOUT ══════════════ */
     return (
         <div style={{ position: 'relative', width: '100%', maxWidth: '480px', margin: '0 auto', padding: '12px 96px' }}>
+
+            {/* RESPONSIVE CSS VARIABLES APPLIED SPECIFICALLY FOR 1024px SCREEN (lg:) */}
             <style>{`
+                :root {
+                    --card-left-pos: -88px;
+                    --card-right-pos: -88px;
+                }
+                @media (min-width: 1024px) and (max-width: 1279px) {
+                    :root {
+                        --card-left-pos: -40px;  /* Left cards slightly closer on 1024px */
+                        --card-right-pos: -20px; /* Right cards pushed left inside container to prevent layout cut */
+                    }
+                }
                 @keyframes floatMain {
                     0%,100% { transform: perspective(1000px) rotateX(-5deg) rotateY(-10deg) rotateZ(-1.8deg) translateY(0px);   }
                     50%      { transform: perspective(1000px) rotateX(-5deg) rotateY(13deg) rotateZ(-1.8deg) translateY(-14px); }

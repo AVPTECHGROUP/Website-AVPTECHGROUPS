@@ -71,8 +71,8 @@ const futerData = [
 ];
 
 const trustStats = [
-    { icon: <Building2 />, value: "3000+", label: "Schools Trust Us", color: "text-cyan-600 dark:text-cyan-400", ring: "ring-cyan-500/30 dark:ring-cyan-400/30" },
-    { icon: <Users />, value: "2,50,000+", label: "Students Managed", color: "text-cyan-600 dark:text-cyan-400", ring: "ring-cyan-500/30 dark:ring-cyan-400/30" },
+    { icon: <Building2 />, value: "5+", label: "Schools Trust Us", color: "text-cyan-600 dark:text-cyan-400", ring: "ring-cyan-500/30 dark:ring-cyan-400/30" },
+    { icon: <Users />, value: "3000+", label: "Students Managed", color: "text-cyan-600 dark:text-cyan-400", ring: "ring-cyan-500/30 dark:ring-cyan-400/30" },
     { icon: <ShieldCheck />, value: "99.99%", label: "Uptime & Reliability", color: "text-amber-600 dark:text-amber-400", ring: "ring-amber-500/30 dark:ring-amber-400/30" },
     { icon: <Headphones />, value: "24x7", label: "Support Available", color: "text-cyan-600 dark:text-cyan-400", ring: "ring-cyan-500/30 dark:ring-cyan-400/30" },
 ];
@@ -254,7 +254,7 @@ const Details = () => {
                             {/* Stats row */}
                             <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 gap-4 sm:gap-6">
                                 {trustStats.map((stat, i) => (
-                                    <div key={i} className="flex flex-col items-center lg:items-start gap-2">
+                                    <div key={i} className="flex flex-col items-center justify-center text-center gap-2">
                                         <div className={`w-11 h-11 rounded-full flex items-center justify-center ring-1 ${stat.ring} ${isDark ? 'bg-[#0b1220]' : 'bg-white shadow-sm'}`}>
                                             <span className={`${stat.color} [&>svg]:w-5 [&>svg]:h-5`}>
                                                 {stat.icon}
@@ -263,7 +263,10 @@ const Details = () => {
                                         <div className={`font-heading text-lg sm:text-xl font-bold ${stat.color}`}>
                                             {stat.value}
                                         </div>
-                                        <div className={`text-[11px] sm:text-xs text-center lg:text-left leading-tight ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                                        <div
+                                            className={`text-[11px] sm:text-xs text-center leading-tight ${isDark ? 'text-slate-400' : 'text-slate-500'
+                                                }`}
+                                        >
                                             {stat.label}
                                         </div>
                                     </div>
