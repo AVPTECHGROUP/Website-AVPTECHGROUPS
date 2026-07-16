@@ -1,5 +1,6 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useContext } from 'react';
 import { Settings, Printer, X, Plus, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
+import { UserContext } from '../../ContextAPI/UserContext.jsx'; // TODO: confirm this path matches your project structure
 
 const DEFAULT_CONFIG = {
   schoolName:    'ABC Public School',
@@ -284,7 +285,21 @@ const ReceiptCopy = ({ config, data, copyLabel }) => {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function FeeReceiptPrint({ receipt, onClose }) {
-  const [config,      setConfig]      = useState(DEFAULT_CONFIG);
+  // FIX: pull the actual selected school from UserContext instead of
+  // always defaulting to the hardcoded "ABC Public School" placeholder.
+  // schoolInfo is set via saveSchool() when a school is selected and mirrors
+  // localStorage 'school' -> { schoolId, schoolName, schoolCode, logoUrl }.
+  const { schoolInfo } = useContext(UserContext);
+
+  const [config, setConfig] = useState(() => ({
+    ...DEFAULT_CONFIG,
+    // Only override fields the real school object actually carries.
+    // Address/phone/email aren't part of schoolInfo today, so they keep
+    // falling back to DEFAULT_CONFIG until those fields exist on the backend.
+    schoolName: schoolInfo?.schoolName || DEFAULT_CONFIG.schoolName,
+    schoolLogo: schoolInfo?.logoUrl    || DEFAULT_CONFIG.schoolLogo,
+  }));
+
   const [showConfig,  setShowConfig]  = useState(false);
   const [editData,    setEditData]    = useState(() => ({
     receiptNo:   receipt?.receiptNo   || '',
