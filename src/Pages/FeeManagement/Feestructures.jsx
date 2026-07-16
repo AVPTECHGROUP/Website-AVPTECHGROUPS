@@ -37,6 +37,14 @@ import {
 // COMPONENT_TYPE_OPTIONS is affected.
 const STRUCTURE_COMPONENT_OPTIONS = COMPONENT_TYPE_OPTIONS.filter((o) => o.value !== 'TRANSPORT_FEE');
 
+// FIX: Custom Name (used for Misc Fee / Other Fee components) must be
+// letters and spaces only — no digits, no symbols. This regex is used both
+// to strip disallowed characters as the user types and to validate on
+// submit (covers paste, which onChange filtering alone wouldn't fully block
+// if a component were to bypass updateComponent).
+const NAME_ONLY_REGEX = /^[A-Za-z\s]*$/;
+const sanitizeNameInput = (val) => val.replace(/[^A-Za-z\s]/g, '');
+
 // ─── Toast ────────────────────────────────────────────────────────────────────
 let _dispatch = null;
 
@@ -353,7 +361,11 @@ function StructureModal({ isOpen, onClose, structure, periods, classes, onSucces
         ...p,
         components: p.components.map((c, idx) => {
           if (idx !== i) return c;
-          const updated = { ...c, [field]: val };
+          // FIX: Custom Name is letters/spaces only — strip any digit or
+          // symbol as the user types (also covers paste, since the pasted
+          // text still flows through this handler).
+          const nextVal = field === 'customName' ? sanitizeNameInput(val) : val;
+          const updated = { ...c, [field]: nextVal };
           if (field === 'componentType' && !REQUIRES_CUSTOM_NAME.includes(val)) updated.customName = '';
           return updated;
         }),
@@ -378,10 +390,19 @@ function StructureModal({ isOpen, onClose, structure, periods, classes, onSucces
       const rowLabel = `row ${i + 1}`;
       if (!comp.componentType) { toast.error(FEE_STRUCTURE_STRINGS.TOAST_VALIDATION, `Select component type for ${rowLabel}`); return; }
       if (!comp.amount || parseFloat(comp.amount) <= 0) { toast.error(FEE_STRUCTURE_STRINGS.TOAST_VALIDATION, `Enter valid amount for ${rowLabel}`); return; }
-      if (REQUIRES_CUSTOM_NAME.includes(comp.componentType) && !comp.customName?.trim()) {
-        const label = comp.componentType === 'MISC_FEE' ? 'Misc Fee' : 'Other Fee';
-        toast.error(FEE_STRUCTURE_STRINGS.TOAST_VALIDATION, `"Custom Name" is required for ${label} (${rowLabel})`);
-        return;
+      if (REQUIRES_CUSTOM_NAME.includes(comp.componentType)) {
+        if (!comp.customName?.trim()) {
+          const label = comp.componentType === 'MISC_FEE' ? 'Misc Fee' : 'Other Fee';
+          toast.error(FEE_STRUCTURE_STRINGS.TOAST_VALIDATION, `"Custom Name" is required for ${label} (${rowLabel})`);
+          return;
+        }
+        // FIX: belt-and-suspenders check on submit — blocks any numbers or
+        // symbols that might slip through (e.g. programmatic state updates),
+        // not just what's typed directly into the input.
+        if (!NAME_ONLY_REGEX.test(comp.customName)) {
+          toast.error(FEE_STRUCTURE_STRINGS.TOAST_VALIDATION, `"Custom Name" can only contain letters (${rowLabel})`);
+          return;
+        }
       }
     }
 
@@ -537,6 +558,8 @@ function StructureModal({ isOpen, onClose, structure, periods, classes, onSucces
                           />
                         </div>
                         <div className="col-span-4">
+                          {/* FIX: letters/spaces only. updateComponent strips
+                              digits/symbols on every keystroke and on paste. */}
                           <Input
                               value={comp.customName}
                               onChange={(v) => updateComponent(i, 'customName', v)}
