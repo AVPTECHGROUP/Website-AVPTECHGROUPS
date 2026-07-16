@@ -322,6 +322,7 @@ export default function AllocateStudentCard({ isOpen, onClose, onSave, allocatio
     if (!validate()) return;
     setSaving(true);
 
+    // FIXED: Only populate override fields if user has explicitly changed the fee amount
     const payload = {
       studentId: Number(form.studentId),
       routeId: Number(form.routeId),
@@ -329,7 +330,7 @@ export default function AllocateStudentCard({ isOpen, onClose, onSave, allocatio
       pickupDropType: form.pickupDropType,
       effectiveFrom: form.effectiveFrom,
       effectiveTo: form.effectiveTo || null,
-      overrideFeeAmount: form.monthlyFee !== "" ? Number(form.monthlyFee) : null,
+      overrideFeeAmount: isFeeOverridden && form.monthlyFee !== "" ? Number(form.monthlyFee) : null,
       overrideReason: isFeeOverridden ? form.overrideReason : null,
       remarks: form.remarks || null,
     };
