@@ -325,6 +325,7 @@ export default function EditAllocateStudentCards({ isOpen, onClose, onUpdate, ed
     if (!validate()) return;
     setSaving(true);
     try {
+      // FIXED: Send overrideFeeAmount as null if it's not actually overridden
       await updateTransportAllocation(editData.id, {
         studentId: Number(form.studentId),
         routeId: Number(form.routeId),
@@ -332,7 +333,7 @@ export default function EditAllocateStudentCards({ isOpen, onClose, onUpdate, ed
         pickupDropType: form.pickupDropType,
         effectiveFrom: form.effectiveFrom,
         effectiveTo: form.effectiveTo || null,
-        overrideFeeAmount: form.monthlyFee !== "" ? Number(form.monthlyFee) : null,
+        overrideFeeAmount: isFeeOverridden && form.monthlyFee !== "" ? Number(form.monthlyFee) : null,
         overrideReason: isFeeOverridden ? form.overrideReason : null,
         remarks: form.remarks || null,
       });
