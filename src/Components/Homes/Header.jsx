@@ -4,8 +4,6 @@ import Dashboard_anim from './Dashboard_anim'
 import Text_animate from './Text_animate'
 import Mockups from '../../Components/Homes/Mockups/Mockups'
 import { useNavigate } from 'react-router-dom'
-import dpis from "../../assets/Images/dpis.jpg"
-import rav from "../../assets/Images/Rav.png"
 
 export default function Header() {
     const [mounted, setMounted] = useState(false)
@@ -37,13 +35,22 @@ export default function Header() {
         }
     };
 
-    // Premium 5 Schools Dataset
+    const features = [
+        "Smart ERP Operations",
+        "Unified Communication",
+        "Real-Time Analytics",
+        "Secure Cloud Platform",
+    ];
+
+    // Premium Schools Dataset (Updated with new entries & logos removed)
     const trustedSchools = [
-        { name: "Delhi Public International School", logo: dpis },
-        { name: "RAV Public School", logo: rav },
-        { name: "St. Xavier's School", logo: "xaviers-logo.jpg" },
-        { name: "RLB School", logo: "sunbeam-logo.jpg" },
-        { name: "Avadh Collegiate", logo: "gdgoenka-logo.jpg" }
+        { name: "Delhi Public International School" },
+        { name: "RAV Public School" },
+        { name: "St. Xavier's School" },
+        { name: "RLB School" },
+        { name: "Shyam Children Public School" },
+        { name: "Rama Public School" },
+        { name: "KBMA School" }
     ];
 
     return (
@@ -58,7 +65,7 @@ export default function Header() {
                 .animate-marquee-premium {
                     display: flex;
                     width: max-content;
-                    animation: marqueeLeft 30s linear infinite;
+                    animation: marqueeLeft 35s linear infinite;
                 }
                 .animate-marquee-premium:hover {
                     animation-play-state: paused;
@@ -75,56 +82,57 @@ export default function Header() {
             <div className="relative z-10 flex flex-col w-full max-w-350 mx-auto px-6 sm:px-10 xl:px-16 pt-10 sm:pt-8 pb-0">
 
                 {/* TOP HERO ROW: Content Split */}
-                <div className="flex flex-col lg:flex-row items-center justify-between gap-8 lg:gap-4 w-full">
+                <div className="flex flex-col lg:flex-row items-center justify-between gap-8 lg:gap-6 w-full">
 
                     {/* LEFT: Text Block */}
-                    <div className="flex flex-col items-center lg:items-start text-center lg:text-left shrink-0 w-full lg:w-[46%] xl:w-[44%]">
+                    <div className="flex flex-col items-center lg:items-start text-center lg:text-left shrink-0 w-full lg:w-[48%] xl:w-[44%]">
                         <div className="animate-[fadeUp_0.9s_0.1s_ease_both]">
                             <span className="inline-flex items-center gap-2 bg-theme-card border border-theme-border backdrop-blur-md rounded-full px-4 py-1.5 text-gold text-[11px] font-semibold tracking-widest uppercase">
                                 <Star size={12} fill="currentColor" className="text-gold" /> Recognized by Startup India
                             </span>
                         </div>
 
-                        <div className="mt-3 animate-[fadeUp_0.9s_0.2s_ease_both]">
-                            <h1 className="font-heading font-bold text-4xl text-nowrap sm:text-5xl lg:text-5xl xl:text-6xl leading-tight">
+                        {/* MOBILE OPTIMIZED HEADLINE & SPACING */}
+                        <div className="mt-4 w-full animate-[fadeUp_0.9s_0.2s_ease_both]">
+                            <h1 className="font-heading font-bold text-[28px] leading-[1.25] sm:text-5xl lg:text-4xl xl:text-5xl sm:leading-tight lg:leading-tight xl:leading-tight">
                                 <span className="block text-theme-text">The Operating System</span>
                                 <span className="text-theme-text"> for</span> <span className='text-grad-teal-gold'> Modern Schools.</span>
                             </h1>
-                            <div className="flex items-center justify-center lg:justify-start mt-1">
+                            {/* Adjusted padding/margin spacing on mobile to prevent overlapping */}
+                            <div className="flex items-center justify-center lg:justify-start mt-4 min-h-[32px]">
                                 <Text_animate />
                             </div>
                         </div>
 
-                        <p className="mt-2 text-[14px] sm:text-[15px] md:text-[18px] font-medium leading-relaxed text-theme-subtext max-w-sm lg:max-w-none animate-[fadeUp_0.9s_0.28s_ease_both]">
-                            Manage everything. Connect everyone. <span className='block'>Grow beyond limits.</span>
+                        <p className="mt-4 text-[14px] sm:text-[15px] md:text-[18px] lg:text-[15px] xl:text-[18px] font-medium leading-relaxed text-theme-subtext max-w-sm lg:max-w-none animate-[fadeUp_0.9s_0.28s_ease_both]">
+                            Manage everything. Connect everyone. <span className='block lg:inline xl:block'>Grow beyond limits.</span>
                         </p>
 
                         {/* Responsive 4-Point Feature Grid */}
                         <div className="mt-5 grid grid-cols-2 gap-y-3 w-full max-w-xs sm:max-w-md lg:max-w-none mx-auto lg:mx-0 text-left animate-[fadeUp_0.9s_0.34s_ease_both]">
-                            <div className="flex items-center gap-2 text-theme-subtext text-[13px] sm:text-[14px] md:text-[15px] font-medium">
-                                <svg className="w-4 h-4 text-[#00C9B1] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                                </svg>
-                                <span>Smart ERP Operations</span>
-                            </div>
-                            <div className="flex items-center gap-2 text-theme-subtext text-[13px] sm:text-[14px] md:text-[15px] font-medium">
-                                <svg className="w-4 h-4 text-[#00C9B1] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                                </svg>
-                                <span>Unified Communication</span>
-                            </div>
-                            <div className="flex items-center gap-2 text-theme-subtext text-[13px] sm:text-[14px] md:text-[15px] font-medium">
-                                <svg className="w-4 h-4 text-[#00C9B1] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                                </svg>
-                                <span>Real-Time Analytics</span>
-                            </div>
-                            <div className="flex items-center gap-2 text-theme-subtext text-[13px] sm:text-[14px] md:text-[15px] font-medium">
-                                <svg className="w-4 h-4 text-[#00C9B1] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                                </svg>
-                                <span>Secure Cloud Platform</span>
-                            </div>
+                            {features.map((feature) => (
+                                <div
+                                    key={feature}
+                                    className="flex items-center gap-2 text-theme-subtext text-[13px] sm:text-[14px] md:text-[15px] lg:text-[13px] xl:text-[15px] font-medium"
+                                >
+                                    <div className="w-5 h-5 sm:w-6 sm:h-6 lg:w-5 lg:h-5 xl:w-6 xl:h-6 rounded-full bg-teal-dark flex items-center justify-center shrink-0 shadow-sm">
+                                        <svg
+                                            className="w-3 h-3 text-white"
+                                            fill="none"
+                                            viewBox="0 0 24 24"
+                                            stroke="currentColor"
+                                            strokeWidth="3"
+                                        >
+                                            <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                d="M5 13l4 4L19 7"
+                                            />
+                                        </svg>
+                                    </div>
+                                    <span>{feature}</span>
+                                </div>
+                            ))}
                         </div>
 
                         <div className="flex flex-wrap items-center gap-3 mt-6 justify-center lg:justify-start animate-[fadeUp_0.9s_0.4s_ease_both]">
@@ -137,15 +145,17 @@ export default function Header() {
                                     Book A Demo
                                 </span>
                             </button>
-                            <button
-                                className="relative overflow-hidden flex items-center gap-2 px-4 sm:px-5 py-3 sm:py-3.5 bg-[#0D1626] border-2 border-[#F5A623] text-[#F5A623] font-medium text-[14px] sm:text-[15px] rounded-2xl shadow-[0_0_0_1px_rgba(245,166,35,0.25),0_8px_32px_rgba(0,0,0,0.35)] hover:bg-[#142036] hover:shadow-[0_0_0_1px_rgba(245,166,35,0.45),0_12px_40px_rgba(245,166,35,0.18)] hover:-translate-y-0.5 transition-all duration-300 cursor-pointer group"
+                            <a
+                                href="/brochure/SchoolSpine-Brochure.pdf"
+                                download="SchoolSpine-Brochure.pdf"
+                                className="relative overflow-hidden inline-flex items-center gap-2 px-4 sm:px-5 py-3 sm:py-3.5 bg-[#0D1626] border-2 border-[#F5A623] text-[#F5A623] font-medium text-[14px] sm:text-[15px] rounded-2xl shadow-[0_0_0_1px_rgba(245,166,35,0.25),0_8px_32px_rgba(0,0,0,0.35)] hover:bg-[#142036] hover:shadow-[0_0_0_1px_rgba(245,166,35,0.45),0_12px_40px_rgba(245,166,35,0.18)] hover:-translate-y-0.5 transition-all duration-300 group"
                             >
                                 <Download
                                     size={14}
                                     className="text-[#F5A623] group-hover:scale-110 transition-transform duration-300"
                                 />
                                 <span>Brochure</span>
-                            </button>
+                            </a>
                         </div>
                     </div>
 
@@ -194,7 +204,7 @@ export default function Header() {
                 </div>
 
                 {/* Premium Glass Showcase Container with Hidden Overflow */}
-                <div className="w-full relative overflow-hidden bg-gradient-to-r from-theme-card/10 via-theme-card/40 to-theme-card/10 border border-theme-border/60 backdrop-blur-xl rounded-2xl py-6 shadow-[0_12px_40px_-12px_rgba(0,0,0,0.25)] dark:shadow-[0_16px_48px_-16px_rgba(0,0,0,0.65)] hover:border-theme-border/90 transition-all duration-300">
+                <div className="w-full relative overflow-hidden bg-gradient-to-r from-theme-card/10 via-theme-card/40 to-theme-card/10 border border-theme-border/60 backdrop-blur-xl rounded-2xl py-6 shadow-[0_12px_40px_-12px_rgba(0,0,0,0.25)] dark:shadow-[0_16px_48px_-16px_rgba(0,0,0,0.15)] hover:border-theme-border/90 transition-all duration-300">
 
                     {/* Premium Edge Fades Overlay (Left/Right Blur Mask) */}
                     <div className="absolute inset-y-0 left-0 w-16 sm:w-28 bg-gradient-to-r from-theme-bg via-theme-bg/40 to-transparent z-10 pointer-events-none transition-colors duration-300" />
@@ -207,17 +217,10 @@ export default function Header() {
                         {[...trustedSchools, ...trustedSchools].map((school, index) => (
                             <div key={index} className="flex items-center shrink-0">
                                 <div
-                                    className="flex items-center gap-4 group transition-all duration-300 cursor-pointer px-8 sm:px-12"
+                                    className="flex items-center group transition-all duration-300 cursor-pointer px-8 sm:px-12"
                                 >
-                                    <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-sm overflow-hidden bg-white/5 flex items-center justify-center border border-theme-border/40 group-hover:border-[#00C9B1]/60 group-hover:bg-white/10 shadow-sm transition-all duration-300 shrink-0">
-                                        <img
-                                            src={school.logo}
-                                            alt={`${school.name} logo`}
-                                            className="w-full h-full object-contain filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-transform duration-300 group-hover:scale-105"
-                                            onError={(e) => { e.target.src = "https://via.placeholder.com/40" }}
-                                        />
-                                    </div>
-                                    <span className="text-[13px] sm:text-[14px] font-semibold text-theme-text/85 tracking-wide leading-snug group-hover:text-theme-text transition-colors whitespace-nowrap">
+                                    {/* Premium Typography Showcase Tag */}
+                                    <span className="text-[14px] sm:text-[16px] font-heading font-medium text-theme-text/75 tracking-wider leading-snug group-hover:text-[#00C9B1] group-hover:scale-[1.03] transition-all duration-300 whitespace-nowrap">
                                         {school.name}
                                     </span>
                                 </div>

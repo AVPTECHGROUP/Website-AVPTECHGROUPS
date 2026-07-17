@@ -175,14 +175,38 @@ export const getTransportAllocationById = async (id) => {
 };
 
 export const addTransportAllocation = async (allocationData) => {
-  const res = await authFetch(API_ENDPOINTS.TRANSPORT_ALLOCATIONS, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(allocationData) });
-  if (!res.ok) throw new Error("Failed to allocate student");
+  const res = await authFetch(API_ENDPOINTS.TRANSPORT_ALLOCATIONS, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(allocationData)
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.message || "Failed to allocate student");
+  }
+
   return await res.json();
 };
-
 export const updateTransportAllocation = async (id, allocationData) => {
-  const res = await authFetch(API_ENDPOINTS.transportAllocationById(id), { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(allocationData) });
-  if (!res.ok) throw new Error("Failed to update allocation");
+  const res = await authFetch(API_ENDPOINTS.transportAllocationById(id), {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(allocationData)
+  });
+
+  if (!res.ok) {
+    let errorMsg = "Failed to update allocation";
+    try {
+      const errorData = await res.json();
+      if (errorData && errorData.message) {
+        errorMsg = errorData.message;
+      }
+    } catch (e) {
+    }
+    throw new Error(errorMsg);
+  }
+
   return await res.json();
 };
 
