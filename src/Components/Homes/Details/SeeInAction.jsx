@@ -385,8 +385,8 @@ export default function SeeInAction() {
         }}>
           <div style={{ ...S.slider, left: activeTab === 'admin' ? 4 : 'calc(50%)' }} />
           {[
-            { key: 'admin', e: '🖥️', t: 'Admin Dashboard' },
-            { key: 'parent', e: '📱', t: 'Parent App' },
+            { key: 'admin', e: '', t: 'Admin Dashboard' },
+            { key: 'parent', e: '', t: 'SchoolSpine App' },
           ].map(({ key, e, t }) => (
             <button
               key={key}
