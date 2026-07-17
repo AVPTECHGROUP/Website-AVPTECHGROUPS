@@ -46,6 +46,18 @@ const initials = (name = '') =>
 const MONTH_NAMES = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const EPS = 0.01;
 
+// FIX (negative amounts — discount, late fine, academic/transport amount):
+// every money field in this file shares this one sanitizer. It strips any
+// character that isn't a digit directly out of the raw keystroke/paste
+// BEFORE it reaches state, so a '-' can never actually land in a
+// controlled input. Clamping the parsed number after the fact (the old
+// `Math.max(0, Number(val) || 0)` approach) doesn't work reliably here:
+// React does not repaint a controlled type="number" input while its raw
+// text is in a browser-invalid intermediate state (e.g. "-", "-1"), so the
+// field can keep showing a negative value on screen even though the
+// clamped state underneath is already 0.
+const sanitizeNonNegativeAmount = (raw) => String(raw ?? '').replace(/[^0-9]/g, '');
+
 const reconcilePaidAmount = (totalFee, balanceDue, reportedPaid) => {
   const total = Number(totalFee) || 0;
   const balance = Number(balanceDue) || 0;
@@ -140,6 +152,49 @@ const toast = {
   info: (title, message, duration) => _toastDispatch?.({ type: 'info', title, message, duration }),
 };
 
+// FIX (horizontal scroll not discoverable on wide tables): every wide
+// table in this file (Outstanding, Payment History, Bulk Collect) sits in
+// a container with `overflow-x: auto`, which was already functionally
+// correct — the scroll worked — but on most modern browsers/OSes the
+// scrollbar is an invisible overlay until the user is mid-scroll, so
+// there was no visual cue that columns existed off-screen. `.ch-table-scroll`
+// makes the scrollbar permanently visible and styled (both WebKit browsers
+// and Firefox), and adds a subtle left/right fade so it's obvious there's
+// more content to scroll to, without needing any JS scroll-position
+// tracking. This is applied once, globally, to every scrollable table
+// wrapper below.
+const TableScrollStyles = () => (
+    <style>{`
+      .ch-table-scroll {
+        scrollbar-width: thin;
+        scrollbar-color: #93c5fd #f3f4f6;
+        background:
+          linear-gradient(to right, white 30%, rgba(255,255,255,0)) 0 0,
+          linear-gradient(to left, white 30%, rgba(255,255,255,0)) 100% 0,
+          linear-gradient(to right, rgba(15,23,42,0.10), rgba(15,23,42,0)) 0 0,
+          linear-gradient(to left, rgba(15,23,42,0.10), rgba(15,23,42,0)) 100% 0;
+        background-repeat: no-repeat;
+        background-color: white;
+        background-size: 32px 100%, 32px 100%, 12px 100%, 12px 100%;
+        background-attachment: local, local, scroll, scroll;
+      }
+      .ch-table-scroll::-webkit-scrollbar {
+        height: 10px;
+      }
+      .ch-table-scroll::-webkit-scrollbar-track {
+        background: #f3f4f6;
+        border-radius: 999px;
+      }
+      .ch-table-scroll::-webkit-scrollbar-thumb {
+        background: #93c5fd;
+        border-radius: 999px;
+      }
+      .ch-table-scroll::-webkit-scrollbar-thumb:hover {
+        background: #60a5fa;
+      }
+    `}</style>
+);
+
 // ─── Shared primitives ────────────────────────────────────────────────────────
 const Av = ({ name, status, size = 'md' }) => {
   const sz = { sm: 'w-7 h-7 text-[10px]', md: 'w-9 h-9 text-xs', lg: 'w-12 h-12 text-base' }[size];
@@ -177,13 +232,17 @@ const StatusCell = ({ status, daysLate }) => {
 const Modal = ({ open, onClose, title, subtitle, wide, children, footer }) => {
   if (!open) return null;
   return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-start justify-center p-2 sm:p-4 md:p-6 overflow-y-auto backdrop-blur-sm"
-      onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className={`bg-white rounded-2xl shadow-2xl w-full ${wide ? 'max-w-5xl' : 'max-w-lg'} my-2 sm:my-4`}>
-        <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-100">
-          <div className="min-w-0 flex-1 pr-2">
-            <h2 className="text-[14px] sm:text-[15px] font-bold text-gray-900 truncate">{title}</h2>
-            {subtitle && <p className="text-xs text-gray-400 mt-0.5 truncate">{subtitle}</p>}
+      <div className="fixed inset-0 bg-black/40 z-50 flex items-start justify-center p-2 sm:p-4 md:p-6 overflow-y-auto backdrop-blur-sm">
+        <div className={`bg-white rounded-2xl shadow-2xl w-full ${wide ? 'max-w-5xl' : 'max-w-lg'} my-2 sm:my-4`}>
+          <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-100">
+            <div className="min-w-0 flex-1 pr-2">
+              <h2 className="text-[14px] sm:text-[15px] font-bold text-gray-900 truncate">{title}</h2>
+              {subtitle && <p className="text-xs text-gray-400 mt-0.5 truncate">{subtitle}</p>}
+            </div>
+            <button onClick={onClose}
+                    className="w-7 h-7 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-colors flex-shrink-0">
+              <X size={14} />
+            </button>
           </div>
           <button onClick={onClose}
             className="w-7 h-7 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-colors flex-shrink-0">
@@ -531,6 +590,9 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
     if (discountExceedsAmount) { toast.warning(COLLECTION_HISTORY_STRINGS.TOAST_DISCOUNT_TOO_HIGH, COLLECTION_HISTORY_STRINGS.TOAST_DISCOUNT_EXCEEDS); return; }
     if (!selectedPeriodId) { toast.warning(COLLECTION_HISTORY_STRINGS.TOAST_NO_PERIOD_SELECTED, COLLECTION_HISTORY_STRINGS.TOAST_PLEASE_SELECT_PERIOD); return; }
     if (academicAmountNum > 0 && !activeStudent.feeStructureId) { toast.error(COLLECTION_HISTORY_STRINGS.TOAST_FEE_STRUCTURE_MISSING, COLLECTION_HISTORY_STRINGS.TOAST_NO_FEE_STRUCTURE_FOUND); return; }
+    // FIX: hard backstop, even though negatives can no longer be typed in.
+    if (discountNum < 0) { toast.warning('Invalid discount', 'Discount cannot be negative.'); return; }
+    if (lateFineNum < 0) { toast.warning('Invalid late fine', 'Late fine cannot be negative.'); return; }
 
     try {
       setLoading(true);
@@ -570,40 +632,30 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
     academicExceedsBalance || (canViewTransport && transportExceedsBalance) || discountExceedsAmount;
 
   return (
-    <Modal open={open} onClose={onClose}
-      title={COLLECTION_HISTORY_STRINGS.BTN_COLLECT_FEE}
-      subtitle={COLLECTION_HISTORY_STRINGS.HEADER_SUBTITLE}
-      wide
-      footer={
-        <>
-          <Btn variant="secondary" onClick={onClose} className="w-full sm:w-auto">{COLLECTION_HISTORY_STRINGS.BTN_CANCEL}</Btn>
-          <div className="relative group w-full sm:w-auto">
-            <Btn variant="success" onClick={handleSubmit} disabled={submitDisabled} className="w-full sm:w-auto">
-              {loading && <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />}
-              {loading ? COLLECTION_HISTORY_STRINGS.BTN_RECORDING : COLLECTION_HISTORY_STRINGS.BTN_RECORD_RECEIPT}
-            </Btn>
-            {activeStudent && isFullyPaid && (
-              <div className="absolute bottom-full right-0 mb-2 px-3 py-1.5 bg-gray-800 text-white text-xs rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                ✓ Fully paid
-              </div>
-            )}
-          </div>
-        </>
-      }>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      <Modal open={open} onClose={onClose}
+             title={COLLECTION_HISTORY_STRINGS.BTN_COLLECT_FEE}
+             subtitle={COLLECTION_HISTORY_STRINGS.HEADER_SUBTITLE}
+             wide
+             footer={
+               <>
+                 <Btn variant="secondary" onClick={onClose} className="w-full sm:w-auto">{COLLECTION_HISTORY_STRINGS.BTN_CANCEL}</Btn>
+                 <div className="relative group w-full sm:w-auto">
+                   <Btn variant="success" onClick={handleSubmit} disabled={submitDisabled} className="w-full sm:w-auto">
+                     {loading && <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />}
+                     {loading ? COLLECTION_HISTORY_STRINGS.BTN_RECORDING : COLLECTION_HISTORY_STRINGS.BTN_RECORD_RECEIPT}
+                   </Btn>
+                   {activeStudent && isFullyPaid && (
+                       <div className="absolute bottom-full right-0 mb-2 px-3 py-1.5 bg-gray-800 text-white text-xs rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                         ✓ Fully paid
+                       </div>
+                   )}
+                 </div>
+               </>
+             }>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
-        {/* ── LEFT: Period → Class → Student (manual mode only) ── */}
-        <div className="space-y-4">
-          <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1.5">Fee Period <span className="text-gray-400">*</span></label>
-            <select value={selectedPeriodId} onChange={(e) => setSelectedPeriodId(e.target.value)}
-              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all bg-white">
-              <option value="">-- Select fee period --</option>
-              {periodOptions.map((p) => <option key={p.value} value={String(p.value)}>{p.label}</option>)}
-            </select>
-          </div>
-
-          {isManualMode && selectedPeriodId && (
+          {/* ── LEFT: Period → Class → Student (manual mode only) ── */}
+          <div className="space-y-4">
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1.5">
                 Class <span className="text-gray-400">*</span>
@@ -697,6 +749,81 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
                     <CheckCircle size={12} className="text-emerald-600 flex-shrink-0" />
                     <span className="text-[11px] font-bold text-emerald-700">Fully paid</span>
                   </div>
+                </div>
+            )}
+
+            {/* ── Fee Breakdown: itemized Academic + Transport ── */}
+            {activeStudent && selectedPeriodId && (
+                <div className="space-y-2">
+                  <div className="text-[10.5px] font-bold text-gray-400 uppercase tracking-wider">Fee Breakdown</div>
+
+                  {hasAcademicStructure && (
+                      <LineItemBlock
+                          title="Academic Fee"
+                          icon={<IndianRupee size={12} />}
+                          items={academicItems}
+                          subtotal={academicSubtotal}
+                          tone="slate"
+                      />
+                  )}
+
+                  {canViewTransport && (
+                      <LineItemBlock
+                          title="Transport Fee"
+                          icon={<Bus size={12} />}
+                          items={transportLoading ? [] : transportItems}
+                          subtotal={transportDue}
+                          tone="sky"
+                          extra={
+                            transportLoading ? (
+                                <div className="text-xs text-sky-600 flex items-center gap-2 mt-2">
+                                  <span className="w-3 h-3 border-2 border-sky-400 border-t-transparent rounded-full animate-spin" /> Loading…
+                                </div>
+                            ) : !transportInfo ? (
+                                <div className="text-xs text-sky-600 mt-2">No transport allocation for this student/period.</div>
+                            ) : (
+                                <div className="text-[11px] text-sky-500 mt-2">
+                                  {transportInfo.routeName || transportInfo.routeCode || 'Route'} · {transportInfo.stopName || '—'}
+                                </div>
+                            )
+                          }
+                      />
+                  )}
+                </div>
+            )}
+          </div>
+
+          {/* ── RIGHT: Payment form — two independent amount columns ── */}
+          <div className={`space-y-4 ${(isFullyPaid || isTransportOnlyStudent) ? 'opacity-40 pointer-events-none select-none' : ''}`}>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Academic column */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                  Academic Amount <span className="text-gray-400">*</span>
+                </label>
+                <div className="relative">
+                  {/* FIX: same non-negative sanitization as discount/late
+                      fine below — a '-' can never be typed into this field. */}
+                  <Inp
+                      type="number"
+                      value={form.academicAmount}
+                      disabled={!hasAcademicStructure}
+                      className={`pr-16 ${academicExceedsBalance ? 'border-orange-400 bg-orange-50' : ''}`}
+                      onChange={(e) => { academicTouchedRef.current = true; setForm((p) => ({ ...p, academicAmount: sanitizeNonNegativeAmount(e.target.value) })); }}
+                      max={academicBalance} min={0}
+                      placeholder={hasAcademicStructure ? `Max ${fmt(academicBalance)}` : 'N/A'}
+                  />
+                  {hasAcademicStructure && academicBalance > 0 && (
+                      <button type="button"
+                              onClick={() => { academicTouchedRef.current = true; setForm((p) => ({ ...p, academicAmount: String(academicBalance) })); }}
+                              className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-[#1E3A5F] bg-blue-50 hover:bg-blue-100 border border-blue-200 px-1.5 py-1 rounded whitespace-nowrap">
+                        Full
+                      </button>
+                  )}
+                </div>
+                {academicExceedsBalance && (
+                    <p className="text-[10.5px] text-orange-600 font-medium mt-1">Exceeds academic due ({fmt(academicBalance)})</p>
                 )}
                 {isTransportOnlyStudent && canViewTransport && (
                   <div className="flex items-center gap-1 mt-1">
@@ -724,26 +851,32 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
               )}
 
               {canViewTransport && (
-                <LineItemBlock
-                  title="Transport Fee"
-                  icon={<Bus size={12} />}
-                  items={transportLoading ? [] : transportItems}
-                  subtotal={transportDue}
-                  tone="sky"
-                  extra={
-                    transportLoading ? (
-                      <div className="text-xs text-sky-600 flex items-center gap-2 mt-2">
-                        <span className="w-3 h-3 border-2 border-sky-400 border-t-transparent rounded-full animate-spin" /> Loading…
-                      </div>
-                    ) : !transportInfo ? (
-                      <div className="text-xs text-sky-600 mt-2">No transport allocation for this student/period.</div>
-                    ) : (
-                      <div className="text-[11px] text-sky-500 mt-2">
-                        {transportInfo.routeName || transportInfo.routeCode || 'Route'} · {transportInfo.stopName || '—'}
-                      </div>
-                    )
-                  }
-                />
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1.5 flex items-center gap-1">
+                      <Bus size={11} className="text-sky-600 flex-shrink-0" /> Transport Amount
+                    </label>
+                    <div className="relative">
+                      <Inp
+                          type="number"
+                          value={form.transportAmount}
+                          disabled={transportDue <= 0}
+                          className={`pr-16 ${transportExceedsBalance ? 'border-orange-400 bg-orange-50' : ''}`}
+                          onChange={(e) => { transportTouchedRef.current = true; setForm((p) => ({ ...p, transportAmount: sanitizeNonNegativeAmount(e.target.value) })); }}
+                          max={transportDue} min={0}
+                          placeholder={transportDue > 0 ? `Max ${fmt(transportDue)}` : 'None due'}
+                      />
+                      {transportDue > 0 && (
+                          <button type="button"
+                                  onClick={() => { transportTouchedRef.current = true; setForm((p) => ({ ...p, transportAmount: String(transportDue) })); }}
+                                  className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-sky-700 bg-sky-50 hover:bg-sky-100 border border-sky-200 px-1.5 py-1 rounded whitespace-nowrap">
+                            Full
+                          </button>
+                      )}
+                    </div>
+                    {transportExceedsBalance && (
+                        <p className="text-[10.5px] text-orange-600 font-medium mt-1">Exceeds transport due ({fmt(transportDue)})</p>
+                    )}
+                  </div>
               )}
             </div>
           )}
@@ -847,8 +980,33 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
               <label className="block text-xs font-semibold text-gray-700 mb-1.5">
                 {COLLECTION_HISTORY_STRINGS.LBL_PAYMENT_DATE} <span className="text-gray-400">*</span>
               </label>
-              <Inp type="date" value={form.paymentDate}
-                onChange={(e) => setForm((p) => ({ ...p, paymentDate: e.target.value }))} />
+              {/* FIX: discount can now only ever be zero or a positive whole
+                  number — '-' and every other non-digit character are
+                  stripped as the user types or pastes, so a negative value
+                  can never actually be rendered in the field. */}
+              <Inp
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={form.discount}
+                  placeholder="Discount amount"
+                  className={discountExceedsAmount ? 'border-orange-400 bg-orange-50' : ''}
+                  onChange={(e) => setForm((p) => ({ ...p, discount: sanitizeNonNegativeAmount(e.target.value) }))}
+              />
+              {discountExceedsAmount && (
+                  <p className="text-[11px] text-orange-600 font-medium mt-1 flex items-center gap-1">
+                    <AlertCircle size={11} /> {COLLECTION_HISTORY_STRINGS.MSG_DISCOUNT_EXCEEDS}
+                  </p>
+              )}
+              {discountNum > 0 && !discountExceedsAmount && (
+                  <p className="text-[11px] text-emerald-600 font-medium mt-1 flex items-center gap-1">
+                    <CheckCircle size={11} /> Discount of {fmt(discountNum)} applied
+                  </p>
+              )}
+              <textarea value={form.discountReason} rows={2}
+                        onChange={(e) => setForm((p) => ({ ...p, discountReason: e.target.value }))}
+                        placeholder={COLLECTION_HISTORY_STRINGS.LBL_REASON}
+                        className="w-full mt-2 px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 resize-none" />
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1.5">{COLLECTION_HISTORY_STRINGS.LBL_REFERENCE_NO}</label>
@@ -891,6 +1049,10 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
                   <div className="text-[11px] text-amber-700 mt-0.5">
                     Due: {fmtDate(activeStudent?.dueDate)} · {activeStudent?.daysLate} day{activeStudent?.daysLate !== 1 ? 's' : ''} overdue
                   </div>
+                  {/* FIX: same non-negative sanitization — late fine can
+                      never hold a '-' character either. */}
+                  <Inp type="number" min={0} step={1} value={form.lateFine} placeholder="Fine amount (₹)"
+                       onChange={(e) => setForm((p) => ({ ...p, lateFine: sanitizeNonNegativeAmount(e.target.value) }))} />
                 </div>
               </div>
               <Inp type="number" value={form.lateFine} placeholder="Fine amount (₹)"
@@ -952,7 +1114,15 @@ const BulkCollectModal = ({ open, onClose, students, onSuccess, canCollect, canV
     }
   }, [open, students]);
 
-  const update = (id, field, val) => setRows((p) => p.map((r) => r.id === id ? { ...r, [field]: val } : r));
+  // FIX: bulk-row money fields (academic/transport collect, discount, late
+  // fine) go through the same non-negative sanitizer as the single-collect
+  // modal, so a negative value can't be typed into any per-row input here
+  // either.
+  const update = (id, field, val) => {
+    const moneyFields = ['academicCollect', 'transportCollect', 'discount', 'lateFine'];
+    const nextVal = moneyFields.includes(field) ? sanitizeNonNegativeAmount(val) : val;
+    setRows((p) => p.map((r) => r.id === id ? { ...r, [field]: nextVal } : r));
+  };
   const applyAll = () => setRows((p) => p.map((r) => ({ ...r, paymentMode: commonMode, paymentDate: commonDate })));
 
   const academicGrandTotal = rows.reduce((s, r) => s + (parseFloat(r.academicCollect) || 0), 0);
@@ -1021,11 +1191,12 @@ const BulkCollectModal = ({ open, onClose, students, onSuccess, canCollect, canV
           <label className="block text-xs font-semibold text-gray-700 mb-1.5">{COLLECTION_HISTORY_STRINGS.LBL_PAYMENT_DATE}</label>
           <Inp type="date" value={commonDate} onChange={(e) => setCommonDate(e.target.value)} className="w-full sm:w-40" />
         </div>
-        <Btn variant="ghost" size="sm" onClick={applyAll} className="w-full sm:w-auto mt-2 sm:mt-0">{COLLECTION_HISTORY_STRINGS.BTN_APPLY_ALL}</Btn>
-      </div>
-      <div className="overflow-x-auto rounded-xl border border-gray-200 -mx-1 px-1 sm:mx-0 sm:px-0">
-        <table className="w-full text-sm min-w-[820px]">
-          <thead>
+        {/* FIX: same always-visible scrollbar + fade treatment as the main
+            Outstanding/History tables, so overflowed columns (Discount,
+            Late Fine, Mode) are just as discoverable here. */}
+        <div className="overflow-x-auto ch-table-scroll rounded-xl border border-gray-200 -mx-1 px-1 sm:mx-0 sm:px-0">
+          <table className="w-full text-sm min-w-[820px]">
+            <thead>
             <tr className="bg-gray-50 border-b border-gray-200">
               <th className="px-3 py-2.5 text-left text-[10.5px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Student</th>
               <th className="px-3 py-2.5 text-left text-[10.5px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Academic Due</th>
@@ -1046,58 +1217,54 @@ const BulkCollectModal = ({ open, onClose, students, onSuccess, canCollect, canV
               const acadOver = (parseFloat(row.academicCollect) || 0) > (parseFloat(row.academicDue) || 0) + EPS;
               const transOver = (parseFloat(row.transportCollect) || 0) > (parseFloat(row.transportDue) || 0) + EPS;
               return (
-                <tr key={row.id} className={row.daysLate > 0 ? 'bg-orange-50/60' : 'hover:bg-gray-50/60'}>
-                  <td className="px-3 py-2.5">
-                    <div className="font-semibold text-gray-900 whitespace-nowrap">{row.studentName}</div>
-                    <div className="text-xs text-gray-400 whitespace-nowrap">{row.studentCode} · {row.class}</div>
-                  </td>
-                  <td className="px-3 py-2.5">
-                    {row.daysLate > 0
-                      ? <span className="text-red-700 text-xs font-bold whitespace-nowrap">{fmt(row.academicDue)}<br /><span className="text-[10px]">{row.daysLate}d late</span></span>
-                      : <span className="font-semibold text-gray-800 whitespace-nowrap">{fmt(row.academicDue)}</span>
-                    }
-                  </td>
-                  <td className="px-3 py-2.5">
-                    <input type="number" value={row.academicCollect}
-                      disabled={!row.academicDue}
-                      onChange={(e) => update(row.id, 'academicCollect', e.target.value)}
-                      className={`w-24 px-2 py-1 text-sm border rounded-lg focus:outline-none disabled:bg-gray-50 disabled:text-gray-300 ${acadOver ? 'border-orange-400 bg-orange-50' : 'border-gray-200 focus:border-blue-400'}`} />
-                    {acadOver && <div className="text-[10px] text-orange-600 mt-0.5 whitespace-nowrap">Exceeds due</div>}
-                  </td>
-                  {canViewTransport && (
-                    <>
-                      <td className="px-3 py-2.5">
-                        <span className="text-sky-700 font-semibold text-xs whitespace-nowrap">{row.transportDue > 0 ? fmt(row.transportDue) : '—'}</span>
-                      </td>
-                      <td className="px-3 py-2.5">
-                        <input type="number" value={row.transportCollect}
-                          disabled={!row.transportDue}
-                          onChange={(e) => update(row.id, 'transportCollect', e.target.value)}
-                          className={`w-24 px-2 py-1 text-sm border rounded-lg focus:outline-none disabled:bg-gray-50 disabled:text-gray-300 ${transOver ? 'border-orange-400 bg-orange-50' : 'border-sky-200 focus:border-sky-400'}`} />
-                        {transOver && <div className="text-[10px] text-orange-600 mt-0.5 whitespace-nowrap">Exceeds due</div>}
-                      </td>
-                    </>
-                  )}
-                  <td className="px-3 py-2.5">
-                    <input type="number" value={row.discount} placeholder="0"
-                      onChange={(e) => update(row.id, 'discount', e.target.value)}
-                      className="w-20 px-2 py-1 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-blue-400" />
-                  </td>
-                  <td className="px-3 py-2.5">
-                    {row.lateFine !== null
-                      ? <input type="number" value={row.lateFine} placeholder="Fine"
-                        onChange={(e) => update(row.id, 'lateFine', e.target.value)}
-                        className="w-20 px-2 py-1 text-sm border border-amber-200 rounded-lg bg-amber-50" />
-                      : <span className="text-xs text-gray-300 whitespace-nowrap">N/A</span>
-                    }
-                  </td>
-                  <td className="px-3 py-2.5">
-                    <select value={row.paymentMode} onChange={(e) => update(row.id, 'paymentMode', e.target.value)}
-                      className="w-24 px-2 py-1 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-blue-400">
-                      {PAYMENT_MODE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                    </select>
-                  </td>
-                </tr>
+                  <tr key={row.id} className={row.daysLate > 0 ? 'bg-orange-50/60' : 'hover:bg-gray-50/60'}>
+                    <td className="px-3 py-2.5">
+                      <div className="font-semibold text-gray-900 whitespace-nowrap">{row.studentName}</div>
+                      <div className="text-xs text-gray-400 whitespace-nowrap">{row.studentCode} · {row.class}</div>
+                    </td>
+                    <td className="px-3 py-2.5">
+                      {row.daysLate > 0
+                          ? <span className="text-red-700 text-xs font-bold whitespace-nowrap">{fmt(row.academicDue)}<br /><span className="text-[10px]">{row.daysLate}d late</span></span>
+                          : <span className="font-semibold text-gray-800 whitespace-nowrap">{fmt(row.academicDue)}</span>
+                      }
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <input type="number" min={0} value={row.academicCollect}
+                             disabled={!row.academicDue}
+                             onChange={(e) => update(row.id, 'academicCollect', e.target.value)}
+                             className={`w-24 px-2 py-1 text-sm border rounded-lg focus:outline-none disabled:bg-gray-50 disabled:text-gray-300 ${acadOver ? 'border-orange-400 bg-orange-50' : 'border-gray-200 focus:border-blue-400'}`} />
+                      {acadOver && <div className="text-[10px] text-orange-600 mt-0.5 whitespace-nowrap">Exceeds due</div>}
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <span className="text-sky-700 font-semibold text-xs whitespace-nowrap">{row.transportDue > 0 ? fmt(row.transportDue) : '—'}</span>
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <input type="number" min={0} value={row.transportCollect}
+                             disabled={!row.transportDue}
+                             onChange={(e) => update(row.id, 'transportCollect', e.target.value)}
+                             className={`w-24 px-2 py-1 text-sm border rounded-lg focus:outline-none disabled:bg-gray-50 disabled:text-gray-300 ${transOver ? 'border-orange-400 bg-orange-50' : 'border-sky-200 focus:border-sky-400'}`} />
+                      {transOver && <div className="text-[10px] text-orange-600 mt-0.5 whitespace-nowrap">Exceeds due</div>}
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <input type="number" min={0} value={row.discount} placeholder="0"
+                             onChange={(e) => update(row.id, 'discount', e.target.value)}
+                             className="w-20 px-2 py-1 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-blue-400" />
+                    </td>
+                    <td className="px-3 py-2.5">
+                      {row.lateFine !== null
+                          ? <input type="number" min={0} value={row.lateFine} placeholder="Fine"
+                                   onChange={(e) => update(row.id, 'lateFine', e.target.value)}
+                                   className="w-20 px-2 py-1 text-sm border border-amber-200 rounded-lg bg-amber-50" />
+                          : <span className="text-xs text-gray-300 whitespace-nowrap">N/A</span>
+                      }
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <select value={row.paymentMode} onChange={(e) => update(row.id, 'paymentMode', e.target.value)}
+                              className="w-24 px-2 py-1 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-blue-400">
+                        {PAYMENT_MODE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                      </select>
+                    </td>
+                  </tr>
               );
             })}
           </tbody>
@@ -1496,21 +1663,31 @@ const CollectionsHistory = () => {
   };
 
   return (
-    <div className="space-y-4 sm:space-y-5 px-2 sm:px-4 max-w-full overflow-hidden">
-      <ToastContainer />
+      // FIX: was `overflow-hidden` on the page root, which was doing
+      // double duty as a "stop stray content from overflowing the page"
+      // guard. That guard is still needed (it's what previously fixed the
+      // overdue-badge overflow issue), but `overflow-hidden` also clips
+      // ANY descendant's box on this axis — including, subtly, the visual
+      // affordances (fade edges) added to the tables below. Narrowing it
+      // to `overflow-x-hidden` keeps the "no stray horizontal overflow at
+      // the page level" guarantee while no longer interfering with the
+      // intentional, contained horizontal scroll regions inside the tables.
+      <div className="space-y-4 sm:space-y-5 px-2 sm:px-4 max-w-full overflow-x-hidden">
+        <ToastContainer />
+        <TableScrollStyles />
 
-      {/* ── Header ── */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-gray-100 pb-3">
-        <div className="min-w-0 flex-1">
-          <h1 className="text-lg sm:text-xl md:text-2xl font-extrabold text-gray-900 tracking-tight">{COLLECTION_HISTORY_STRINGS.HEADER_TITLE}</h1>
-          <p className="text-xs sm:text-sm text-gray-400 mt-0.5 truncate">
-            Academic Year {academicYearLabel} · {COLLECTION_HISTORY_STRINGS.HEADER_SUBTITLE}
-          </p>
-        </div>
-        <div className="flex gap-2 w-full sm:w-auto flex-shrink-0">
-          <button
-            onClick={() => setCollectModal({ open: true, student: null })}
-            className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold rounded-lg transition-colors shadow-sm whitespace-nowrap
+        {/* ── Header ── */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-gray-100 pb-3">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-lg sm:text-xl md:text-2xl font-extrabold text-gray-900 tracking-tight">{COLLECTION_HISTORY_STRINGS.HEADER_TITLE}</h1>
+            <p className="text-xs sm:text-sm text-gray-400 mt-0.5 truncate">
+              Academic Year {academicYearLabel} · {COLLECTION_HISTORY_STRINGS.HEADER_SUBTITLE}
+            </p>
+          </div>
+          <div className="flex gap-2 w-full sm:w-auto flex-shrink-0">
+            <button
+                onClick={() => setCollectModal({ open: true, student: null })}
+                className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold rounded-lg transition-colors shadow-sm whitespace-nowrap
               ${canCollect
                 ? 'text-white bg-[#2563EB] hover:bg-blue-700 cursor-pointer'
                 : 'text-white bg-blue-300 cursor-not-allowed opacity-60'
@@ -1614,15 +1791,31 @@ const CollectionsHistory = () => {
             </div>
           </div>
 
-          {selected.length > 0 && (
-            <div className="bg-[#1E3A5F] rounded-xl px-4 py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-md">
-              <div className="min-w-0">
-                <div className="text-white font-bold text-xs sm:text-sm">{selected.length} selected</div>
-                <div className="text-white/60 text-xs truncate">
-                  Academic: <span className="font-bold text-white">{fmt(selTotal)}</span>
-                  {canViewTransport && selTransportTotal > 0 && (
-                    <> &nbsp;·&nbsp; 🚌 Transport: <span className="font-bold text-sky-300">{fmt(selTransportTotal)}</span></>
-                  )}
+                {/* FIX (responsiveness at ~1440×997, e.g. MacBook with a
+                    sidebar eating into the content width): filter row now
+                    wraps from md up to lg, only forced single-line at lg
+                    (1024px) — matching the table breakpoint below, instead
+                    of previously requiring xl (1280px) which is often wider
+                    than the *content* area actually available once a fixed
+                    sidebar is subtracted from a 1440px window. */}
+                <div className="hidden md:flex flex-wrap lg:flex-nowrap items-center gap-2 w-full">
+                  <div className="relative flex-1 min-w-[180px]">
+                    <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                           placeholder={COLLECTION_HISTORY_STRINGS.PLACEHOLDER_SEARCH_STUDENT}
+                           className="w-full pl-8 pr-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all bg-white" />
+                  </div>
+                  <Sel value={periodF} onChange={(v) => { setPeriodF(v); setPage(1); setSelected([]); }}
+                       options={periodOptions} placeholder="All Periods" className="w-full sm:w-auto md:w-40 flex-shrink-0" />
+                  <Sel value={classF} onChange={(v) => { setClassF(v); setPage(1); setSelected([]); }}
+                       options={classOptions} placeholder="All Classes" className="w-full sm:w-auto md:w-36 flex-shrink-0" />
+                  <Sel value={statusF} onChange={(v) => { setStatusF(v); setPage(1); }}
+                       options={[
+                         { value: STATUSES.OVERDUE, label: 'Overdue' },
+                         { value: STATUSES.PARTIAL, label: 'Partial' },
+                         { value: STATUSES.PENDING, label: 'Pending' },
+                       ]}
+                       placeholder="All Status" className="w-full sm:w-auto md:w-36 flex-shrink-0" />
                 </div>
               </div>
               <div className="flex gap-1.5 flex-shrink-0 w-full sm:w-auto">
@@ -1638,39 +1831,60 @@ const CollectionsHistory = () => {
             </div>
           )}
 
-          {/* Desktop Table View */}
-          <div className="hidden xl:block bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="bg-gray-50/80 border-b border-gray-100">
-                    <th className="px-3 py-2.5 w-8">
-                      <input type="checkbox"
-                        className="w-3.5 h-3.5 cursor-pointer accent-[#2563EB] rounded"
-                        checked={pagedOut.length > 0 && pagedOut.every((s) => selected.includes(s.id))}
-                        onChange={toggleAll} />
-                    </th>
-                    <th className="px-3 py-2.5 text-left text-[10.5px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Student</th>
-                    <th className="px-3 py-2.5 text-left text-[10.5px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Class</th>
-                    <th className="px-3 py-2.5 text-left text-[10.5px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Period</th>
-                    <th className="px-3 py-2.5 text-left text-[10.5px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Academic Fee</th>
-                    <th className="px-3 py-2.5 text-left text-[10.5px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Paid</th>
-                    <th className="px-3 py-2.5 text-left text-[10.5px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Academic Due</th>
-                    {canViewTransport && (
-                      <th className="px-3 py-2.5 text-left text-[10.5px] font-bold text-sky-700 uppercase tracking-wider whitespace-nowrap">🚌 Transport Due</th>
-                    )}
-                    <th className="px-3 py-2.5 text-left text-[10.5px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Due Date</th>
-                    <th className="px-3 py-2.5 text-left text-[10.5px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Status</th>
-                    <th className="px-3 py-2.5 text-left text-[10.5px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {loading ? (
-                    <tr>
-                      <td colSpan={canViewTransport ? 11 : 10} className="text-center py-14">
-                        <span className="w-7 h-7 border-2 border-[#2563EB] border-t-transparent rounded-full animate-spin inline-block mb-2" />
-                        <div className="text-sm text-gray-400">{COLLECTION_HISTORY_STRINGS.MSG_LOADING_OUTSTANDING}</div>
-                      </td>
+              {selected.length > 0 && (
+                  <div className="bg-[#1E3A5F] rounded-xl px-4 py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-md">
+                    <div className="min-w-0">
+                      <div className="text-white font-bold text-xs sm:text-sm">{selected.length} selected</div>
+                      <div className="text-white/60 text-xs truncate">
+                        Academic: <span className="font-bold text-white">{fmt(selTotal)}</span>
+                        {canViewTransport && selTransportTotal > 0 && (
+                            <> &nbsp;·&nbsp; 🚌 Transport: <span className="font-bold text-sky-300">{fmt(selTransportTotal)}</span></>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex gap-1.5 flex-shrink-0 w-full sm:w-auto">
+                      <Btn variant="secondary" size="sm" onClick={() => setSelected([])}
+                           className="!bg-white/10 hover:!bg-white/20 !border-white/30 !text-white text-xs px-2.5 flex-1 sm:flex-none">
+                        {COLLECTION_HISTORY_STRINGS.BTN_CLEAR}
+                      </Btn>
+                      <Btn variant="success" size="sm" className="text-xs px-3 flex-1 sm:flex-none"
+                           onClick={() => setBulkModal({ open: true, students: selStudents })}>
+                        {COLLECTION_HISTORY_STRINGS.BTN_COLLECT} ({selected.length})
+                      </Btn>
+                    </div>
+                  </div>
+              )}
+
+              {/* ── Desktop Table — shown from `lg` (1024px) up. The table
+                  itself carries a min-width so it scrolls horizontally
+                  within its own container rather than squeezing columns
+                  illegibly. `.ch-table-scroll` makes that scroll region's
+                  scrollbar permanently visible (instead of an invisible
+                  overlay) and fades the edges so it's obvious there's more
+                  to scroll to. ── */}
+              <div className="hidden lg:block bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                <div className="overflow-x-auto ch-table-scroll">
+                  <table className="w-full min-w-[1120px]">
+                    <thead>
+                    <tr className="bg-gray-50/80 border-b border-gray-100">
+                      <th className="px-3 py-2.5 w-8">
+                        <input type="checkbox"
+                               className="w-3.5 h-3.5 cursor-pointer accent-[#2563EB] rounded"
+                               checked={pagedOut.length > 0 && pagedOut.every((s) => selected.includes(s.id))}
+                               onChange={toggleAll} />
+                      </th>
+                      <th className="px-3 py-2.5 text-left text-[10.5px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Student</th>
+                      <th className="px-3 py-2.5 text-left text-[10.5px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Class</th>
+                      <th className="px-3 py-2.5 text-left text-[10.5px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Period</th>
+                      <th className="px-3 py-2.5 text-left text-[10.5px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Academic Fee</th>
+                      <th className="px-3 py-2.5 text-left text-[10.5px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Paid</th>
+                      <th className="px-3 py-2.5 text-left text-[10.5px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Academic Due</th>
+                      {canViewTransport && (
+                          <th className="px-3 py-2.5 text-left text-[10.5px] font-bold text-sky-700 uppercase tracking-wider whitespace-nowrap">🚌 Transport Due</th>
+                      )}
+                      <th className="px-3 py-2.5 text-left text-[10.5px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Due Date</th>
+                      <th className="px-3 py-2.5 text-left text-[10.5px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Status</th>
+                      <th className="px-3 py-2.5 text-left text-[10.5px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Action</th>
                     </tr>
                   ) : pagedOut.length === 0 ? (
                     <tr><td colSpan={canViewTransport ? 11 : 10} className="text-center py-14 text-sm text-gray-400">{COLLECTION_HISTORY_STRINGS.MSG_NO_OUTSTANDING_RECORDS}</td></tr>
@@ -1738,18 +1952,58 @@ const CollectionsHistory = () => {
             </div>
           </div>
 
-          {/* Cards View (below xl Breakpoint) */}
-          <div className="xl:hidden space-y-3">
-            {pagedOut.length > 0 && (
-              <div className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-xl px-3 py-2">
-                <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-gray-700">
-                  <input type="checkbox"
-                    className="w-3.5 h-3.5 cursor-pointer accent-[#2563EB] rounded"
-                    checked={pagedOut.length > 0 && pagedOut.every((s) => selected.includes(s.id))}
-                    onChange={toggleAll} />
-                  Select All ({pagedOut.length})
-                </label>
-                <span className="text-xs text-gray-400">Total: {filteredOut.length}</span>
+              {/* ── Cards for everything below lg — phones and tablets only
+                  now ── */}
+              <div className="lg:hidden space-y-3">
+                {pagedOut.length > 0 && (
+                    <div className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-xl px-3 py-2">
+                      <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-gray-700">
+                        <input type="checkbox"
+                               className="w-3.5 h-3.5 cursor-pointer accent-[#2563EB] rounded"
+                               checked={pagedOut.length > 0 && pagedOut.every((s) => selected.includes(s.id))}
+                               onChange={toggleAll} />
+                        Select All ({pagedOut.length})
+                      </label>
+                      <span className="text-xs text-gray-400">Total: {filteredOut.length}</span>
+                    </div>
+                )}
+
+                {loading ? (
+                    <div className="text-center py-14">
+                      <span className="w-7 h-7 border-2 border-[#2563EB] border-t-transparent rounded-full animate-spin inline-block mb-2" />
+                      <div className="text-sm text-gray-400">{COLLECTION_HISTORY_STRINGS.MSG_LOADING_OUTSTANDING}</div>
+                    </div>
+                ) : pagedOut.length === 0 ? (
+                    <div className="text-center py-14 text-sm text-gray-400">{COLLECTION_HISTORY_STRINGS.MSG_NO_OUTSTANDING_RECORDS}</div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {pagedOut.map((s) => (
+                          <OutstandingCard
+                              key={s.id}
+                              s={s}
+                              selected={selected.includes(s.id)}
+                              onToggle={() => toggleRow(s.id)}
+                              onCollect={() => setCollectModal({ open: true, student: s })}
+                              canCollect={canCollect}
+                              canViewTransport={canViewTransport}
+                          />
+                      ))}
+                    </div>
+                )}
+
+                {pagedOut.length > 0 && (
+                    <div className="flex items-center justify-between pt-2">
+                      <Btn variant="secondary" size="sm"
+                           onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>
+                        {COLLECTION_HISTORY_STRINGS.BTN_PREV}
+                      </Btn>
+                      <span className="text-xs text-gray-500">Page {page} of {totalOutPages}</span>
+                      <Btn variant="primary" size="sm"
+                           onClick={() => setPage((p) => Math.min(totalOutPages, p + 1))} disabled={page >= totalOutPages}>
+                        {COLLECTION_HISTORY_STRINGS.BTN_NEXT}
+                      </Btn>
+                    </div>
+                )}
               </div>
             )}
 
@@ -1813,11 +2067,26 @@ const CollectionsHistory = () => {
             </button>
           </div>
 
-          {showFilters && (
-            <div className="flex flex-col gap-2 mb-3 p-3 bg-gray-50 rounded-xl md:hidden border border-gray-100">
-              <div className="grid grid-cols-2 gap-2">
-                <Inp type="date" value={fromDate} onChange={(e) => { setFromDate(e.target.value); setPage(1); }} className="w-full" />
-                <Inp type="date" value={toDate} onChange={(e) => { setToDate(e.target.value); setPage(1); }} className="w-full" />
+              <div className="hidden md:flex flex-wrap lg:flex-nowrap items-center gap-2 w-full">
+                <div className="relative flex-1 min-w-[180px]">
+                  <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                         placeholder={COLLECTION_HISTORY_STRINGS.PLACEHOLDER_SEARCH_HISTORY}
+                         className="w-full pl-8 pr-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all bg-white" />
+                </div>
+                <div className="w-full sm:w-auto md:w-36 lg:w-40 flex-shrink-0">
+                  <Inp type="date" value={fromDate} onChange={(e) => { setFromDate(e.target.value); setPage(1); }} />
+                </div>
+                <div className="w-full sm:w-auto md:w-36 lg:w-40 flex-shrink-0">
+                  <Inp type="date" value={toDate} onChange={(e) => { setToDate(e.target.value); setPage(1); }} />
+                </div>
+                <Sel value={periodF} onChange={(v) => { setPeriodF(v); setPage(1); }}
+                     options={periodOptions} placeholder="All Periods" className="w-full sm:w-auto md:w-36 lg:w-40 flex-shrink-0" />
+                <Sel value={classF} onChange={(v) => { setClassF(v); setPage(1); }}
+                     options={classOptions} placeholder="All Classes" className="w-full sm:w-auto md:w-32 flex-shrink-0" />
+                <Sel value={modeF} onChange={(v) => { setModeF(v); setPage(1); }}
+                     options={PAYMENT_MODE_OPTIONS}
+                     placeholder="All Modes" className="w-full sm:w-auto md:w-32 flex-shrink-0" />
               </div>
               <Sel value={periodF} onChange={(v) => { setPeriodF(v); setPage(1); }}
                 options={periodOptions} placeholder="All Periods" className="w-full" />
@@ -1829,35 +2098,53 @@ const CollectionsHistory = () => {
             </div>
           )}
 
-          <div className="hidden md:flex flex-wrap xl:flex-nowrap items-center gap-2 w-full">
-            <div className="relative flex-1 min-w-[180px]">
-              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                placeholder={COLLECTION_HISTORY_STRINGS.PLACEHOLDER_SEARCH_HISTORY}
-                className="w-full pl-8 pr-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all bg-white" />
-            </div>
-            <div className="w-full sm:w-auto md:w-36 xl:w-40 flex-shrink-0">
-              <Inp type="date" value={fromDate} onChange={(e) => { setFromDate(e.target.value); setPage(1); }} />
-            </div>
-            <div className="w-full sm:w-auto md:w-36 xl:w-40 flex-shrink-0">
-              <Inp type="date" value={toDate} onChange={(e) => { setToDate(e.target.value); setPage(1); }} />
-            </div>
-            <Sel value={periodF} onChange={(v) => { setPeriodF(v); setPage(1); }}
-              options={periodOptions} placeholder="All Periods" className="w-full sm:w-auto md:w-36 xl:w-40 flex-shrink-0" />
-            <Sel value={classF} onChange={(v) => { setClassF(v); setPage(1); }}
-              options={classOptions} placeholder="All Classes" className="w-full sm:w-auto md:w-32 flex-shrink-0" />
-            <Sel value={modeF} onChange={(v) => { setModeF(v); setPage(1); }}
-              options={PAYMENT_MODE_OPTIONS}
-              placeholder="All Modes" className="w-full sm:w-auto md:w-32 flex-shrink-0" />
-          </div>
-
-          <div className="hidden xl:block bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="bg-gray-50/80 border-b border-gray-100">
-                    {COLLECTION_HISTORY_STRINGS.TABLE_HISTORY_HEADERS.map((h) => (
-                      <th key={h} className="px-3 py-2.5 text-left text-[10.5px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
+              {/* ── Desktop Table — same `.ch-table-scroll` treatment as
+                  the Outstanding table above, this is the table the
+                  screenshots flagged as not showing a usable scrollbar. ── */}
+              <div className="hidden lg:block bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                <div className="overflow-x-auto ch-table-scroll">
+                  <table className="w-full min-w-[1180px]">
+                    <thead>
+                    <tr className="bg-gray-50/80 border-b border-gray-100">
+                      {COLLECTION_HISTORY_STRINGS.TABLE_HISTORY_HEADERS.map((h) => (
+                          <th key={h} className="px-3 py-2.5 text-left text-[10.5px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
+                      ))}
+                    </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                    {loading ? (
+                        <tr>
+                          <td colSpan={12} className="text-center py-14">
+                            <span className="w-7 h-7 border-2 border-[#2563EB] border-t-transparent rounded-full animate-spin inline-block mb-2" />
+                            <div className="text-sm text-gray-400">{COLLECTION_HISTORY_STRINGS.MSG_LOADING_HISTORY}</div>
+                          </td>
+                        </tr>
+                    ) : filteredHist.length === 0 ? (
+                        <tr><td colSpan={12} className="text-center py-14 text-sm text-gray-400">{COLLECTION_HISTORY_STRINGS.MSG_NO_HISTORY_RECORDS}</td></tr>
+                    ) : filteredHist.map((h) => (
+                        <tr key={h.id} className="hover:bg-gray-50/60 transition-colors">
+                          <td className="px-3 py-3"><span className="text-[#2563EB] font-bold text-xs whitespace-nowrap">{h.receiptNo}</span></td>
+                          <td className="px-3 py-3 text-xs text-gray-600 whitespace-nowrap">{fmtDate(h.date)}</td>
+                          <td className="px-3 py-3">
+                            <div className="font-semibold text-gray-900 text-sm whitespace-nowrap">{h.studentName}</div>
+                            <div className="text-xs text-gray-400 whitespace-nowrap">{h.studentCode}</div>
+                          </td>
+                          <td className="px-3 py-3">
+                            <span className="inline-block px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-100 text-xs font-semibold rounded-md whitespace-nowrap">{h.class}</span>
+                          </td>
+                          <td className="px-3 py-3 text-xs text-gray-600 whitespace-nowrap">{h.period}</td>
+                          <td className="px-3 py-3 font-bold text-emerald-600 text-sm whitespace-nowrap">{fmt(h.amount)}</td>
+                          <td className="px-3 py-3 text-xs text-gray-500 whitespace-nowrap">{h.discount > 0 ? fmt(h.discount) : '—'}</td>
+                          <td className="px-3 py-3 text-xs text-amber-700 whitespace-nowrap">{h.lateFine > 0 ? fmt(h.lateFine) : '—'}</td>
+                          <td className="px-3 py-3"><StatusPill status={h.mode} label={h.mode} /></td>
+                          <td className="px-3 py-3 text-xs text-gray-500 whitespace-nowrap">{h.referenceNo || '—'}</td>
+                          <td className="px-3 py-3 text-xs text-gray-500 whitespace-nowrap">{h.recordedBy || '—'}</td>
+                          <td className="px-3 py-3">
+                            <Btn variant="ghost" size="xs" onClick={() => handleViewReceipt(h)}>
+                              {COLLECTION_HISTORY_STRINGS.BTN_VIEW_RECEIPT}
+                            </Btn>
+                          </td>
+                        </tr>
                     ))}
                   </tr>
                 </thead>
@@ -1914,11 +2201,35 @@ const CollectionsHistory = () => {
             </div>
           </div>
 
-          <div className="xl:hidden space-y-3">
-            {loading ? (
-              <div className="text-center py-14">
-                <span className="w-7 h-7 border-2 border-[#2563EB] border-t-transparent rounded-full animate-spin inline-block mb-2" />
-                <div className="text-sm text-gray-400">{COLLECTION_HISTORY_STRINGS.MSG_LOADING_HISTORY}</div>
+              <div className="lg:hidden space-y-3">
+                {loading ? (
+                    <div className="text-center py-14">
+                      <span className="w-7 h-7 border-2 border-[#2563EB] border-t-transparent rounded-full animate-spin inline-block mb-2" />
+                      <div className="text-sm text-gray-400">{COLLECTION_HISTORY_STRINGS.MSG_LOADING_HISTORY}</div>
+                    </div>
+                ) : filteredHist.length === 0 ? (
+                    <div className="text-center py-14 text-sm text-gray-400">{COLLECTION_HISTORY_STRINGS.MSG_NO_HISTORY_RECORDS}</div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {filteredHist.map((h) => (
+                          <HistoryCard key={h.id} h={h} onView={() => handleViewReceipt(h)} />
+                      ))}
+                    </div>
+                )}
+
+                {filteredHist.length >= PAGE_SIZE && (
+                    <div className="flex items-center justify-between pt-2">
+                      <Btn variant="secondary" size="sm"
+                           onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>
+                        {COLLECTION_HISTORY_STRINGS.BTN_PREV}
+                      </Btn>
+                      <span className="text-xs text-gray-500">Page {page}</span>
+                      <Btn variant="primary" size="sm"
+                           onClick={() => setPage((p) => p + 1)} disabled={filteredHist.length < PAGE_SIZE}>
+                        {COLLECTION_HISTORY_STRINGS.BTN_NEXT}
+                      </Btn>
+                    </div>
+                )}
               </div>
             ) : filteredHist.length === 0 ? (
               <div className="text-center py-14 text-sm text-gray-400">{COLLECTION_HISTORY_STRINGS.MSG_NO_HISTORY_RECORDS}</div>

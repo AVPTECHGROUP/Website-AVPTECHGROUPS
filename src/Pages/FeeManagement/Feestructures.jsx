@@ -45,6 +45,13 @@ const STRUCTURE_COMPONENT_OPTIONS = COMPONENT_TYPE_OPTIONS.filter((o) => o.value
 const NAME_ONLY_REGEX = /^[A-Za-z\s]*$/;
 const sanitizeNameInput = (val) => val.replace(/[^A-Za-z\s]/g, '');
 
+// FIX (issue 1 — negative amounts): amounts must be a non-negative whole
+// number. Strip anything that isn't a digit (this removes the minus sign
+// and decimal point entirely, so a negative or fractional value can never
+// be typed or pasted in, and the stepper increments 0 → 1 → 2 instead of
+// crawling up by 0.01).
+const sanitizeAmountInput = (val) => val.replace(/[^0-9]/g, '');
+
 // ─── Toast ────────────────────────────────────────────────────────────────────
 let _dispatch = null;
 
@@ -96,11 +103,14 @@ const toast = {
 };
 
 // ─── Delete Confirm Modal ─────────────────────────────────────────────────────
+// FIX (issue 3 — accidental close): the backdrop click-to-close handler has
+// been removed. This modal now only closes via the explicit Cancel button
+// or the X (there is no X here, so Cancel is the only escape hatch), never
+// by clicking outside the dialog.
 const DeleteConfirmModal = ({ open, onClose, onConfirm, loading, structureName }) => {
   if (!open) return null;
   return (
-      <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
-           onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
         <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
           <div className="flex items-start gap-4 mb-5">
             <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
@@ -159,6 +169,8 @@ const StatusPill = ({ status }) => {
 // in fetchClasses below). structure.classes from the detail endpoint only
 // carries id/name, no count and sometimes no nested feePeriod object, which
 // is why Period/Students previously showed blank or "—".
+// FIX (issue 3): backdrop click-to-close removed — only the X button closes
+// this modal now.
 function ViewDetailsModal({ isOpen, onClose, structure, periods = [], allClasses = [] }) {
   if (!isOpen || !structure) return null;
 
@@ -177,8 +189,7 @@ function ViewDetailsModal({ isOpen, onClose, structure, periods = [], allClasses
   );
 
   return (
-      <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
-           onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
         <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto">
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
             <h2 className="text-[15px] font-bold text-gray-900">{FEE_STRUCTURE_STRINGS.VIEW_TITLE}</h2>
@@ -239,6 +250,9 @@ function ViewDetailsModal({ isOpen, onClose, structure, periods = [], allClasses
 // — an existing structure is already anchored to a period/year via
 // feePeriodId, and changing the year there would require also changing the
 // period, which is out of scope for "edit an existing structure."
+// FIX (issue 3): backdrop click-to-close removed — only the X button closes
+// this modal now, so an accidental click on the page behind the dialog no
+// longer discards in-progress form data.
 function StructureModal({ isOpen, onClose, structure, periods, classes, onSuccess, academicYear }) {
   const isEdit = !!structure;
   const [loading, setLoading] = useState(false);
@@ -364,7 +378,12 @@ function StructureModal({ isOpen, onClose, structure, periods, classes, onSucces
           // FIX: Custom Name is letters/spaces only — strip any digit or
           // symbol as the user types (also covers paste, since the pasted
           // text still flows through this handler).
-          const nextVal = field === 'customName' ? sanitizeNameInput(val) : val;
+          // FIX (issue 1): Amount can never contain a minus sign — strip it
+          // (and any other non-numeric character) as the user types/pastes,
+          // so a negative amount can't be entered in the first place.
+          let nextVal = val;
+          if (field === 'customName') nextVal = sanitizeNameInput(val);
+          if (field === 'amount') nextVal = sanitizeAmountInput(val);
           const updated = { ...c, [field]: nextVal };
           if (field === 'componentType' && !REQUIRES_CUSTOM_NAME.includes(val)) updated.customName = '';
           return updated;
@@ -380,6 +399,19 @@ function StructureModal({ isOpen, onClose, structure, periods, classes, onSucces
   const periodOptions = isEdit ? periods : yearPeriods;
   const displayYearLabel = isEdit ? (academicYear?.label || '—') : (selectedYearLabel || '—');
 
+  // FIX (issue 2 — duplicate components): a component type that doesn't
+  // require a custom name (e.g. Tuition Fee, Library Fee) can only appear
+  // once per structure — there's no way to distinguish two "Tuition Fee"
+  // rows from each other, so allowing both is always a mistake. Types that
+  // DO require a custom name (Misc Fee / Other Fee) are the exception,
+  // since two rows of the same type are legitimately different line items
+  // as long as their custom names differ (e.g. "Lab Fee" vs "Sports Fee",
+  // both under Misc Fee).
+  const getUsedTypesForRow = (rowIndex) =>
+      form.components
+          .filter((c, idx) => idx !== rowIndex && c.componentType && !REQUIRES_CUSTOM_NAME.includes(c.componentType))
+          .map((c) => c.componentType);
+
   const handleSubmit = async (saveAsDraft) => {
     if (!form.feePeriodId) { toast.error(FEE_STRUCTURE_STRINGS.TOAST_VALIDATION, 'Please select a fee period'); return; }
     if (form.classIds.length === 0) { toast.error(FEE_STRUCTURE_STRINGS.TOAST_VALIDATION, 'Please select at least one class'); return; }
@@ -389,7 +421,14 @@ function StructureModal({ isOpen, onClose, structure, periods, classes, onSucces
       const comp = form.components[i];
       const rowLabel = `row ${i + 1}`;
       if (!comp.componentType) { toast.error(FEE_STRUCTURE_STRINGS.TOAST_VALIDATION, `Select component type for ${rowLabel}`); return; }
-      if (!comp.amount || parseFloat(comp.amount) <= 0) { toast.error(FEE_STRUCTURE_STRINGS.TOAST_VALIDATION, `Enter valid amount for ${rowLabel}`); return; }
+      // FIX (issue 1): reject zero, blank, and any amount that isn't a
+      // valid positive number (negative values can no longer even be typed
+      // thanks to sanitizeAmountInput, but this is kept as a hard backstop).
+      const amountNum = parseFloat(comp.amount);
+      if (!comp.amount || isNaN(amountNum) || amountNum <= 0) {
+        toast.error(FEE_STRUCTURE_STRINGS.TOAST_VALIDATION, `Enter a valid amount greater than 0 for ${rowLabel}`);
+        return;
+      }
       if (REQUIRES_CUSTOM_NAME.includes(comp.componentType)) {
         if (!comp.customName?.trim()) {
           const label = comp.componentType === 'MISC_FEE' ? 'Misc Fee' : 'Other Fee';
@@ -403,6 +442,31 @@ function StructureModal({ isOpen, onClose, structure, periods, classes, onSucces
           toast.error(FEE_STRUCTURE_STRINGS.TOAST_VALIDATION, `"Custom Name" can only contain letters (${rowLabel})`);
           return;
         }
+      }
+    }
+
+    // FIX (issue 2): block duplicate component types (e.g. Tuition Fee
+    // added twice). Misc Fee / Other Fee are only flagged as duplicates
+    // when both the type AND the custom name match — different custom
+    // names under the same type are legitimate distinct line items.
+    const seenSimpleTypes = new Set();
+    const seenCustomEntries = new Set();
+    for (let i = 0; i < form.components.length; i++) {
+      const comp = form.components[i];
+      if (REQUIRES_CUSTOM_NAME.includes(comp.componentType)) {
+        const key = `${comp.componentType}::${comp.customName.trim().toLowerCase()}`;
+        if (seenCustomEntries.has(key)) {
+          toast.error(FEE_STRUCTURE_STRINGS.TOAST_VALIDATION, `"${comp.customName.trim()}" has already been added — each component must be unique`);
+          return;
+        }
+        seenCustomEntries.add(key);
+      } else if (comp.componentType) {
+        if (seenSimpleTypes.has(comp.componentType)) {
+          const label = STRUCTURE_COMPONENT_OPTIONS.find((o) => o.value === comp.componentType)?.label || comp.componentType;
+          toast.error(FEE_STRUCTURE_STRINGS.TOAST_VALIDATION, `"${label}" has already been added — each component can only be added once`);
+          return;
+        }
+        seenSimpleTypes.add(comp.componentType);
       }
     }
 
@@ -438,8 +502,7 @@ function StructureModal({ isOpen, onClose, structure, periods, classes, onSucces
   if (!isOpen) return null;
 
   return (
-      <div className="fixed inset-0 bg-black/40 z-50 flex items-start justify-center p-6 overflow-y-auto backdrop-blur-sm"
-           onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="fixed inset-0 bg-black/40 z-50 flex items-start justify-center p-6 overflow-y-auto backdrop-blur-sm">
         <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl my-4">
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
             <div>
@@ -547,6 +610,14 @@ function StructureModal({ isOpen, onClose, structure, periods, classes, onSucces
               <div className="space-y-2">
                 {form.components.map((comp, i) => {
                   const needsName = REQUIRES_CUSTOM_NAME.includes(comp.componentType);
+                  // FIX (issue 2): hide component types already used by
+                  // another row (unless that type supports a custom name,
+                  // in which case repeats are fine as long as the name
+                  // differs — enforced at submit time instead).
+                  const usedTypes = getUsedTypesForRow(i);
+                  const rowOptions = STRUCTURE_COMPONENT_OPTIONS.filter(
+                      (o) => o.value === comp.componentType || !usedTypes.includes(o.value)
+                  );
                   return (
                       <div key={i} className="grid grid-cols-12 gap-3 items-start">
                         <div className="col-span-5">
@@ -554,7 +625,7 @@ function StructureModal({ isOpen, onClose, structure, periods, classes, onSucces
                           <Select
                               value={comp.componentType}
                               onChange={(v) => updateComponent(i, 'componentType', v)}
-                              options={[{ value: '', label: '-- Select --' }, ...STRUCTURE_COMPONENT_OPTIONS]}
+                              options={[{ value: '', label: '-- Select --' }, ...rowOptions]}
                           />
                         </div>
                         <div className="col-span-4">
@@ -572,8 +643,15 @@ function StructureModal({ isOpen, onClose, structure, periods, classes, onSucces
                           )}
                         </div>
                         <div className="col-span-2">
+                          {/* FIX (issue 1): min="0" and step="1" as native
+                              backstops, plus updateComponent strips any
+                              non-digit character (including '-' and '.') so
+                              only whole, non-negative amounts can be typed
+                              in, and the up/down arrows step 0 → 1 → 2. */}
                           <Input
                               type="number"
+                              min="0"
+                              step="1"
                               value={comp.amount}
                               onChange={(v) => updateComponent(i, 'amount', v)}
                               placeholder="0"

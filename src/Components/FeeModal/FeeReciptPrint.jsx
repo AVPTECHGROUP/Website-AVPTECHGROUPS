@@ -1,13 +1,19 @@
-import React, { useState, useRef, useContext } from 'react';
+import React, { useState, useRef, useContext, useEffect } from 'react';
 import { Settings, Printer, X, Plus, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 import { UserContext } from '../../ContextAPI/UserContext.jsx'; // TODO: confirm this path matches your project structure
 
+// TODO: confirm this import path matches where getSchoolById actually lives
+// in your project (per your Schools.js file, likely something like
+// '../../Api/SchoolConfiguration/Schools').
+import { getSchoolById } from '../../Api/SchoolConfiguration/schoolconfig.js';
+
+// FIX: this was missing from the file, which is what caused the
+// "ReferenceError: DEFAULT_CONFIG is not defined" crash in the console.
+// School identity fields (name/address/phone/email/logo) have been
+// REMOVED from this config — they are no longer hardcoded defaults or
+// user-editable. They now come exclusively from the school's record via
+// getSchoolById(schoolId), fetched below and rendered read-only.
 const DEFAULT_CONFIG = {
-  schoolName:    'ABC Public School',
-  schoolAddress: '123 Education Lane, New Delhi - 110001',
-  schoolPhone:   '+91 98765 43210',
-  schoolEmail:   'admin@abcschool.edu.in',
-  schoolLogo:    '',
   headerColor:   '#2E7D32',
   accentColor:   '#C8E6C9',
   transportAccentColor: '#BAE6FD',
@@ -20,24 +26,47 @@ const DEFAULT_CONFIG = {
   showSignatureLine: true,
 };
 
-// ─── Config Panel ─────────────────────────────────────────────────────────────
-const ConfigPanel = ({ config, onChange, onClose }) => {
-  const field = (label, key, type = 'text', placeholder = '') => (
+// Shown only until the real school record loads (or if it fails to load,
+// so the receipt still renders instead of breaking).
+const FALLBACK_SCHOOL = {
+  schoolName: 'School',
+  schoolAddress: '',
+  schoolPhone: '',
+  schoolEmail: '',
+  schoolLogo: '',
+};
+
+// ─── Config Panel (read-only view — nothing here is editable) ─────────────────
+// FIX: this used to be an edit form (text inputs, color pickers, toggle
+// switches) for the branding/copy/currency/footer settings. Per request,
+// the whole panel is now a plain read-only display of the current
+// settings — no `onChange` wiring left anywhere in here. `config` and
+// `school` are shown, never mutated, from this component.
+const ConfigPanel = ({ config, onClose, school, schoolLoading }) => {
+  const readOnlyField = (label, value) => (
       <div>
         <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">{label}</label>
-        <input type={type} value={config[key]} placeholder={placeholder}
-               onChange={(e) => onChange({ ...config, [key]: type === 'number' ? +e.target.value : e.target.value })}
-               className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-lg outline-none focus:border-[#2E7D32] focus:ring-1 focus:ring-[#2E7D32]/20 bg-white" />
+        <div className="w-full px-3 py-1.5 text-sm border border-gray-100 rounded-lg bg-gray-50 text-gray-600 truncate">
+          {value || '—'}
+        </div>
       </div>
   );
-  const toggle = (label, key) => (
-      <label className="flex items-center justify-between cursor-pointer">
-        <span className="text-sm font-medium text-gray-700">{label}</span>
-        <div onClick={() => onChange({ ...config, [key]: !config[key] })}
-             className={`w-10 h-5 rounded-full transition-colors relative ${config[key] ? 'bg-[#2E7D32]' : 'bg-gray-300'}`}>
-          <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all ${config[key] ? 'left-5' : 'left-0.5'}`} />
+  const readOnlyColor = (label, hex) => (
+      <div>
+        <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">{label}</label>
+        <div className="flex items-center gap-2">
+          <span className="w-9 h-9 rounded-lg border border-gray-200 flex-shrink-0" style={{ background: hex }} />
+          <span className="text-xs text-gray-500 font-mono">{hex}</span>
         </div>
-      </label>
+      </div>
+  );
+  const readOnlyFlag = (label, value) => (
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-medium text-gray-700">{label}</span>
+        <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${value ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-400'}`}>
+          {value ? 'Yes' : 'No'}
+        </span>
+      </div>
   );
 
   return (
@@ -47,53 +76,49 @@ const ConfigPanel = ({ config, onChange, onClose }) => {
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 sticky top-0 bg-white rounded-t-2xl">
             <div className="flex items-center gap-2">
               <Settings size={15} className="text-[#2E7D32]" />
-              <h3 className="font-extrabold text-gray-900 text-sm">Receipt Configuration</h3>
+              <h3 className="font-extrabold text-gray-900 text-sm">Configuration</h3>
             </div>
             <button onClick={onClose} className="w-6 h-6 rounded-md bg-gray-100 hover:bg-gray-200 flex items-center justify-center">
               <X size={13} />
             </button>
           </div>
           <div className="px-5 py-4 space-y-4">
-            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">School Info</p>
-            {field('School Name', 'schoolName')}
-            {field('Address', 'schoolAddress')}
-            {field('Phone', 'schoolPhone')}
-            {field('Email', 'schoolEmail')}
+            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
+              School Info <span className="normal-case font-normal text-gray-300">(from school profile)</span>
+            </p>
+            {schoolLoading ? (
+                <div className="text-xs text-gray-400 flex items-center gap-2">
+                  <span className="w-3 h-3 border-2 border-gray-300 border-t-gray-500 rounded-full animate-spin" />
+                  Loading school details…
+                </div>
+            ) : (
+                <>
+                  {readOnlyField('School Name', school.schoolName)}
+                  {readOnlyField('Address', school.schoolAddress)}
+                  {readOnlyField('Phone', school.schoolPhone)}
+                  {readOnlyField('Email', school.schoolEmail)}
+                </>
+            )}
 
             <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest pt-2">Branding</p>
             <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Header Color</label>
-                <div className="flex items-center gap-2">
-                  <input type="color" value={config.headerColor}
-                         onChange={(e) => onChange({ ...config, headerColor: e.target.value })}
-                         className="w-9 h-9 rounded-lg border border-gray-200 cursor-pointer p-0.5" />
-                  <span className="text-xs text-gray-500 font-mono">{config.headerColor}</span>
-                </div>
-              </div>
-              <div>
-                <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Row Accent</label>
-                <div className="flex items-center gap-2">
-                  <input type="color" value={config.accentColor}
-                         onChange={(e) => onChange({ ...config, accentColor: e.target.value })}
-                         className="w-9 h-9 rounded-lg border border-gray-200 cursor-pointer p-0.5" />
-                  <span className="text-xs text-gray-500 font-mono">{config.accentColor}</span>
-                </div>
-              </div>
+              {readOnlyColor('Header Color', config.headerColor)}
+              {readOnlyColor('Row Accent', config.accentColor)}
             </div>
+            {readOnlyColor('Transport Accent', config.transportAccentColor)}
 
             <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest pt-2">Copies</p>
-            {toggle('Show Admin / Office Copy', 'showAdminCopy')}
-            {toggle('Show Parent / Student Copy', 'showParentCopy')}
-            {field('Admin Copy Label', 'adminCopyLabel')}
-            {field('Parent Copy Label', 'parentCopyLabel')}
+            {readOnlyFlag('Show Admin / Office Copy', config.showAdminCopy)}
+            {readOnlyFlag('Show Parent / Student Copy', config.showParentCopy)}
+            {readOnlyField('Admin Copy Label', config.adminCopyLabel)}
+            {readOnlyField('Parent Copy Label', config.parentCopyLabel)}
 
             <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest pt-2">Currency</p>
-            {field('Currency Symbol', 'currency')}
+            {readOnlyField('Currency Symbol', config.currency)}
 
             <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest pt-2">Footer</p>
-            {field('Footer Note', 'footerNote')}
-            {toggle('Show Signature Line', 'showSignatureLine')}
+            {readOnlyField('Footer Note', config.footerNote)}
+            {readOnlyFlag('Show Signature Line', config.showSignatureLine)}
           </div>
         </div>
       </div>
@@ -101,11 +126,9 @@ const ConfigPanel = ({ config, onChange, onClose }) => {
 };
 
 // ─── Single Receipt Copy ──────────────────────────────────────────────────────
-// FIX: previously showed one merged `components` table with a single
-// TOTAL. Now shows two itemized sections — Academic Fee (with discount/
-// late fine adjustments) and Transport Fee — each with its own subtotal,
-// reflecting the two-column collection this receipt was generated from.
-const ReceiptCopy = ({ config, data, copyLabel }) => {
+// FIX: school identity (name/address/logo) is now a separate `school` prop
+// sourced from the API, instead of living inside `config`.
+const ReceiptCopy = ({ config, school, data, copyLabel }) => {
   const { currency, headerColor, accentColor, transportAccentColor, showSignatureLine, footerNote } = config;
   const fmt = (n) => currency + (Number(n) || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 });
 
@@ -151,16 +174,16 @@ const ReceiptCopy = ({ config, data, copyLabel }) => {
 
         <div style={{ background: headerColor, padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            {config.schoolLogo ? (
-                <img src={config.schoolLogo} alt="logo" style={{ width: 36, height: 36, borderRadius: 4, objectFit: 'cover' }} />
+            {school.schoolLogo ? (
+                <img src={school.schoolLogo} alt="logo" style={{ width: 36, height: 36, borderRadius: 4, objectFit: 'cover' }} />
             ) : (
                 <div style={{ width: 36, height: 36, borderRadius: 4, background: 'rgba(255,255,255,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold', fontSize: 13 }}>
-                  {config.schoolName.split(' ').slice(0, 2).map(w => w[0]).join('')}
+                  {(school.schoolName || '').split(' ').slice(0, 2).map(w => w[0]).join('')}
                 </div>
             )}
             <div>
-              <div style={{ color: 'white', fontWeight: 'bold', fontSize: 13, letterSpacing: 0.5 }}>{config.schoolName}</div>
-              <div style={{ color: 'rgba(255,255,255,0.8)', fontSize: 9 }}>{config.schoolAddress}</div>
+              <div style={{ color: 'white', fontWeight: 'bold', fontSize: 13, letterSpacing: 0.5 }}>{school.schoolName}</div>
+              <div style={{ color: 'rgba(255,255,255,0.8)', fontSize: 9 }}>{school.schoolAddress}</div>
             </div>
           </div>
           <div style={{ color: 'white', fontWeight: 'bold', fontSize: 13, textTransform: 'uppercase', letterSpacing: 1 }}>
@@ -177,7 +200,7 @@ const ReceiptCopy = ({ config, data, copyLabel }) => {
               ['Adm. No.', data.studentCode],
               ['Name',     data.studentName],
               ['Class',    data.class],
-              ['School',   config.schoolName],
+              ['School',   school.schoolName],
             ].map(([k, v]) => (
                 <div key={k} style={{ display: 'flex', gap: 6, marginBottom: 3 }}>
                   <span style={{ fontWeight: 'bold', minWidth: 60, color: '#444' }}>{k}:</span>
@@ -285,20 +308,54 @@ const ReceiptCopy = ({ config, data, copyLabel }) => {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function FeeReceiptPrint({ receipt, onClose }) {
-  // FIX: pull the actual selected school from UserContext instead of
-  // always defaulting to the hardcoded "ABC Public School" placeholder.
-  // schoolInfo is set via saveSchool() when a school is selected and mirrors
-  // localStorage 'school' -> { schoolId, schoolName, schoolCode, logoUrl }.
-  const { schoolInfo } = useContext(UserContext);
+  const { schoolId, schoolInfo } = useContext(UserContext);
 
-  const [config, setConfig] = useState(() => ({
-    ...DEFAULT_CONFIG,
-    // Only override fields the real school object actually carries.
-    // Address/phone/email aren't part of schoolInfo today, so they keep
-    // falling back to DEFAULT_CONFIG until those fields exist on the backend.
-    schoolName: schoolInfo?.schoolName || DEFAULT_CONFIG.schoolName,
-    schoolLogo: schoolInfo?.logoUrl    || DEFAULT_CONFIG.schoolLogo,
-  }));
+  // FIX: school identity is now its own state, fetched fresh from the
+  // backend for the logged-in school's schoolId — never hardcoded and
+  // never user-editable. We seed it from the lightweight `schoolInfo`
+  // already in UserContext (name/logo) so the header isn't blank while
+  // the fuller record (address/phone/email) loads.
+  const [school, setSchool] = useState({
+    ...FALLBACK_SCHOOL,
+    schoolName: schoolInfo?.schoolName || FALLBACK_SCHOOL.schoolName,
+    schoolLogo: schoolInfo?.logoUrl || FALLBACK_SCHOOL.schoolLogo,
+  });
+  const [schoolLoading, setSchoolLoading] = useState(true);
+
+  useEffect(() => {
+    if (!schoolId) { setSchoolLoading(false); return; }
+    let cancelled = false;
+    (async () => {
+      setSchoolLoading(true);
+      try {
+        const res = await getSchoolById(schoolId);
+        const data = res?.data || res;
+        if (!cancelled && data) {
+          // TODO: confirm these field names against the actual
+          // getSchoolById response shape and adjust the right-hand side
+          // keys if they differ (e.g. contactNumber vs phone).
+          setSchool({
+            schoolName: data.name || data.schoolName || schoolInfo?.schoolName || FALLBACK_SCHOOL.schoolName,
+            schoolAddress: data.address || data.schoolAddress || '',
+            schoolPhone: data.phone || data.contactNumber || data.schoolPhone || '',
+            schoolEmail: data.email || data.schoolEmail || '',
+            schoolLogo: data.logoUrl || schoolInfo?.logoUrl || FALLBACK_SCHOOL.schoolLogo,
+          });
+        }
+      } catch {
+        // Keep whatever we already have (context-seeded values) — a
+        // failed lookup shouldn't block printing a receipt.
+      } finally {
+        if (!cancelled) setSchoolLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [schoolId, schoolInfo]);
+
+  // FIX: config is fixed formatting defaults, shown read-only in the
+  // Config panel — there's no editing UI left to call a setter from, so
+  // this no longer needs to be mutable state.
+  const config = DEFAULT_CONFIG;
 
   const [showConfig,  setShowConfig]  = useState(false);
   const [editData,    setEditData]    = useState(() => ({
@@ -315,7 +372,7 @@ export default function FeeReceiptPrint({ receipt, onClose }) {
     balanceAfter:receipt?.balanceAfter ?? 0,
     discount:    receipt?.discount    || 0,
     lateFine:    receipt?.lateFine    || 0,
-    // FIX: academic and transport are now tracked separately, matching the
+    // Academic and transport are tracked separately, matching the
     // two-column collection. Falls back to legacy `components` (single
     // list) if this receipt was generated before the split, so old
     // receipts still render sensibly.
@@ -390,7 +447,7 @@ export default function FeeReceiptPrint({ receipt, onClose }) {
           </button>
           <button onClick={() => setShowConfig(true)}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-[12px] font-semibold text-gray-600 hover:bg-gray-50 transition">
-            <Settings size={13} /> Configure
+            <Settings size={13} /> Config
           </button>
           <button onClick={handlePrint}
                   className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-white text-[12px] font-bold hover:opacity-90 transition"
@@ -491,10 +548,10 @@ export default function FeeReceiptPrint({ receipt, onClose }) {
           <div className="max-w-5xl mx-auto">
             <div className="grid grid-cols-2 gap-4 bg-white p-4 rounded-xl shadow-lg">
               {config.showAdminCopy && (
-                  <ReceiptCopy config={config} data={editData} copyLabel={config.adminCopyLabel} />
+                  <ReceiptCopy config={config} school={school} data={editData} copyLabel={config.adminCopyLabel} />
               )}
               {config.showParentCopy && (
-                  <ReceiptCopy config={config} data={editData} copyLabel={config.parentCopyLabel} />
+                  <ReceiptCopy config={config} school={school} data={editData} copyLabel={config.parentCopyLabel} />
               )}
             </div>
             <p className="text-center text-[11px] text-gray-500 mt-3">↑ Live preview · Click "Print Both Copies" to print</p>
@@ -505,18 +562,25 @@ export default function FeeReceiptPrint({ receipt, onClose }) {
           <div ref={printRef}>
             {config.showAdminCopy && (
                 <div className="receipt-page">
-                  <ReceiptCopy config={config} data={editData} copyLabel={config.adminCopyLabel} />
+                  <ReceiptCopy config={config} school={school} data={editData} copyLabel={config.adminCopyLabel} />
                 </div>
             )}
             {config.showParentCopy && (
                 <div className="receipt-page">
-                  <ReceiptCopy config={config} data={editData} copyLabel={config.parentCopyLabel} />
+                  <ReceiptCopy config={config} school={school} data={editData} copyLabel={config.parentCopyLabel} />
                 </div>
             )}
           </div>
         </div>
 
-        {showConfig && <ConfigPanel config={config} onChange={setConfig} onClose={() => setShowConfig(false)} />}
+        {showConfig && (
+            <ConfigPanel
+                config={config}
+                onClose={() => setShowConfig(false)}
+                school={school}
+                schoolLoading={schoolLoading}
+            />
+        )}
       </div>
   );
 }

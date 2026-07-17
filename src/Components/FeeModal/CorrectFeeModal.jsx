@@ -1,23 +1,3 @@
-// ─── Collect Fee Modal — TWO-COLUMN VERSION ───────────────────────────────
-// FIX (confirmed from Swagger): POST /v1/fee/collections actually accepts a
-// `transportAmount` field alongside `amountPaid` — I didn't know this
-// before. The backend validates `amountPaid` against the ACADEMIC balance
-// only, which is exactly why sending the combined ₹3,000 (₹1,500 academic +
-// ₹1,500... well ₹1,500 academic due but user tried 3,000 incl. transport)
-// as a single `amountPaid` failed with "Amount paid exceeds balance due".
-//
-// Rebuilt around two independent amount fields:
-//   - Academic Amount to Collect  → capped at academicBalance, → amountPaid
-//   - Transport Amount to Collect → capped at transportDue,   → transportAmount
-// Both accept partial payment independently. At least one must be > 0.
-//
-// ASSUMPTION (flagged, not silently applied): the payload always shows a
-// `feeStructureId` field with a 0 default. For a student with NO academic
-// fee structure who is paying transport only, I'm sending `feeStructureId:
-// 0` rather than omitting the field, since the field appears mandatory in
-// the schema. This is untested — if the backend actually rejects
-// feeStructureId: 0 for a transport-only submission, that's a real gap to
-// confirm and fix.
 const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions, onSuccess, canCollect, canViewTransport }) => {
   const isManualMode = !initialStudent;
 
@@ -285,6 +265,16 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
     setForm((p) => ({ ...p, academicAmount: studentBalance > 0 ? String(studentBalance) : '' }));
   };
 
+  // FIX: discount and late fine must only ever be zero or a positive whole
+  // number. Rather than parsing the value and clamping it after the fact
+  // (Math.max(0, Number(...))), which can leave a stray "-" sitting visibly
+  // in a controlled type="number" input because React doesn't repaint an
+  // invalid numeric input on every keystroke, we strip any character that
+  // isn't a digit directly out of the raw string as the user types or
+  // pastes. This makes a negative value structurally impossible to enter,
+  // not just numerically clamped after the fact.
+  const sanitizeNonNegativeAmount = (raw) => raw.replace(/[^0-9]/g, '');
+
   const handleSubmit = async () => {
     if (!activeStudent) { toast.warning(COLLECTION_HISTORY_STRINGS.TOAST_NO_STUDENT_SELECTED, COLLECTION_HISTORY_STRINGS.TOAST_PLEASE_SELECT_STUDENT); return; }
     if (isTransportOnlyStudent) { toast.warning('Transport-only fee', 'This student has no academic fee for this period — collect the transport fee via Transport → Billing.'); return; }
@@ -295,6 +285,12 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
     if (discountExceedsAmount) { toast.warning(COLLECTION_HISTORY_STRINGS.TOAST_DISCOUNT_TOO_HIGH, COLLECTION_HISTORY_STRINGS.TOAST_DISCOUNT_EXCEEDS); return; }
     if (!selectedPeriodId) { toast.warning(COLLECTION_HISTORY_STRINGS.TOAST_NO_PERIOD_SELECTED, COLLECTION_HISTORY_STRINGS.TOAST_PLEASE_SELECT_PERIOD); return; }
     if (academicAmountNum > 0 && !activeStudent.feeStructureId) { toast.error(COLLECTION_HISTORY_STRINGS.TOAST_FEE_STRUCTURE_MISSING, COLLECTION_HISTORY_STRINGS.TOAST_NO_FEE_STRUCTURE_FOUND); return; }
+    // FIX: hard backstop — even though discount/lateFine can no longer be
+    // typed as negative (sanitizeNonNegativeAmount strips '-' on every
+    // keystroke), this guards against any other code path that might set
+    // form.discount / form.lateFine programmatically.
+    if (discountNum < 0) { toast.warning('Invalid discount', 'Discount cannot be negative.'); return; }
+    if (lateFineNum < 0) { toast.warning('Invalid late fine', 'Late fine cannot be negative.'); return; }
 
     try {
       setLoading(true);
@@ -626,10 +622,21 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
               <label className="block text-xs font-semibold text-gray-700 mb-1.5">
                 {COLLECTION_HISTORY_STRINGS.LBL_DISCOUNT} <span className="text-gray-400 font-normal">(academic only, optional)</span>
               </label>
+              {/* FIX: discount can now only ever be zero or a positive whole
+                  number — '-' and any other non-digit character are
+                  stripped as the user types or pastes, so a negative value
+                  is never actually renderable in the field, not merely
+                  clamped after the fact. */}
               <Inp
-                  type="number" value={form.discount} placeholder="Discount amount"
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={form.discount}
+                  placeholder="Discount amount"
                   className={discountExceedsAmount ? 'border-orange-400 bg-orange-50' : ''}
-                  onChange={(e) => setForm((p) => ({ ...p, discount: e.target.value }))}
+                  onChange={(e) => {
+                    setForm((p) => ({ ...p, discount: sanitizeNonNegativeAmount(e.target.value) }));
+                  }}
               />
               {discountExceedsAmount && (
                   <p className="text-[11px] text-orange-600 font-medium mt-1 flex items-center gap-1">
@@ -658,8 +665,18 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
                       </div>
                     </div>
                   </div>
-                  <Inp type="number" value={form.lateFine} placeholder="Fine amount (₹)"
-                       onChange={(e) => setForm((p) => ({ ...p, lateFine: e.target.value }))} />
+                  {/* FIX: same non-negative sanitization as discount — the
+                      late fine field can never hold a '-' character. */}
+                  <Inp
+                      type="number"
+                      min={0}
+                      step={1}
+                      value={form.lateFine}
+                      placeholder="Fine amount (₹)"
+                      onChange={(e) => {
+                        setForm((p) => ({ ...p, lateFine: sanitizeNonNegativeAmount(e.target.value) }));
+                      }}
+                  />
                 </div>
             )}
 
