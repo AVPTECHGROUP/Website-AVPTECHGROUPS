@@ -362,6 +362,6 @@ export const COLLECTION_HISTORY_STRINGS = {
     TOAST_COULD_NOT_PROCESS_BULK: "Could not process bulk payments.",
 
     TABLE_OUTSTANDING_HEADERS: ['Student', 'Class', 'Period', 'Total Fee', 'Paid', 'Balance Due', 'Due Date', 'Status', 'Action'],
-    TABLE_HISTORY_HEADERS: ['Receipt No.', 'Date', 'Student', 'Class', 'Period', 'Collected', 'Discount', 'Late Fine', 'Mode', 'Ref. No.', 'Recorded By', ''],
+    TABLE_HISTORY_HEADERS: ['Receipt No.', 'Date', 'Student', 'Class', 'Period', 'Collected', 'Discount', 'Late Fine', 'Ref. No.', 'Recorded By', ''],
     TABLE_BULK_HEADERS: ['Student', 'Balance Due', 'Collect Amount', 'Discount', 'Late Fine', 'Mode']
 };

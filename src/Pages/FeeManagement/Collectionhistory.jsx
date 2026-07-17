@@ -46,6 +46,8 @@ const initials = (name = '') =>
 const MONTH_NAMES = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const EPS = 0.01;
 
+const sanitizeNonNegativeAmount = (raw) => String(raw ?? '').replace(/[^0-9]/g, '');
+
 const reconcilePaidAmount = (totalFee, balanceDue, reportedPaid) => {
   const total = Number(totalFee) || 0;
   const balance = Number(balanceDue) || 0;
@@ -140,6 +142,38 @@ const toast = {
   info: (title, message, duration) => _toastDispatch?.({ type: 'info', title, message, duration }),
 };
 
+const TableScrollStyles = () => (
+  <style>{`
+      .ch-table-scroll {
+        scrollbar-width: thin;
+        scrollbar-color: #93c5fd #f3f4f6;
+        background:
+          linear-gradient(to right, white 30%, rgba(255,255,255,0)) 0 0,
+          linear-gradient(to left, white 30%, rgba(255,255,255,0)) 100% 0,
+          linear-gradient(to right, rgba(15,23,42,0.10), rgba(15,23,42,0)) 0 0,
+          linear-gradient(to left, rgba(15,23,42,0.10), rgba(15,23,42,0)) 100% 0;
+        background-repeat: no-repeat;
+        background-color: white;
+        background-size: 32px 100%, 32px 100%, 12px 100%, 12px 100%;
+        background-attachment: local, local, scroll, scroll;
+      }
+      .ch-table-scroll::-webkit-scrollbar {
+        height: 10px;
+      }
+      .ch-table-scroll::-webkit-scrollbar-track {
+        background: #f3f4f6;
+        border-radius: 999px;
+      }
+      .ch-table-scroll::-webkit-scrollbar-thumb {
+        background: #93c5fd;
+        border-radius: 999px;
+      }
+      .ch-table-scroll::-webkit-scrollbar-thumb:hover {
+        background: #60a5fa;
+      }
+    `}</style>
+);
+
 // ─── Shared primitives ────────────────────────────────────────────────────────
 const Av = ({ name, status, size = 'md' }) => {
   const sz = { sm: 'w-7 h-7 text-[10px]', md: 'w-9 h-9 text-xs', lg: 'w-12 h-12 text-base' }[size];
@@ -177,8 +211,7 @@ const StatusCell = ({ status, daysLate }) => {
 const Modal = ({ open, onClose, title, subtitle, wide, children, footer }) => {
   if (!open) return null;
   return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-start justify-center p-2 sm:p-4 md:p-6 overflow-y-auto backdrop-blur-sm"
-      onClick={(e) => e.target === e.currentTarget && onClose()}>
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-start justify-center p-2 sm:p-4 md:p-6 overflow-y-auto backdrop-blur-sm">
       <div className={`bg-white rounded-2xl shadow-2xl w-full ${wide ? 'max-w-5xl' : 'max-w-lg'} my-2 sm:my-4`}>
         <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-100">
           <div className="min-w-0 flex-1 pr-2">
@@ -204,7 +237,7 @@ const Modal = ({ open, onClose, title, subtitle, wide, children, footer }) => {
 const Btn = ({ children, variant = 'primary', size = 'md', onClick, disabled, type = 'button', className = 'cursor-pointer', title }) => {
   const sz = { xs: 'px-2 py-1 text-[11px]', sm: 'px-3 py-1.5 text-xs', md: 'px-4 py-2 text-[12.5px]' }[size];
   const v = {
-    primary: 'bg-[#2563EB] text-white hover:bg-blue-700',
+    primary: 'bg-blue-600 text-white hover:bg-blue-700',
     success: 'bg-emerald-600 text-white hover:bg-emerald-700',
     danger: 'bg-red-600 text-white hover:bg-red-700',
     secondary: 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50',
@@ -262,7 +295,7 @@ const LineItemBlock = ({ title, icon, items, subtotal, tone = 'slate', extra }) 
   );
 };
 
-// ─── Collect Fee Modal — two independent columns ───────────────────────────
+// ─── Collect Fee Modal ───
 const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions, onSuccess, canCollect, canViewTransport }) => {
   const isManualMode = !initialStudent;
 
@@ -304,7 +337,7 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
   const lateFineNum = parseFloat(form.lateFine) || 0;
 
   const netAcademicAmount = Math.max(0, academicAmountNum - discountNum);
-  const netTotal = netAcademicAmount + lateFineNum + transportAmountNum;
+  const netTotal = netAcademicAmount + lateFineNum + (canViewTransport ? transportAmountNum : 0);
 
   const academicExceedsBalance = netAcademicAmount > academicBalance + EPS && academicBalance > 0;
   const transportExceedsBalance = transportAmountNum > transportDue + EPS && transportDue > 0;
@@ -430,7 +463,6 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
               feeStructureId: rec.feeStructureId ?? matchedStructure?.id ?? null,
               overdueDays: rec.overdueDays || 0,
               dueDate: rec.dueDate,
-              status: (rec.overdueDays > 0 && balanceDueVal > 0) ? STATUSES.OVERDUE : (reconcilePaidAmount(totalFee, balanceDueVal, rec.paidAmount) > 0 && balanceDueVal > 0) ? STATUSES.PARTIAL : balanceDueVal <= 0 ? STATUSES.PAID : STATUSES.PENDING,
             };
           }
           const historyPaid = paidByStudent.get(sid) || 0;
@@ -443,7 +475,6 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
             feeStructureId: matchedStructure?.id ?? s.feeStructureId ?? null,
             overdueDays: 0,
             dueDate: null,
-            status: resolvedBalance <= 0 ? STATUSES.PAID : historyPaid > 0 ? STATUSES.PARTIAL : STATUSES.PENDING,
           };
         });
 
@@ -481,7 +512,6 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
     if (transportDue > 0) {
       setForm((p) => (p.transportAmount === String(transportDue) ? p : { ...p, transportAmount: String(transportDue) }));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [transportLoading, transportDue, activeStudent, canViewTransport]);
 
   if (!open) return null;
@@ -513,7 +543,11 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
       totalFee: Number(s.totalFee) || 0,
       dueDate: s.dueDate,
       daysLate: s.overdueDays || 0,
-      status: s.status,
+      status:
+        s.overdueDays > 0 && studentBalance > 0 ? STATUSES.OVERDUE
+          : paidSoFar > 0 && studentBalance > 0 ? STATUSES.PARTIAL
+            : studentBalance <= 0 ? STATUSES.PAID
+              : STATUSES.PENDING,
       parentName: s.parentName,
       parentPhone: s.parentPhone,
     });
@@ -523,14 +557,16 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
 
   const handleSubmit = async () => {
     if (!activeStudent) { toast.warning(COLLECTION_HISTORY_STRINGS.TOAST_NO_STUDENT_SELECTED, COLLECTION_HISTORY_STRINGS.TOAST_PLEASE_SELECT_STUDENT); return; }
-    if (isTransportOnlyStudent && canViewTransport) { toast.warning('Transport-only fee', 'This student has no academic fee for this period — collect the transport fee via Transport → Billing.'); return; }
+    if (canViewTransport && isTransportOnlyStudent) { toast.warning('Transport-only fee', 'This student has no academic fee for this period — collect the transport fee via Transport → Billing.'); return; }
     if (isFullyPaid) { toast.info(COLLECTION_HISTORY_STRINGS.TOAST_NO_BALANCE_DUE, `${activeStudent.studentName} has no outstanding balance.`); return; }
-    if (academicAmountNum <= 0 && (!canViewTransport || transportAmountNum <= 0)) { toast.warning(COLLECTION_HISTORY_STRINGS.TOAST_INVALID_AMOUNT, 'Enter an academic amount to collect.'); return; }
+    if (academicAmountNum <= 0 && (!canViewTransport || transportAmountNum <= 0)) { toast.warning(COLLECTION_HISTORY_STRINGS.TOAST_INVALID_AMOUNT, 'Enter an amount to collect.'); return; }
     if (academicExceedsBalance) { toast.warning(COLLECTION_HISTORY_STRINGS.TOAST_AMOUNT_TOO_HIGH, `Academic amount cannot exceed ${fmt(academicBalance)}.`); return; }
     if (canViewTransport && transportExceedsBalance) { toast.warning(COLLECTION_HISTORY_STRINGS.TOAST_AMOUNT_TOO_HIGH, `Transport amount cannot exceed ${fmt(transportDue)}.`); return; }
     if (discountExceedsAmount) { toast.warning(COLLECTION_HISTORY_STRINGS.TOAST_DISCOUNT_TOO_HIGH, COLLECTION_HISTORY_STRINGS.TOAST_DISCOUNT_EXCEEDS); return; }
     if (!selectedPeriodId) { toast.warning(COLLECTION_HISTORY_STRINGS.TOAST_NO_PERIOD_SELECTED, COLLECTION_HISTORY_STRINGS.TOAST_PLEASE_SELECT_PERIOD); return; }
     if (academicAmountNum > 0 && !activeStudent.feeStructureId) { toast.error(COLLECTION_HISTORY_STRINGS.TOAST_FEE_STRUCTURE_MISSING, COLLECTION_HISTORY_STRINGS.TOAST_NO_FEE_STRUCTURE_FOUND); return; }
+    if (discountNum < 0) { toast.warning('Invalid discount', 'Discount cannot be negative.'); return; }
+    if (lateFineNum < 0) { toast.warning('Invalid late fine', 'Late fine cannot be negative.'); return; }
 
     try {
       setLoading(true);
@@ -565,7 +601,7 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
   };
 
   const submitDisabled =
-    loading || !activeStudent || isFullyPaid || (isTransportOnlyStudent && canViewTransport) ||
+    loading || !activeStudent || isFullyPaid || (canViewTransport && isTransportOnlyStudent) ||
     (academicAmountNum <= 0 && (!canViewTransport || transportAmountNum <= 0)) ||
     academicExceedsBalance || (canViewTransport && transportExceedsBalance) || discountExceedsAmount;
 
@@ -591,8 +627,6 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
         </>
       }>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-
-        {/* ── LEFT: Period → Class → Student (manual mode only) ── */}
         <div className="space-y-4">
           <div>
             <label className="block text-xs font-semibold text-gray-700 mb-1.5">Fee Period <span className="text-gray-400">*</span></label>
@@ -686,7 +720,7 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
           )}
 
           {activeStudent && (
-            <div className={`border rounded-xl p-3 flex flex-wrap items-center gap-3 ${isFullyPaid ? 'bg-emerald-50 border-emerald-200' : (isTransportOnlyStudent && canViewTransport) ? 'bg-sky-50 border-sky-200' : 'bg-blue-50 border-blue-200'}`}>
+            <div className={`border rounded-xl p-3 flex flex-wrap items-center gap-3 ${isFullyPaid ? 'bg-emerald-50 border-emerald-200' : (canViewTransport && isTransportOnlyStudent) ? 'bg-sky-50 border-sky-200' : 'bg-blue-50 border-blue-200'}`}>
               <Av name={activeStudent.studentName} status={activeStudent.status} size="lg" />
               <div className="min-w-0 flex-1">
                 <div className="font-bold text-gray-900 truncate">{activeStudent.studentName}</div>
@@ -698,7 +732,7 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
                     <span className="text-[11px] font-bold text-emerald-700">Fully paid</span>
                   </div>
                 )}
-                {isTransportOnlyStudent && canViewTransport && (
+                {canViewTransport && isTransportOnlyStudent && (
                   <div className="flex items-center gap-1 mt-1">
                     <Bus size={12} className="text-sky-600 flex-shrink-0" />
                     <span className="text-[11px] font-bold text-sky-700">Transport fee only — use Transport module</span>
@@ -708,7 +742,6 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
             </div>
           )}
 
-          {/* ── Fee Breakdown: itemized Academic + Transport ── */}
           {activeStudent && selectedPeriodId && (
             <div className="space-y-2">
               <div className="text-[10.5px] font-bold text-gray-400 uppercase tracking-wider">Fee Breakdown</div>
@@ -749,11 +782,8 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
           )}
         </div>
 
-        {/* ── RIGHT: Payment form ── */}
-        <div className={`space-y-4 ${(isFullyPaid || (isTransportOnlyStudent && canViewTransport)) ? 'opacity-40 pointer-events-none select-none' : ''}`}>
-
+        <div className={`space-y-4 ${(isFullyPaid || (canViewTransport && isTransportOnlyStudent)) ? 'opacity-40 pointer-events-none select-none' : ''}`}>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {/* Academic column */}
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1.5">
                 Academic Amount <span className="text-gray-400">*</span>
@@ -764,7 +794,7 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
                   value={form.academicAmount}
                   disabled={!hasAcademicStructure}
                   className={`pr-16 ${academicExceedsBalance ? 'border-orange-400 bg-orange-50' : ''}`}
-                  onChange={(e) => { academicTouchedRef.current = true; setForm((p) => ({ ...p, academicAmount: e.target.value })); }}
+                  onChange={(e) => { academicTouchedRef.current = true; setForm((p) => ({ ...p, academicAmount: sanitizeNonNegativeAmount(e.target.value) })); }}
                   max={academicBalance} min={0}
                   placeholder={hasAcademicStructure ? `Max ${fmt(academicBalance)}` : 'N/A'}
                 />
@@ -784,7 +814,6 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
               )}
             </div>
 
-            {/* Transport column */}
             {canViewTransport && (
               <div>
                 <label className="block text-xs font-semibold text-gray-700 mb-1.5 flex items-center gap-1">
@@ -796,7 +825,7 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
                     value={form.transportAmount}
                     disabled={transportDue <= 0}
                     className={`pr-16 ${transportExceedsBalance ? 'border-orange-400 bg-orange-50' : ''}`}
-                    onChange={(e) => { transportTouchedRef.current = true; setForm((p) => ({ ...p, transportAmount: e.target.value })); }}
+                    onChange={(e) => { transportTouchedRef.current = true; setForm((p) => ({ ...p, transportAmount: sanitizeNonNegativeAmount(e.target.value) })); }}
                     max={transportDue} min={0}
                     placeholder={transportDue > 0 ? `Max ${fmt(transportDue)}` : 'None due'}
                   />
@@ -816,7 +845,7 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
           </div>
 
           {(academicAmountNum > 0 && academicAmountNum < academicBalance) || (canViewTransport && transportAmountNum > 0 && transportAmountNum < transportDue) ? (
-            <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+            <div className="flex items-start gap-2 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2">
               <Info size={13} className="text-amber-500 mt-0.5 flex-shrink-0" />
               <div className="text-[11px] text-amber-700">
                 Partial payment — the remainder will stay outstanding for that column.
@@ -862,9 +891,13 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
               {COLLECTION_HISTORY_STRINGS.LBL_DISCOUNT} <span className="text-gray-400 font-normal">(academic only, optional)</span>
             </label>
             <Inp
-              type="number" value={form.discount} placeholder="Discount amount"
+              type="number"
+              min={0}
+              step={1}
+              value={form.discount}
+              placeholder="Discount amount"
               className={discountExceedsAmount ? 'border-orange-400 bg-orange-50' : ''}
-              onChange={(e) => setForm((p) => ({ ...p, discount: e.target.value }))}
+              onChange={(e) => setForm((p) => ({ ...p, discount: sanitizeNonNegativeAmount(e.target.value) }))}
             />
             {discountExceedsAmount && (
               <p className="text-[11px] text-orange-600 font-medium mt-1 flex items-center gap-1">
@@ -893,8 +926,8 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
                   </div>
                 </div>
               </div>
-              <Inp type="number" value={form.lateFine} placeholder="Fine amount (₹)"
-                onChange={(e) => setForm((p) => ({ ...p, lateFine: e.target.value }))} />
+              <Inp type="number" min={0} step={1} value={form.lateFine} placeholder="Fine amount (₹)"
+                onChange={(e) => setForm((p) => ({ ...p, lateFine: sanitizeNonNegativeAmount(e.target.value) }))} />
             </div>
           )}
 
@@ -952,7 +985,11 @@ const BulkCollectModal = ({ open, onClose, students, onSuccess, canCollect, canV
     }
   }, [open, students]);
 
-  const update = (id, field, val) => setRows((p) => p.map((r) => r.id === id ? { ...r, [field]: val } : r));
+  const update = (id, field, val) => {
+    const moneyFields = ['academicCollect', 'transportCollect', 'discount', 'lateFine'];
+    const nextVal = moneyFields.includes(field) ? sanitizeNonNegativeAmount(val) : val;
+    setRows((p) => p.map((r) => r.id === id ? { ...r, [field]: nextVal } : r));
+  };
   const applyAll = () => setRows((p) => p.map((r) => ({ ...r, paymentMode: commonMode, paymentDate: commonDate })));
 
   const academicGrandTotal = rows.reduce((s, r) => s + (parseFloat(r.academicCollect) || 0), 0);
@@ -961,11 +998,13 @@ const BulkCollectModal = ({ open, onClose, students, onSuccess, canCollect, canV
 
   const handleSubmit = async () => {
     const bad = rows.find((r) => (parseFloat(r.academicCollect) || 0) <= 0 && (!canViewTransport || (parseFloat(r.transportCollect) || 0) <= 0));
-    if (bad) { toast.warning(COLLECTION_HISTORY_STRINGS.TOAST_MISSING_AMOUNT, `Enter an academic ${canViewTransport ? "and/or transport" : ""} amount for ${bad.studentName}.`); return; }
+    if (bad) { toast.warning(COLLECTION_HISTORY_STRINGS.TOAST_MISSING_AMOUNT, `Enter an amount to collect for ${bad.studentName}.`); return; }
     const overAcademic = rows.find((r) => (parseFloat(r.academicCollect) || 0) > (parseFloat(r.academicDue) || 0) + EPS);
     if (overAcademic) { toast.warning(COLLECTION_HISTORY_STRINGS.TOAST_AMOUNT_EXCEEDS_BALANCE, `${overAcademic.studentName}: academic amount exceeds due of ${fmt(overAcademic.academicDue)}.`); return; }
-    const overTransport = rows.find((r) => (parseFloat(r.transportCollect) || 0) > (parseFloat(r.transportDue) || 0) + EPS);
-    if (canViewTransport && overTransport) { toast.warning(COLLECTION_HISTORY_STRINGS.TOAST_AMOUNT_EXCEEDS_BALANCE, `${overTransport.studentName}: transport amount exceeds due of ${fmt(overTransport.transportDue)}.`); return; }
+    if (canViewTransport) {
+      const overTransport = rows.find((r) => (parseFloat(r.transportCollect) || 0) > (parseFloat(r.transportDue) || 0) + EPS);
+      if (overTransport) { toast.warning(COLLECTION_HISTORY_STRINGS.TOAST_AMOUNT_EXCEEDS_BALANCE, `${overTransport.studentName}: transport amount exceeds due of ${fmt(overTransport.transportDue)}.`); return; }
+    }
 
     try {
       setLoading(true);
@@ -1010,7 +1049,7 @@ const BulkCollectModal = ({ open, onClose, students, onSuccess, canCollect, canV
       }>
       <div className="flex items-start gap-3 bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-3 mb-4 text-sm text-emerald-800">
         <CheckCircle2 size={15} className="text-emerald-600 mt-0.5 flex-shrink-0" />
-        Enter Academic {canViewTransport ? "and/or Transport" : ""} amounts per student — {canViewTransport ? "both accept partial payment independently." : "accepts partial payment independently."} {canViewTransport && "Students with transport-only dues (no academic fee) should be collected via Transport → Billing instead."}
+        Enter amounts per student to collect.獨立獨立 Partial allocation modes supported.
       </div>
       <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 mb-4 flex flex-col sm:flex-row sm:items-end gap-3">
         <div className="w-full sm:w-auto">
@@ -1023,7 +1062,7 @@ const BulkCollectModal = ({ open, onClose, students, onSuccess, canCollect, canV
         </div>
         <Btn variant="ghost" size="sm" onClick={applyAll} className="w-full sm:w-auto mt-2 sm:mt-0">{COLLECTION_HISTORY_STRINGS.BTN_APPLY_ALL}</Btn>
       </div>
-      <div className="overflow-x-auto rounded-xl border border-gray-200 -mx-1 px-1 sm:mx-0 sm:px-0">
+      <div className="overflow-x-auto ch-table-scroll rounded-xl border border-gray-200 -mx-1 px-1 sm:mx-0 sm:px-0">
         <table className="w-full text-sm min-w-[820px]">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-200">
@@ -1058,7 +1097,7 @@ const BulkCollectModal = ({ open, onClose, students, onSuccess, canCollect, canV
                     }
                   </td>
                   <td className="px-3 py-2.5">
-                    <input type="number" value={row.academicCollect}
+                    <input type="number" min={0} value={row.academicCollect}
                       disabled={!row.academicDue}
                       onChange={(e) => update(row.id, 'academicCollect', e.target.value)}
                       className={`w-24 px-2 py-1 text-sm border rounded-lg focus:outline-none disabled:bg-gray-50 disabled:text-gray-300 ${acadOver ? 'border-orange-400 bg-orange-50' : 'border-gray-200 focus:border-blue-400'}`} />
@@ -1070,7 +1109,7 @@ const BulkCollectModal = ({ open, onClose, students, onSuccess, canCollect, canV
                         <span className="text-sky-700 font-semibold text-xs whitespace-nowrap">{row.transportDue > 0 ? fmt(row.transportDue) : '—'}</span>
                       </td>
                       <td className="px-3 py-2.5">
-                        <input type="number" value={row.transportCollect}
+                        <input type="number" min={0} value={row.transportCollect}
                           disabled={!row.transportDue}
                           onChange={(e) => update(row.id, 'transportCollect', e.target.value)}
                           className={`w-24 px-2 py-1 text-sm border rounded-lg focus:outline-none disabled:bg-gray-50 disabled:text-gray-300 ${transOver ? 'border-orange-400 bg-orange-50' : 'border-sky-200 focus:border-sky-400'}`} />
@@ -1079,13 +1118,13 @@ const BulkCollectModal = ({ open, onClose, students, onSuccess, canCollect, canV
                     </>
                   )}
                   <td className="px-3 py-2.5">
-                    <input type="number" value={row.discount} placeholder="0"
+                    <input type="number" min={0} value={row.discount} placeholder="0"
                       onChange={(e) => update(row.id, 'discount', e.target.value)}
                       className="w-20 px-2 py-1 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-blue-400" />
                   </td>
                   <td className="px-3 py-2.5">
                     {row.lateFine !== null
-                      ? <input type="number" value={row.lateFine} placeholder="Fine"
+                      ? <input type="number" min={0} value={row.lateFine} placeholder="Fine"
                         onChange={(e) => update(row.id, 'lateFine', e.target.value)}
                         className="w-20 px-2 py-1 text-sm border border-amber-200 rounded-lg bg-amber-50" />
                       : <span className="text-xs text-gray-300 whitespace-nowrap">N/A</span>
@@ -1108,7 +1147,9 @@ const BulkCollectModal = ({ open, onClose, students, onSuccess, canCollect, canV
           {rows.length} {COLLECTION_HISTORY_STRINGS.MSG_RECEIPTS_GENERATED}
         </div>
         <div className="text-right">
-          <div className="text-white font-extrabold text-base">Academic: {fmt(academicGrandTotal)} {canViewTransport && `· 🚌 Transport: ${fmt(transportGrandTotal)}`}</div>
+          <div className="text-white font-extrabold text-base">
+            Academic: {fmt(academicGrandTotal)} {canViewTransport && `· 🚌 Transport: ${fmt(transportGrandTotal)}`}
+          </div>
           <div className="text-white/50 text-[11px]">Combined: {fmt(combinedGrandTotal)}</div>
         </div>
       </div>
@@ -1116,7 +1157,7 @@ const BulkCollectModal = ({ open, onClose, students, onSuccess, canCollect, canV
   );
 };
 
-// ─── Mobile/Tablet Card for Outstanding ────────────────────────────────────
+// ─── Mobile/Tablet Card for Outstanding ───
 const OutstandingCard = ({ s, selected, onToggle, onCollect, canCollect, canViewTransport }) => {
   const isSel = selected;
   return (
@@ -1175,7 +1216,7 @@ const OutstandingCard = ({ s, selected, onToggle, onCollect, canCollect, canView
   );
 };
 
-// ─── Mobile/Tablet Card for History ─────────────────────────────────────────
+// ─── Mobile/Tablet Card for History ───
 const HistoryCard = ({ h, onView }) => (
   <div className="bg-white rounded-xl border border-gray-200 p-3">
     <div className="flex items-start justify-between gap-2 mb-2">
@@ -1203,13 +1244,14 @@ const HistoryCard = ({ h, onView }) => (
   </div>
 );
 
-// ─── Main: CollectionsHistory ─────────────────────────────────────────────────
+// ─── Main: CollectionsHistory ───
 const CollectionsHistory = () => {
   const { currentAcademicYear, schoolId } = useContext(UserContext);
   const academicYearId = currentAcademicYear?.id || null;
   const academicYearLabel = currentAcademicYear?.label || null;
 
   const canCollect = true;
+  const [canViewTransport, setCanViewTransport] = useState(true);
 
   const [tab, setTab] = useState('outstanding');
   const [search, setSearch] = useState('');
@@ -1230,7 +1272,6 @@ const CollectionsHistory = () => {
   const [classOptions, setClassOptions] = useState([]);
   const [periodOptions, setPeriodOptions] = useState([]);
   const [optionsLoading, setOptionsLoading] = useState(true);
-  const [transportConfig, setTransportConfig] = useState(null);
 
   const [collectModal, setCollectModal] = useState({ open: false, student: null });
   const [bulkModal, setBulkModal] = useState({ open: false, students: [] });
@@ -1240,12 +1281,25 @@ const CollectionsHistory = () => {
   const [toDate, setToDate] = useState('');
   const [totalPages, setTotalPages] = useState(1);
 
-  // Dynamic evaluation linked entirely to the backend toggle configuration records
-  const canViewTransport = transportConfig?.enabled !== false && transportConfig?.showInCollectionModal !== false;
-
   useEffect(() => {
     setFromDate(getOneMonthAgoDate());
     setToDate(getTodayDate());
+  }, []);
+
+  // Sync Transport Billing System Settings Configuration Drop logic safely
+  useEffect(() => {
+    (async () => {
+      try {
+        const rawConfig = await getTransportbillingconfig();
+        if (rawConfig && rawConfig.showInCollectionModal === false) {
+          setCanViewTransport(false);
+        } else {
+          setCanViewTransport(true);
+        }
+      } catch (err) {
+        console.error("Failed to sync transport modal config:", err);
+      }
+    })();
   }, []);
 
   useEffect(() => {
@@ -1253,14 +1307,10 @@ const CollectionsHistory = () => {
     const loadOptions = async () => {
       setOptionsLoading(true);
       try {
-        const [classesData, periodsData, rawConfig] = await Promise.all([
+        const [classesData, periodsData] = await Promise.all([
           getActiveClasses(schoolId).catch(() => []),
           getFeePeriods(academicYearId).catch(() => []),
-          getTransportbillingconfig().catch(() => null)
         ]);
-
-        setTransportConfig(rawConfig);
-
         const records = Array.isArray(classesData) ? classesData : (classesData?.data || []);
         setClassOptions(records.map((c) => ({ value: String(c.id), label: c.name || c.className })));
 
@@ -1382,7 +1432,7 @@ const CollectionsHistory = () => {
   if (!academicYearId || !schoolId || optionsLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-3">
-        <span className="w-6 h-6 border-2 border-[#2563EB] border-t-transparent rounded-full animate-spin" />
+        <span className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
         <div className="text-sm text-gray-500">
           {!academicYearId || !schoolId ? COLLECTION_HISTORY_STRINGS.MSG_WAITING : COLLECTION_HISTORY_STRINGS.MSG_LOADING_OPTIONS}
         </div>
@@ -1496,8 +1546,9 @@ const CollectionsHistory = () => {
   };
 
   return (
-    <div className="space-y-4 sm:space-y-5 px-2 sm:px-4 max-w-full overflow-hidden">
+    <div className="space-y-4 sm:space-y-5 px-2 sm:px-4 max-w-full overflow-x-hidden">
       <ToastContainer />
+      <TableScrollStyles />
 
       {/* ── Header ── */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-gray-100 pb-3">
@@ -1512,10 +1563,10 @@ const CollectionsHistory = () => {
             onClick={() => setCollectModal({ open: true, student: null })}
             className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold rounded-lg transition-colors shadow-sm whitespace-nowrap
               ${canCollect
-                ? 'text-white bg-[#2563EB] hover:bg-blue-700 cursor-pointer'
+                ? 'text-white bg-blue-600 hover:bg-blue-700 cursor-pointer'
                 : 'text-white bg-blue-300 cursor-not-allowed opacity-60'
               }`}>
-            <Plus size={15} className="flex-shrink-0" />
+            <Plus size={13} className="flex-shrink-0" />
             <span>{COLLECTION_HISTORY_STRINGS.BTN_COLLECT_FEE}</span>
           </button>
         </div>
@@ -1533,7 +1584,7 @@ const CollectionsHistory = () => {
         </div>
       )}
 
-      <div className="flex border-b border-gray-200 overflow-x-auto">
+      <div className="flex border-b border-gray-200 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {[
           { key: 'outstanding', label: COLLECTION_HISTORY_STRINGS.TAB_OUTSTANDING, badge: overdueCount },
           { key: 'history', label: COLLECTION_HISTORY_STRINGS.TAB_HISTORY, badge: 0 },
@@ -1541,7 +1592,7 @@ const CollectionsHistory = () => {
           <button key={t.key}
             onClick={() => { setTab(t.key); resetTab(); }}
             className={`inline-flex items-center gap-2 px-4 py-3 text-[12px] sm:text-[13px] font-semibold border-b-2 -mb-px transition-colors whitespace-nowrap flex-shrink-0 ${tab === t.key
-              ? 'text-[#2563EB] border-[#2563EB]'
+              ? 'text-blue-600 border-blue-600'
               : 'text-gray-500 border-transparent hover:text-gray-700 hover:border-gray-300'
               }`}>
             {t.label}
@@ -1556,8 +1607,7 @@ const CollectionsHistory = () => {
       {tab === 'outstanding' && (
         <>
           <div>
-            {/* Filter trigger for phones/tablets */}
-            <div className="flex gap-2 md:hidden mb-2">
+            <div className="flex gap-2 xl:hidden mb-2">
               <div className="relative flex-1">
                 <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }}
@@ -1578,7 +1628,7 @@ const CollectionsHistory = () => {
             </div>
 
             {showFilters && (
-              <div className="flex flex-col gap-2 mb-3 p-3 bg-gray-50 rounded-xl md:hidden border border-gray-100">
+              <div className="flex flex-col gap-2 mb-3 p-3 bg-gray-50 rounded-xl xl:hidden border border-gray-100">
                 <Sel value={periodF} onChange={(v) => { setPeriodF(v); setPage(1); setSelected([]); }}
                   options={periodOptions} placeholder="All Periods" className="w-full" />
                 <Sel value={classF} onChange={(v) => { setClassF(v); setPage(1); setSelected([]); }}
@@ -1593,7 +1643,7 @@ const CollectionsHistory = () => {
               </div>
             )}
 
-            <div className="hidden md:flex flex-wrap xl:flex-nowrap items-center gap-2 w-full">
+            <div className="hidden xl:flex items-center gap-2 w-full">
               <div className="relative flex-1 min-w-[180px]">
                 <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }}
@@ -1638,10 +1688,9 @@ const CollectionsHistory = () => {
             </div>
           )}
 
-          {/* Desktop Table View */}
           <div className="hidden xl:block bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
+            <div className="overflow-x-auto ch-table-scroll">
+              <table className="w-full min-w-[1120px]">
                 <thead>
                   <tr className="bg-gray-50/80 border-b border-gray-100">
                     <th className="px-3 py-2.5 w-8">
@@ -1668,7 +1717,7 @@ const CollectionsHistory = () => {
                   {loading ? (
                     <tr>
                       <td colSpan={canViewTransport ? 11 : 10} className="text-center py-14">
-                        <span className="w-7 h-7 border-2 border-[#2563EB] border-t-transparent rounded-full animate-spin inline-block mb-2" />
+                        <span className="w-7 h-7 border-2 border-blue-600 border-t-transparent rounded-full animate-spin inline-block mb-2" />
                         <div className="text-sm text-gray-400">{COLLECTION_HISTORY_STRINGS.MSG_LOADING_OUTSTANDING}</div>
                       </td>
                     </tr>
@@ -1678,7 +1727,7 @@ const CollectionsHistory = () => {
                     const isSel = selected.includes(s.id);
                     return (
                       <tr key={s.id}
-                        className={`transition-colors ${isSel ? 'bg-blue-50 border-l-4 border-l-[#2563EB]' : 'hover:bg-gray-50/60'}`}>
+                        className={`transition-colors ${isSel ? 'bg-blue-50 border-l-4 border-l-blue-600' : 'hover:bg-gray-50/60'}`}>
                         <td className="px-3 py-3">
                           <input type="checkbox"
                             className="w-3.5 h-3.5 cursor-pointer accent-[#2563EB] rounded"
@@ -1738,7 +1787,6 @@ const CollectionsHistory = () => {
             </div>
           </div>
 
-          {/* Cards View (below xl Breakpoint) */}
           <div className="xl:hidden space-y-3">
             {pagedOut.length > 0 && (
               <div className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-xl px-3 py-2">
@@ -1755,7 +1803,7 @@ const CollectionsHistory = () => {
 
             {loading ? (
               <div className="text-center py-14">
-                <span className="w-7 h-7 border-2 border-[#2563EB] border-t-transparent rounded-full animate-spin inline-block mb-2" />
+                <span className="w-7 h-7 border-2 border-blue-600 border-t-transparent rounded-full animate-spin inline-block mb-2" />
                 <div className="text-sm text-gray-400">{COLLECTION_HISTORY_STRINGS.MSG_LOADING_OUTSTANDING}</div>
               </div>
             ) : pagedOut.length === 0 ? (
@@ -1796,7 +1844,7 @@ const CollectionsHistory = () => {
       {/* ══ HISTORY TAB ══ */}
       {tab === 'history' && (
         <>
-          <div className="flex gap-2 md:hidden mb-2">
+          <div className="flex gap-2 xl:hidden mb-2">
             <div className="relative flex-1">
               <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
               <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }}
@@ -1814,7 +1862,7 @@ const CollectionsHistory = () => {
           </div>
 
           {showFilters && (
-            <div className="flex flex-col gap-2 mb-3 p-3 bg-gray-50 rounded-xl md:hidden border border-gray-100">
+            <div className="flex flex-col gap-2 mb-3 p-3 bg-gray-50 rounded-xl xl:hidden border border-gray-100">
               <div className="grid grid-cols-2 gap-2">
                 <Inp type="date" value={fromDate} onChange={(e) => { setFromDate(e.target.value); setPage(1); }} className="w-full" />
                 <Inp type="date" value={toDate} onChange={(e) => { setToDate(e.target.value); setPage(1); }} className="w-full" />
@@ -1829,21 +1877,21 @@ const CollectionsHistory = () => {
             </div>
           )}
 
-          <div className="hidden md:flex flex-wrap xl:flex-nowrap items-center gap-2 w-full">
+          <div className="hidden xl:flex items-center gap-2 w-full">
             <div className="relative flex-1 min-w-[180px]">
               <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
               <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                 placeholder={COLLECTION_HISTORY_STRINGS.PLACEHOLDER_SEARCH_HISTORY}
                 className="w-full pl-8 pr-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all bg-white" />
             </div>
-            <div className="w-full sm:w-auto md:w-36 xl:w-40 flex-shrink-0">
+            <div className="w-full sm:w-auto md:w-36 lg:w-40 flex-shrink-0">
               <Inp type="date" value={fromDate} onChange={(e) => { setFromDate(e.target.value); setPage(1); }} />
             </div>
-            <div className="w-full sm:w-auto md:w-36 xl:w-40 flex-shrink-0">
+            <div className="w-full sm:w-auto md:w-36 lg:w-40 flex-shrink-0">
               <Inp type="date" value={toDate} onChange={(e) => { setToDate(e.target.value); setPage(1); }} />
             </div>
             <Sel value={periodF} onChange={(v) => { setPeriodF(v); setPage(1); }}
-              options={periodOptions} placeholder="All Periods" className="w-full sm:w-auto md:w-36 xl:w-40 flex-shrink-0" />
+              options={periodOptions} placeholder="All Periods" className="w-full sm:w-auto md:w-36 lg:w-40 flex-shrink-0" />
             <Sel value={classF} onChange={(v) => { setClassF(v); setPage(1); }}
               options={classOptions} placeholder="All Classes" className="w-full sm:w-auto md:w-32 flex-shrink-0" />
             <Sel value={modeF} onChange={(v) => { setModeF(v); setPage(1); }}
@@ -1852,8 +1900,8 @@ const CollectionsHistory = () => {
           </div>
 
           <div className="hidden xl:block bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
+            <div className="overflow-x-auto ch-table-scroll">
+              <table className="w-full min-w-[1180px]">
                 <thead>
                   <tr className="bg-gray-50/80 border-b border-gray-100">
                     {COLLECTION_HISTORY_STRINGS.TABLE_HISTORY_HEADERS.map((h) => (
@@ -1865,7 +1913,7 @@ const CollectionsHistory = () => {
                   {loading ? (
                     <tr>
                       <td colSpan={12} className="text-center py-14">
-                        <span className="w-7 h-7 border-2 border-[#2563EB] border-t-transparent rounded-full animate-spin inline-block mb-2" />
+                        <span className="w-7 h-7 border-2 border-blue-600 border-t-transparent rounded-full animate-spin inline-block mb-2" />
                         <div className="text-sm text-gray-400">{COLLECTION_HISTORY_STRINGS.MSG_LOADING_HISTORY}</div>
                       </td>
                     </tr>
@@ -1873,7 +1921,7 @@ const CollectionsHistory = () => {
                     <tr><td colSpan={12} className="text-center py-14 text-sm text-gray-400">{COLLECTION_HISTORY_STRINGS.MSG_NO_HISTORY_RECORDS}</td></tr>
                   ) : filteredHist.map((h) => (
                     <tr key={h.id} className="hover:bg-gray-50/60 transition-colors">
-                      <td className="px-3 py-3"><span className="text-[#2563EB] font-bold text-xs whitespace-nowrap">{h.receiptNo}</span></td>
+                      <td className="px-3 py-3"><span className="text-blue-600 font-bold text-xs whitespace-nowrap">{h.receiptNo}</span></td>
                       <td className="px-3 py-3 text-xs text-gray-600 whitespace-nowrap">{fmtDate(h.date)}</td>
                       <td className="px-3 py-3">
                         <div className="font-semibold text-gray-900 text-sm whitespace-nowrap">{h.studentName}</div>
@@ -1886,7 +1934,6 @@ const CollectionsHistory = () => {
                       <td className="px-3 py-3 font-bold text-emerald-600 text-sm whitespace-nowrap">{fmt(h.amount)}</td>
                       <td className="px-3 py-3 text-xs text-gray-500 whitespace-nowrap">{h.discount > 0 ? fmt(h.discount) : '—'}</td>
                       <td className="px-3 py-3 text-xs text-amber-700 whitespace-nowrap">{h.lateFine > 0 ? fmt(h.lateFine) : '—'}</td>
-                      <td className="px-3 py-3"><StatusPill status={h.mode} label={h.mode} /></td>
                       <td className="px-3 py-3 text-xs text-gray-500 whitespace-nowrap">{h.referenceNo || '—'}</td>
                       <td className="px-3 py-3 text-xs text-gray-500 whitespace-nowrap">{h.recordedBy || '—'}</td>
                       <td className="px-3 py-3">
@@ -1917,7 +1964,7 @@ const CollectionsHistory = () => {
           <div className="xl:hidden space-y-3">
             {loading ? (
               <div className="text-center py-14">
-                <span className="w-7 h-7 border-2 border-[#2563EB] border-t-transparent rounded-full animate-spin inline-block mb-2" />
+                <span className="w-7 h-7 border-2 border-blue-600 border-t-transparent rounded-full animate-spin inline-block mb-2" />
                 <div className="text-sm text-gray-400">{COLLECTION_HISTORY_STRINGS.MSG_LOADING_HISTORY}</div>
               </div>
             ) : filteredHist.length === 0 ? (
