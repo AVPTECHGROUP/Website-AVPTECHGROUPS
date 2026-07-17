@@ -46,6 +46,18 @@ const initials = (name = '') =>
 const MONTH_NAMES = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const EPS = 0.01;
 
+// FIX (negative amounts — discount, late fine, academic/transport amount):
+// every money field in this file shares this one sanitizer. It strips any
+// character that isn't a digit directly out of the raw keystroke/paste
+// BEFORE it reaches state, so a '-' can never actually land in a
+// controlled input. Clamping the parsed number after the fact (the old
+// `Math.max(0, Number(val) || 0)` approach) doesn't work reliably here:
+// React does not repaint a controlled type="number" input while its raw
+// text is in a browser-invalid intermediate state (e.g. "-", "-1"), so the
+// field can keep showing a negative value on screen even though the
+// clamped state underneath is already 0.
+const sanitizeNonNegativeAmount = (raw) => String(raw ?? '').replace(/[^0-9]/g, '');
+
 const reconcilePaidAmount = (totalFee, balanceDue, reportedPaid) => {
   const total = Number(totalFee) || 0;
   const balance = Number(balanceDue) || 0;
@@ -140,6 +152,49 @@ const toast = {
   info: (title, message, duration) => _toastDispatch?.({ type: 'info', title, message, duration }),
 };
 
+// FIX (horizontal scroll not discoverable on wide tables): every wide
+// table in this file (Outstanding, Payment History, Bulk Collect) sits in
+// a container with `overflow-x: auto`, which was already functionally
+// correct — the scroll worked — but on most modern browsers/OSes the
+// scrollbar is an invisible overlay until the user is mid-scroll, so
+// there was no visual cue that columns existed off-screen. `.ch-table-scroll`
+// makes the scrollbar permanently visible and styled (both WebKit browsers
+// and Firefox), and adds a subtle left/right fade so it's obvious there's
+// more content to scroll to, without needing any JS scroll-position
+// tracking. This is applied once, globally, to every scrollable table
+// wrapper below.
+const TableScrollStyles = () => (
+    <style>{`
+      .ch-table-scroll {
+        scrollbar-width: thin;
+        scrollbar-color: #93c5fd #f3f4f6;
+        background:
+          linear-gradient(to right, white 30%, rgba(255,255,255,0)) 0 0,
+          linear-gradient(to left, white 30%, rgba(255,255,255,0)) 100% 0,
+          linear-gradient(to right, rgba(15,23,42,0.10), rgba(15,23,42,0)) 0 0,
+          linear-gradient(to left, rgba(15,23,42,0.10), rgba(15,23,42,0)) 100% 0;
+        background-repeat: no-repeat;
+        background-color: white;
+        background-size: 32px 100%, 32px 100%, 12px 100%, 12px 100%;
+        background-attachment: local, local, scroll, scroll;
+      }
+      .ch-table-scroll::-webkit-scrollbar {
+        height: 10px;
+      }
+      .ch-table-scroll::-webkit-scrollbar-track {
+        background: #f3f4f6;
+        border-radius: 999px;
+      }
+      .ch-table-scroll::-webkit-scrollbar-thumb {
+        background: #93c5fd;
+        border-radius: 999px;
+      }
+      .ch-table-scroll::-webkit-scrollbar-thumb:hover {
+        background: #60a5fa;
+      }
+    `}</style>
+);
+
 // ─── Shared primitives ────────────────────────────────────────────────────────
 const Av = ({ name, status, size = 'md' }) => {
   const sz = { sm: 'w-7 h-7 text-[10px]', md: 'w-9 h-9 text-xs', lg: 'w-12 h-12 text-base' }[size];
@@ -177,8 +232,7 @@ const StatusCell = ({ status, daysLate }) => {
 const Modal = ({ open, onClose, title, subtitle, wide, children, footer }) => {
   if (!open) return null;
   return (
-      <div className="fixed inset-0 bg-black/40 z-50 flex items-start justify-center p-2 sm:p-4 md:p-6 overflow-y-auto backdrop-blur-sm"
-           onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="fixed inset-0 bg-black/40 z-50 flex items-start justify-center p-2 sm:p-4 md:p-6 overflow-y-auto backdrop-blur-sm">
         <div className={`bg-white rounded-2xl shadow-2xl w-full ${wide ? 'max-w-5xl' : 'max-w-lg'} my-2 sm:my-4`}>
           <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-100">
             <div className="min-w-0 flex-1 pr-2">
@@ -533,6 +587,9 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
     if (discountExceedsAmount) { toast.warning(COLLECTION_HISTORY_STRINGS.TOAST_DISCOUNT_TOO_HIGH, COLLECTION_HISTORY_STRINGS.TOAST_DISCOUNT_EXCEEDS); return; }
     if (!selectedPeriodId) { toast.warning(COLLECTION_HISTORY_STRINGS.TOAST_NO_PERIOD_SELECTED, COLLECTION_HISTORY_STRINGS.TOAST_PLEASE_SELECT_PERIOD); return; }
     if (academicAmountNum > 0 && !activeStudent.feeStructureId) { toast.error(COLLECTION_HISTORY_STRINGS.TOAST_FEE_STRUCTURE_MISSING, COLLECTION_HISTORY_STRINGS.TOAST_NO_FEE_STRUCTURE_FOUND); return; }
+    // FIX: hard backstop, even though negatives can no longer be typed in.
+    if (discountNum < 0) { toast.warning('Invalid discount', 'Discount cannot be negative.'); return; }
+    if (lateFineNum < 0) { toast.warning('Invalid late fine', 'Late fine cannot be negative.'); return; }
 
     try {
       setLoading(true);
@@ -592,10 +649,6 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
                  </div>
                </>
              }>
-        {/* FIX: two-column split now switches at `lg` instead of `md`, so
-            tablets in portrait (~768–1023px) get one readable column
-            instead of two cramped ones — same responsive breakpoint
-            reasoning as the outstanding table below. */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
           {/* ── LEFT: Period → Class → Student (manual mode only) ── */}
@@ -765,12 +818,14 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
                   Academic Amount <span className="text-gray-400">*</span>
                 </label>
                 <div className="relative">
+                  {/* FIX: same non-negative sanitization as discount/late
+                      fine below — a '-' can never be typed into this field. */}
                   <Inp
                       type="number"
                       value={form.academicAmount}
                       disabled={!hasAcademicStructure}
                       className={`pr-16 ${academicExceedsBalance ? 'border-orange-400 bg-orange-50' : ''}`}
-                      onChange={(e) => { academicTouchedRef.current = true; setForm((p) => ({ ...p, academicAmount: e.target.value })); }}
+                      onChange={(e) => { academicTouchedRef.current = true; setForm((p) => ({ ...p, academicAmount: sanitizeNonNegativeAmount(e.target.value) })); }}
                       max={academicBalance} min={0}
                       placeholder={hasAcademicStructure ? `Max ${fmt(academicBalance)}` : 'N/A'}
                   />
@@ -802,7 +857,7 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
                           value={form.transportAmount}
                           disabled={transportDue <= 0}
                           className={`pr-16 ${transportExceedsBalance ? 'border-orange-400 bg-orange-50' : ''}`}
-                          onChange={(e) => { transportTouchedRef.current = true; setForm((p) => ({ ...p, transportAmount: e.target.value })); }}
+                          onChange={(e) => { transportTouchedRef.current = true; setForm((p) => ({ ...p, transportAmount: sanitizeNonNegativeAmount(e.target.value) })); }}
                           max={transportDue} min={0}
                           placeholder={transportDue > 0 ? `Max ${fmt(transportDue)}` : 'None due'}
                       />
@@ -867,10 +922,18 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
               <label className="block text-xs font-semibold text-gray-700 mb-1.5">
                 {COLLECTION_HISTORY_STRINGS.LBL_DISCOUNT} <span className="text-gray-400 font-normal">(academic only, optional)</span>
               </label>
+              {/* FIX: discount can now only ever be zero or a positive whole
+                  number — '-' and every other non-digit character are
+                  stripped as the user types or pastes, so a negative value
+                  can never actually be rendered in the field. */}
               <Inp
-                  type="number" value={form.discount} placeholder="Discount amount"
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={form.discount}
+                  placeholder="Discount amount"
                   className={discountExceedsAmount ? 'border-orange-400 bg-orange-50' : ''}
-                  onChange={(e) => setForm((p) => ({ ...p, discount: e.target.value }))}
+                  onChange={(e) => setForm((p) => ({ ...p, discount: sanitizeNonNegativeAmount(e.target.value) }))}
               />
               {discountExceedsAmount && (
                   <p className="text-[11px] text-orange-600 font-medium mt-1 flex items-center gap-1">
@@ -899,8 +962,10 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
                       </div>
                     </div>
                   </div>
-                  <Inp type="number" value={form.lateFine} placeholder="Fine amount (₹)"
-                       onChange={(e) => setForm((p) => ({ ...p, lateFine: e.target.value }))} />
+                  {/* FIX: same non-negative sanitization — late fine can
+                      never hold a '-' character either. */}
+                  <Inp type="number" min={0} step={1} value={form.lateFine} placeholder="Fine amount (₹)"
+                       onChange={(e) => setForm((p) => ({ ...p, lateFine: sanitizeNonNegativeAmount(e.target.value) }))} />
                 </div>
             )}
 
@@ -958,7 +1023,15 @@ const BulkCollectModal = ({ open, onClose, students, onSuccess, canCollect }) =>
     }
   }, [open, students]);
 
-  const update = (id, field, val) => setRows((p) => p.map((r) => r.id === id ? { ...r, [field]: val } : r));
+  // FIX: bulk-row money fields (academic/transport collect, discount, late
+  // fine) go through the same non-negative sanitizer as the single-collect
+  // modal, so a negative value can't be typed into any per-row input here
+  // either.
+  const update = (id, field, val) => {
+    const moneyFields = ['academicCollect', 'transportCollect', 'discount', 'lateFine'];
+    const nextVal = moneyFields.includes(field) ? sanitizeNonNegativeAmount(val) : val;
+    setRows((p) => p.map((r) => r.id === id ? { ...r, [field]: nextVal } : r));
+  };
   const applyAll = () => setRows((p) => p.map((r) => ({ ...r, paymentMode: commonMode, paymentDate: commonDate })));
 
   const academicGrandTotal = rows.reduce((s, r) => s + (parseFloat(r.academicCollect) || 0), 0);
@@ -1029,11 +1102,10 @@ const BulkCollectModal = ({ open, onClose, students, onSuccess, canCollect }) =>
           </div>
           <Btn variant="ghost" size="sm" onClick={applyAll} className="w-full sm:w-auto mt-2 sm:mt-0">{COLLECTION_HISTORY_STRINGS.BTN_APPLY_ALL}</Btn>
         </div>
-        {/* Data-dense row per student: horizontal scroll on narrow screens
-            is the correct pattern here rather than stacking (a card layout
-            with 8 fields per student would be far worse to scan/edit on
-            mobile than a scrollable table). */}
-        <div className="overflow-x-auto rounded-xl border border-gray-200 -mx-1 px-1 sm:mx-0 sm:px-0">
+        {/* FIX: same always-visible scrollbar + fade treatment as the main
+            Outstanding/History tables, so overflowed columns (Discount,
+            Late Fine, Mode) are just as discoverable here. */}
+        <div className="overflow-x-auto ch-table-scroll rounded-xl border border-gray-200 -mx-1 px-1 sm:mx-0 sm:px-0">
           <table className="w-full text-sm min-w-[820px]">
             <thead>
             <tr className="bg-gray-50 border-b border-gray-200">
@@ -1064,7 +1136,7 @@ const BulkCollectModal = ({ open, onClose, students, onSuccess, canCollect }) =>
                       }
                     </td>
                     <td className="px-3 py-2.5">
-                      <input type="number" value={row.academicCollect}
+                      <input type="number" min={0} value={row.academicCollect}
                              disabled={!row.academicDue}
                              onChange={(e) => update(row.id, 'academicCollect', e.target.value)}
                              className={`w-24 px-2 py-1 text-sm border rounded-lg focus:outline-none disabled:bg-gray-50 disabled:text-gray-300 ${acadOver ? 'border-orange-400 bg-orange-50' : 'border-gray-200 focus:border-blue-400'}`} />
@@ -1074,20 +1146,20 @@ const BulkCollectModal = ({ open, onClose, students, onSuccess, canCollect }) =>
                       <span className="text-sky-700 font-semibold text-xs whitespace-nowrap">{row.transportDue > 0 ? fmt(row.transportDue) : '—'}</span>
                     </td>
                     <td className="px-3 py-2.5">
-                      <input type="number" value={row.transportCollect}
+                      <input type="number" min={0} value={row.transportCollect}
                              disabled={!row.transportDue}
                              onChange={(e) => update(row.id, 'transportCollect', e.target.value)}
                              className={`w-24 px-2 py-1 text-sm border rounded-lg focus:outline-none disabled:bg-gray-50 disabled:text-gray-300 ${transOver ? 'border-orange-400 bg-orange-50' : 'border-sky-200 focus:border-sky-400'}`} />
                       {transOver && <div className="text-[10px] text-orange-600 mt-0.5 whitespace-nowrap">Exceeds due</div>}
                     </td>
                     <td className="px-3 py-2.5">
-                      <input type="number" value={row.discount} placeholder="0"
+                      <input type="number" min={0} value={row.discount} placeholder="0"
                              onChange={(e) => update(row.id, 'discount', e.target.value)}
                              className="w-20 px-2 py-1 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-blue-400" />
                     </td>
                     <td className="px-3 py-2.5">
                       {row.lateFine !== null
-                          ? <input type="number" value={row.lateFine} placeholder="Fine"
+                          ? <input type="number" min={0} value={row.lateFine} placeholder="Fine"
                                    onChange={(e) => update(row.id, 'lateFine', e.target.value)}
                                    className="w-20 px-2 py-1 text-sm border border-amber-200 rounded-lg bg-amber-50" />
                           : <span className="text-xs text-gray-300 whitespace-nowrap">N/A</span>
@@ -1491,8 +1563,18 @@ const CollectionsHistory = () => {
   };
 
   return (
-      <div className="space-y-4 sm:space-y-5 px-2 sm:px-4 max-w-full overflow-hidden">
+      // FIX: was `overflow-hidden` on the page root, which was doing
+      // double duty as a "stop stray content from overflowing the page"
+      // guard. That guard is still needed (it's what previously fixed the
+      // overdue-badge overflow issue), but `overflow-hidden` also clips
+      // ANY descendant's box on this axis — including, subtly, the visual
+      // affordances (fade edges) added to the tables below. Narrowing it
+      // to `overflow-x-hidden` keeps the "no stray horizontal overflow at
+      // the page level" guarantee while no longer interfering with the
+      // intentional, contained horizontal scroll regions inside the tables.
+      <div className="space-y-4 sm:space-y-5 px-2 sm:px-4 max-w-full overflow-x-hidden">
         <ToastContainer />
+        <TableScrollStyles />
 
         {/* ── Header ── */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-gray-100 pb-3">
@@ -1588,13 +1670,14 @@ const CollectionsHistory = () => {
                     </div>
                 )}
 
-                {/* FIX: filter row wraps onto two lines from md up to xl —
-                    only forced single-line at xl (1280px), where the
-                    desktop table also kicks in and there's genuinely room
-                    for everything side-by-side. Previously it tried to
-                    stay nowrap from lg (1024px), which is exactly where
-                    the screenshot showed things getting squeezed. */}
-                <div className="hidden md:flex flex-wrap xl:flex-nowrap items-center gap-2 w-full">
+                {/* FIX (responsiveness at ~1440×997, e.g. MacBook with a
+                    sidebar eating into the content width): filter row now
+                    wraps from md up to lg, only forced single-line at lg
+                    (1024px) — matching the table breakpoint below, instead
+                    of previously requiring xl (1280px) which is often wider
+                    than the *content* area actually available once a fixed
+                    sidebar is subtracted from a 1440px window. */}
+                <div className="hidden md:flex flex-wrap lg:flex-nowrap items-center gap-2 w-full">
                   <div className="relative flex-1 min-w-[180px]">
                     <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                     <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }}
@@ -1639,11 +1722,16 @@ const CollectionsHistory = () => {
                   </div>
               )}
 
-              {/* ── Desktop Table — only at xl+ (1280px), where 11 columns
-                  actually fit without squeezing. Below that, cards. ── */}
-              <div className="hidden xl:block bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
+              {/* ── Desktop Table — shown from `lg` (1024px) up. The table
+                  itself carries a min-width so it scrolls horizontally
+                  within its own container rather than squeezing columns
+                  illegibly. `.ch-table-scroll` makes that scroll region's
+                  scrollbar permanently visible (instead of an invisible
+                  overlay) and fades the edges so it's obvious there's more
+                  to scroll to. ── */}
+              <div className="hidden lg:block bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                <div className="overflow-x-auto ch-table-scroll">
+                  <table className="w-full min-w-[1120px]">
                     <thead>
                     <tr className="bg-gray-50/80 border-b border-gray-100">
                       <th className="px-3 py-2.5 w-8">
@@ -1740,10 +1828,9 @@ const CollectionsHistory = () => {
                 </div>
               </div>
 
-              {/* ── Cards for everything below xl — phones, all tablets,
-                  and laptops narrower than 1280px (including the 1024px
-                  case from the screenshot) ── */}
-              <div className="xl:hidden space-y-3">
+              {/* ── Cards for everything below lg — phones and tablets only
+                  now ── */}
+              <div className="lg:hidden space-y-3">
                 {pagedOut.length > 0 && (
                     <div className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-xl px-3 py-2">
                       <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-gray-700">
@@ -1833,21 +1920,21 @@ const CollectionsHistory = () => {
                   </div>
               )}
 
-              <div className="hidden md:flex flex-wrap xl:flex-nowrap items-center gap-2 w-full">
+              <div className="hidden md:flex flex-wrap lg:flex-nowrap items-center gap-2 w-full">
                 <div className="relative flex-1 min-w-[180px]">
                   <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                   <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                          placeholder={COLLECTION_HISTORY_STRINGS.PLACEHOLDER_SEARCH_HISTORY}
                          className="w-full pl-8 pr-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all bg-white" />
                 </div>
-                <div className="w-full sm:w-auto md:w-36 xl:w-40 flex-shrink-0">
+                <div className="w-full sm:w-auto md:w-36 lg:w-40 flex-shrink-0">
                   <Inp type="date" value={fromDate} onChange={(e) => { setFromDate(e.target.value); setPage(1); }} />
                 </div>
-                <div className="w-full sm:w-auto md:w-36 xl:w-40 flex-shrink-0">
+                <div className="w-full sm:w-auto md:w-36 lg:w-40 flex-shrink-0">
                   <Inp type="date" value={toDate} onChange={(e) => { setToDate(e.target.value); setPage(1); }} />
                 </div>
                 <Sel value={periodF} onChange={(v) => { setPeriodF(v); setPage(1); }}
-                     options={periodOptions} placeholder="All Periods" className="w-full sm:w-auto md:w-36 xl:w-40 flex-shrink-0" />
+                     options={periodOptions} placeholder="All Periods" className="w-full sm:w-auto md:w-36 lg:w-40 flex-shrink-0" />
                 <Sel value={classF} onChange={(v) => { setClassF(v); setPage(1); }}
                      options={classOptions} placeholder="All Classes" className="w-full sm:w-auto md:w-32 flex-shrink-0" />
                 <Sel value={modeF} onChange={(v) => { setModeF(v); setPage(1); }}
@@ -1855,9 +1942,12 @@ const CollectionsHistory = () => {
                      placeholder="All Modes" className="w-full sm:w-auto md:w-32 flex-shrink-0" />
               </div>
 
-              <div className="hidden xl:block bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
+              {/* ── Desktop Table — same `.ch-table-scroll` treatment as
+                  the Outstanding table above, this is the table the
+                  screenshots flagged as not showing a usable scrollbar. ── */}
+              <div className="hidden lg:block bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                <div className="overflow-x-auto ch-table-scroll">
+                  <table className="w-full min-w-[1180px]">
                     <thead>
                     <tr className="bg-gray-50/80 border-b border-gray-100">
                       {COLLECTION_HISTORY_STRINGS.TABLE_HISTORY_HEADERS.map((h) => (
@@ -1918,7 +2008,7 @@ const CollectionsHistory = () => {
                 </div>
               </div>
 
-              <div className="xl:hidden space-y-3">
+              <div className="lg:hidden space-y-3">
                 {loading ? (
                     <div className="text-center py-14">
                       <span className="w-7 h-7 border-2 border-[#2563EB] border-t-transparent rounded-full animate-spin inline-block mb-2" />

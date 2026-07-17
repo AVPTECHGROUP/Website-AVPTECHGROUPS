@@ -86,8 +86,7 @@ const toast = {
 const DeleteConfirmModal = ({ open, onClose, onConfirm, loading, periodName }) => {
   if (!open) return null;
   return (
-      <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
-           onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
         <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
           <div className="flex items-start gap-4 mb-5">
             <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
@@ -281,8 +280,9 @@ function PeriodModal({ isOpen, onClose, period, academicYear, onSuccess }) {
   if (!isOpen) return null;
 
   return (
-      <div className="fixed inset-0 bg-black/40 z-50 flex items-start justify-center p-6 overflow-y-auto backdrop-blur-sm"
-           onClick={(e) => e.target === e.currentTarget && onClose()}>
+      // FIX: removed the backdrop onClick-to-close handler below so this
+      // modal only closes via the explicit X button (or Cancel/Save flow).
+      <div className="fixed inset-0 bg-black/40 z-50 flex items-start justify-center p-6 overflow-y-auto backdrop-blur-sm">
         <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md my-4">
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
