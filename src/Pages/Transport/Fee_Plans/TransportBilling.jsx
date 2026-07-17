@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import {
   Bus, Download, RefreshCcw, Search, ChevronDown, X, Info,
   AlertTriangle, Pencil, Eye, Users, IndianRupee, PiggyBank,
-  SlidersHorizontal, CreditCard, Check,
+  SlidersHorizontal, CreditCard, Check, Trash2, EyeOff,
 } from "lucide-react";
 import { toast } from "react-toastify";
 import * as XLSX from "xlsx";
@@ -32,8 +32,19 @@ const MONTH_NAMES = [
   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
 ];
 
+const STATUS_LABELS = {
+  PENDING: "UNPAID",
+  UNPAID: "UNPAID",
+  PAID: "PAID",
+  PARTIAL: "PARTIAL",
+  HAS_OVERRIDE: "HAS_OVERRIDE",
+};
+
+const statusLabel = (status) => STATUS_LABELS[status?.toUpperCase()] || status;
+
 const STATUS_STYLES = {
   PENDING: "bg-amber-50 text-amber-700 border-amber-200",
+  UNPAID: "bg-amber-50 text-amber-700 border-amber-200",
   PAID: "bg-green-50 text-green-700 border-green-200",
   PARTIAL: "bg-blue-50 text-blue-700 border-blue-200",
   HAS_OVERRIDE: "bg-purple-50 text-purple-700 border-purple-200",
@@ -109,6 +120,22 @@ export default function TransportBilling() {
   useEffect(() => {
     (async () => {
       try {
+        const rawConfig = await getTransportbillingconfig();
+        const normalized = normalizeTransportConfig(rawConfig);
+
+        // Merging raw backend configuration securely to prevent normalizer property drop drops
+        setConfig({
+          ...normalized,
+          enabled: rawConfig?.enabled ?? true,
+          showInCollectionModal: rawConfig?.showInCollectionModal ?? true,
+          allowFlatOverride: rawConfig?.allowFlatOverride ?? normalized.allowFlatOverride ?? true,
+          allowMonthlyAdjustments: rawConfig?.allowMonthlyAdjustments ?? normalized.allowMonthlyAdjustments ?? true,
+          requireAdjustmentReason: rawConfig?.requireAdjustmentReason ?? normalized.requireAdjustmentReason ?? true
+        });
+      } catch (err) {
+        console.error(err);
+      }
+      try {
         const periods = await getFeePeriods();
         setFeePeriods(periods);
         if (periods.length) setSelectedPeriodId(periods[0].id);
@@ -122,18 +149,12 @@ export default function TransportBilling() {
       } catch (err) {
         console.error(err);
       }
-      try {
-        const rawConfig = await getTransportbillingconfig();
-        setConfig(normalizeTransportConfig(rawConfig));
-      } catch (err) {
-        console.error(err);
-      }
     })();
   }, []);
 
   /* ---------------- Load billing whenever filters change ---------------- */
   const fetchBilling = useCallback(async (page = 0) => {
-    if (!selectedPeriodId) return;
+    if (!selectedPeriodId || config.enabled === false) return;
     try {
       setLoading(true);
       const isCustomStatusFilter = statusFilter !== STATUS_OPTIONS[0] && statusFilter !== "HAS_OVERRIDE";
@@ -153,7 +174,7 @@ export default function TransportBilling() {
     } finally {
       setLoading(false);
     }
-  }, [selectedPeriodId, routeFilter, statusFilter]);
+  }, [selectedPeriodId, routeFilter, statusFilter, config.enabled]);
 
   useEffect(() => { fetchBilling(0); }, [fetchBilling]);
 
@@ -173,7 +194,15 @@ export default function TransportBilling() {
       if (statusFilter === "HAS_OVERRIDE") {
         rows = rows.filter((r) => r.calcMode === "FLAT" || r.finalTotal !== r.computedTotal);
       } else {
-        rows = rows.filter((r) => r.paymentStatus === statusFilter);
+        rows = rows.filter((r) => {
+          const currentStatus = r.paymentStatus?.toUpperCase();
+          const targetStatus = statusFilter.toUpperCase();
+
+          if (targetStatus === "PENDING" || targetStatus === "UNPAID") {
+            return currentStatus === "PENDING" || currentStatus === "UNPAID";
+          }
+          return currentStatus === targetStatus;
+        });
       }
     }
     return rows;
@@ -257,7 +286,7 @@ export default function TransportBilling() {
         row["Final Total"] = r.finalTotal;
         row["Paid"] = r.paidAmount;
         row["Outstanding"] = r.outstandingAmount;
-        row["Status"] = r.paymentStatus;
+        row["Status"] = statusLabel(r.paymentStatus);
         return row;
       });
       const ws = XLSX.utils.json_to_sheet(rows);
@@ -273,6 +302,21 @@ export default function TransportBilling() {
       setExporting(false);
     }
   };
+
+  /* ─── 1st TOGGLE TRIGGER FUNCTIONALITY ─── */
+  if (config.enabled === false) {
+    return (
+      <div className="w-full text-center py-16 bg-white border border-gray-100 rounded-2xl shadow-sm px-6">
+        <div className="w-14 h-14 bg-gray-50 border border-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
+          <EyeOff className="w-6 h-6 text-gray-400" />
+        </div>
+        <h3 className="text-base font-bold text-gray-800">Transport Billing is Deactivated</h3>
+        <p className="text-gray-400 text-xs mt-1 max-w-md mx-auto">
+          The transport fee billing system has been turned off via Configuration Settings. Please navigate to the Transport Billing Config panel to enable integration features.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-full min-w-0">
@@ -303,6 +347,16 @@ export default function TransportBilling() {
           </button>
         </div>
       </div>
+
+      {/* ─── 2nd TOGGLE TRIGGER FUNCTIONALITY ─── */}
+      {config.showInCollectionModal === false && (
+        <div className="bg-amber-50 border border-amber-100 text-amber-800 text-xs rounded-xl px-4 py-3 mb-4 flex items-start gap-2.5 shadow-sm">
+          <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0 text-amber-600" />
+          <div>
+            <span className="font-semibold">Fee Integration Notice:</span> Transport Ledger items are currently configured to be <b>Hidden</b> inside the core Student Fee Collection Modals. Dues will need to be collected independently.
+          </div>
+        </div>
+      )}
 
       {/* Stat Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
@@ -336,15 +390,6 @@ export default function TransportBilling() {
         />
       </div>
 
-      {/* Info banner */}
-      <div className="bg-blue-50 border border-blue-100 text-blue-800 text-sm rounded-xl px-4 py-3 mb-6 flex items-start gap-2">
-        <Info className="w-4 h-4 mt-0.5 shrink-0" />
-        <p>
-          Each row shows a student's monthly transport amount for the selected period. Amounts auto-populate from the
-          student's allocation. Use <b>Flat Override</b> to skip month-by-month and bill a single period total.
-        </p>
-      </div>
-
       {/* Filters Box */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="px-4 sm:px-6 py-3.5 border-b border-gray-50 flex flex-col md:flex-row gap-3 items-center">
@@ -359,7 +404,6 @@ export default function TransportBilling() {
             />
           </div>
           <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
-            {/* Fee Period Dropdown */}
             <div className="relative flex-1 sm:flex-none">
               <select
                 value={selectedPeriodId || ""}
@@ -374,7 +418,6 @@ export default function TransportBilling() {
               <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
             </div>
 
-            {/* Route Filter Dropdown */}
             <div className="relative flex-1 sm:flex-none">
               <select
                 value={routeFilter}
@@ -389,7 +432,6 @@ export default function TransportBilling() {
               <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
             </div>
 
-            {/* Status Filter Dropdown */}
             <div className="relative flex-1 sm:flex-none">
               <select
                 value={statusFilter}
@@ -397,7 +439,7 @@ export default function TransportBilling() {
                 className="appearance-none w-full pl-3 pr-8 py-2 text-sm border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-200 cursor-pointer sm:min-w-[140px]"
               >
                 {STATUS_OPTIONS.map((s) => (
-                  <option key={s} value={s}>{s}</option>
+                  <option key={s} value={s}>{s === "All Statuses" ? s : statusLabel(s)}</option>
                 ))}
               </select>
               <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
@@ -405,10 +447,8 @@ export default function TransportBilling() {
           </div>
         </div>
 
-        {/* Selected Period Metadata Banner */}
         {selectedPeriod && (
           <div className="px-4 sm:px-6 py-2 bg-gray-50 border-b border-gray-100 flex flex-wrap gap-x-6 gap-y-1 text-xs text-gray-500">
-            <span>📅 Months covered: <b className="text-gray-700">{selectedPeriod.monthsCovered || selectedPeriod.months || "—"}</b></span>
             <span>Due date: <b className="text-gray-700">{selectedPeriod.dueDate || "—"}</b></span>
             {selectedPeriod.billingType && (
               <span className="bg-gray-200 px-2 py-0.5 rounded-full font-semibold text-gray-600 text-[10px]">
@@ -462,7 +502,7 @@ export default function TransportBilling() {
                           {months.map((m) => (
                             <button
                               key={m.idx}
-                              disabled={isFlat || r.paymentStatus === "PAID" || !config.allowMonthlyAdjustments}
+                              disabled={isFlat || r.paymentStatus?.toUpperCase() === "PAID" || !config.allowMonthlyAdjustments}
                               onClick={() => setDetailModal({ open: true, record: r })}
                               className={`px-2 py-1 rounded-lg text-xs font-semibold border whitespace-nowrap transition-colors ${isFlat
                                 ? "bg-gray-50 text-gray-400 border-gray-100 cursor-not-allowed"
@@ -473,7 +513,7 @@ export default function TransportBilling() {
                                     : "bg-white text-gray-700 border-gray-200 hover:border-blue-300"
                                 }`}
                             >
-                              {MONTH_NAMES[m.month]}: {fmt(m.amount)}
+                              {MONTH_NAMES[m.month]} : {fmt(m.amount)}
                             </button>
                           ))}
                         </div>
@@ -484,7 +524,7 @@ export default function TransportBilling() {
                         </span>
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap text-xs">
-                        <p className="font-bold text-gray-950 text-sm">{fmt(r.finalTotal)}</p>
+                        <p className="font-bold text-gray-955 text-sm">{fmt(r.finalTotal)}</p>
                         {r.finalTotal !== r.computedTotal && (
                           <p className="text-[11px] text-gray-400 line-through">{fmt(r.computedTotal)}</p>
                         )}
@@ -494,21 +534,22 @@ export default function TransportBilling() {
                         </div>
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full border ${STATUS_STYLES[r.paymentStatus] || "bg-gray-100 text-gray-500 border-gray-200"}`}>
-                          {r.paymentStatus}
+                        <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full border ${STATUS_STYLES[r.paymentStatus?.toUpperCase()] || "bg-gray-100 text-gray-500 border-gray-200"}`}>
+                          {statusLabel(r.paymentStatus)}
                         </span>
                       </td>
                       <td className="px-4 py-4">
                         <div className="flex items-center justify-center gap-1.5">
-                          {r.paymentStatus !== "PAID" && (
+                          {r.paymentStatus?.toUpperCase() !== "PAID" && (
                             <button
                               onClick={() => setPayModal({ open: true, record: r })}
-                              className="inline-flex items-center gap-1 text-xs font-bold bg-green-600 text-white hover:bg-green-700 px-2.5 py-1.5 rounded-lg shadow-sm transition-colors"
+                              className="inline-flex items-center cursor-pointer gap-1 text-xs font-bold bg-green-600 text-white hover:bg-green-700 px-2.5 py-1.5 rounded-lg shadow-sm transition-colors"
                             >
                               <CreditCard className="w-3.5 h-3.5" /> Pay
                             </button>
                           )}
-                          {config.allowFlatOverride && (
+                          {/* ─── 4th TOGGLE TRIGGER FUNCTIONALITY ─── */}
+                          {config.allowFlatOverride !== false && (
                             <button
                               onClick={() =>
                                 setFlatModal({
@@ -517,7 +558,7 @@ export default function TransportBilling() {
                                   record: r,
                                 })
                               }
-                              className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:bg-blue-50 border border-blue-100 px-2.5 py-1.5 rounded-lg transition-colors"
+                              className="inline-flex items-center cursor-pointer gap-1 text-xs font-semibold text-blue-600 hover:bg-blue-50 border border-blue-100 px-2.5 py-1.5 rounded-lg transition-colors"
                             >
                               {r.flatOverrideAmount != null ? (
                                 <><Pencil className="w-3.5 h-3.5" /> Edit Flat</>
@@ -528,7 +569,7 @@ export default function TransportBilling() {
                           )}
                           <button
                             onClick={() => setDetailModal({ open: true, record: r })}
-                            className="inline-flex items-center gap-1 text-xs font-semibold text-gray-600 hover:bg-gray-50 border border-gray-200 px-2.5 py-1.5 rounded-lg transition-colors"
+                            className="inline-flex items-center cursor-pointer gap-1 text-xs font-semibold text-gray-600 hover:bg-gray-50 border border-gray-200 px-2.5 py-1.5 rounded-lg transition-colors"
                           >
                             <Eye className="w-3.5 h-3.5" /> Detail
                           </button>
@@ -562,8 +603,8 @@ export default function TransportBilling() {
                       <p className="font-bold text-gray-900 text-sm truncate">{r.studentName}</p>
                       <p className="text-xs text-gray-400">#{r.admissionNumber} · {r.routeName}</p>
                     </div>
-                    <span className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full border shrink-0 ${STATUS_STYLES[r.paymentStatus] || "bg-gray-100 text-gray-500 border-gray-200"}`}>
-                      {r.paymentStatus}
+                    <span className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full border shrink-0 ${STATUS_STYLES[r.paymentStatus?.toUpperCase()] || "bg-gray-100 text-gray-500 border-gray-200"}`}>
+                      {statusLabel(r.paymentStatus)}
                     </span>
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -588,7 +629,7 @@ export default function TransportBilling() {
                     </div>
                   </div>
                   <div className="flex justify-end gap-2 pt-1">
-                    {r.paymentStatus !== "PAID" && (
+                    {r.paymentStatus?.toUpperCase() !== "PAID" && (
                       <button
                         onClick={() => setPayModal({ open: true, record: r })}
                         className="inline-flex items-center gap-1 text-xs font-bold bg-green-600 text-white hover:bg-green-700 px-2.5 py-1.5 rounded-lg shadow-sm"
@@ -596,7 +637,8 @@ export default function TransportBilling() {
                         <CreditCard className="w-3.5 h-3.5" /> Pay
                       </button>
                     )}
-                    {config.allowFlatOverride && (
+                    {/* ─── 4th TOGGLE TRIGGER FUNCTIONALITY (Mobile View) ─── */}
+                    {config.allowFlatOverride !== false && (
                       <button
                         onClick={() => setFlatModal({ open: true, mode: r.flatOverrideAmount != null ? "edit" : "add", record: r })}
                         className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:bg-blue-50 border border-blue-100 px-2.5 py-1.5 rounded-lg"
@@ -659,7 +701,6 @@ export default function TransportBilling() {
           record={flatModal.record}
           onClose={() => setFlatModal({ open: false, mode: "add", record: null })}
           onSave={handleSaveFlat}
-          reasonOptions={reasonOptions}
           requireReason={config.requireAdjustmentReason}
         />
       )}
@@ -676,7 +717,7 @@ export default function TransportBilling() {
           reasonOptions={reasonOptions}
           requireReason={config.requireAdjustmentReason}
           allowMonthlyAdjustments={config.allowMonthlyAdjustments}
-          allowFlatOverride={config.allowFlatOverride}
+          allowFlatOverride={config.allowFlatOverride !== false}
         />
       )}
 
@@ -695,7 +736,7 @@ export default function TransportBilling() {
 }
 
 /* ---------------------------------------------------------------- */
-/* Record Payment Modal Component                                  */
+/* Shared Modals Components                                         */
 /* ---------------------------------------------------------------- */
 
 function PayTransportBillingModal({ record, onClose, onSuccess }) {
@@ -813,18 +854,19 @@ function PayTransportBillingModal({ record, onClose, onSuccess }) {
         />
       </div>
 
-      <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+      <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 bg-white">
         <button
+          type="button"
           onClick={onClose}
-          disabled={submitting}
-          className="px-4 py-2.5 text-sm font-semibold text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50"
+          className="px-4 py-2.5 text-sm font-semibold cursor-pointer text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50"
         >
           Cancel
         </button>
         <button
+          type="button"
           onClick={handlePaySubmit}
           disabled={submitting}
-          className="inline-flex items-center gap-2 px-6 py-2.5 text-sm font-bold text-white bg-green-600 hover:bg-green-700 rounded-xl shadow transition-colors disabled:opacity-60"
+          className="inline-flex items-center gap-2 cursor-pointer px-6 py-2.5 text-sm font-bold text-white bg-green-600 hover:bg-green-700 rounded-xl shadow transition-colors disabled:opacity-60"
         >
           <Check className="w-4 h-4" /> {submitting ? "Processing..." : "Confirm Payment"}
         </button>
@@ -833,16 +875,13 @@ function PayTransportBillingModal({ record, onClose, onSuccess }) {
   );
 }
 
-/* ---------------------------------------------------------------- */
-/* Generate / Refresh Modal Component                              */
-/* ---------------------------------------------------------------- */
-
 function GenerateBillingModal({ feePeriods, routes, defaultPeriodId, onClose, onGenerate }) {
   const [feePeriodId, setFeePeriodId] = useState(defaultPeriodId || "");
   const [routeId, setRouteId] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const period = feePeriods.find((p) => p.id === Number(feePeriodId));
+  const period = feePeriods.find((p) => String(p.id) === String(feePeriodId));
+  const route = routes.find((r) => String(r.id) === String(routeId));
 
   const submit = async () => {
     if (!feePeriodId) return toast.error("Please select a fee period");
@@ -854,21 +893,13 @@ function GenerateBillingModal({ feePeriods, routes, defaultPeriodId, onClose, on
 
   return (
     <ModalShell onClose={onClose} title="Generate Transport Billing" icon={RefreshCcw}>
-      <div className="bg-blue-50 border border-blue-100 text-blue-800 text-sm rounded-xl px-4 py-3 mb-5 flex items-start gap-2">
-        <Info className="w-4 h-4 mt-0.5 shrink-0" />
-        <p>
-          Creates billing records for all students with an active transport allocation whose enrollment falls within
-          the period's months. Safe to re-run — existing overrides are preserved.
-        </p>
-      </div>
-
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-1.5">Fee Period *</label>
           <select
             value={feePeriodId}
             onChange={(e) => setFeePeriodId(e.target.value)}
-            className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-200"
+            className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-200 font-medium text-gray-700"
           >
             <option value="">Select period</option>
             {feePeriods.map((p) => (
@@ -881,7 +912,7 @@ function GenerateBillingModal({ feePeriods, routes, defaultPeriodId, onClose, on
           <select
             value={routeId}
             onChange={(e) => setRouteId(e.target.value)}
-            className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-200"
+            className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-200 font-medium text-gray-700"
           >
             <option value="">Select a Route</option>
             {routes.map((r) => (
@@ -891,22 +922,22 @@ function GenerateBillingModal({ feePeriods, routes, defaultPeriodId, onClose, on
         </div>
       </div>
 
-      <div className="bg-gray-50 rounded-xl p-4 mb-6 space-y-2 text-sm">
-        <p className="font-semibold text-gray-700 mb-1">Will generate / refresh for:</p>
-        <Row label="Fee period" value={period?.name || period?.label || "—"} />
-        <Row label="Months covered" value={period?.monthsCovered || period?.months || "—"} />
-        <Row label="Base rate source" value="allocation.resolvedFeeAmount" />
-        <Row label="Existing override preservation" value="✓ Yes" colorClass="text-green-600" />
+      <div className="bg-gray-50 rounded-xl p-4 mb-6 space-y-2.5 text-sm border border-gray-100">
+        <p className="font-bold text-gray-700 mb-2 text-xs uppercase tracking-wider">Summary Details</p>
+        <Row label="Target Fee Period" value={period?.name || period?.label || "—"} colorClass="text-indigo-700 font-semibold" />
+        <Row label="Selected Route" value={route ? `${route.routeName || route.name}` : "—"} colorClass="text-blue-700 font-semibold" />
+        <Row label="Base Rate Source" value="Predefined Stop Fee Allocation" colorClass="text-gray-700" />
+        <Row label="Preserve Custom Overrides" value="✓ Yes (Will keep modified records)" colorClass="text-green-600 font-medium" />
       </div>
 
       <div className="flex justify-end gap-3">
-        <button onClick={onClose} className="px-4 py-2.5 text-sm font-semibold text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50">
+        <button onClick={onClose} className="px-4 py-2.5 cursor-pointer text-sm font-semibold text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50">
           Cancel
         </button>
         <button
           onClick={submit}
           disabled={submitting || !feePeriodId || !routeId}
-          className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-5 py-2.5 rounded-xl disabled:opacity-60 transition-colors"
+          className="inline-flex items-center gap-2 cursor-pointer bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-5 py-2.5 rounded-xl disabled:opacity-60 transition-colors shadow-sm"
         >
           <RefreshCcw className="w-4 h-4" /> {submitting ? "Generating..." : "Generate Billing"}
         </button>
@@ -915,116 +946,170 @@ function GenerateBillingModal({ feePeriods, routes, defaultPeriodId, onClose, on
   );
 }
 
-/* ---------------------------------------------------------------- */
-/* Flat Override Modal Component                                   */
-/* ---------------------------------------------------------------- */
-
-function FlatOverrideModal({ record, onClose, onSave, reasonOptions, requireReason = true }) {
+function FlatOverrideModal({ record, onClose, onSave, requireReason = true }) {
   const isEdit = record?.flatOverrideAmount != null;
+
+  const FRONTEND_REASONS = [
+    "Management Discretionary Concession",
+    "Special Sibling/Staff Discount",
+    "Mid-Quarter Route Allocation Adjustment",
+    "Seasonal Weather / School Closure Waiver",
+    "Custom Fixed Corporate Billing Structure"
+  ];
+
   const [amount, setAmount] = useState(isEdit ? record.flatOverrideAmount : "");
-  const [reason, setReason] = useState(isEdit ? record.flatOverrideReason || reasonOptions[0] || "" : reasonOptions[0] || "");
+  const [reason, setReason] = useState("");
+  const [customReason, setCustomReason] = useState("");
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  useEffect(() => {
+    if (isEdit && record.flatOverrideReason) {
+      if (FRONTEND_REASONS.includes(record.flatOverrideReason)) {
+        setReason(record.flatOverrideReason);
+      } else {
+        setReason("Other");
+        setCustomReason(record.flatOverrideReason);
+      }
+    } else {
+      setReason(FRONTEND_REASONS[0]);
+    }
+  }, [isEdit, record]);
+
   const save = async () => {
-    if (amount === "") return toast.error("Enter a flat amount");
-    if (requireReason && !reason) return toast.error("Select a reason");
+    if (amount === "") return toast.error("Please enter a flat override amount");
+
+    const finalReason = reason === "Other" ? customReason.trim() : reason;
+    if (requireReason && !finalReason) {
+      return toast.error("Please select or enter a valid reason for this override");
+    }
+
     setSubmitting(true);
-    await onSave(record.id, amount, reason);
+    await onSave(record.id, amount, finalReason);
     setSubmitting(false);
   };
 
   const clearOverride = async () => {
     setSubmitting(true);
-    await onSave(record.id, "", reason || "Revert to computed");
+    await onSave(record.id, "", "Revert to standard computed billing structure");
     setSubmitting(false);
   };
 
   return (
     <ModalShell onClose={onClose} title={`Flat Quarter Override — ${record.studentName}`} icon={CreditCard}>
-      <div className="bg-amber-50 border border-amber-200 text-amber-800 text-sm rounded-xl px-4 py-3 mb-5 flex items-start gap-2">
-        <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
-        <p>
-          Setting a flat override <b>disables month-level editing</b> for this student. The flat amount replaces the
-          computed sum. To re-enable month editing, clear the flat override below.
-        </p>
+      <div className="bg-amber-50 border border-amber-200 text-amber-800 text-sm rounded-xl px-4 py-3 mb-5 flex items-start gap-2.5 shadow-sm">
+        <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0 text-amber-600" />
+        <div>
+          <p className="font-semibold text-amber-900">Important Operational Notice</p>
+          <p className="text-xs text-amber-800 mt-0.5">
+            Setting a flat override <b>disables month-level editing</b> for this student. The flat value explicitly replaces the calculated sum total.
+          </p>
+        </div>
       </div>
 
-      <div className="bg-gray-50 rounded-xl p-4 mb-5 flex items-center justify-between text-sm">
+      <div className="bg-gray-50 border border-gray-100 rounded-xl p-4 mb-5 grid grid-cols-2 gap-4 text-sm shadow-inner">
         <div>
-          <p className="text-gray-500">Computed total (sum of months)</p>
-          <p className="font-bold text-gray-900">{fmt(record.computedTotal)}</p>
+          <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider">Computed Total (Sum)</p>
+          <p className="font-extrabold text-gray-900 text-base mt-0.5">{fmt(record.computedTotal)}</p>
         </div>
         <div className="text-right">
-          <p className="text-gray-500">Current override</p>
-          <p className="font-bold text-gray-900">{isEdit ? fmt(record.flatOverrideAmount) : "None set"}</p>
+          <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider">Current Lock Status</p>
+          <p className={`font-extrabold text-base mt-0.5 ${isEdit ? "text-purple-600" : "text-gray-500"}`}>
+            {isEdit ? fmt(record.flatOverrideAmount) : "None (Computed)"}
+          </p>
         </div>
-      </div>
-
-      <div className="mb-4">
-        <label className="block text-sm font-semibold text-gray-700 mb-1.5">Flat Quarter Amount (₹) *</label>
-        <input
-          type="number"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          placeholder="e.g. 3500"
-          className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-200"
-        />
-        <p className="text-xs text-gray-400 mt-1">This overrides the computed monthly sum. Leave blank and save to revert to Computed mode.</p>
-      </div>
-
-      <div className="mb-4">
-        <label className="block text-sm font-semibold text-gray-700 mb-1.5">Reason {requireReason && "*"}</label>
-        <select
-          value={reason}
-          onChange={(e) => setReason(e.target.value)}
-          className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-200"
-        >
-          {!requireReason && <option value="">No reason</option>}
-          {reasonOptions.map((r) => <option key={r} value={r}>{r}</option>)}
-        </select>
-      </div>
-
-      <div className="mb-4">
-        <label className="block text-sm font-semibold text-gray-700 mb-1.5">Notes (optional)</label>
-        <input
-          type="text"
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          placeholder="Optional context"
-          className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-200"
-        />
       </div>
 
       {isEdit && (
-        <button
-          onClick={clearOverride}
-          disabled={submitting}
-          className="text-sm font-semibold text-red-600 hover:bg-red-50 px-3 py-2 rounded-lg mb-4 inline-flex items-center gap-1"
-        >
-          <X className="w-4 h-4" /> Clear Flat Override — Revert to Computed
-        </button>
+        <div className="bg-red-50/60 border border-red-100 rounded-xl p-4 mb-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm">
+          <div className="space-y-0.5">
+            <h4 className="text-sm font-bold text-red-955">Reset to Default Calculation</h4>
+            <p className="text-xs text-red-700">Remove flat lock fee and recalculate row via individual standard monthly tiers.</p>
+          </div>
+          <button
+            type="button"
+            onClick={clearOverride}
+            disabled={submitting}
+            className="inline-flex items-center gap-1.5 text-xs font-bold bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 px-3.5 py-2 rounded-xl transition-all shadow-sm shrink-0 active:scale-[0.98]"
+          >
+            <Trash2 className="w-3.5 h-3.5" /> Revert to Computed
+          </button>
+        </div>
       )}
 
-      <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
-        <button onClick={onClose} className="px-4 py-2.5 text-sm font-semibold text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50">
+      <div className="space-y-4 mb-6">
+        <div>
+          <label className="block text-sm font-semibold text-gray-800 mb-1.5">Flat Override Amount (₹) *</label>
+          <input
+            type="number"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder="e.g. 3500"
+            className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-200 font-semibold transition-all"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-semibold text-gray-800 mb-1.5">Reason Selection *</label>
+          <div className="relative">
+            <select
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-200 cursor-pointer text-gray-700 font-medium transition-all appearance-none"
+            >
+              {FRONTEND_REASONS.map((r) => <option key={r} value={r}>{r}</option>)}
+              <option value="Other">Other / Custom Exception</option>
+            </select>
+            <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+          </div>
+        </div>
+
+        {reason === "Other" && (
+          <div className="animate-fadeIn">
+            <label className="block text-xs font-bold text-blue-800 uppercase tracking-wider mb-1.5">Specify Custom Reason *</label>
+            <input
+              type="text"
+              required
+              value={customReason}
+              onChange={(e) => setCustomReason(e.target.value)}
+              placeholder="Enter context reason details manually..."
+              className="w-full px-3.5 py-2.5 text-sm border border-blue-200 rounded-xl bg-blue-50/20 focus:outline-none focus:ring-2 focus:ring-blue-200 text-gray-900 transition-all font-medium"
+            />
+          </div>
+        )}
+
+        <div>
+          <label className="block text-sm font-semibold text-gray-800 mb-1.5">Contextual Office Notes (optional)</label>
+          <input
+            type="text"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Type administrative context tracking notes..."
+            className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-200 text-gray-700 transition-all"
+          />
+        </div>
+      </div>
+
+      <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 bg-white">
+        <button
+          type="button"
+          onClick={onClose}
+          className="px-4 py-2.5 text-sm font-semibold cursor-pointer text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 active:scale-[0.98] transition-all"
+        >
           Cancel
         </button>
         <button
+          type="button"
           onClick={save}
           disabled={submitting}
-          className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-[#1A1A2E] hover:bg-black rounded-xl disabled:opacity-60"
+          className="inline-flex items-center gap-2 cursor-pointer bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-sm font-bold px-6 py-2.5 rounded-xl disabled:opacity-60 transition-all shadow-sm active:scale-[0.98]"
         >
-          <Check className="w-4 h-4" /> Save Flat Override
+          <Check className="w-4 h-4" /> {submitting ? "Saving changes..." : "Save Flat Override"}
         </button>
       </div>
     </ModalShell>
   );
 }
-
-/* ---------------------------------------------------------------- */
-/* Billing Detail Modal Component                                  */
-/* ---------------------------------------------------------------- */
 
 function BillingDetailModal({
   record, onClose, onOpenFlat, onMonthOverride,
@@ -1070,7 +1155,7 @@ function BillingDetailModal({
         </div>
         <div>
           <p className="text-gray-500 text-xs">Status</p>
-          <p className="font-bold text-gray-900">{record.paymentStatus}</p>
+          <p className="font-bold text-gray-900">{statusLabel(record.paymentStatus)}</p>
           <p className="text-xs text-gray-400">{isFlat ? "⊞ Flat" : "Σ Computed"}</p>
         </div>
       </div>
@@ -1109,7 +1194,7 @@ function BillingDetailModal({
                   {m.adjusted ? (m.reason || "Adjusted") : "Base rate"}
                 </span>
                 <button
-                  disabled={isFlat || record.paymentStatus === "PAID" || !allowMonthlyAdjustments}
+                  disabled={isFlat || record.paymentStatus?.toUpperCase() === "PAID" || !allowMonthlyAdjustments}
                   onClick={() => startEdit(m)}
                   className="w-full inline-flex items-center justify-center gap-1 text-xs font-semibold text-blue-600 hover:bg-blue-50 border border-blue-100 px-2.5 py-1.5 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed"
                 >
@@ -1144,7 +1229,7 @@ function BillingDetailModal({
         ) : <span />}
         <button
           onClick={onClose}
-          className="px-4 py-2.5 text-sm font-semibold text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50"
+          className="px-4 py-2.5 text-sm font-semibold cursor-pointer border border-gray-200 rounded-xl hover:bg-gray-50"
         >
           Close
         </button>
@@ -1152,10 +1237,6 @@ function BillingDetailModal({
     </ModalShell>
   );
 }
-
-/* ---------------------------------------------------------------- */
-/* Shared Helpers & Skeletons Components                            */
-/* ---------------------------------------------------------------- */
 
 function Row({ label, value, colorClass = "text-gray-800" }) {
   return (
@@ -1192,7 +1273,16 @@ function MobileSkeletonRows({ rows = 4 }) {
 
 function ModalShell({ title, icon: Icon, onClose, children }) {
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4 animate-fadeIn" onClick={onClose}>
+      <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: scale(0.98); }
+          to { opacity: 1; transform: scale(1); }
+        }
+        .animate-fadeIn {
+          animation: fadeIn 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+      `}</style>
       <div
         className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6"
         onClick={(e) => e.stopPropagation()}
@@ -1201,7 +1291,7 @@ function ModalShell({ title, icon: Icon, onClose, children }) {
           <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
             {Icon && <Icon className="w-5 h-5 text-indigo-600" />} {title}
           </h3>
-          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400">
+          <button onClick={onClose} className="w-8 h-8 cursor-pointer flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400">
             <X className="w-4 h-4" />
           </button>
         </div>

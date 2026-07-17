@@ -200,7 +200,7 @@ export const STAFF_ASSIGNMENT_COLUMNS = [
 ];
 
 export const STUDENT_FEE_COLUMNS = [
-  "Student ID", "Name", "Class", "Route", "Stop", "Type", "Fee Plan", "Amount", "Frequency"
+  "Student ID", "Name", "Class", "Route", "Stop", "Type", "Amount", "Frequency"
 ];
 
 export const VEHICLE_CAPACITY_COLUMNS = [

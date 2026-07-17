@@ -14,11 +14,12 @@ import TransportBilling from "./TransportBilling";
 // import CollectionView from "./Collection_View";
 import FeeConfig from "./Fee_Config";
 
-import {
-  getTransportFeePlans,
-  activateTransportFeePlan,
-  deactivateTransportFeePlan,
-} from "../../../Api/Transport/TransportAPI";
+// Fee Plan APIs - commented out, tab disabled
+// import {
+//   getTransportFeePlans,
+//   activateTransportFeePlan,
+//   deactivateTransportFeePlan,
+// } from "../../../Api/Transport/TransportAPI";
 import {
   FEE_FREQ_COLORS,
   PAGINATION,
@@ -34,9 +35,10 @@ import {
 function fmt(n) { return `${FEE_PLAN_UI_TEXT.CURRENCY_SYMBOL}${Number(n).toLocaleString("en-IN")}`; }
 
 export default function Fee_Plans() {
-  // 2. State to track the active tab
-  const [activeTab, setActiveTab] = useState("fee-plan");
+  // 2. State to track the active tab - default to "billing" now that fee-plan tab is disabled
+  const [activeTab, setActiveTab] = useState("billing");
 
+  // Fee Plan state - kept but unused since fee-plan tab/APIs are disabled
   const [plans, setPlans] = useState([]);
   const [search, setSearch] = useState("");
   const [freqFilter, setFreqFilter] = useState(FEE_FREQ_FILTER_OPTIONS[0]);
@@ -48,74 +50,75 @@ export default function Fee_Plans() {
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [togglingId, setTogglingId] = useState(null);
 
-  const fetchFeePlans = useCallback(async () => {
-    try {
-      setLoading(true);
-      const data = await getTransportFeePlans();
-      const formatted = data.map((item) => ({
-        id: item.id,
-        planName: item.planName,
-        routeId: item.routeId ?? "",
-        route: item.routeName ? item.routeName.split(" – ")[0] : FEE_PLAN_UI_TEXT.GENERIC_ROUTE,
-        amount: item.feeAmount,
-        frequency: item.frequency,
-        distanceSlab: item.distanceSlabKm ? `${item.distanceSlabKm} km` : "—",
-        description: item.description ?? "",
-        status: item.isActive ? STATUS.ACTIVE : STATUS.INACTIVE,
-      }));
-      setPlans(formatted);
-    } catch (error) {
-      console.error("Failed to fetch fee plans:", error);
-      toast.error(TOAST_MESSAGES.FEE_PLAN_LOAD_FAIL);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  // Fee Plan API calls - commented out, no longer fetched
+  // const fetchFeePlans = useCallback(async () => {
+  //   try {
+  //     setLoading(true);
+  //     const data = await getTransportFeePlans();
+  //     const formatted = data.map((item) => ({
+  //       id: item.id,
+  //       planName: item.planName,
+  //       routeId: item.routeId ?? "",
+  //       route: item.routeName ? item.routeName.split(" – ")[0] : FEE_PLAN_UI_TEXT.GENERIC_ROUTE,
+  //       amount: item.feeAmount,
+  //       frequency: item.frequency,
+  //       distanceSlab: item.distanceSlabKm ? `${item.distanceSlabKm} km` : "—",
+  //       description: item.description ?? "",
+  //       status: item.isActive ? STATUS.ACTIVE : STATUS.INACTIVE,
+  //     }));
+  //     setPlans(formatted);
+  //   } catch (error) {
+  //     console.error("Failed to fetch fee plans:", error);
+  //     toast.error(TOAST_MESSAGES.FEE_PLAN_LOAD_FAIL);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // }, []);
 
-  useEffect(() => {
-    if (activeTab === "fee-plan") {
-      fetchFeePlans();
-    }
-  }, [fetchFeePlans, activeTab]);
+  // useEffect(() => {
+  //   if (activeTab === "fee-plan") {
+  //     fetchFeePlans();
+  //   }
+  // }, [fetchFeePlans, activeTab]);
 
-  const handleAction = async (id, value, status) => {
-    if (value === ACTION_TYPES.EDIT) {
-      const plan = plans.find((p) => p.id === id);
-      setSelectedPlan(plan);
-      setEditModal(true);
-      return;
-    }
-    if (value === ACTION_TYPES.TOGGLE) {
-      try {
-        setTogglingId(id);
-        if (status === STATUS.ACTIVE) {
-          await deactivateTransportFeePlan(id);
-          toast.success(TOAST_MESSAGES.FEE_PLAN_DEACTIVATE_SUCCESS);
-        } else {
-          await activateTransportFeePlan(id);
-          toast.success(TOAST_MESSAGES.FEE_PLAN_ACTIVATE_SUCCESS);
-        }
-        fetchFeePlans();
-      } catch (err) {
-        console.error("Toggle failed:", err);
-        toast.error(TOAST_MESSAGES.FEE_PLAN_STATUS_UPDATE_FAIL);
-      } finally {
-        setTogglingId(null);
-      }
-    }
-  };
+  // const handleAction = async (id, value, status) => {
+  //   if (value === ACTION_TYPES.EDIT) {
+  //     const plan = plans.find((p) => p.id === id);
+  //     setSelectedPlan(plan);
+  //     setEditModal(true);
+  //     return;
+  //   }
+  //   if (value === ACTION_TYPES.TOGGLE) {
+  //     try {
+  //       setTogglingId(id);
+  //       if (status === STATUS.ACTIVE) {
+  //         await deactivateTransportFeePlan(id);
+  //         toast.success(TOAST_MESSAGES.FEE_PLAN_DEACTIVATE_SUCCESS);
+  //       } else {
+  //         await activateTransportFeePlan(id);
+  //         toast.success(TOAST_MESSAGES.FEE_PLAN_ACTIVATE_SUCCESS);
+  //       }
+  //       fetchFeePlans();
+  //     } catch (err) {
+  //       console.error("Toggle failed:", err);
+  //       toast.error(TOAST_MESSAGES.FEE_PLAN_STATUS_UPDATE_FAIL);
+  //     } finally {
+  //       setTogglingId(null);
+  //     }
+  //   }
+  // };
 
-  const filtered = plans.filter((p) => {
-    const q = search.toLowerCase();
-    const matchSearch = p.planName.toLowerCase().includes(q) || p.route.toLowerCase().includes(q);
-    const matchFreq = freqFilter === FEE_FREQ_FILTER_OPTIONS[0] || p.frequency === freqFilter;
-    const matchStatus = statusFilter === STATUS_FILTER_OPTIONS_SIMPLE[0] || p.status === statusFilter;
-    return matchSearch && matchFreq && matchStatus;
-  });
+  // const filtered = plans.filter((p) => {
+  //   const q = search.toLowerCase();
+  //   const matchSearch = p.planName.toLowerCase().includes(q) || p.route.toLowerCase().includes(q);
+  //   const matchFreq = freqFilter === FEE_FREQ_FILTER_OPTIONS[0] || p.frequency === freqFilter;
+  //   const matchStatus = statusFilter === STATUS_FILTER_OPTIONS_SIMPLE[0] || p.status === statusFilter;
+  //   return matchSearch && matchFreq && matchStatus;
+  // });
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGINATION.FEE_PLANS_PER_PAGE));
-  const safePage = Math.min(page, totalPages);
-  const paginated = filtered.slice((safePage - 1) * PAGINATION.FEE_PLANS_PER_PAGE, safePage * PAGINATION.FEE_PLANS_PER_PAGE);
+  // const totalPages = Math.max(1, Math.ceil(filtered.length / PAGINATION.FEE_PLANS_PER_PAGE));
+  // const safePage = Math.min(page, totalPages);
+  // const paginated = filtered.slice((safePage - 1) * PAGINATION.FEE_PLANS_PER_PAGE, safePage * PAGINATION.FEE_PLANS_PER_PAGE);
 
   return (
     <div className="min-h-screen bg-[#f0f2f8] font-sans w-full max-w-full overflow-x-hidden min-w-0 flex flex-col">
@@ -130,10 +133,10 @@ export default function Fee_Plans() {
           {FEE_PLAN_UI_TEXT.PAGE_SUBTITLE}
         </p>
 
-        {/* 3. Switch Tabs Row */}
+        {/* 3. Switch Tabs Row - only Transport Billing and Fee Config are active */}
         <div className="flex flex-wrap gap-2 sm:gap-6 mt-6 border-b border-transparent">
           {[
-            { id: "fee-plan", label: "Fee Plan" },
+            // { id: "fee-plan", label: "Fee Plan" },
             { id: "billing", label: "Transport Billing" },
             // { id: "collection", label: "Collection View" },
             { id: "config", label: "Fee Config" },
@@ -142,8 +145,8 @@ export default function Fee_Plans() {
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`pb-3 text-sm font-semibold transition-all relative px-1 ${activeTab === tab.id
-                  ? "text-blue-600 border-b-2 border-blue-600 font-bold"
-                  : "text-gray-500 hover:text-gray-800"
+                ? "text-blue-600 border-b-2 border-blue-600 font-bold"
+                : "text-gray-500 hover:text-gray-800"
                 }`}
             >
               {tab.label}
@@ -152,14 +155,13 @@ export default function Fee_Plans() {
         </div>
       </div>
 
-      {/* 4. Conditional Content Rendering based on activeTab */}
+      {/* 4. Fee Plan tab content - commented out, tab disabled */}
+      {/*
       {activeTab === "fee-plan" && (
         <>
-          {/* Main Content Area */}
           <div className="px-4 sm:px-6 xl:px-8 py-6 w-full max-w-full min-w-0 flex-1">
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden w-full max-w-full min-w-0 flex flex-col">
 
-              {/* Table Header */}
               <div className="px-4 sm:px-6 py-4 flex flex-row items-center justify-between gap-4 border-b border-gray-100 w-full min-w-0">
                 <h2 className="text-base sm:text-lg font-bold text-gray-900 flex items-center gap-2">
                   <SlidersHorizontal className="w-4 h-4 text-indigo-500" />
@@ -173,7 +175,6 @@ export default function Fee_Plans() {
                 </button>
               </div>
 
-              {/* Dynamic Search & Filters Row Panel */}
               <div className="px-4 sm:px-6 py-3.5 border-b border-gray-50 flex flex-col md:flex-row gap-3 w-full max-w-full min-w-0 items-center">
                 <div className="relative flex-1 w-full">
                   <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -215,7 +216,6 @@ export default function Fee_Plans() {
                 </div>
               </div>
 
-              {/* Desktop & Laptop Table */}
               <div className="hidden xl:block w-full max-w-full min-w-0 overflow-x-auto">
                 <div className="inline-block min-w-full align-middle">
                   <table className="w-full text-sm border-collapse table-auto min-w-[920px]">
@@ -295,7 +295,6 @@ export default function Fee_Plans() {
                 </div>
               </div>
 
-              {/* Mobile & Tablet Adaptive Cards */}
               <div className="xl:hidden divide-y divide-gray-100 w-full bg-gray-50/30">
                 {loading ? (
                   <div className="p-4 bg-white"><ListLoader rows={4} avatar={false} colSpanSet={1} /></div>
@@ -351,7 +350,6 @@ export default function Fee_Plans() {
                 )}
               </div>
 
-              {/* Pagination */}
               {!loading && totalPages > 1 && (
                 <div className="px-4 sm:px-6 py-4 border-t border-gray-100 flex items-center justify-between gap-4 flex-wrap bg-white mt-auto">
                   <p className="text-xs text-gray-400 font-medium">
@@ -379,7 +377,6 @@ export default function Fee_Plans() {
             </div>
           </div>
 
-          {/* Modals */}
           <AddFeePlanCard
             isOpen={addModal}
             onClose={() => setAddModal(false)}
@@ -393,19 +390,22 @@ export default function Fee_Plans() {
           />
         </>
       )}
+      */}
 
-      {/* 5. Render alternative tab components based on selection */}
+      {/* 5. Render active tab components - only Transport Billing and Fee Config are wired up */}
       {activeTab === "billing" && (
         <div className="px-4 sm:px-6 xl:px-8 py-6 w-full max-w-full">
           <TransportBilling />
         </div>
       )}
 
+      {/*
       {activeTab === "collection" && (
         <div className="px-4 sm:px-6 xl:px-8 py-6 w-full max-w-full">
           <CollectionView />
         </div>
       )}
+      */}
 
       {activeTab === "config" && (
         <div className="px-4 sm:px-6 xl:px-8 py-6 w-full max-w-full">
