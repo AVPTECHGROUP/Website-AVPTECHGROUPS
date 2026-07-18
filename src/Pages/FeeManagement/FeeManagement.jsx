@@ -67,9 +67,7 @@ export const FeeSynthesisPage = () => {
                     <div className="font-bold text-lg text-gray-900 leading-tight">{FEE_MANAGEMENT_STRINGS.HEADER_FEE_CONFIG}</div>
                     <AySubtitle label={currentAcademicYear?.label} schoolName={schoolInfo?.schoolName} />
                 </div>
-                <div className="flex items-center gap-3">
-                    <BackButton />
-                </div>
+
             </header>
 
             <nav className="bg-white border-b border-gray-200 px-6 flex sticky top-14 z-30">
@@ -132,7 +130,7 @@ export const OverviewPage = () => {
                     <div className="font-bold text-lg text-gray-900 leading-tight">{FEE_MANAGEMENT_STRINGS.HEADER_FEE_MANAGEMENT}</div>
                     <AySubtitle label={currentAcademicYear?.label} schoolName={schoolInfo?.schoolName} />
                 </div>
-                
+
             </header>
             <main className="flex-1 p-6 max-w-[1600px] mx-auto w-full">
                 <Overview onNavigate={() => { }} />
