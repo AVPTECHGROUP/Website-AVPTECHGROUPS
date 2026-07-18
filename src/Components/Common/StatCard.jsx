@@ -50,7 +50,7 @@ const StatCard = ({ icon, title, description, showLearnMore = false }) => {
       </div>
 
       {/* Title */}
-      <h3 className="relative z-10 font-heading text-base sm:text-lg font-semibold text-theme-text mb-1.5">
+      <h3 className="relative z-10 font-heading text-base sm:text-[16px] lg:text-wrap lg:text-center font-semibold text-theme-text mb-1.5 text-nowrap">
         {title}
       </h3>
 

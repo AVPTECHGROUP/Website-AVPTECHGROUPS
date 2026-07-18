@@ -41,7 +41,8 @@ function AddNewStudent() {
             try {
                 const res = await getAllSections();
                 if (res?.success && Array.isArray(res.data)) {
-                    setSections(res.data);
+                    const activeSections = res.data.filter(sec => sec.status === 'ACTIVE');
+                    setSections(activeSections);
                 } else {
                     toast.error(S.EDIT_STUDENT.ERRORS.SECTION_LOAD_FAILED);
                 }

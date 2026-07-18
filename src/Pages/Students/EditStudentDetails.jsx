@@ -52,7 +52,8 @@ function EditStudentDetails() {
       try {
         const res = await getAllSections();
         if (res?.success && Array.isArray(res.data)) {
-          setSections(res.data);
+          const activeSections = res.data.filter(sec => sec.status === 'ACTIVE');
+          setSections(activeSections);
         } else {
           toast.error(ES.ERRORS.SECTION_LOAD_FAILED);
         }
