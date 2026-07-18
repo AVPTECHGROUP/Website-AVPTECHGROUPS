@@ -221,6 +221,7 @@ const AddPersonalInfo = ({ formData, setFormData, handleInputChange, errors, set
                             value={formData.joiningDate}
                             onChange={handleInputChange}
                             className={inputCls(errors?.joiningDate)}
+                            max={new Date().toISOString().split("T")[0]}
                         />
                         <ErrorText msg={errors?.joiningDate} />
                     </div>

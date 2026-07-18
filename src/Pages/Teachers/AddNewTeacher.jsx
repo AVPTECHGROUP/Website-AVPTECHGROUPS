@@ -124,8 +124,20 @@ function AddNewTeacher() {
             }
         }
 
+
+
         if (!formData.joiningDate) {
             newErrors.joiningDate = strings.ADD_TEACHER.VALIDATION.JOINING_REQUIRED;
+        } else {
+            const joiningDate = new Date(formData.joiningDate);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            if (joiningDate > today) {
+                newErrors.joiningDate =
+                    strings.ADD_TEACHER.VALIDATION.JOINING_DATE_INVALID ||
+                    "Joining date cannot be in the future.";
+            }
         }
 
         if (!formData.loginEmail) {
