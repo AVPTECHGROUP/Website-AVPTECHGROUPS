@@ -22,6 +22,7 @@ export default function PasswordResetModal({ isOpen, onClose, onReset, userName,
   const [newPassword, setNewPassword] = useState("");
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -52,7 +53,7 @@ export default function PasswordResetModal({ isOpen, onClose, onReset, userName,
 
     setLoading(true); setError("");
     try {
-      const result = await updateUserPassword(currUserId,password.trim(),confirmPassword.trim());// api is defined here 
+      const result = await updateUserPassword(currUserId, password.trim(), confirmPassword.trim());// api is defined here 
       setNewPassword(result.data || password);
       setStep("success");
     } catch (err) {
@@ -180,16 +181,37 @@ export default function PasswordResetModal({ isOpen, onClose, onReset, userName,
 
               {/* Password field — always obscured, no eye btn */}
               <div className="mb-3">
-                <label className="text-xs font-semibold text-slate-600 block mb-1.5">New Password</label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={e => { setPassword(e.target.value); setLengthError(""); }}
-                  placeholder="Enter new password"
-                  className={`w-full px-3.5 py-2.5 rounded-lg border text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 transition-colors ${lengthError ? "border-red-300 focus:ring-red-500/20 focus:border-red-400" : "border-slate-200 focus:ring-blue-500/20 focus:border-blue-400"
-                    }`}
-                />
-                {lengthError && <p className="text-xs text-red-500 mt-1.5">{lengthError}</p>}
+                <label className="text-xs font-semibold text-slate-600 block mb-1.5">
+                  New Password
+                </label>
+
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={e => {
+                      setPassword(e.target.value);
+                      setLengthError("");
+                    }}
+                    placeholder="Enter new password"
+                    className={`w-full px-3.5 py-2.5 pr-10 rounded-lg border text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 transition-colors ${lengthError
+                        ? "border-red-300 focus:ring-red-500/20 focus:border-red-400"
+                        : "border-slate-200 focus:ring-blue-500/20 focus:border-blue-400"
+                      }`}
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(v => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                  >
+                    {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
+                </div>
+
+                {lengthError && (
+                  <p className="text-xs text-red-500 mt-1.5">{lengthError}</p>
+                )}
               </div>
 
               {/* Confirm password field — eye btn only here */}
@@ -218,9 +240,9 @@ export default function PasswordResetModal({ isOpen, onClose, onReset, userName,
               {/* Strength message — only when passwords match */}
               {showStrength && (
                 <div className={`text-xs font-medium px-3.5 py-2.5 rounded-lg border mb-4 ${strength.label === "Weak" ? "bg-red-50 border-red-100 text-red-600" :
-                    strength.label === "Medium" ? "bg-yellow-50 border-yellow-100 text-yellow-700" :
-                      strength.label === "Strong" ? "bg-blue-50 border-blue-100 text-blue-700" :
-                        "bg-green-50 border-green-100 text-green-700"
+                  strength.label === "Medium" ? "bg-yellow-50 border-yellow-100 text-yellow-700" :
+                    strength.label === "Strong" ? "bg-blue-50 border-blue-100 text-blue-700" :
+                      "bg-green-50 border-green-100 text-green-700"
                   }`}>
                   <span className="font-bold">{strength.label}:</span> {strength.msg}
                 </div>

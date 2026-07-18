@@ -229,7 +229,7 @@ export default function AddStaffCard({ isOpen, onClose, onSaved, editData }) {
             {form.staffRole === "DRIVER" && (
               <Field label="License Number">
                 <input
-                  type="text" placeholder="e.g. MH1220120001"
+                  type="text" placeholder="e.g. MH1220120001" required
                   value={form.licenseNumber} onChange={set("licenseNumber")}
                   className={inputCls}
                 />
@@ -240,7 +240,7 @@ export default function AddStaffCard({ isOpen, onClose, onSaved, editData }) {
             {form.staffRole === "DRIVER" && (
               <Field label="License Expiry Date">
                 <input
-                  type="date"
+                  type="date" required
                   value={form.licenseExpiryDate} onChange={set("licenseExpiryDate")}
                   className={inputCls}
                 />

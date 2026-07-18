@@ -86,17 +86,36 @@ export const getTransportStaff = async ({ page = 0, size = 20, searchTerm = "", 
   const data = await res.json();
   return { staff: data.data || [], pagination: data.pagination };
 };
-
 export const addTransportStaff = async (staffData) => {
-  const res = await authFetch(API_ENDPOINTS.TRANSPORT_STAFF, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(staffData) });
-  if (!res.ok) throw new Error("Failed to add staff");
-  return await res.json();
+  const res = await authFetch(API_ENDPOINTS.TRANSPORT_STAFF, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(staffData),
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.message || "Failed to add staff");
+  }
+
+  return data;
 };
 
 export const updateTransportStaff = async (id, staffData) => {
-  const res = await authFetch(API_ENDPOINTS.transportStaffById(id), { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(staffData) });
-  if (!res.ok) throw new Error("Failed to update staff");
-  return await res.json();
+  const res = await authFetch(API_ENDPOINTS.transportStaffById(id), {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(staffData),
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.message || "Failed to update staff");
+  }
+
+  return data;
 };
 
 export const activateTransportStaff = async (id) => {
