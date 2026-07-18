@@ -213,7 +213,7 @@ const AddStudentPersonalDetails = ({ formData, setFormData, handleInputChange, s
                         <label className='block font-semibold text-gray-600 text-sm mb-2'>
                             Date of Admission<span className="text-red-600 ml-1">*</span>
                         </label>
-                        <input type="date" name="admissionDate" value={formData.admissionDate} onChange={handleInputChange} required
+                        <input type="date" name="admissionDate" value={formData.admissionDate} onChange={handleInputChange} required max={new Date().toISOString().split("T")[0]}
                             className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500' />
                     </div>
 
@@ -278,7 +278,9 @@ const AddStudentPersonalDetails = ({ formData, setFormData, handleInputChange, s
                     </div>
 
                     <div className="lg:col-span-2">
-                        <label className='block font-semibold text-gray-600 text-sm mb-2'>Current Address</label>
+
+                        <label className='block font-semibold text-gray-600 text-sm mb-2'>Current Address   <span className="text-red-600 ml-1">*</span></label>
+
                         <textarea rows={3} name="address" value={formData.address} onChange={handleInputChange}
                             placeholder='Enter residential address'
                             className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500' />

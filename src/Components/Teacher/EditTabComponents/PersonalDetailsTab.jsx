@@ -244,6 +244,8 @@ const PersonalDetailsTab = ({ formData, setFormData, handleInputChange, onSave, 
                                 name="joiningDate"
                                 value={formData.joiningDate}
                                 onChange={handleInputChange}
+                                max={new Date().toISOString().split("T")[0]}
+                                
                                 className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                             />
                         </div>

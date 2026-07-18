@@ -36,6 +36,7 @@ const TEACHER_MODULE_STRINGS = {
       DOB_REQUIRED: 'Date of birth is required',
       DOB_INVALID: 'Date of birth must be in the past',
       JOINING_REQUIRED: 'Joining date is required',
+      JOINING_DATE_INVALID:'joining date cannot be in future',
       LOGIN_EMAIL_REQUIRED: 'Login email is required',
       LOGIN_EMAIL_INVALID: 'Please enter a valid login email',
       ACCOUNT_STATUS_REQUIRED: 'Account status must be enabled to add teacher',

@@ -113,6 +113,13 @@ function EditTeachersDetails() {
 
     // ── Personal: Save and stay ───────────────────────────────────────────────
     const handleSavePersonal = async () => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        if (new Date(formData.joiningDate) > today) {
+            toast.error("Joining date cannot be in the future.");
+            return;
+        }
         setIsSaving(true);
         const loadingToast = toast.loading('Saving personal details...');
         try {
@@ -133,6 +140,13 @@ function EditTeachersDetails() {
 
     // ── Personal: Save and move to Salary tab ────────────────────────────────
     const handleSaveAndNextPersonal = async () => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        if (new Date(formData.joiningDate) > today) {
+            toast.error("Joining date cannot be in the future.");
+            return;
+        }
         setIsSaving(true);
         const loadingToast = toast.loading('Saving personal details...');
         try {
