@@ -12,7 +12,7 @@ import {
   Power,
 } from 'lucide-react';
 import { toast } from 'react-toastify';
-import { activateStatus, deactivateStatus } from '../../../Api/TeachersAPI';
+import { activateStatus, deactivateStatus } from '../../../Api/Teachers/TeachersAPI';
 import ActionDropDownComp from '../../CommonComp/ActionDropDownComp';
 import ListLoader from '../../CommonComp/ListLoader';
 
@@ -32,7 +32,7 @@ const NoDataFound = ({ message = 'No data found' }) => (
 const TeachersTable = ({
   selectedTeacherId,
   onRowSelect,
-  assignTeacherId, // Preserved in case it's used by a parent wrapper
+  assignTeacherId,
   teachers,
   setTeachers,
   loading,
@@ -637,22 +637,82 @@ const TeachersTable = ({
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
-            {[...Array(totalPages || 0)].map((_, idx) => (
-              <button
-                key={idx + 1}
-                onClick={() => setPage(idx + 1)}
-                className={`px-3 py-1 rounded transition-all ${page === idx + 1
-                  ? 'bg-blue-500 text-white'
-                  : 'text-gray-600 hover:bg-gray-100'
-                  }`}
-              >
-                {idx + 1}
-              </button>
-            ))}
+
+            {(() => {
+              if (!totalPages || totalPages <= 1) return null;
+
+              const base =
+                'min-w-[28px] h-7 px-1.5 rounded text-xs transition-all font-medium';
+
+              const active = 'bg-blue-500 text-white';
+              const inactive = 'text-gray-600 hover:bg-gray-100';
+
+              const btn = (num) => (
+                <button
+                  key={num}
+                  onClick={() => setPage(num)}
+                  className={`${base} ${page === num ? active : inactive
+                    }`}
+                >
+                  {num}
+                </button>
+              );
+
+              const dots = (key) => (
+                <span
+                  key={key}
+                  className="min-w-[28px] h-7 flex items-center justify-center text-gray-400 text-xs select-none"
+                >
+                  …
+                </span>
+              );
+
+              if (totalPages <= 7) {
+                return Array.from({ length: totalPages }, (_, i) =>
+                  btn(i + 1)
+                );
+              }
+
+              const pages = new Set([
+                1,
+                2,
+                totalPages - 1,
+                totalPages,
+              ]);
+
+              for (
+                let i = Math.max(1, page - 1);
+                i <= Math.min(totalPages, page + 1);
+                i++
+              ) {
+                pages.add(i);
+              }
+
+              const sorted = Array.from(pages).sort((a, b) => a - b);
+
+              return sorted.reduce((acc, num, idx) => {
+                if (
+                  idx > 0 &&
+                  num - sorted[idx - 1] > 1
+                ) {
+                  acc.push(dots(`d${idx}`));
+                }
+
+                acc.push(btn(num));
+
+                return acc;
+              }, []);
+            })()}
+
             <button
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              onClick={() =>
+                setPage((p) => Math.min(totalPages, p + 1))
+              }
               disabled={
-                page === totalPages || loading || !!error || totalElements === 0
+                page === totalPages ||
+                loading ||
+                !!error ||
+                totalElements === 0
               }
               className="px-3 py-1 text-gray-600 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >

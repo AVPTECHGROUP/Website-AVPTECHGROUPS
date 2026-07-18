@@ -1,27 +1,19 @@
 import { useState, useEffect, useCallback } from "react";
 import { Download, ChevronDown } from "lucide-react";
 import { toast } from "react-toastify";
-import { getTransportFeeReport, getActiveRoutes } from "../../../Api/TransportAPI";
+import { getTransportFeeReport, getActiveRoutes } from "../../../Api/Transport/TransportAPI";
 import ListLoader from "../../../Components/CommonComp/ListLoader";
-
-const typeColors = {
-  "BOTH":        "bg-blue-100 text-blue-700",
-  "PICKUP_ONLY": "bg-teal-100 text-teal-700",
-  "DROP_ONLY":   "bg-purple-100 text-purple-700",
-};
-
-const typeLabel = {
-  "BOTH":        "BOTH",
-  "PICKUP_ONLY": "PICKUP ONLY",
-  "DROP_ONLY":   "DROP ONLY",
-};
-
-const freqColors = {
-  MONTHLY:    "bg-blue-100 text-blue-700",
-  ANNUALLY:   "bg-orange-100 text-orange-700",
-  QUARTERLY:  "bg-purple-100 text-purple-700",
-  "ONE-TIME": "bg-gray-100 text-gray-600",
-};
+import {
+  PICKUP_DROP_COLORS,
+  PICKUP_DROP_LABELS,
+  FEE_FREQ_COLORS,
+  STUDENT_FEE_COLUMNS,
+  REPORT_TABLE_HEADERS,
+  REPORT_UI_TEXT,
+  EXPORT_CONSTANTS,
+  CSV_HEADERS,
+  TOAST_MESSAGES
+} from "../../../Constants/StringConstants/TransportConstants";
 
 function fmt(n) { return `₹${Number(n).toLocaleString("en-IN")}`; }
 
@@ -30,19 +22,14 @@ function exportToCSV(report) {
   if (!report?.students?.length) return;
 
   const rows = [];
-  rows.push(["Student Transport Fee Report"]);
-  rows.push(["Total Students",         report.totalStudentsWithTransport]);
-  rows.push(["Students with Fee Plan", report.totalStudentsWithFeePlan]);
-  rows.push(["Students without Plan",  report.totalStudentsWithoutFeePlan]);
-  rows.push(["Total Monthly Revenue",  fmt(report.totalMonthlyFeeRevenue)]);
-  rows.push(["Total Annual Revenue",   fmt(report.totalAnnualFeeRevenue)]);
+  rows.push([EXPORT_CONSTANTS.FEE_REPORT_TITLE]);
+  rows.push([EXPORT_CONSTANTS.FEE_META_TOTAL_STUDENTS, report.totalStudentsWithTransport]);
+  rows.push([EXPORT_CONSTANTS.FEE_META_WITH_PLAN, report.totalStudentsWithFeePlan]);
+  rows.push([EXPORT_CONSTANTS.FEE_META_WITHOUT_PLAN, report.totalStudentsWithoutFeePlan]);
+  rows.push([REPORT_UI_TEXT.LBL_TOTAL_MONTHLY_REV, fmt(report.totalMonthlyFeeRevenue)]);
+  rows.push([REPORT_UI_TEXT.LBL_TOTAL_ANNUAL_REV, fmt(report.totalAnnualFeeRevenue)]);
   rows.push([]);
-  rows.push([
-    "Student ID", "Name", "Class", "Section", "Roll No.",
-    "Route", "Stop", "Pickup/Drop",
-    "Fee Plan", "Amount", "Frequency",
-    "Effective From", "Effective To", "Active",
-  ]);
+  rows.push(CSV_HEADERS.STUDENT_FEE);
 
   report.students.forEach((s) => {
     rows.push([
@@ -53,13 +40,13 @@ function exportToCSV(report) {
       s.studentRollNumber || "",
       `${s.routeCode} – ${s.routeName}`,
       s.stopName,
-      typeLabel[s.pickupDropType] || s.pickupDropType,
+      PICKUP_DROP_LABELS[s.pickupDropType] || s.pickupDropType,
       s.feePlanName,
       s.feeAmount,
       s.feeFrequency,
       s.effectiveFrom,
       s.effectiveTo,
-      s.isActive ? "Yes" : "No",
+      s.isActive ? REPORT_UI_TEXT.YES : REPORT_UI_TEXT.NO,
     ]);
   });
 
@@ -68,10 +55,10 @@ function exportToCSV(report) {
     .join("\n");
 
   const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-  const url  = URL.createObjectURL(blob);
+  const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
-  link.href     = url;
-  link.download = "student_fee_report.csv";
+  link.href = url;
+  link.download = EXPORT_CONSTANTS.FEE_FILE_NAME;
   link.click();
   URL.revokeObjectURL(url);
 }
@@ -94,10 +81,10 @@ function StudentCard({ s }) {
       </div>
 
       <div className="flex flex-wrap gap-2 text-xs">
-        <span className={`font-semibold px-2.5 py-1 rounded-full ${typeColors[s.pickupDropType] ?? "bg-gray-100 text-gray-600"}`}>
-          {typeLabel[s.pickupDropType] || s.pickupDropType}
+        <span className={`font-semibold px-2.5 py-1 rounded-full ${PICKUP_DROP_COLORS[s.pickupDropType] ?? "bg-gray-100 text-gray-600"}`}>
+          {PICKUP_DROP_LABELS[s.pickupDropType] || s.pickupDropType}
         </span>
-        <span className={`font-semibold px-2.5 py-1 rounded-full ${freqColors[s.feeFrequency] ?? "bg-gray-100 text-gray-600"}`}>
+        <span className={`font-semibold px-2.5 py-1 rounded-full ${FEE_FREQ_COLORS[s.feeFrequency] ?? "bg-gray-100 text-gray-600"}`}>
           {s.feeFrequency}
         </span>
       </div>
@@ -123,13 +110,12 @@ function StudentCard({ s }) {
 }
 
 export default function StudentFeeTab() {
-  const [routes, setRoutes]                   = useState([]);
+  const [routes, setRoutes] = useState([]);
   const [selectedRouteId, setSelectedRouteId] = useState("");
-  const [report, setReport]                   = useState(null);
-  const [loadingRoutes, setLoadingRoutes]     = useState(true);
-  const [loading, setLoading]                 = useState(true);
+  const [report, setReport] = useState(null);
+  const [loadingRoutes, setLoadingRoutes] = useState(true);
+  const [loading, setLoading] = useState(true);
 
-  // 1. Fetch active routes on mount
   useEffect(() => {
     const fetchRoutes = async () => {
       try {
@@ -138,7 +124,7 @@ export default function StudentFeeTab() {
         setRoutes(data);
       } catch (err) {
         console.error(err);
-        toast.error("Failed to load routes.");
+        toast.error(TOAST_MESSAGES.ROUTES_LOAD_FAIL);
       } finally {
         setLoadingRoutes(false);
       }
@@ -146,7 +132,6 @@ export default function StudentFeeTab() {
     fetchRoutes();
   }, []);
 
-  // 2. Fetch report
   const fetchReport = useCallback(async (routeId) => {
     try {
       setLoading(true);
@@ -156,16 +141,15 @@ export default function StudentFeeTab() {
       setReport(data);
     } catch (err) {
       console.error(err);
-      toast.error("Failed to load fee report.");
+      toast.error(TOAST_MESSAGES.FEE_REPORT_LOAD_FAIL);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  // Fetch on mount (all routes)
   useEffect(() => {
     fetchReport("");
-  }, []);
+  }, [fetchReport]);
 
   const handleRouteChange = (e) => {
     const val = e.target.value;
@@ -173,28 +157,26 @@ export default function StudentFeeTab() {
     fetchReport(val);
   };
 
-  // Derived data
   const routeSummaryRows = report?.routeSummary ? Object.values(report.routeSummary) : [];
-  const freqRows         = report?.studentsByFrequency ? Object.entries(report.studentsByFrequency) : [];
-  const students         = report?.students || [];
+  const freqRows = report?.studentsByFrequency ? Object.entries(report.studentsByFrequency) : [];
+  const students = report?.students || [];
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden w-full min-w-0 max-w-full">
-
       {/* Header */}
       <div className="px-4 sm:px-6 py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100">
         <h2 className="font-bold text-gray-900 flex items-center gap-2 text-base">
-          🪪 Student Transport Fee Report
+          {REPORT_UI_TEXT.FEE_TAB_TITLE}
         </h2>
         <button
           onClick={() => {
-            if (!report?.students?.length) return toast.info("No data to export.");
+            if (!report?.students?.length) return toast.info(TOAST_MESSAGES.EXPORT_NO_DATA);
             exportToCSV(report);
-            toast.success("CSV exported successfully!");
+            toast.success(TOAST_MESSAGES.EXPORT_SUCCESS);
           }}
           className="inline-flex items-center justify-center gap-1.5 border border-gray-200 text-gray-600 text-xs font-semibold px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer w-full sm:w-fit"
         >
-          <Download className="w-3.5 h-3.5" /> Export CSV
+          <Download className="w-3.5 h-3.5" /> {REPORT_UI_TEXT.BTN_EXPORT_CSV}
         </button>
       </div>
 
@@ -211,7 +193,7 @@ export default function StudentFeeTab() {
                 disabled={loading}
                 className="appearance-none w-full sm:w-auto pl-4 pr-9 py-2 text-sm border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-200 cursor-pointer sm:min-w-44 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <option value="">All Routes</option>
+                <option value="">{REPORT_UI_TEXT.OPT_ALL_ROUTES}</option>
                 {routes.map((r) => (
                   <option key={r.id} value={r.id}>
                     {r.routeCode ? `${r.routeCode} – ` : ""}{r.routeName || r.name}
@@ -224,48 +206,44 @@ export default function StudentFeeTab() {
         </div>
       </div>
 
-      {/* Summary Cards — skeleton while loading */}
+      {/* Summary Cards */}
       <div className="px-4 sm:px-6 py-5 grid grid-cols-1 sm:grid-cols-3 gap-4 border-b border-gray-200">
         {loading
           ? Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="rounded-xl border border-gray-200 p-5 text-center animate-pulse">
-                <div className="h-8 w-24 bg-gray-200 rounded-lg mx-auto mb-2" />
-                <div className="h-3 w-32 bg-gray-100 rounded mx-auto" />
-              </div>
-            ))
+            <div key={i} className="rounded-xl border border-gray-200 p-5 text-center animate-pulse">
+              <div className="h-8 w-24 bg-gray-200 rounded-lg mx-auto mb-2" />
+              <div className="h-3 w-32 bg-gray-100 rounded mx-auto" />
+            </div>
+          ))
           : [
-              { label: "Students with Transport", value: report?.totalStudentsWithTransport ?? 0, blue: false },
-              { label: "Total Monthly Revenue",   value: fmt(report?.totalMonthlyFeeRevenue ?? 0), blue: true },
-              { label: "Total Annual Revenue",    value: fmt(report?.totalAnnualFeeRevenue  ?? 0), blue: true },
-            ].map((c) => (
-              <div key={c.label} className="rounded-xl border border-gray-200 p-5 text-center min-w-0">
-                <p className={`text-2xl font-extrabold truncate ${c.blue ? "text-blue-600" : "text-gray-900"}`}>{c.value}</p>
-                <p className="text-xs text-gray-400 mt-1">{c.label}</p>
-              </div>
-            ))
+            { label: REPORT_UI_TEXT.LBL_TOTAL_STUDENTS_TRANSPORT, value: report?.totalStudentsWithTransport ?? 0, blue: false },
+            { label: REPORT_UI_TEXT.LBL_TOTAL_MONTHLY_REV, value: fmt(report?.totalMonthlyFeeRevenue ?? 0), blue: true },
+            { label: REPORT_UI_TEXT.LBL_TOTAL_ANNUAL_REV, value: fmt(report?.totalAnnualFeeRevenue ?? 0), blue: true },
+          ].map((c) => (
+            <div key={c.label} className="rounded-xl border border-gray-200 p-5 text-center min-w-0">
+              <p className={`text-2xl font-extrabold truncate ${c.blue ? "text-blue-600" : "text-gray-900"}`}>{c.value}</p>
+              <p className="text-xs text-gray-400 mt-1">{c.label}</p>
+            </div>
+          ))
         }
       </div>
 
       {/* Route Breakdown + Frequency Distribution */}
       <div className="px-4 sm:px-6 py-5 grid grid-cols-1 md:grid-cols-2 gap-6 border-b border-gray-100">
-
-        {/* Route Breakdown */}
         <div className="min-w-0">
-          <p className="font-bold text-gray-800 mb-3 text-sm">Route Breakdown</p>
+          <p className="font-bold text-gray-800 mb-3 text-sm">{REPORT_UI_TEXT.SECTION_ROUTE_BREAKDOWN}</p>
           {loading ? (
             <div className="space-y-2">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="h-8 bg-gray-100 animate-pulse rounded-lg" />
-              ))}
+              {Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-8 bg-gray-100 animate-pulse rounded-lg" />)}
             </div>
           ) : routeSummaryRows.length === 0 ? (
-            <p className="text-xs text-gray-400 italic">No route data.</p>
+            <p className="text-xs text-gray-400 italic">{REPORT_UI_TEXT.NO_ROUTE_DATA}</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-100">
-                    {["Route", "Students", "Monthly Rev.", "Annual Rev."].map((h) => (
+                    {REPORT_TABLE_HEADERS.ROUTE_BREAKDOWN.map((h) => (
                       <th key={h} className="pb-2 text-xs font-semibold text-gray-400 text-left pr-4 whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -285,23 +263,20 @@ export default function StudentFeeTab() {
           )}
         </div>
 
-        {/* Frequency Distribution */}
         <div className="min-w-0">
-          <p className="font-bold text-gray-800 mb-3 text-sm">Frequency Distribution</p>
+          <p className="font-bold text-gray-800 mb-3 text-sm">{REPORT_UI_TEXT.SECTION_FREQ_DIST}</p>
           {loading ? (
             <div className="space-y-2">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="h-8 bg-gray-100 animate-pulse rounded-lg" />
-              ))}
+              {Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-8 bg-gray-100 animate-pulse rounded-lg" />)}
             </div>
           ) : freqRows.length === 0 ? (
-            <p className="text-xs text-gray-400 italic">No frequency data.</p>
+            <p className="text-xs text-gray-400 italic">{REPORT_UI_TEXT.NO_FREQ_DATA}</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-100">
-                    {["Frequency", "Students"].map((h) => (
+                    {REPORT_TABLE_HEADERS.FREQ_DISTRIBUTION.map((h) => (
                       <th key={h} className="pb-2 text-xs font-semibold text-gray-400 text-left pr-4 whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -310,7 +285,7 @@ export default function StudentFeeTab() {
                   {freqRows.map(([freq, count]) => (
                     <tr key={freq} className="hover:bg-gray-50">
                       <td className="py-2.5 pr-4">
-                        <span className={`text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap ${freqColors[freq] ?? "bg-gray-100 text-gray-600"}`}>
+                        <span className={`text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap ${FEE_FREQ_COLORS[freq] ?? "bg-gray-100 text-gray-600"}`}>
                           {freq}
                         </span>
                       </td>
@@ -324,93 +299,71 @@ export default function StudentFeeTab() {
         </div>
       </div>
 
-      {/* ── Student Detail table — only on very wide screens (2xl: 1536px+) ── */}
-      {/* Tablet 768px and laptop 1024px/1440px all get the card-grid below instead, so nothing gets cut off */}
+      {/* Main Table */}
       <div className="hidden 2xl:block overflow-x-auto w-full max-w-full">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-100">
-              {["Student ID", "Name", "Class", "Route", "Stop", "Type", "Fee Plan", "Amount", "Frequency"].map((h) => (
+              {STUDENT_FEE_COLUMNS.map((h) => (
                 <th key={h} className="px-4 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wider text-left whitespace-nowrap">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
-
-            {/* ListLoader */}
             {loading && <ListLoader rows={5} avatar={false} colSpanSet={9} />}
-
-            {/* Empty */}
             {!loading && students.length === 0 && (
               <tr>
-                <td colSpan={9} className="py-12 text-center text-gray-400 text-sm">
-                  No students found.
-                </td>
+                <td colSpan={9} className="py-12 text-center text-gray-400 text-sm">{REPORT_UI_TEXT.NO_STUDENTS_FOUND}</td>
               </tr>
             )}
-
-            {/* Rows */}
             {!loading && students.map((s) => (
               <tr key={s.allocationId} className="hover:bg-blue-50/30 transition-colors">
                 <td className="px-4 py-3.5 text-gray-500 text-xs font-medium">#{s.studentId}</td>
                 <td className="px-4 py-3.5">
                   <p className="font-semibold text-gray-900">{s.studentName}</p>
-                  {s.studentRollNumber && (
-                    <p className="text-xs text-gray-400 mt-0.5">Roll: {s.studentRollNumber}</p>
-                  )}
+                  {s.studentRollNumber && <p className="text-xs text-gray-400 mt-0.5">Roll: {s.studentRollNumber}</p>}
                 </td>
-                <td className="px-4 py-3.5 text-gray-500 text-xs">
-                  {s.className} {s.sectionName}
-                </td>
+                <td className="px-4 py-3.5 text-gray-500 text-xs">{s.className} {s.sectionName}</td>
                 <td className="px-4 py-3.5">
-                  <span className="bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold px-2.5 py-1 rounded-full">
-                    {s.routeCode}
-                  </span>
+                  <span className="bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold px-2.5 py-1 rounded-full">{s.routeCode}</span>
                 </td>
                 <td className="px-4 py-3.5 text-gray-600 text-xs">{s.stopName}</td>
                 <td className="px-4 py-3.5">
-                  <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${typeColors[s.pickupDropType] ?? "bg-gray-100 text-gray-600"}`}>
-                    {typeLabel[s.pickupDropType] || s.pickupDropType}
+                  <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${PICKUP_DROP_COLORS[s.pickupDropType] ?? "bg-gray-100 text-gray-600"}`}>
+                    {PICKUP_DROP_LABELS[s.pickupDropType] || s.pickupDropType}
                   </span>
                 </td>
                 <td className="px-4 py-3.5 text-gray-600 text-xs">{s.feePlanName}</td>
                 <td className="px-4 py-3.5 font-semibold text-gray-800">{fmt(s.feeAmount)}</td>
                 <td className="px-4 py-3.5">
-                  <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${freqColors[s.feeFrequency] ?? "bg-gray-100 text-gray-600"}`}>
+                  <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${FEE_FREQ_COLORS[s.feeFrequency] ?? "bg-gray-100 text-gray-600"}`}>
                     {s.feeFrequency}
                   </span>
                 </td>
               </tr>
             ))}
-
           </tbody>
         </table>
       </div>
 
-      {/* ── Card grid — phone (1 col), tablet (2 col), laptop / laptop L (3 col) ── */}
-      {/* Covers everything below 1536px, including the 768px tablet, 1024px and 1440px laptop cases */}
+      {/* Mobile Cards */}
       <div className="2xl:hidden w-full">
         {loading && (
           <div className="py-2 px-4">
             <table className="w-full">
-              <tbody>
-                <ListLoader rows={5} avatar={false} colSpanSet={1} />
-              </tbody>
+              <tbody><ListLoader rows={5} avatar={false} colSpanSet={1} /></tbody>
             </table>
           </div>
         )}
-
         {!loading && students.length === 0 && (
-          <div className="py-12 text-center text-gray-400 text-sm">No students found.</div>
+          <div className="py-12 text-center text-gray-400 text-sm">{REPORT_UI_TEXT.NO_STUDENTS_FOUND}</div>
         )}
-
         {!loading && students.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 p-4 sm:p-5">
             {students.map((s) => <StudentCard key={s.allocationId} s={s} />)}
           </div>
         )}
       </div>
-
     </div>
   );
 }

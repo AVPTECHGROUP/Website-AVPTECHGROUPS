@@ -5,8 +5,8 @@ import {
   Loader2, RefreshCw,
 } from "lucide-react";
 import ActionDropDownComp from "../../Components/CommonComp/ActionDropDownComp";
-import AddStopCard        from "../../Components/Transport/AddStopCard";
-import CreateRouteCard    from "../../Components/Transport/CreateRouteCard";
+import AddStopCard from "../../Components/Transport/AddStopCard";
+import CreateRouteCard from "../../Components/Transport/CreateRouteCard";
 import {
   getRoutes,
   activateRoute,
@@ -14,37 +14,18 @@ import {
   getRouteStops,
   deleteRouteStop,
   getActiveRoutes,
-} from "../../Api/TransportAPI";
-
-let _setToasts = null;
-const toast = {
-  success: (msg) => _setToasts?.((p) => [...p, { id: Date.now() + Math.random(), type: "success", msg }]),
-  error:   (msg) => _setToasts?.((p) => [...p, { id: Date.now() + Math.random(), type: "error",   msg }]),
-};
-function ToastContainer() {
-  const [toasts, setToasts] = useState([]);
-  _setToasts = setToasts;
-  const remove = (id) => setToasts((p) => p.filter((t) => t.id !== id));
-  useEffect(() => {
-    if (!toasts.length) return;
-    const t = setTimeout(() => remove(toasts[0].id), 3500);
-    return () => clearTimeout(t);
-  }, [toasts]);
-  return (
-    <div className="fixed bottom-5 right-5 z-9999 flex flex-col gap-2 items-end pointer-events-none">
-      {toasts.map((t) => (
-        <div key={t.id} className={`flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lg text-sm font-medium pointer-events-auto min-w-55 max-w-xs bg-white
-          ${t.type === "success" ? "border border-green-200 text-green-800" : "border border-red-200 text-red-700"}`}>
-          {t.type === "success"
-            ? <CheckCircle className="w-4 h-4 text-green-500 shrink-0" />
-            : <XCircleIcon className="w-4 h-4 text-red-500 shrink-0" />}
-          <span className="flex-1">{t.msg}</span>
-          <button onClick={() => remove(t.id)} className="text-gray-400 hover:text-gray-600 ml-1 text-xs">✕</button>
-        </div>
-      ))}
-    </div>
-  );
-}
+} from "../../Api/Transport/TransportAPI";
+import {
+  STATUS,
+  ACTION_TYPES,
+  STATUS_OPTIONS,
+  VEHICLE_TYPE_LABELS,
+  TOAST_MESSAGES,
+  ROUTES_UI_TEXT,
+  COMMON_UI_TEXT,
+  ACTION_MESSAGES
+} from "../../Constants/StringConstants/TransportConstants";
+import { toast } from "react-toastify";
 
 // ─── Helpers ──────────────────────────────────────────────────────
 function fmtTime(t) {
@@ -52,10 +33,8 @@ function fmtTime(t) {
   return String(t).slice(0, 5); // "07:00:00" → "07:00"
 }
 
-const typeLabel = { BUS: "BUS", MINI_BUS: "MINI BUS", VAN: "VAN" };
-
 function UtilBar({ allocated, capacity }) {
-  const pct   = capacity > 0 ? Math.round((allocated / capacity) * 100) : 0;
+  const pct = capacity > 0 ? Math.round((allocated / capacity) * 100) : 0;
   const color = pct >= 100 ? "bg-red-500" : pct >= 80 ? "bg-orange-400" : "bg-blue-500";
   return (
     <div className="flex items-center gap-2 mt-2">
@@ -67,40 +46,33 @@ function UtilBar({ allocated, capacity }) {
   );
 }
 
-// ─── Constants ────────────────────────────────────────────────────
-const STATUS_OPTIONS = [
-  { value: "",         label: "All Status" },
-  { value: "ACTIVE",   label: "Active"     },
-  { value: "INACTIVE", label: "Inactive"   },
-];
-
 // ─── Main ─────────────────────────────────────────────────────────
 export default function Routes_Manage() {
 
   // ── Routes list state ──
-  const [allRoutes, setAllRoutes]         = useState([]);
+  const [allRoutes, setAllRoutes] = useState([]);
   const [loadingRoutes, setLoadingRoutes] = useState(true);
-  const [togglingId, setTogglingId]       = useState(null);
+  const [togglingId, setTogglingId] = useState(null);
 
-  const [searchInput, setSearchInput]   = useState("");
-  const [search, setSearch]             = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
 
   // ── Route modal ──
   const [showCreateRoute, setShowCreateRoute] = useState(false);
-  const [editRoute, setEditRoute]             = useState(null); // null=add, object=edit
+  const [editRoute, setEditRoute] = useState(null);
 
   // ── Stops panel state ──
-  const [activeRoutes, setActiveRoutes]       = useState([]);   // for dropdown
+  const [activeRoutes, setActiveRoutes] = useState([]);   // for dropdown
   const [selectedRouteId, setSelectedRouteId] = useState("");   // string id from dropdown
   const [selectedRouteObj, setSelectedRouteObj] = useState(null); // full route object
-  const [stops, setStops]                     = useState([]);
-  const [loadingStops, setLoadingStops]       = useState(false);
-  const [deletingStopId, setDeletingStopId]   = useState(null);
+  const [stops, setStops] = useState([]);
+  const [loadingStops, setLoadingStops] = useState(false);
+  const [deletingStopId, setDeletingStopId] = useState(null);
 
   // ── Stop modal ──
   const [showAddStop, setShowAddStop] = useState(false);
-  const [editStop, setEditStop]       = useState(null); // null=add, object=edit
+  const [editStop, setEditStop] = useState(null);
 
   // ── Debounce search ──
   useEffect(() => {
@@ -115,7 +87,7 @@ export default function Routes_Manage() {
       const res = await getRoutes({ page: 0, size: 200, searchTerm: search, status: statusFilter });
       setAllRoutes(res.routes || []);
     } catch {
-      toast.error("Failed to load routes.");
+      toast.error(TOAST_MESSAGES.ROUTES_LOAD_FAIL);
     } finally {
       setLoadingRoutes(false);
     }
@@ -136,7 +108,7 @@ export default function Routes_Manage() {
     } catch {
       /* silent */
     }
-  }, []);
+  }, [selectedRouteId]);
 
   useEffect(() => { fetchActiveRoutes(); }, [fetchActiveRoutes]);
 
@@ -149,7 +121,7 @@ export default function Routes_Manage() {
       const data = await getRouteStops(routeId);
       setStops(data || []);
     } catch {
-      toast.error("Failed to load stops.");
+      toast.error(TOAST_MESSAGES.STOPS_LOAD_FAIL);
     } finally {
       setLoadingStops(false);
     }
@@ -170,24 +142,24 @@ export default function Routes_Manage() {
 
   // ── Activate / Deactivate route ──
   const handleRouteAction = async (route, value) => {
-    if (value === "edit") {
+    if (value === ACTION_TYPES.EDIT) {
       setEditRoute(route);
       setShowCreateRoute(true);
       return;
     }
-    if (value === "toggle") {
-      const isActive = route.status === "ACTIVE";
+    if (value === ACTION_TYPES.TOGGLE) {
+      const isActive = route.status === STATUS.ACTIVE;
       setTogglingId(route.id);
       try {
         isActive ? await deactivateRoute(route.id) : await activateRoute(route.id);
         toast.success(isActive
-          ? `${route.routeName} deactivated.`
-          : `${route.routeName} activated.`
+          ? `${route.routeName} ${ACTION_MESSAGES.DEACTIVATED}`
+          : `${route.routeName} ${ACTION_MESSAGES.ACTIVATED}`
         );
         await fetchRoutes();
         await fetchActiveRoutes();
       } catch {
-        toast.error(`Failed to ${isActive ? "deactivate" : "activate"} route.`);
+        toast.error(`${isActive ? ACTION_MESSAGES.FAILED_DEACTIVATE : ACTION_MESSAGES.FAILED_ACTIVATE} route.`);
       } finally {
         setTogglingId(null);
       }
@@ -198,7 +170,7 @@ export default function Routes_Manage() {
   const handleRouteSaved = async (isEdit) => {
     setShowCreateRoute(false);
     setEditRoute(null);
-    toast.success(isEdit ? "Route updated successfully." : "Route created successfully.");
+    toast.success(isEdit ? TOAST_MESSAGES.ROUTE_UPDATE_SUCCESS : TOAST_MESSAGES.ROUTE_CREATE_SUCCESS);
     await fetchRoutes();
     await fetchActiveRoutes();
   };
@@ -209,10 +181,12 @@ export default function Routes_Manage() {
     setDeletingStopId(stopId);
     try {
       await deleteRouteStop(selectedRouteId, stopId);
-      toast.success("Stop deleted successfully.");
+      toast.success(TOAST_MESSAGES.STOP_DELETE_SUCCESS);
+      // Trigger instant dynamic list updates 
       await fetchStops(selectedRouteId);
+      await fetchRoutes();
     } catch {
-      toast.error("Failed to delete stop.");
+      toast.error(TOAST_MESSAGES.STOP_DELETE_FAIL);
     } finally {
       setDeletingStopId(null);
     }
@@ -220,11 +194,11 @@ export default function Routes_Manage() {
 
   // ── Stop action (edit / delete) ──
   const handleStopAction = (stop, value) => {
-    if (value === "edit") {
+    if (value === ACTION_TYPES.EDIT) {
       setEditStop(stop);
       setShowAddStop(true);
     }
-    if (value === "delete") {
+    if (value === ACTION_TYPES.DELETE) {
       handleDeleteStop(stop.id);
     }
   };
@@ -233,13 +207,26 @@ export default function Routes_Manage() {
   const handleStopSaved = async (isEdit) => {
     setShowAddStop(false);
     setEditStop(null);
-    toast.success(isEdit ? "Stop updated successfully." : "Stop added successfully.");
-    if (selectedRouteId) await fetchStops(selectedRouteId);
-  };
 
+    if (isEdit) {
+      toast.success("Stop updated successfully!");
+    } else {
+      toast.success("Stop added successfully!");
+    }
+
+    if (selectedRouteId) {
+      // Reload Route Stops section
+      await fetchStops(selectedRouteId);
+
+      // Reload Route list (updates totalStops count)
+      await fetchRoutes();
+
+      // Reload active routes (updates dropdown summary if needed)
+      await fetchActiveRoutes();
+    }
+  };
   return (
     <>
-      <ToastContainer />
 
       <div className="min-h-screen bg-[#f0f2f8] font-sans">
 
@@ -247,10 +234,10 @@ export default function Routes_Manage() {
         <div className="px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8 pb-2">
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 flex items-center gap-2">
             <Map className="w-6 h-6 sm:w-7 sm:h-7 text-blue-600 shrink-0" />
-            Routes Management
+            {ROUTES_UI_TEXT.PAGE_TITLE}
           </h1>
           <p className="text-gray-500 text-xs sm:text-sm mt-1 max-w-2xl">
-            Create and manage transport routes, assign vehicles and drivers, and configure stops with pickup &amp; drop timings.
+            {ROUTES_UI_TEXT.PAGE_SUBTITLE}
           </p>
         </div>
 
@@ -267,15 +254,15 @@ export default function Routes_Manage() {
                 <div className="flex items-center gap-2">
                   <span className="text-xl">📋</span>
                   <div>
-                    <h2 className="font-bold text-gray-900 text-base">Routes</h2>
-                    <p className="text-xs text-gray-400">{allRoutes.length} route{allRoutes.length !== 1 ? "s" : ""} found</p>
+                    <h2 className="font-bold text-gray-900 text-base">{ROUTES_UI_TEXT.SECTION_ROUTES}</h2>
+                    <p className="text-xs text-gray-400">{allRoutes.length} {allRoutes.length !== 1 ? ROUTES_UI_TEXT.LBL_ROUTES : ROUTES_UI_TEXT.LBL_ROUTE} {COMMON_UI_TEXT.FOUND}</p>
                   </div>
                 </div>
                 <button
                   onClick={() => { setEditRoute(null); setShowCreateRoute(true); }}
                   className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors shadow-sm"
                 >
-                  <Plus className="w-4 h-4" /> New Route
+                  <Plus className="w-4 h-4" /> {ROUTES_UI_TEXT.BTN_NEW_ROUTE}
                 </button>
               </div>
 
@@ -285,7 +272,7 @@ export default function Routes_Manage() {
                   <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <input
                     type="text"
-                    placeholder="Search route name or code…"
+                    placeholder={ROUTES_UI_TEXT.SEARCH_PLACEHOLDER}
                     value={searchInput}
                     onChange={(e) => setSearchInput(e.target.value)}
                     className="w-full pl-10 pr-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-200 bg-gray-50 placeholder-gray-400"
@@ -320,8 +307,8 @@ export default function Routes_Manage() {
                 ) : allRoutes.length === 0 ? (
                   <div className="text-center py-12 text-gray-400">
                     <Map className="w-10 h-10 mx-auto text-gray-200 mb-3" />
-                    <p className="font-medium text-sm">No routes found</p>
-                    <p className="text-xs mt-1">Try adjusting your search or filters</p>
+                    <p className="font-medium text-sm">{ROUTES_UI_TEXT.EMPTY_ROUTES_TITLE}</p>
+                    <p className="text-xs mt-1">{ROUTES_UI_TEXT.EMPTY_ROUTES_SUBTITLE}</p>
                   </div>
                 ) : (
                   allRoutes.map((route) => {
@@ -340,13 +327,12 @@ export default function Routes_Manage() {
                             </span>
                           </div>
                           {isBusy ? (
-                            <span className="text-xs font-bold px-2.5 py-1 rounded-full shrink-0 bg-gray-100 text-gray-400 border border-gray-200 animate-pulse">Wait…</span>
+                            <span className="text-xs font-bold px-2.5 py-1 rounded-full shrink-0 bg-gray-100 text-gray-400 border border-gray-200 animate-pulse">{COMMON_UI_TEXT.WAIT}</span>
                           ) : (
-                            <span className={`text-xs font-bold px-2.5 py-1 rounded-full shrink-0 ${
-                              route.status === "ACTIVE"
-                                ? "bg-green-100 text-green-700 border border-green-200"
-                                : "bg-gray-100 text-gray-500 border border-gray-200"
-                            }`}>
+                            <span className={`text-xs font-bold px-2.5 py-1 rounded-full shrink-0 ${route.status === STATUS.ACTIVE
+                              ? "bg-green-100 text-green-700 border border-green-200"
+                              : "bg-gray-100 text-gray-500 border border-gray-200"
+                              }`}>
                               {route.status}
                             </span>
                           )}
@@ -358,7 +344,7 @@ export default function Routes_Manage() {
                             <Bus className="w-3.5 h-3.5 text-blue-400" />
                             {route.vehicleNumber}
                             {route.vehicleType && (
-                              <span className="text-gray-400">({typeLabel[route.vehicleType] || route.vehicleType})</span>
+                              <span className="text-gray-400">({VEHICLE_TYPE_LABELS[route.vehicleType] || route.vehicleType})</span>
                             )}
                           </span>
                           <span className="flex items-center gap-1">
@@ -377,7 +363,7 @@ export default function Routes_Manage() {
                           </span>
                           <span className="flex items-center gap-1">
                             <MapPin className="w-3.5 h-3.5 text-red-400" />
-                            {route.totalStops} stop{route.totalStops !== 1 ? "s" : ""}
+                            {route.totalStops} {route.totalStops !== 1 ? ROUTES_UI_TEXT.LBL_STOPS : ROUTES_UI_TEXT.LBL_STOP}
                           </span>
                         </div>
 
@@ -390,16 +376,16 @@ export default function Routes_Manage() {
                             onAction={(val) => handleRouteAction(route, val)}
                             actionOptions={[
                               {
-                                label: "Edit", value: "edit", icon: Pencil,
+                                label: COMMON_UI_TEXT.EDIT, value: ACTION_TYPES.EDIT, icon: Pencil,
                                 bg: "bg-white", text: "text-blue-600", hover: "hover:bg-blue-50",
                               },
                               {
-                                label: route.status === "ACTIVE" ? "Deactivate" : "Activate",
-                                value: "toggle",
-                                icon: route.status === "ACTIVE" ? ToggleLeft : ToggleRight,
+                                label: route.status === STATUS.ACTIVE ? COMMON_UI_TEXT.DEACTIVATE : COMMON_UI_TEXT.ACTIVATE,
+                                value: ACTION_TYPES.TOGGLE,
+                                icon: route.status === STATUS.ACTIVE ? ToggleLeft : ToggleRight,
                                 bg: "bg-white",
-                                text: route.status === "ACTIVE" ? "text-orange-600" : "text-green-600",
-                                hover: route.status === "ACTIVE" ? "hover:bg-orange-50" : "hover:bg-green-50",
+                                text: route.status === STATUS.ACTIVE ? "text-orange-600" : "text-green-600",
+                                hover: route.status === STATUS.ACTIVE ? "hover:bg-orange-50" : "hover:bg-green-50",
                                 disabled: isBusy,
                               },
                             ]}
@@ -422,14 +408,14 @@ export default function Routes_Manage() {
                 <div className="flex items-center justify-between gap-3 mb-3">
                   <div className="flex items-center gap-2">
                     <MapPin className="w-5 h-5 text-red-500 shrink-0" />
-                    <h2 className="font-bold text-gray-900 text-base">Route Stops</h2>
+                    <h2 className="font-bold text-gray-900 text-base">{ROUTES_UI_TEXT.SECTION_STOPS}</h2>
                   </div>
                   {selectedRouteId && (
                     <button
                       onClick={() => { setEditStop(null); setShowAddStop(true); }}
                       className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors shadow-sm shrink-0"
                     >
-                      <Plus className="w-4 h-4" /> Add Stop
+                      <Plus className="w-4 h-4" /> {ROUTES_UI_TEXT.BTN_ADD_STOP}
                     </button>
                   )}
                 </div>
@@ -441,7 +427,7 @@ export default function Routes_Manage() {
                     onChange={handleRouteDropdownChange}
                     className="appearance-none w-full pl-4 pr-10 py-2.5 text-sm border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-200 cursor-pointer font-medium text-gray-700"
                   >
-                    <option value="">— Select a Route to view Stops —</option>
+                    <option value="">{ROUTES_UI_TEXT.SELECT_ROUTE_OPT}</option>
                     {activeRoutes.map((r) => (
                       <option key={r.id} value={String(r.id)}>
                         {r.routeName} ({r.routeCode})
@@ -468,7 +454,7 @@ export default function Routes_Manage() {
                     </span>
                     <span className="flex items-center gap-1">
                       <MapPin className="w-3.5 h-3.5 text-red-400" />
-                      {stops.length} stop{stops.length !== 1 ? "s" : ""}
+                      {stops.length} {stops.length !== 1 ? ROUTES_UI_TEXT.LBL_STOPS : ROUTES_UI_TEXT.LBL_STOP}
                     </span>
                   </div>
                 )}
@@ -479,8 +465,8 @@ export default function Routes_Manage() {
                 {!selectedRouteId ? (
                   <div className="text-center py-16 text-gray-400">
                     <MapPin className="w-10 h-10 mx-auto text-gray-200 mb-3" />
-                    <p className="font-medium">Select a route to view stops</p>
-                    <p className="text-xs mt-1">Use the dropdown above to pick a route</p>
+                    <p className="font-medium">{ROUTES_UI_TEXT.SELECT_ROUTE_TITLE}</p>
+                    <p className="text-xs mt-1">{ROUTES_UI_TEXT.SELECT_ROUTE_SUBTITLE}</p>
                   </div>
                 ) : loadingStops ? (
                   <div className="space-y-4 pt-2">
@@ -497,18 +483,18 @@ export default function Routes_Manage() {
                 ) : stops.length === 0 ? (
                   <div className="text-center py-16 text-gray-400">
                     <MapPin className="w-10 h-10 mx-auto text-gray-200 mb-3" />
-                    <p className="font-medium text-sm">No stops yet</p>
-                    <p className="text-xs mt-1">Click "+ Add Stop" to add the first stop</p>
+                    <p className="font-medium text-sm">{ROUTES_UI_TEXT.EMPTY_STOPS_TITLE}</p>
+                    <p className="text-xs mt-1">{ROUTES_UI_TEXT.EMPTY_STOPS_SUBTITLE}</p>
                   </div>
                 ) : (
                   <div className="relative">
                     {[...stops]
                       .sort((a, b) => a.stopOrder - b.stopOrder)
                       .map((stop, idx, arr) => {
-                        const isLast   = idx === arr.length - 1;
+                        const isLast = idx === arr.length - 1;
                         const isDeleting = deletingStopId === stop.id;
                         return (
-                          <div key={stop.id} className="flex gap-4">
+                          <div key={stop.id} className="flex gap-4 items-start">
                             {/* Timeline column */}
                             <div className="flex flex-col items-center shrink-0" style={{ width: 34 }}>
                               <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold z-10 border-2 shrink-0
@@ -522,47 +508,70 @@ export default function Routes_Manage() {
                                 {stop.stopOrder}
                               </div>
                               {!isLast && (
-                                <div className="w-px bg-gray-200 flex-1 my-1" style={{ minHeight: 36 }} />
+                                <div className="w-px bg-gray-200 flex-1 my-1" style={{ minHeight: 48 }} />
                               )}
                             </div>
 
-                            {/* Stop content */}
-                            <div className={`flex-1 flex items-start justify-between gap-3 ${isLast ? "pb-0" : "pb-5"}`}>
-                              <div className="flex-1 min-w-0">
-                                <p className={`font-bold text-sm leading-tight ${isDeleting ? "text-gray-400" : "text-gray-900"}`}>
+                            {/* Stop Content: Optimized for flexible layouts and laptop displays */}
+                            <div className={`flex-1 flex flex-col xl:flex-row xl:items-start justify-between gap-4 ${isLast ? "pb-0" : "pb-6"}`}>
+
+                              {/* Left detail card content panel block */}
+                              <div className="flex-1 min-w-0 space-y-1.5">
+                                <p className={`font-bold text-gray-900 text-sm sm:text-base tracking-tight leading-snug break-words ${isDeleting ? "text-gray-400" : ""}`}>
                                   {stop.stopName}
                                 </p>
-                                <div className="flex items-center gap-1 text-xs text-gray-500 mt-1 flex-wrap">
-                                  <Clock className="w-3 h-3 text-gray-400 shrink-0" />
-                                  <span>Pickup: {fmtTime(stop.pickupTime)}</span>
-                                  <span className="text-gray-300 mx-1">|</span>
-                                  <span>Drop: {fmtTime(stop.dropTime)}</span>
+
+                                {/* Timeline details */}
+                                <div className="flex items-center gap-1.5 text-xs text-gray-500 flex-wrap pt-0.5">
+                                  <Clock className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                                  <span className="font-semibold text-gray-700 bg-gray-100 px-2 py-0.5 rounded whitespace-nowrap">
+                                    Pickup: {fmtTime(stop.pickupTime)}
+                                  </span>
+                                  <span className="text-gray-300">|</span>
+                                  <span className="font-semibold text-gray-700 bg-gray-100 px-2 py-0.5 rounded whitespace-nowrap">
+                                    Drop: {fmtTime(stop.dropTime)}
+                                  </span>
                                 </div>
-                                <div className="flex items-start gap-1 mt-0.5">
-                                  <MapPin className="w-3 h-3 text-red-400 shrink-0 mt-0.5" />
-                                  <p className="text-xs text-gray-400 leading-relaxed">
+
+                                {/* Address description details mapping block container */}
+                                <div className="flex items-start gap-1 pt-1">
+                                  <MapPin className="w-3.5 h-3.5 text-red-500 shrink-0 mt-0.5" />
+                                  <p className="text-xs text-gray-500 font-medium leading-relaxed break-words max-w-full">
                                     {stop.locationAddress}
-                                    {stop.landmark && ` · ${stop.landmark}`}
+                                    {stop.landmark && <span className="text-gray-400 font-normal"> · {stop.landmark}</span>}
                                   </p>
                                 </div>
                               </div>
-                              <div className="shrink-0 mt-0.5">
+
+                              {/* Right side alignment: Fee tag badges alongside operations dropdown configurations */}
+                              <div className="flex items-center justify-between xl:justify-end gap-3 shrink-0 mt-1 xl:mt-0 pt-0.5 border-t border-gray-100 xl:border-none w-full xl:w-auto">
+                                {stop.monthlyFee && Number(stop.monthlyFee) > 0 ? (
+                                  <span className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-3 py-1 rounded-full whitespace-nowrap shadow-sm">
+                                    ₹{Number(stop.monthlyFee).toLocaleString("en-IN")}/mo
+                                  </span>
+                                ) : (
+                                  <span className="text-[11px] font-semibold text-gray-500 bg-gray-50 border border-gray-200 px-2.5 py-1 rounded-full whitespace-nowrap">
+                                    No fee · uses fee plan
+                                  </span>
+                                )}
+
                                 {isDeleting ? (
                                   <Loader2 className="w-4 h-4 text-gray-400 animate-spin" />
                                 ) : (
                                   <ActionDropDownComp
                                     onAction={(val) => handleStopAction(stop, val)}
                                     actionOptions={[
-                                      { label: "Edit", value: "edit", icon: Pencil, bg: "bg-white", text: "text-blue-600", hover: "hover:bg-blue-50" },
-                                      { label: "Delete", value: "delete", icon: Trash2, bg: "bg-white", text: "text-red-600", hover: "hover:bg-red-50" },
+                                      { label: COMMON_UI_TEXT.EDIT, value: ACTION_TYPES.EDIT, icon: Pencil, bg: "bg-white", text: "text-blue-600", hover: "hover:bg-blue-50" },
+                                      { label: COMMON_UI_TEXT.DELETE, value: ACTION_TYPES.DELETE, icon: Trash2, bg: "bg-white", text: "text-red-600", hover: "hover:bg-red-50" },
                                     ]}
                                   />
                                 )}
                               </div>
+
                             </div>
                           </div>
                         );
-                    })}
+                      })}
                   </div>
                 )}
               </div>

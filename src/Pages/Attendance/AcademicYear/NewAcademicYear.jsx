@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { X, Calendar, Tag, Star } from "lucide-react";
-import { createAcademicYear } from "../../../Api/AcademicYear"; 
+import { createAcademicYear } from "../../../Api/AcademicYears/AcademicYear";
+import { NEW_ACADEMIC_YEAR }  from "../../../Constants/StringConstants/AcademicYear";
 
 const NewAcademicYear = ({ isOpen, onClose, onSuccess }) => {
     const [form, setForm] = useState({
@@ -24,11 +25,11 @@ const NewAcademicYear = ({ isOpen, onClose, onSuccess }) => {
         e.preventDefault();
         setError("");
 
-        if (!form.label.trim()) return setError("Label is required.");
-        if (!form.startDate) return setError("Start date is required.");
-        if (!form.endDate) return setError("End date is required.");
+        if (!form.label.trim()) return setError(NEW_ACADEMIC_YEAR.VALIDATION.LABEL_REQUIRED);
+        if (!form.startDate) return setError(NEW_ACADEMIC_YEAR.VALIDATION.START_DATE_REQUIRED);
+        if (!form.endDate) return setError(NEW_ACADEMIC_YEAR.VALIDATION.END_DATE_REQUIRED);
         if (form.startDate >= form.endDate)
-            return setError("End date must be after start date.");
+            return setError(NEW_ACADEMIC_YEAR.VALIDATION.END_AFTER_START);
 
         try {
             setLoading(true);
@@ -41,7 +42,7 @@ const NewAcademicYear = ({ isOpen, onClose, onSuccess }) => {
             onSuccess?.();
             handleClose();
         } catch (err) {
-            setError(err.message || "Failed to create academic year.");
+            setError(err.message || NEW_ACADEMIC_YEAR.CREATE_ERROR_FALLBACK);
         } finally {
             setLoading(false);
         }
@@ -69,10 +70,10 @@ const NewAcademicYear = ({ isOpen, onClose, onSuccess }) => {
                 <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
                     <div>
                         <h2 className="text-lg font-semibold text-gray-900">
-                            Add Academic Year
+                            {NEW_ACADEMIC_YEAR.TITLE}
                         </h2>
                         <p className="text-sm text-gray-500 mt-0.5">
-                            Fill in the details to create a new academic year
+                            {NEW_ACADEMIC_YEAR.SUBTITLE}
                         </p>
                     </div>
                     <button
@@ -96,14 +97,14 @@ const NewAcademicYear = ({ isOpen, onClose, onSuccess }) => {
                     <div className="space-y-1.5">
                         <label className="text-sm font-medium text-gray-700 flex items-center gap-1.5">
                             <Tag size={14} className="text-gray-400" />
-                            Label
+                            {NEW_ACADEMIC_YEAR.LABEL_FIELD}
                         </label>
                         <input
                             type="text"
                             name="label"
                             value={form.label}
                             onChange={handleChange}
-                            placeholder="e.g. 2027-28"
+                            placeholder={NEW_ACADEMIC_YEAR.LABEL_PLACEHOLDER}
                             className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                         />
                     </div>
@@ -114,7 +115,7 @@ const NewAcademicYear = ({ isOpen, onClose, onSuccess }) => {
                         <div className="space-y-1.5">
                             <label className="text-sm font-medium text-gray-700 flex items-center gap-1.5">
                                 <Calendar size={14} className="text-gray-400" />
-                                Start Date
+                                {NEW_ACADEMIC_YEAR.START_DATE_FIELD}
                             </label>
                             <input
                                 type="date"
@@ -129,7 +130,7 @@ const NewAcademicYear = ({ isOpen, onClose, onSuccess }) => {
                         <div className="space-y-1.5">
                             <label className="text-sm font-medium text-gray-700 flex items-center gap-1.5">
                                 <Calendar size={14} className="text-gray-400" />
-                                End Date
+                                {NEW_ACADEMIC_YEAR.END_DATE_FIELD}
                             </label>
                             <input
                                 type="date"
@@ -149,10 +150,10 @@ const NewAcademicYear = ({ isOpen, onClose, onSuccess }) => {
                             </div>
                             <div>
                                 <p className="text-sm font-medium text-gray-800">
-                                    Set as Current Year
+                                    {NEW_ACADEMIC_YEAR.CURRENT_TOGGLE_TITLE}
                                 </p>
                                 <p className="text-xs text-gray-500">
-                                    This will replace the existing current year
+                                    {NEW_ACADEMIC_YEAR.CURRENT_TOGGLE_DESC}
                                 </p>
                             </div>
                         </div>
@@ -178,7 +179,7 @@ const NewAcademicYear = ({ isOpen, onClose, onSuccess }) => {
                             onClick={handleClose}
                             className="flex-1 px-4 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
                         >
-                            Cancel
+                            {NEW_ACADEMIC_YEAR.CANCEL}
                         </button>
                         <button
                             type="submit"
@@ -206,10 +207,10 @@ const NewAcademicYear = ({ isOpen, onClose, onSuccess }) => {
                                             d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
                                         />
                                     </svg>
-                                    Creating...
+                                    {NEW_ACADEMIC_YEAR.SUBMIT_LOADING}
                                 </>
                             ) : (
-                                "Create Year"
+                                NEW_ACADEMIC_YEAR.SUBMIT
                             )}
                         </button>
                     </div>

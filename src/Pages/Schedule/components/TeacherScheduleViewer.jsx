@@ -2,10 +2,11 @@ import { useState, useEffect } from 'react';
 import {
     X, User, ChevronDown, BookOpen, Clock,
     Home, Coffee, CalendarDays, AlertCircle,
-    WifiOff, CheckCircle2, Hash
+    WifiOff, CheckCircle2
 } from 'lucide-react';
-import { getTeachers } from '../../../Api/TeachersAPI';
-import { getTeacherSchedule } from '../../../Api/ScheduleApi';
+import { getTeachers } from '../../../Api/Teachers/TeachersAPI';
+import { getTeacherSchedule } from '../../../Api/Academics/ScheduleApi';
+import { TIMETABLE_CONSTS }  from '../../../Constants/StringConstants/TimetableConstants';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -32,15 +33,17 @@ function getDuration(start, end) {
     return `${mins} min`;
 }
 
-const PERIOD_COLORS = [
-    { bg: 'bg-blue-50',    border: 'border-blue-200',   icon: 'text-blue-500',   badge: 'bg-blue-100 text-blue-700',    dot: 'bg-blue-400' },
-    { bg: 'bg-violet-50',  border: 'border-violet-200', icon: 'text-violet-500', badge: 'bg-violet-100 text-violet-700', dot: 'bg-violet-400' },
-    { bg: 'bg-emerald-50', border: 'border-emerald-200',icon: 'text-emerald-500',badge: 'bg-emerald-100 text-emerald-700',dot: 'bg-emerald-400' },
-    { bg: 'bg-orange-50',  border: 'border-orange-200', icon: 'text-orange-500', badge: 'bg-orange-100 text-orange-700', dot: 'bg-orange-400' },
-    { bg: 'bg-pink-50',    border: 'border-pink-200',   icon: 'text-pink-500',   badge: 'bg-pink-100 text-pink-700',    dot: 'bg-pink-400' },
-    { bg: 'bg-cyan-50',    border: 'border-cyan-200',   icon: 'text-cyan-500',   badge: 'bg-cyan-100 text-cyan-700',    dot: 'bg-cyan-400' },
-    { bg: 'bg-amber-50',   border: 'border-amber-200',  icon: 'text-amber-500',  badge: 'bg-amber-100 text-amber-700',  dot: 'bg-amber-400' },
-];
+// Map subject colors based on index from the central pool
+const getSubjectPalette = (idx) => {
+    const color = TIMETABLE_CONSTS.COLORS.SUBJECT_POOL[idx % TIMETABLE_CONSTS.COLORS.SUBJECT_POOL.length];
+    return {
+        bg: color.bg,
+        border: color.border,
+        icon: color.color, // text-color
+        badge: `${color.bg} ${color.color}`, // text-color
+        dot: color.dot // bg-color
+    };
+};
 
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function TeacherScheduleViewer({ onClose }) {
@@ -67,7 +70,7 @@ export default function TeacherScheduleViewer({ onClose }) {
                 setTeachers(list);
             } catch (err) {
                 console.error('getTeachers error:', err);
-                setErrorTeachers('Failed to load teachers. Please try again.');
+                setErrorTeachers(TIMETABLE_CONSTS.TEACHER_SCH_VIEWER.ERR_LOAD_TEACHERS);
             } finally {
                 setLoadingTeachers(false);
             }
@@ -88,7 +91,7 @@ export default function TeacherScheduleViewer({ onClose }) {
                 setScheduleData(data ?? null);
             } catch (err) {
                 console.error('getTeacherSchedule error:', err);
-                setErrorSchedule(err?.message || 'Failed to load schedule. Please try again.');
+                setErrorSchedule(err?.message || TIMETABLE_CONSTS.TEACHER_SCH_VIEWER.ERR_LOAD_SCHEDULE);
             } finally {
                 setLoadingSchedule(false);
             }
@@ -108,7 +111,7 @@ export default function TeacherScheduleViewer({ onClose }) {
     const filteredTeachers = teacherSearch
         ? teachers.filter(t =>
             (t.name || t.fullName || '').toLowerCase().includes(teacherSearch.toLowerCase())
-          )
+        )
         : teachers;
 
     // Derived from scheduleData
@@ -131,10 +134,10 @@ export default function TeacherScheduleViewer({ onClose }) {
                 <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-blue-600 to-indigo-600 flex-shrink-0">
                     <div>
                         <h2 className="text-base sm:text-lg font-bold text-white tracking-tight">
-                            Teacher Schedule Viewer
+                            {TIMETABLE_CONSTS.TEACHER_SCH_VIEWER.TITLE}
                         </h2>
                         <p className="text-xs text-blue-200 mt-0.5">
-                            View any teacher's daily period schedule
+                            {TIMETABLE_CONSTS.TEACHER_SCH_VIEWER.SUBTITLE}
                         </p>
                     </div>
                     <button
@@ -155,7 +158,7 @@ export default function TeacherScheduleViewer({ onClose }) {
                         {/* Teacher dropdown */}
                         <div>
                             <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 block">
-                                Select Teacher *
+                                {TIMETABLE_CONSTS.TEACHER_SCH_VIEWER.LBL_SEL_TEACHER} *
                             </label>
                             <div className="relative">
                                 <button
@@ -171,7 +174,7 @@ export default function TeacherScheduleViewer({ onClose }) {
                                             }
                                         </span>
                                         <span className="truncate text-sm">
-                                            {selectedTeacher ? teacherDisplayName(selectedTeacher) : 'Choose a teacher'}
+                                            {selectedTeacher ? teacherDisplayName(selectedTeacher) : TIMETABLE_CONSTS.TEACHER_SCH_VIEWER.PH_CHOOSE_TEACHER}
                                         </span>
                                     </span>
                                     <ChevronDown size={14} className={`text-gray-400 transition-transform flex-shrink-0 ${dropdownOpen ? 'rotate-180' : ''}`} />
@@ -184,13 +187,13 @@ export default function TeacherScheduleViewer({ onClose }) {
                                                 autoFocus
                                                 value={teacherSearch}
                                                 onChange={(e) => setTeacherSearch(e.target.value)}
-                                                placeholder="Search teacher…"
+                                                placeholder={TIMETABLE_CONSTS.TEACHER_SCH_VIEWER.PH_SEARCH_TEACHER}
                                                 className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300"
                                             />
                                         </div>
                                         <div className="max-h-48 overflow-y-auto">
                                             {filteredTeachers.length === 0 ? (
-                                                <p className="text-xs text-gray-400 text-center py-4">No teachers found</p>
+                                                <p className="text-xs text-gray-400 text-center py-4">{TIMETABLE_CONSTS.TEACHER_SCH_VIEWER.NO_TEACHERS}</p>
                                             ) : filteredTeachers.map(t => (
                                                 <button
                                                     key={t.id}
@@ -213,7 +216,7 @@ export default function TeacherScheduleViewer({ onClose }) {
                         {/* Date picker */}
                         <div>
                             <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 block">
-                                Date
+                                {TIMETABLE_CONSTS.TEACHER_SCH_VIEWER.LBL_DATE}
                             </label>
                             <div className="relative">
                                 <CalendarDays size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
@@ -277,9 +280,9 @@ export default function TeacherScheduleViewer({ onClose }) {
                                             <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center mb-3">
                                                 <Coffee size={24} className="text-gray-400" />
                                             </div>
-                                            <p className="text-sm font-semibold text-gray-600">Non-working day</p>
+                                            <p className="text-sm font-semibold text-gray-600">{TIMETABLE_CONSTS.TEACHER_SCH_VIEWER.LBL_NON_WORKING}</p>
                                             <p className="text-xs text-gray-400 mt-1">
-                                                {formatDisplayDate(scheduleData.date)} is not a working day.
+                                                {formatDisplayDate(scheduleData.date)} {TIMETABLE_CONSTS.TEACHER_SCH_VIEWER.LBL_NON_WORKING_DESC}
                                             </p>
                                         </div>
                                     )}
@@ -290,9 +293,9 @@ export default function TeacherScheduleViewer({ onClose }) {
                                             <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center mb-3">
                                                 <BookOpen size={24} className="text-blue-300" />
                                             </div>
-                                            <p className="text-sm font-semibold text-gray-600">No periods assigned</p>
+                                            <p className="text-sm font-semibold text-gray-600">{TIMETABLE_CONSTS.TEACHER_SCH_VIEWER.LBL_NO_PERIODS}</p>
                                             <p className="text-xs text-gray-400 mt-1">
-                                                {teacherDisplayName(selectedTeacher)} has no periods on {formatDisplayDate(scheduleData.date)}.
+                                                {teacherDisplayName(selectedTeacher)} {TIMETABLE_CONSTS.TEACHER_SCH_VIEWER.LBL_NO_PERIODS_DESC(formatDisplayDate(scheduleData.date))}
                                             </p>
                                         </div>
                                     )}
@@ -308,7 +311,7 @@ export default function TeacherScheduleViewer({ onClose }) {
                                                 </span>
                                                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-semibold border border-emerald-200">
                                                     <CheckCircle2 size={11} />
-                                                     {`Working day : ${scheduleData.dayOfWeek}`}
+                                                    {`${TIMETABLE_CONSTS.TEACHER_SCH_VIEWER.LBL_WORKING_DAY} : ${scheduleData.dayOfWeek}`}
                                                 </span>
                                                 {scheduleData.teacherName && (
                                                     <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs font-semibold border border-indigo-200">
@@ -321,7 +324,7 @@ export default function TeacherScheduleViewer({ onClose }) {
                                             {/* Period cards */}
                                             <div className="space-y-2.5">
                                                 {periods.map((period, idx) => {
-                                                    const color = PERIOD_COLORS[idx % PERIOD_COLORS.length];
+                                                    const color = getSubjectPalette(idx);
                                                     const duration = getDuration(period.startTime, period.endTime);
                                                     return (
                                                         <div
@@ -396,7 +399,7 @@ export default function TeacherScheduleViewer({ onClose }) {
                                             {teachers.length} teacher{teachers.length !== 1 ? 's' : ''} loaded
                                         </p>
                                         <p className="text-xs text-gray-400 mt-1">
-                                            Select a teacher above to view their schedule
+                                            {TIMETABLE_CONSTS.TEACHER_SCH_VIEWER.LBL_PROMPT}
                                         </p>
                                     </div>
                                 )
@@ -404,24 +407,24 @@ export default function TeacherScheduleViewer({ onClose }) {
                         </>
                     )}
 
-                {/* ── Footer ─────────────────────────────────────────────── */}
-                <div className="px-5 sm:px-6 py-3 border-t border-gray-100 flex justify-end bg-gray-50 flex-shrink-0">
-                    <button
-                        onClick={onClose}
-                        className="px-5 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 transition cursor-pointer"
-                    >
-                        Close
-                    </button>
+                    {/* ── Footer ─────────────────────────────────────────────── */}
+                    <div className="px-5 sm:px-6 py-3 border-t border-gray-100 flex justify-end bg-gray-50 flex-shrink-0">
+                        <button
+                            onClick={onClose}
+                            className="px-5 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 transition cursor-pointer"
+                        >
+                            {TIMETABLE_CONSTS.TEACHER_SCH_VIEWER.BTN_CLOSE}
+                        </button>
+                    </div>
                 </div>
-            </div>
 
-            <style>{`
+                <style>{`
                 @keyframes popIn {
                     from { opacity: 0; transform: scale(0.95) translateY(10px); }
                     to   { opacity: 1; transform: scale(1) translateY(0); }
                 }
             `}</style>
-        </div>
+            </div>
         </div>
     );
 }

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { X, Bus, Save, Loader2, Pencil } from "lucide-react";
-import { addVehicle, updateVehicle } from "../../Api/TransportAPI";
+import { addVehicle, updateVehicle } from "../../Api/Transport/TransportAPI";
 
 const EMPTY_FORM = {
   vehicleNumber:     "",
@@ -192,8 +192,7 @@ export default function AddVehicleCard({ isOpen, onClose, onSaved, editData }) {
                   placeholder="e.g. MH12XY9999"
                   value={form.vehicleNumber}
                   onChange={(e) => set("vehicleNumber", e.target.value)}
-                  disabled={isEditMode} // Vehicle number shouldn't change
-                  className={`${inputCls} ${errors.vehicleNumber ? errCls : ""} ${isEditMode ? "bg-gray-50 text-gray-400 cursor-not-allowed" : ""}`}
+                 className={`${inputCls} ${errors.vehicleNumber ? errCls : ""}`}
                 />
               </Field>
 

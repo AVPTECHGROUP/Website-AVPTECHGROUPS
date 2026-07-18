@@ -3,7 +3,7 @@ import { useEffect, useRef, useCallback } from "react";
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getMessaging, getToken, onMessage, deleteToken } from "firebase/messaging";
 import { vapidKey, serviceWorkerPath, firebaseConfig as fbConfig } from "../Firebase/Firebase";
-import { registerUserDeviceToken, registerParentDeviceToken } from "../Api/Notification";
+import { registerUserDeviceToken, registerParentDeviceToken } from "../Api/Communication/Notification";
 
 export function useFcmToken({ role, onForegroundMessage } = {}) {
   const messagingRef          = useRef(null);

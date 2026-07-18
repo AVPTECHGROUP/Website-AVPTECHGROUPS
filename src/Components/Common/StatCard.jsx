@@ -1,40 +1,80 @@
-import React from "react";
-import { ArrowRight } from "lucide-react";
+import React from 'react';
+import { ArrowRight } from 'lucide-react';
 
-const StatCard = ({ icon, title, description, showLearnMore = true }) => {
+const StatCard = ({ icon, title, description, showLearnMore = false }) => {
   return (
     <div
-      className={`group relative rounded-[20px] bg-white p-5 sm:p-6 lg:p-7 transition-all duration-300
-        [box-shadow:0_2px_10px_rgba(0,180,120,0.22),0_0px_2px_rgba(0,0,0,0.07)]
-        ${showLearnMore
-          ? "hover:-translate-y-1.5 hover:[box-shadow:inset_4px_0_0_0_#00C9B1,0_5px_20px_rgba(0,201,177,0.22),0_2px_5px_rgba(0,0,0,0.07)]"
-          : ""
-        }`}
-      style={
-        !showLearnMore
-          ? { boxShadow: "inset 4px 0 0 0 #00C9B1, 0 5px 20px rgba(0,201,177,0.22), 0 2px 5px rgba(0,0,0,0.07)" }
-          : {}
-      }
+      className="
+                group relative h-full rounded-2xl p-6
+                bg-theme-card border 
+                shadow-sm dark:shadow-none flex items-center justify-center flex-col
+                transition-all duration-300 ease-out
+                border-teal-400/60 dark:hover:border-teal-400/50
+                hover:shadow-[0_0_0_1px_rgba(45,212,191,0.3),0_8px_30px_rgba(45,212,191,0.12)]
+                hover:-translate-y-1
+                overflow-hidden
+            "
     >
-      {/* Icon */}
-      <div className="w-10 h-10 sm:w-11 sm:h-11 lg:w-12 lg:h-12 flex items-center justify-center rounded-full bg-teal text-white mb-4 sm:mb-5">
+      {/* Subtle glow blob on hover - dark mode only */}
+      <div
+        className="
+                    pointer-events-none absolute -top-10 -right-10 w-32 h-32 rounded-full
+                    bg-teal-400/0 group-hover:bg-teal-400/10
+                    blur-2xl transition-all duration-500
+                    hidden dark:block
+                "
+      />
+
+      {/* Icon Wrapper Container with Premium Glow Shadow */}
+      <div
+        className="
+                    relative z-10 w-14 h-14 rounded-full flex items-center justify-center mb-4
+                    bg-teal-500/10 text-teal-500 dark:text-teal-300
+                    ring-1 ring-teal-400/30
+                    
+                    /* Premium Static Shadow Effect */
+                    shadow-[0_0_15px_rgba(45,212,191,0.2)] 
+                    dark:shadow-[0_0_20px_rgba(45,212,191,0.15)]
+                    
+                    /* Enhanced Hover Shadow & Ring Effects */
+                    group-hover:bg-teal-500/20 
+                    group-hover:ring-teal-400/60
+                    group-hover:shadow-[0_0_25px_rgba(45,212,191,0.45)]
+                    group-hover:scale-105
+                    
+                    transition-all duration-300 ease-out
+                    [&>svg]:w-6 [&>svg]:h-6
+                "
+      >
         {icon}
       </div>
 
       {/* Title */}
-      <h3 className="text-sm sm:text-base font-semibold text-gray-900 mb-1.5 sm:mb-2">{title}</h3>
+      <h3 className="relative z-10 font-heading text-base sm:text-[16px] lg:text-wrap lg:text-center font-semibold text-theme-text mb-1.5 text-nowrap">
+        {title}
+      </h3>
 
       {/* Description */}
-      <p className="text-gray-700 leading-relaxed text-xs sm:text-[15px]">{description}</p>
+      <p className="relative z-10 text-sm text-theme-subtext text-center leading-relaxed">
+        {description}
+      </p>
 
-      {/* Learn More */}
+      {/* Learn More - only visible on hover */}
       {showLearnMore && (
-        <div className="mt-3 sm:mt-4 flex items-center gap-1 text-teal font-semibold text-xs sm:text-sm
-          opacity-0 translate-y-1.5
-          group-hover:opacity-100 group-hover:translate-y-0
-          transition-all duration-250 delay-50">
-          <p className="cursor-pointer">Learn more</p>
-          <ArrowRight size={13} className="cursor-pointer transition-transform duration-200 group-hover:translate-x-0.5" />
+        <div
+          className="
+                        relative z-10 flex items-center gap-1.5 mt-4
+                        text-sm font-bold text-teal-500 dark:text-teal-300
+                        opacity-0 max-h-0 -translate-y-1
+                        group-hover:opacity-100 group-hover:max-h-6 group-hover:translate-y-0
+                        transition-all duration-300 ease-out
+                    "
+        >
+          Learn More
+          <ArrowRight
+            size={14}
+            className="transition-transform duration-300 group-hover:translate-x-1"
+          />
         </div>
       )}
     </div>

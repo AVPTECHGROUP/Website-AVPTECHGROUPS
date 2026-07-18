@@ -1,18 +1,20 @@
 import { useEffect, useRef, useState } from 'react'
 
 const BAR_DATA = [62, 78, 55, 88, 70, 45, 92, 67, 80, 58, 75, 83, 60, 90]
+const LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb']
 
+// CSS variables inject kiye hain taaki left/right positions responsive custom behavior follow karein
 const FLOAT_CARDS = [
-    { id: 'attendance', emoji: '📋', label: 'Attendance', value: '94.2%', sub: '+2.1% wk', color: '#00D2B9', pos: { top: '2%', left: '-88px' }, delay: '0s', anim: 'f1' },
-    { id: 'students',   emoji: '🎓', label: 'Admissions', value: '24',    sub: '↑ 8 today', color: '#7C6AF7', pos: { bottom: '12%', left: '-88px' }, delay: '0.8s', anim: 'f3' },
-    { id: 'fees',       emoji: '💰', label: 'Fees',       value: '₹2.4L', sub: '92% done',  color: '#F5A623', pos: { top: '2%', right: '-88px' }, delay: '1.4s', anim: 'f2' },
-    { id: 'transport',  emoji: '🚌', label: 'Buses Live', value: '12/14', sub: 'On route',  color: '#38BDF8', pos: { bottom: '12%', right: '-88px' }, delay: '2s', anim: 'f4' },
+    { id: 'attendance', emoji: '📋', label: 'Attendance', value: '94.2%', sub: '+2.1% wk', color: '#00D2B9', pos: { top: '2%', left: 'var(--card-left-pos)' }, delay: '0s', anim: 'f1' },
+    { id: 'students', emoji: '🎓', label: 'Admissions', value: '24', sub: '↑ 8 today', color: '#7C6AF7', pos: { bottom: '12%', left: 'var(--card-left-pos)' }, delay: '0.8s', anim: 'f3' },
+    { id: 'fees', emoji: '💰', label: 'Fees', value: '₹2.4L', sub: '92% done', color: '#F5A623', pos: { top: '2%', right: 'var(--card-right-pos)' }, delay: '1.4s', anim: 'f2' },
+    { id: 'transport', emoji: '🚌', label: 'Buses Live', value: '12/14', sub: 'On route', color: '#38BDF8', pos: { bottom: '12%', right: 'var(--card-right-pos)' }, delay: '2s', anim: 'f4' },
 ]
 
-const SKELETON_ROWS = [
-    { w1: '55%', w2: '20%', active: true },
-    { w1: '70%', w2: '15%', active: false },
-    { w1: '45%', w2: '25%', active: false },
+const ACTIVITY_DATA = [
+    { id: 1, title: 'Grade 10 Attendance Roll', desc: 'Completed by Admin', time: '2m ago', color: '#00D2B9', icon: '⚡' },
+    { id: 2, title: 'Fee Payment Received', desc: 'ID #89420 • ₹12,500', time: '14m ago', color: '#F5A623', icon: '🪙' },
+    { id: 3, title: 'Route 4 Bus Delayed', desc: 'Heavy traffic near bypass', time: '1h ago', color: '#FF5E7E', icon: '⚠️' },
 ]
 
 export default function Dashboard_anim() {
@@ -31,48 +33,96 @@ export default function Dashboard_anim() {
         if (!canvas) return
         const ctx = canvas.getContext('2d')
         const W = canvas.width, H = canvas.height
-        const gap = 6
+
+        const paddingBottom = 16
+        const chartH = H - paddingBottom
+        const gap = 8
         const barW = (W - gap * (BAR_DATA.length + 1)) / BAR_DATA.length
         let progress = 0, raf
 
         const draw = () => {
             ctx.clearRect(0, 0, W, H)
-            progress = Math.min(progress + 0.018, 1)
+            progress = Math.min(progress + 0.02, 1)
             const ease = 1 - Math.pow(1 - progress, 3)
+
+            // Graphical Visual: Background Grid Lines
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)'
+            ctx.lineWidth = 1
+            for (let i = 1; i <= 3; i++) {
+                const gridY = (chartH / 4) * i
+                ctx.beginPath()
+                ctx.moveTo(0, gridY)
+                ctx.lineTo(W, gridY)
+                ctx.stroke()
+            }
+
+            // Draw Bars and Labels
             BAR_DATA.forEach((val, i) => {
                 const x = gap + i * (barW + gap)
-                const barH = (val / 100) * (H - 8) * ease
-                const y = H - barH
-                const grad = ctx.createLinearGradient(0, y, 0, H)
+                const barH = (val / 100) * (chartH - 12) * ease
+                const y = chartH - barH
+
+                // Gradient Fill
+                const grad = ctx.createLinearGradient(0, y, 0, chartH)
                 grad.addColorStop(0, 'rgba(0,210,185,0.95)')
-                grad.addColorStop(1, 'rgba(0,210,185,0.15)')
+                grad.addColorStop(1, 'rgba(0,210,185,0.08)')
                 ctx.fillStyle = grad
-                const r = 5
+
+                // Rounded Corners Top Only
+                const r = Math.min(4, barW / 2)
                 ctx.beginPath()
-                ctx.moveTo(x + r, y); ctx.lineTo(x + barW - r, y)
+                ctx.moveTo(x + r, y)
+                ctx.lineTo(x + barW - r, y)
                 ctx.quadraticCurveTo(x + barW, y, x + barW, y + r)
-                ctx.lineTo(x + barW, H); ctx.lineTo(x, H); ctx.lineTo(x, y + r)
+                ctx.lineTo(x + barW, chartH)
+                ctx.lineTo(x, chartH)
+                ctx.lineTo(x, y + r)
                 ctx.quadraticCurveTo(x, y, x + r, y)
-                ctx.closePath(); ctx.fill()
+                ctx.closePath()
+                ctx.fill()
+
+                // Neon Cyber Glow Overlay for high data values
                 if (val > 75) {
                     ctx.save()
-                    ctx.shadowColor = 'rgba(0,210,185,0.55)'
-                    ctx.shadowBlur = 14
+                    ctx.shadowColor = 'rgba(0,210,185,0.6)'
+                    ctx.shadowBlur = 10
                     ctx.fill()
                     ctx.restore()
                 }
+
+                // Graphical Visual: X-Axis Text Labels
+                if (LABELS[i]) {
+                    ctx.fillStyle = 'rgba(256, 256, 256, 0.3)'
+                    ctx.font = '700 8px sans-serif'
+                    ctx.textAlign = 'center'
+                    ctx.fillText(LABELS[i], x + barW / 2, H - 4)
+                }
             })
+
             if (progress < 1) raf = requestAnimationFrame(draw)
         }
-        raf = requestAnimationFrame(draw)
-        return () => cancelAnimationFrame(raf)
-    }, [])
 
-    /* ─── shared inner card content ─── */
-    const CardContent = () => (
-        <div style={{ position: 'relative', zIndex: 2 }}>
+        // Timeout ensures execution happens cleanly after layout stabilization
+        const timer = setTimeout(() => {
+            raf = requestAnimationFrame(draw)
+        }, 50)
+
+        return () => {
+            clearTimeout(timer)
+            cancelAnimationFrame(raf)
+        }
+    }, [isMobile])
+
+    const sharedCardBg = {
+        background: 'linear-gradient(150deg, #0e2836 0%, #091e2a 60%, #060f18 100%)',
+        border: '1px solid rgba(0,210,185,0.18)',
+        boxShadow: '0 40px 30px rgba(0,0,0,0.6), inset 0 1.5px 0 rgba(255,255,255,0.08), 0 0 0 1px rgba(0,210,185,0.06)',
+    }
+
+    const dashboardLayoutContent = (
+        <>
             {/* TOP BAR */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3 }}>
                 <div>
                     <div style={{ fontSize: 8.5, letterSpacing: '.13em', textTransform: 'uppercase', color: '#2e6a7a', fontWeight: 700, marginBottom: 2 }}>
                         School Dashboard
@@ -91,10 +141,10 @@ export default function Dashboard_anim() {
             {/* STAT TILES */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8, marginBottom: 14 }}>
                 {[
-                    { label: 'Students',   value: '2,450',  color: '#00D2B9' },
-                    { label: 'Attendance', value: '94.2%',  color: '#00D2B9' },
-                    { label: 'Revenue',    value: '₹12.4L', color: '#F5A623' },
-                    { label: 'Staff',      value: '48',     color: 'rgba(0,210,185,0.7)' },
+                    { label: 'Students', value: '2,450', color: '#00D2B9' },
+                    { label: 'Attendance', value: '94.2%', color: '#00D2B9' },
+                    { label: 'Revenue', value: '₹12.4L', color: '#F5A623' },
+                    { label: 'Staff', value: '48', color: 'rgba(0,210,185,0.7)' },
                 ].map(s => (
                     <div key={s.label} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, padding: '10px 10px' }}>
                         <div style={{ fontSize: 8.5, color: '#2e6a7a', fontWeight: 600, marginBottom: 4 }}>{s.label}</div>
@@ -103,47 +153,45 @@ export default function Dashboard_anim() {
                 ))}
             </div>
 
-            {/* BAR CHART */}
+            {/* BAR CHART SECTION */}
             <div style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.065)', borderRadius: 14, padding: '12px 12px 8px', marginBottom: 10 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
                     <span style={{ fontSize: 8.5, color: '#2e6a7a', fontWeight: 700, letterSpacing: '.11em', textTransform: 'uppercase' }}>Monthly Attendance</span>
                     <span style={{ fontSize: 8.5, color: '#00D2B9' }}>This Year →</span>
                 </div>
-                <canvas ref={canvasRef} width={440} height={80} style={{ width: '100%', height: 'auto', display: 'block' }} />
+                <canvas ref={canvasRef} width={440} height={100} style={{ width: '100%', height: 'auto', display: 'block' }} />
             </div>
 
-            {/* ACTIVITY */}
-            <div style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.065)', borderRadius: 14, padding: '12px 12px' }}>
-                <div style={{ marginBottom: 10 }}>
+            {/* RECENT ACTIVITY */}
+            <div style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.065)', borderRadius: 14, padding: '12px 14px' }}>
+                <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontSize: 8.5, color: '#2e6a7a', fontWeight: 700, letterSpacing: '.11em', textTransform: 'uppercase' }}>Recent Activity</span>
+                    <span style={{ fontSize: 8, color: 'rgba(255,255,255,0.3)', fontWeight: 500 }}>Real-time Feed</span>
                 </div>
-                {SKELETON_ROWS.map((row, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: i < 2 ? 8 : 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <div style={{ width: 6, height: 6, borderRadius: '50%', background: i === 0 ? '#00D2B9' : 'rgba(255,255,255,0.12)', flexShrink: 0 }} />
-                            <div style={{ height: 6, borderRadius: 3, width: row.w1, background: 'rgba(255,255,255,0.09)' }} />
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <div style={{ height: 6, borderRadius: 3, width: row.w2, background: 'rgba(255,255,255,0.06)' }} />
-                            {row.active && (
-                                <div style={{ fontSize: 8, fontWeight: 700, color: '#00D2B9', background: 'rgba(0,210,185,0.1)', border: '1px solid rgba(0,210,185,0.22)', borderRadius: 5, padding: '2px 7px' }}>
-                                    Active
+
+                <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <div style={{ position: 'absolute', left: '7px', top: '8px', bottom: '8px', width: '1px', background: 'linear-gradient(to bottom, rgba(0,210,185,0.3), rgba(255,255,255,0.05))', zIndex: 1 }} />
+                    {ACTIVITY_DATA.map((item, i) => (
+                        <div key={item.id} style={{ display: 'flex', alignItems: 'center', justifyBox: 'center', justifyContent: 'space-between', position: 'relative', zIndex: 2 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                <div style={{ width: 16, height: 16, borderRadius: '50%', background: 'rgba(6,15,24,0.9)', border: `1.5px solid ${item.color}`, boxShadow: i === 0 ? `0 0 10px ${item.color}80` : 'none', display: 'flex', alignItems: 'center', justifyBox: 'center', justifyContent: 'center', fontSize: 8, flexShrink: 0 }}>
+                                    <span style={{ transform: 'scale(0.85)', color: item.color }}>{item.icon}</span>
                                 </div>
-                            )}
+                                <div>
+                                    <div style={{ fontSize: 10.5, fontWeight: 600, color: '#e0f2f8', lineHeight: 1.2 }}>{item.title}</div>
+                                    <div style={{ fontSize: 8.5, color: 'rgba(255,255,255,0.4)', marginTop: 1 }}>{item.desc}</div>
+                                </div>
+                            </div>
+                            <div style={{ fontSize: 8, fontWeight: 500, color: 'rgba(255,255,255,0.35)', background: 'rgba(255,255,255,0.03)', padding: '2px 6px', borderRadius: 4, border: '1px solid rgba(255,255,255,0.05)' }}>
+                                {item.time}
+                            </div>
                         </div>
-                    </div>
-                ))}
+                    ))}
+                </div>
             </div>
-        </div>
+        </>
     )
 
-    const sharedCardBg = {
-        background: 'linear-gradient(150deg, #0e2836 0%, #091e2a 60%, #060f18 100%)',
-        border: '1px solid rgba(0,210,185,0.18)',
-        boxShadow: '0 40px 30px rgba(0,0,0,0.6), inset 0 1.5px 0 rgba(255,255,255,0.08), 0 0 0 1px rgba(0,210,185,0.06)',
-    }
-
-    /* ══════════════ MOBILE LAYOUT ══════════════ */
     if (isMobile) {
         return (
             <div style={{ position: 'relative', width: '100%', padding: '8px 0 4px' }}>
@@ -152,7 +200,6 @@ export default function Dashboard_anim() {
                     @keyframes blink { 0%,100%{opacity:1;} 50%{opacity:.25;} }
                 `}</style>
 
-                {/* Main card — full width, simple float, no 3‑D tilt */}
                 <div style={{
                     ...sharedCardBg,
                     borderRadius: '20px',
@@ -163,10 +210,9 @@ export default function Dashboard_anim() {
                     animation: 'floatMobile 5.5s ease-in-out infinite',
                 }}>
                     <div style={{ position: 'absolute', inset: 0, borderRadius: '20px', background: 'linear-gradient(130deg, rgba(255,255,255,0.06) 0%, transparent 42%)', pointerEvents: 'none', zIndex: 1 }} />
-                    <CardContent />
+                    {dashboardLayoutContent}
                 </div>
 
-                {/* Floating cards → 2×2 grid below */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 10 }}>
                     {FLOAT_CARDS.map(card => (
                         <div key={card.id} style={{
@@ -196,10 +242,21 @@ export default function Dashboard_anim() {
         )
     }
 
-    /* ══════════════ DESKTOP LAYOUT (unchanged) ══════════════ */
     return (
         <div style={{ position: 'relative', width: '100%', maxWidth: '480px', margin: '0 auto', padding: '12px 96px' }}>
+
+            {/* RESPONSIVE CSS VARIABLES APPLIED SPECIFICALLY FOR 1024px SCREEN (lg:) */}
             <style>{`
+                :root {
+                    --card-left-pos: -88px;
+                    --card-right-pos: -88px;
+                }
+                @media (min-width: 1024px) and (max-width: 1279px) {
+                    :root {
+                        --card-left-pos: -40px;  /* Left cards slightly closer on 1024px */
+                        --card-right-pos: -20px; /* Right cards pushed left inside container to prevent layout cut */
+                    }
+                }
                 @keyframes floatMain {
                     0%,100% { transform: perspective(1000px) rotateX(-5deg) rotateY(-10deg) rotateZ(-1.8deg) translateY(0px);   }
                     50%      { transform: perspective(1000px) rotateX(-5deg) rotateY(13deg) rotateZ(-1.8deg) translateY(-14px); }
@@ -211,7 +268,6 @@ export default function Dashboard_anim() {
                 @keyframes blink { 0%,100%{opacity:1;} 50%{opacity:.25;} }
             `}</style>
 
-            {/* Floating stat cards */}
             {FLOAT_CARDS.map(card => (
                 <div key={card.id} style={{ position: 'absolute', zIndex: 40, pointerEvents: 'none', ...card.pos, animation: `${card.anim} 5s ${card.delay} ease-in-out infinite`, filter: `drop-shadow(0 4px 16px ${card.color}30)` }}>
                     <div style={{ width: '178px', background: 'linear-gradient(145deg, rgba(14,40,54,0.9), rgba(6,15,24,0.9))', border: `1px solid ${card.color}33`, borderRadius: '16px', padding: '11px 10px', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', boxShadow: `0 0 0 1px ${card.color}15, 0 8px 24px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.06)`, display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: '6px', textAlign: 'center' }}>
@@ -223,10 +279,9 @@ export default function Dashboard_anim() {
                 </div>
             ))}
 
-            {/* Main dashboard card */}
             <div style={{ ...sharedCardBg, borderRadius: '28px', width: '400px', boxShadow: '0 60px 30px rgba(0,0,0,0.75), inset 0 1.5px 0 rgba(255,255,255,0.08), 0 0 0 1px rgba(0,210,185,0.06)', padding: '18px 16px', position: 'relative', right: '30px', zIndex: 10, animation: 'floatMain 5.5s ease-in-out infinite' }}>
                 <div style={{ position: 'absolute', inset: 0, borderRadius: '28px', background: 'linear-gradient(130deg, rgba(255,255,255,0.06) 0%, transparent 42%)', pointerEvents: 'none', zIndex: 1 }} />
-                <CardContent />
+                {dashboardLayoutContent}
             </div>
         </div>
     )

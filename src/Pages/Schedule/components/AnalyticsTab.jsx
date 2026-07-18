@@ -1,30 +1,20 @@
 import { useState, useEffect, useMemo } from 'react';
 import { BarChart2, Users, Grid, Target } from 'lucide-react';
-import { getTimetableById, getTimetableSlots, getTimetableConfig } from '../../../Api/ScheduleApi';
-import { getSubjectsBySection } from '../../../Api/TeachersAPI';
+import { getTimetableById, getTimetableSlots, getTimetableConfig } from '../../../Api/Academics/ScheduleApi';
+import SectionSubjectService from '../../../Api/Academics/SectionSubjectService';
+import { TIMETABLE_CONSTS }  from '../../../Constants/StringConstants/TimetableConstants';
 
-const AVATAR_COLORS = [
-    'bg-pink-500', 'bg-blue-500', 'bg-orange-500', 'bg-green-500',
-    'bg-purple-500', 'bg-amber-500', 'bg-cyan-500', 'bg-red-500',
-    'bg-teal-500', 'bg-violet-500',
-];
-const SUBJECT_BADGE_COLORS = {
-    MATH: 'bg-blue-100 text-blue-700',
-    ENG: 'bg-green-100 text-green-700',
-    PHY: 'bg-sky-100 text-sky-700',
-    CHEM: 'bg-pink-100 text-pink-700',
-    BIO: 'bg-emerald-100 text-emerald-700',
-    CS: 'bg-cyan-100 text-cyan-700',
-    HIN: 'bg-purple-100 text-purple-700',
-    SST: 'bg-orange-100 text-orange-700',
-};
-
-const colorFor = (id) => AVATAR_COLORS[(id || 0) % AVATAR_COLORS.length];
+const colorFor = (id) => TIMETABLE_CONSTS.COLORS.AVATAR_POOL[(id || 0) % TIMETABLE_CONSTS.COLORS.AVATAR_POOL.length].bg;
 const getInitials = (name) => {
     if (!name) return '??';
     return name.trim().split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
 };
-const badgeClass = (code) => SUBJECT_BADGE_COLORS[code] || 'bg-gray-100 text-gray-700';
+
+const badgeClass = (code) => {
+    const upper = (code || '').toUpperCase();
+    const style = TIMETABLE_CONSTS.COLORS.SUBJECT_MAP[upper];
+    return style ? `${style.bg} ${style.color}` : 'bg-gray-100 text-gray-700';
+};
 
 export default function AnalyticsTab({
     slots: slotsProp = [],
@@ -74,10 +64,10 @@ export default function AnalyticsTab({
 
         if (subjectsListProp.length === 0 && sectionId)
             promises.push(
-                getSubjectsBySection(sectionId).then(data => {
+                SectionSubjectService.getSubjectsBySection(sectionId).then(data => {
                     if (!cancelled) {
                         setFetchedSubjects((data || []).map(s => ({
-                            id: s.id || s.subjectId,
+                            id:  s.subjectId || s.id ,
                             code: s.code || s.subjectCode || '',
                             label: s.name || s.subjectName || '',
                             weeklyHours: s.weeklyHours || 0,
@@ -131,11 +121,11 @@ export default function AnalyticsTab({
 
     const behind = stats.subjectCoverage.filter(s => s.target > 0 && s.filled < s.target);
     const suggestions = [
-        stats.emptySlots > 0 && `Use Auto-fill to place ${stats.emptySlots} remaining slot${stats.emptySlots > 1 ? 's' : ''}.`,
+        stats.emptySlots > 0 && TIMETABLE_CONSTS.ANALYTICS.SUGG_AUTO(stats.emptySlots),
         ...behind.slice(0, 2).map(s =>
-            `Prioritize ${s.code} — ${s.target - s.filled} period${s.target - s.filled > 1 ? 's' : ''} behind target.`
+            TIMETABLE_CONSTS.ANALYTICS.SUGG_PRIO(s.code, s.target - s.filled)
         ),
-        stats.overloaded > 0 && `${stats.overloaded} teacher${stats.overloaded > 1 ? 's' : ''} exceed ${stats.MAX_PERIODS} periods/week.`,
+        stats.overloaded > 0 && TIMETABLE_CONSTS.ANALYTICS.SUGG_OVER(stats.overloaded, stats.MAX_PERIODS),
     ].filter(Boolean);
 
     const r = 55, cx = 72, strokeW = 14;
@@ -145,12 +135,12 @@ export default function AnalyticsTab({
     if (loading) {
         return (
             <div className="flex items-center justify-center h-48 text-sm text-gray-400">
-                Loading analytics…
+                {TIMETABLE_CONSTS.ANALYTICS.LBL_LOADING}
             </div>
         );
     }
     if (error) {
-        return <div className="p-4 sm:p-6 text-sm text-red-500">Error: {error}</div>;
+        return <div className="p-4 sm:p-6 text-sm text-red-500">{TIMETABLE_CONSTS.ANALYTICS.LBL_ERR}{error}</div>;
     }
 
     return (
@@ -161,29 +151,29 @@ export default function AnalyticsTab({
                 <div className="bg-white border border-orange-200 rounded-xl p-3 sm:p-4">
                     <BarChart2 size={18} className="text-orange-400 mb-1" />
                     <p className="text-2xl sm:text-3xl font-bold text-orange-500">{stats.completion}%</p>
-                    <p className="text-xs font-semibold text-gray-500 mt-0.5 uppercase tracking-wide">Completion</p>
-                    <p className="text-xs text-gray-400 hidden sm:block">{stats.filledSlots} / {stats.totalSlots} filled</p>
+                    <p className="text-xs font-semibold text-gray-500 mt-0.5 uppercase tracking-wide">{TIMETABLE_CONSTS.ANALYTICS.LBL_COMPLETION}</p>
+                    <p className="text-xs text-gray-400 hidden sm:block">{stats.filledSlots} / {stats.totalSlots} {TIMETABLE_CONSTS.ANALYTICS.LBL_FILLED}</p>
                 </div>
 
                 <div className="bg-white border border-purple-200 rounded-xl p-3 sm:p-4">
                     <Target size={16} className="text-purple-400 mb-1" />
                     <p className="text-2xl sm:text-3xl font-bold text-purple-500">{stats.onTarget}</p>
-                    <p className="text-xs font-semibold text-gray-500 mt-0.5 uppercase tracking-wide">On target</p>
-                    <p className="text-xs text-gray-400 hidden sm:block">{stats.subjectCoverage.length - stats.onTarget} behind</p>
+                    <p className="text-xs font-semibold text-gray-500 mt-0.5 uppercase tracking-wide">{TIMETABLE_CONSTS.ANALYTICS.LBL_ON_TARGET}</p>
+                    <p className="text-xs text-gray-400 hidden sm:block">{stats.subjectCoverage.length - stats.onTarget} {TIMETABLE_CONSTS.ANALYTICS.LBL_BEHIND}</p>
                 </div>
 
                 <div className="bg-white border border-gray-200 rounded-xl p-3 sm:p-4">
                     <Grid size={16} className="text-gray-400 mb-1" />
                     <p className="text-2xl sm:text-3xl font-bold text-gray-700">{stats.emptySlots}</p>
-                    <p className="text-xs font-semibold text-gray-500 mt-0.5 uppercase tracking-wide">Empty slots</p>
-                    <p className="text-xs text-gray-400 hidden sm:block">Auto-fill can resolve</p>
+                    <p className="text-xs font-semibold text-gray-500 mt-0.5 uppercase tracking-wide">{TIMETABLE_CONSTS.ANALYTICS.LBL_EMPTY_SLOTS}</p>
+                    <p className="text-xs text-gray-400 hidden sm:block">{TIMETABLE_CONSTS.ANALYTICS.LBL_AUTO_RES}</p>
                 </div>
 
                 <div className="bg-white border border-red-200 rounded-xl p-3 sm:p-4">
                     <Users size={16} className="text-red-400 mb-1" />
                     <p className="text-2xl sm:text-3xl font-bold text-red-500">{stats.overloaded}</p>
-                    <p className="text-xs font-semibold text-gray-500 mt-0.5 uppercase tracking-wide">Overloaded</p>
-                    <p className="text-xs text-gray-400 hidden sm:block">Above {stats.MAX_PERIODS}/week</p>
+                    <p className="text-xs font-semibold text-gray-500 mt-0.5 uppercase tracking-wide">{TIMETABLE_CONSTS.ANALYTICS.LBL_OVERLOADED}</p>
+                    <p className="text-xs text-gray-400 hidden sm:block">{TIMETABLE_CONSTS.ANALYTICS.LBL_ABOVE_PW}{stats.MAX_PERIODS}{TIMETABLE_CONSTS.ANALYTICS.LBL_PW}</p>
                 </div>
             </div>
 
@@ -210,9 +200,9 @@ export default function AnalyticsTab({
 
                     <div className="flex justify-around w-full text-center">
                         {[
-                            ['FILLED', stats.filledSlots, 'text-blue-600'],
-                            ['EMPTY', stats.emptySlots, 'text-gray-500'],
-                            ['TOTAL', stats.totalSlots, 'text-gray-700'],
+                            [TIMETABLE_CONSTS.ANALYTICS.CHART_FILLED, stats.filledSlots, 'text-blue-600'],
+                            [TIMETABLE_CONSTS.ANALYTICS.CHART_EMPTY, stats.emptySlots, 'text-gray-500'],
+                            [TIMETABLE_CONSTS.ANALYTICS.CHART_TOTAL, stats.totalSlots, 'text-gray-700'],
                         ].map(([l, v, c]) => (
                             <div key={l}>
                                 <p className={`text-xl font-bold ${c}`}>{v}</p>
@@ -223,7 +213,7 @@ export default function AnalyticsTab({
 
                     {suggestions.length > 0 && (
                         <div className="w-full bg-gray-50 rounded-lg p-3 text-xs text-gray-600 space-y-1.5">
-                            <p className="font-semibold text-gray-700">⚡ Suggestions</p>
+                            <p className="font-semibold text-gray-700">{TIMETABLE_CONSTS.ANALYTICS.SUGG_TITLE}</p>
                             {suggestions.map((s, i) => <p key={i}>{s}</p>)}
                         </div>
                     )}
@@ -232,7 +222,7 @@ export default function AnalyticsTab({
                 {/* Tabs panel */}
                 <div className="flex-1 bg-white border border-gray-200 rounded-xl overflow-hidden min-w-0">
                     <div className="flex border-b border-gray-100">
-                        {[['coverage', '📘 Subject coverage'], ['load', '👥 Teacher load']].map(([key, label]) => (
+                        {[['coverage', TIMETABLE_CONSTS.ANALYTICS.TAB_COVERAGE], ['load', TIMETABLE_CONSTS.ANALYTICS.TAB_LOAD]].map(([key, label]) => (
                             <button key={key} onClick={() => setActiveTab(key)}
                                 className={`px-3 sm:px-5 py-3 text-xs sm:text-sm font-medium transition-colors flex-1 sm:flex-none
                                     ${activeTab === key
@@ -246,7 +236,7 @@ export default function AnalyticsTab({
                     {/* Subject coverage tab */}
                     {activeTab === 'coverage' && (
                         stats.subjectCoverage.length === 0 ? (
-                            <div className="p-6 text-center text-gray-400 text-sm">No subjects available.</div>
+                            <div className="p-6 text-center text-gray-400 text-sm">{TIMETABLE_CONSTS.ANALYTICS.NO_SUBJ}</div>
                         ) : (
                             <div className="divide-y divide-gray-50">
                                 {stats.subjectCoverage.map(s => {
@@ -258,7 +248,7 @@ export default function AnalyticsTab({
                                                 {s.code || '--'}
                                             </span>
                                             <span className="text-xs sm:text-sm text-gray-700 flex-1 min-w-0 truncate">
-                                                {s.name || 'Unnamed'}
+                                                {s.name || TIMETABLE_CONSTS.ANALYTICS.UNNAMED}
                                             </span>
                                             {hasTarget && (
                                                 <div className="hidden sm:flex flex-1 max-w-[120px] lg:max-w-[140px]">
@@ -280,7 +270,7 @@ export default function AnalyticsTab({
                     {/* Teacher load tab */}
                     {activeTab === 'load' && (
                         stats.teachers.length === 0 ? (
-                            <div className="p-6 text-center text-gray-400 text-sm">No teacher data in slots.</div>
+                            <div className="p-6 text-center text-gray-400 text-sm">{TIMETABLE_CONSTS.ANALYTICS.NO_TEACHER}</div>
                         ) : (
                             <div className="divide-y divide-gray-50">
                                 {stats.teachers.map(t => {
@@ -288,7 +278,7 @@ export default function AnalyticsTab({
                                     const pct = Math.min(Math.round((t.count / stats.MAX_PERIODS) * 100), 100);
                                     return (
                                         <div key={t.id} className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3">
-                                            <span className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full ${colorFor(t.id)} text-white text-xs font-bold flex items-center justify-center shrink-0`}>
+                                            <span className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[${colorFor(t.id)}] text-white text-xs font-bold flex items-center justify-center shrink-0`}>
                                                 {getInitials(t.name)}
                                             </span>
                                             <span className="text-xs sm:text-sm text-gray-700 flex-1 min-w-0 truncate">{t.name}</span>
@@ -298,14 +288,14 @@ export default function AnalyticsTab({
                                                         style={{ width: `${pct}%` }} />
                                                 </div>
                                             </div>
-                                            <span className="text-xs text-gray-500 shrink-0">{t.count}p/w</span>
+                                            <span className="text-xs text-gray-500 shrink-0">{t.count}{TIMETABLE_CONSTS.ANALYTICS.LBL_PER_WEEK}</span>
                                             {isOver && (
                                                 <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full bg-red-100 text-red-600 shrink-0 hidden sm:inline">
-                                                    Overloaded
+                                                    {TIMETABLE_CONSTS.ANALYTICS.LBL_OVERLOAD_BADGE}
                                                 </span>
                                             )}
                                             {isOver && (
-                                                <span className="w-2 h-2 rounded-full bg-red-500 shrink-0 sm:hidden" title="Overloaded" />
+                                                <span className="w-2 h-2 rounded-full bg-red-500 shrink-0 sm:hidden" title={TIMETABLE_CONSTS.ANALYTICS.LBL_OVERLOAD_BADGE} />
                                             )}
                                         </div>
                                     );

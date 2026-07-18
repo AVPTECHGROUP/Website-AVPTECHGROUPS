@@ -71,10 +71,23 @@ const AddSalaryDetails = ({ formData, setFormData, handleInputChange, errors = {
         return DEDUCTION_OPTIONS.filter(option => !selectedKeys.includes(option.key));
     };
 
+    // ✅ FIX: block '-', '+', 'e', 'E' so an allowance amount can never be typed as negative
+    // (previously only the deduction/penalty input had this guard — the allowance input
+    // was missing it, which let a value like "-034903" slip in and get ADDED to the net,
+    // effectively subtracting it instead of adding an allowance).
+    const blockNonPositiveKeys = (e) => {
+        if (["-", "+", "e", "E"].includes(e.key)) {
+            e.preventDefault();
+        }
+    };
+
     const handleAddAllowance = (e) => {
         e.preventDefault();
         if (!newAllowance.name || !newAllowance.amount) return;
-        const amount = parseFloat(newAllowance.amount);
+        // ✅ FIX: force a non-negative amount even if a negative value somehow reaches here
+        // (e.g. via paste, autofill, or browser quirks that bypass onKeyDown).
+        const amount = Math.abs(parseFloat(newAllowance.amount)) || 0;
+        if (amount <= 0) return;
         setAllowances(prev => [...prev, { id: Date.now(), name: newAllowance.name, amount }]);
         setFormData(prev => ({ ...prev, [newAllowance.name]: amount }));
         setNewAllowance({ name: '', amount: '' });
@@ -195,7 +208,7 @@ const AddSalaryDetails = ({ formData, setFormData, handleInputChange, errors = {
                                             : errors?.salaryType
                                                 ? 'bg-red-50 text-red-600 border-red-300 hover:border-red-400'
                                                 : 'bg-gray-50 text-gray-700 border-transparent hover:bg-gray-100'
-                                            }`}
+                                        }`}
                                     >
                                         Monthly
                                     </button>
@@ -207,7 +220,7 @@ const AddSalaryDetails = ({ formData, setFormData, handleInputChange, errors = {
                                             : errors?.salaryType
                                                 ? 'bg-red-50 text-red-600 border-red-300 hover:border-red-400'
                                                 : 'bg-gray-50 text-gray-700 border-transparent hover:bg-gray-100'
-                                            }`}
+                                        }`}
                                     >
                                         Per Day
                                     </button>
@@ -226,13 +239,14 @@ const AddSalaryDetails = ({ formData, setFormData, handleInputChange, errors = {
                                         name="baseSalary"
                                         type="number"
                                         min="0"
+                                        onKeyDown={blockNonPositiveKeys}
                                         value={formData.baseSalary}
                                         onChange={handleBaseSalaryChange}
                                         placeholder="0"
                                         className={`w-full pl-7 sm:pl-8 pr-28 sm:pr-32 py-2.5 sm:py-3 border-2 rounded-lg text-base sm:text-lg font-semibold focus:outline-none focus:ring-2 transition-colors ${errors?.baseSalary
                                             ? 'border-red-400 bg-red-50 focus:ring-red-300 focus:border-red-500'
                                             : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
-                                            }`}
+                                        }`}
                                     />
                                     <span className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 text-xs sm:text-sm text-gray-500 whitespace-nowrap">
                                         {formData.salaryType === 'PER_DAY' ? 'INR / DAY' : 'INR / MONTH'}
@@ -279,6 +293,7 @@ const AddSalaryDetails = ({ formData, setFormData, handleInputChange, errors = {
                                     <input
                                         type="number"
                                         name="leaveDeductionPerDay"
+                                        onKeyDown={blockNonPositiveKeys}
                                         value={formData.leaveDeductionPerDay}
                                         onChange={handleInputChange}
                                         disabled={!leaveDeductionEnabled}
@@ -299,6 +314,7 @@ const AddSalaryDetails = ({ formData, setFormData, handleInputChange, errors = {
                                     <input
                                         type="number"
                                         name="lateArrivalPenalty"
+                                        onKeyDown={blockNonPositiveKeys}
                                         value={formData.lateArrivalPenalty || ''}
                                         onChange={handleInputChange}
                                         disabled={!leaveDeductionEnabled}
@@ -349,11 +365,20 @@ const AddSalaryDetails = ({ formData, setFormData, handleInputChange, errors = {
                                                 <span className="text-gray-500 text-lg sm:text-xl">₹</span>
                                                 <input
                                                     type="number"
-                                                    step="0.01"
                                                     min="0"
+                                                    step="0.01"
                                                     value={newAllowance.amount}
-                                                    onChange={(e) => setNewAllowance(prev => ({ ...prev, amount: e.target.value }))}
-                                                    placeholder="0.00"
+                                                    onKeyDown={blockNonPositiveKeys}
+                                                    onChange={(e) => {
+                                                        // ✅ FIX: also guard on change (covers paste/drag-drop which
+                                                        // bypasses onKeyDown) by stripping a negative sign / '+' / 'e'.
+                                                        const raw = e.target.value;
+                                                        const sanitized = raw.replace(/[-+eE]/g, '');
+                                                        setNewAllowance(prev => ({
+                                                            ...prev,
+                                                            amount: sanitized
+                                                        }));
+                                                    }}
                                                     className="w-full text-xs sm:text-sm outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                                                 />
                                             </div>
@@ -432,7 +457,12 @@ const AddSalaryDetails = ({ formData, setFormData, handleInputChange, errors = {
                                                     min="0"
                                                     placeholder="0.00"
                                                     value={newPenalty.amount}
-                                                    onChange={(e) => setNewPenalty(prev => ({ ...prev, amount: e.target.value }))}
+                                                    onKeyDown={blockNonPositiveKeys}
+                                                    onChange={(e) => {
+                                                        const raw = e.target.value;
+                                                        const sanitized = raw.replace(/[-+eE]/g, '');
+                                                        setNewPenalty(prev => ({ ...prev, amount: sanitized }));
+                                                    }}
                                                     className="w-full text-xs sm:text-sm outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                                                 />
                                             </div>

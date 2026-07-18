@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useContext } from 'react'
 import { Link } from 'react-router-dom'
+import { UserContext } from '../../../ContextAPI/UserContext'
 
 const sections = [
     { id: 'introduction', label: 'Introduction', icon: '📋' },
@@ -16,12 +17,15 @@ const sections = [
     { id: 'contact', label: 'Contact Us', icon: '✉️' },
 ]
 
-/* ─── Sub-components (mirrors Privacy Policy page) ──────────────────────── */
+/* ─── Sub-components ────────────────────────────────────────────────────── */
 
-const Section = ({ id, number, title, icon, children }) => (
+const Section = ({ id, number, title, icon, children, isDark }) => (
     <section
         id={id}
-        className="bg-white/[0.02] border border-white/[0.08] rounded-2xl p-6 md:p-8 scroll-mt-28"
+        className={`border rounded-2xl p-6 md:p-8 scroll-mt-28 transition-colors duration-300 ${isDark
+                ? 'bg-white/[0.02] border-white/[0.08]'
+                : 'bg-black/[0.02] border-black/[0.08]'
+            }`}
         style={{ animation: 'fadeUp 0.5s ease both' }}
     >
         <div className="flex items-start gap-4 mb-6">
@@ -31,19 +35,19 @@ const Section = ({ id, number, title, icon, children }) => (
             <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-xl">{icon}</span>
-                    <h2 className="font-heading text-xl font-bold text-white">{title}</h2>
+                    <h2 className={`font-heading text-xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{title}</h2>
                 </div>
-                <div className="mt-3 h-px bg-gradient-to-r from-teal/30 via-white/5 to-transparent" />
+                <div className={`mt-3 h-px bg-gradient-to-r from-teal/30 to-transparent ${isDark ? 'via-white/5' : 'via-black/5'}`} />
             </div>
         </div>
 
-        <div className="text-text-muted text-sm leading-7 flex flex-col gap-3 pl-14">
+        <div className={`text-sm leading-7 flex flex-col gap-3 pl-14 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
             {children}
         </div>
     </section>
 )
 
-const InfoBox = ({ children, type = 'info' }) => {
+const InfoBox = ({ children, type = 'info', isDark }) => {
     const styles = {
         info: 'bg-teal/5 border-teal/20',
         warning: 'bg-gold/5 border-gold/20',
@@ -53,26 +57,26 @@ const InfoBox = ({ children, type = 'info' }) => {
     return (
         <div className={`flex gap-3 p-4 rounded-xl border ${styles[type]} text-sm`}>
             <span className="flex-shrink-0 mt-0.5">{icons[type]}</span>
-            <p className={type === 'warning' ? 'text-gold/80' : 'text-teal/80'}>{children}</p>
+            <p className={type === 'warning' ? 'text-amber-500' : 'text-teal/80'}>{children}</p>
         </div>
     )
 }
 
-const DataCard = ({ items }) => (
+const DataCard = ({ items, isDark }) => (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
         {items.map(({ label, value }) => (
-            <div key={label} className="bg-white/[0.03] border border-white/[0.07] rounded-xl px-4 py-3">
-                <p className="text-[10px] text-text-muted uppercase tracking-wider mb-1">{label}</p>
-                <p className="text-sm text-white font-medium break-all">{value}</p>
+            <div key={label} className={`border rounded-xl px-4 py-3 ${isDark ? 'bg-white/[0.03] border-white/[0.07]' : 'bg-black/[0.03] border-black/[0.07]'}`}>
+                <p className={`text-[10px] uppercase tracking-wider mb-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{label}</p>
+                <p className={`text-sm font-medium break-all ${isDark ? 'text-white' : 'text-slate-800'}`}>{value}</p>
             </div>
         ))}
     </div>
 )
 
-const CheckList = ({ items }) => (
+const CheckList = ({ items, isDark }) => (
     <ul className="flex flex-col gap-2 mt-1">
         {items.map((item) => (
-            <li key={item} className="flex items-start gap-3 text-[13px] text-text-muted">
+            <li key={item} className={`flex items-start gap-3 text-[13px] ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
                 <span className="mt-0.5 w-5 h-5 rounded-full bg-teal/10 border border-teal/20 flex items-center justify-center text-teal text-[10px] flex-shrink-0">
                     ✓
                 </span>
@@ -82,32 +86,32 @@ const CheckList = ({ items }) => (
     </ul>
 )
 
-const IconGrid = ({ items }) => (
+const IconGrid = ({ items, isDark }) => (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mt-1">
         {items.map(({ icon, text }) => (
-            <div key={text} className="flex items-center gap-3 bg-white/[0.02] border border-white/[0.07] rounded-xl px-4 py-3">
+            <div key={text} className={`flex items-center gap-3 border rounded-xl px-4 py-3 ${isDark ? 'bg-white/[0.02] border-white/[0.07]' : 'bg-black/[0.02] border-black/[0.07]'}`}>
                 <span className="text-base">{icon}</span>
-                <span className="text-[13px] text-text-muted">{text}</span>
+                <span className={`text-[13px] ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{text}</span>
             </div>
         ))}
     </div>
 )
 
-const CategoryCard = ({ category, emoji, items, note }) => (
-    <div className="bg-white/[0.02] border border-white/[0.07] rounded-xl p-4">
+const CategoryCard = ({ category, emoji, items, note, isDark }) => (
+    <div className={`border rounded-xl p-4 ${isDark ? 'bg-white/[0.02] border-white/[0.07]' : 'bg-black/[0.02] border-black/[0.07]'}`}>
         <div className="flex items-center gap-2 mb-3">
             <span className="text-xl">{emoji}</span>
-            <h4 className="text-white font-semibold text-sm">{category}</h4>
+            <h4 className={`font-semibold text-sm ${isDark ? 'text-white' : 'text-slate-800'}`}>{category}</h4>
         </div>
         <ul className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
             {items.map((item) => (
-                <li key={item} className="flex items-start gap-2 text-[13px] text-text-muted">
+                <li key={item} className={`flex items-start gap-2 text-[13px] ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
                     <span className="text-teal mt-0.5 text-[10px]">▸</span>
                     {item}
                 </li>
             ))}
         </ul>
-        {note && <p className="text-[12px] text-text-muted/80 mt-3 italic">{note}</p>}
+        {note && <p className={`text-[12px] mt-3 italic ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{note}</p>}
     </div>
 )
 
@@ -116,6 +120,9 @@ const CategoryCard = ({ category, emoji, items, note }) => (
 const Cookie_Policy = () => {
     const [activeSection, setActiveSection] = useState('introduction')
     const [scrollProgress, setScrollProgress] = useState(0)
+
+    const { theme } = useContext(UserContext);
+    const isDark = theme === 'dark';
 
     useEffect(() => {
         const onScroll = () => {
@@ -147,7 +154,7 @@ const Cookie_Policy = () => {
     }
 
     return (
-        <div className="min-h-screen bg-bg-dark font-body">
+        <div className={`min-h-screen font-body transition-colors duration-300 ${isDark ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'}`}>
 
             <div
                 className="fixed top-0 left-0 z-50 h-[2px] transition-all duration-150"
@@ -159,20 +166,18 @@ const Cookie_Policy = () => {
 
             {/* ══════════════════ HERO ══════════════════ */}
             <div className="relative overflow-hidden">
-
                 <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_10%_0%,rgba(0,201,177,0.07),transparent)]" />
                 <div className="absolute inset-0 bg-[radial-gradient(ellipse_50%_40%_at_90%_100%,rgba(245,166,35,0.05),transparent)]" />
                 <div className="absolute top-16 right-24 w-56 h-56 rounded-full bg-teal/[0.04] blur-3xl pointer-events-none" />
                 <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-teal/20 to-transparent" />
 
-                <div className="relative max-w-7xl mx-auto px-6 pt-5 pb-16  md:pb-20">
-
+                <div className="relative max-w-7xl mx-auto px-6 pt-5 pb-16 md:pb-20">
                     <div
-                        className="flex items-center gap-2 text-sm text-text-muted mb-8"
+                        className={`flex items-center gap-2 text-sm mb-8 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}
                         style={{ animation: 'fadeDown 0.45s ease both' }}
                     >
                         <Link to="/" className="hover:text-teal transition-colors">Home</Link>
-                        <span className="text-white/20">/</span>
+                        <span className={isDark ? 'text-white/20' : 'text-black/20'}>/</span>
                         <span className="text-teal">Cookie Policy</span>
                     </div>
 
@@ -185,7 +190,7 @@ const Cookie_Policy = () => {
                     </div>
 
                     <h1
-                        className="font-heading text-5xl md:text-7xl font-bold text-white leading-tight mb-4"
+                        className={`font-heading text-5xl md:text-7xl font-bold leading-tight mb-4 ${isDark ? 'text-white' : 'text-slate-900'}`}
                         style={{ animation: 'fadeUp 0.5s ease 0.15s both' }}
                     >
                         Cookie{' '}
@@ -193,7 +198,7 @@ const Cookie_Policy = () => {
                     </h1>
 
                     <p
-                        className="text-text-muted text-base md:text-lg max-w-2xl leading-relaxed mb-10"
+                        className={`text-base md:text-lg max-w-2xl leading-relaxed mb-10 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}
                         style={{ animation: 'fadeUp 0.5s ease 0.22s both' }}
                     >
                         This Policy explains how SchoolSpine uses cookies and similar technologies
@@ -211,11 +216,14 @@ const Cookie_Policy = () => {
                         ].map(({ emoji, label, value }) => (
                             <div
                                 key={label}
-                                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/[0.03] border border-white/[0.08] text-text-muted"
+                                className={`flex items-center gap-2 px-4 py-2 rounded-xl border ${isDark
+                                        ? 'bg-white/[0.03] border-white/[0.08] text-slate-300'
+                                        : 'bg-black/[0.03] border-black/[0.08] text-slate-600'
+                                    }`}
                             >
                                 <span>{emoji}</span>
                                 <span>{label}:</span>
-                                <span className="text-white font-medium">{value}</span>
+                                <span className={`font-medium ${isDark ? 'text-white' : 'text-slate-800'}`}>{value}</span>
                             </div>
                         ))}
                     </div>
@@ -229,36 +237,41 @@ const Cookie_Policy = () => {
                     <aside className="hidden lg:block w-64 xl:w-72 flex-shrink-0">
                         <div className="sticky top-24 flex flex-col gap-4">
 
-                            <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl p-4 backdrop-blur-md">
-                                <p className="text-[10px] text-text-muted uppercase tracking-widest font-semibold px-2 mb-3">
+                            <div className={`border rounded-2xl p-4 backdrop-blur-md shadow-sm ${isDark ? 'bg-slate-900 border-white/[0.08]' : 'bg-white border-slate-200'}`}>
+                                <p className={`text-[10px] uppercase tracking-widest font-semibold px-2 mb-3 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
                                     On This Page
                                 </p>
                                 <ul className="flex flex-col gap-0.5">
                                     {sections.map(({ id, label, icon }) => {
-                                        const active = activeSection === id
+                                        const active = activeSection === id;
+
                                         return (
                                             <li key={id}>
                                                 <button
                                                     onClick={() => scrollTo(id)}
                                                     className={`w-full text-left flex items-center gap-2.5 px-3 py-2 rounded-xl text-[13px] transition-all duration-200 cursor-pointer
-                                                        ${active
+                                                    ${active
                                                             ? 'bg-teal/10 text-teal border border-teal/20'
-                                                            : 'text-text-muted hover:text-white hover:bg-white/[0.04]'
+                                                            : isDark
+                                                                ? 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
+                                                                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                                                         }`}
                                                 >
                                                     <span className="text-sm">{icon}</span>
                                                     <span className="leading-tight flex-1">{label}</span>
-                                                    {active && <span className="w-1.5 h-1.5 rounded-full bg-teal flex-shrink-0" />}
+                                                    {active && (
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-teal flex-shrink-0" />
+                                                    )}
                                                 </button>
                                             </li>
-                                        )
+                                        );
                                     })}
                                 </ul>
                             </div>
 
                             <div className="bg-[linear-gradient(135deg,rgba(0,201,177,0.07),rgba(245,166,35,0.04))] border border-teal/[0.15] rounded-2xl p-4">
-                                <p className="text-sm font-semibold text-white mb-1">Questions?</p>
-                                <p className="text-xs text-text-muted mb-3">Reach out to our team</p>
+                                <p className={`text-sm font-semibold mb-1 ${isDark ? 'text-white' : 'text-slate-800'}`}>Questions?</p>
+                                <p className={`text-xs mb-3 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Reach out to our team</p>
                                 <a
                                     href="mailto:info@computesofttech.com"
                                     className="text-xs text-teal hover:text-teal-light transition-colors break-all"
@@ -272,10 +285,10 @@ const Cookie_Policy = () => {
                     <div className="flex-1 min-w-0 flex flex-col gap-5 pt-1">
 
                         {/* 01 */}
-                        <Section id="introduction" number="01" title="Introduction" icon="📋">
+                        <Section id="introduction" number="01" title="Introduction" icon="📋" isDark={isDark}>
                             <p>
-                                This Cookie Policy explains how <strong className="text-white">SchoolSpine</strong>,
-                                a product of <strong className="text-white">ComputeSoftTechnologies</strong>, uses cookies
+                                This Cookie Policy explains how <strong className={isDark ? 'text-white' : 'text-slate-900'}>SchoolSpine</strong>,
+                                a product of <strong className={isDark ? 'text-white' : 'text-slate-900'}>ComputeSoftTechnologies</strong>, uses cookies
                                 and similar technologies on its website, mobile applications, and related services.
                             </p>
                             <p>
@@ -284,16 +297,16 @@ const Cookie_Policy = () => {
                                 {' '}and{' '}
                                 <Link to="/terms" className="text-teal hover:text-teal-light transition-colors">Terms of Service</Link>.
                             </p>
-                            <InfoBox type="info">
+                            <InfoBox type="info" isDark={isDark}>
                                 By continuing to use SchoolSpine, you consent to the use of cookies and similar
                                 technologies as described in this Policy.
                             </InfoBox>
                         </Section>
 
                         {/* 02 */}
-                        <Section id="company-info" number="02" title="Company Information" icon="🏢">
+                        <Section id="company-info" number="02" title="Company Information" icon="🏢" isDark={isDark}>
                             <p>You may reach ComputeSoftTechnologies through:</p>
-                            <DataCard items={[
+                            <DataCard isDark={isDark} items={[
                                 { label: 'Company Name', value: 'ComputeSoftTechnologies' },
                                 { label: 'Brand Name', value: 'SchoolSpine' },
                                 { label: 'Address', value: 'Royal Plaza, Sushant Golf City, Lucknow, UP – 226030, India' },
@@ -304,7 +317,7 @@ const Cookie_Policy = () => {
                         </Section>
 
                         {/* 03 */}
-                        <Section id="what-are-cookies" number="03" title="What Are Cookies?" icon="🍪">
+                        <Section id="what-are-cookies" number="03" title="What Are Cookies?" icon="🍪" isDark={isDark}>
                             <p>
                                 Cookies are small text files stored on your device when you visit a website or
                                 use certain online services. Cookies help websites remember user preferences,
@@ -317,9 +330,9 @@ const Cookie_Policy = () => {
                         </Section>
 
                         {/* 04 */}
-                        <Section id="why-we-use" number="04" title="Why We Use Cookies" icon="🎯">
+                        <Section id="why-we-use" number="04" title="Why We Use Cookies" icon="🎯" isDark={isDark}>
                             <p>SchoolSpine uses cookies and similar technologies to:</p>
-                            <IconGrid items={[
+                            <IconGrid isDark={isDark} items={[
                                 { icon: '🔒', text: 'Maintain secure user sessions' },
                                 { icon: '🔑', text: 'Authenticate users during login' },
                                 { icon: '⚙️', text: 'Remember user preferences' },
@@ -332,9 +345,10 @@ const Cookie_Policy = () => {
                         </Section>
 
                         {/* 05 */}
-                        <Section id="types-of-cookies" number="05" title="Types of Cookies We Use" icon="🗂️">
+                        <Section id="types-of-cookies" number="05" title="Types of Cookies We Use" icon="🗂️" isDark={isDark}>
                             <div className="grid grid-cols-1 gap-3 mt-1">
                                 <CategoryCard
+                                    isDark={isDark}
                                     category="Essential Cookies"
                                     emoji="🔑"
                                     items={[
@@ -347,6 +361,7 @@ const Cookie_Policy = () => {
                                     note="These cookies are necessary for the operation of the platform and cannot be disabled. Without them, certain features of SchoolSpine may not function properly."
                                 />
                                 <CategoryCard
+                                    isDark={isDark}
                                     category="Performance & Analytics Cookies"
                                     emoji="📊"
                                     items={[
@@ -359,6 +374,7 @@ const Cookie_Policy = () => {
                                     note="This information helps us understand how users interact with our platform and improve performance and usability."
                                 />
                                 <CategoryCard
+                                    isDark={isDark}
                                     category="Functional Cookies"
                                     emoji="🎛️"
                                     items={[
@@ -370,6 +386,7 @@ const Cookie_Policy = () => {
                                     note="These cookies enable enhanced functionality and personalization, improving the overall user experience."
                                 />
                                 <CategoryCard
+                                    isDark={isDark}
                                     category="Security Cookies"
                                     emoji="🛡️"
                                     items={[
@@ -384,9 +401,9 @@ const Cookie_Policy = () => {
                         </Section>
 
                         {/* 06 */}
-                        <Section id="mobile-app" number="06" title="Mobile Application Technologies" icon="📱">
+                        <Section id="mobile-app" number="06" title="Mobile Application Technologies" icon="📱" isDark={isDark}>
                             <p>The SchoolSpine mobile application may use technologies similar to cookies, including:</p>
-                            <CheckList items={[
+                            <CheckList isDark={isDark} items={[
                                 'Device identifiers',
                                 'Application storage',
                                 'Session tokens',
@@ -396,37 +413,37 @@ const Cookie_Policy = () => {
                         </Section>
 
                         {/* 07 */}
-                        <Section id="third-party" number="07" title="Third-Party Services" icon="🔗">
+                        <Section id="third-party" number="07" title="Third-Party Services" icon="🔗" isDark={isDark}>
                             <p>SchoolSpine may use trusted third-party services that may place cookies or collect limited technical information to support:</p>
-                            <CheckList items={[
+                            <CheckList isDark={isDark} items={[
                                 'Platform analytics',
                                 'Performance monitoring',
                                 'Security services',
                                 'Cloud infrastructure',
                             ]} />
                             <p>Such third-party providers are contractually required to maintain appropriate safeguards for user information.</p>
-                            <InfoBox type="success">
+                            <InfoBox type="success" isDark={isDark}>
                                 We do not sell user data to advertisers or marketing companies.
                             </InfoBox>
                         </Section>
 
                         {/* 08 */}
-                        <Section id="managing-cookies" number="08" title="Managing Cookies" icon="⚙️">
+                        <Section id="managing-cookies" number="08" title="Managing Cookies" icon="⚙️" isDark={isDark}>
                             <p>Most web browsers allow users to:</p>
-                            <CheckList items={[
+                            <CheckList isDark={isDark} items={[
                                 'View stored cookies',
                                 'Delete cookies',
                                 'Block cookies',
                                 'Configure cookie preferences',
                             ]} />
-                            <InfoBox type="warning">
+                            <InfoBox type="warning" isDark={isDark}>
                                 Please note that disabling certain cookies may affect the functionality, security,
                                 and performance of SchoolSpine.
                             </InfoBox>
                         </Section>
 
                         {/* 09 */}
-                        <Section id="data-protection" number="09" title="Data Protection" icon="🔐">
+                        <Section id="data-protection" number="09" title="Data Protection" icon="🔐" isDark={isDark}>
                             <p>
                                 Information collected through cookies is protected using appropriate technical
                                 and organizational security measures.
@@ -439,12 +456,12 @@ const Cookie_Policy = () => {
                         </Section>
 
                         {/* 10 */}
-                        <Section id="childrens-info" number="10" title="Children's Information" icon="👶">
+                        <Section id="childrens-info" number="10" title="Children's Information" icon="👶" isDark={isDark}>
                             <p>
                                 SchoolSpine is designed for educational institutions and may process information
                                 relating to students through schools and authorized guardians.
                             </p>
-                            <InfoBox type="info">
+                            <InfoBox type="info" isDark={isDark}>
                                 Schools are responsible for obtaining any necessary permissions or consents
                                 required under applicable laws before providing student information to the
                                 platform.
@@ -452,7 +469,7 @@ const Cookie_Policy = () => {
                         </Section>
 
                         {/* 11 */}
-                        <Section id="changes" number="11" title="Changes to This Cookie Policy" icon="🔄">
+                        <Section id="changes" number="11" title="Changes to This Cookie Policy" icon="🔄" isDark={isDark}>
                             <p>
                                 ComputeSoftTechnologies reserves the right to update this Cookie Policy at any time.
                                 Any changes will become effective immediately upon publication on the School
@@ -462,19 +479,19 @@ const Cookie_Policy = () => {
                         </Section>
 
                         {/* 12 */}
-                        <Section id="contact" number="12" title="Contact Us" icon="✉️">
+                        <Section id="contact" number="12" title="Contact Us" icon="✉️" isDark={isDark}>
                             <p>If you have any questions regarding this Cookie Policy, please contact us:</p>
-                            <div className="mt-2 bg-[linear-gradient(135deg,rgba(0,201,177,0.05),rgba(245,166,35,0.03))] border border-teal/[0.15] rounded-2xl p-5 md:p-6">
-                                <p className="text-white font-heading font-bold text-lg mb-5">ComputeSoftTechnologies</p>
+                            <div className={`mt-2 border rounded-2xl p-5 md:p-6 ${isDark ? 'bg-white/[0.02] border-white/[0.15]' : 'bg-black/[0.02] border-black/[0.15]'}`}>
+                                <p className={`font-heading font-bold text-lg mb-5 ${isDark ? 'text-white' : 'text-slate-900'}`}>ComputeSoftTechnologies</p>
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
                                     <div>
-                                        <p className="text-[10px] text-text-muted uppercase tracking-wider mb-1.5">Address</p>
-                                        <p className="text-sm text-white leading-6">
+                                        <p className={`text-[10px] uppercase tracking-wider mb-1.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Address</p>
+                                        <p className={`text-sm leading-6 ${isDark ? 'text-white' : 'text-slate-700'}`}>
                                             Royal Plaza, Sushant Golf City,<br />Lucknow, UP – 226030, India
                                         </p>
                                     </div>
                                     <div>
-                                        <p className="text-[10px] text-text-muted uppercase tracking-wider mb-1.5">Email</p>
+                                        <p className={`text-[10px] uppercase tracking-wider mb-1.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Email</p>
                                         <a
                                             href="mailto:info@computesofttech.com"
                                             className="text-sm text-teal hover:text-teal-light transition-colors"
@@ -483,7 +500,7 @@ const Cookie_Policy = () => {
                                         </a>
                                     </div>
                                     <div>
-                                        <p className="text-[10px] text-text-muted uppercase tracking-wider mb-1.5">Phone</p>
+                                        <p className={`text-[10px] uppercase tracking-wider mb-1.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Phone</p>
                                         <a
                                             href="tel:9511117450"
                                             className="text-sm text-teal hover:text-teal-light transition-colors"
@@ -503,4 +520,4 @@ const Cookie_Policy = () => {
     )
 }
 
-export default Cookie_Policy
+export default Cookie_Policy;

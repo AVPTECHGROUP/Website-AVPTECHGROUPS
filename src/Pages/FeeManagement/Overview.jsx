@@ -18,21 +18,28 @@ import {
   getOverdueAlerts,
   getRecentPayments,
   getFeeDashboardStats,
-} from '../../Api/FeeDashboard';
-import { getFeePeriods }     from '../../Api/FeePeriods';
-import { getFeeStructures }  from '../../Api/FeeStructures';
-import { getStudentByClass } from '../../Api/StudentsApi';
+} from '../../Api/FeeManagement/FeeDashboard';
+import { getStudentByClass } from '../../Api/Students/StudentsApi';
+import { getFeeStructures } from '../../Api/FeeManagement/FeeStructures';
 import {
-  getOutstandingFees, createFeeCollection,
-  createBulkFeeCollection, getFeeCollectionHistory,
-} from '../../Api/FeeCollection';
+  createFeeCollection,
+  createBulkFeeCollection,
+} from '../../Api/FeeManagement/FeeCollection';
 import { UserContext } from '../../ContextAPI/UserContext';
 
-// ─── Constants ────────────────────────────────────────────────────────────────
-const TODAY = new Date().toISOString().split('T')[0];
-const ONE_MONTH_AGO = (() => {
-  const d = new Date(); d.setMonth(d.getMonth() - 1); return d.toISOString().split('T')[0];
-})();
+// Import Constants
+import {
+  STATUSES,
+  PERIOD_TYPES,
+  PERIOD_TYPE_LABELS,
+  PERIOD_TYPE_GRADIENT,
+  PERIOD_TYPE_BADGE_STYLE,
+  PAYMENT_MODES_WITH_ICON,
+  PAYMENT_MODE_OPTIONS,
+  FEE_COLLECTION_STRINGS,
+  OVERVIEW_STRINGS,
+  getTodayDate
+} from '../../Constants/StringConstants/FeeManagementConstants';
 
 // ─── Formatters ───────────────────────────────────────────────────────────────
 const fmt = (n) => '₹' + (Number(n) || 0).toLocaleString('en-IN');
@@ -51,24 +58,14 @@ const fmtDate = (d) => {
 const initials = (name = '') =>
   name.split(' ').slice(0, 2).map((w) => w[0] || '').join('').toUpperCase() || '??';
 
-// ─── Period type config ───────────────────────────────────────────────────────
-const PERIOD_TYPE_GRADIENT = {
-  QUARTERLY:   'from-[#1A3A5C] to-[#2563EB]',
-  MONTHLY:     'from-[#0369A1] to-[#0EA5E9]',
-  YEARLY:      'from-[#0D7A55] to-[#10B981]',
-  HALF_YEARLY: 'from-[#7C3AED] to-[#A78BFA]',
-  CUSTOM:      'from-[#92400E] to-[#F59E0B]',
-};
-const PERIOD_TYPE_BADGE = {
-  QUARTERLY:   'bg-blue-50 text-blue-700 border-blue-200',
-  MONTHLY:     'bg-sky-50 text-sky-700 border-sky-200',
-  YEARLY:      'bg-emerald-50 text-emerald-700 border-emerald-200',
-  HALF_YEARLY: 'bg-violet-50 text-violet-700 border-violet-200',
-  CUSTOM:      'bg-amber-50 text-amber-700 border-amber-200',
-};
-const PERIOD_TYPE_LABEL = {
-  QUARTERLY: 'Quarterly', MONTHLY: 'Monthly', YEARLY: 'Yearly',
-  HALF_YEARLY: 'Half-Yearly', CUSTOM: 'Custom',
+// ─── Shared primitives ────────────────────────────────────────────────────────
+const TypeBadge = ({ type }) => {
+  const cls = PERIOD_TYPE_BADGE_STYLE[type] || 'bg-gray-50 text-gray-600 border-gray-200';
+  return (
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-md border text-[11px] font-semibold ${cls}`}>
+      {PERIOD_TYPE_LABELS[type] || type}
+    </span>
+  );
 };
 
 // ─── Toast ────────────────────────────────────────────────────────────────────
@@ -86,9 +83,9 @@ const ToastContainer = () => {
   }, []);
   const icons = {
     success: <CheckCircle2 size={15} className="flex-shrink-0 text-emerald-400" />,
-    error:   <AlertCircle  size={15} className="flex-shrink-0 text-red-400" />,
+    error: <AlertCircle size={15} className="flex-shrink-0 text-red-400" />,
     warning: <AlertTriangle size={15} className="flex-shrink-0 text-amber-400" />,
-    info:    <Info          size={15} className="flex-shrink-0 text-blue-400" />,
+    info: <Info size={15} className="flex-shrink-0 text-blue-400" />,
   };
   return (
     <div className="fixed top-5 right-5 z-[9999] flex flex-col gap-2 pointer-events-none">
@@ -98,7 +95,7 @@ const ToastContainer = () => {
           style={{ animation: 'ovToastIn .22s ease-out' }}>
           {icons[t.type] || icons.info}
           <div className="flex-1 min-w-0">
-            {t.title   && <div className="text-[13px] font-semibold">{t.title}</div>}
+            {t.title && <div className="text-[13px] font-semibold">{t.title}</div>}
             {t.message && <div className="text-[12px] text-white/70 mt-0.5">{t.message}</div>}
           </div>
           <button onClick={() => setToasts((p) => p.filter((x) => x.id !== t.id))}
@@ -112,15 +109,15 @@ const ToastContainer = () => {
 
 const toast = {
   success: (title, message, duration) => _toastDispatch?.({ type: 'success', title, message, duration }),
-  error:   (title, message, duration) => _toastDispatch?.({ type: 'error',   title, message, duration }),
+  error: (title, message, duration) => _toastDispatch?.({ type: 'error', title, message, duration }),
   warning: (title, message, duration) => _toastDispatch?.({ type: 'warning', title, message, duration }),
-  info:    (title, message, duration) => _toastDispatch?.({ type: 'info',    title, message, duration }),
+  info: (title, message, duration) => _toastDispatch?.({ type: 'info', title, message, duration }),
 };
 
-// ─── Shared primitives ────────────────────────────────────────────────────────
+// ─── Shared components ────────────────────────────────────────────────────────
 const Av = ({ name, status, size = 'md' }) => {
   const sz = { sm: 'w-7 h-7 text-[10px]', md: 'w-9 h-9 text-xs', lg: 'w-12 h-12 text-base' }[size];
-  const bg = status === 'OVERDUE' ? 'bg-red-700' : status === 'PARTIAL' ? 'bg-amber-700' : 'bg-[#1E3A5F]';
+  const bg = status === STATUSES.OVERDUE ? 'bg-red-700' : status === STATUSES.PARTIAL ? 'bg-amber-700' : 'bg-[#1E3A5F]';
   return (
     <div className={`${sz} ${bg} rounded-full flex items-center justify-center text-white font-bold flex-shrink-0`}>
       {initials(name)}
@@ -130,16 +127,16 @@ const Av = ({ name, status, size = 'md' }) => {
 
 const StatusPill = ({ status, label }) => {
   const map = {
-    PAID:     'bg-emerald-50 text-emerald-700 border-emerald-200',
-    PARTIAL:  'bg-amber-50 text-amber-700 border-amber-200',
-    OVERDUE:  'bg-red-50 text-red-700 border-red-200',
-    PENDING:  'bg-gray-100 text-gray-500 border-gray-200',
-    UNPAID:   'bg-gray-100 text-gray-500 border-gray-200',
-    CLOSED:   'bg-gray-100 text-gray-500 border-gray-200',
+    PAID: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    PARTIAL: 'bg-amber-50 text-amber-700 border-amber-200',
+    OVERDUE: 'bg-red-50 text-red-700 border-red-200',
+    PENDING: 'bg-gray-100 text-gray-500 border-gray-200',
+    UNPAID: 'bg-gray-100 text-gray-500 border-gray-200',
+    CLOSED: 'bg-gray-100 text-gray-500 border-gray-200',
     UPCOMING: 'bg-gray-100 text-gray-500 border-gray-200',
-    ACTIVE:   'bg-emerald-50 text-emerald-700 border-emerald-200',
-    DRAFT:    'bg-amber-50 text-amber-700 border-amber-200',
-    LOCKED:   'bg-gray-100 text-gray-500 border-gray-200',
+    ACTIVE: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    DRAFT: 'bg-amber-50 text-amber-700 border-amber-200',
+    LOCKED: 'bg-gray-100 text-gray-500 border-gray-200',
   };
   const dotMap = {
     PAID: 'bg-emerald-500', PARTIAL: 'bg-amber-500', OVERDUE: 'bg-red-500',
@@ -151,15 +148,6 @@ const StatusPill = ({ status, label }) => {
     <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-[11.5px] font-semibold ${cls}`}>
       {dot && <span className={`w-1.5 h-1.5 rounded-full ${dot}`} />}
       {label}
-    </span>
-  );
-};
-
-const TypeBadge = ({ type }) => {
-  const cls = PERIOD_TYPE_BADGE[type] || 'bg-gray-50 text-gray-600 border-gray-200';
-  return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-md border text-[11px] font-semibold ${cls}`}>
-      {PERIOD_TYPE_LABEL[type] || type}
     </span>
   );
 };
@@ -206,11 +194,11 @@ const Modal = ({ open, onClose, title, subtitle, wide, children, footer }) => {
 const Btn = ({ children, variant = 'primary', size = 'md', onClick, disabled, className = '' }) => {
   const sz = { xs: 'px-2 py-1 text-[11px]', sm: 'px-3 py-1.5 text-xs', md: 'px-4 py-2 text-[12.5px]' }[size];
   const v = {
-    primary:   'bg-[#2563EB] text-white hover:bg-blue-700',
-    success:   'bg-emerald-600 text-white hover:bg-emerald-700',
-    danger:    'bg-red-600 text-white hover:bg-red-700',
+    primary: 'bg-[#2563EB] text-white hover:bg-blue-700',
+    success: 'bg-emerald-600 text-white hover:bg-emerald-700',
+    danger: 'bg-red-600 text-white hover:bg-red-700',
     secondary: 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50',
-    ghost:     'bg-blue-50 text-[#1E3A5F] border border-blue-200 hover:bg-blue-100',
+    ghost: 'bg-blue-50 text-[#1E3A5F] border border-blue-200 hover:bg-blue-100',
   }[variant];
   return (
     <button onClick={onClick} disabled={disabled}
@@ -238,17 +226,17 @@ const ReceiptModal = ({ open, onClose, receipt }) => {
   if (!open || !receipt) return null;
   const handlePrint = () => {
     const w = window.open('', '_blank');
-    w.document.write(`<html><head><title>Receipt ${receipt.receiptNo}</title>
+    w.document.write(`<html><head><title>${FEE_COLLECTION_STRINGS.MODAL_RECEIPT_TITLE} ${receipt.receiptNo}</title>
       <style>body{font-family:monospace;font-size:12px;padding:20px}hr{border:none;border-top:1px dashed #999;margin:8px 0}</style>
       </head><body>${printRef.current?.innerHTML || ''}</body></html>`);
     w.document.close(); w.print();
   };
   return (
-    <Modal open={open} onClose={onClose} title="Payment Receipt"
+    <Modal open={open} onClose={onClose} title={FEE_COLLECTION_STRINGS.MODAL_RECEIPT_TITLE}
       footer={
         <>
-          <Btn variant="secondary" onClick={onClose}>Close</Btn>
-          <Btn variant="primary" onClick={handlePrint}><Printer size={13} /> Print</Btn>
+          <Btn variant="secondary" onClick={onClose}>{FEE_COLLECTION_STRINGS.BTN_CLOSE}</Btn>
+          <Btn variant="primary" onClick={handlePrint}><Printer size={13} /> {FEE_COLLECTION_STRINGS.BTN_PRINT}</Btn>
         </>
       }>
       <div ref={printRef} className="border-2 border-gray-200 rounded-xl p-6 font-mono text-xs max-w-sm mx-auto bg-gray-50">
@@ -258,7 +246,7 @@ const ReceiptModal = ({ open, onClose, receipt }) => {
         <hr className="border-dashed border-gray-300" />
         <div className="space-y-1 my-2">
           {[['Date', fmtDate(receipt.date)], ['Student', receipt.studentName], ['Class', receipt.class || receipt.className],
-            ['Adm. No.', receipt.studentCode], ['Period', receipt.period || receipt.periodName]].map(([k, v]) => (
+          ['Adm. No.', receipt.studentCode], ['Period', receipt.period || receipt.periodName]].map(([k, v]) => (
             <div key={k} className="flex justify-between"><span>{k}:</span><span>{v}</span></div>
           ))}
         </div>
@@ -293,7 +281,7 @@ const ReceiptModal = ({ open, onClose, receipt }) => {
 const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions, onSuccess }) => {
   const [selectedPeriodId, setSelectedPeriodId] = useState('');
   const [form, setForm] = useState({
-    amountPaid: '', paymentMode: 'CASH', paymentDate: TODAY,
+    amountPaid: '', paymentMode: STATUSES.CASH, paymentDate: getTodayDate(),
     referenceNo: '', discount: '', discountReason: '', lateFine: '', remarks: '',
   });
   const [loading, setLoading] = useState(false);
@@ -306,14 +294,14 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
   const [studentSearch, setStudentSearch] = useState('');
   const [activeStudent, setActiveStudent] = useState(null);
 
-  const balanceDue             = Number(activeStudent?.balance) || 0;
-  const isFullyPaid            = activeStudent !== null && balanceDue <= 0;
-  const amountNum              = parseFloat(form.amountPaid)  || 0;
-  const discountNum            = parseFloat(form.discount)    || 0;
-  const lateFineNum            = parseFloat(form.lateFine)    || 0;
-  const netTotal               = amountNum + lateFineNum - discountNum;
-  const amountExceedsBalance   = amountNum > balanceDue && balanceDue > 0;
-  const discountExceedsAmount  = discountNum > amountNum;
+  const balanceDue = Number(activeStudent?.balance) || 0;
+  const isFullyPaid = activeStudent !== null && balanceDue <= 0;
+  const amountNum = parseFloat(form.amountPaid) || 0;
+  const discountNum = parseFloat(form.discount) || 0;
+  const lateFineNum = parseFloat(form.lateFine) || 0;
+  const netTotal = amountNum + lateFineNum - discountNum;
+  const amountExceedsBalance = amountNum > balanceDue && balanceDue > 0;
+  const discountExceedsAmount = discountNum > amountNum;
 
   useEffect(() => {
     if (!open) return;
@@ -326,10 +314,10 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
         periodOptions.find((p) => p.label?.trim().toLowerCase() === initialStudent.period?.trim().toLowerCase()) ||
         periodOptions[0];
       setSelectedPeriodId(matched ? String(matched.value) : '');
-      setForm({ amountPaid: initialStudent.balance > 0 ? initialStudent.balance?.toString() : '', paymentMode: 'CASH', paymentDate: TODAY, referenceNo: '', discount: '', discountReason: '', lateFine: '', remarks: '' });
+      setForm({ amountPaid: initialStudent.balance > 0 ? initialStudent.balance?.toString() : '', paymentMode: STATUSES.CASH, paymentDate: getTodayDate(), referenceNo: '', discount: '', discountReason: '', lateFine: '', remarks: '' });
     } else {
       setActiveStudent(null); setSelectedPeriodId('');
-      setForm({ amountPaid: '', paymentMode: 'CASH', paymentDate: TODAY, referenceNo: '', discount: '', discountReason: '', lateFine: '', remarks: '' });
+      setForm({ amountPaid: '', paymentMode: STATUSES.CASH, paymentDate: getTodayDate(), referenceNo: '', discount: '', discountReason: '', lateFine: '', remarks: '' });
     }
   }, [open, initialStudent, periodOptions]);
 
@@ -363,8 +351,7 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
 
   if (!open) return null;
 
-  const isOverdue = activeStudent?.status === 'OVERDUE';
-  const MODES = [['CASH', '💵', 'Cash'], ['ONLINE', '🌐', 'Online'], ['CHEQUE', '📝', 'Cheque'], ['DD', '🏦', 'DD']];
+  const isOverdue = activeStudent?.status === STATUSES.OVERDUE;
   const filteredStudents = students.filter((s) => {
     const q = studentSearch.toLowerCase();
     const name = `${s.firstName || ''} ${s.lastName || ''}`.toLowerCase();
@@ -382,7 +369,7 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
       class: s.className || s.class || classObj?.name || '', feeStructureId: resolvedFeeStructureId,
       feePeriodId: selectedPeriodId, balance: studentBalance, paidAmount: s.paidAmount || 0,
       totalFee: s.totalFee || 0, dueDate: s.dueDate, daysLate: s.overdueDays || 0,
-      status: (s.overdueDays > 0 && studentBalance > 0) ? 'OVERDUE' : (s.paidAmount > 0 && studentBalance > 0) ? 'PARTIAL' : studentBalance <= 0 ? 'PAID' : 'PENDING',
+      status: (s.overdueDays > 0 && studentBalance > 0) ? STATUSES.OVERDUE : (s.paidAmount > 0 && studentBalance > 0) ? STATUSES.PARTIAL : studentBalance <= 0 ? STATUSES.PAID : STATUSES.PENDING,
       parentName: s.parentName, parentPhone: s.parentPhone,
     });
     if (studentBalance <= 0) {
@@ -394,13 +381,13 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
   };
 
   const handleSubmit = async () => {
-    if (!activeStudent)                            { toast.warning('No Student Selected', 'Please select a student to continue.'); return; }
-    if (isFullyPaid)                               { toast.info('No Balance Due', `${activeStudent.studentName} has already paid all fees.`); return; }
-    if (!form.amountPaid || amountNum <= 0)        { toast.warning('Invalid Amount', 'Please enter a valid amount to collect.'); return; }
-    if (amountExceedsBalance)                      { toast.warning('Amount Too High', `Amount cannot exceed ${fmt(balanceDue)}.`); return; }
-    if (discountExceedsAmount)                     { toast.warning('Discount Too High', 'Discount cannot exceed the amount being collected.'); return; }
-    if (!selectedPeriodId)                         { toast.warning('No Period Selected', 'Please select a fee period.'); return; }
-    if (!activeStudent.feeStructureId)             { toast.error('Fee Structure Missing', 'No fee structure found for this class and period.'); return; }
+    if (!activeStudent) { toast.warning('No Student Selected', FEE_COLLECTION_STRINGS.MSG_SELECT_STUDENT); return; }
+    if (isFullyPaid) { toast.info('No Balance Due', `${activeStudent.studentName} has already paid all fees.`); return; }
+    if (!form.amountPaid || amountNum <= 0) { toast.warning('Invalid Amount', 'Please enter a valid amount to collect.'); return; }
+    if (amountExceedsBalance) { toast.warning('Amount Too High', `Amount cannot exceed ${fmt(balanceDue)}.`); return; }
+    if (discountExceedsAmount) { toast.warning('Discount Too High', 'Discount cannot exceed the amount being collected.'); return; }
+    if (!selectedPeriodId) { toast.warning('No Period Selected', 'Please select a fee period.'); return; }
+    if (!activeStudent.feeStructureId) { toast.error('Fee Structure Missing', 'No fee structure found for this class and period.'); return; }
     try {
       setLoading(true);
       const res = await createFeeCollection({
@@ -419,18 +406,18 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
   const submitDisabled = loading || !activeStudent || isFullyPaid || !form.amountPaid || amountNum <= 0 || amountExceedsBalance || discountExceedsAmount;
 
   return (
-    <Modal open={open} onClose={onClose} title="Collect Fee Payment" subtitle="Record a student fee payment and generate receipt" wide
+    <Modal open={open} onClose={onClose} title={FEE_COLLECTION_STRINGS.MODAL_SINGLE_TITLE} subtitle={FEE_COLLECTION_STRINGS.MODAL_SINGLE_SUBTITLE} wide
       footer={
         <>
-          <Btn variant="secondary" onClick={onClose}>Cancel</Btn>
+          <Btn variant="secondary" onClick={onClose}>{FEE_COLLECTION_STRINGS.BTN_CANCEL}</Btn>
           <div className="relative group">
             <Btn variant="success" onClick={handleSubmit} disabled={submitDisabled}>
               {loading && <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />}
-              {loading ? 'Recording…' : '✓ Record & Generate Receipt'}
+              {loading ? 'Recording…' : FEE_COLLECTION_STRINGS.BTN_RECORD}
             </Btn>
             {activeStudent && isFullyPaid && (
               <div className="absolute bottom-full right-0 mb-2 px-3 py-1.5 bg-gray-800 text-white text-xs rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                ✓ Fees fully paid — no balance due
+                ✓ {FEE_COLLECTION_STRINGS.MSG_PAID}
               </div>
             )}
           </div>
@@ -440,7 +427,7 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
         {/* LEFT */}
         <div className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1.5">Fee Period <span className="text-red-500">*</span></label>
+            <label className="block text-xs font-semibold text-gray-700 mb-1.5">{FEE_COLLECTION_STRINGS.LBL_PERIOD} <span className="text-red-500">*</span></label>
             <select value={selectedPeriodId} onChange={(e) => setSelectedPeriodId(e.target.value)}
               className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all bg-white">
               <option value="">-- Select fee period --</option>
@@ -450,12 +437,12 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
           {selectedPeriodId && (
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                Class <span className="text-red-500">*</span>
+                {FEE_COLLECTION_STRINGS.LBL_CLASS} <span className="text-red-500">*</span>
                 {classesLoading && <span className="text-gray-400 font-normal ml-1">(loading…)</span>}
               </label>
               {!classesLoading && periodClasses.length === 0 ? (
                 <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 px-3 py-2 rounded-lg">
-                  No classes linked to this period. Add a fee structure first.
+                  {FEE_COLLECTION_STRINGS.MSG_NO_CLASS}
                 </div>
               ) : (
                 <div className="flex flex-wrap gap-2 p-3 border border-gray-200 rounded-lg bg-gray-50/50 max-h-32 overflow-y-auto">
@@ -464,11 +451,10 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
                     : periodClasses.map((c) => (
                       <button key={c.id} type="button"
                         onClick={() => { setSelectedClassId(String(c.id)); setStudentSearch(''); setActiveStudent(null); }}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${
-                          selectedClassId === String(c.id)
-                            ? 'bg-[#1E3A5F] text-white border-[#1E3A5F]'
-                            : 'bg-white text-gray-700 border-gray-200 hover:border-[#1E3A5F]/50 hover:text-[#1E3A5F]'
-                        }`}>
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${selectedClassId === String(c.id)
+                          ? 'bg-[#1E3A5F] text-white border-[#1E3A5F]'
+                          : 'bg-white text-gray-700 border-gray-200 hover:border-[#1E3A5F]/50 hover:text-[#1E3A5F]'
+                          }`}>
                         {c.name}
                       </button>
                     ))
@@ -480,7 +466,7 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
           {selectedClassId && (
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                Student <span className="text-red-500">*</span>
+                {FEE_COLLECTION_STRINGS.LBL_STUDENT} <span className="text-red-500">*</span>
                 {studentsLoading && <span className="text-gray-400 font-normal ml-1">(loading…)</span>}
               </label>
               <div className="relative mb-2">
@@ -500,15 +486,14 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
                     {studentSearch ? 'No students match your search' : 'No students found in this class'}
                   </div>
                 ) : filteredStudents.map((s) => {
-                  const fullName   = `${s.firstName || ''} ${s.lastName || ''}`.trim();
+                  const fullName = `${s.firstName || ''} ${s.lastName || ''}`.trim();
                   const isSelected = activeStudent?.studentId === (s.id || s.studentId);
-                  const sBalance   = s.balanceDue ?? s.balance ?? 0;
-                  const isPaid     = sBalance <= 0;
+                  const sBalance = s.balanceDue ?? s.balance ?? 0;
+                  const isPaid = sBalance <= 0;
                   return (
                     <div key={s.id || s.studentId} onClick={() => selectStudent(s)}
-                      className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-colors border-b border-gray-50 last:border-0 ${
-                        isSelected ? 'bg-blue-50 border-l-4 border-l-[#1E3A5F]' : isPaid ? 'bg-emerald-50/50 hover:bg-emerald-50' : 'hover:bg-gray-50'
-                      }`}>
+                      className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-colors border-b border-gray-50 last:border-0 ${isSelected ? 'bg-blue-50 border-l-4 border-l-[#1E3A5F]' : isPaid ? 'bg-emerald-50/50 hover:bg-emerald-50' : 'hover:bg-gray-50'
+                        }`}>
                       <Av name={fullName} size="sm" />
                       <div className="flex-1 min-w-0">
                         <div className="font-semibold text-sm text-gray-900 truncate">{fullName}</div>
@@ -560,7 +545,7 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
               <CheckCircle size={15} className="text-emerald-600 mt-0.5 flex-shrink-0" />
               <div>
                 <div className="text-sm font-bold text-emerald-800">No payment required</div>
-                <div className="text-[11px] text-emerald-700 mt-0.5">This student has no outstanding balance.</div>
+                <div className="text-[11px] text-emerald-700 mt-0.5">{FEE_COLLECTION_STRINGS.MSG_PAID}</div>
               </div>
             </div>
           )}
@@ -572,12 +557,12 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
             <div className="flex items-start gap-2 bg-blue-50 border border-blue-100 rounded-xl px-3 py-2">
               <Info size={13} className="text-blue-500 mt-0.5 flex-shrink-0" />
               <div className="text-[11px] text-blue-700">
-                You can collect a <strong>partial amount</strong>. Enter any amount up to {fmt(balanceDue)}.
+                {FEE_COLLECTION_STRINGS.MSG_PARTIAL_INFO} Enter any amount up to {fmt(balanceDue)}.
               </div>
             </div>
           )}
           <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1.5">Amount to Collect <span className="text-red-500">*</span></label>
+            <label className="block text-xs font-semibold text-gray-700 mb-1.5">{FEE_COLLECTION_STRINGS.LBL_AMOUNT} <span className="text-red-500">*</span></label>
             <div className="relative">
               <Inp type="number" value={form.amountPaid}
                 className={`pr-28 ${amountExceedsBalance ? 'border-red-400 bg-red-50' : ''}`}
@@ -602,13 +587,12 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
             )}
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1.5">Payment Mode <span className="text-red-500">*</span></label>
+            <label className="block text-xs font-semibold text-gray-700 mb-1.5">{FEE_COLLECTION_STRINGS.LBL_MODE} <span className="text-red-500">*</span></label>
             <div className="grid grid-cols-4 gap-2">
-              {MODES.map(([mode, icon, label]) => (
+              {PAYMENT_MODES_WITH_ICON.map(([mode, icon, label]) => (
                 <button key={mode} type="button" onClick={() => setForm((p) => ({ ...p, paymentMode: mode }))}
-                  className={`flex flex-col items-center gap-1.5 px-2 py-2.5 rounded-xl border-2 transition-all ${
-                    form.paymentMode === mode ? 'border-[#1E3A5F] bg-blue-50 text-[#1E3A5F]' : 'border-gray-200 bg-white text-gray-600 hover:border-[#1E3A5F]/40'
-                  }`}>
+                  className={`flex flex-col items-center gap-1.5 px-2 py-2.5 rounded-xl border-2 transition-all ${form.paymentMode === mode ? 'border-[#1E3A5F] bg-blue-50 text-[#1E3A5F]' : 'border-gray-200 bg-white text-gray-600 hover:border-[#1E3A5F]/40'
+                    }`}>
                   <span className="text-xl">{icon}</span>
                   <span className="text-[10.5px] font-bold">{label}</span>
                 </button>
@@ -617,16 +601,16 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1.5">Payment Date <span className="text-red-500">*</span></label>
+              <label className="block text-xs font-semibold text-gray-700 mb-1.5">{FEE_COLLECTION_STRINGS.LBL_DATE} <span className="text-red-500">*</span></label>
               <Inp type="date" value={form.paymentDate} onChange={(e) => setForm((p) => ({ ...p, paymentDate: e.target.value }))} />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1.5">Reference No.</label>
+              <label className="block text-xs font-semibold text-gray-700 mb-1.5">{FEE_COLLECTION_STRINGS.LBL_REF}</label>
               <Inp value={form.referenceNo} placeholder="TXN / Cheque no." onChange={(e) => setForm((p) => ({ ...p, referenceNo: e.target.value }))} />
             </div>
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1.5">Discount <span className="text-gray-400 font-normal">(optional)</span></label>
+            <label className="block text-xs font-semibold text-gray-700 mb-1.5">{FEE_COLLECTION_STRINGS.LBL_DISCOUNT} <span className="text-gray-400 font-normal">(optional)</span></label>
             <Inp type="number" value={form.discount} placeholder="Discount amount"
               className={discountExceedsAmount ? 'border-red-400 bg-red-50' : ''}
               onChange={(e) => setForm((p) => ({ ...p, discount: e.target.value }))} />
@@ -643,7 +627,7 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
               <div className="flex items-start gap-2 mb-2">
                 <AlertTriangle size={14} className="text-amber-600 mt-0.5" />
                 <div>
-                  <div className="text-sm font-bold text-amber-800">Past Due — Add Late Fine?</div>
+                  <div className="text-sm font-bold text-amber-800">{FEE_COLLECTION_STRINGS.MSG_OVERDUE_FINE}</div>
                   <div className="text-[11px] text-amber-700 mt-0.5">
                     Due: {fmtDate(activeStudent?.dueDate)} · {activeStudent?.daysLate} day{activeStudent?.daysLate !== 1 ? 's' : ''} overdue
                   </div>
@@ -654,7 +638,7 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
             </div>
           )}
           <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1.5">Remarks</label>
+            <label className="block text-xs font-semibold text-gray-700 mb-1.5">{FEE_COLLECTION_STRINGS.LBL_REMARKS}</label>
             <textarea value={form.remarks} rows={2}
               onChange={(e) => setForm((p) => ({ ...p, remarks: e.target.value }))}
               placeholder="Optional note…"
@@ -662,11 +646,11 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
           </div>
           <div className="flex justify-between items-center bg-[#1E3A5F] rounded-xl px-4 py-3">
             <div>
-              <div className="text-[10px] text-white/50 uppercase tracking-wider">Receipt No.</div>
+              <div className="text-[10px] text-white/50 uppercase tracking-wider">{FEE_COLLECTION_STRINGS.LBL_RECEIPT_NO}</div>
               <div className="text-white font-bold text-sm mt-0.5">Auto-generated</div>
             </div>
             <div className="text-right">
-              <div className="text-[10px] text-white/50 uppercase tracking-wider">Net Total</div>
+              <div className="text-[10px] text-white/50 uppercase tracking-wider">{FEE_COLLECTION_STRINGS.LBL_NET_TOTAL}</div>
               <div className={`font-extrabold text-xl ${netTotal > 0 ? 'text-white' : 'text-white/30'}`}>
                 {netTotal > 0 ? fmt(netTotal) : '—'}
               </div>
@@ -680,8 +664,8 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
 
 // ─── Bulk Collect Modal ───────────────────────────────────────────────────────
 const BulkCollectModal = ({ open, onClose, students, onSuccess }) => {
-  const [commonMode, setCommonMode] = useState('CASH');
-  const [commonDate, setCommonDate] = useState(TODAY);
+  const [commonMode, setCommonMode] = useState(STATUSES.CASH);
+  const [commonDate, setCommonDate] = useState(getTodayDate());
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -692,16 +676,15 @@ const BulkCollectModal = ({ open, onClose, students, onSuccess }) => {
         studentCode: s.studentCode, class: s.class, period: s.period,
         balanceDue: s.balance, feeStructureId: s.feeStructureId,
         collectAmount: s.balance, discount: 0,
-        lateFine: s.status === 'OVERDUE' ? '' : null,
-        daysLate: s.daysLate || 0, paymentMode: 'CASH', paymentDate: TODAY,
+        lateFine: s.status === STATUSES.OVERDUE ? '' : null,
+        daysLate: s.daysLate || 0, paymentMode: STATUSES.CASH, paymentDate: getTodayDate(),
       })));
     }
   }, [open, students]);
 
-  const update     = (id, field, val) => setRows((p) => p.map((r) => r.id === id ? { ...r, [field]: val } : r));
-  const applyAll   = () => setRows((p) => p.map((r) => ({ ...r, paymentMode: commonMode, paymentDate: commonDate })));
+  const update = (id, field, val) => setRows((p) => p.map((r) => r.id === id ? { ...r, [field]: val } : r));
+  const applyAll = () => setRows((p) => p.map((r) => ({ ...r, paymentMode: commonMode, paymentDate: commonDate })));
   const grandTotal = rows.reduce((s, r) => s + (parseFloat(r.collectAmount) || 0), 0);
-  const MODES      = [{ value: 'CASH', label: 'Cash' }, { value: 'ONLINE', label: 'Online' }, { value: 'CHEQUE', label: 'Cheque' }, { value: 'DD', label: 'DD' }];
 
   const handleSubmit = async () => {
     const bad = rows.find((r) => !r.collectAmount || parseFloat(r.collectAmount) <= 0);
@@ -713,18 +696,19 @@ const BulkCollectModal = ({ open, onClose, students, onSuccess }) => {
       const res = await createBulkFeeCollection({ payments: rows.map((r) => ({ studentId: r.studentId, feeStructureId: r.feeStructureId, amountPaid: parseFloat(r.collectAmount), discount: parseFloat(r.discount) || 0, discountReason: null, lateFine: r.lateFine !== null && r.lateFine !== '' ? parseFloat(r.lateFine) : null, paymentMode: r.paymentMode, paymentDate: r.paymentDate, referenceNo: null, remarks: null })) });
       toast.success('Bulk Payment Processed', `${Array.isArray(res) ? res.length : rows.length} receipts generated.`);
       onSuccess(res);
-    } catch (e) { toast.error('Bulk Payment Failed', e.message || 'Could not process bulk payments.');
+    } catch (e) {
+      toast.error('Bulk Payment Failed', e.message || 'Could not process bulk payments.');
     } finally { setLoading(false); }
   };
 
   return (
-    <Modal open={open} onClose={onClose} title={`Bulk Fee Collection`} subtitle={`${students.length} students selected`} wide
+    <Modal open={open} onClose={onClose} title={FEE_COLLECTION_STRINGS.MODAL_BULK_TITLE} subtitle={`${students.length} students selected`} wide
       footer={
         <>
-          <Btn variant="secondary" onClick={onClose}>Cancel</Btn>
+          <Btn variant="secondary" onClick={onClose}>{FEE_COLLECTION_STRINGS.BTN_CANCEL}</Btn>
           <Btn variant="success" onClick={handleSubmit} disabled={loading}>
             {loading && <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />}
-            {loading ? 'Processing…' : `Process ${rows.length} Payments`}
+            {loading ? 'Processing…' : `${FEE_COLLECTION_STRINGS.BTN_PROCESS_BULK} (${rows.length})`}
           </Btn>
         </>
       }>
@@ -733,15 +717,15 @@ const BulkCollectModal = ({ open, onClose, students, onSuccess }) => {
         Payments will be recorded for all {students.length} selected students.
       </div>
       <div className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 mb-4 flex items-end gap-4">
-        <div><label className="block text-xs font-semibold text-gray-700 mb-1.5">Common Payment Mode</label><Sel value={commonMode} onChange={setCommonMode} options={MODES} className="w-32" /></div>
+        <div><label className="block text-xs font-semibold text-gray-700 mb-1.5">Common Payment Mode</label><Sel value={commonMode} onChange={setCommonMode} options={PAYMENT_MODE_OPTIONS} className="w-32" /></div>
         <div><label className="block text-xs font-semibold text-gray-700 mb-1.5">Payment Date</label><Inp type="date" value={commonDate} onChange={(e) => setCommonDate(e.target.value)} className="w-40" /></div>
-        <Btn variant="ghost" size="sm" onClick={applyAll}>Apply to All Rows</Btn>
+        <Btn variant="ghost" size="sm" onClick={applyAll}>{FEE_COLLECTION_STRINGS.BTN_APPLY_ALL}</Btn>
       </div>
       <div className="overflow-x-auto rounded-xl border border-gray-200">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-200">
-              {['Student', 'Class', 'Period', 'Balance Due', 'Collect Amount', 'Discount', 'Late Fine', 'Mode'].map((h) => (
+              {FEE_COLLECTION_STRINGS.BULK_TABLE_HEADERS.map((h) => (
                 <th key={h} className="px-3 py-2.5 text-left text-[10.5px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
               ))}
             </tr>
@@ -756,7 +740,7 @@ const BulkCollectModal = ({ open, onClose, students, onSuccess }) => {
                 <td className="px-3 py-2.5"><input type="number" value={row.collectAmount} onChange={(e) => update(row.id, 'collectAmount', e.target.value)} className="w-24 px-2 py-1 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-blue-400" /></td>
                 <td className="px-3 py-2.5"><input type="number" value={row.discount} placeholder="0" onChange={(e) => update(row.id, 'discount', e.target.value)} className="w-20 px-2 py-1 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-blue-400" /></td>
                 <td className="px-3 py-2.5">{row.lateFine !== null ? <input type="number" value={row.lateFine} placeholder="Fine" onChange={(e) => update(row.id, 'lateFine', e.target.value)} className="w-20 px-2 py-1 text-sm border border-amber-200 rounded-lg bg-amber-50" /> : <span className="text-xs text-gray-300">N/A</span>}</td>
-                <td className="px-3 py-2.5"><select value={row.paymentMode} onChange={(e) => update(row.id, 'paymentMode', e.target.value)} className="w-24 px-2 py-1 text-sm border border-gray-200 rounded-lg">{MODES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</select></td>
+                <td className="px-3 py-2.5"><select value={row.paymentMode} onChange={(e) => update(row.id, 'paymentMode', e.target.value)} className="w-24 px-2 py-1 text-sm border border-gray-200 rounded-lg">{PAYMENT_MODE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</select></td>
               </tr>
             ))}
           </tbody>
@@ -773,11 +757,11 @@ const BulkCollectModal = ({ open, onClose, students, onSuccess }) => {
 // ─── Stat Card ────────────────────────────────────────────────────────────────
 const StatCard = ({ title, value, subtitle, type, icon: Icon }) => {
   const config = {
-    total:    { accent: 'from-[#1E3A5F] to-[#2563EB]', text: 'text-[#1E3A5F]', bg: 'bg-blue-50' },
-    paid:     { accent: 'from-emerald-500 to-teal-500', text: 'text-emerald-700', bg: 'bg-emerald-50' },
-    partial:  { accent: 'from-amber-400 to-orange-400', text: 'text-amber-700',   bg: 'bg-amber-50'   },
-    overdue:  { accent: 'from-red-500 to-rose-500',     text: 'text-red-700',     bg: 'bg-red-50'     },
-    discount: { accent: 'from-gray-400 to-slate-500',   text: 'text-gray-700',    bg: 'bg-gray-50'    },
+    total: { accent: 'from-[#1E3A5F] to-[#2563EB]', text: 'text-[#1E3A5F]', bg: 'bg-blue-50' },
+    paid: { accent: 'from-emerald-500 to-teal-500', text: 'text-emerald-700', bg: 'bg-emerald-50' },
+    partial: { accent: 'from-amber-400 to-orange-400', text: 'text-amber-700', bg: 'bg-amber-50' },
+    overdue: { accent: 'from-red-500 to-rose-500', text: 'text-red-700', bg: 'bg-red-50' },
+    discount: { accent: 'from-gray-400 to-slate-500', text: 'text-gray-700', bg: 'bg-gray-50' },
   }[type] || { accent: 'from-gray-400 to-gray-500', text: 'text-gray-700', bg: 'bg-gray-50' };
 
   return (
@@ -803,22 +787,22 @@ const StatCard = ({ title, value, subtitle, type, icon: Icon }) => {
 const Overview = ({ onNavigate }) => {
   const navigate = useNavigate();
   const { currentAcademicYear } = useContext(UserContext);
-  const academicYearId    = currentAcademicYear?.id;
+  const academicYearId = currentAcademicYear?.id;
   const academicYearLabel = currentAcademicYear?.label;
 
   // ── Separate state per API ──────────────────────────────────────────────────
-  const [stats,          setStats]          = useState(null);   // getFeeDashboardStats
-  const [activePeriods,  setActivePeriods]  = useState([]);     // getActivePeriods
-  const [classSummary,   setClassSummary]   = useState([]);     // getClassSummary
-  const [overdueAlerts,  setOverdueAlerts]  = useState([]);     // getOverdueAlerts
+  const [stats, setStats] = useState(null);   // getFeeDashboardStats
+  const [activePeriods, setActivePeriods] = useState([]);     // getActivePeriods
+  const [classSummary, setClassSummary] = useState([]);     // getClassSummary
+  const [overdueAlerts, setOverdueAlerts] = useState([]);     // getOverdueAlerts
   const [recentPayments, setRecentPayments] = useState([]);     // getRecentPayments
 
   const [selectedPeriodId, setSelectedPeriodId] = useState(null);
-  const [periodOptions,    setPeriodOptions]    = useState([]);
-  const [loading,          setLoading]          = useState(false);
+  const [periodOptions, setPeriodOptions] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   const [collectModal, setCollectModal] = useState({ open: false, student: null });
-  const [bulkModal,    setBulkModal]    = useState({ open: false, students: [] });
+  const [bulkModal, setBulkModal] = useState({ open: false, students: [] });
   const [receiptModal, setReceiptModal] = useState({ open: false, receipt: null });
 
   // ── Load everything that only needs academicYearId ─────────────────────────
@@ -849,7 +833,7 @@ const Overview = ({ onNavigate }) => {
       setOverdueAlerts(Array.isArray(alertsData) ? alertsData : []);
       setRecentPayments(Array.isArray(paymentsData) ? paymentsData : []);
     } catch {
-      toast.error('Load Failed', 'Could not fetch fee data. Please refresh.');
+      toast.error('Load Failed', OVERVIEW_STRINGS.TOAST_LOAD_FAILED);
     } finally {
       setLoading(false);
     }
@@ -893,7 +877,7 @@ const Overview = ({ onNavigate }) => {
   if (!academicYearId) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-gray-400 text-sm">⏳ Waiting for academic year data…</div>
+        <div className="text-gray-400 text-sm">{OVERVIEW_STRINGS.MSG_WAITING}</div>
       </div>
     );
   }
@@ -905,61 +889,61 @@ const Overview = ({ onNavigate }) => {
       {/* ── Page header ─────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">Fee Dashboard</h1>
+          <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">{OVERVIEW_STRINGS.HEADER_TITLE}</h1>
           <p className="text-sm text-gray-400 mt-0.5">
             Academic Year {academicYearLabel} · {new Date().toLocaleString('en-IN', { month: 'long', year: 'numeric' })}
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <button className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-            <Download size={14} /> Export
-          </button>
-          <button onClick={() => setCollectModal({ open: true, student: null })}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-[#2563EB] rounded-lg hover:bg-blue-700 transition-colors shadow-sm">
-            <Plus size={15} /> Collect Fee
-          </button>
+          {/*<button className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">*/}
+          {/*  <Download size={14} /> {OVERVIEW_STRINGS.BTN_EXPORT}*/}
+          {/*</button>*/}
+          {/*<button onClick={() => setCollectModal({ open: true, student: null })}*/}
+          {/*  className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-[#2563EB] rounded-lg hover:bg-blue-700 transition-colors shadow-sm">*/}
+          {/*  <Plus size={15} /> {OVERVIEW_STRINGS.BTN_COLLECT}*/}
+          {/*</button>*/}
         </div>
       </div>
 
       {loading && (
         <div className="flex items-center gap-2 text-xs text-gray-400">
           <span className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-          Loading data…
+          {OVERVIEW_STRINGS.MSG_LOADING}
         </div>
       )}
 
       {/* ── Stat cards — values directly from getFeeDashboardStats ──────────── */}
       <div className="grid grid-cols-5 gap-4">
         <StatCard
-          title="Total Billed"
+          title={OVERVIEW_STRINGS.STAT_BILLED}
           value={fmtCompact(stats?.totalBilled ?? 0)}
           subtitle={`${stats?.totalStudents ?? 0} students`}
           type="total"
           icon={IndianRupee}
         />
         <StatCard
-          title="Collected"
+          title={OVERVIEW_STRINGS.STAT_COLLECTED}
           value={fmtCompact(stats?.totalCollected ?? 0)}
           subtitle={`${stats?.collectionRate != null ? Number(stats.collectionRate).toFixed(1) : '—'}% collection rate`}
           type="paid"
           icon={TrendingUp}
         />
         <StatCard
-          title="Partial / Pending"
+          title={OVERVIEW_STRINGS.STAT_PARTIAL}
           value={fmtCompact(stats?.totalPartialOrPending ?? 0)}
           subtitle={`${stats?.partialStudentCount ?? 0} students with balance`}
           type="partial"
           icon={Clock}
         />
         <StatCard
-          title="Overdue"
+          title={OVERVIEW_STRINGS.STAT_OVERDUE}
           value={fmtCompact(stats?.totalOverdue ?? 0)}
           subtitle={`${stats?.overdueStudentCount ?? 0} students past due date`}
           type="overdue"
           icon={AlertCircle}
         />
         <StatCard
-          title="Discounts Given"
+          title={OVERVIEW_STRINGS.STAT_DISCOUNT}
           value={fmtCompact(stats?.totalDiscounts ?? 0)}
           subtitle="Total discount awarded"
           type="discount"
@@ -975,7 +959,7 @@ const Overview = ({ onNavigate }) => {
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
             <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2">
               <span className="w-1 h-4 rounded-full bg-[#2563EB] inline-block" />
-              Collection by Class
+              {OVERVIEW_STRINGS.SECTION_CLASS_COLLECTION}
             </h3>
             {/* Period selector — switches class summary */}
             <select
@@ -991,7 +975,7 @@ const Overview = ({ onNavigate }) => {
             <table className="w-full">
               <thead>
                 <tr className="bg-gray-50/80 border-b border-gray-100">
-                  {['Class', 'Students', 'Billed', 'Collected', 'Balance', 'Progress', 'Status'].map((h) => (
+                  {OVERVIEW_STRINGS.CLASS_SUMMARY_HEADERS.map((h) => (
                     <th key={h} className="px-4 py-3 text-left text-[10.5px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -1015,7 +999,7 @@ const Overview = ({ onNavigate }) => {
                     </tr>
                   );
                 }) : (
-                  <tr><td colSpan={7} className="text-center py-12 text-sm text-gray-400">No class data for this period</td></tr>
+                  <tr><td colSpan={7} className="text-center py-12 text-sm text-gray-400">{OVERVIEW_STRINGS.MSG_NO_CLASS_DATA}</td></tr>
                 )}
               </tbody>
             </table>
@@ -1027,11 +1011,11 @@ const Overview = ({ onNavigate }) => {
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
             <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2">
               <span className="w-1 h-4 rounded-full bg-[#2563EB] inline-block" />
-              Recent Collections
+              {OVERVIEW_STRINGS.SECTION_RECENT_PAYMENTS}
             </h3>
             <button onClick={() => onNavigate && onNavigate('collections')}
               className="text-xs text-[#2563EB] font-semibold flex items-center gap-1 hover:underline">
-              View all <ArrowRight size={11} />
+              {OVERVIEW_STRINGS.BTN_VIEW_ALL} <ArrowRight size={11} />
             </button>
           </div>
           {recentPayments.length > 0 ? recentPayments.map((item, i, arr) => (
@@ -1048,7 +1032,7 @@ const Overview = ({ onNavigate }) => {
               </div>
             </div>
           )) : (
-            <div className="text-center py-12 text-sm text-gray-400">No recent collections</div>
+            <div className="text-center py-12 text-sm text-gray-400">{OVERVIEW_STRINGS.MSG_NO_RECENT}</div>
           )}
         </div>
       </div>
@@ -1059,7 +1043,7 @@ const Overview = ({ onNavigate }) => {
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
             <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2">
               <span className="w-1 h-4 rounded-full bg-red-500 inline-block" />
-              Overdue Alerts
+              {OVERVIEW_STRINGS.SECTION_OVERDUE_ALERTS}
               <span className="ml-1 px-2 py-0.5 bg-red-50 text-red-600 text-[11px] font-bold rounded-full border border-red-100">{overdueAlerts.length}</span>
             </h3>
           </div>
@@ -1067,7 +1051,7 @@ const Overview = ({ onNavigate }) => {
             <table className="w-full">
               <thead>
                 <tr className="bg-gray-50/80 border-b border-gray-100">
-                  {['Student', 'Class', 'Period', 'Total Fee', 'Paid', 'Balance Due', 'Due Date', 'Overdue By'].map((h) => (
+                  {OVERVIEW_STRINGS.OVERDUE_ALERTS_HEADERS.map((h) => (
                     <th key={h} className="px-4 py-3 text-left text-[10.5px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -1077,7 +1061,7 @@ const Overview = ({ onNavigate }) => {
                   <tr key={`${alert.studentId}-${alert.feeStructureId}-${i}`} className="hover:bg-red-50/30 transition-colors">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
-                        <Av name={alert.studentName} status="OVERDUE" size="sm" />
+                        <Av name={alert.studentName} status={STATUSES.OVERDUE} size="sm" />
                         <div>
                           <div className="font-semibold text-sm text-gray-900">{alert.studentName}</div>
                           <div className="text-[11px] text-gray-400">{alert.admissionNumber}</div>
@@ -1108,12 +1092,12 @@ const Overview = ({ onNavigate }) => {
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2">
             <span className="w-1 h-4 rounded-full bg-[#2563EB] inline-block" />
-            Active Fee Periods
+            {OVERVIEW_STRINGS.SECTION_ACTIVE_PERIODS}
             <span className="ml-1 px-2 py-0.5 bg-blue-50 text-blue-600 text-[11px] font-bold rounded-full border border-blue-100">{activePeriods.length}</span>
           </h3>
-          <button onClick={() => navigate('/feemanagement/config')}
+          <button onClick={() => navigate('/feeManagement/config')}
             className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-[#1E3A5F] border border-blue-200 rounded-lg bg-blue-50 hover:bg-blue-100 transition-colors">
-            Manage Periods <ArrowRight size={11} />
+            {OVERVIEW_STRINGS.BTN_MANAGE_PERIODS} <ArrowRight size={11} />
           </button>
         </div>
         <div className="p-5">
@@ -1159,7 +1143,7 @@ const Overview = ({ onNavigate }) => {
               })}
             </div>
           ) : (
-            <div className="text-center py-10 text-sm text-gray-400">No active fee periods found</div>
+            <div className="text-center py-10 text-sm text-gray-400">{OVERVIEW_STRINGS.MSG_NO_ACTIVE_PERIODS}</div>
           )}
         </div>
       </div>

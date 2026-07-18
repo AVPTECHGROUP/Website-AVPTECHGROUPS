@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
-import { getAvailableTeachersForSlot } from '../../../Api/ScheduleApi';
+import { getAvailableTeachersForSlot } from '../../../Api/Academics/ScheduleApi';
+import { TIMETABLE_CONSTS }  from '../../../Constants/StringConstants/TimetableConstants';
 
 const normalizeTeacher = (t) => ({
     id: t.teacherId,
@@ -80,7 +81,7 @@ export default function AssignTeacherModal({ day, period, slot, timetableId, onC
 
             setTeachers({ bestMatch, others, busy });
         } catch (err) {
-            console.error('Teacher load failed:', err);
+            console.error(TIMETABLE_CONSTS.ASSIGN_TEACHER.ERR_LOAD_FAIL, err);
             setTeachers({ bestMatch: [], others: [], busy: [] });
         } finally {
             setLoading(false);
@@ -106,7 +107,7 @@ export default function AssignTeacherModal({ day, period, slot, timetableId, onC
                 {/* Header */}
                 <div className="flex items-center justify-between px-5 py-3 sm:py-4 border-b border-gray-100">
                     <div>
-                        <h2 className="text-base font-semibold text-gray-900">Assign Teacher</h2>
+                        <h2 className="text-base font-semibold text-gray-900">{TIMETABLE_CONSTS.ASSIGN_TEACHER.TITLE}</h2>
                         <p className="text-xs text-gray-400 mt-0.5">{day} · {period?.label}</p>
                     </div>
                     <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 transition">
@@ -125,7 +126,7 @@ export default function AssignTeacherModal({ day, period, slot, timetableId, onC
                     {/* Currently Assigned */}
                     {slot?.teacher?.name && (
                         <div>
-                            <p className="text-xs font-semibold text-gray-400 tracking-widest mb-2">CURRENTLY ASSIGNED</p>
+                            <p className="text-xs font-semibold text-gray-400 tracking-widest mb-2">{TIMETABLE_CONSTS.ASSIGN_TEACHER.LBL_CURR_ASSIGNED}</p>
                             <div className="flex items-center gap-3 bg-green-50 border border-green-200 rounded-lg px-3 py-2.5">
                                 <span className="w-8 h-8 rounded-full bg-green-600 text-white text-sm font-bold flex items-center justify-center shrink-0">
                                     {slot.teacher.name?.split(' ').map(w => w[0]).join('') || '?'}
@@ -140,7 +141,7 @@ export default function AssignTeacherModal({ day, period, slot, timetableId, onC
 
                     {/* Teacher list */}
                     <div>
-                        <p className="text-xs font-semibold text-gray-400 tracking-widest mb-2">SELECT TEACHER</p>
+                        <p className="text-xs font-semibold text-gray-400 tracking-widest mb-2">{TIMETABLE_CONSTS.ASSIGN_TEACHER.LBL_SEL_TEACHER}</p>
 
                         <div className="border border-gray-200 rounded-lg overflow-hidden max-h-52 sm:max-h-64 overflow-y-auto divide-y divide-gray-100">
 
@@ -149,18 +150,18 @@ export default function AssignTeacherModal({ day, period, slot, timetableId, onC
                                     checked={!selectedTeacherId}
                                     onChange={() => setSelectedTeacherId(null)}
                                     className="accent-[#1e293b]" />
-                                <span className="text-sm text-gray-400 italic">— Unassigned —</span>
+                                <span className="text-sm text-gray-400 italic">{TIMETABLE_CONSTS.ASSIGN_TEACHER.LBL_UNASSIGNED}</span>
                             </label>
 
                             {loading ? (
-                                <p className="text-sm text-gray-400 py-4 text-center">Loading teachers…</p>
+                                <p className="text-sm text-gray-400 py-4 text-center">{TIMETABLE_CONSTS.ASSIGN_TEACHER.LOADING_TEACHERS}</p>
                             ) : !hasAnyTeacher ? (
-                                <p className="text-sm text-gray-400 py-4 text-center italic">No teachers found</p>
+                                <p className="text-sm text-gray-400 py-4 text-center italic">{TIMETABLE_CONSTS.ASSIGN_TEACHER.NO_TEACHERS}</p>
                             ) : (
                                 <>
                                     {teachers.bestMatch.length > 0 && (
                                         <div>
-                                            <p className="text-xs font-semibold text-gray-400 px-3 pt-2 pb-1 uppercase tracking-wide">⭐ Best Match</p>
+                                            <p className="text-xs font-semibold text-gray-400 px-3 pt-2 pb-1 uppercase tracking-wide">{TIMETABLE_CONSTS.ASSIGN_TEACHER.LBL_BEST_MATCH}</p>
                                             {teachers.bestMatch.map(t => (
                                                 <TeacherRow key={t.id} t={t} selectedTeacherId={selectedTeacherId}
                                                     onSelect={setSelectedTeacherId} colorClass="bg-green-500" />
@@ -169,7 +170,7 @@ export default function AssignTeacherModal({ day, period, slot, timetableId, onC
                                     )}
                                     {teachers.others.length > 0 && (
                                         <div>
-                                            <p className="text-xs font-semibold text-gray-400 px-3 pt-2 pb-1 uppercase tracking-wide">Others</p>
+                                            <p className="text-xs font-semibold text-gray-400 px-3 pt-2 pb-1 uppercase tracking-wide">{TIMETABLE_CONSTS.ASSIGN_TEACHER.LBL_OTHERS}</p>
                                             {teachers.others.map(t => (
                                                 <TeacherRow key={t.id} t={t} selectedTeacherId={selectedTeacherId}
                                                     onSelect={setSelectedTeacherId} colorClass="bg-blue-400" />
@@ -178,7 +179,7 @@ export default function AssignTeacherModal({ day, period, slot, timetableId, onC
                                     )}
                                     {teachers.busy.length > 0 && (
                                         <div>
-                                            <p className="text-xs font-semibold text-red-400 px-3 pt-2 pb-1 uppercase tracking-wide">🔴 Busy (Conflict)</p>
+                                            <p className="text-xs font-semibold text-red-400 px-3 pt-2 pb-1 uppercase tracking-wide">{TIMETABLE_CONSTS.ASSIGN_TEACHER.LBL_BUSY}</p>
                                             {teachers.busy.map(t => (
                                                 <TeacherRow key={t.id} t={t} selectedTeacherId={selectedTeacherId}
                                                     onSelect={setSelectedTeacherId} colorClass="bg-red-400" dimmed={true} />
@@ -195,11 +196,11 @@ export default function AssignTeacherModal({ day, period, slot, timetableId, onC
                 <div className="flex justify-end gap-3 px-5 py-4 border-t border-gray-100">
                     <button onClick={onClose}
                         className="flex-1 sm:flex-none px-4 py-2.5 sm:py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 text-center">
-                        Cancel
+                        {TIMETABLE_CONSTS.ASSIGN_TEACHER.BTN_CANCEL}
                     </button>
                     <button onClick={handleAssign} disabled={!selectedTeacherId || saving}
                         className="flex-1 sm:flex-none px-4 py-2.5 sm:py-2 bg-[#1e293b] text-white rounded-lg text-sm font-medium hover:bg-[#334155] disabled:opacity-40 transition text-center">
-                        {saving ? 'Assigning…' : 'Assign Teacher'}
+                        {saving ? TIMETABLE_CONSTS.ASSIGN_TEACHER.BTN_ASSIGNING : TIMETABLE_CONSTS.ASSIGN_TEACHER.BTN_ASSIGN}
                     </button>
                 </div>
             </div>

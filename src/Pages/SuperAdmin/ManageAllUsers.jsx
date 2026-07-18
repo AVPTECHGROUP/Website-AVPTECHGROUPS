@@ -1,4 +1,4 @@
-import { useContext, useEffect, useMemo, useState } from 'react';
+import { useContext, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     ChevronRight,
@@ -18,7 +18,7 @@ import {
     Upload,
 } from 'lucide-react';
 import { toast } from 'react-toastify';
-import { activateUserStatus, allUserFilter, deactivateUserStatus, getAllUserRoles, getUsersStatistics, resetUserPassword } from '../../Api/userManagementAPI';
+import { activateUserStatus, allUserFilter, deactivateUserStatus, getAllUserRoles, getUsersStatistics, resetUserPassword } from '../../Api/StaffManagement/UserManagementAPI';
 import ActionDropDownComp from '../../Components/CommonComp/ActionDropDownComp';
 import CardComponent from '../../Components/CommonComp/CardComponent';
 import CardLoader from '../../Components/CommonComp/CardLoader';
@@ -27,14 +27,16 @@ import { UserContext } from '../../ContextAPI/UserContext';
 import PasswordResetModal from '../../Components/PopupResetPassword/ResetPasswordComponent';
 import TooltipComponent from '../../Components/CommonComp/Tooltip_comp/TooltipComp';
 import ConfirmationModal from '../../Components/CommonComp/ConfirmationModel/ConfirmationModal';
-import { useAuth } from '../../hooks/useAuth';
 import { PERMISSIONS as P } from '../../Constants/Permission';
+import USER_MANAGEMENT_STRINGS from '../../Constants/StringConstants/UserManagemetConstant';
 
 const ManageAllUsers = () => {
+    const strings = USER_MANAGEMENT_STRINGS.MANAGE_USERS;
+    const commonStrings = USER_MANAGEMENT_STRINGS.COMMON;
     const [search, setsearch] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
-    const [statusFilter, setStatusFilter] = useState('All Status');
-    const [roleFilter, setroleFilter] = useState('All Roles');
+    const [statusFilter, setStatusFilter] = useState(strings.FILTERS.ALL_STATUS);
+    const [roleFilter, setroleFilter] = useState(strings.FILTERS.ALL_ROLES);
     const [page, setpage] = useState(1);
     const [rowsPerpage, setrowsPerpage] = useState(10);
     const [statistics, setstatistics] = useState({
@@ -50,12 +52,10 @@ const ManageAllUsers = () => {
     const [roleOptions, setRoleOptions] = useState([]);
     const [sorting, setSorting] = useState('firstName,asc');
     const { user } = useContext(UserContext);
-    const { hasPermission } = useAuth();
     const [isResetOpen, setisResetOpen] = useState(false);
     const [selectedUser, setSelectedUser] = useState(null);
     const [refressStat, setRefressStat] = useState(0);
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
-    const [isExporting, setIsExporting] = useState(false);
 
     function compareAndGetLabel(data, compareValue) {
         const found = data.find(item => item.roleVal === compareValue);
@@ -84,9 +84,6 @@ const ManageAllUsers = () => {
         return () => clearTimeout(timer);
     }, [search]);
 
-    const hasActiveFilters = useMemo(() => (
-        debouncedSearch.trim() !== '' || statusFilter !== 'All Status' || roleFilter !== 'All Roles'
-    ), [debouncedSearch, statusFilter, roleFilter]);
 
     const [isStatLoading, setStatLoading] = useState(false);
     useEffect(() => {
@@ -113,16 +110,16 @@ const ManageAllUsers = () => {
                 const filters = {};
                 if (debouncedSearch.trim()) filters.searchTerm = debouncedSearch.trim();
 
-                if (statusFilter !== 'All Status') {
+                if (statusFilter !== strings.FILTERS.ALL_STATUS) {
                     filters.status = statusFilter.toUpperCase();
                 }
 
-                if (roleFilter !== 'All Roles') filters.role = roleFilter;
+                if (roleFilter !== strings.FILTERS.ALL_ROLES) filters.role = roleFilter;
 
                 const res = await allUserFilter(filters, page - 1, rowsPerpage, sorting);
                 let sys_userArray = res.data || [];
 
-                if (statusFilter !== 'All Status') {
+                if (statusFilter !== strings.FILTERS.ALL_STATUS) {
                     sys_userArray = sys_userArray.filter(
                         u => u.status?.toUpperCase() === statusFilter.toUpperCase()
                     );
@@ -137,12 +134,12 @@ const ManageAllUsers = () => {
                 setsysUsers(sys_userArray.map((sys_user) => ({
                     id: sys_user.id,
                     email: sys_user.email,
-                    name: sys_user.fullName || 'Unknown',
-                    mobile: sys_user.mobile || 'N/A',
+                    name: sys_user.fullName || commonStrings.UNKNOWN,
+                    mobile: sys_user.mobile || commonStrings.N_A,
                     empCode: sys_user.employeeCode,
                     avatar: (sys_user.fullName || 'U')[0].toUpperCase(),
                     image: sys_user.profileImageUrl || sys_user.profileImage || `https://ui-avatars.com/api/?name=${encodeURIComponent(sys_user.fullName)}&background=random`,
-                    role: sys_user.roles || 'N/A',
+                    role: sys_user.roles || commonStrings.N_A,
                     department: sys_user.department,
                     designation: sys_user.designation,
                     status: sys_user.status,
@@ -170,7 +167,7 @@ const ManageAllUsers = () => {
         try {
             return await resetUserPassword(id);
         } catch (error) {
-            toast.error(error.message || 'Reset password failed');
+            toast.error(error.message || strings.MESSAGES.RESET_FAILED);
         }
     };
 
@@ -187,42 +184,85 @@ const ManageAllUsers = () => {
                 return prev.map(u => u.id === id ? { ...u, status: newStatus } : u);
             });
             if (statusFilter !== 'All Status') {
-                set_noUserFound(prev => {
+                set_noUserFound(pev => {
                     const remaining = sysUsers.filter(u => u.id !== id);
                     return remaining.length === 0;
                 });
             }
         } catch (error) {
-            toast.error(error.message || 'Status update failed');
+            toast.error(error.message || strings.MESSAGES.STATUS_FAILED);
         }
     };
 
-    // ── Smart Pagination ────────────────────────────────────────────────────
     const renderPageButtons = () => {
         if (totalPages <= 1) return null;
-        const base = 'min-w-[32px] h-8 px-2 rounded text-sm transition-all font-medium';
+
+        const base =
+            'min-w-[32px] h-8 px-2 rounded text-sm transition-all font-medium';
+
         const active = 'bg-blue-500 text-white';
         const inactive = 'text-gray-600 hover:bg-gray-100';
-        const dots = (key) => (
-            <span key={key} className="min-w-8 h-8 flex items-center justify-center text-gray-400 text-sm select-none">…</span>
-        );
+
         const btn = (num) => (
-            <button key={num} onClick={() => setpage(num)} className={`${base} ${page === num ? active : inactive}`}>
+            <button
+                key={num}
+                onClick={() => setpage(num)}
+                className={`${base} ${page === num ? active : inactive
+                    }`}
+            >
                 {num}
             </button>
         );
-        if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => btn(i + 1));
-        const items = [];
-        items.push(btn(1));
-        const left = page - 1;
-        const right = page + 1;
-        if (left > 2) items.push(dots('dl'));
-        else if (left === 2) items.push(btn(2));
-        for (let i = Math.max(2, left); i <= Math.min(totalPages - 1, right); i++) items.push(btn(i));
-        if (right < totalPages - 1) items.push(dots('dr'));
-        else if (right === totalPages - 1) items.push(btn(totalPages - 1));
-        items.push(btn(totalPages));
-        return items;
+
+        const dots = (key) => (
+            <span
+                key={key}
+                className="min-w-[32px] h-8 flex items-center justify-center text-gray-400 text-sm select-none"
+            >
+                …
+            </span>
+        );
+
+        if (totalPages <= 7) {
+            return Array.from(
+                { length: totalPages },
+                (_, i) => btn(i + 1)
+            );
+        }
+
+        const pages = new Set([
+            1,
+            2,
+            totalPages - 1,
+            totalPages,
+        ]);
+
+        for (
+            let i = Math.max(1, page - 1);
+            i <= Math.min(totalPages, page + 1);
+            i++
+        ) {
+            pages.add(i);
+        }
+
+        const sorted = Array.from(pages).sort(
+            (a, b) => a - b
+        );
+
+        return sorted.reduce((acc, num, idx) => {
+
+            if (
+                idx > 0 &&
+                num - sorted[idx - 1] > 1
+            ) {
+                acc.push(dots(`d${idx}`));
+            }
+
+            acc.push(btn(num));
+
+            return acc;
+
+        }, []);
     };
 
     const PrevBtn = ({ mobile = false }) => (
@@ -249,26 +289,26 @@ const ManageAllUsers = () => {
     // ────────────────────────────────────────────────────────────────────────
 
     const cardsArray = [
-        { IconName: UsersIcon, keyName: "Total Users", val: statistics.totalUsers, iconTxColor: "text-blue-600", iconBgColor: "bg-blue-50" },
-        { IconName: UserCheck2, keyName: "Active Users", val: statistics.activeUsers, iconTxColor: "text-green-600", iconBgColor: "bg-green-50" },
-        { IconName: UserRoundXIcon, keyName: "Inactive Users", val: statistics.inactiveUsers, iconTxColor: "text-red-600", iconBgColor: "bg-red-50" },
+        { IconName: UsersIcon, keyName: strings.CARDS.TOTAL_USERS, val: statistics.totalUsers, iconTxColor: "text-blue-600", iconBgColor: "bg-blue-50" },
+        { IconName: UserCheck2, keyName: strings.CARDS.ACTIVE_USERS, val: statistics.activeUsers, iconTxColor: "text-green-600", iconBgColor: "bg-green-50" },
+        { IconName: UserRoundXIcon, keyName: strings.CARDS.INACTIVE_USERS, val: statistics.inactiveUsers, iconTxColor: "text-red-600", iconBgColor: "bg-red-50" },
     ];
 
     const tabledataItemsStyle = 'px-2 py-2 text-left text-gray-700 text-sm';
 
     const getActionOptions = (sys_user) => {
         const baseOptions = [
-            { value: "viewUser", label: "View", icon: Eye, text: "text-gray-600", bg: "bg-gray-50", hover: "hover:bg-gray-200" },
-            { value: "editUser", label: "Edit", icon: UserPenIcon, text: "text-blue-600", bg: "bg-blue-50", hover: "hover:bg-blue-100" },
+            { value: "viewUser", label: strings.ACTIONS.VIEW, icon: Eye, text: "text-gray-600", bg: "bg-gray-50", hover: "hover:bg-gray-200" },
+            { value: "editUser", label: strings.ACTIONS.EDIT, icon: UserPenIcon, text: "text-blue-600", bg: "bg-blue-50", hover: "hover:bg-blue-100" },
             {
                 value: "toogleStatus",
-                label: sys_user.status === 'ACTIVE' ? 'Deactivate' : 'Activate',
+                label: sys_user.status === 'ACTIVE' ? strings.ACTIONS.DEACTIVATE : strings.ACTIONS.ACTIVATE,
                 icon: Power,
                 text: sys_user.status === 'ACTIVE' ? "text-red-600" : "text-green-600",
                 bg: sys_user.status === 'ACTIVE' ? "bg-red-50" : "bg-green-50",
                 hover: sys_user.status === 'ACTIVE' ? "hover:bg-red-100" : "hover:bg-green-100",
             },
-            { value: "resetPassword", label: "Password Reset", icon: KeyIcon, text: "text-green-600", bg: "bg-green-50", hover: "hover:bg-green-100" },
+            { value: "resetPassword", label: strings.ACTIONS.RESET_PASSWORD, icon: KeyIcon, text: "text-green-600", bg: "bg-green-50", hover: "hover:bg-green-100" },
         ];
 
         return baseOptions.filter(option =>
@@ -307,14 +347,14 @@ const ManageAllUsers = () => {
         return str;
     };
     const getRoleDisplay = (roleVal) => {
-        if (!roleVal || roleVal === 'N/A') return 'N/A';
+        if (!roleVal || roleVal === commonStrings.N_A) return commonStrings.N_A;
         const found = roleOptions.find((r) => r.roleVal === roleVal);
         return found ? found.roleDisplay : roleVal;
     };
 
     const handleExportCSV = () => {
         if (sysUsers.length === 0) {
-            toast.info('No users on this page to export.');
+            toast.info(strings.MESSAGES.EXPORT_INFO);
             return;
         }
 
@@ -331,14 +371,14 @@ const ManageAllUsers = () => {
 
         const dataRows = sysUsers.map((u) =>
             [
-                csvCell(u.name || 'Unknown'),
-                csvCell(u.empCode || 'N/A'),
-                csvCell(u.email || 'N/A'),
-                csvCell(u.mobile || 'N/A'),
+                csvCell(u.name || commonStrings.UNKNOWN),
+                csvCell(u.empCode || commonStrings.N_A),
+                csvCell(u.email || commonStrings.N_A),
+                csvCell(u.mobile || commonStrings.N_A),
                 csvCell(getRoleDisplay(Array.isArray(u.role) ? u.role[0] : u.role)),
-                csvCell(u.department || 'N/A'),
-                csvCell(u.designation || 'N/A'),
-                csvCell(u.status || 'N/A'),
+                csvCell(u.department || commonStrings.N_A),
+                csvCell(u.designation || commonStrings.N_A),
+                csvCell(u.status || commonStrings.N_A),
             ].join(',')
         );
 
@@ -358,7 +398,11 @@ const ManageAllUsers = () => {
         URL.revokeObjectURL(url);
 
         toast.success(
-            `✓ Exported ${sysUsers.length} user${sysUsers.length !== 1 ? 's' : ''} — CSV ${page} of ${totalPages}`
+            strings.MESSAGES.EXPORT_SUCCESS
+                .replace('{count}', sysUsers.length)
+                .replace('{plural}', sysUsers.length !== 1 ? 's' : '')
+                .replace('{page}', page)
+                .replace('{totalPages}', totalPages)
         );
     };
 
@@ -370,8 +414,8 @@ const ManageAllUsers = () => {
                     {/* Page Title */}
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">
-                            <TooltipComponent message="Efficiently manage system roles, permissions and account status." direction='right' color='nocolor'>
-                                Manage All Users
+                            <TooltipComponent message={strings.PAGE_TOOLTIP} direction='right' color='nocolor'>
+                                {strings.PAGE_TITLE}
                             </TooltipComponent>
                         </h2>
                     </div>
@@ -404,7 +448,7 @@ const ManageAllUsers = () => {
                             <input
                                 value={search}
                                 onChange={(e) => { setsearch(e.target.value); setpage(1); }}
-                                placeholder="Search by name, email or ID.."
+                                placeholder={strings.SEARCH_PLACEHOLDER}
                                 className="text-sm font-normal focus:outline-none appearance-none text-gray-600 w-full bg-transparent"
                             />
                         </div>
@@ -416,9 +460,9 @@ const ManageAllUsers = () => {
                                 onChange={(e) => { setStatusFilter(e.target.value); setpage(1); }}
                                 className="flex-1 lg:w-32 px-3 py-2.5 border cursor-pointer border-gray-200 bg-gray-100 rounded-lg focus:outline-none focus:shadow-sm focus:shadow-blue-200 text-sm font-medium text-gray-700"
                             >
-                                <option value="All Status">All Status</option>
-                                <option value="ACTIVE">Active</option>
-                                <option value="INACTIVE">Inactive</option>
+                                <option value={strings.FILTERS.ALL_STATUS}>{strings.FILTERS.ALL_STATUS}</option>
+                                <option value={strings.FILTERS.ACTIVE}>{strings.FILTERS.ACTIVE_LABEL}</option>
+                                <option value={strings.FILTERS.INACTIVE}>{strings.FILTERS.INACTIVE_LABEL}</option>
                             </select>
 
                             <select
@@ -426,7 +470,7 @@ const ManageAllUsers = () => {
                                 onChange={(e) => { setroleFilter(e.target.value); setpage(1); }}
                                 className="flex-1 lg:w-32 cursor-pointer px-3 py-2.5 border border-gray-200 bg-gray-100 rounded-lg focus:outline-none focus:shadow-sm focus:shadow-blue-200 text-sm font-medium text-gray-700"
                             >
-                                <option value={"All Roles"}>All Roles</option>
+                                <option value={strings.FILTERS.ALL_ROLES}>{strings.FILTERS.ALL_ROLES}</option>
                                 {roleOptions.map((item) => (
                                     <option key={item.roleKey} value={item.roleVal}>{item.roleDisplay}</option>
                                 ))}
@@ -439,7 +483,7 @@ const ManageAllUsers = () => {
                                 onClick={() => navigate('/manageUsers/adduser')}
                                 className="flex-1 lg:flex-none flex items-center justify-center px-3 py-2.5 cursor-pointer rounded-lg font-semibold gap-2 transition-all bg-blue-600 text-white text-sm whitespace-nowrap hover:bg-blue-700 active:scale-95 shadow-sm"
                             >
-                                <UserPlusIcon className="w-4 h-4" /> Add User
+                                <UserPlusIcon className="w-4 h-4" /> {strings.ACTIONS.ADD_USER}
                             </button>
 
                             <button
@@ -447,7 +491,7 @@ const ManageAllUsers = () => {
                                 className="flex-1 lg:flex-none flex items-center justify-center gap-2 px-3 py-2.5 cursor-pointer bg-white hover:bg-gray-50 active:scale-95 border border-gray-200 text-gray-700 text-sm font-semibold rounded-lg shadow-sm transition-all whitespace-nowrap"
                             >
                                 <Upload className="w-4 h-4 text-gray-500" />
-                                Export CSV
+                                {strings.ACTIONS.EXPORT_CSV}
                             </button>
                         </div>
 
@@ -459,7 +503,7 @@ const ManageAllUsers = () => {
                             <div className="text-center py-8 col-span-4">
                                 <div className="flex flex-col items-center">
                                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-2"></div>
-                                    <span className="text-gray-600">Loading users ...</span>
+                                    <span className="text-gray-600">{strings.MESSAGES.LOADING_USERS}</span>
                                 </div>
                             </div>
                         ) : error ? (
@@ -467,17 +511,17 @@ const ManageAllUsers = () => {
                                 <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                                     <UserRoundXIcon className="w-6 h-6 text-red-600" />
                                 </div>
-                                <h3 className="text-lg font-bold text-gray-900 mb-2">Error Loading Users</h3>
+                                <h3 className="text-lg font-bold text-gray-900 mb-2">{strings.MESSAGES.ERROR_LOADING}</h3>
                                 <p className="text-gray-600 mb-4">{error}</p>
-                                <button onClick={() => window.location.reload()} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Retry</button>
+                                <button onClick={() => window.location.reload()} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">{commonStrings.RETRY}</button>
                             </div>
                         ) : noUserFound ? (
                             <div className="text-center py-8">
                                 <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                                     <UserSearch className="w-6 h-6 text-blue-600" />
                                 </div>
-                                <h3 className="text-lg font-bold text-gray-900 mb-2">No Users Found</h3>
-                                <p className="text-gray-600 mb-4">There are no users to display.</p>
+                                <h3 className="text-lg font-bold text-gray-900 mb-2">{strings.MESSAGES.NO_USERS_FOUND}</h3>
+                                <p className="text-gray-600 mb-4">{strings.MESSAGES.NO_USERS_DISPLAY}</p>
                             </div>
                         ) : sysUsers.map((sys_user) => (
                             <div key={sys_user.id} className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
@@ -505,9 +549,9 @@ const ManageAllUsers = () => {
                                     </div>
                                 </div>
                                 <div className="space-y-2 text-sm">
-                                    <p><span className="font-medium text-gray-600">Contact:</span><span className="text-gray-800 ml-4">{sys_user.mobile}</span></p>
+                                    <p><span className="font-medium text-gray-600">{commonStrings.CONTACT}</span><span className="text-gray-800 ml-4">{sys_user.mobile}</span></p>
                                     <p>
-                                        <span className="font-medium text-gray-600">Status:</span>
+                                        <span className="font-medium text-gray-600">{commonStrings.STATUS}</span>
                                         <span className={`inline-flex size-fit items-center gap-1 px-3 py-1 ml-6 rounded-sm text-xs font-medium ${sys_user.status === "ACTIVE" ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}>
                                             <span className={`w-1.5 h-1.5 rounded-full ${sys_user.status === "ACTIVE" ? "bg-green-700" : "bg-red-700"}`} />
                                             {sys_user.status}
@@ -529,10 +573,10 @@ const ManageAllUsers = () => {
                             setIsConfirmOpen(false);
                         }}
                         onCancel={() => setIsConfirmOpen(false)}
-                        title="Redirect to Teachers Module"
-                        message="You will be redirected to the Teachers Module to manage this teacher. Do you wish to continue?"
-                        confirmLabel="Yes, Continue"
-                        cancelLabel="Cancel"
+                        title={strings.CONFIRMATION.TITLE}
+                        message={strings.CONFIRMATION.MESSAGE}
+                        confirmLabel={strings.CONFIRMATION.CONFIRM_LABEL}
+                        cancelLabel={strings.CONFIRMATION.CANCEL_LABEL}
                     />
 
                     {/* DESKTOP TABLE */}
@@ -544,24 +588,24 @@ const ManageAllUsers = () => {
                                         <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-11">
                                             <button onClick={() => setSorting(prev => prev === 'firstName,asc' ? 'firstName,desc' : 'firstName,asc')}
                                                 className="flex items-center gap-1 hover:text-gray-700 cursor-pointer uppercase">
-                                                User Name {sorting === 'firstName,desc' ? <ArrowDown size={16} /> : <ArrowUp size={16} />}
+                                                {strings.TABLE_HEADERS.USER_NAME} {sorting === 'firstName,desc' ? <ArrowDown size={16} /> : <ArrowUp size={16} />}
                                             </button>
                                         </th>
                                         <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-50">
                                             <button onClick={() => setSorting(prev => prev === 'employeeCode,asc' ? 'employeeCode,desc' : 'employeeCode,asc')}
                                                 className="flex items-center gap-1 hover:text-gray-700 cursor-pointer uppercase">
-                                                Employee Id {sorting === 'employeeCode,desc' ? <ArrowDown size={16} /> : <ArrowUp size={16} />}
+                                                {strings.TABLE_HEADERS.EMP_ID} {sorting === 'employeeCode,desc' ? <ArrowDown size={16} /> : <ArrowUp size={16} />}
                                             </button>
                                         </th>
                                         <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-50">
                                             <button onClick={() => setSorting(prev => prev === 'email,asc' ? 'email,desc' : 'email,asc')}
                                                 className="flex items-center gap-1 hover:text-gray-700 cursor-pointer uppercase">
-                                                Email {sorting === 'email,desc' ? <ArrowDown size={16} /> : <ArrowUp size={16} />}
+                                                {strings.TABLE_HEADERS.EMAIL} {sorting === 'email,desc' ? <ArrowDown size={16} /> : <ArrowUp size={16} />}
                                             </button>
                                         </th>
-                                        <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-50">Mobile Number</th>
-                                        <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-50">Status</th>
-                                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-50">Actions</th>
+                                        <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-50">{strings.TABLE_HEADERS.MOBILE}</th>
+                                        <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-50">{strings.TABLE_HEADERS.STATUS}</th>
+                                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-50">{strings.TABLE_HEADERS.ACTIONS}</th>
                                     </tr>
                                 </thead>
                                 <tbody className="bg-white divide-y divide-gray-200 font-normal">
@@ -573,9 +617,9 @@ const ManageAllUsers = () => {
                                                 <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                                                     <UserRoundXIcon className="w-6 h-6 text-red-600" />
                                                 </div>
-                                                <h3 className="text-lg font-bold text-gray-900 mb-2">Error Loading Users</h3>
+                                                <h3 className="text-lg font-bold text-gray-900 mb-2">{strings.MESSAGES.ERROR_LOADING}</h3>
                                                 <p className="text-gray-600 mb-4">{error}</p>
-                                                <button onClick={() => window.location.reload()} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Retry</button>
+                                                <button onClick={() => window.location.reload()} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">{commonStrings.RETRY}</button>
                                             </td>
                                         </tr>
                                     ) : noUserFound ? (
@@ -584,7 +628,7 @@ const ManageAllUsers = () => {
                                                 <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-1">
                                                     <UserSearch className="w-6 h-6 text-blue-600" />
                                                 </div>
-                                                <h3 className="text-sm font-bold text-gray-700 mb-2">No Users Found</h3>
+                                                <h3 className="text-sm font-bold text-gray-700 mb-2">{strings.MESSAGES.NO_USERS_FOUND}</h3>
                                             </td>
                                         </tr>
                                     ) : sysUsers.map((sys_user) => (
@@ -635,15 +679,15 @@ const ManageAllUsers = () => {
                         <div className="px-6 py-4 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4 bg-white">
                             <div className="flex flex-col sm:flex-row items-center gap-4">
                                 <span className="text-sm text-gray-500">
-                                    Showing{' '}
+                                    {strings.ACTIONS.SHOWING}{' '}
                                     <span className="font-medium text-gray-700">{totalElements === 0 ? 0 : (page - 1) * rowsPerpage + 1}</span>
-                                    {' '}to{' '}
+                                    {' '}{strings.ACTIONS.TO}{' '}
                                     <span className="font-medium text-gray-700">{Math.min(page * rowsPerpage, totalElements)}</span>
-                                    {' '}of{' '}
+                                    {' '}{strings.ACTIONS.OF}{' '}
                                     <span className="font-medium text-gray-700">{totalElements}</span>
                                 </span>
                                 <div className="flex items-center gap-2">
-                                    <span className="text-sm text-gray-500">Rows per page:</span>
+                                    <span className="text-sm text-gray-500">{strings.ACTIONS.ROWS_PER_PAGE}</span>
                                     <select value={rowsPerpage} onChange={(e) => { setrowsPerpage(Number(e.target.value)); setpage(1); }}
                                         className="px-2.5 py-1 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white">
                                         <option value={10}>10</option>
@@ -664,7 +708,7 @@ const ManageAllUsers = () => {
                     <div className="lg:hidden bg-white rounded-xl border border-gray-200 p-4 mt-4">
                         <div className="flex flex-col gap-3">
                             <div className="text-center text-sm text-gray-500">
-                                Showing{' '}
+                                {strings.ACTIONS.SHOWING}{' '}
                                 <span className="font-medium text-gray-700">{totalElements === 0 ? 0 : (page - 1) * rowsPerpage + 1}</span>
                                 {' '}–{' '}
                                 <span className="font-medium text-gray-700">{Math.min(page * rowsPerpage, totalElements)}</span>
@@ -672,7 +716,7 @@ const ManageAllUsers = () => {
                                 <span className="font-medium text-gray-700">{totalElements}</span>
                             </div>
                             <div className="flex items-center justify-center gap-2">
-                                <span className="text-sm text-gray-500">Rows:</span>
+                                <span className="text-sm text-gray-500">{strings.ACTIONS.ROWS}:</span>
                                 <select value={rowsPerpage} onChange={(e) => { setrowsPerpage(Number(e.target.value)); setpage(1); }}
                                     className="px-2.5 py-1 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white">
                                     <option value={10}>10</option>
@@ -685,7 +729,7 @@ const ManageAllUsers = () => {
                                 {renderPageButtons()}
                                 <NextBtn mobile />
                             </div>
-                            <div className="text-center text-xs text-gray-400">Page {page} of {totalPages}</div>
+                            <div className="text-center text-xs text-gray-400">{strings.ACTIONS.PAGE} {page} {strings.ACTIONS.OF_TOTAL} {totalPages}</div>
                         </div>
                     </div>
 

@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, IndianRupee, User, Camera, X } from 'lucide-react';
-import { getTeacherById, updateTeacher, upsertTeacherSalary } from '../../Api/TeachersAPI';
+import { getTeacherById, updateTeacher, upsertTeacherSalary } from '../../Api/Teachers/TeachersAPI';
 import PersonalDetailsTab from '../../Components/Teacher/EditTabComponents/PersonalDetailsTab';
 import SalaryStructureTab from '../../Components/Teacher/EditTabComponents/SalaryStructureTab';
 import { toast } from 'react-toastify';
+import TEACHER_MODULE_STRINGS from '../../Constants/StringConstants/TeacherConstants';
 
 function EditTeachersDetails() {
+    const strings = TEACHER_MODULE_STRINGS;
     const { id } = useParams();
     const navigate = useNavigate();
     const [teacher, setTeacher] = useState(null);
@@ -111,14 +113,21 @@ function EditTeachersDetails() {
 
     // ── Personal: Save and stay ───────────────────────────────────────────────
     const handleSavePersonal = async () => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        if (new Date(formData.joiningDate) > today) {
+            toast.error("Joining date cannot be in the future.");
+            return;
+        }
         setIsSaving(true);
         const loadingToast = toast.loading('Saving personal details...');
         try {
             await updateTeacher(id, buildTeacherPayload(), profileImage);
             toast.dismiss(loadingToast);
-            toast.success('Personal details saved ✅');
+            toast.success(strings.EDIT_TEACHER.PERSONAL_SAVE_SUCCESS);
             if (profileImage) {
-                toast.info('Profile photo may take a few seconds to reflect.', { autoClose: 4000 });
+                toast.info(strings.EDIT_TEACHER.PHOTO_REFRESH_NOTICE, { autoClose: 4000 });
             }
         } catch (err) {
             console.error(err);
@@ -131,6 +140,13 @@ function EditTeachersDetails() {
 
     // ── Personal: Save and move to Salary tab ────────────────────────────────
     const handleSaveAndNextPersonal = async () => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        if (new Date(formData.joiningDate) > today) {
+            toast.error("Joining date cannot be in the future.");
+            return;
+        }
         setIsSaving(true);
         const loadingToast = toast.loading('Saving personal details...');
         try {
@@ -149,30 +165,30 @@ function EditTeachersDetails() {
     // ── Salary: Save (footer button) ─────────────────────────────────────────
     const handleSaveSalary = async () => {
         if (!formData.salaryType || !formData.baseSalary) {
-            toast.warning('Please set a salary type and base salary before saving.');
+            toast.warning(strings.EDIT_TEACHER.SALARY_WARNING);
             return;
         }
 
         setIsLoading(true);
-        const loadingToast = toast.loading('Saving salary structure...');
+        const loadingToast = toast.loading(strings.EDIT_TEACHER.SALARY_SAVE_LOADING);
         try {
-            const baseSalary     = Number(formData.baseSalary) || 0;
-            const hra            = Number(formData.houseRentAllowance) || 0;
-            const ta             = Number(formData.travelAllowance) || 0;
-            const da             = Number(formData.dearnessAllowance) || 0;
-            const sa             = Number(formData.specialAllowance) || 0;
-            const oa             = Number(formData.otherAllowances) || 0;
-            const pf             = Number(formData.providentFund) || 0;
-            const profTax        = Number(formData.professionalTax) || 0;
-            const incomeTax      = Number(formData.incomeTax) || 0;
-            const otherDed       = Number(formData.otherDeductions) || 0;
+            const baseSalary = Number(formData.baseSalary) || 0;
+            const hra = Number(formData.houseRentAllowance) || 0;
+            const ta = Number(formData.travelAllowance) || 0;
+            const da = Number(formData.dearnessAllowance) || 0;
+            const sa = Number(formData.specialAllowance) || 0;
+            const oa = Number(formData.otherAllowances) || 0;
+            const pf = Number(formData.providentFund) || 0;
+            const profTax = Number(formData.professionalTax) || 0;
+            const incomeTax = Number(formData.incomeTax) || 0;
+            const otherDed = Number(formData.otherDeductions) || 0;
             const leaveDeduction = Number(formData.leaveDeductionPerDay) || 0;
 
-            const grossSalary    = baseSalary + hra + ta + da + sa + oa + pf;
+            const grossSalary = baseSalary + hra + ta + da + sa + oa + pf;
             const totalDeductions = profTax + incomeTax + otherDed + leaveDeduction;
-            const netSalary      = grossSalary - totalDeductions;
+            const netSalary = grossSalary - totalDeductions;
 
-            const today      = new Date().toISOString().split('T')[0];
+            const today = new Date().toISOString().split('T')[0];
             const effectiveTo = `${new Date().getFullYear()}-12-31`;
 
             const salaryPayload = {
@@ -204,29 +220,45 @@ function EditTeachersDetails() {
                 const d = salaryRes.data;
                 setFormData(prev => ({
                     ...prev,
-                    salaryId:            d.id,
-                    salaryType:          d.salaryType          || '',
-                    baseSalary:          d.baseSalary          || '',
-                    houseRentAllowance:  d.houseRentAllowance  || 0,
-                    travelAllowance:     d.travelAllowance     || 0,
-                    dearnessAllowance:   d.dearnessAllowance   || 0,
-                    specialAllowance:    d.specialAllowance    || 0,
-                    otherAllowances:     d.otherAllowances     || 0,
-                    providentFund:       d.providentFund       || 0,
-                    professionalTax:     d.professionalTax     || 0,
-                    incomeTax:           d.incomeTax           || 0,
-                    otherDeductions:     d.otherDeductions     || 0,
+                    salaryId: d.id,
+                    salaryType: d.salaryType || '',
+                    baseSalary: d.baseSalary || '',
+                    houseRentAllowance: d.houseRentAllowance || 0,
+                    travelAllowance: d.travelAllowance || 0,
+                    dearnessAllowance: d.dearnessAllowance || 0,
+                    specialAllowance: d.specialAllowance || 0,
+                    otherAllowances: d.otherAllowances || 0,
+                    providentFund: d.providentFund || 0,
+                    professionalTax: d.professionalTax || 0,
+                    incomeTax: d.incomeTax || 0,
+                    otherDeductions: d.otherDeductions || 0,
                     leaveDeductionPerDay: d.leaveDeductionPerDay || 0,
                 }));
             }
 
             toast.dismiss(loadingToast);
-            toast.success('Salary structure saved ✅');
+            toast.success(strings.EDIT_TEACHER.SALARY_SAVE_SUCCESS);
             navigate('/teachers');
         } catch (err) {
-            console.error(err);
+            console.error("Salary Catch Error:", err);
             toast.dismiss(loadingToast);
-            toast.error('Failed to save salary. Please try again.');
+
+            // API validation mapping checks
+            const validationData = err?.response?.data?.data || err?.data?.data || err?.errorData?.data;
+            let errorMessage = "";
+
+            if (validationData && typeof validationData === 'object') {
+                const firstFieldError = Object.values(validationData)[0];
+                if (firstFieldError && typeof firstFieldError === 'string') {
+                    errorMessage = firstFieldError;
+                }
+            }
+
+            if (!errorMessage) {
+                errorMessage = err?.response?.data?.message || err?.data?.message || err?.message || strings.EDIT_TEACHER.SALARY_SAVE_ERROR;
+            }
+
+            toast.error(errorMessage);
         } finally {
             setIsLoading(false);
         }
@@ -239,11 +271,11 @@ function EditTeachersDetails() {
         if (!file) return;
         const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
         if (!validTypes.includes(file.type)) {
-            toast.error('Only JPEG or PNG images are allowed!');
+            toast.error(strings.ADD_TEACHER.ERRORS.IMG_TYPE);
             return;
         }
         if (file.size > 10 * 1024 * 1024) {
-            toast.error('Image must be smaller than 10 MB!');
+            toast.error(strings.ADD_TEACHER.ERRORS.IMG_SIZE);
             return;
         }
         setProfileImage(file);
@@ -274,7 +306,7 @@ function EditTeachersDetails() {
                 <div className="flex items-center justify-center py-8 relative">
                     <div className="flex flex-col items-center justify-center absolute lg:top-75">
                         <div className="w-7 h-7 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                        <p className="text-gray-600 lg:text-xl font-medium">Loading teacher...</p>
+                        <p className="text-gray-600 lg:text-xl font-medium">{strings.EDIT_TEACHER.LOADING}</p>
                     </div>
                 </div>
             </div>
@@ -296,10 +328,10 @@ function EditTeachersDetails() {
                 {/* Header */}
                 <div className="mb-6">
                     <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
-                        Edit Teacher: {formData.name}
+                        {strings.ADD_TEACHER.PAGE_TITLE}: {formData.name}
                     </h1>
                     <p className="text-sm sm:text-base text-gray-500">
-                        Manage personal information and employment status for faculty members.
+                        {strings.ADD_TEACHER.SUBTITLE}
                     </p>
                 </div>
 
@@ -310,27 +342,25 @@ function EditTeachersDetails() {
                             <button
                                 type="button"
                                 onClick={() => setActiveTab('personal')}
-                                className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${
-                                    activeTab === 'personal'
+                                className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'personal'
                                         ? 'border-blue-600 text-blue-600'
                                         : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                                }`}
+                                    }`}
                             >
                                 <User size={20} />
-                                <span className="hidden sm:inline">Personal Details</span>
-                                <span className="sm:hidden">Personal</span>
+                                <span className="hidden sm:inline">{strings.ADD_TEACHER.TABS.PERSONAL}</span>
+                                <span className="sm:hidden">{strings.ADD_TEACHER.LABELS.PERSONAL}</span>
                             </button>
                             <button
                                 type="button"
                                 onClick={() => setActiveTab('salary')}
-                                className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${
-                                    activeTab === 'salary'
+                                className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'salary'
                                         ? 'border-blue-600 text-blue-600'
                                         : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                                }`}
+                                    }`}
                             >
                                 <IndianRupee size={18} />
-                                <span className="hidden sm:inline">Salary Structure</span>
+                                <span className="hidden sm:inline">{strings.ADD_TEACHER.TABS.SALARY}</span>
                                 <span className="sm:hidden">Salary</span>
                             </button>
                         </nav>
@@ -343,8 +373,8 @@ function EditTeachersDetails() {
                                 {/* Profile Photo */}
                                 <div className="mb-6">
                                     <label className="block font-semibold text-gray-600 text-sm mb-3">
-                                        Profile Photo{' '}
-                                        <span className="text-gray-400 text-xs font-normal ml-1">(optional)</span>
+                                        {strings.EDIT_TEACHER.UPLOAD.LABEL}{' '}
+                                        <span className="text-gray-400 text-xs font-normal ml-1">{strings.EDIT_TEACHER.UPLOAD.HELP}</span>
                                     </label>
                                     <div className="flex items-center gap-5">
                                         <div className="relative shrink-0">
@@ -377,8 +407,8 @@ function EditTeachersDetails() {
                                                     className="w-full border-2 border-dashed border-blue-300 hover:border-blue-500 bg-blue-50 hover:bg-blue-100 rounded-lg p-4 text-center transition-colors cursor-pointer"
                                                 >
                                                     <Camera className="w-5 h-5 text-blue-400 mx-auto mb-1" />
-                                                    <p className="text-sm font-medium text-blue-600">Click to upload photo</p>
-                                                    <p className="text-xs text-gray-400 mt-0.5">JPEG or PNG, max 10 MB</p>
+                                                    <p className="text-sm font-medium text-blue-600">{strings.EDIT_TEACHER.UPLOAD.CTA}</p>
+                                                    <p className="text-xs text-gray-400 mt-0.5">{strings.EDIT_TEACHER.UPLOAD.FORMAT_HELP}</p>
                                                 </button>
                                             ) : (
                                                 <div className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-lg">
@@ -392,8 +422,8 @@ function EditTeachersDetails() {
                                                             </>
                                                         ) : (
                                                             <>
-                                                                <p className="text-sm font-medium text-green-700">Current profile photo</p>
-                                                                <p className="text-xs text-green-500 mt-0.5">Click "Change" to replace</p>
+                                                                <p className="text-sm font-medium text-green-700">{strings.EDIT_TEACHER.UPLOAD.CURRENT}</p>
+                                                                <p className="text-xs text-green-500 mt-0.5">{strings.EDIT_TEACHER.UPLOAD.REPLACE}</p>
                                                             </>
                                                         )}
                                                     </div>
@@ -403,7 +433,7 @@ function EditTeachersDetails() {
                                                             onClick={() => fileInputRef.current?.click()}
                                                             className="text-xs px-2.5 py-1 bg-white border border-green-300 text-green-700 rounded-md hover:bg-green-50 transition-colors"
                                                         >
-                                                            Change
+                                                            {strings.EDIT_TEACHER.UPLOAD.CHANGE}
                                                         </button>
                                                         <button
                                                             type="button"
@@ -426,7 +456,7 @@ function EditTeachersDetails() {
                                     />
                                 </div>
 
-                                {/* Personal Details Tab — has its own Save / Save & Next buttons */}
+                                {/* Personal Details Tab */}
                                 <PersonalDetailsTab
                                     formData={formData}
                                     setFormData={setFormData}
@@ -457,17 +487,16 @@ function EditTeachersDetails() {
                                     onClick={handleDiscard}
                                     className="px-6 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                                 >
-                                    Discard Changes
+                                    {strings.COMMON.DISCARD_CHANGES}
                                 </button>
                                 <button
                                     type="button"
                                     onClick={handleSaveSalary}
                                     disabled={isLoading}
-                                    className={`px-6 py-2.5 text-sm font-semibold rounded-lg transition-all flex items-center justify-center gap-2 ${
-                                        isLoading
+                                    className={`px-6 py-2.5 text-sm font-semibold rounded-lg transition-all flex items-center justify-center gap-2 ${isLoading
                                             ? 'bg-blue-300 cursor-not-allowed text-white'
                                             : 'bg-blue-500 hover:bg-blue-600 cursor-pointer text-white'
-                                    }`}
+                                        }`}
                                 >
                                     {isLoading ? (
                                         <>

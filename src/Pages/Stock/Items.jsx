@@ -13,17 +13,18 @@ import ViewItem from "../../Components/Stock/ViewItem";
 import {
     getStockItems, getStockItemsStats,
     activateItem, deactivateItem, createItem, updateItem,
-} from "../../Api/StockApi";
-import { getListOfValues } from "../../Api/ListOfValues";
+} from "../../Api/Stock/StockApi";
+import { getListOfValues } from "../../Api/Lov/ListOfValues";
 import { toast } from "react-toastify";
+import { STOCK_SHARED_CONSTS, ITEMS_CONSTS } from "../../Constants/StringConstants/StockAndOrdersConstants";
 
 // ── Constants ────────────────────────────────────────────────────
-const SEARCH_DEBOUNCE_MS = 400;
+const SEARCH_DEBOUNCE_MS = ITEMS_CONSTS.CONFIG.SEARCH_DEBOUNCE_MS;
 
 const STATUS_OPTIONS = [
-    { label: "All Status", api: "" },
-    { label: "Active", api: "ACTIVE" },
-    { label: "Inactive", api: "INACTIVE" },
+    { label: STOCK_SHARED_CONSTS.STATUS.ALL, api: "" },
+    { label: STOCK_SHARED_CONSTS.STATUS.ACTIVE_LABEL, api: STOCK_SHARED_CONSTS.STATUS.ACTIVE_API },
+    { label: STOCK_SHARED_CONSTS.STATUS.INACTIVE_LABEL, api: STOCK_SHARED_CONSTS.STATUS.INACTIVE_API },
 ];
 
 const categoryColors = {
@@ -72,7 +73,7 @@ export default function Items() {
     const [search, setSearch] = useState("");
     const [debouncedSearch, setDebouncedSearch] = useState("");
     const [categoryFilter, setCategoryFilter] = useState("");   // "" = All
-    const [statusFilter, setStatusFilter] = useState("Active");
+    const [statusFilter, setStatusFilter] = useState(STOCK_SHARED_CONSTS.STATUS.ACTIVE_LABEL);
     const [page, setPage] = useState(1);    // 1-based
     const [rowsPerPage, setRowsPerPage] = useState(10);
 
@@ -97,7 +98,7 @@ export default function Items() {
     // ── Fetch LOV categories on mount ──────────────────────────
     useEffect(() => {
         setCatsLoading(true);
-        getListOfValues("ITEM_CATEGORY")
+        getListOfValues(STOCK_SHARED_CONSTS.ITEM_CATEGORY.LOV_KEY)
             .then((data) => setCategoryOptions(data.map((d) => ({ label: d.label, value: d.value }))))
             .catch(() => setCategoryOptions([]))
             .finally(() => setCatsLoading(false));
@@ -137,7 +138,7 @@ export default function Items() {
                 name: item.itemName,
                 category: item.category,
                 unit: item.unit,
-                price: item.unitPrice ?? 0,       // unitPrice from API
+                price: item.unitPrice ?? 0,
                 totalStock: item.totalQuantity ?? 0,
                 minLevel: item.minimumStockLevel ?? 0,
                 description: item.description ?? "",
@@ -151,9 +152,9 @@ export default function Items() {
             setNoItemFound(mapped.length === 0);
         } catch (err) {
             console.error(err);
-            setError(err.message || "Something went wrong");
+            setError(err.message || STOCK_SHARED_CONSTS.COMMON.GENERIC_ERROR);
             setItems([]);
-            toast.error("Failed to load items");
+            toast.error(ITEMS_CONSTS.MESSAGES.LOAD_FAILED);
         } finally {
             setLoading(false);
         }
@@ -164,27 +165,27 @@ export default function Items() {
 
     // ── Stat cards ─────────────────────────────────────────────
     const stats = useMemo(() => [
-        { key: "Total Items", val: statsData?.totalItems ?? 0, icon: Package, txColor: "text-blue-600", bgColor: "bg-blue-50" },
-        { key: "Active Items", val: statsData?.activeItems ?? 0, icon: PackageCheck, txColor: "text-green-600", bgColor: "bg-green-50" },
-        { key: "Inactive", val: statsData?.inactiveItems ?? 0, icon: PackageX, txColor: "text-red-500", bgColor: "bg-red-50" },
-        { key: "Active Categories", val: statsData?.categories ?? statsData?.totalCategories ?? 0, icon: Layers, txColor: "text-purple-600", bgColor: "bg-purple-50" },
+        { key: ITEMS_CONSTS.STATS.TOTAL_ITEMS, val: statsData?.totalItems ?? 0, icon: Package, txColor: "text-blue-600", bgColor: "bg-blue-50" },
+        { key: ITEMS_CONSTS.STATS.ACTIVE_ITEMS, val: statsData?.activeItems ?? 0, icon: PackageCheck, txColor: "text-green-600", bgColor: "bg-green-50" },
+        { key: STOCK_SHARED_CONSTS.STATUS.INACTIVE_LABEL, val: statsData?.inactiveItems ?? 0, icon: PackageX, txColor: "text-red-500", bgColor: "bg-red-50" },
+        { key: ITEMS_CONSTS.STATS.CATEGORIES_COVERED, val: statsData?.categories ?? statsData?.totalCategories ?? 0, icon: Layers, txColor: "text-purple-600", bgColor: "bg-purple-50" },
     ], [statsData]);
 
     const resetPage = () => setPage(1);
 
     // ── Action menu ────────────────────────────────────────────
     const getActionOptions = (item) => [
-        { value: "view", label: "View", icon: Eye, text: "text-blue-600", bg: "bg-blue-50", hover: "hover:bg-blue-100" },
-        { value: "edit", label: "Edit", icon: Edit, text: "text-orange-600", bg: "bg-orange-50", hover: "hover:bg-orange-100" },
+        { value: "view", label: STOCK_SHARED_CONSTS.COMMON.VIEW, icon: Eye, text: "text-blue-600", bg: "bg-blue-50", hover: "hover:bg-blue-100" },
+        { value: "edit", label: STOCK_SHARED_CONSTS.COMMON.EDIT, icon: Edit, text: "text-orange-600", bg: "bg-orange-50", hover: "hover:bg-orange-100" },
         {
             value: "toggleStatus",
             label: togglingId === item.id
-                ? (item.status === "ACTIVE" ? "Deactivating…" : "Activating…")
-                : (item.status === "ACTIVE" ? "Inactive" : "Activate"),
-            icon: item.status === "ACTIVE" ? MinusCircle : Power,
-            text: item.status === "ACTIVE" ? "text-red-600" : "text-green-600",
-            bg: item.status === "ACTIVE" ? "bg-red-50" : "bg-green-50",
-            hover: item.status === "ACTIVE" ? "hover:bg-red-100" : "hover:bg-green-100",
+                ? (item.status === STOCK_SHARED_CONSTS.STATUS.ACTIVE_API ? STOCK_SHARED_CONSTS.COMMON.DEACTIVATING : STOCK_SHARED_CONSTS.COMMON.ACTIVATING)
+                : (item.status === STOCK_SHARED_CONSTS.STATUS.ACTIVE_API ? STOCK_SHARED_CONSTS.STATUS.INACTIVE_LABEL : STOCK_SHARED_CONSTS.COMMON.ACTIVATE),
+            icon: item.status === STOCK_SHARED_CONSTS.STATUS.ACTIVE_API ? MinusCircle : Power,
+            text: item.status === STOCK_SHARED_CONSTS.STATUS.ACTIVE_API ? "text-red-600" : "text-green-600",
+            bg: item.status === STOCK_SHARED_CONSTS.STATUS.ACTIVE_API ? "bg-red-50" : "bg-green-50",
+            hover: item.status === STOCK_SHARED_CONSTS.STATUS.ACTIVE_API ? "hover:bg-red-100" : "hover:bg-green-100",
             disabled: togglingId === item.id,
         },
     ];
@@ -198,16 +199,16 @@ export default function Items() {
             if (togglingId) return;
             try {
                 setTogglingId(item.id);
-                if (item.status === "ACTIVE") {
+                if (item.status === STOCK_SHARED_CONSTS.STATUS.ACTIVE_API) {
                     await deactivateItem(item.id);
-                    toast.success("Item deactivated");
+                    toast.success(ITEMS_CONSTS.MESSAGES.ITEM_DEACTIVATED);
                 } else {
                     await activateItem(item.id);
-                    toast.success("Item activated");
+                    toast.success(ITEMS_CONSTS.MESSAGES.ITEM_ACTIVATED);
                 }
                 await Promise.all([fetchItems(), fetchStats()]);
             } catch {
-                toast.error("Failed to update item status");
+                toast.error(ITEMS_CONSTS.MESSAGES.STATUS_UPDATE_FAILED);
             } finally {
                 setTogglingId(null);
             }
@@ -219,30 +220,29 @@ export default function Items() {
         if (saving) return;
         try {
             setSaving(true);
-            // payload comes from NewItem: { itemCode, itemName, category, unit, unitPrice, minimumStockLevel, status, description }
             const mappedPayload = {
                 itemCode: payload.itemCode,
                 itemName: payload.itemName,
                 category: payload.category,
                 unit: payload.unit,
-                unitPrice: payload.unitPrice,          // ← sent to API
+                unitPrice: payload.unitPrice,
                 minimumStockLevel: payload.minimumStockLevel,
                 description: payload.description ?? "",
-                status: payload.status ?? "ACTIVE",
+                status: payload.status ?? STOCK_SHARED_CONSTS.STATUS.ACTIVE_API,
             };
             if (editItemData) {
                 await updateItem(editItemData.id, mappedPayload);
-                toast.success("Item updated successfully");
+                toast.success(ITEMS_CONSTS.MESSAGES.ITEM_UPDATED);
             } else {
                 await createItem(mappedPayload);
-                toast.success("Item created successfully");
+                toast.success(ITEMS_CONSTS.MESSAGES.ITEM_CREATED);
             }
             setIsNewItemOpen(false);
             setEditItemData(null);
             await Promise.all([fetchItems(), fetchStats()]);
         } catch (err) {
             console.error(err);
-            toast.error(editItemData ? "Failed to update item" : "Failed to create item");
+            toast.error(editItemData ? ITEMS_CONSTS.MESSAGES.UPDATE_FAILED : ITEMS_CONSTS.MESSAGES.CREATE_FAILED);
             throw err;
         } finally {
             setSaving(false);
@@ -259,9 +259,9 @@ export default function Items() {
                 {/* Page Header */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
-                        <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Stock Items</h2>
+                        <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">{ITEMS_CONSTS.TEXT.TITLE}</h2>
                         <p className="text-gray-500 mt-1 font-medium text-sm sm:text-base">
-                            Manage inventory items, categories, stock levels and store distribution.
+                            {ITEMS_CONSTS.TEXT.SUBTITLE}
                         </p>
                     </div>
                 </div>
@@ -283,14 +283,14 @@ export default function Items() {
                     <div className="flex items-center justify-between gap-3 px-4 md:px-5 py-3 md:py-4 border-b border-gray-100">
                         <div className="flex items-center gap-2 min-w-0">
                             <Package className="w-5 h-5 text-blue-500 shrink-0" />
-                            <h2 className="font-semibold text-gray-800 text-base md:text-lg truncate">Stock Items</h2>
+                            <h2 className="font-semibold text-gray-800 text-base md:text-lg truncate">{ITEMS_CONSTS.TEXT.TITLE}</h2>
                         </div>
                         <button
                             onClick={() => { setEditItemData(null); setIsNewItemOpen(true); }}
                             className="flex items-center gap-1.5 cursor-pointer bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs md:text-sm font-semibold px-3 md:px-4 py-2 rounded-lg transition-colors shrink-0"
                         >
                             <Plus className="w-3.5 h-3.5 md:w-4 md:h-4" />
-                            New Item
+                            {ITEMS_CONSTS.TEXT.NEW_ITEM_BTN}
                         </button>
                     </div>
 
@@ -313,7 +313,7 @@ export default function Items() {
                             <SearchIcon className="w-4 h-4 text-gray-400 shrink-0" />
                             <input
                                 type="text"
-                                placeholder="Search by name or code…"
+                                placeholder={STOCK_SHARED_CONSTS.COMMON.SEARCH_BY_NAME_OR_CODE}
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
                                 className="text-sm focus:outline-none text-gray-600 w-full bg-transparent"
@@ -325,7 +325,7 @@ export default function Items() {
                             disabled={catsLoading}
                             className="px-3 py-2 border border-gray-200 bg-gray-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-200 text-sm text-gray-700 w-44 shrink-0 disabled:opacity-60"
                         >
-                            <option value="">{catsLoading ? "Loading…" : "All Categories"}</option>
+                            <option value="">{catsLoading ? STOCK_SHARED_CONSTS.COMMON.LOADING_ELLIPSIS : STOCK_SHARED_CONSTS.ITEM_CATEGORY.ALL}</option>
                             {categoryOptions.map((c) => (
                                 <option key={c.value} value={c.value}>{c.label}</option>
                             ))}
@@ -347,21 +347,21 @@ export default function Items() {
                             <div className="text-center py-8 col-span-2">
                                 <div className="flex flex-col items-center">
                                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-2" />
-                                    <span className="text-gray-600">Loading items…</span>
+                                    <span className="text-gray-600">{ITEMS_CONSTS.TEXT.LOADING}</span>
                                 </div>
                             </div>
                         ) : error ? (
                             <div className="text-center py-8 col-span-2">
                                 <p className="text-red-600 mb-4">{error}</p>
-                                <button onClick={() => window.location.reload()} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Retry</button>
+                                <button onClick={() => window.location.reload()} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">{STOCK_SHARED_CONSTS.COMMON.RETRY}</button>
                             </div>
                         ) : noItemFound ? (
                             <div className="text-center py-8 col-span-2">
                                 <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                                     <Package className="w-6 h-6 text-blue-600" />
                                 </div>
-                                <h3 className="text-lg font-bold text-gray-900 mb-2">No Items Found</h3>
-                                <p className="text-gray-600">There are no items to display.</p>
+                                <h3 className="text-lg font-bold text-gray-900 mb-2">{ITEMS_CONSTS.TEXT.EMPTY_TITLE}</h3>
+                                <p className="text-gray-600">{ITEMS_CONSTS.TEXT.EMPTY_SUB}</p>
                             </div>
                         ) : (
                             items.map((item, idx) => (
@@ -376,8 +376,8 @@ export default function Items() {
                                                 <p className="text-xs text-gray-400 truncate">{item.code}</p>
                                             </div>
                                         </div>
-                                        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold shrink-0 ${item.status === "ACTIVE" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"}`}>
-                                            {item.status === "ACTIVE" ? "Active" : "Inactive"}
+                                        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold shrink-0 ${item.status === STOCK_SHARED_CONSTS.STATUS.ACTIVE_API ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"}`}>
+                                            {item.status === STOCK_SHARED_CONSTS.STATUS.ACTIVE_API ? STOCK_SHARED_CONSTS.STATUS.ACTIVE_LABEL : STOCK_SHARED_CONSTS.STATUS.INACTIVE_LABEL}
                                         </span>
                                     </div>
                                     <div className="space-y-2 text-sm">
@@ -387,13 +387,13 @@ export default function Items() {
                                             </span>
                                             <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">{item.unit}</span>
                                             <span className="text-xs font-semibold text-gray-700 bg-green-50 border border-green-100 px-2 py-0.5 rounded">
-                                                ₹{Number(item.price).toFixed(2)}
+                                                {STOCK_SHARED_CONSTS.LOCALE.CURRENCY_PREFIX}{Number(item.price).toFixed(2)}
                                             </span>
                                         </div>
                                         <div className="space-y-1">
                                             <div className="flex justify-between text-xs text-gray-500">
-                                                <span>Stock: <span className={`font-bold ${item.totalStock < item.minLevel ? "text-red-500" : "text-gray-700"}`}>{item.totalStock}</span></span>
-                                                <span>Min: <span className="font-medium text-gray-700">{item.minLevel}</span></span>
+                                                <span>{ITEMS_CONSTS.TEXT.STOCK_LABEL} <span className={`font-bold ${item.totalStock < item.minLevel ? "text-red-500" : "text-gray-700"}`}>{item.totalStock}</span></span>
+                                                <span>{ITEMS_CONSTS.TEXT.MIN_LABEL} <span className="font-medium text-gray-700">{item.minLevel}</span></span>
                                             </div>
                                             <div className="w-full bg-gray-100 rounded-full h-1.5">
                                                 <div
@@ -422,14 +422,14 @@ export default function Items() {
                                     <tr>
                                         {[
                                             ["#", "w-10", "text-left"],
-                                            ["Item", "", "text-left"],
-                                            ["Category", "", "text-left"],
-                                            ["Unit", "", "text-left"],
-                                            ["Unit Price", "", "text-left"],
-                                            ["Stock", "", "text-left"],
-                                            ["Min Lvl", "", "text-left"],
-                                            ["Status", "", "text-left"],
-                                            ["Actions", "", "text-center"],
+                                            [ITEMS_CONSTS.TABLE_HEADERS.ITEM, "", "text-left"],
+                                            [ITEMS_CONSTS.TABLE_HEADERS.CATEGORY, "", "text-left"],
+                                            [ITEMS_CONSTS.TABLE_HEADERS.UNIT, "", "text-left"],
+                                            [ITEMS_CONSTS.TABLE_HEADERS.UNIT_PRICE, "", "text-left"],
+                                            [ITEMS_CONSTS.TABLE_HEADERS.STOCK, "", "text-left"],
+                                            [ITEMS_CONSTS.TABLE_HEADERS.MIN_LVL, "", "text-left"],
+                                            [ITEMS_CONSTS.TABLE_HEADERS.STATUS, "", "text-left"],
+                                            [ITEMS_CONSTS.TABLE_HEADERS.ACTIONS, "", "text-center"],
                                         ].map(([label, w, align]) => (
                                             <th key={label}
                                                 className={`px-2 py-3 text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10 ${w} ${align}`}>
@@ -449,7 +449,7 @@ export default function Items() {
                                                 <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-1">
                                                     <Package className="w-6 h-6 text-blue-600" />
                                                 </div>
-                                                <h3 className="text-sm font-bold text-gray-700 mb-2">No Items Found</h3>
+                                                <h3 className="text-sm font-bold text-gray-700 mb-2">{ITEMS_CONSTS.TEXT.EMPTY_TITLE}</h3>
                                             </td>
                                         </tr>
                                     ) : (
@@ -476,7 +476,7 @@ export default function Items() {
                                                 {/* Unit Price */}
                                                 <td className={tdStyle}>
                                                     <span className="text-gray-700 font-semibold whitespace-nowrap">
-                                                        ₹{Number(item.price).toFixed(2)}
+                                                        {STOCK_SHARED_CONSTS.LOCALE.CURRENCY_PREFIX}{Number(item.price).toFixed(2)}
                                                     </span>
                                                 </td>
 
@@ -502,9 +502,9 @@ export default function Items() {
                                                 </td>
 
                                                 <td className={tdStyle}>
-                                                    <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-sm text-xs font-medium ${item.status === "ACTIVE" ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"
+                                                    <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-sm text-xs font-medium ${item.status === STOCK_SHARED_CONSTS.STATUS.ACTIVE_API ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"
                                                         }`}>
-                                                        {item.status === "ACTIVE" ? "Active" : "Inactive"}
+                                                        {item.status === STOCK_SHARED_CONSTS.STATUS.ACTIVE_API ? STOCK_SHARED_CONSTS.STATUS.ACTIVE_LABEL : STOCK_SHARED_CONSTS.STATUS.INACTIVE_LABEL}
                                                     </span>
                                                 </td>
 
@@ -526,11 +526,11 @@ export default function Items() {
                             <div className="flex flex-col sm:flex-row items-center gap-4">
                                 <span className="text-sm text-gray-700">
                                     {totalItems === 0
-                                        ? "No items"
-                                        : `Showing ${(page - 1) * rowsPerPage + 1} to ${Math.min(page * rowsPerPage, totalItems)} of ${totalItems}`}
+                                        ? ITEMS_CONSTS.TEXT.NO_ITEMS
+                                        : STOCK_SHARED_CONSTS.COMMON.SHOWING_RANGE((page - 1) * rowsPerPage + 1, Math.min(page * rowsPerPage, totalItems), totalItems)}
                                 </span>
                                 <div className="flex items-center gap-2">
-                                    <span className="text-sm text-gray-700">Rows per page:</span>
+                                    <span className="text-sm text-gray-700">{STOCK_SHARED_CONSTS.COMMON.ROWS_PER_PAGE}</span>
                                     <select
                                         value={rowsPerPage}
                                         onChange={(e) => { setRowsPerPage(Number(e.target.value)); resetPage(); }}
@@ -589,11 +589,11 @@ export default function Items() {
                         <div className="flex flex-col gap-4">
                             <div className="text-center text-sm text-gray-700">
                                 {totalItems === 0
-                                    ? "No items"
-                                    : `Showing ${(page - 1) * rowsPerPage + 1} to ${Math.min(page * rowsPerPage, totalItems)} of ${totalItems}`}
+                                    ? ITEMS_CONSTS.TEXT.NO_ITEMS
+                                    : STOCK_SHARED_CONSTS.COMMON.SHOWING_RANGE((page - 1) * rowsPerPage + 1, Math.min(page * rowsPerPage, totalItems), totalItems)}
                             </div>
                             <div className="flex items-center justify-center gap-2">
-                                <span className="text-sm text-gray-700">Rows:</span>
+                                <span className="text-sm text-gray-700">{STOCK_SHARED_CONSTS.COMMON.ROWS_SHORT}</span>
                                 <select value={rowsPerPage} onChange={(e) => { setRowsPerPage(Number(e.target.value)); resetPage(); }}
                                     className="px-3 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
                                     <option value={10}>10</option>

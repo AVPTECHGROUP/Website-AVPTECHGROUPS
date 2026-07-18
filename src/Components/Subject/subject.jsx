@@ -2,11 +2,12 @@ import { useState, useEffect, useCallback } from "react";
 import {
   getSubjectsWithFilters,
   deleteSubject,
-} from "../../Api/subject";
-import { getSubjectCategoryLov } from "../../Api/ListOfValues";
+} from "../../Api/Academics/Subject";
+import { getSubjectCategoryLov } from "../../Api/Lov/ListOfValues";
 import AddNewSubject from "./AddnewSubject";
 import SectionSubjectAssignment from "../../Pages/SubjectManagement/SectionSubjectAssignment";
 import { Eye } from "lucide-react";
+import { toast } from "react-toastify";
 
 const CAT_CLS = {
   // ── by VALUE key (what the LOV/edit API sends) ──────────────────────────
@@ -297,15 +298,30 @@ function SubjectCard({ s, onEdit, onDelete, onView }) {
   );
 }
 
-/* ═══════════════════════════════════════════
-   DELETE DIALOG
-═══════════════════════════════════════════ */
 function DeleteDialog({ subject, onClose, onConfirm }) {
   const [busy, setBusy] = useState(false);
   const go = async () => {
     setBusy(true);
-    try { await deleteSubject(subject.id); onConfirm(); }
-    catch { onClose(); }
+    try {
+      await deleteSubject(subject.id);
+      onConfirm();
+    }
+    catch (err) {
+      // Debug karne ke liye console me pura error print hoga
+      console.log("Backend Error Response:", err.response);
+
+      // Aapke JSON structure ke hisab se exact message nikalne ke liye flexible check:
+      const errorMessage =
+        err.response?.data?.message ||  // Standard Axios path
+        err.data?.message ||           // Fetch / Custom wrapper path
+        err.message ||                 // Fallback message
+        "Failed to delete subject.";
+
+      // Toastify se message show karna
+      toast.error(errorMessage);
+
+      onClose();
+    }
     finally { setBusy(false); }
   };
   return (

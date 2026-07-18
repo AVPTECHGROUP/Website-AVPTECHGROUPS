@@ -1,10 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { TriangleAlert, Search, ChevronDown, Loader2 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { getUsersSummary } from "../../Api/userManagementAPI";
-import { requestManualAttendance } from '../../Api/AttendanceApi';
+import { getUsersSummary } from "../../Api/StaffManagement/UserManagementAPI";
+import { requestManualAttendance } from '../../Api/Attendance/AttendanceApi';
 import { toast } from 'react-toastify';
-
+import { ROUTE_PATHS } from '../../Constants/RoutesConstants/RoutesConst';
 const TODAY = new Date().toISOString().split('T')[0];
 
 /* ─── Field resolvers (same as ManualStaffAttendance) ─── */
@@ -139,7 +139,6 @@ const ManualAttendance = () => {
   };
 
   const handleSubmit = async () => {
-
     if (reason.trim().length > 500) {
       toast.error('Reason cannot exceed 500 characters');
       return;
@@ -163,11 +162,13 @@ const ManualAttendance = () => {
         gpsLongitude: gps.longitude ?? 0,
       });
       toast.success('Request Submitted');
-      navigate('/attendance/markUserAttendance');
+
+      navigate(ROUTE_PATHS.ATTENDANCE_MARK_USER);
+
     } catch (error) {
       toast.error(error.message || 'Failed to submit manual attendance');
     } finally {
-      setSubmitting(false);
+      boxSubmitting(false);
     }
   };
 

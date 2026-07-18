@@ -19,28 +19,20 @@ import {
   approoveRejLeaveReq,
   getAllLeaveRequest,
   getALLLeavesStatistics,
-} from '../../Api/LeavesManagementAPI';
+} from '../../Api/Leaves/LeavesManagementAPI';
 import { toast } from 'react-toastify';
-import { getListOfValues } from '../../Api/ListOfValues';
+import { getListOfValues } from '../../Api/Lov/ListOfValues';
 import ListLoader from '../../Components/CommonComp/ListLoader';
 import { useDecodedUser } from '../../ContextAPI/UserContext';
+import {
+  ROLE_HIERARCHY,
+  STATUS_STYLES,
+  AVATAR_COLORS,
+  LEAVES_TEXT,
+  LEAVES_TOAST_MESSAGES,
+} from '../../Constants/StringConstants/LeavesConstants';
 
-// ── Hierarchy ──────────────────────────────────────────────────────────────────
-// Lower index  = higher authority.
-// Any role NOT in this list gets rank Infinity (can approve nobody).
-const ROLE_HIERARCHY = [
-  'GLOBAL_ADMIN',
-  'SUPER_ADMIN',
-  'ADMIN',
-  'PRINCIPAL',
-  'VICE_PRINCIPAL',
-  'HOD',
-  'TEACHER',
-  'ACCOUNTANT',
-  'RECEPTIONIST',
-  'STAFF',
-  'STUDENT',
-];
+// ── Hierarchy — imported from leavesConstants ─────────────────────────────
 
 function getRoleRank(role) {
   const idx = ROLE_HIERARCHY.indexOf((role ?? '').toUpperCase());
@@ -133,6 +125,51 @@ const Leaves = () => {
     fetchListOfValues();
   }, []);
 
+  const handleExportCSV = () => {
+    if (leaveReq.length === 0) {
+      toast.warning("No data available to export.");
+      return;
+    }
+
+    // 1. Define the CSV Headers matching your table structure
+    const headers = ["Employee Name", "Employee Code", "Leave Type", "From Date", "To Date", "Duration", "Status"];
+
+    // 2. Map row content and convert values to descriptive text labels
+    const rows = leaveReq.map(emp => [
+      emp.name,
+      emp.empCode || 'N/A',
+      getLabelFromValue(listOfLeaveType, emp.leaveType),
+      emp.fromDate,
+      emp.toDate,
+      getLeaveDurationText(emp),
+      emp.currEmpstatus
+    ]);
+
+    // 3. Assemble content string escaping dynamic text columns properly
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(row =>
+        row.map(val => {
+          const cleanVal = String(val ?? '').replace(/"/g, '""');
+          return cleanVal.includes(',') || cleanVal.includes('\n') || cleanVal.includes('"')
+            ? `"${cleanVal}"`
+            : cleanVal;
+        }).join(",")
+      )
+    ].join("\n");
+
+    // 4. Trigger localized window download target block
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Leave_Requests_Export_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   // ── Statistics ────────────────────────────────────────────────────────────────
   useEffect(() => {
     const fetchStatistics = async () => {
@@ -178,19 +215,19 @@ const Leaves = () => {
 
       setLeaveReq(
         leaveRequests.map((employee) => ({
-          leaveId:        employee.id,
-          id:             employee.userId,           // applicant's user ID
-          applicantRole:  employee.userType || '',   // applicant's role — used for hierarchy check
-          name:           employee.userName || 'Unknown',
-          leaveType:      employee.leaveType,
-          fromDate:       employee.fromDate,
-          toDate:         employee.toDate,
-          totalDays:      employee.totalDays,
-          reason:         employee.reason,
-          reviewRemarks:  employee.reviewRemarks,
-          status:         employee.status,
-          empCode:        employee.employeeCode,
-          avatar:         (employee.userName || 'U')[0].toUpperCase(),
+          leaveId: employee.id,
+          id: employee.userId,           // applicant's user ID
+          applicantRole: employee.userType || '',   // applicant's role — used for hierarchy check
+          name: employee.userName || 'Unknown',
+          leaveType: employee.leaveType,
+          fromDate: employee.fromDate,
+          toDate: employee.toDate,
+          totalDays: employee.totalDays,
+          reason: employee.reason,
+          reviewRemarks: employee.reviewRemarks,
+          status: employee.status,
+          empCode: employee.employeeCode,
+          avatar: (employee.userName || 'U')[0].toUpperCase(),
           isHalfDay:
             employee.isHalfDay === true ||
             employee.isHalfDay === 'true' ||
@@ -199,8 +236,8 @@ const Leaves = () => {
             employee.imageUrl ||
             employee.profileImage ||
             `https://ui-avatars.com/api/?name=${encodeURIComponent(employee.userName)}&background=random`,
-          role:           employee.userType || 'N/A',
-          currEmpstatus:  employee.status,
+          role: employee.userType || 'N/A',
+          currEmpstatus: employee.status,
         }))
       );
 
@@ -221,7 +258,7 @@ const Leaves = () => {
 
   // ── Helpers ───────────────────────────────────────────────────────────────────
   const getAvatarColor = (name) => {
-    const colors = ['bg-blue-500', 'bg-emerald-500', 'bg-violet-500', 'bg-pink-500', 'bg-indigo-500', 'bg-amber-500'];
+    const colors = AVATAR_COLORS;
     return colors[(name?.charCodeAt(0) || 0) % colors.length];
   };
 
@@ -245,10 +282,10 @@ const Leaves = () => {
   function showApproveReject(emp) {
     if (emp.currEmpstatus !== 'PENDING') return false;
     return canViewerApprove({
-      viewerUserId:   currentUser?.id,
-      viewerRole:     currentUser?.userType,
+      viewerUserId: currentUser?.id,
+      viewerRole: currentUser?.userType,
       applicantUserId: emp.id,
-      applicantRole:  emp.applicantRole,
+      applicantRole: emp.applicantRole,
     });
   }
 
@@ -256,46 +293,41 @@ const Leaves = () => {
   const cardsArray = [
     {
       IconName: ClockIcon,
-      keyName: 'Pending Requests',
+      keyName: LEAVES_TEXT.statCards.pendingRequests,
       val: statistics.pendingApproval,
       iconTxColor: 'text-orange-600',
       iconBgColor: 'bg-orange-50',
     },
     {
       IconName: ThumbsUpIcon,
-      keyName: 'Approved This Month',
+      keyName: LEAVES_TEXT.statCards.approvedThisMonth,
       val: statistics.approvedThisMonth,
       iconTxColor: 'text-green-600',
       iconBgColor: 'bg-green-50',
     },
     {
       IconName: CalendarX2,
-      keyName: 'Rejected This Month',
+      keyName: LEAVES_TEXT.statCards.rejectedThisMonth,
       val: statistics.rejectedThisMonth,
       iconTxColor: 'text-red-600',
       iconBgColor: 'bg-red-50',
     },
     {
       IconName: CalendarRange,
-      keyName: 'Applied This Month',
+      keyName: LEAVES_TEXT.statCards.appliedThisMonth,
       val: statistics.appliedThisMonth,
       iconTxColor: 'text-blue-600',
       iconBgColor: 'bg-blue-50',
     },
   ];
 
-  const statusStyles = {
-    PENDING:   'bg-amber-50   text-amber-800  border border-amber-200',
-    APPROVED:  'bg-emerald-50 text-emerald-800 border border-emerald-200',
-    REJECTED:  'bg-red-50     text-red-800    border border-red-200',
-    CANCELLED: 'bg-orange-50  text-orange-800 border border-orange-200',
-    WITHDRAWN: 'bg-gray-50    text-gray-700   border border-gray-200',
-  };
+  // statusStyles imported from leavesConstants as STATUS_STYLES
+  const statusStyles = STATUS_STYLES;
 
   // ── Popup state ───────────────────────────────────────────────────────────────
   const [selectedUser, setSelectedUser] = useState(null);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
-  const [remarkVal, setRemarksVal] = useState('As per the policy');
+  const [remarkVal, setRemarksVal] = useState(LEAVES_TEXT.defaultRemark);
 
   const handleViewClick = (user) => {
     setRemarksVal(user.reviewRemarks || '');
@@ -317,7 +349,7 @@ const Leaves = () => {
       fetchLeaveRequests();
       setRefreshStat((p) => p + 1);
     } catch (error) {
-      toast.error(error.message || 'Leave Approval failed');
+      toast.error(error.message || LEAVES_TOAST_MESSAGES.approvalFailed);
     }
   };
 
@@ -329,7 +361,7 @@ const Leaves = () => {
       fetchLeaveRequests();
       setRefreshStat((p) => p + 1);
     } catch (error) {
-      toast.error(error.message || 'Leave Rejection failed');
+      toast.error(error.message || LEAVES_TOAST_MESSAGES.rejectionFailed);
     }
   };
 
@@ -338,26 +370,26 @@ const Leaves = () => {
     const isHalfDay =
       emp.isHalfDay === true || emp.isHalfDay === 'true' || emp.isHalfDay === 'TRUE';
 
-    if (days === 0 && isHalfDay) return 'Half Day';
-    if (days === 0 && !isHalfDay) return 'Weekend / Holiday';
+    if (days === 0 && isHalfDay) return LEAVES_TEXT.duration.halfDay;
+    if (days === 0 && !isHalfDay) return LEAVES_TEXT.duration.weekendOrHoliday;
 
     const totalDuration = isHalfDay ? days + 0.5 : days;
-    return `${totalDuration} ${totalDuration === 1 ? 'Day' : 'Days'}`;
+    return `${totalDuration} ${totalDuration === 1 ? LEAVES_TEXT.duration.day : LEAVES_TEXT.duration.days}`;
   };
 
   // ── Pagination helpers ────────────────────────────────────────────────────────
   const safeTotalElements = Number(totalElements) || 0;
-  const safeRowsPerPage   = Number(rowsPerPage) || 10;
-  const safePage          = Number(page) || 1;
-  const showingFrom       = (safePage - 1) * safeRowsPerPage + 1;
-  const showingTo         = Math.min(safePage * safeRowsPerPage, safeTotalElements);
+  const safeRowsPerPage = Number(rowsPerPage) || 10;
+  const safePage = Number(page) || 1;
+  const showingFrom = (safePage - 1) * safeRowsPerPage + 1;
+  const showingTo = Math.min(safePage * safeRowsPerPage, safeTotalElements);
 
   const pageNumbers = () => {
-    const tp  = Number(totalPages) || 0;
+    const tp = Number(totalPages) || 0;
     const cur = Math.min(Math.max(1, Number(page) || 1), tp);
     if (tp <= 5) return [...Array(tp)].map((_, i) => i + 1);
     let start = Math.max(2, cur - 1);
-    let end   = Math.min(tp - 1, start + 2);
+    let end = Math.min(tp - 1, start + 2);
     if (end - start < 2) start = Math.max(2, end - 2);
     const pages = [1];
     for (let p = start; p <= end; p++) pages.push(p);
@@ -458,7 +490,7 @@ const Leaves = () => {
                 <div />
               )}
 
-              {/* Date range */}
+              {/* Date range & Export Actions */}
               <div className="sm:col-span-2 lg:col-span-2 flex items-center gap-2">
                 <input
                   value={fromDateFilter}
@@ -473,6 +505,14 @@ const Leaves = () => {
                   type="date"
                   className="px-3 py-2 border border-gray-200 bg-gray-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-200 text-sm w-full text-gray-600"
                 />
+                <button
+                  onClick={handleExportCSV}
+                  disabled={loading || leaveReq.length === 0}
+                  className="px-3 py-2 bg-blue-600 text-white font-medium rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm whitespace-nowrap cursor-pointer"
+                  title="Export current table view to CSV"
+                >
+                  Export CSV
+                </button>
               </div>
             </div>
 
@@ -531,7 +571,7 @@ const Leaves = () => {
                   </colgroup>
                   <thead className="bg-gray-50 sticky top-0 z-10 border-b border-gray-200">
                     <tr>
-                      {['Employee', 'Leave Type', 'From', 'To', 'Days', 'Status', 'Action'].map((h) => (
+                      {LEAVES_TEXT.table.headers.map((h) => (
                         <th key={h} className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                           {h}
                         </th>
@@ -547,7 +587,7 @@ const Leaves = () => {
                           <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
                             <UserRoundXIcon className="w-5 h-5 text-red-400" />
                           </div>
-                          <p className="text-sm font-semibold text-gray-800 mb-1">Error Loading Requests</p>
+                          <p className="text-sm font-semibold text-gray-800 mb-1">{LEAVES_TEXT.emptyStates.errorTitle}</p>
                           <p className="text-xs text-gray-500 mb-3">{error}</p>
                           <button onClick={fetchLeaveRequests} className="px-4 py-1.5 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
                             Retry
@@ -560,7 +600,7 @@ const Leaves = () => {
                           <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-2">
                             <SearchX className="w-5 h-5 text-blue-400" />
                           </div>
-                          <p className="text-sm font-semibold text-gray-600">No requests found</p>
+                          <p className="text-sm font-semibold text-gray-600">{LEAVES_TEXT.emptyStates.noRequests}</p>
                           {hasActiveFilters && (
                             <button onClick={clearAllFilters} className="mt-2 text-xs text-blue-600 hover:underline">
                               Clear all filters
@@ -608,13 +648,13 @@ const Leaves = () => {
                                   onClick={() => handleViewClick(emp)}
                                   className="px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-md text-xs font-medium hover:bg-emerald-100 transition-colors border border-emerald-200"
                                 >
-                                  Approve
+                                  {LEAVES_TEXT.buttons.approve}
                                 </button>
                                 <button
                                   onClick={() => handleViewClick(emp)}
                                   className="px-2.5 py-1 bg-red-50 text-red-600 rounded-md text-xs font-medium hover:bg-red-100 transition-colors border border-red-200"
                                 >
-                                  Reject
+                                  {LEAVES_TEXT.buttons.reject}
                                 </button>
                               </div>
                             ) : (
@@ -622,7 +662,7 @@ const Leaves = () => {
                                 onClick={() => handleViewClick(emp)}
                                 className="px-2.5 py-1 bg-blue-50 text-blue-700 rounded-md text-xs font-medium hover:bg-blue-100 transition-colors border border-blue-200"
                               >
-                                View
+                                {LEAVES_TEXT.buttons.view}
                               </button>
                             )}
                           </td>
@@ -649,7 +689,7 @@ const Leaves = () => {
                   <p className="text-sm font-semibold text-gray-800 mb-1">Error Loading Requests</p>
                   <p className="text-xs text-gray-500 mb-3">{error}</p>
                   <button onClick={fetchLeaveRequests} className="px-4 py-1.5 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
-                    Retry
+                    {LEAVES_TEXT.buttons.retry}
                   </button>
                 </div>
               ) : noUserFound ? (
@@ -703,13 +743,13 @@ const Leaves = () => {
                             onClick={() => handleViewClick(emp)}
                             className="flex-1 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-lg text-xs font-medium hover:bg-emerald-100 transition-colors border border-emerald-200"
                           >
-                            Approve
+                            {LEAVES_TEXT.buttons.approve}
                           </button>
                           <button
                             onClick={() => handleViewClick(emp)}
                             className="flex-1 px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-xs font-medium hover:bg-red-100 transition-colors border border-red-200"
                           >
-                            Reject
+                            {LEAVES_TEXT.buttons.reject}
                           </button>
                         </div>
                       ) : (
@@ -717,7 +757,7 @@ const Leaves = () => {
                           onClick={() => handleViewClick(emp)}
                           className="w-full px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-xs font-medium hover:bg-blue-100 transition-colors border border-blue-200"
                         >
-                          View Details
+                          {LEAVES_TEXT.buttons.viewDetails}
                         </button>
                       )}
                     </div>
@@ -764,9 +804,8 @@ const Leaves = () => {
                     )}
                     <button
                       onClick={() => setPage(pNum)}
-                      className={`w-7 h-7 text-xs rounded font-medium transition-all ${
-                        page === pNum ? 'bg-blue-500 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-100'
-                      }`}
+                      className={`w-7 h-7 text-xs rounded font-medium transition-all ${page === pNum ? 'bg-blue-500 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-100'
+                        }`}
                     >
                       {pNum}
                     </button>

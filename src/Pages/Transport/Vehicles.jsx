@@ -1,51 +1,34 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Bus, Search, ChevronDown, AlertTriangle, CheckCircle2,
   XCircle, Pencil, ToggleLeft, ToggleRight, Plus, SlidersHorizontal,
   CheckCircle, XCircle as XCircleIcon,
 } from "lucide-react";
-import AddVehicleCard     from "../../Components/Transport/AddVehicleCard";
+import AddVehicleCard from "../../Components/Transport/AddVehicleCard";
 import ActionDropDownComp from "../../Components/CommonComp/ActionDropDownComp";
-import ListLoader         from "../../Components/CommonComp/ListLoader";
+import ListLoader from "../../Components/CommonComp/ListLoader";
 import {
   getVehicles,
   getActiveVehicles,
   getVehicleCapacityReport,
   activateVehicle,
   deactivateVehicle,
-} from "../../Api/TransportAPI";
+} from "../../Api/Transport/TransportAPI";
 import { toast } from "react-toastify";
-
-// ─── Constants ────────────────────────────────────────────────────
-const STATUS_OPTIONS = [
-  { value: "",         label: "All Status" },
-  { value: "ACTIVE",   label: "Active"     },
-  { value: "INACTIVE", label: "Inactive"   },
-];
-
-const TYPE_OPTIONS_BASE = [{ value: "", label: "All Types" }];
-const ITEMS_PER_PAGE    = 10;
-
-const typeColors = {
-  BUS:      "bg-blue-100 text-blue-700",
-  MINI_BUS: "bg-purple-100 text-purple-700",
-  VAN:      "bg-orange-100 text-orange-700",
-};
-const typeLabel = { BUS: "BUS", MINI_BUS: "MINI BUS", VAN: "VAN" };
-
-// Desktop table column definitions — keeps header + body cells in sync
-// and makes it easy to hide/show columns at specific breakpoints.
-const TABLE_COLUMNS = [
-  { label: "#",            extra: "px-4 sm:px-6 w-8" },
-  { label: "Vehicle",       extra: "px-3 sm:px-4" },
-  { label: "Type",          extra: "px-3 sm:px-4" },
-  { label: "Capacity",      extra: "px-3 sm:px-4" },
-  { label: "GPS",           extra: "px-3 sm:px-4" },
-  { label: "Make / Model",  extra: "px-3 sm:px-4 hidden 2xl:table-cell" },
-  { label: "Compliance",    extra: "px-3 sm:px-4" },
-  { label: "Status",        extra: "px-3 sm:px-4" },
-  { label: "Actions",       extra: "px-3 sm:px-4 text-center" },
-];
+import {
+  STATUS,
+  ACTION_TYPES,
+  STATUS_OPTIONS,
+  TYPE_OPTIONS_BASE,
+  PAGINATION,
+  VEHICLE_TYPE_COLORS,
+  VEHICLE_TYPE_LABELS,
+  VEHICLE_TABLE_COLUMNS,
+  TOAST_MESSAGES,
+  VEHICLE_UI_TEXT,
+  COMMON_UI_TEXT,
+  ACTION_MESSAGES
+} from "../../Constants/StringConstants/TransportConstants";
 
 // ─── Helpers ──────────────────────────────────────────────────────
 function fmtDate(dateStr) {
@@ -62,8 +45,8 @@ function isExpiringSoon(dateStr, days = 30) {
 
 // ─── Mobile / Tablet Vehicle Card ──────────────────────────────────
 function VehicleCard({ v, capacityMap, onAction }) {
-  const cap     = capacityMap[v.id] || {};
-  const insDate = v.insuranceExpiryDate   || cap.insuranceExpiryDate;
+  const cap = capacityMap[v.id] || {};
+  const insDate = v.insuranceExpiryDate || cap.insuranceExpiryDate;
   const fitDate = v.fitnessCertExpiryDate || cap.fitnessCertExpiryDate;
   const insWarn = isExpiringSoon(insDate);
   const fitWarn = isExpiringSoon(fitDate);
@@ -76,41 +59,41 @@ function VehicleCard({ v, capacityMap, onAction }) {
           <p className="text-xs text-gray-400 mt-0.5">{v.makeModel} · {v.yearOfManufacture}</p>
         </div>
         <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
-          <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${typeColors[v.vehicleType] || "bg-gray-100 text-gray-600"}`}>
-            {typeLabel[v.vehicleType] || v.vehicleType}
+          <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${VEHICLE_TYPE_COLORS[v.vehicleType] || "bg-gray-100 text-gray-600"}`}>
+            {VEHICLE_TYPE_LABELS[v.vehicleType] || v.vehicleType}
           </span>
-          {v.status === "ACTIVE"
+          {v.status === STATUS.ACTIVE
             ? <span className="inline-flex items-center gap-1.5 bg-green-50 text-green-700 text-xs font-bold px-2.5 py-1 rounded-full border border-green-200">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse inline-block" /> Active
-              </span>
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse inline-block" /> {COMMON_UI_TEXT.ACTIVE}
+            </span>
             : <span className="inline-flex items-center gap-1.5 bg-gray-100 text-gray-500 text-xs font-bold px-2.5 py-1 rounded-full border border-gray-200">
-                <span className="w-1.5 h-1.5 rounded-full bg-gray-400 inline-block" /> Inactive
-              </span>
+              <span className="w-1.5 h-1.5 rounded-full bg-gray-400 inline-block" /> {COMMON_UI_TEXT.INACTIVE}
+            </span>
           }
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-2 text-xs">
         <div className="bg-gray-50 rounded-lg px-3 py-2">
-          <p className="text-gray-400 font-medium mb-0.5">Capacity</p>
-          <p className="font-bold text-gray-700">{v.capacity} seats</p>
+          <p className="text-gray-400 font-medium mb-0.5">{VEHICLE_UI_TEXT.LBL_CAPACITY}</p>
+          <p className="font-bold text-gray-700">{v.capacity} {VEHICLE_UI_TEXT.LBL_SEATS}</p>
         </div>
         <div className="bg-gray-50 rounded-lg px-3 py-2">
-          <p className="text-gray-400 font-medium mb-0.5">GPS</p>
+          <p className="text-gray-400 font-medium mb-0.5">{VEHICLE_UI_TEXT.LBL_GPS}</p>
           {v.gpsEnabled
-            ? <span className="inline-flex items-center gap-1 text-green-600 font-semibold"><CheckCircle2 className="w-3.5 h-3.5" /> Enabled</span>
-            : <span className="inline-flex items-center gap-1 text-red-500 font-semibold"><XCircle className="w-3.5 h-3.5" /> Disabled</span>
+            ? <span className="inline-flex items-center gap-1 text-green-600 font-semibold"><CheckCircle2 className="w-3.5 h-3.5" /> {VEHICLE_UI_TEXT.LBL_ENABLED}</span>
+            : <span className="inline-flex items-center gap-1 text-red-500 font-semibold"><XCircle className="w-3.5 h-3.5" /> {VEHICLE_UI_TEXT.LBL_DISABLED}</span>
           }
         </div>
         <div className="bg-gray-50 rounded-lg px-3 py-2">
-          <p className="text-gray-400 font-medium mb-0.5">Insurance Expiry</p>
+          <p className="text-gray-400 font-medium mb-0.5">{VEHICLE_UI_TEXT.LBL_INS_EXPIRY}</p>
           <span className={`inline-flex items-center gap-1 font-semibold ${insWarn ? "text-orange-600" : "text-gray-700"}`}>
             {insWarn && <AlertTriangle className="w-3.5 h-3.5 shrink-0" />}
             {fmtDate(insDate)}
           </span>
         </div>
         <div className="bg-gray-50 rounded-lg px-3 py-2">
-          <p className="text-gray-400 font-medium mb-0.5">Fitness Expiry</p>
+          <p className="text-gray-400 font-medium mb-0.5">{VEHICLE_UI_TEXT.LBL_FIT_EXPIRY}</p>
           <span className={`inline-flex items-center gap-1 font-semibold ${fitWarn ? "text-orange-600" : "text-gray-700"}`}>
             {fitWarn && <AlertTriangle className="w-3.5 h-3.5 shrink-0" />}
             {fmtDate(fitDate)}
@@ -121,14 +104,14 @@ function VehicleCard({ v, capacityMap, onAction }) {
       <ActionDropDownComp
         onAction={(val) => onAction(v, val)}
         actionOptions={[
-          { label: "Edit", value: "edit", icon: Pencil, bg: "bg-white", text: "text-blue-600", hover: "hover:bg-blue-50" },
+          { label: COMMON_UI_TEXT.EDIT, value: ACTION_TYPES.EDIT, icon: Pencil, bg: "bg-white", text: "text-blue-600", hover: "hover:bg-blue-50" },
           {
-            label: v.status === "ACTIVE" ? "Deactivate" : "Activate",
-            value: "toggle",
-            icon: v.status === "ACTIVE" ? ToggleLeft : ToggleRight,
+            label: v.status === STATUS.ACTIVE ? COMMON_UI_TEXT.DEACTIVATE : COMMON_UI_TEXT.ACTIVATE,
+            value: ACTION_TYPES.TOGGLE,
+            icon: v.status === STATUS.ACTIVE ? ToggleLeft : ToggleRight,
             bg: "bg-white",
-            text: v.status === "ACTIVE" ? "text-orange-600" : "text-green-600",
-            hover: v.status === "ACTIVE" ? "hover:bg-orange-50" : "hover:bg-green-50",
+            text: v.status === STATUS.ACTIVE ? "text-orange-600" : "text-green-600",
+            hover: v.status === STATUS.ACTIVE ? "hover:bg-orange-50" : "hover:bg-green-50",
           },
         ]}
       />
@@ -139,22 +122,22 @@ function VehicleCard({ v, capacityMap, onAction }) {
 // ─── Main ─────────────────────────────────────────────────────────
 export default function Vehicles() {
   // ── All vehicles (fetched once, no type param sent) ──
-  const [allVehicles, setAllVehicles]   = useState([]);   // raw API data, unfiltered
-  const [pagination, setPagination]     = useState(null);
-  const [capacityMap, setCapacityMap]   = useState({});
-  const [typeOptions, setTypeOptions]   = useState(TYPE_OPTIONS_BASE);
+  const [allVehicles, setAllVehicles] = useState([]);   // raw API data, unfiltered
+  const [pagination, setPagination] = useState(null);
+  const [capacityMap, setCapacityMap] = useState({});
+  const [typeOptions, setTypeOptions] = useState(TYPE_OPTIONS_BASE);
 
-  const [loading, setLoading]           = useState(true);
-  const [togglingId, setTogglingId]     = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [togglingId, setTogglingId] = useState(null);
 
-  const [searchInput, setSearchInput]   = useState("");
-  const [search, setSearch]             = useState("");
-  const [typeFilter, setTypeFilter]     = useState("");    // "" | "BUS" | "MINI_BUS" | "VAN"
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState("");    // "" | "BUS" | "MINI_BUS" | "VAN"
   const [statusFilter, setStatusFilter] = useState("");    // "" | "ACTIVE" | "INACTIVE"
-  const [page, setPage]                 = useState(0);
+  const [page, setPage] = useState(0);
 
-  const [showModal, setShowModal]       = useState(false);
-  const [editVehicle, setEditVehicle]   = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  const [editVehicle, setEditVehicle] = useState(null);
 
   // ── Debounce search ──
   useEffect(() => {
@@ -169,16 +152,16 @@ export default function Vehicles() {
       // Fetch a large page so we can do FE type filtering on the full dataset.
       // Status filter is reliable server-side so we pass it directly.
       const res = await getVehicles({
-        page:       0,
-        size:       500,           // fetch all, FE handles type + search + pagination
+        page: 0,
+        size: 500,           // fetch all, FE handles type + search + pagination
         searchTerm: search,
-        type:       "",            // do NOT send type to API — handle on FE
-        status:     statusFilter,  // status IS reliable server-side
+        type: "",            // do NOT send type to API — handle on FE
+        status: statusFilter,  // status IS reliable server-side
       });
       setAllVehicles(res.vehicles || []);
     } catch (e) {
       console.error(e);
-      toast.error("Failed to load vehicles.");
+      toast.error(TOAST_MESSAGES.VEHICLES_LOAD_FAIL);
     } finally {
       setLoading(false);
     }
@@ -205,10 +188,10 @@ export default function Vehicles() {
       .then((data) => {
         const seen = new Set(data.map((v) => v.vehicleType));
         setTypeOptions([
-          { value: "", label: "All Types" },
+          ...TYPE_OPTIONS_BASE,
           ...Array.from(seen).map((val) => ({
             value: val,
-            label: typeLabel[val] || val,
+            label: VEHICLE_TYPE_LABELS[val] || val,
           })),
         ]);
       })
@@ -220,10 +203,10 @@ export default function Vehicles() {
     ? allVehicles.filter((v) => v.vehicleType === typeFilter)
     : allVehicles;
 
-  const totalItems  = filtered.length;
-  const totalPages  = Math.max(1, Math.ceil(totalItems / ITEMS_PER_PAGE));
-  const safePage    = Math.min(page, totalPages - 1);
-  const paginated   = filtered.slice(safePage * ITEMS_PER_PAGE, (safePage + 1) * ITEMS_PER_PAGE);
+  const totalItems = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / PAGINATION.ITEMS_PER_PAGE));
+  const safePage = Math.min(page, totalPages - 1);
+  const paginated = filtered.slice(safePage * PAGINATION.ITEMS_PER_PAGE, (safePage + 1) * PAGINATION.ITEMS_PER_PAGE);
   const currentPage = safePage;
 
   // Reset to page 0 when type filter changes
@@ -237,13 +220,13 @@ export default function Vehicles() {
 
   // ── Toggle activate / deactivate ──
   const handleAction = async (vehicle, value) => {
-    if (value === "edit") {
+    if (value === ACTION_TYPES.EDIT) {
       setEditVehicle(vehicle);
       setShowModal(true);
       return;
     }
-    if (value === "toggle") {
-      const isActive = vehicle.status === "ACTIVE";
+    if (value === ACTION_TYPES.TOGGLE) {
+      const isActive = vehicle.status === STATUS.ACTIVE;
       setTogglingId(vehicle.id);
       try {
         isActive
@@ -251,13 +234,13 @@ export default function Vehicles() {
           : await activateVehicle(vehicle.id);
         toast.success(
           isActive
-            ? `${vehicle.vehicleNumber} deactivated successfully.`
-            : `${vehicle.vehicleNumber} activated successfully.`
+            ? `${vehicle.vehicleNumber} ${ACTION_MESSAGES.DEACTIVATED}`
+            : `${vehicle.vehicleNumber} ${ACTION_MESSAGES.ACTIVATED}`
         );
         await fetchVehicles();
       } catch (e) {
         console.error(e);
-        toast.error(`Failed to ${isActive ? "deactivate" : "activate"} ${vehicle.vehicleNumber}.`);
+        toast.error(`${isActive ? ACTION_MESSAGES.FAILED_DEACTIVATE : ACTION_MESSAGES.FAILED_ACTIVATE} ${vehicle.vehicleNumber}.`);
       } finally {
         setTogglingId(null);
       }
@@ -267,7 +250,7 @@ export default function Vehicles() {
   const handleSaved = async (isEdit) => {
     setShowModal(false);
     setEditVehicle(null);
-    toast.success(isEdit ? "Vehicle updated successfully." : "Vehicle added successfully.");
+    toast.success(isEdit ? TOAST_MESSAGES.VEHICLE_UPDATE_SUCCESS : TOAST_MESSAGES.VEHICLE_ADD_SUCCESS);
     await fetchVehicles();
     fetchCapacity();
   };
@@ -281,11 +264,10 @@ export default function Vehicles() {
         <div className="px-4 sm:px-6 lg:px-6 2xl:px-8 pt-6 sm:pt-8 pb-2">
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 flex items-center gap-2">
             <Bus className="w-6 h-6 sm:w-7 sm:h-7 text-blue-600 shrink-0" />
-            Vehicle Management
+            {VEHICLE_UI_TEXT.PAGE_TITLE}
           </h1>
           <p className="text-gray-500 text-xs sm:text-sm mt-1 max-w-2xl">
-            Manage your entire fleet — add vehicles, track GPS status, monitor
-            insurance &amp; fitness expiry, and toggle active status in one place.
+            {VEHICLE_UI_TEXT.PAGE_SUBTITLE}
           </p>
         </div>
 
@@ -297,17 +279,17 @@ export default function Vehicles() {
               <div>
                 <h2 className="text-base sm:text-lg font-bold text-gray-900 flex items-center gap-2">
                   <SlidersHorizontal className="w-4 h-4 text-blue-500" />
-                  Manage Vehicles
+                  {VEHICLE_UI_TEXT.SECTION_TITLE}
                 </h2>
                 <p className="text-xs text-gray-400 mt-0.5">
-                  {totalItems} vehicle{totalItems !== 1 ? "s" : ""} found
+                  {totalItems} {totalItems !== 1 ? VEHICLE_UI_TEXT.LBL_VEHICLES : VEHICLE_UI_TEXT.LBL_VEHICLE} {COMMON_UI_TEXT.FOUND}
                 </p>
               </div>
               <button
                 onClick={() => { setEditVehicle(null); setShowModal(true); }}
                 className="inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors shadow-sm w-full sm:w-auto"
               >
-                <Plus className="w-4 h-4" /> Add Vehicle
+                <Plus className="w-4 h-4" /> {VEHICLE_UI_TEXT.BTN_ADD_VEHICLE}
               </button>
             </div>
 
@@ -317,7 +299,7 @@ export default function Vehicles() {
                 <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Search by vehicle number or model…"
+                  placeholder={VEHICLE_UI_TEXT.SEARCH_PLACEHOLDER}
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
                   className="w-full pl-10 pr-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-200 bg-gray-50 placeholder-gray-400"
@@ -360,8 +342,8 @@ export default function Vehicles() {
               ) : paginated.length === 0 ? (
                 <div className="text-center py-12 text-gray-400">
                   <Bus className="w-10 h-10 mx-auto text-gray-200 mb-3" />
-                  <p className="font-medium text-sm">No vehicles found</p>
-                  <p className="text-xs mt-1">Try adjusting your search or filters</p>
+                  <p className="font-medium text-sm">{VEHICLE_UI_TEXT.EMPTY_TITLE}</p>
+                  <p className="text-xs mt-1">{VEHICLE_UI_TEXT.EMPTY_SUBTITLE}</p>
                 </div>
               ) : paginated.map((v) => (
                 <VehicleCard key={v.id} v={v} capacityMap={capacityMap} onAction={handleAction} />
@@ -373,7 +355,7 @@ export default function Vehicles() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-100">
-                    {TABLE_COLUMNS.map((col, i) => (
+                    {VEHICLE_TABLE_COLUMNS.map((col, i) => (
                       <th
                         key={i}
                         className={`${col.extra} py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider text-nowrap`}
@@ -385,42 +367,42 @@ export default function Vehicles() {
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   {loading ? (
-                    <ListLoader rows={ITEMS_PER_PAGE} avatar={false} />
+                    <ListLoader rows={PAGINATION.ITEMS_PER_PAGE} avatar={false} />
                   ) : paginated.length === 0 ? (
                     <tr>
-                      <td colSpan={TABLE_COLUMNS.length} className="text-center py-16 text-gray-400">
+                      <td colSpan={VEHICLE_TABLE_COLUMNS.length} className="text-center py-16 text-gray-400">
                         <Bus className="w-10 h-10 mx-auto text-gray-200 mb-3" />
-                        <p className="font-medium">No vehicles found</p>
-                        <p className="text-xs mt-1">Try adjusting your search or filters</p>
+                        <p className="font-medium">{VEHICLE_UI_TEXT.EMPTY_TITLE}</p>
+                        <p className="text-xs mt-1">{VEHICLE_UI_TEXT.EMPTY_SUBTITLE}</p>
                       </td>
                     </tr>
                   ) : paginated.map((v, idx) => {
-                    const cap     = capacityMap[v.id] || {};
-                    const insDate = v.insuranceExpiryDate   || cap.insuranceExpiryDate;
+                    const cap = capacityMap[v.id] || {};
+                    const insDate = v.insuranceExpiryDate || cap.insuranceExpiryDate;
                     const fitDate = v.fitnessCertExpiryDate || cap.fitnessCertExpiryDate;
                     const insWarn = isExpiringSoon(insDate);
                     const fitWarn = isExpiringSoon(fitDate);
-                    const isBusy  = togglingId === v.id;
+                    const isBusy = togglingId === v.id;
 
                     return (
                       <tr key={v.id} className="hover:bg-blue-50/30 transition-colors text-center">
                         <td className="px-4 sm:px-6 py-3 text-gray-400 text-xs font-medium">
-                          {currentPage * ITEMS_PER_PAGE + idx + 1}
+                          {currentPage * PAGINATION.ITEMS_PER_PAGE + idx + 1}
                         </td>
                         <td className="px-3 sm:px-4 py-3">
                           <p className="font-bold text-gray-900">{v.vehicleNumber}</p>
                           <p className="text-xs text-gray-400 mt-0.5">{v.makeModel} · {v.yearOfManufacture}</p>
                         </td>
                         <td className="px-3 sm:px-4 py-3">
-                          <span className={`text-xs font-semibold text-nowrap px-2.5 py-1 rounded-full ${typeColors[v.vehicleType] || "bg-gray-100 text-gray-600"}`}>
-                            {typeLabel[v.vehicleType] || v.vehicleType}
+                          <span className={`text-xs font-semibold text-nowrap px-2.5 py-1 rounded-full ${VEHICLE_TYPE_COLORS[v.vehicleType] || "bg-gray-100 text-gray-600"}`}>
+                            {VEHICLE_TYPE_LABELS[v.vehicleType] || v.vehicleType}
                           </span>
                         </td>
                         <td className="px-3 sm:px-4 py-3 text-gray-700 font-semibold">{v.capacity}</td>
                         <td className="px-3 sm:px-4 py-3">
                           {v.gpsEnabled
-                            ? <span className="inline-flex items-center gap-1 text-green-600 text-xs font-semibold bg-green-50 px-2.5 py-1 rounded-full border border-green-100"><CheckCircle2 className="w-3.5 h-3.5" /> Yes</span>
-                            : <span className="inline-flex items-center gap-1 text-red-500 text-xs font-semibold bg-red-50 px-2.5 py-1 rounded-full border border-red-100"><XCircle className="w-3.5 h-3.5" /> No</span>
+                            ? <span className="inline-flex items-center gap-1 text-green-600 text-xs font-semibold bg-green-50 px-2.5 py-1 rounded-full border border-green-100"><CheckCircle2 className="w-3.5 h-3.5" /> {COMMON_UI_TEXT.YES}</span>
+                            : <span className="inline-flex items-center gap-1 text-red-500 text-xs font-semibold bg-red-50 px-2.5 py-1 rounded-full border border-red-100"><XCircle className="w-3.5 h-3.5" /> {COMMON_UI_TEXT.NO}</span>
                           }
                         </td>
                         <td className="px-3 sm:px-4 py-3 hidden 2xl:table-cell text-nowrap text-gray-600">{v.makeModel}</td>
@@ -438,14 +420,14 @@ export default function Vehicles() {
                         </td>
                         <td className="px-3 sm:px-4 py-3">
                           {isBusy ? (
-                            <span className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full bg-gray-100 text-gray-400 border border-gray-200 animate-pulse">Wait…</span>
-                          ) : v.status === "ACTIVE" ? (
+                            <span className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full bg-gray-100 text-gray-400 border border-gray-200 animate-pulse">{COMMON_UI_TEXT.WAIT}</span>
+                          ) : v.status === STATUS.ACTIVE ? (
                             <span className="inline-flex items-center gap-1.5 bg-green-50 text-green-700 text-xs font-bold px-3 py-1.5 rounded-full border border-green-200">
-                              <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse inline-block" /> Active
+                              <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse inline-block" /> {COMMON_UI_TEXT.ACTIVE}
                             </span>
                           ) : (
                             <span className="inline-flex items-center gap-1.5 bg-gray-100 text-gray-500 text-xs font-bold px-3 py-1.5 rounded-full border border-gray-200">
-                              <span className="w-1.5 h-1.5 rounded-full bg-gray-400 inline-block" /> Inactive
+                              <span className="w-1.5 h-1.5 rounded-full bg-gray-400 inline-block" /> {COMMON_UI_TEXT.INACTIVE}
                             </span>
                           )}
                         </td>
@@ -453,14 +435,14 @@ export default function Vehicles() {
                           <ActionDropDownComp
                             onAction={(val) => handleAction(v, val)}
                             actionOptions={[
-                              { label: "Edit", value: "edit", icon: Pencil, bg: "bg-white", text: "text-blue-600", hover: "hover:bg-blue-50" },
+                              { label: COMMON_UI_TEXT.EDIT, value: ACTION_TYPES.EDIT, icon: Pencil, bg: "bg-white", text: "text-blue-600", hover: "hover:bg-blue-50" },
                               {
-                                label: v.status === "ACTIVE" ? "Deactivate" : "Activate",
-                                value: "toggle",
-                                icon: v.status === "ACTIVE" ? ToggleLeft : ToggleRight,
+                                label: v.status === STATUS.ACTIVE ? COMMON_UI_TEXT.DEACTIVATE : COMMON_UI_TEXT.ACTIVATE,
+                                value: ACTION_TYPES.TOGGLE,
+                                icon: v.status === STATUS.ACTIVE ? ToggleLeft : ToggleRight,
                                 bg: "bg-white",
-                                text: v.status === "ACTIVE" ? "text-orange-600" : "text-green-600",
-                                hover: v.status === "ACTIVE" ? "hover:bg-orange-50" : "hover:bg-green-50",
+                                text: v.status === STATUS.ACTIVE ? "text-orange-600" : "text-green-600",
+                                hover: v.status === STATUS.ACTIVE ? "hover:bg-orange-50" : "hover:bg-green-50",
                                 disabled: isBusy,
                               },
                             ]}
@@ -477,7 +459,7 @@ export default function Vehicles() {
             {!loading && totalPages > 1 && (
               <div className="px-4 sm:px-6 py-4 border-t border-gray-100 flex items-center justify-between gap-4 flex-wrap">
                 <p className="text-xs text-gray-400 font-medium">
-                  Showing {totalItems === 0 ? 0 : currentPage * ITEMS_PER_PAGE + 1}–{Math.min((currentPage + 1) * ITEMS_PER_PAGE, totalItems)} of {totalItems} vehicle{totalItems !== 1 ? "s" : ""}
+                  Showing {totalItems === 0 ? 0 : currentPage * PAGINATION.ITEMS_PER_PAGE + 1}–{Math.min((currentPage + 1) * PAGINATION.ITEMS_PER_PAGE, totalItems)} of {totalItems} {totalItems !== 1 ? VEHICLE_UI_TEXT.LBL_VEHICLES : VEHICLE_UI_TEXT.LBL_VEHICLE}
                 </p>
                 <div className="flex items-center gap-1.5">
                   <button
@@ -491,11 +473,10 @@ export default function Vehicles() {
                     <button
                       key={p}
                       onClick={() => setPage(p)}
-                      className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold transition-colors ${
-                        currentPage === p
+                      className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold transition-colors ${currentPage === p
                           ? "bg-blue-600 text-white shadow-sm"
                           : "border border-gray-200 text-gray-600 hover:bg-gray-50"
-                      }`}
+                        }`}
                     >
                       {p + 1}
                     </button>

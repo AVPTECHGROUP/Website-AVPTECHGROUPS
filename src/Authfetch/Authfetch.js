@@ -11,30 +11,40 @@ export const authFetch = async (url, options = {}) => {
 
   // Check token validity before every request
   const decoded = getCurrUserDetails();
-  if (!decoded) {
+  if (!token || !decoded) {
     clearSessionAndRedirect();
-    return;
+    // Throw instead of returning undefined — callers do res.json()/res.ok
+    // on the return value, so silently returning undefined crashes them
+    // instead of letting their .catch() fallbacks handle it gracefully.
+    throw new Error("SESSION_EXPIRED");
   }
 
   const isFormData = options.body instanceof FormData;
 
-  const response = await fetch(url, {
-    ...options,
-    headers: {
-      // Only set Accept and Authorization by default
-      // Do NOT set Content-Type for FormData — browser handles it automatically
-      ...(!isFormData && { "Content-Type": "application/json" }),
-      Accept: "application/json",
-      Authorization: `Bearer ${token}`,
-      // Allow callers to override or add headers
-      ...options.headers,
-    },
-  });
+  let response;
+  try {
+    response = await fetch(url, {
+      ...options,
+      headers: {
+        // Only set Accept and Authorization by default
+        // Do NOT set Content-Type for FormData — browser handles it automatically
+        ...(!isFormData && { "Content-Type": "application/json" }),
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+        // Allow callers to override or add headers
+        ...options.headers,
+      },
+    });
+  } catch (networkErr) {
+    // fetch() itself throws on network failure/CORS/offline — surface a
+    // clear error instead of letting it bubble as a raw TypeError.
+    throw new Error("Network error — please check your connection and try again.");
+  }
 
   // Handle 401 Unauthorized globally
   if (response.status === 401) {
     clearSessionAndRedirect();
-    return;
+    throw new Error("SESSION_EXPIRED");
   }
 
   return response;

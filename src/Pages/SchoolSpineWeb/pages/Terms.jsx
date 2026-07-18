@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useContext } from 'react'
 import { Link } from 'react-router-dom'
+import { UserContext } from '../../../ContextAPI/UserContext'
 
 const sections = [
     { id: 'introduction', label: 'Introduction', icon: '📋' },
@@ -22,12 +23,16 @@ const sections = [
     { id: 'contact', label: 'Contact Information', icon: '✉️' },
 ]
 
-/* ─── Sub-components (mirrors Privacy Policy page) ──────────────────────── */
+/* ─── Sub-components ────────────────────────────────────────────────────── */
 
-const Section = ({ id, number, title, icon, children }) => (
+const Section = ({ id, number, title, icon, children, isDark }) => (
     <section
         id={id}
-        className="bg-white/[0.02] border border-white/[0.08] rounded-2xl p-6 md:p-8 scroll-mt-28"
+        className={`border rounded-2xl p-6 md:p-8 scroll-mt-28 transition-colors duration-300 ${
+            isDark 
+                ? 'bg-white/[0.02] border-white/[0.08]' 
+                : 'bg-black/[0.02] border-black/[0.08]'
+        }`}
         style={{ animation: 'fadeUp 0.5s ease both' }}
     >
         <div className="flex items-start gap-4 mb-6">
@@ -37,19 +42,19 @@ const Section = ({ id, number, title, icon, children }) => (
             <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-xl">{icon}</span>
-                    <h2 className="font-heading text-xl font-bold text-white">{title}</h2>
+                    <h2 className={`font-heading text-xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{title}</h2>
                 </div>
-                <div className="mt-3 h-px bg-gradient-to-r from-teal/30 via-white/5 to-transparent" />
+                <div className={`mt-3 h-px bg-gradient-to-r from-teal/30 to-transparent ${isDark ? 'via-white/5' : 'via-black/5'}`} />
             </div>
         </div>
 
-        <div className="text-text-muted text-sm leading-7 flex flex-col gap-3 pl-14">
+        <div className={`text-sm leading-7 flex flex-col gap-3 pl-14 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
             {children}
         </div>
     </section>
 )
 
-const InfoBox = ({ children, type = 'info' }) => {
+const InfoBox = ({ children, type = 'info', isDark }) => {
     const styles = {
         info: 'bg-teal/5 border-teal/20',
         warning: 'bg-gold/5 border-gold/20',
@@ -59,26 +64,26 @@ const InfoBox = ({ children, type = 'info' }) => {
     return (
         <div className={`flex gap-3 p-4 rounded-xl border ${styles[type]} text-sm`}>
             <span className="flex-shrink-0 mt-0.5">{icons[type]}</span>
-            <p className={type === 'warning' ? 'text-gold/80' : 'text-teal/80'}>{children}</p>
+            <p className={type === 'warning' ? 'text-amber-500' : 'text-teal/80'}>{children}</p>
         </div>
     )
 }
 
-const DataCard = ({ items }) => (
+const DataCard = ({ items, isDark }) => (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
         {items.map(({ label, value }) => (
-            <div key={label} className="bg-white/[0.03] border border-white/[0.07] rounded-xl px-4 py-3">
-                <p className="text-[10px] text-text-muted uppercase tracking-wider mb-1">{label}</p>
-                <p className="text-sm text-white font-medium break-all">{value}</p>
+            <div key={label} className={`border rounded-xl px-4 py-3 ${isDark ? 'bg-white/[0.03] border-white/[0.07]' : 'bg-black/[0.03] border-black/[0.07]'}`}>
+                <p className={`text-[10px] uppercase tracking-wider mb-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{label}</p>
+                <p className={`text-sm font-medium break-all ${isDark ? 'text-white' : 'text-slate-800'}`}>{value}</p>
             </div>
         ))}
     </div>
 )
 
-const CheckList = ({ items }) => (
+const CheckList = ({ items, isDark }) => (
     <ul className="flex flex-col gap-2 mt-1">
         {items.map((item) => (
-            <li key={item} className="flex items-start gap-3 text-[13px] text-text-muted">
+            <li key={item} className={`flex items-start gap-3 text-[13px] ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
                 <span className="mt-0.5 w-5 h-5 rounded-full bg-teal/10 border border-teal/20 flex items-center justify-center text-teal text-[10px] flex-shrink-0">
                     ✓
                 </span>
@@ -88,24 +93,24 @@ const CheckList = ({ items }) => (
     </ul>
 )
 
-const IconGrid = ({ items }) => (
+const IconGrid = ({ items, isDark }) => (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mt-1">
         {items.map(({ icon, text }) => (
-            <div key={text} className="flex items-center gap-3 bg-white/[0.02] border border-white/[0.07] rounded-xl px-4 py-3">
+            <div key={text} className={`flex items-center gap-3 border rounded-xl px-4 py-3 ${isDark ? 'bg-white/[0.02] border-white/[0.07]' : 'bg-black/[0.02] border-black/[0.07]'}`}>
                 <span className="text-base">{icon}</span>
-                <span className="text-[13px] text-text-muted">{text}</span>
+                <span className={`text-[13px] ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{text}</span>
             </div>
         ))}
     </div>
 )
 
-const FeatureGrid = ({ items }) => (
+const FeatureGrid = ({ items, isDark }) => (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-1">
         {items.map(({ icon, title, desc }) => (
-            <div key={title} className="bg-white/[0.02] border border-white/[0.07] rounded-xl p-4">
+            <div key={title} className={`border rounded-xl p-4 ${isDark ? 'bg-white/[0.02] border-white/[0.07]' : 'bg-black/[0.02] border-black/[0.07]'}`}>
                 <span className="text-2xl">{icon}</span>
-                <p className="text-white font-semibold text-sm mt-2">{title}</p>
-                {desc && <p className="text-text-muted text-xs mt-1">{desc}</p>}
+                <p className={`font-semibold text-sm mt-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>{title}</p>
+                {desc && <p className={`text-xs mt-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{desc}</p>}
             </div>
         ))}
     </div>
@@ -116,6 +121,9 @@ const FeatureGrid = ({ items }) => (
 const Terms_Of_Service = () => {
     const [activeSection, setActiveSection] = useState('introduction')
     const [scrollProgress, setScrollProgress] = useState(0)
+
+    const { theme } = useContext(UserContext);
+    const isDark = theme === 'dark';
 
     useEffect(() => {
         const onScroll = () => {
@@ -147,7 +155,7 @@ const Terms_Of_Service = () => {
     }
 
     return (
-        <div className="min-h-screen bg-bg-dark font-body">
+        <div className={`min-h-screen font-body transition-colors duration-300 ${isDark ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'}`}>
 
             <div
                 className="fixed top-0 left-0 z-50 h-[2px] transition-all duration-150"
@@ -159,20 +167,18 @@ const Terms_Of_Service = () => {
 
             {/* ══════════════════ HERO ══════════════════ */}
             <div className="relative overflow-hidden">
-
                 <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_10%_0%,rgba(0,201,177,0.07),transparent)]" />
                 <div className="absolute inset-0 bg-[radial-gradient(ellipse_50%_40%_at_90%_100%,rgba(245,166,35,0.05),transparent)]" />
                 <div className="absolute top-16 right-24 w-56 h-56 rounded-full bg-teal/[0.04] blur-3xl pointer-events-none" />
                 <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-teal/20 to-transparent" />
 
-                <div className="relative max-w-7xl mx-auto px-6 pt-5 pb-16  md:pb-20">
-
+                <div className="relative max-w-7xl mx-auto px-6 pt-5 pb-16 md:pb-20">
                     <div
-                        className="flex items-center gap-2 text-sm text-text-muted mb-8"
+                        className={`flex items-center gap-2 text-sm mb-8 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}
                         style={{ animation: 'fadeDown 0.45s ease both' }}
                     >
                         <Link to="/" className="hover:text-teal transition-colors">Home</Link>
-                        <span className="text-white/20">/</span>
+                        <span className={isDark ? 'text-white/20' : 'text-black/20'}>/</span>
                         <span className="text-teal">Terms of Service</span>
                     </div>
 
@@ -185,7 +191,7 @@ const Terms_Of_Service = () => {
                     </div>
 
                     <h1
-                        className="font-heading text-5xl md:text-7xl font-bold text-white leading-tight mb-4"
+                        className={`font-heading text-5xl md:text-7xl font-bold leading-tight mb-4 ${isDark ? 'text-white' : 'text-slate-900'}`}
                         style={{ animation: 'fadeUp 0.5s ease 0.15s both' }}
                     >
                         Terms of{' '}
@@ -193,7 +199,7 @@ const Terms_Of_Service = () => {
                     </h1>
 
                     <p
-                        className="text-text-muted text-base md:text-lg max-w-2xl leading-relaxed mb-10"
+                        className={`text-base md:text-lg max-w-2xl leading-relaxed mb-10 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}
                         style={{ animation: 'fadeUp 0.5s ease 0.22s both' }}
                     >
                         These Terms govern your access to and use of SchoolSpine. Please read them
@@ -211,11 +217,15 @@ const Terms_Of_Service = () => {
                         ].map(({ emoji, label, value }) => (
                             <div
                                 key={label}
-                                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/[0.03] border border-white/[0.08] text-text-muted"
+                                className={`flex items-center gap-2 px-4 py-2 rounded-xl border ${
+                                    isDark 
+                                        ? 'bg-white/[0.03] border-white/[0.08] text-slate-300' 
+                                        : 'bg-black/[0.03] border-black/[0.08] text-slate-600'
+                                }`}
                             >
                                 <span>{emoji}</span>
                                 <span>{label}:</span>
-                                <span className="text-white font-medium">{value}</span>
+                                <span className={`font-medium ${isDark ? 'text-white' : 'text-slate-800'}`}>{value}</span>
                             </div>
                         ))}
                     </div>
@@ -229,8 +239,8 @@ const Terms_Of_Service = () => {
                     <aside className="hidden lg:block w-64 xl:w-72 flex-shrink-0">
                         <div className="sticky top-24 flex flex-col gap-4">
 
-                            <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl p-4 backdrop-blur-md max-h-[70vh] overflow-y-auto">
-                                <p className="text-[10px] text-text-muted uppercase tracking-widest font-semibold px-2 mb-3">
+                            <div className={`border rounded-2xl p-4 backdrop-blur-md max-h-[70vh] overflow-y-auto shadow-sm ${isDark ? 'bg-slate-900 border-white/[0.08]' : 'bg-white border-slate-200'}`}>
+                                <p className={`text-[10px] uppercase tracking-widest font-semibold px-2 mb-3 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
                                     On This Page
                                 </p>
                                 <ul className="flex flex-col gap-0.5">
@@ -243,7 +253,9 @@ const Terms_Of_Service = () => {
                                                     className={`w-full text-left flex items-center gap-2.5 px-3 py-2 rounded-xl text-[13px] transition-all duration-200 cursor-pointer
                                                         ${active
                                                             ? 'bg-teal/10 text-teal border border-teal/20'
-                                                            : 'text-text-muted hover:text-white hover:bg-white/[0.04]'
+                                                            : isDark 
+                                                                ? 'text-slate-400 hover:text-white hover:bg-white/[0.04]' 
+                                                                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                                                         }`}
                                                 >
                                                     <span className="text-sm">{icon}</span>
@@ -255,14 +267,13 @@ const Terms_Of_Service = () => {
                                     })}
                                 </ul>
                             </div>
-
+                            
                             <div className="bg-[linear-gradient(135deg,rgba(0,201,177,0.07),rgba(245,166,35,0.04))] border border-teal/[0.15] rounded-2xl p-4">
-                                <p className="text-sm font-semibold text-white mb-1">Questions?</p>
-                                <p className="text-xs text-text-muted mb-3">Reach out to our team</p>
+                                <p className={`text-sm font-semibold mb-1 ${isDark ? 'text-white' : 'text-slate-800'}`}>Questions?</p>
+                                <p className={`text-xs mb-3 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Reach out to our team</p>
                                 <a
                                     href="mailto:info@computesofttech.com"
-                                    className="text-xs text-teal hover:text-teal-light transition-colors break-all"
-                                >
+                                    className="text-xs text-teal hover:text-teal-light transition-colors break-all">
                                     info@computesofttech.com
                                 </a>
                             </div>
@@ -272,14 +283,14 @@ const Terms_Of_Service = () => {
                     <div className="flex-1 min-w-0 flex flex-col gap-5 pt-1">
 
                         {/* 01 */}
-                        <Section id="introduction" number="01" title="Introduction" icon="📋">
+                        <Section id="introduction" number="01" title="Introduction" icon="📋" isDark={isDark}>
                             <p>
-                                Welcome to <strong className="text-white">SchoolSpine</strong>, a School
-                                Management System owned and operated by <strong className="text-white">ComputeSoftTechnologies</strong>.
+                                Welcome to <strong className={isDark ? 'text-white' : 'text-slate-900'}>SchoolSpine</strong>, a School
+                                Management System owned and operated by <strong className={isDark ? 'text-white' : 'text-slate-900'}>ComputeSoftTechnologies</strong>.
                                 These Terms of Service ("Terms") govern your access to and use of the School
                                 Spine website, mobile applications, and related services.
                             </p>
-                            <InfoBox type="info">
+                            <InfoBox type="info" isDark={isDark}>
                                 By accessing, registering for, or using SchoolSpine, you agree to be legally
                                 bound by these Terms. If you do not agree with any part of these Terms, you must
                                 discontinue use of the platform immediately.
@@ -287,9 +298,9 @@ const Terms_Of_Service = () => {
                         </Section>
 
                         {/* 02 */}
-                        <Section id="company-info" number="02" title="Company Information" icon="🏢">
+                        <Section id="company-info" number="02" title="Company Information" icon="🏢" isDark={isDark}>
                             <p>You may reach ComputeSoftTechnologies through:</p>
-                            <DataCard items={[
+                            <DataCard isDark={isDark} items={[
                                 { label: 'Company Name', value: 'ComputeSoftTechnologies' },
                                 { label: 'Brand Name', value: 'SchoolSpine' },
                                 { label: 'Address', value: 'Royal Plaza, Sushant Golf City, Lucknow, UP – 226030, India' },
@@ -300,9 +311,9 @@ const Terms_Of_Service = () => {
                         </Section>
 
                         {/* 03 */}
-                        <Section id="services" number="03" title="Description of Services" icon="🛠️">
+                        <Section id="services" number="03" title="Description of Services" icon="🛠️" isDark={isDark}>
                             <p>SchoolSpine is a cloud-based School Management Platform that enables educational institutions to manage and monitor:</p>
-                            <IconGrid items={[
+                            <IconGrid isDark={isDark} items={[
                                 { icon: '🎓', text: 'Student records' },
                                 { icon: '👩‍🏫', text: 'Teacher records' },
                                 { icon: '✅', text: 'Attendance management' },
@@ -314,16 +325,16 @@ const Terms_Of_Service = () => {
                                 { icon: '🗂️', text: 'Digital document management' },
                                 { icon: '📱', text: 'Mobile & web-based administration' },
                             ]} />
-                            <InfoBox type="info">
+                            <InfoBox type="info" isDark={isDark}>
                                 The platform is intended solely for legitimate educational and administrative
                                 purposes.
                             </InfoBox>
                         </Section>
 
                         {/* 04 */}
-                        <Section id="eligibility" number="04" title="Eligibility" icon="✅">
+                        <Section id="eligibility" number="04" title="Eligibility" icon="✅" isDark={isDark}>
                             <p>Users must be authorized by their educational institution to access and use SchoolSpine. Authorized users may include:</p>
-                            <FeatureGrid items={[
+                            <FeatureGrid isDark={isDark} items={[
                                 { icon: '🧑‍💼', title: 'School Administrators' },
                                 { icon: '🏫', title: 'Principals' },
                                 { icon: '👩‍🏫', title: 'Teachers' },
@@ -335,24 +346,24 @@ const Terms_Of_Service = () => {
                         </Section>
 
                         {/* 05 */}
-                        <Section id="account-security" number="05" title="Account Registration and Security" icon="🔐">
+                        <Section id="account-security" number="05" title="Account Registration and Security" icon="🔐" isDark={isDark}>
                             <p>Users are responsible for:</p>
-                            <CheckList items={[
+                            <CheckList isDark={isDark} items={[
                                 'Maintaining the confidentiality of login credentials',
                                 'Restricting unauthorized access to their accounts',
                                 'Ensuring the accuracy of information provided',
                                 'Reporting unauthorized account activity immediately',
                             ]} />
-                            <InfoBox type="warning">
+                            <InfoBox type="warning" isDark={isDark}>
                                 ComputeSoftTechnologies shall not be liable for losses resulting from unauthorized use
                                 of user accounts due to negligence or credential sharing.
                             </InfoBox>
                         </Section>
 
                         {/* 06 */}
-                        <Section id="acceptable-use" number="06" title="Acceptable Use Policy" icon="🚫">
+                        <Section id="acceptable-use" number="06" title="Acceptable Use Policy" icon="🚫" isDark={isDark}>
                             <p>Users agree not to:</p>
-                            <CheckList items={[
+                            <CheckList isDark={isDark} items={[
                                 'Use the platform for unlawful purposes',
                                 'Upload harmful, malicious, or fraudulent content',
                                 'Attempt unauthorized access to systems or data',
@@ -361,15 +372,15 @@ const Terms_Of_Service = () => {
                                 'Violate the privacy rights of students, parents, teachers, or staff',
                                 'Misrepresent identity or authority',
                             ]} />
-                            <InfoBox type="warning">
+                            <InfoBox type="warning" isDark={isDark}>
                                 Any violation may result in suspension or termination of access.
                             </InfoBox>
                         </Section>
 
                         {/* 07 */}
-                        <Section id="school-data" number="07" title="School Data Responsibility" icon="🏫">
+                        <Section id="school-data" number="07" title="School Data Responsibility" icon="🏫" isDark={isDark}>
                             <p>Educational institutions remain the owners and controllers of the data they upload to SchoolSpine. Schools are responsible for:</p>
-                            <CheckList items={[
+                            <CheckList isDark={isDark} items={[
                                 'Obtaining necessary permissions and consents',
                                 'Ensuring data accuracy',
                                 'Maintaining compliance with applicable laws and regulations',
@@ -379,13 +390,13 @@ const Terms_Of_Service = () => {
                         </Section>
 
                         {/* 08 */}
-                        <Section id="ip-rights" number="08" title="Intellectual Property Rights" icon="©️">
+                        <Section id="ip-rights" number="08" title="Intellectual Property Rights" icon="©️" isDark={isDark}>
                             <p>
                                 All software, source code, designs, interfaces, logos, trademarks, content, and
                                 platform features are the exclusive property of ComputeSoftTechnologies unless
                                 otherwise stated. Users may not:
                             </p>
-                            <CheckList items={[
+                            <CheckList isDark={isDark} items={[
                                 'Copy any part of the platform',
                                 'Modify any part of the platform',
                                 'Reverse engineer any part of the platform',
@@ -397,7 +408,7 @@ const Terms_Of_Service = () => {
                         </Section>
 
                         {/* 09 */}
-                        <Section id="data-privacy" number="09" title="Data Privacy" icon="🔏">
+                        <Section id="data-privacy" number="09" title="Data Privacy" icon="🔏" isDark={isDark}>
                             <p>
                                 The collection, processing, storage, and protection of personal information are
                                 governed by our <Link to="/privacy-policy" className="text-teal hover:text-teal-light transition-colors">Privacy Policy</Link>.
@@ -406,38 +417,38 @@ const Terms_Of_Service = () => {
                         </Section>
 
                         {/* 10 */}
-                        <Section id="service-availability" number="10" title="Service Availability" icon="⏱️">
+                        <Section id="service-availability" number="10" title="Service Availability" icon="⏱️" isDark={isDark}>
                             <p>While we strive to maintain uninterrupted services, we do not guarantee that the platform will always be available without interruption. Services may occasionally be unavailable due to:</p>
-                            <CheckList items={[
+                            <CheckList isDark={isDark} items={[
                                 'System maintenance',
                                 'Technical upgrades',
                                 'Internet connectivity issues',
                                 'Force majeure events',
                                 'Third-party service disruptions',
                             ]} />
-                            <InfoBox type="warning">
+                            <InfoBox type="warning" isDark={isDark}>
                                 ComputeSoftTechnologies shall not be liable for temporary service interruptions.
                             </InfoBox>
                         </Section>
 
                         {/* 11 */}
-                        <Section id="third-party" number="11" title="Third-Party Services" icon="🔗">
+                        <Section id="third-party" number="11" title="Third-Party Services" icon="🔗" isDark={isDark}>
                             <p>The platform may integrate with third-party technologies or services. We are not responsible for:</p>
-                            <CheckList items={[
+                            <CheckList isDark={isDark} items={[
                                 'Third-party content',
                                 'External websites',
                                 'Third-party privacy practices',
                                 'External service interruptions',
                             ]} />
-                            <InfoBox type="warning">
+                            <InfoBox type="warning" isDark={isDark}>
                                 Users access third-party services at their own risk.
                             </InfoBox>
                         </Section>
 
                         {/* 12 */}
-                        <Section id="liability" number="12" title="Limitation of Liability" icon="⚖️">
+                        <Section id="liability" number="12" title="Limitation of Liability" icon="⚖️" isDark={isDark}>
                             <p>To the maximum extent permitted by applicable law, ComputeSoftTechnologies shall not be liable for:</p>
-                            <CheckList items={[
+                            <CheckList isDark={isDark} items={[
                                 'Indirect damages',
                                 'Consequential damages',
                                 'Data loss',
@@ -446,15 +457,15 @@ const Terms_Of_Service = () => {
                                 'Educational decisions based on platform data',
                                 'Unauthorized access caused by user negligence',
                             ]} />
-                            <InfoBox type="info">
+                            <InfoBox type="info" isDark={isDark}>
                                 The platform is provided on an "as available" and "as is" basis.
                             </InfoBox>
                         </Section>
 
                         {/* 13 */}
-                        <Section id="indemnification" number="13" title="Indemnification" icon="🛡️">
+                        <Section id="indemnification" number="13" title="Indemnification" icon="🛡️" isDark={isDark}>
                             <p>Users and educational institutions agree to indemnify and hold harmless ComputeSoftTechnologies, its directors, employees, partners, and affiliates from claims, liabilities, damages, losses, and expenses arising from:</p>
-                            <CheckList items={[
+                            <CheckList isDark={isDark} items={[
                                 'Misuse of the platform',
                                 'Violation of these Terms',
                                 'Violation of applicable laws',
@@ -463,24 +474,24 @@ const Terms_Of_Service = () => {
                         </Section>
 
                         {/* 14 */}
-                        <Section id="termination" number="14" title="Suspension and Termination" icon="⛔">
+                        <Section id="termination" number="14" title="Suspension and Termination" icon="⛔" isDark={isDark}>
                             <p>We reserve the right to suspend, restrict, or terminate access to SchoolSpine if:</p>
-                            <CheckList items={[
+                            <CheckList isDark={isDark} items={[
                                 'These Terms are violated',
                                 'Fraudulent activity is detected',
                                 'Unauthorized access is attempted',
                                 'Legal or regulatory requirements necessitate such action',
                             ]} />
-                            <InfoBox type="warning">
+                            <InfoBox type="warning" isDark={isDark}>
                                 Termination may occur without prior notice where required for security or legal
                                 reasons.
                             </InfoBox>
                         </Section>
 
                         {/* 15 */}
-                        <Section id="modifications" number="15" title="Modifications to Services" icon="🔄">
+                        <Section id="modifications" number="15" title="Modifications to Services" icon="🔄" isDark={isDark}>
                             <p>ComputeSoftTechnologies reserves the right to:</p>
-                            <CheckList items={[
+                            <CheckList isDark={isDark} items={[
                                 'Add new features',
                                 'Modify existing functionality',
                                 'Discontinue features',
@@ -491,37 +502,37 @@ const Terms_Of_Service = () => {
                         </Section>
 
                         {/* 16 */}
-                        <Section id="governing-law" number="16" title="Governing Law" icon="🏛️">
+                        <Section id="governing-law" number="16" title="Governing Law" icon="🏛️" isDark={isDark}>
                             <p>
                                 These Terms shall be governed by and interpreted in accordance with the laws of
                                 India.
                             </p>
-                            <InfoBox type="info">
+                            <InfoBox type="info" isDark={isDark}>
                                 Any disputes arising from these Terms shall be subject to the exclusive
                                 jurisdiction of the courts located in Lucknow, Uttar Pradesh, India.
                             </InfoBox>
                         </Section>
 
                         {/* 17 */}
-                        <Section id="changes" number="17" title="Changes to These Terms" icon="📝">
+                        <Section id="changes" number="17" title="Changes to These Terms" icon="📝" isDark={isDark}>
                             <p>We may revise these Terms periodically. Updated versions will be posted on the SchoolSpine website and applications with a revised effective date.</p>
                             <p>Continued use of the platform after updates constitutes acceptance of the revised Terms.</p>
                         </Section>
 
                         {/* 18 */}
-                        <Section id="contact" number="18" title="Contact Information" icon="✉️">
+                        <Section id="contact" number="18" title="Contact Information" icon="✉️" isDark={isDark}>
                             <p>For questions regarding these Terms of Service, please contact us:</p>
-                            <div className="mt-2 bg-[linear-gradient(135deg,rgba(0,201,177,0.05),rgba(245,166,35,0.03))] border border-teal/[0.15] rounded-2xl p-5 md:p-6">
-                                <p className="text-white font-heading font-bold text-lg mb-5">ComputeSoftTechnologies</p>
+                            <div className={`mt-2 border rounded-2xl p-5 md:p-6 ${isDark ? 'bg-white/[0.02] border-white/[0.15]' : 'bg-black/[0.02] border-black/[0.15]'}`}>
+                                <p className={`font-heading font-bold text-lg mb-5 ${isDark ? 'text-white' : 'text-slate-900'}`}>ComputeSoftTechnologies</p>
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
                                     <div>
-                                        <p className="text-[10px] text-text-muted uppercase tracking-wider mb-1.5">Address</p>
-                                        <p className="text-sm text-white leading-6">
+                                        <p className={`text-[10px] uppercase tracking-wider mb-1.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Address</p>
+                                        <p className={`text-sm leading-6 ${isDark ? 'text-white' : 'text-slate-700'}`}>
                                             Royal Plaza, Sushant Golf City,<br />Lucknow, UP – 226030, India
                                         </p>
                                     </div>
                                     <div>
-                                        <p className="text-[10px] text-text-muted uppercase tracking-wider mb-1.5">Email</p>
+                                        <p className={`text-[10px] uppercase tracking-wider mb-1.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Email</p>
                                         <a
                                             href="mailto:info@computesofttech.com"
                                             className="text-sm text-teal hover:text-teal-light transition-colors"
@@ -530,7 +541,7 @@ const Terms_Of_Service = () => {
                                         </a>
                                     </div>
                                     <div>
-                                        <p className="text-[10px] text-text-muted uppercase tracking-wider mb-1.5">Phone</p>
+                                        <p className={`text-[10px] uppercase tracking-wider mb-1.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Phone</p>
                                         <a
                                             href="tel:9511117450"
                                             className="text-sm text-teal hover:text-teal-light transition-colors"
@@ -550,4 +561,4 @@ const Terms_Of_Service = () => {
     )
 }
 
-export default Terms_Of_Service
+export default Terms_Of_Service;

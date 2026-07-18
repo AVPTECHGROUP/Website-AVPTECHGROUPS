@@ -37,23 +37,24 @@ const TeachersFilters = ({
         mb-4
     ">
 
-      {/* Search */}
       <div className="
-          lg:col-span-2
-          flex
-          items-center
-          gap-2
-          border
-          rounded-lg
-          border-gray-200
-          bg-gray-100
-          px-3
-          py-2
-          min-w-0
-      ">
+    lg:col-span-2
+    flex
+    items-center
+    gap-2
+    border
+    rounded-lg
+    border-gray-200
+    bg-gray-100
+    px-3
+    py-2
+    min-w-0 ">
+
         <SearchIcon className="w-5 h-5 text-gray-500 shrink-0" />
 
         <input
+          name="teacher-search-filter"
+          autoComplete="one-time-code"
           value={search}
           onChange={(e) => {
             setSearch(e.target.value);
@@ -61,14 +62,12 @@ const TeachersFilters = ({
           }}
           placeholder="Search by name, employee code or contact..."
           className="
-              w-full
-              min-w-0
-              text-sm
-              focus:outline-none
-              bg-transparent
-              text-gray-600
-          "
-        />
+        w-full
+        min-w-0
+        text-sm
+        focus:outline-none
+        bg-transparent
+        text-gray-600"/>
       </div>
 
 

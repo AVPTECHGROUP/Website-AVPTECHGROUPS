@@ -3,7 +3,7 @@ import {
     X, Hash, Package, Layers, Ruler, BarChart2,
     ToggleLeft, AlignLeft, Tag, IndianRupee, Loader2,
 } from "lucide-react";
-import { getItemById } from "../../Api/StockApi";
+import { getItemById } from "../../Api/Stock/StockApi";
 
 const categoryColors = {
     STATIONERY:  "bg-gray-100   text-gray-700   border-gray-200",

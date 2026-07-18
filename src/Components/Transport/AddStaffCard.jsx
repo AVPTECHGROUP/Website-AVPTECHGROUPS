@@ -1,37 +1,38 @@
 import { useState, useEffect } from "react";
 import { X, Users, Loader2, AlertCircle } from "lucide-react";
-import { addTransportStaff, updateTransportStaff } from "../../Api/TransportAPI";
+import { addTransportStaff, updateTransportStaff } from "../../Api/Transport/TransportAPI";
+import { toast } from "react-toastify";
 
 const toDateInput = (dateStr) => {
   if (!dateStr) return "";
-  return dateStr.split("T")[0]; 
+  return dateStr.split("T")[0];
 };
 
 const EMPTY_FORM = {
-  fullName:          "",
-  staffRole:         "DRIVER",
-  contactNumber:     "",
-  alternateContact:  "",
-  licenseNumber:     "",
+  fullName: "",
+  staffRole: "DRIVER",
+  contactNumber: "",
+  alternateContact: "",
+  licenseNumber: "",
   licenseExpiryDate: "",
-  address:           "",
-  aadharNumber:      "",
-  joiningDate:       "",
-  remarks:           "",
+  address: "",
+  aadharNumber: "",
+  joiningDate: "",
+  remarks: "",
 };
 
 function staffToForm(s) {
   return {
-    fullName:          s.fullName          || "",
-    staffRole:         s.staffRole         || "DRIVER",
-    contactNumber:     s.contactNumber     || "",
-    alternateContact:  s.alternateContact  || "",
-    licenseNumber:     s.licenseNumber     || "",
+    fullName: s.fullName || "",
+    staffRole: s.staffRole || "DRIVER",
+    contactNumber: s.contactNumber || "",
+    alternateContact: s.alternateContact || "",
+    licenseNumber: s.licenseNumber || "",
     licenseExpiryDate: toDateInput(s.licenseExpiryDate),
-    address:           s.address           || "",
-    aadharNumber:      s.aadharNumber      || "",
-    joiningDate:       toDateInput(s.joiningDate),
-    remarks:           s.remarks           || "",
+    address: s.address || "",
+    aadharNumber: s.aadharNumber || "",
+    joiningDate: toDateInput(s.joiningDate),
+    remarks: s.remarks || "",
   };
 }
 
@@ -54,8 +55,8 @@ const disabledCls = "w-full px-3.5 py-2.5 text-sm border border-gray-100 rounded
 export default function AddStaffCard({ isOpen, onClose, onSaved, editData }) {
   const isEditMode = Boolean(editData);
 
-  const [form, setForm]       = useState(EMPTY_FORM);
-  const [saving, setSaving]   = useState(false);
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [saving, setSaving] = useState(false);
   const [apiError, setApiError] = useState("");
 
   // Populate form on open / editData change
@@ -82,23 +83,23 @@ export default function AddStaffCard({ isOpen, onClose, onSaved, editData }) {
     const aadharClean = form.aadharNumber.trim();
 
     // ─── Core Form Validation ───
-    if (!form.fullName.trim()) { 
-      setApiError("Full name is required."); 
-      return; 
+    if (!form.fullName.trim()) {
+      setApiError("Full name is required.");
+      return;
     }
-    if (!form.staffRole) { 
-      setApiError("Staff role is required."); 
-      return; 
+    if (!form.staffRole) {
+      setApiError("Staff role is required.");
+      return;
     }
-    
+
     // Primary Phone Rule Validation
-    if (!contactClean) { 
-      setApiError("Contact number is required."); 
-      return; 
+    if (!contactClean) {
+      setApiError("Contact number is required.");
+      return;
     }
-    if (!/^\d{10}$/.test(contactClean)) { 
-      setApiError("Contact number must be exactly 10 digits."); 
-      return; 
+    if (!/^\d{10}$/.test(contactClean)) {
+      setApiError("Contact number must be exactly 10 digits.");
+      return;
     }
 
     // Optional Alternate Phone Validation
@@ -117,16 +118,16 @@ export default function AddStaffCard({ isOpen, onClose, onSaved, editData }) {
     setSaving(true);
 
     const payload = {
-      fullName:          form.fullName.trim(),
-      staffRole:         form.staffRole,
-      contactNumber:     contactClean,
-      alternateContact:  altContactClean || undefined,
-      licenseNumber:     form.licenseNumber.trim()    || undefined,
-      licenseExpiryDate: form.licenseExpiryDate       || undefined,
-      address:           form.address.trim()          || undefined,
-      aadharNumber:      aadharClean                  || undefined,
-      joiningDate:       form.joiningDate             || undefined,
-      remarks:           form.remarks.trim()          || undefined,
+      fullName: form.fullName.trim(),
+      staffRole: form.staffRole,
+      contactNumber: contactClean,
+      alternateContact: altContactClean || undefined,
+      licenseNumber: form.licenseNumber.trim() || undefined,
+      licenseExpiryDate: form.licenseExpiryDate || undefined,
+      address: form.address.trim() || undefined,
+      aadharNumber: aadharClean || undefined,
+      joiningDate: form.joiningDate || undefined,
+      remarks: form.remarks.trim() || undefined,
     };
 
     try {
@@ -135,10 +136,13 @@ export default function AddStaffCard({ isOpen, onClose, onSaved, editData }) {
       } else {
         await addTransportStaff(payload);
       }
+
       onSaved?.(isEditMode);
     } catch (e) {
       console.error(e);
-      setApiError(e?.message || "Something went wrong. Please try again.");
+      const msg = e?.message || "Something went wrong. Please try again.";
+      setApiError(msg);
+      toast.error(msg);
     } finally {
       setSaving(false);
     }
@@ -225,7 +229,7 @@ export default function AddStaffCard({ isOpen, onClose, onSaved, editData }) {
             {form.staffRole === "DRIVER" && (
               <Field label="License Number">
                 <input
-                  type="text" placeholder="e.g. MH1220120001"
+                  type="text" placeholder="e.g. MH1220120001" required
                   value={form.licenseNumber} onChange={set("licenseNumber")}
                   className={inputCls}
                 />
@@ -236,7 +240,7 @@ export default function AddStaffCard({ isOpen, onClose, onSaved, editData }) {
             {form.staffRole === "DRIVER" && (
               <Field label="License Expiry Date">
                 <input
-                  type="date"
+                  type="date" required
                   value={form.licenseExpiryDate} onChange={set("licenseExpiryDate")}
                   className={inputCls}
                 />

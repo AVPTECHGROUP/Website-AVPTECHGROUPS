@@ -1,32 +1,34 @@
 import { useState, useEffect } from "react";
-import { X, MapPin, Save, Loader2, Hash, Clock, Navigation, Pencil } from "lucide-react";
-import { addRouteStop, updateRouteStop } from "../../Api/TransportAPI";
+import { X, MapPin, Save, Loader2, Hash, Clock, Navigation, Pencil, Coins } from "lucide-react";
+import { addRouteStop, updateRouteStop } from "../../Api/Transport/TransportAPI";
+import { toast } from "react-toastify";
 
 // ─── Empty form ───────────────────────────────────────────────────
 const EMPTY_FORM = {
-  stopName:        "",
-  stopOrder:       "",
-  pickupTime:      "",
-  dropTime:        "",
+  stopName: "",
+  stopOrder: "",
+  pickupTime: "",
+  dropTime: "",
   locationAddress: "",
-  landmark:        "",
+  landmark: "",
+  monthlyFee: "",
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────
 function toTimeInput(t) {
-  // "07:00:00" → "07:00"
   if (!t) return "";
   return String(t).slice(0, 5);
 }
 
 function stopToForm(s) {
   return {
-    stopName:        s.stopName        || "",
-    stopOrder:       s.stopOrder       ? String(s.stopOrder) : "",
-    pickupTime:      toTimeInput(s.pickupTime),
-    dropTime:        toTimeInput(s.dropTime),
+    stopName: s.stopName || "",
+    stopOrder: s.stopOrder ? String(s.stopOrder) : "",
+    pickupTime: toTimeInput(s.pickupTime),
+    dropTime: toTimeInput(s.dropTime),
     locationAddress: s.locationAddress || "",
-    landmark:        s.landmark        || "",
+    landmark: s.landmark || "",
+    monthlyFee: s.monthlyFee !== undefined && s.monthlyFee !== null ? String(s.monthlyFee) : "",
   };
 }
 
@@ -50,23 +52,14 @@ const inputCls =
   "focus:outline-none focus:ring-2 transition border-gray-200 focus:ring-blue-300 focus:border-blue-400";
 const errCls = "border-red-400 focus:ring-red-200 focus:border-red-400";
 
-// ─── Main ─────────────────────────────────────────────────────────
-// Props:
-//   isOpen    — boolean
-//   onClose   — fn()
-//   onSaved   — fn(isEditMode)
-//   editData  — stop object | null
-//   routeId   — number (required)
-//   routeName — string display label
 export default function AddStopCard({ isOpen, onClose, onSaved, editData, routeId, routeName = "" }) {
   const isEditMode = Boolean(editData);
 
-  const [form, setForm]         = useState(EMPTY_FORM);
-  const [saving, setSaving]     = useState(false);
-  const [errors, setErrors]     = useState({});
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState({});
   const [apiError, setApiError] = useState("");
 
-  // Populate form on open
   useEffect(() => {
     if (isOpen) {
       setForm(isEditMode ? stopToForm(editData) : EMPTY_FORM);
@@ -75,7 +68,6 @@ export default function AddStopCard({ isOpen, onClose, onSaved, editData, routeI
     }
   }, [isOpen, isEditMode, editData]);
 
-  // Lock scroll
   useEffect(() => {
     document.body.style.overflow = isOpen ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
@@ -92,13 +84,15 @@ export default function AddStopCard({ isOpen, onClose, onSaved, editData, routeI
   // ── Validate ──
   const validate = () => {
     const e = {};
-    if (!form.stopName.trim())        e.stopName        = "Stop name is required";
-    if (!form.stopOrder)              e.stopOrder        = "Stop order is required";
-    else if (Number(form.stopOrder) < 1) e.stopOrder    = "Must be at least 1";
-    if (!form.pickupTime)             e.pickupTime       = "Pickup time is required";
-    if (!form.dropTime)               e.dropTime         = "Drop time is required";
-    if (!form.locationAddress.trim()) e.locationAddress  = "Location address is required";
-    if (!form.landmark.trim())        e.landmark         = "Landmark is required";
+    if (!form.stopName.trim()) e.stopName = "Stop name is required";
+    if (!form.stopOrder) e.stopOrder = "Stop order is required";
+    else if (Number(form.stopOrder) < 1) e.stopOrder = "Must be at least 1";
+    if (!form.pickupTime) e.pickupTime = "Pickup time is required";
+    if (!form.dropTime) e.dropTime = "Drop time is required";
+    if (!form.locationAddress.trim()) e.locationAddress = "Location address is required";
+    if (!form.landmark.trim()) e.landmark = "Landmark is required";
+    if (form.monthlyFee && Number(form.monthlyFee) < 0) e.monthlyFee = "Fee cannot be negative";
+
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -114,12 +108,13 @@ export default function AddStopCard({ isOpen, onClose, onSaved, editData, routeI
     setApiError("");
 
     const payload = {
-      stopName:        form.stopName.trim(),
-      stopOrder:       Number(form.stopOrder),
-      pickupTime:      form.pickupTime ? `${form.pickupTime}:00` : null,
-      dropTime:        form.dropTime   ? `${form.dropTime}:00`   : null,
+      stopName: form.stopName.trim(),
+      stopOrder: Number(form.stopOrder),
+      pickupTime: form.pickupTime ? `${form.pickupTime}:00` : null,
+      dropTime: form.dropTime ? `${form.dropTime}:00` : null,
       locationAddress: form.locationAddress.trim(),
-      landmark:        form.landmark.trim(),
+      landmark: form.landmark.trim(),
+      monthlyFee: form.monthlyFee ? Number(form.monthlyFee) : null,
     };
 
     try {
@@ -131,6 +126,13 @@ export default function AddStopCard({ isOpen, onClose, onSaved, editData, routeI
       onSaved?.(isEditMode);
     } catch (err) {
       console.error(err);
+
+      toast.error(
+        isEditMode
+          ? "Failed to update stop."
+          : "Failed to add stop."
+      );
+
       setApiError(
         isEditMode
           ? "Failed to update stop. Please try again."
@@ -154,9 +156,7 @@ export default function AddStopCard({ isOpen, onClose, onSaved, editData, routeI
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 sticky top-0 bg-white z-10">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center">
-                {isEditMode
-                  ? <Pencil className="w-4 h-4 text-red-500" />
-                  : <MapPin className="w-4 h-4 text-red-500" />}
+                {isEditMode ? <Pencil className="w-4 h-4 text-red-500" /> : <MapPin className="w-4 h-4 text-red-500" />}
               </div>
               <div>
                 <h2 className="text-base font-bold text-gray-800">
@@ -236,16 +236,28 @@ export default function AddStopCard({ isOpen, onClose, onSaved, editData, routeI
               />
             </Field>
 
-            {/* Landmark */}
-            <Field label="Landmark" required icon={MapPin} error={errors.landmark}>
-              <input
-                type="text"
-                placeholder="e.g. Near HDFC Bank"
-                value={form.landmark}
-                onChange={(e) => set("landmark", e.target.value)}
-                className={`${inputCls} ${errors.landmark ? errCls : ""}`}
-              />
-            </Field>
+            {/* Landmark + Monthly Fee */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Field label="Landmark" required icon={MapPin} error={errors.landmark}>
+                <input
+                  type="text"
+                  placeholder="e.g. Near HDFC Bank"
+                  value={form.landmark}
+                  onChange={(e) => set("landmark", e.target.value)}
+                  className={`${inputCls} ${errors.landmark ? errCls : ""}`}
+                />
+              </Field>
+              <Field label="Monthly Fee" icon={Coins} error={errors.monthlyFee}>
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="e.g. 1500 (Optional)"
+                  value={form.monthlyFee}
+                  onChange={(e) => set("monthlyFee", e.target.value)}
+                  className={`${inputCls} ${errors.monthlyFee ? errCls : ""}`}
+                />
+              </Field>
+            </div>
 
           </div>
 
@@ -261,7 +273,7 @@ export default function AddStopCard({ isOpen, onClose, onSaved, editData, routeI
             <button
               onClick={handleSave}
               disabled={saving}
-              className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 disabled:bg-blue-400 text-white text-sm font-semibold px-5 py-2 rounded-lg transition-colors disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-5 py-2 rounded-lg transition-colors disabled:cursor-not-allowed"
             >
               {saving ? (
                 <><Loader2 className="w-4 h-4 animate-spin" /> {isEditMode ? "Updating…" : "Adding…"}</>

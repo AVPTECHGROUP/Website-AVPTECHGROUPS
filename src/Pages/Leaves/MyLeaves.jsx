@@ -17,14 +17,19 @@ import {
   CancelUserlLeaveReq,
   getUserLeaveRequest,
   getUsersLeaveBalance,
-} from '../../Api/LeavesManagementAPI';
+} from '../../Api/Leaves/LeavesManagementAPI';
 
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { getListOfValues } from '../../Api/ListOfValues';
+import { getListOfValues } from '../../Api/Lov/ListOfValues';
 import ListLoader from '../../Components/CommonComp/ListLoader';
 import { UserContext } from '../../ContextAPI/UserContext';
 import CardComponent from '../../Components/CommonComp/CardComponent';
+import {
+  STATUS_STYLES,
+  MY_LEAVES_TOAST_MESSAGES,
+  MY_LEAVES_TEXT,
+} from '../../Constants/StringConstants/LeavesConstants';
 
 export default function LeaveDashboard() {
   const { user } = useContext(UserContext);
@@ -80,13 +85,8 @@ export default function LeaveDashboard() {
     fetchListOfValues();
   }, []);
 
-  /* ---------------- STATUS STYLES ---------------- */
-  const statusStyles = {
-    APPROVED: 'bg-green-100 text-green-700 border border-green-200',
-    REJECTED: 'bg-red-100 text-red-700 border border-red-200',
-    PENDING: 'bg-yellow-100 text-yellow-700 border border-yellow-200',
-    CANCELLED: 'bg-gray-100 text-gray-700 border border-gray-200',
-  };
+  /* ---------------- STATUS STYLES — imported from leavesConstants ---------------- */
+  const statusStyles = STATUS_STYLES;
 
   const statusIcons = {
     APPROVED: CircleCheckBig,
@@ -144,12 +144,12 @@ export default function LeaveDashboard() {
           totalDays: userReq.totalDays,
           reason: userReq.reason,
           reviewRemarks: userReq.reviewRemarks,
-          role: userReq.userType || 'N/A',
+          role: userReq.userType || MY_LEAVES_TEXT.fallbacks.role,
           currLeavestatus: userReq.status,
         }));
         setLeaveData(mappedRequests);
       } catch (err) {
-        setError(err.message || 'Something went wrong');
+        setError(err.message || MY_LEAVES_TEXT.fallbacks.somethingWrong);
         setLeaveData([]);
       } finally {
         setLoading(false);
@@ -164,11 +164,11 @@ export default function LeaveDashboard() {
     try {
       if (!user_id) return;
       await CancelUserlLeaveReq(leaveReq.leaveId, user_id);
-      toast.success('Leave request cancelled successfully.');
+      toast.success(MY_LEAVES_TOAST_MESSAGES.cancelSuccess);
       setFetchleaveReqfress((prev) => prev + 1);
     } catch (error) {
       console.log(error);
-      toast.error('Failed to cancel leave request.');
+      toast.error(MY_LEAVES_TOAST_MESSAGES.cancelFailed);
     }
   };
 
@@ -184,14 +184,14 @@ export default function LeaveDashboard() {
     const formattedTo = formatDate(toDate);
     return formattedFrom === formattedTo
       ? formattedFrom
-      : `${formattedFrom} – ${formattedTo}`;
+      : `${formattedFrom} \u2013 ${formattedTo}`;
   };
 
   /* ---------------- CARDS DATA ---------------- */
   const cardsArrayLeaves = [
     {
       IconName: Calendar,
-      keyName: 'Available Leaves',
+      keyName: MY_LEAVES_TEXT.statCards.availableLeaves,
       rem_val: statistics.totalAvailable,
       total_val: statistics.totalAvailable + statistics.totalUsed,
       type: 'available',
@@ -200,7 +200,7 @@ export default function LeaveDashboard() {
     },
     {
       IconName: Calendar,
-      keyName: 'Sick Leaves',
+      keyName: MY_LEAVES_TEXT.statCards.sickLeaves,
       rem_val: statistics.sickLeaveAvailable,
       total_val: statistics.sickLeaveLimit,
       type: 'remaining',
@@ -209,7 +209,7 @@ export default function LeaveDashboard() {
     },
     {
       IconName: Calendar,
-      keyName: 'Casual Leaves',
+      keyName: MY_LEAVES_TEXT.statCards.casualLeaves,
       rem_val: statistics.casualLeaveAvailable,
       total_val: statistics.casualLeaveLimit,
       type: 'remaining',
@@ -218,7 +218,7 @@ export default function LeaveDashboard() {
     },
     {
       IconName: Calendar,
-      keyName: 'Earned Leaves',
+      keyName: MY_LEAVES_TEXT.statCards.earnedLeaves,
       rem_val: statistics.earnedLeaveAvailable,
       total_val: statistics.earnedLeaveLimit,
       type: 'remaining',
@@ -252,10 +252,10 @@ export default function LeaveDashboard() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
           <div>
             <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-800">
-              My Leave Dashboard
+              {MY_LEAVES_TEXT.pageTitle}
             </h1>
             <p className="text-sm text-slate-500 mt-0.5">
-              Track and manage your leave requests and balance.
+              {MY_LEAVES_TEXT.pageSubtitle}
             </p>
           </div>
 
@@ -264,7 +264,7 @@ export default function LeaveDashboard() {
             className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-2xl flex items-center justify-center gap-2 text-sm font-semibold shadow-sm transition-colors flex-shrink-0"
           >
             <Plus className="w-4 h-4" />
-            Request New Leave
+            {MY_LEAVES_TEXT.buttons.requestNewLeave}
           </button>
         </div>
 
@@ -293,20 +293,19 @@ export default function LeaveDashboard() {
           {/* Card header */}
           <div className="px-4 sm:px-6 py-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
             <h2 className="text-base sm:text-lg font-semibold text-slate-800">
-              My Leave History
+              {MY_LEAVES_TEXT.historyTitle}
             </h2>
             {statistics.year && (
               <span className="text-xs sm:text-sm text-slate-500">
-                Academic Year {statistics.year}
+                {MY_LEAVES_TEXT.academicYearPrefix} {statistics.year}
               </span>
             )}
           </div>
 
           {/* ═══════════════════════════════════════════════════════════════
-              DESKTOP TABLE  (md and above → 768 px+)
+              DESKTOP TABLE  (lg and above)
           ═══════════════════════════════════════════════════════════════ */}
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
-            {/* DESKTOP TABLE */}
             <div className="hidden lg:block rounded-t-xl">
               <div
                 style={{
@@ -328,7 +327,7 @@ export default function LeaveDashboard() {
 
                   <thead className="bg-slate-50 sticky top-0 z-10 border-b border-slate-200">
                     <tr>
-                      {['Leave Type', 'Period', 'Duration', 'Reason', 'Status', 'Action'].map((h) => (
+                      {MY_LEAVES_TEXT.tableHeaders.map((h) => (
                         <th
                           key={h}
                           className="px-2 lg:px-3 py-2 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider"
@@ -353,7 +352,7 @@ export default function LeaveDashboard() {
                       <tr>
                         <td colSpan={6} className="py-16 text-center">
                           <SearchX className="mx-auto mb-3 text-blue-400 w-12 h-12" />
-                          <p className="text-slate-600 font-medium">No Request Found</p>
+                          <p className="text-slate-600 font-medium">{MY_LEAVES_TEXT.states.noRequests}</p>
                         </td>
                       </tr>
                     ) : (
@@ -393,7 +392,10 @@ export default function LeaveDashboard() {
                             {/* Duration */}
                             <td className="px-2 py-2 whitespace-nowrap">
                               <span className="text-xs font-semibold text-slate-800">
-                                {leaveReq.totalDays} {leaveReq.totalDays === 1 ? 'day' : 'days'}
+                                {leaveReq.totalDays}{' '}
+                                {leaveReq.totalDays === 1
+                                  ? MY_LEAVES_TEXT.duration.day
+                                  : MY_LEAVES_TEXT.duration.days}
                               </span>
                             </td>
 
@@ -412,7 +414,7 @@ export default function LeaveDashboard() {
                                     whiteSpace: 'pre-wrap',
                                   }}
                                 >
-                                  {leaveReq.reason || '-'}
+                                  {leaveReq.reason || MY_LEAVES_TEXT.fallbacks.noReason}
                                 </p>
                               </div>
                             </td>
@@ -429,12 +431,12 @@ export default function LeaveDashboard() {
 
                             {/* Action */}
                             <td className="px-2 py-2 whitespace-nowrap items-center">
-                              {leaveReq.currLeavestatus === "PENDING" ? (
+                              {leaveReq.currLeavestatus === 'PENDING' ? (
                                 <button
                                   onClick={() => handleCancelLeave(leaveReq)}
                                   className="px-2 py-0.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-700 text-[10px] font-medium transition-colors"
                                 >
-                                  Cancel
+                                  {MY_LEAVES_TEXT.buttons.cancel}
                                 </button>
                               ) : (
                                 <span className="text-slate-400 text-xs text-center"> - </span>
@@ -448,132 +450,137 @@ export default function LeaveDashboard() {
                 </table>
               </div>
             </div>
-          </div>
-          {/* 
-              MOBILE CARDS  (below md → up to 767 px) */}
-          <div className="lg:hidden">
-            {loading ? (
-              <div className="py-16 flex flex-col items-center gap-3">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-                <span className="text-slate-500 text-sm">Loading requests…</span>
-              </div>
-            ) : error ? (
-              <div className="py-16 text-center px-4">
-                <UserRoundX className="mx-auto mb-3 text-red-400 w-12 h-12" />
-                <p className="text-red-600 font-medium">{error}</p>
-              </div>
-            ) : noReqFound ? (
-              <div className="py-16 text-center px-4">
-                <SearchX className="mx-auto mb-3 text-blue-400 w-12 h-12" />
-                <p className="text-slate-600 font-medium">No Request Found</p>
-              </div>
-            ) : (
-              <div className="p-3 sm:p-4 space-y-3 w-full">
-                {leaveData.map((leaveReq) => {
-                  const StatusIcon = statusIcons[leaveReq.currLeavestatus];
-                  return (
-                    <div
-                      key={leaveReq.leaveId}
-                      className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
-                      style={{ maxWidth: '100%', boxSizing: 'border-box' }}
-                    >
-                      {/* Top row: icon + leave name + status badge */}
+
+            {/* ═══════════════════════════════════════════════════════════════
+                MOBILE CARDS  (below lg)
+            ═══════════════════════════════════════════════════════════════ */}
+            <div className="lg:hidden">
+              {loading ? (
+                <div className="py-16 flex flex-col items-center gap-3">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+                  <span className="text-slate-500 text-sm">{MY_LEAVES_TEXT.states.loading}</span>
+                </div>
+              ) : error ? (
+                <div className="py-16 text-center px-4">
+                  <UserRoundX className="mx-auto mb-3 text-red-400 w-12 h-12" />
+                  <p className="text-red-600 font-medium">{error}</p>
+                </div>
+              ) : noReqFound ? (
+                <div className="py-16 text-center px-4">
+                  <SearchX className="mx-auto mb-3 text-blue-400 w-12 h-12" />
+                  <p className="text-slate-600 font-medium">{MY_LEAVES_TEXT.states.noRequests}</p>
+                </div>
+              ) : (
+                <div className="p-3 sm:p-4 space-y-3 w-full">
+                  {leaveData.map((leaveReq) => {
+                    const StatusIcon = statusIcons[leaveReq.currLeavestatus];
+                    return (
                       <div
-                        className="flex items-start justify-between gap-2 mb-3"
-                        style={{ maxWidth: '100%' }}
+                        key={leaveReq.leaveId}
+                        className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+                        style={{ maxWidth: '100%', boxSizing: 'border-box' }}
                       >
-                        {/* Left: icon + name + date  →  flex:1 + minWidth:0
-                            so this side shrinks and gives the badge its space */}
+                        {/* Top row: icon + leave name + status badge */}
                         <div
-                          className="flex items-start gap-3"
-                          style={{ flex: 1, minWidth: 0 }}
+                          className="flex items-start justify-between gap-2 mb-3"
+                          style={{ maxWidth: '100%' }}
                         >
-                          <div className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center flex-shrink-0">
-                            <Calendar className="w-5 h-5 text-violet-600" />
+                          {/* Left: icon + name + date */}
+                          <div
+                            className="flex items-start gap-3"
+                            style={{ flex: 1, minWidth: 0 }}
+                          >
+                            <div className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center flex-shrink-0">
+                              <Calendar className="w-5 h-5 text-violet-600" />
+                            </div>
+                            <div style={{ minWidth: 0, flex: 1 }}>
+                              <p
+                                className="text-sm font-semibold text-slate-800 leading-snug"
+                                style={{
+                                  wordBreak: 'break-word',
+                                  overflowWrap: 'anywhere',
+                                  whiteSpace: 'normal',
+                                }}
+                              >
+                                {compareAndGetLabel(listOfLeaveType, leaveReq.leaveType)}
+                              </p>
+                              <p
+                                className="text-xs text-slate-500 mt-0.5"
+                                style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
+                              >
+                                {formatDateRange(leaveReq.fromDate, leaveReq.toDate)}
+                              </p>
+                            </div>
                           </div>
-                          <div style={{ minWidth: 0, flex: 1 }}>
-                            <p
-                              className="text-sm font-semibold text-slate-800 leading-snug"
-                              style={{
-                                wordBreak: 'break-word',
-                                overflowWrap: 'anywhere',
-                                whiteSpace: 'normal',
-                              }}
-                            >
-                              {compareAndGetLabel(listOfLeaveType, leaveReq.leaveType)}
-                            </p>
-                            <p
-                              className="text-xs text-slate-500 mt-0.5"
-                              style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
-                            >
-                              {formatDateRange(leaveReq.fromDate, leaveReq.toDate)}
-                            </p>
-                          </div>
-                        </div>
 
-                        {/* Badge — flex-shrink-0 so it never gets squashed */}
-                        <span
-                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold flex-shrink-0 ${statusStyles[leaveReq.currLeavestatus]}`}
-                        >
-                          <StatusIcon className="w-3 h-3" />
-                          {leaveReq.currLeavestatus}
-                        </span>
-                      </div>
-
-                      {/* Detail rows */}
-                      <div
-                        className="space-y-2 border-t border-slate-100 pt-3"
-                        style={{ maxWidth: '100%' }}
-                      >
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-slate-500 text-xs">Duration</span>
-                          <span className="font-semibold text-slate-800 text-xs">
-                            {leaveReq.totalDays}{' '}
-                            {leaveReq.totalDays === 1 ? 'day' : 'days'}
+                          {/* Status badge */}
+                          <span
+                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold flex-shrink-0 ${statusStyles[leaveReq.currLeavestatus]}`}
+                          >
+                            <StatusIcon className="w-3 h-3" />
+                            {leaveReq.currLeavestatus}
                           </span>
                         </div>
 
-                        {leaveReq.reason && (
-                          <div
-                            className="flex items-start gap-2"
-                            style={{ maxWidth: '100%' }}
-                          >
-                            <FileText className="w-3.5 h-3.5 text-slate-400 mt-0.5 flex-shrink-0" />
-                            <p
-                              className="text-xs text-slate-600 leading-relaxed"
-                              style={{
-                                flex: 1,
-                                width: 0,
-                                wordBreak: 'break-word',
-                                overflowWrap: 'anywhere',
-                                whiteSpace: 'pre-wrap',
-                              }}
-                            >
-                              {leaveReq.reason}
-                            </p>
+                        {/* Detail rows */}
+                        <div
+                          className="space-y-2 border-t border-slate-100 pt-3"
+                          style={{ maxWidth: '100%' }}
+                        >
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-slate-500 text-xs">
+                              {MY_LEAVES_TEXT.mobileLabels.duration}
+                            </span>
+                            <span className="font-semibold text-slate-800 text-xs">
+                              {leaveReq.totalDays}{' '}
+                              {leaveReq.totalDays === 1
+                                ? MY_LEAVES_TEXT.duration.day
+                                : MY_LEAVES_TEXT.duration.days}
+                            </span>
                           </div>
+
+                          {leaveReq.reason && (
+                            <div
+                              className="flex items-start gap-2"
+                              style={{ maxWidth: '100%' }}
+                            >
+                              <FileText className="w-3.5 h-3.5 text-slate-400 mt-0.5 flex-shrink-0" />
+                              <p
+                                className="text-xs text-slate-600 leading-relaxed"
+                                style={{
+                                  flex: 1,
+                                  width: 0,
+                                  wordBreak: 'break-word',
+                                  overflowWrap: 'anywhere',
+                                  whiteSpace: 'pre-wrap',
+                                }}
+                              >
+                                {leaveReq.reason}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Cancel button */}
+                        {leaveReq.currLeavestatus === 'PENDING' && (
+                          <button
+                            onClick={() => handleCancelLeave(leaveReq)}
+                            className="mt-3 w-full py-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 text-sm font-semibold transition-colors"
+                          >
+                            {MY_LEAVES_TEXT.buttons.cancelRequest}
+                          </button>
                         )}
                       </div>
-
-                      {/* Cancel button */}
-                      {leaveReq.currLeavestatus === 'PENDING' && (
-                        <button
-                          onClick={() => handleCancelLeave(leaveReq)}
-                          className="mt-3 w-full py-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 text-sm font-semibold transition-colors"
-                        >
-                          Cancel Request
-                        </button>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Card footer */}
           <div className="px-4 sm:px-6 py-3 border-t border-slate-100 text-xs sm:text-sm text-slate-400 italic bg-slate-50">
-            Showing your recent leave activity
+            {MY_LEAVES_TEXT.footerNote}
           </div>
         </div>
 

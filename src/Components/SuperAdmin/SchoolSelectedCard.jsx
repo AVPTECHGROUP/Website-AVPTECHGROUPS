@@ -1,8 +1,8 @@
 import { useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { CheckCircle, ArrowRight, X, Loader2 } from "lucide-react";
-import { switchSchool } from "../../Api/Schools";
-import { getCurrentAcademicYear } from "../../Api/AcademicYear";
+import { switchSchool } from "../../Api/SchoolConfiguration/Schools";
+import { getCurrentAcademicYear } from "../../Api/AcademicYears/AcademicYear";
 import { UserContext } from "../../ContextAPI/UserContext";
 
 export default function SchoolSelectedCard({ school, onClose }) {
@@ -81,39 +81,39 @@ export default function SchoolSelectedCard({ school, onClose }) {
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-            <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-8 flex flex-col items-center text-center border border-gray-100">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+            <div className="relative bg-[#0A1828]/95 border border-white/[0.08] backdrop-blur-md rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-8 flex flex-col items-center text-center">
 
                 <button onClick={onClose} disabled={loading}
-                    className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-30">
+                    className="absolute top-4 right-4 text-slate-400 hover:text-slate-200 transition-colors disabled:opacity-30 p-1 rounded-lg hover:bg-white/5 cursor-pointer">
                     <X size={16} />
                 </button>
 
-                <div className="w-14 h-14 rounded-xl bg-emerald-500 flex items-center justify-center mb-5 shadow-lg shadow-emerald-200">
-                    <CheckCircle size={28} className="text-white" strokeWidth={2.5} />
+                <div className="w-14 h-14 rounded-xl bg-gradient-to-tr from-[#00C9B1] to-[#00E5D4] flex items-center justify-center mb-5 shadow-lg shadow-emerald-950/40">
+                    <CheckCircle size={28} className="text-[#05111D]" strokeWidth={2.5} />
                 </div>
 
-                <h2 className="text-xl font-bold text-gray-900 mb-1">School Selected!</h2>
-                <p className="text-base font-semibold text-blue-600 mb-1">{school?.name || "School Name"}</p>
-                <p className="text-sm text-gray-500 mb-6">Workspace successfully updated.</p>
+                <h2 className="text-xl font-black text-white mb-1">School Selected!</h2>
+                <p className="text-base font-extrabold text-[#00C9B1] mb-1">{school?.name || "School Name"}</p>
+                <p className="text-xs text-slate-400 mb-6">Workspace successfully updated.</p>
 
-                <div className="w-full bg-gray-50 text-center rounded-xl px-5 py-4 space-y-2.5 mb-6 border border-gray-100">
+                <div className="w-full bg-white/[0.02] text-center rounded-xl px-5 py-4 space-y-2.5 mb-6 border border-white/[0.06]">
                     <div className="flex items-center justify-center gap-2.5">
-                        <div className="w-7 h-7 rounded bg-emerald-500 flex items-center justify-center shrink-0">
-                            <CheckCircle size={16} className="text-white" strokeWidth={3} />
+                        <div className="w-7 h-7 rounded bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center shrink-0">
+                            <CheckCircle size={15} className="text-emerald-400" strokeWidth={3} />
                         </div>
-                        <p className="text-lg font-medium">Access validated</p>
+                        <p className="text-sm font-semibold text-slate-200">Access validated</p>
                     </div>
                 </div>
 
                 {error && (
-                    <p className="text-xs text-red-500 bg-red-50 border border-red-100 rounded-lg px-3 py-2 mb-4 w-full text-left">
+                    <p className="text-xs text-red-400 bg-red-950/20 border border-red-900/30 rounded-lg px-3 py-2 mb-4 w-full text-left">
                         {error}
                     </p>
                 )}
 
                 <button onClick={handleEnterDashboard} disabled={loading}
-                    className="w-full flex items-center cursor-pointer justify-center gap-2 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold transition-colors shadow-md shadow-blue-100 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed">
+                    className="w-full flex items-center cursor-pointer justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-[#00C9B1] to-[#F5A623] hover:from-[#00E5D4] hover:to-[#FFD166] text-[#05111D] font-extrabold text-sm transition-all duration-200 shadow-md shadow-cyan-950/30 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed">
                     {loading
                         ? <><Loader2 size={14} className="animate-spin" /> Switching School...</>
                         : <><span>Enter Dashboard</span> <ArrowRight size={14} /></>

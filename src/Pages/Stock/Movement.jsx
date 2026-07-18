@@ -10,49 +10,61 @@ import {
   ChevronRight,
   Store,
   Inbox,
-  ArrowRight, // Changed from ArrowRightLeft to ArrowRight for clear unidirectionality
+  ArrowRight,
   ShoppingCart,
 } from "lucide-react";
 import CardComponent from "../../Components/CommonComp/CardComponent";
 import CardLoader from "../../Components/CommonComp/CardLoader";
 import ListLoader from "../../Components/CommonComp/ListLoader";
-import { getStockMovementHistory, getStockMovementStats, getActiveStores } from "../../Api/StockApi";
+import { getStockMovementHistory, getStockMovementStats } from "../../Api/Stock/StockApi";
+import { getActiveStores } from "../../Api/Stock/StoreApi";
+import { STOCK_SHARED_CONSTS, MOVEMENT_CONSTS } from "../../Constants/StringConstants/StockAndOrdersConstants";
 
-const ROWS_PER_PAGE_OPTIONS = [10, 20, 50];
-const SEARCH_DEBOUNCE_MS = 400;
+const ROWS_PER_PAGE_OPTIONS = MOVEMENT_CONSTS.CONFIG.ROWS_PER_PAGE_OPTIONS;
+const SEARCH_DEBOUNCE_MS = MOVEMENT_CONSTS.CONFIG.SEARCH_DEBOUNCE_MS;
 
 // ── Type metadata ─────────────────────────────────────────────────────────────
 const typeMeta = {
-  IN: { dot: "bg-green-500", badge: "text-green-700  bg-green-50  border border-green-200", label: "IN" },
-  OUT: { dot: "bg-red-500", badge: "text-red-600    bg-red-50    border border-red-200", label: "OUT" },
-  TRANSFER: { dot: "bg-blue-500", badge: "text-blue-700   bg-blue-50   border border-blue-200", label: "TRANSFER" },
-  ORDER: { dot: "bg-orange-500", badge: "text-orange-700 bg-orange-50 border border-orange-200", label: "ORDER" },
+  [STOCK_SHARED_CONSTS.MOVEMENT_TYPE.IN]: { dot: "bg-green-500", badge: "text-green-700  bg-green-50  border border-green-200", label: STOCK_SHARED_CONSTS.MOVEMENT_TYPE.IN },
+  [STOCK_SHARED_CONSTS.MOVEMENT_TYPE.OUT]: { dot: "bg-red-500", badge: "text-red-600    bg-red-50    border border-red-200", label: STOCK_SHARED_CONSTS.MOVEMENT_TYPE.OUT },
+  [STOCK_SHARED_CONSTS.MOVEMENT_TYPE.TRANSFER]: { dot: "bg-blue-500", badge: "text-blue-700   bg-blue-50   border border-blue-200", label: STOCK_SHARED_CONSTS.MOVEMENT_TYPE.TRANSFER },
+  [STOCK_SHARED_CONSTS.MOVEMENT_TYPE.ORDER]: { dot: "bg-orange-500", badge: "text-orange-700 bg-orange-50 border border-orange-200", label: STOCK_SHARED_CONSTS.MOVEMENT_TYPE.ORDER },
 };
 
-const qtyColor = { IN: "text-green-600", OUT: "text-red-500", TRANSFER: "text-blue-600", ORDER: "text-orange-600" };
-const qtyPrefix = { IN: "+", OUT: "-", TRANSFER: "±", ORDER: "-" };
+const qtyColor = {
+  [STOCK_SHARED_CONSTS.MOVEMENT_TYPE.IN]: "text-green-600",
+  [STOCK_SHARED_CONSTS.MOVEMENT_TYPE.OUT]: "text-red-500",
+  [STOCK_SHARED_CONSTS.MOVEMENT_TYPE.TRANSFER]: "text-blue-600",
+  [STOCK_SHARED_CONSTS.MOVEMENT_TYPE.ORDER]: "text-orange-600"
+};
+const qtyPrefix = {
+  [STOCK_SHARED_CONSTS.MOVEMENT_TYPE.IN]: "+",
+  [STOCK_SHARED_CONSTS.MOVEMENT_TYPE.OUT]: "-",
+  [STOCK_SHARED_CONSTS.MOVEMENT_TYPE.TRANSFER]: "±",
+  [STOCK_SHARED_CONSTS.MOVEMENT_TYPE.ORDER]: "-"
+};
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const formatDateTime = (isoString) => {
   if (!isoString) return { date: "—", time: "—" };
   const d = new Date(isoString);
   return {
-    date: d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
-    time: d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: true }),
+    date: d.toLocaleDateString(STOCK_SHARED_CONSTS.LOCALE.DATE_GB, { day: "2-digit", month: "short", year: "numeric" }),
+    time: d.toLocaleTimeString(STOCK_SHARED_CONSTS.LOCALE.DATE_GB, { hour: "2-digit", minute: "2-digit", hour12: true }),
   };
 };
 
 const mapMovement = (m) => {
   const { date, time } = formatDateTime(m.createdAt);
-  const type = m.movementType || "IN";
+  const type = m.movementType || STOCK_SHARED_CONSTS.MOVEMENT_TYPE.IN;
   return {
     id: m.id,
     date, time,
     item: m.itemName || "—",
-    itemId: m.itemCode || `ITM-${m.itemId}`,
+    itemId: m.itemCode || MOVEMENT_CONSTS.ITEM_ID_PREFIX(m.itemId),
     type,
     storeName: m.storeName || "—",
-    destStore: type === "TRANSFER" ? (m.destinationStoreName || null) : null,
+    destStore: type === STOCK_SHARED_CONSTS.MOVEMENT_TYPE.TRANSFER ? (m.destinationStoreName || null) : null,
     qty: m.quantity,
     before: m.quantityBefore,
     after: m.quantityAfter,
@@ -62,17 +74,29 @@ const mapMovement = (m) => {
 };
 
 const exportToCSV = (movements) => {
-  const headers = ["Date", "Time", "Item", "Item ID", "Type", "Store", "Dest Store", "Qty", "Before", "After", "Reference", "Reason / Remarks"];
+  const headers = [
+    MOVEMENT_CONSTS.TABLE_HEADERS.DATE_TIME,
+    MOVEMENT_CONSTS.TABLE_HEADERS.ITEM,
+    MOVEMENT_CONSTS.TABLE_HEADERS.ITEM_ID,
+    MOVEMENT_CONSTS.TABLE_HEADERS.TYPE,
+    MOVEMENT_CONSTS.TABLE_HEADERS.STORE,
+    MOVEMENT_CONSTS.TABLE_HEADERS.DEST_STORE,
+    MOVEMENT_CONSTS.TABLE_HEADERS.QTY,
+    MOVEMENT_CONSTS.TABLE_HEADERS.BEFORE,
+    MOVEMENT_CONSTS.TABLE_HEADERS.AFTER,
+    MOVEMENT_CONSTS.TABLE_HEADERS.REFERENCE,
+    MOVEMENT_CONSTS.TABLE_HEADERS.REASON_REMARKS
+  ];
   const rows = movements.map((m) => [
     m.date, m.time, m.item, m.itemId, m.type,
     m.storeName, m.destStore || "",
     `${qtyPrefix[m.type] ?? ""}${m.qty}`, m.before, m.after, m.ref, m.reason,
   ]);
   const csv = [headers, ...rows].map((r) => r.map((c) => `"${String(c ?? "").replace(/"/g, '""')}"`).join(",")).join("\n");
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const blob = new Blob([csv], { type: MOVEMENT_CONSTS.CSV.MIME_TYPE });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  a.href = url; a.download = `stock-movements-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.href = url; a.download = MOVEMENT_CONSTS.CSV.FILE_NAME(new Date().toISOString().slice(0, 10));
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   URL.revokeObjectURL(url);
 };
@@ -105,7 +129,7 @@ const StoreCell = ({ storeName, destStore }) => {
 
 // ── Mobile / Tablet Card ──────────────────────────────────────────────────────
 const MobileCard = ({ m, idx, page, rowsPerPage }) => {
-  const meta = typeMeta[m.type] || typeMeta["IN"];
+  const meta = typeMeta[m.type] || typeMeta[STOCK_SHARED_CONSTS.MOVEMENT_TYPE.IN];
   return (
     <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
       <div className="flex items-start justify-between gap-2 mb-3">
@@ -124,37 +148,37 @@ const MobileCard = ({ m, idx, page, rowsPerPage }) => {
 
       <div className="space-y-1.5 text-sm">
         <p>
-          <span className="font-medium text-gray-500">Date:</span>
+          <span className="font-medium text-gray-500">{MOVEMENT_CONSTS.TEXT.DATE_LABEL}</span>
           <span className="ml-2 text-gray-700">{m.date}</span>
           <span className="ml-1 text-gray-400 text-xs">{m.time}</span>
         </p>
         <div className="flex flex-col gap-0.5">
-          <span className="font-medium text-gray-500">Store Context:</span>
+          <span className="font-medium text-gray-500">{MOVEMENT_CONSTS.TEXT.STORE_CONTEXT_LABEL}</span>
           <div className="mt-1 pl-2 border-l-2 border-gray-200">
             <StoreCell storeName={m.storeName} destStore={m.destStore} />
           </div>
         </div>
         <div className="flex items-center gap-4 pt-1">
           <p>
-            <span className="font-medium text-gray-500">Qty:</span>
+            <span className="font-medium text-gray-500">{MOVEMENT_CONSTS.TEXT.QTY_LABEL}</span>
             <span className={`ml-2 font-bold ${qtyColor[m.type] ?? "text-gray-700"}`}>
               {qtyPrefix[m.type] ?? ""}{m.qty}
             </span>
           </p>
           <p>
-            <span className="font-medium text-gray-500">Stock:</span>
+            <span className="font-medium text-gray-500">{MOVEMENT_CONSTS.TEXT.STOCK_LABEL}</span>
             <span className="ml-2 text-gray-700 text-xs">{m.before} → {m.after}</span>
           </p>
         </div>
         {m.ref !== "—" && (
           <p>
-            <span className="font-medium text-gray-500">Ref:</span>
+            <span className="font-medium text-gray-500">{MOVEMENT_CONSTS.TEXT.REF_LABEL}</span>
             <span className="ml-2 text-gray-600 text-xs">{m.ref}</span>
           </p>
         )}
         {m.reason !== "—" && (
           <p className="line-clamp-2">
-            <span className="font-medium text-gray-500">Reason:</span>
+            <span className="font-medium text-gray-500">{MOVEMENT_CONSTS.TEXT.REASON_LABEL}</span>
             <span className="ml-2 text-gray-600 text-xs" title={m.reason}>{m.reason}</span>
           </p>
         )}
@@ -168,8 +192,8 @@ const EmptyState = ({ colSpan }) => {
   const content = (
     <div className="flex flex-col items-center gap-2 text-gray-400">
       <Inbox className="w-10 h-10 opacity-30" />
-      <p className="text-sm font-bold text-gray-700 mb-1">No Movements Found</p>
-      <p className="text-xs text-gray-400">Try adjusting your filters or date range.</p>
+      <p className="text-sm font-bold text-gray-700 mb-1">{MOVEMENT_CONSTS.TEXT.EMPTY_TITLE}</p>
+      <p className="text-xs text-gray-400">{MOVEMENT_CONSTS.TEXT.EMPTY_SUB}</p>
     </div>
   );
   return colSpan
@@ -196,7 +220,7 @@ export default function Movement() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [page, setPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(20);
+  const [rowsPerPage, setRowsPerPage] = useState(ROWS_PER_PAGE_OPTIONS[1] || 20);
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const debounceRef = useRef(null);
 
@@ -208,11 +232,11 @@ export default function Movement() {
   const resetPage = () => setPage(1);
 
   const stats = [
-    { key: "Total Movements", val: statsData?.totalMovements ?? 0, icon: History, txColor: "text-blue-600", bgColor: "bg-blue-50" },
-    { key: "Stock IN", val: statsData?.stockIn ?? 0, icon: ArrowDownToLine, txColor: "text-green-600", bgColor: "bg-green-50" },
-    { key: "Stock OUT", val: statsData?.stockOut ?? 0, icon: ArrowUpFromLine, txColor: "text-red-500", bgColor: "bg-red-50" },
-    { key: "Transfers", val: statsData?.transfers ?? 0, icon: ArrowLeftRight, txColor: "text-blue-600", bgColor: "bg-indigo-50" },
-    { key: "Orders", val: statsData?.orders ?? 0, icon: ShoppingCart, txColor: "text-orange-600", bgColor: "bg-orange-50" },
+    { key: MOVEMENT_CONSTS.STATS.TOTAL_MOVEMENTS, val: statsData?.totalMovements ?? 0, icon: History, txColor: "text-blue-600", bgColor: "bg-blue-50" },
+    { key: MOVEMENT_CONSTS.STATS.STOCK_IN, val: statsData?.stockIn ?? 0, icon: ArrowDownToLine, txColor: "text-green-600", bgColor: "bg-green-50" },
+    { key: MOVEMENT_CONSTS.STATS.STOCK_OUT, val: statsData?.stockOut ?? 0, icon: ArrowUpFromLine, txColor: "text-red-500", bgColor: "bg-red-50" },
+    { key: MOVEMENT_CONSTS.STATS.TRANSFERS, val: statsData?.transfers ?? 0, icon: ArrowLeftRight, txColor: "text-blue-600", bgColor: "bg-indigo-50" },
+    { key: MOVEMENT_CONSTS.STATS.ORDERS, val: statsData?.orders ?? 0, icon: ShoppingCart, txColor: "text-orange-600", bgColor: "bg-orange-50" },
   ];
 
   // ── Fetch stats ───────────────────────────────────────────────────────────
@@ -267,7 +291,7 @@ export default function Movement() {
       setPagination(pg);
     } catch (err) {
       console.error(err);
-      setError("Failed to load stock movements. Please try again.");
+      setError(MOVEMENT_CONSTS.MESSAGES.LOAD_FAILED);
       setMovements([]);
       setPagination({});
     } finally {
@@ -292,9 +316,9 @@ export default function Movement() {
         {/* Heading */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Stock Movement History</h1>
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">{MOVEMENT_CONSTS.TEXT.TITLE}</h1>
             <p className="text-gray-500 mt-1 font-medium text-sm sm:text-base">
-              Track all stock IN, OUT, ORDER and transfer movements across stores.
+              {MOVEMENT_CONSTS.TEXT.SUBTITLE}
             </p>
           </div>
         </div>
@@ -316,7 +340,7 @@ export default function Movement() {
           <div className="flex items-center justify-between gap-3 px-4 md:px-5 py-3 md:py-4 border-b border-gray-100">
             <div className="flex items-center gap-2 min-w-0">
               <History className="w-4 h-4 md:w-5 md:h-5 text-blue-500 shrink-0" />
-              <h2 className="font-semibold text-gray-800 text-base md:text-lg truncate">Stock Movement History</h2>
+              <h2 className="font-semibold text-gray-800 text-base md:text-lg truncate">{MOVEMENT_CONSTS.TEXT.TITLE}</h2>
             </div>
             <button
               onClick={() => exportToCSV(movements)}
@@ -338,7 +362,7 @@ export default function Movement() {
                 <Search className="w-4 h-4 text-gray-400 shrink-0" />
                 <input
                   type="text"
-                  placeholder="Search item name, item code..."
+                  placeholder={MOVEMENT_CONSTS.TEXT.SEARCH_ITEM_NAME_CODE}
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
                   className="text-sm focus:outline-none text-gray-600 w-full bg-transparent"
@@ -350,11 +374,11 @@ export default function Movement() {
                 onChange={(e) => handleTypeChange(e.target.value)}
                 className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-200 text-gray-700 w-36 shrink-0 cursor-pointer"
               >
-                <option value="">All Types</option>
-                <option value="IN">IN</option>
-                <option value="OUT">OUT</option>
-                <option value="TRANSFER">TRANSFER</option>
-                <option value="ORDER">ORDER</option>
+                <option value="">{STOCK_SHARED_CONSTS.MOVEMENT_TYPE.ALL_TYPES}</option>
+                <option value={STOCK_SHARED_CONSTS.MOVEMENT_TYPE.IN}>{STOCK_SHARED_CONSTS.MOVEMENT_TYPE.IN}</option>
+                <option value={STOCK_SHARED_CONSTS.MOVEMENT_TYPE.OUT}>{STOCK_SHARED_CONSTS.MOVEMENT_TYPE.OUT}</option>
+                <option value={STOCK_SHARED_CONSTS.MOVEMENT_TYPE.TRANSFER}>{STOCK_SHARED_CONSTS.MOVEMENT_TYPE.TRANSFER}</option>
+                <option value={STOCK_SHARED_CONSTS.MOVEMENT_TYPE.ORDER}>{STOCK_SHARED_CONSTS.MOVEMENT_TYPE.ORDER}</option>
               </select>
               {/* All Stores */}
               <select
@@ -363,13 +387,14 @@ export default function Movement() {
                 disabled={storesLoading}
                 className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-200 text-gray-700 w-44 shrink-0 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                <option value="">{storesLoading ? "Loading stores…" : "All Stores"}</option>
+                <option value="">{storesLoading ? MOVEMENT_CONSTS.TEXT.LOADING_STORES : MOVEMENT_CONSTS.TEXT.ALL_STORES}</option>
                 {stores.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
               {/* Date From */}
               <input
                 type="date"
                 value={dateFrom}
+                max={new Date().toISOString().split("T")[0]}
                 onChange={(e) => handleFromChange(e.target.value)}
                 className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-200 text-gray-700 w-40 shrink-0 cursor-pointer"
               />
@@ -388,7 +413,7 @@ export default function Movement() {
                 <Search className="w-4 h-4 text-gray-400 shrink-0" />
                 <input
                   type="text"
-                  placeholder="Search item, store, user..."
+                  placeholder={MOVEMENT_CONSTS.TEXT.SEARCH_ITEM_STORE_USER}
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
                   className="text-sm focus:outline-none text-gray-600 w-full bg-transparent"
@@ -396,15 +421,15 @@ export default function Movement() {
               </div>
               <select value={typeFilter} onChange={(e) => handleTypeChange(e.target.value)}
                 className={`${filterCls} cursor-pointer`}>
-                <option value="">All Types</option>
-                <option value="IN">IN</option>
-                <option value="OUT">OUT</option>
-                <option value="TRANSFER">TRANSFER</option>
-                <option value="ORDER">ORDER</option>
+                <option value="">{STOCK_SHARED_CONSTS.MOVEMENT_TYPE.ALL_TYPES}</option>
+                <option value={STOCK_SHARED_CONSTS.MOVEMENT_TYPE.IN}>{STOCK_SHARED_CONSTS.MOVEMENT_TYPE.IN}</option>
+                <option value={STOCK_SHARED_CONSTS.MOVEMENT_TYPE.OUT}>{STOCK_SHARED_CONSTS.MOVEMENT_TYPE.OUT}</option>
+                <option value={STOCK_SHARED_CONSTS.MOVEMENT_TYPE.TRANSFER}>{STOCK_SHARED_CONSTS.MOVEMENT_TYPE.TRANSFER}</option>
+                <option value={STOCK_SHARED_CONSTS.MOVEMENT_TYPE.ORDER}>{STOCK_SHARED_CONSTS.MOVEMENT_TYPE.ORDER}</option>
               </select>
               <select value={storeId} onChange={(e) => handleStoreChange(e.target.value)} disabled={storesLoading}
                 className={`${filterCls} cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed`}>
-                <option value="">{storesLoading ? "Loading stores…" : "All Stores"}</option>
+                <option value="">{storesLoading ? MOVEMENT_CONSTS.TEXT.LOADING_STORES : MOVEMENT_CONSTS.TEXT.ALL_STORES}</option>
                 {stores.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
               <input type="date" value={dateFrom} onChange={(e) => handleFromChange(e.target.value)}
@@ -419,7 +444,7 @@ export default function Movement() {
                 <Search className="w-4 h-4 text-gray-400 shrink-0" />
                 <input
                   type="text"
-                  placeholder="Search item, store, user..."
+                  placeholder={MOVEMENT_CONSTS.TEXT.SEARCH_ITEM_STORE_USER}
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
                   className="text-sm focus:outline-none text-gray-600 w-full bg-transparent"
@@ -428,15 +453,15 @@ export default function Movement() {
               <div className="grid grid-cols-2 gap-2">
                 <select value={typeFilter} onChange={(e) => handleTypeChange(e.target.value)}
                   className={`${filterCls} cursor-pointer`}>
-                  <option value="">All Types</option>
-                  <option value="IN">IN</option>
-                  <option value="OUT">OUT</option>
-                  <option value="TRANSFER">TRANSFER</option>
-                  <option value="ORDER">ORDER</option>
+                  <option value="">{STOCK_SHARED_CONSTS.MOVEMENT_TYPE.ALL_TYPES}</option>
+                  <option value={STOCK_SHARED_CONSTS.MOVEMENT_TYPE.IN}>{STOCK_SHARED_CONSTS.MOVEMENT_TYPE.IN}</option>
+                  <option value={STOCK_SHARED_CONSTS.MOVEMENT_TYPE.OUT}>{STOCK_SHARED_CONSTS.MOVEMENT_TYPE.OUT}</option>
+                  <option value={STOCK_SHARED_CONSTS.MOVEMENT_TYPE.TRANSFER}>{STOCK_SHARED_CONSTS.MOVEMENT_TYPE.TRANSFER}</option>
+                  <option value={STOCK_SHARED_CONSTS.MOVEMENT_TYPE.ORDER}>{STOCK_SHARED_CONSTS.MOVEMENT_TYPE.ORDER}</option>
                 </select>
                 <select value={storeId} onChange={(e) => handleStoreChange(e.target.value)} disabled={storesLoading}
                   className={`${filterCls} cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed`}>
-                  <option value="">{storesLoading ? "Loading stores…" : "All Stores"}</option>
+                  <option value="">{storesLoading ? MOVEMENT_CONSTS.TEXT.LOADING_STORES : MOVEMENT_CONSTS.TEXT.ALL_STORES}</option>
                   {stores.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </select>
               </div>
@@ -463,7 +488,7 @@ export default function Movement() {
               <div className="text-center py-8 col-span-2">
                 <div className="flex flex-col items-center">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-2" />
-                  <span className="text-gray-600 text-sm">Loading movements…</span>
+                  <span className="text-gray-600 text-sm">{MOVEMENT_CONSTS.TEXT.LOADING}</span>
                 </div>
               </div>
             ) : movements.length === 0 ? (
@@ -481,14 +506,20 @@ export default function Movement() {
               <table className="w-full min-w-225">
                 <thead className="border-b border-gray-200">
                   <tr>
-                    <th className="px-3 py-3 text-left   text-xs font-semibold text-gray-500 uppercase tracking-wider sticky top-0 bg-gray-50 z-10">Date & Time</th>
-                    <th className="px-3 py-3 text-left   text-xs font-semibold text-gray-500 uppercase tracking-wider sticky top-0 bg-gray-50 z-10">Item</th>
-                    <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider sticky top-0 bg-gray-50 z-10">Type</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider sticky top-0 bg-gray-50 z-10">Store Log</th>
-                    <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider sticky top-0 bg-gray-50 z-10">Qty</th>
-                    <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider sticky top-0 bg-gray-50 z-10 whitespace-nowrap">Before → After</th>
-                    <th className="px-3 py-3 text-left   text-xs font-semibold text-gray-500 uppercase tracking-wider sticky top-0 bg-gray-50 z-10">Reference</th>
-                    <th className="px-3 py-3 text-center   text-xs font-semibold text-gray-500 uppercase tracking-wider sticky top-0 bg-gray-50 z-10">Reason</th>
+                    {[
+                      [MOVEMENT_CONSTS.TABLE_HEADERS.DATE_TIME, "text-left"],
+                      [MOVEMENT_CONSTS.TABLE_HEADERS.ITEM, "text-left"],
+                      [MOVEMENT_CONSTS.TABLE_HEADERS.TYPE, "text-center"],
+                      [MOVEMENT_CONSTS.TABLE_HEADERS.STORE_LOG, "text-left"],
+                      [MOVEMENT_CONSTS.TABLE_HEADERS.QTY, "text-center"],
+                      [MOVEMENT_CONSTS.TABLE_HEADERS.BEFORE_AFTER, "text-center"],
+                      [MOVEMENT_CONSTS.TABLE_HEADERS.REFERENCE, "text-left"],
+                      [MOVEMENT_CONSTS.TABLE_HEADERS.REASON, "text-center"]
+                    ].map(([label, align]) => (
+                      <th key={label} className={`px-3 py-3 ${align} text-xs font-semibold text-gray-500 uppercase tracking-wider sticky top-0 bg-gray-50 z-10`}>
+                        {label}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-100 font-normal">
@@ -498,7 +529,7 @@ export default function Movement() {
                     <EmptyState colSpan={10} />
                   ) : (
                     movements.map((m, idx) => {
-                      const meta = typeMeta[m.type] || typeMeta["IN"];
+                      const meta = typeMeta[m.type] || typeMeta[STOCK_SHARED_CONSTS.MOVEMENT_TYPE.IN];
                       return (
                         <tr key={m.id} className="hover:bg-blue-50/40 transition-colors">
                           <td className={tdStyle}>
@@ -549,11 +580,11 @@ export default function Movement() {
               <div className="flex flex-col sm:flex-row items-center gap-4">
                 <span className="text-sm text-gray-700">
                   {totalElements === 0
-                    ? "No movements"
-                    : `Showing ${startItem} to ${endItem} of ${totalElements}`}
+                    ? MOVEMENT_CONSTS.TEXT.NO_MOVEMENTS
+                    : STOCK_SHARED_CONSTS.COMMON.SHOWING_RANGE(startItem, endItem, totalElements)}
                 </span>
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-700">Rows per page:</span>
+                  <span className="text-sm text-gray-700">{STOCK_SHARED_CONSTS.COMMON.ROWS_PER_PAGE}</span>
                   <select
                     value={rowsPerPage}
                     onChange={(e) => { setRowsPerPage(Number(e.target.value)); resetPage(); }}
@@ -586,7 +617,7 @@ export default function Movement() {
                         className={`px-3 py-1 rounded cursor-pointer transition-all text-sm font-semibold ${p === page
                           ? "bg-blue-500 text-white"
                           : "text-gray-600 hover:bg-gray-100"
-                        }`}
+                          }`}
                       >
                         {p}
                       </button>
@@ -609,11 +640,11 @@ export default function Movement() {
             <div className="flex flex-col gap-4">
               <div className="text-center text-sm text-gray-700">
                 {totalElements === 0
-                  ? "No movements"
-                  : `Showing ${startItem} to ${endItem} of ${totalElements}`}
+                  ? MOVEMENT_CONSTS.TEXT.NO_MOVEMENTS
+                  : STOCK_SHARED_CONSTS.COMMON.SHOWING_RANGE(startItem, endItem, totalElements)}
               </div>
               <div className="flex items-center justify-center gap-2">
-                <span className="text-sm text-gray-700">Rows:</span>
+                <span className="text-sm text-gray-700">{STOCK_SHARED_CONSTS.COMMON.ROWS_SHORT}</span>
                 <select
                   value={rowsPerPage}
                   onChange={(e) => { setRowsPerPage(Number(e.target.value)); resetPage(); }}

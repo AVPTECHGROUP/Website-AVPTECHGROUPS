@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { ChevronDown, ChevronUp, ArrowRight } from 'lucide-react'
+import { ArrowRight, ChevronDown, ChevronUp } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
 export const faqs = [
@@ -194,8 +194,8 @@ export const faqs = [
     },
 ]
 
-const PREVIEW_COUNT = 10
 
+const PREVIEW_COUNT = 10
 const FAQ = () => {
     const [openIndex, setOpenIndex] = useState(null)
     const navigate = useNavigate()
@@ -206,88 +206,86 @@ const FAQ = () => {
 
     const previewFaqs = faqs.slice(0, PREVIEW_COUNT)
     const remaining = faqs.length - PREVIEW_COUNT
-
     return (
-        <section className="w-full bg-white px-4 sm:px-6 flex items-center">
-            <div className="w-full max-w-3xl mx-auto py-16 lg:py-24">
+        <section className="w-full relative py-20 px-4 sm:px-6 overflow-hidden bg-theme-bg text-theme-text transition-colors duration-300">
+            {/* Top Gradient Divider */}
+            <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-[#00C9B1]/30 via-[#F5A623]/20 to-transparent z-10" />
+            {/* Bottom Gradient Divider */}
+            <div className="absolute bottom-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-[#00C9B1]/30 via-[#F5A623]/20 to-transparent z-10" />
+
+            {/* Grid overlay */}
+            <div className="absolute inset-0 pointer-events-none opacity-[0.5]" style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
+
+            {/* Glowing background blob */}
+            <div className="pointer-events-none absolute -bottom-40 -left-40 w-96 h-96 rounded-full opacity-[0.15] blur-3xl"
+                style={{ background: 'radial-gradient(circle, #00C9B1, transparent 70%)' }} />
+
+            <div className="relative z-10 w-full max-w-3xl mx-auto py-8">
 
                 {/* Header */}
-                <div className="text-center mb-12">
-                    <p className="font-body text-teal-dark text-sm font-semibold uppercase tracking-widest mb-3">
-                        Support
-                    </p>
-                    <h2 className="font-heading text-4xl sm:text-5xl font-bold text-text-primary leading-tight mb-4">
-                        Frequently asked{' '}
-                        <span className="text-grad-teal-gold">questions</span>
+                <div className="text-center mb-16">
+                    <h2 className="font-heading text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-theme-text leading-tight mb-4">
+                        Frequently Asked <span className="bg-gradient-to-r from-teal-dark to-teal bg-clip-text text-transparent">Questions</span>
                     </h2>
-                    <p className="text-text-secondary font-body text-base sm:text-lg max-w-xl mx-auto">
-                        Everything you need to know about SchoolSpine. Can't find the answer?{' '}
-                        <a href="#contact" className="text-teal-dark font-medium underline underline-offset-2 hover:text-teal transition-colors">
-                            Talk to our team
-                        </a>
-                        .
+                    <p className="text-theme-subtext text-base sm:text-lg max-w-lg mx-auto">
+                        Everything you need to know about SchoolSpine.
                     </p>
                 </div>
 
-                {/* Accordion List — first 10 */}
-                <div className="divide-y divide-gray-100 border-t border-gray-100">
+                {/* Accordion List */}
+                <div className="space-y-4">
                     {previewFaqs.map((faq, idx) => {
                         const isOpen = openIndex === idx
                         return (
-                            <div key={idx}>
+                            <div
+                                key={idx}
+                                className="rounded-2xl backdrop-blur-md transition-all duration-300 shadow-[0_8px_30px_rgba(0,0,0,0.02)] hover:shadow-[0_12px_30px_rgba(0,201,177,0.08)] border border-theme-border hover:border-teal/50 bg-theme-card overflow-hidden"
+                            >
+                                {/* Question Row */}
                                 <button
                                     onClick={() => toggle(idx)}
-                                    className="w-full flex items-center justify-between py-5 text-left gap-4 group cursor-pointer"
+                                    className="w-full flex items-center justify-between p-6 text-left gap-4 group cursor-pointer"
                                     aria-expanded={isOpen}
                                 >
-                                    <span className="text-text-primary font-body font-medium text-base sm:text-[17px] group-hover:text-teal-dark transition-colors duration-200">
+                                    <span className="text-theme-text font-body font-bold text-base sm:text-lg group-hover:text-[#00C9B1] transition-colors duration-200">
                                         {faq.question}
                                     </span>
-                                    <span
-                                        className={`flex-shrink-0 w-7 h-7 rounded-full border flex items-center justify-center transition-all duration-200 ${
-                                            isOpen
-                                                ? 'bg-teal-dark border-teal-dark text-white'
-                                                : 'border-gray-200 text-text-muted group-hover:border-teal-dark group-hover:text-teal-dark'
-                                        }`}
-                                    >
-                                        {isOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                                    <span className={`flex-shrink-0 text-theme-subtext group-hover:text-[#00C9B1] transition-all duration-300 ${isOpen ? 'rotate-180 text-[#00C9B1]' : ''}`}>
+                                        <ChevronDown size={20} />
                                     </span>
                                 </button>
 
-                                {/* Animated answer */}
+                                {/* Answer — animated open/close */}
                                 <div
-                                    className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                                        isOpen ? 'max-h-[400px] opacity-100 pb-5' : 'max-h-0 opacity-0'
-                                    }`}
+                                    className={`overflow-hidden transition-all duration-300 ease-in-out ${isOpen ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'
+                                        }`}
                                 >
-                                    <p className="text-text-secondary font-body text-sm sm:text-base leading-relaxed pr-10">
+                                    <div className="p-6 pt-0 text-theme-subtext font-body text-sm sm:text-base leading-relaxed pr-8 border-t border-theme-border mt-1">
                                         {faq.answer}
-                                    </p>
+                                    </div>
                                 </div>
                             </div>
                         )
                     })}
-                </div>
 
-                {/* View More CTA */}
-                <div className="mt-10 flex flex-col items-center gap-3">
-                    <div className="w-full h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent mb-2" />
-                    <button
-                        onClick={() => navigate('/faqs')}
-                        className="group inline-flex items-center gap-3 px-7 py-3.5 rounded-full bg-teal-dark text-white font-body font-semibold text-sm sm:text-base shadow-md hover:bg-teal transition-all duration-200 cursor-pointer"
-                    >
-                        View All FAQs
-                        <span className="text-white/60 font-normal text-sm">
-                            +{remaining} more
-                        </span>
-                        <ArrowRight
-                            size={17}
-                            className="group-hover:translate-x-1 transition-transform duration-200"
-                        />
-                    </button>
                 </div>
             </div>
-        </section>
+            {/* View More CTA */}
+            <div className="mt-10 flex flex-col items-center gap-3">
+                <div className="w-full h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent mb-2" />
+                <button
+                    onClick={() => navigate('/faqs')}
+                    className="group inline-flex items-center gap-3 px-7 py-3.5 rounded-full bg-teal-dark text-white font-body font-semibold text-sm sm:text-base shadow-md hover:bg-teal transition-all duration-200 cursor-pointer"
+                >
+                    View All FAQs
+                    <ArrowRight
+                        size={17}
+                        className="group-hover:translate-x-1 transition-transform duration-200"
+                    />
+                </button>
+            </div>
+
+        </section >
     )
 }
 
