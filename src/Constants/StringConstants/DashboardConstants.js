@@ -11,6 +11,7 @@ export const DASHBOARD_CONST = {
         REVIEW: "Review",
         TAKE_ACTION: "Take Action",
         VIEW_CALENDAR: "View Full Calendar",
+        VIEW_FEE_COLLECTIONS: "View Fee Collections",
     },
     LABELS: {
         PENDING: "Pending",
@@ -22,13 +23,15 @@ export const DASHBOARD_CONST = {
         ATTENDANCE_LEAVE: "Attendance / Leave",
         ACTION_REQUIRED: "Action Required",
         SOME_ITEMS_ATTENTION: "Some items need your attention",
-        ALL_CAUGHT_UP: "✓ All caught up!",
+        ALL_CAUGHT_UP: "All caught up!",
         NEXT_HOLIDAY: "Next Holiday:",
         PENDING_ACTIONS: "Pending Actions",
         ITEMS_REQUIRING_ATTENTION: "Items requiring your attention",
         QUICK_ACTIONS: "Quick Actions",
         FREQUENTLY_USED: "Frequently used features",
-        UPCOMING_HOLIDAYS: "Upcoming Holidays"
+        UPCOMING_HOLIDAYS: "Upcoming Holidays",
+        FEE_COLLECTIONS: "Fee Collections",
+        RECENT_ACTIVITY: "Recent activity",
     },
     STATUS: {
         NO_DATA: "No Data",
