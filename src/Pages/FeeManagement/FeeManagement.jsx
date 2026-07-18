@@ -30,21 +30,7 @@ const AySubtitle = ({ label, schoolName }) => {
     );
 };
 
-// ─── Back Button ─────────────────────────────────────────────────────────────
-const BackButton = () => {
-    const navigate = useNavigate();
-    return (
-        <button
-            onClick={() => navigate(-1)}
-            className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium
-                       text-gray-700 bg-white border border-gray-300 rounded-lg
-                       hover:bg-gray-50 transition-colors"
-        >
-            <ArrowLeft size={16} />
-            {FEE_MANAGEMENT_STRINGS.BTN_BACK}
-        </button>
-    );
-};
+
 
 // ─── Fee Synthesis Page ───────────────────────────────────────────────────────
 export const FeeSynthesisPage = () => {
@@ -146,9 +132,7 @@ export const OverviewPage = () => {
                     <div className="font-bold text-lg text-gray-900 leading-tight">{FEE_MANAGEMENT_STRINGS.HEADER_FEE_MANAGEMENT}</div>
                     <AySubtitle label={currentAcademicYear?.label} schoolName={schoolInfo?.schoolName} />
                 </div>
-                <div className="flex items-center gap-3">
-                    <BackButton />
-                </div>
+                
             </header>
             <main className="flex-1 p-6 max-w-[1600px] mx-auto w-full">
                 <Overview onNavigate={() => { }} />
