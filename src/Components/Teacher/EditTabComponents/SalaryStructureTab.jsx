@@ -44,6 +44,20 @@ const SalaryStructureTab = ({ formData, setFormData, handleInputChange, teacherI
         { label: 'Other Deductions', key: 'otherDeductions' },
     ];
 
+    // ✅ FIX: block '-', '+', 'e', 'E' so amounts can never be typed as negative or
+    // in scientific notation. Applied to every amount input below (allowance amount
+    // was previously missing ANY guard at all — that's how "-500" got through and
+    // was then ADDED into the net total, silently subtracting it).
+    const blockNonPositiveKeys = (e) => {
+        if (["-", "+", "e", "E"].includes(e.key)) {
+            e.preventDefault();
+        }
+    };
+
+    // ✅ FIX: strip any '-', '+', 'e' that slips in via paste/autofill/drag-drop,
+    // which onKeyDown alone can't catch.
+    const sanitizeAmountInput = (value) => value.replace(/[-+eE]/g, '');
+
     useEffect(() => {
         if (!teacherId) return;
 
@@ -123,7 +137,11 @@ const SalaryStructureTab = ({ formData, setFormData, handleInputChange, teacherI
     const handleAddAllowance = (e) => {
         e.preventDefault();
         if (!newAllowance.name || !newAllowance.amount) return;
-        const amount = parseFloat(newAllowance.amount);
+        // ✅ FIX: force a non-negative amount even if a negative value somehow reaches
+        // here (paste, autofill, or browser quirks bypassing onKeyDown), and reject
+        // a zero/invalid amount outright instead of silently adding a 0-value row.
+        const amount = Math.abs(parseFloat(newAllowance.amount)) || 0;
+        if (amount <= 0) return;
         setAllowances(prev => [...prev, { id: Date.now(), name: newAllowance.name, amount }]);
         setFormData(prev => ({ ...prev, [newAllowance.name]: amount }));
         setNewAllowance({ name: '', amount: '' });
@@ -260,8 +278,10 @@ const SalaryStructureTab = ({ formData, setFormData, handleInputChange, teacherI
                                     <input
                                         name="baseSalary"
                                         type="number"
+                                        min="0"
+                                        onKeyDown={blockNonPositiveKeys}
                                         value={formData.baseSalary}
-                                        onChange={(e) => setFormData(prev => ({ ...prev, baseSalary: e.target.value }))}
+                                        onChange={(e) => setFormData(prev => ({ ...prev, baseSalary: sanitizeAmountInput(e.target.value) }))}
                                         placeholder="0"
                                         className="w-full pl-8 pr-24 sm:pr-28 py-2.5 border border-gray-300 rounded-lg text-base font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     />
@@ -310,6 +330,7 @@ const SalaryStructureTab = ({ formData, setFormData, handleInputChange, teacherI
                                     <input
                                         type="number"
                                         name="leaveDeductionPerDay"
+                                        onKeyDown={blockNonPositiveKeys}
                                         value={formData.leaveDeductionPerDay}
                                         onChange={handleInputChange}
                                         disabled={!leaveDeductionEnabled}
@@ -329,6 +350,7 @@ const SalaryStructureTab = ({ formData, setFormData, handleInputChange, teacherI
                                     <input
                                         type="number"
                                         name="lateArrivalPenalty"
+                                        onKeyDown={blockNonPositiveKeys}
                                         value={formData.lateArrivalPenalty || ''}
                                         onChange={handleInputChange}
                                         disabled={!leaveDeductionEnabled}
@@ -381,8 +403,9 @@ const SalaryStructureTab = ({ formData, setFormData, handleInputChange, teacherI
                                                     type="number"
                                                     step="0.01"
                                                     min="0"
+                                                    onKeyDown={blockNonPositiveKeys}
                                                     value={newAllowance.amount}
-                                                    onChange={(e) => setNewAllowance(prev => ({ ...prev, amount: e.target.value }))}
+                                                    onChange={(e) => setNewAllowance(prev => ({ ...prev, amount: sanitizeAmountInput(e.target.value) }))}
                                                     placeholder="Amount"
                                                     className="w-full text-xs outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                                                 />
@@ -466,8 +489,9 @@ const SalaryStructureTab = ({ formData, setFormData, handleInputChange, teacherI
                                                     step="0.01"
                                                     min="0"
                                                     placeholder="Amount"
+                                                    onKeyDown={blockNonPositiveKeys}
                                                     value={newPenalty.amount}
-                                                    onChange={(e) => setNewPenalty(prev => ({ ...prev, amount: e.target.value }))}
+                                                    onChange={(e) => setNewPenalty(prev => ({ ...prev, amount: sanitizeAmountInput(e.target.value) }))}
                                                     className="w-full text-xs outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                                                 />
                                             </div>
