@@ -1,5 +1,5 @@
 import React, { useState, useRef, useContext, useEffect } from 'react';
-import { Settings, Printer, X, Plus, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Settings, Printer, X } from 'lucide-react';
 import { UserContext } from '../../ContextAPI/UserContext.jsx'; // TODO: confirm this path matches your project structure
 
 // TODO: confirm this import path matches where getSchoolById actually lives
@@ -126,8 +126,11 @@ const ConfigPanel = ({ config, onClose, school, schoolLoading }) => {
 };
 
 // ─── Single Receipt Copy ──────────────────────────────────────────────────────
-// FIX: school identity (name/address/logo) is now a separate `school` prop
-// sourced from the API, instead of living inside `config`.
+// FIX: school identity is now a separate `school` prop sourced from the API,
+// instead of living inside `config`.
+// FIX: school phone/email were being fetched (and shown in the read-only
+// Config panel) but never actually rendered on the printed receipt itself.
+// They're now shown in the header, under the address, whenever present.
 const ReceiptCopy = ({ config, school, data, copyLabel }) => {
   const { currency, headerColor, accentColor, transportAccentColor, showSignatureLine, footerNote } = config;
   const fmt = (n) => currency + (Number(n) || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 });
@@ -184,6 +187,11 @@ const ReceiptCopy = ({ config, school, data, copyLabel }) => {
             <div>
               <div style={{ color: 'white', fontWeight: 'bold', fontSize: 13, letterSpacing: 0.5 }}>{school.schoolName}</div>
               <div style={{ color: 'rgba(255,255,255,0.8)', fontSize: 9 }}>{school.schoolAddress}</div>
+              {(school.schoolPhone || school.schoolEmail) && (
+                  <div style={{ color: 'rgba(255,255,255,0.75)', fontSize: 9, marginTop: 1 }}>
+                    {[school.schoolPhone, school.schoolEmail].filter(Boolean).join('  ·  ')}
+                  </div>
+              )}
             </div>
           </div>
           <div style={{ color: 'white', fontWeight: 'bold', fontSize: 13, textTransform: 'uppercase', letterSpacing: 1 }}>
@@ -334,11 +342,14 @@ export default function FeeReceiptPrint({ receipt, onClose }) {
           // TODO: confirm these field names against the actual
           // getSchoolById response shape and adjust the right-hand side
           // keys if they differ (e.g. contactNumber vs phone).
+          // ✅ FIX: widened fallback chain so phone/email reliably show up in
+          // the Config panel regardless of which field name the backend
+          // actually uses for them.
           setSchool({
             schoolName: data.name || data.schoolName || schoolInfo?.schoolName || FALLBACK_SCHOOL.schoolName,
             schoolAddress: data.address || data.schoolAddress || '',
-            schoolPhone: data.phone || data.contactNumber || data.schoolPhone || '',
-            schoolEmail: data.email || data.schoolEmail || '',
+            schoolPhone: data.phone || data.contactNumber || data.mobileNumber || data.mobile || data.contactPhone || data.schoolPhone || '',
+            schoolEmail: data.email || data.contactEmail || data.officialEmail || data.schoolEmail || '',
             schoolLogo: data.logoUrl || schoolInfo?.logoUrl || FALLBACK_SCHOOL.schoolLogo,
           });
         }
@@ -357,8 +368,13 @@ export default function FeeReceiptPrint({ receipt, onClose }) {
   // this no longer needs to be mutable state.
   const config = DEFAULT_CONFIG;
 
-  const [showConfig,  setShowConfig]  = useState(false);
-  const [editData,    setEditData]    = useState(() => ({
+  const [showConfig, setShowConfig] = useState(false);
+
+  // FIX: receipt data is now fixed at open-time from the `receipt` prop.
+  // The "Edit Data" panel (and every setter that mutated it) has been
+  // removed per request — this now only feeds the read-only preview/print
+  // output, it is never mutated after mount.
+  const editData = {
     receiptNo:   receipt?.receiptNo   || '',
     date:        receipt?.date        || new Date().toLocaleDateString('en-IN'),
     studentName: receipt?.studentName || '',
@@ -382,8 +398,8 @@ export default function FeeReceiptPrint({ receipt, onClose }) {
     academicCollected: receipt?.academicCollected ?? receipt?.amountPaid ?? 0,
     transportComponents: receipt?.transportComponents || [],
     transportCollected: receipt?.transportCollected ?? receipt?.transportPaid ?? 0,
-  }));
-  const [showEdit, setShowEdit] = useState(false);
+  };
+
   const printRef = useRef();
 
   const handlePrint = () => {
@@ -413,26 +429,6 @@ export default function FeeReceiptPrint({ receipt, onClose }) {
     setTimeout(() => { win.print(); }, 400);
   };
 
-  const updateAcademicComponent = (i, field, val) => {
-    setEditData((p) => {
-      const comps = [...p.academicComponents];
-      comps[i] = { ...comps[i], [field]: field === 'amount' ? +val : val };
-      return { ...p, academicComponents: comps };
-    });
-  };
-  const addAcademicComponent    = () => setEditData((p) => ({ ...p, academicComponents: [...p.academicComponents, { name: '', amount: 0 }] }));
-  const removeAcademicComponent = (i) => setEditData((p) => ({ ...p, academicComponents: p.academicComponents.filter((_, idx) => idx !== i) }));
-
-  const updateTransportComponent = (i, field, val) => {
-    setEditData((p) => {
-      const comps = [...p.transportComponents];
-      comps[i] = { ...comps[i], [field]: field === 'amount' ? +val : val };
-      return { ...p, transportComponents: comps };
-    });
-  };
-  const addTransportComponent    = () => setEditData((p) => ({ ...p, transportComponents: [...p.transportComponents, { name: '', amount: 0 }] }));
-  const removeTransportComponent = (i) => setEditData((p) => ({ ...p, transportComponents: p.transportComponents.filter((_, idx) => idx !== i) }));
-
   return (
       <div className="fixed inset-0 bg-black/60 z-50 flex flex-col overflow-hidden backdrop-blur-sm">
         <div className="flex-shrink-0 bg-white border-b border-gray-200 px-6 py-3 flex items-center gap-3">
@@ -440,11 +436,6 @@ export default function FeeReceiptPrint({ receipt, onClose }) {
             <h2 className="text-[14px] font-extrabold text-gray-900">Fee Receipt Preview</h2>
             <p className="text-[11px] text-gray-400">Admin copy + Parent copy · Academic + Transport itemized · Side by side · Print-ready</p>
           </div>
-          <button onClick={() => setShowEdit((v) => !v)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-[12px] font-semibold text-gray-600 hover:bg-gray-50 transition">
-            {showEdit ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-            Edit Data
-          </button>
           <button onClick={() => setShowConfig(true)}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-[12px] font-semibold text-gray-600 hover:bg-gray-50 transition">
             <Settings size={13} /> Config
@@ -458,91 +449,6 @@ export default function FeeReceiptPrint({ receipt, onClose }) {
             <X size={15} />
           </button>
         </div>
-
-        {showEdit && (
-            <div className="flex-shrink-0 bg-gray-50 border-b border-gray-200 px-6 py-4 overflow-x-auto">
-              <div className="flex gap-6 min-w-max">
-                <div className="space-y-2">
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Student</p>
-                  {[['Name', 'studentName'], ['Adm. No.', 'studentCode'], ['Class', 'class'], ['Period', 'period']].map(([lbl, key]) => (
-                      <div key={key} className="flex items-center gap-2">
-                        <span className="text-[11px] text-gray-500 w-16 flex-shrink-0">{lbl}</span>
-                        <input value={editData[key]} onChange={(e) => setEditData((p) => ({ ...p, [key]: e.target.value }))}
-                               className="px-2 py-1 text-[12px] border border-gray-200 rounded-lg outline-none focus:border-green-600 w-40 bg-white" />
-                      </div>
-                  ))}
-                </div>
-                <div className="space-y-2">
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Receipt</p>
-                  {[['Receipt No.', 'receiptNo'], ['Date', 'date'], ['Mode', 'paymentMode'], ['Ref. No.', 'referenceNo'], ['Recorded By', 'recordedBy']].map(([lbl, key]) => (
-                      <div key={key} className="flex items-center gap-2">
-                        <span className="text-[11px] text-gray-500 w-20 flex-shrink-0">{lbl}</span>
-                        <input value={editData[key]} onChange={(e) => setEditData((p) => ({ ...p, [key]: e.target.value }))}
-                               className="px-2 py-1 text-[12px] border border-gray-200 rounded-lg outline-none focus:border-green-600 w-36 bg-white" />
-                      </div>
-                  ))}
-                </div>
-                <div className="space-y-2">
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Academic Adjustments</p>
-                  {[['Discount', 'discount'], ['Late Fine', 'lateFine'], ['Academic Collected', 'academicCollected'], ['Balance After', 'balanceAfter']].map(([lbl, key]) => (
-                      <div key={key} className="flex items-center gap-2">
-                        <span className="text-[11px] text-gray-500 w-28 flex-shrink-0">{lbl}</span>
-                        <input type="number" value={editData[key]} onChange={(e) => setEditData((p) => ({ ...p, [key]: +e.target.value }))}
-                               className="px-2 py-1 text-[12px] border border-gray-200 rounded-lg outline-none focus:border-green-600 w-28 bg-white" />
-                      </div>
-                  ))}
-                  <div className="flex items-center gap-2">
-                    <span className="text-[11px] text-gray-500 w-28 flex-shrink-0">Transport Collected</span>
-                    <input type="number" value={editData.transportCollected} onChange={(e) => setEditData((p) => ({ ...p, transportCollected: +e.target.value }))}
-                           className="px-2 py-1 text-[12px] border border-sky-200 rounded-lg outline-none focus:border-sky-500 w-28 bg-white" />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[11px] text-gray-500 w-28 flex-shrink-0">Remarks</span>
-                    <input value={editData.remarks} onChange={(e) => setEditData((p) => ({ ...p, remarks: e.target.value }))}
-                           className="px-2 py-1 text-[12px] border border-gray-200 rounded-lg outline-none focus:border-green-600 w-48 bg-white" />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Academic Items</p>
-                    <button onClick={addAcademicComponent} className="flex items-center gap-1 text-[11px] font-bold text-green-700 hover:text-green-900">
-                      <Plus size={11} /> Add
-                    </button>
-                  </div>
-                  {editData.academicComponents.map((c, i) => (
-                      <div key={i} className="flex items-center gap-2">
-                        <input value={c.name} onChange={(e) => updateAcademicComponent(i, 'name', e.target.value)} placeholder="Description"
-                               className="px-2 py-1 text-[12px] border border-gray-200 rounded-lg outline-none focus:border-green-600 w-32 bg-white" />
-                        <input type="number" value={c.amount} onChange={(e) => updateAcademicComponent(i, 'amount', e.target.value)} placeholder="Amount"
-                               className="px-2 py-1 text-[12px] border border-gray-200 rounded-lg outline-none focus:border-green-600 w-20 bg-white" />
-                        <button onClick={() => removeAcademicComponent(i)} className="text-red-400 hover:text-red-600">
-                          <Trash2 size={12} />
-                        </button>
-                      </div>
-                  ))}
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <p className="text-[10px] font-bold text-sky-500 uppercase tracking-wider">🚌 Transport Items</p>
-                    <button onClick={addTransportComponent} className="flex items-center gap-1 text-[11px] font-bold text-sky-700 hover:text-sky-900">
-                      <Plus size={11} /> Add
-                    </button>
-                  </div>
-                  {editData.transportComponents.map((c, i) => (
-                      <div key={i} className="flex items-center gap-2">
-                        <input value={c.name} onChange={(e) => updateTransportComponent(i, 'name', e.target.value)} placeholder="Description"
-                               className="px-2 py-1 text-[12px] border border-sky-200 rounded-lg outline-none focus:border-sky-500 w-32 bg-white" />
-                        <input type="number" value={c.amount} onChange={(e) => updateTransportComponent(i, 'amount', e.target.value)} placeholder="Amount"
-                               className="px-2 py-1 text-[12px] border border-sky-200 rounded-lg outline-none focus:border-sky-500 w-20 bg-white" />
-                        <button onClick={() => removeTransportComponent(i)} className="text-red-400 hover:text-red-600">
-                          <Trash2 size={12} />
-                        </button>
-                      </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-        )}
 
         <div className="flex-1 overflow-auto bg-gray-200 p-6">
           <div className="max-w-5xl mx-auto">
