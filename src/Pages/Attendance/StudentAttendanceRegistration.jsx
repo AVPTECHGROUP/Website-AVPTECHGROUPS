@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import Webcam from "react-webcam"; // ⚡ Added webcam support
 import {
     Users, UserCheck, UserX, Search, CheckCircle, AlertTriangle,
     RefreshCw, ChevronRight, Trash2, X, Zap, Camera, BookOpen,
-    GraduationCap, FileText, AlertCircle
+    GraduationCap, FileText, AlertCircle, Upload // ⚡ Added Upload icon
 } from "lucide-react";
 import CardComponent from "../../Components/CommonComp/CardComponent";
 import CardLoader from "../../Components/CommonComp/CardLoader";
@@ -45,13 +46,183 @@ function PhotoDots({ count, max = 5 }) {
     );
 }
 
+// ⚡ New PhotoCaptureModal Component added for Students
+function PhotoCaptureModal({ slotIndex, angleLabel, onCapture, onClose }) {
+    const [mode, setMode] = useState(null);
+    const [cameraFacing, setCameraFacing] = useState("user");
+    const [cameraReady, setCameraReady] = useState(false);
+    const [capturedPreview, setCapturedPreview] = useState(null);
+    const webcamRef = useRef(null);
+    const fileInputRef = useRef(null);
+
+    useEffect(() => { setCameraReady(false); }, [cameraFacing]);
+
+    const handleCapture = useCallback(() => {
+        if (!webcamRef.current) return;
+        const imageSrc = webcamRef.current.getScreenshot();
+        if (!imageSrc) return;
+        fetch(imageSrc)
+            .then((res) => res.blob())
+            .then((blob) => {
+                const file = new File([blob], `student_face_${slotIndex + 1}_${Date.now()}.jpg`, { type: "image/jpeg" });
+                setCapturedPreview({ src: imageSrc, file });
+            });
+    }, [slotIndex]);
+
+    const handleConfirmCapture = () => {
+        if (!capturedPreview) return;
+        onCapture(slotIndex, capturedPreview.file);
+        onClose();
+    };
+
+    const handleFileChange = (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        onCapture(slotIndex, file);
+        onClose();
+    };
+
+    return (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm px-4"
+            onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden border border-gray-200">
+                <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                    <div>
+                        <h3 className="text-sm font-bold text-gray-900">
+                            Photo {slotIndex + 1} ({angleLabel})
+                        </h3>
+                        <p className="text-xs text-gray-400 mt-0.5">
+                            {mode === "camera" ? UI_STRINGS.STAFF_ENROLL.CAM_GUIDE : UI_STRINGS.STAFF_ENROLL.CHOOSE_HOW}
+                        </p>
+                    </div>
+                    <button onClick={onClose} className="cursor-pointer w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors">
+                        <X className="w-3.5 h-3.5 text-gray-600" />
+                    </button>
+                </div>
+
+                {!mode && (
+                    <div className="p-5 space-y-3">
+                        <button onClick={() => setMode("camera")}
+                            className="cursor-pointer w-full flex items-center gap-4 p-4 rounded-xl border-2 border-blue-100 bg-blue-50 hover:border-blue-400 hover:bg-blue-100 transition-all group text-left">
+                            <div className="w-11 h-11 rounded-full bg-blue-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                                <Camera className="w-5 h-5 text-white" />
+                            </div>
+                            <div>
+                                <p className="text-sm font-bold text-blue-800">{UI_STRINGS.STAFF_ENROLL.OPEN_CAM}</p>
+                                <p className="text-xs text-blue-500 mt-0.5">{UI_STRINGS.STAFF_ENROLL.OPEN_CAM_SUB}</p>
+                            </div>
+                        </button>
+                        <button onClick={() => { setMode("upload"); setTimeout(() => fileInputRef.current?.click(), 80); }}
+                            className="cursor-pointer w-full flex items-center gap-4 p-4 rounded-xl border-2 border-gray-100 bg-gray-50 hover:border-gray-300 hover:bg-gray-100 transition-all group text-left">
+                            <div className="w-11 h-11 rounded-full bg-gray-700 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                                <Upload className="w-5 h-5 text-white" />
+                            </div>
+                            <div>
+                                <p className="text-sm font-bold text-gray-800">{UI_STRINGS.STAFF_ENROLL.UPLOAD_DEV}</p>
+                                <p className="text-xs text-gray-400 mt-0.5">{UI_STRINGS.STAFF_ENROLL.UPLOAD_DEV_SUB}</p>
+                            </div>
+                        </button>
+                        <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+                    </div>
+                )}
+
+                {mode === "camera" && (
+                    <div className="p-4">
+                        {capturedPreview ? (
+                            <div>
+                                <div className="rounded-xl overflow-hidden mb-3 bg-black" style={{ aspectRatio: "4/3" }}>
+                                    <img src={capturedPreview.src} alt="Captured" className="w-full h-full object-cover"
+                                        style={{ transform: cameraFacing === "user" ? "scaleX(-1)" : "none" }} />
+                                </div>
+                                <p className="text-xs text-center text-gray-500 mb-3">{UI_STRINGS.STAFF_ENROLL.PHOTO_LOOKS_GOOD}</p>
+                                <div className="flex gap-2">
+                                    <button onClick={() => setCapturedPreview(null)} className="cursor-pointer flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 text-xs font-semibold transition-colors">
+                                        <RefreshCw className="w-3.5 h-3.5" /> {UI_STRINGS.COMMON.RETAKE}
+                                    </button>
+                                    <button onClick={handleConfirmCapture} className="cursor-pointer flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition-colors">
+                                        <CheckCircle className="w-3.5 h-3.5" /> {UI_STRINGS.STAFF_ENROLL.BTN_USE_PHOTO}
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div>
+                                <div className="rounded-xl overflow-hidden mb-3 bg-gray-900 relative" style={{ aspectRatio: "4/3" }}>
+                                    <Webcam ref={webcamRef} audio={false} screenshotFormat="image/jpeg" screenshotQuality={0.92}
+                                        videoConstraints={{ facingMode: cameraFacing, width: 640, height: 480 }}
+                                        onUserMedia={() => setCameraReady(true)} onUserMediaError={() => setCameraReady(false)}
+                                        className="w-full h-full object-cover" style={{ transform: cameraFacing === "user" ? "scaleX(-1)" : "none" }} />
+                                    {!cameraReady && (
+                                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-900">
+                                            <RefreshCw className="w-6 h-6 text-gray-400 animate-spin mb-2" />
+                                            <p className="text-xs text-gray-400">{UI_STRINGS.STAFF_ENROLL.STARTING_CAM}</p>
+                                        </div>
+                                    )}
+                                    {cameraReady && (
+                                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                            <div className="border-2 border-white/70 border-dashed rounded-full" style={{ width: "42%", height: "68%" }} />
+                                        </div>
+                                    )}
+                                    <div className="absolute top-2 left-2 bg-black/50 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                                        F{slotIndex + 1}
+                                    </div>
+                                </div>
+                                <button onClick={() => { setCameraFacing((f) => f === "user" ? "environment" : "user"); }}
+                                    className="cursor-pointer flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-600 text-xs font-medium transition-colors mb-3">
+                                    <RefreshCw className="w-3 h-3" />
+                                    {cameraFacing === "user" ? UI_STRINGS.STAFF_ENROLL.SWITCH_BACK : UI_STRINGS.STAFF_ENROLL.SWITCH_FRONT}
+                                </button>
+                                <button onClick={handleCapture} disabled={!cameraReady}
+                                    className={`cursor-pointer w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all
+                                        ${cameraReady ? "bg-blue-600 hover:bg-blue-700 text-white shadow-sm" : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}>
+                                    <Camera className="w-4 h-4" /> {UI_STRINGS.STAFF_ENROLL.BTN_CLICK_PHOTO}
+                                </button>
+                                <button onClick={() => { setMode(null); setCameraReady(false); }}
+                                    className="cursor-pointer w-full mt-2 py-1.5 text-xs text-gray-400 hover:text-gray-600 transition-colors">
+                                    {UI_STRINGS.STAFF_ENROLL.BACK_OPTS}
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {mode === "upload" && (
+                    <div className="p-5">
+                        <div className="flex flex-col items-center justify-center py-6 gap-3">
+                            <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
+                                <Upload className="w-5 h-5 text-gray-500" />
+                            </div>
+                            <p className="text-sm text-gray-600 font-medium">{UI_STRINGS.STAFF_ENROLL.OPENING_FILE}</p>
+                            <p className="text-xs text-gray-400 text-center">{UI_STRINGS.STAFF_ENROLL.OPENING_FILE_SUB}</p>
+                        </div>
+                        <div className="flex gap-2">
+                            <button onClick={() => fileInputRef.current?.click()}
+                                className="cursor-pointer flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold transition-colors">
+                                {UI_STRINGS.STAFF_ENROLL.BTN_BROWSE}
+                            </button>
+                            <button onClick={() => setMode(null)}
+                                className="cursor-pointer flex-1 py-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-600 text-xs font-semibold transition-colors">
+                                Back
+                            </button>
+                        </div>
+                        <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
+// ⚡ Updated PhotoSlot Component to manage modal triggers
 function PhotoSlot({ index, file, angleLabel, onAdd, onRemove }) {
-    const ref = useRef();
+    const [showModal, setShowModal] = useState(false);
     const preview = file ? URL.createObjectURL(file) : null;
     return (
         <div className="flex flex-col gap-1.5">
+            {showModal && (
+                <PhotoCaptureModal slotIndex={index} angleLabel={angleLabel} onCapture={onAdd} onClose={() => setShowModal(false)} />
+            )}
             <div className="relative">
-                <div onClick={() => !file && ref.current?.click()}
+                <div onClick={() => !file && setShowModal(true)}
                     className={`w-full rounded-xl border-2 transition-all overflow-hidden flex flex-col items-center justify-center
                         ${file ? "border-emerald-400 bg-emerald-50" : "border-dashed border-gray-300 bg-white hover:border-blue-400 hover:bg-blue-50 cursor-pointer"}`}
                     style={{ height: "108px" }}>
@@ -65,8 +236,6 @@ function PhotoSlot({ index, file, angleLabel, onAdd, onRemove }) {
                             <span className="text-[11px] text-gray-400 font-medium">Photo {index + 1}</span>
                         </div>
                     )}
-                    <input ref={ref} type="file" accept="image/*" className="hidden"
-                        onChange={(e) => e.target.files[0] && onAdd(index, e.target.files[0])} />
                 </div>
                 {file && (
                     <button onClick={() => onRemove(index)}
@@ -291,7 +460,6 @@ export default function StudentAttendanceRegistration() {
     const handleRemove = async () => {
         if (!selectedStudent) return;
         try {
-            setRemoving(true);
             const studentId = selectedStudent.id || selectedStudent.userId;
             await removeEnrollment({ userId: studentId, userType: "STUDENT", classId: selectedClass?.id || selectedStudent.classId, sectionId: selectedSection?.id || selectedStudent.sectionId });
             showToast("Enrollment removed successfully.", "success");
