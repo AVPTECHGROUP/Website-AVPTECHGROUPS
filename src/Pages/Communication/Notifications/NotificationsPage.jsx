@@ -71,10 +71,10 @@ export default function NotificationsPage() {
       setHasMore(mapped.length === COMMUNICATION_CONSTS.PAGINATION.NOTIFICATIONS_PAGE_SIZE);
       setPage(pageNum);
 
-      if (isRefresh) {
-        const totalUnread = data?.unreadCount ?? mapped.filter(x => x.unread).length;
-        setUnreadCount(totalUnread);
-      }
+      // if (isRefresh) {
+      //   const totalUnread = data?.unreadCount ?? mapped.filter(x => x.unread).length;
+      //   setUnreadCount(totalUnread);
+      // }
     } catch (err) {
       console.error("Notifications fetch error:", err);
       setError(COMMUNICATION_CONSTS.NOTIFICATIONS_PAGE_TEXT.LOAD_ERROR_DEFAULT);
