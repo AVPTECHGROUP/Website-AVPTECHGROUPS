@@ -203,7 +203,6 @@ export default function AllocateStudentCard({ isOpen, onClose, onSave, allocatio
     setStops([]);
 
     if (isEditMode) {
-      // Prioritize explicit override value, fallback to normal base feeAmount
       const initialFee = allocationData.overrideFeeAmount !== null && allocationData.overrideFeeAmount !== undefined
         ? String(allocationData.overrideFeeAmount)
         : allocationData.feeAmount !== null && allocationData.feeAmount !== undefined
@@ -236,7 +235,13 @@ export default function AllocateStudentCard({ isOpen, onClose, onSave, allocatio
 
       if (studRes.status === "fulfilled") {
         const list = studRes.value?.data || studRes.value || [];
-        setStudents(list.map((s) => ({
+
+        // 🔹 Filter for transportRequired = true
+        const transportStudents = Array.isArray(list)
+          ? list.filter((s) => Boolean(s.transportRequired))
+          : [];
+
+        setStudents(transportStudents.map((s) => ({
           value: s.id,
           label: `Roll No. ${s.rollNumber} - ${s.fullName || `${s.firstName} ${s.lastName}`}${s.className ? ` — ${s.className}${s.sectionName ? " " + s.sectionName : ""}` : ""}`,
         })));

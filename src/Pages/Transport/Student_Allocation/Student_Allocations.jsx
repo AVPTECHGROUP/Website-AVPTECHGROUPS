@@ -204,45 +204,46 @@ export default function Student_Allocations() {
                                     {totalElements} {totalElements !== 1 ? ALLOCATION_UI_TEXT.ALLOCATION_PLURAL : ALLOCATION_UI_TEXT.ALLOCATION_SINGULAR} {ALLOCATION_UI_TEXT.TOTAL}
                                 </p>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <button
-                                    onClick={fetchAllocations}
-                                    disabled={loading}
-                                    title="Refresh"
-                                    className="w-9 h-9 inline-flex items-center justify-center
-                                               text-gray-500 border border-gray-200 hover:bg-gray-50
-                                               rounded-xl transition-colors disabled:opacity-40"
-                                >
-                                    <RefreshCw className={`w-4 cursor-pointer h-4 ${loading ? "animate-spin" : ""}`} />
-                                </button>
-                                <button
-                                    onClick={() => setShowCreate(true)}
-                                    className="inline-flex items-center cursor-pointer gap-2 bg-blue-600 hover:bg-blue-700
-                                               text-white text-sm font-semibold px-4 py-2 rounded-xl
-                                               transition-colors shadow-sm whitespace-nowrap"
-                                >
-                                    <Plus className="w-4 h-4" /> {ALLOCATION_UI_TEXT.BTN_ALLOCATE}
-                                </button>
-                            </div>
                         </div>
 
-                        {/* Search */}
-                        <div className="px-4 sm:px-6 py-3 border-b border-gray-100">
-                            <div className="relative w-full sm:max-w-sm">
-                                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2
-                                                   w-4 h-4 text-gray-400 pointer-events-none" />
+                        {/* Search & Actions Bar (Fully Responsive with Optimal Large Screen Width) */}
+                        <div className="px-4 sm:px-6 py-3 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            {/* Input Box - Responsive Widths */}
+                            <div className="relative w-full sm:w-80 md:w-96 lg:w-[420px] transition-all">
+                                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                                 <input
                                     type="text"
                                     placeholder={ALLOCATION_UI_TEXT.SEARCH_PLACEHOLDER}
                                     value={searchInput}
                                     onChange={(e) => setSearchInput(e.target.value)}
                                     className="w-full pl-10 pr-4 py-2.5 text-sm border border-gray-200
-                                               rounded-xl focus:outline-none focus:ring-2
-                                               focus:ring-blue-200 bg-gray-50 placeholder-gray-400"
+                       rounded-xl focus:outline-none focus:ring-2
+                       focus:ring-blue-200 bg-gray-50 placeholder-gray-400"
                                 />
                             </div>
-                        </div>
 
+                            {/* Buttons Container */}
+                            <div className="flex items-center justify-between sm:justify-end gap-2.5 w-full sm:w-auto">
+                                <button
+                                    onClick={fetchAllocations}
+                                    disabled={loading}
+                                    title="Refresh"
+                                    className="w-10 h-10 sm:w-9 sm:h-9 inline-flex items-center justify-center
+                       text-gray-500 border border-gray-200 hover:bg-gray-50
+                       rounded-xl transition-colors disabled:opacity-40 shrink-0"
+                                >
+                                    <RefreshCw className={`w-4 h-4 cursor-pointer ${loading ? "animate-spin" : ""}`} />
+                                </button>
+                                <button
+                                    onClick={() => setShowCreate(true)}
+                                    className="flex-1 sm:flex-none inline-flex items-center justify-center cursor-pointer gap-2 bg-blue-600 hover:bg-blue-700
+                       text-white text-sm font-semibold px-4 py-2.5 sm:py-2 rounded-xl
+                       transition-colors shadow-sm whitespace-nowrap"
+                                >
+                                    <Plus className="w-4 h-4" /> {ALLOCATION_UI_TEXT.BTN_ALLOCATE}
+                                </button>
+                            </div>
+                        </div>
                         {/* Table */}
                         <AllocationTable
                             data={filtered}
