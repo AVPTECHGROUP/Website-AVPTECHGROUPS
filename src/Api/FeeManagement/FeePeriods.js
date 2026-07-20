@@ -70,3 +70,16 @@ export const createAcademicYear = async (payload) => {
   if (!res.ok) throw new Error(data?.message || "Failed to create academic year");
   return data;
 };
+export const closeFeePeriod = async (id) => {
+  const res = await authFetch(API_ENDPOINTS.feePeriodClose(id), {
+    method: "PATCH",
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data?.message || "Failed to close fee period");
+  }
+
+  return data;
+};

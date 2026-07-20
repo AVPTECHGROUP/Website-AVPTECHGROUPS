@@ -242,10 +242,11 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
     academicTouchedRef.current = false; transportTouchedRef.current = false;
 
     setActiveStudent({
-      studentId: s.id || s.studentId,
+      studentId:  s.studentId,
       studentName: fullName,
-      studentCode: s.admissionNumber || s.studentCode,
+      studentCode: s.admissionNumber ,
       class: s.className || s.class || classObj?.name || '',
+      section: s.sectionName || s.section || '',
       feeStructureId: s.feeStructureId,
       feePeriodId: selectedPeriodId,
       balance: studentBalance,
@@ -478,7 +479,7 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
                           title="Academic Fee"
                           icon={<IndianRupee size={12} />}
                           items={academicItems}
-                          subtotal={academicSubtotal}
+                         Academics={academicSubtotal}
                           tone="slate"
                       />
                   )}
@@ -488,7 +489,7 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
                           title="Transport Fee"
                           icon={<Bus size={12} />}
                           items={transportLoading ? [] : transportItems}
-                          subtotal={transportDue}
+                          Transport subtotal={transportDue}
                           tone="sky"
                           extra={
                             transportLoading ? (
@@ -517,7 +518,7 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
               {/* Academic column */}
               <div>
                 <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                  Academic Amount <span className="text-gray-400">*</span>
+                  Amount To Collect <span className="text-gray-400">*</span>
                 </label>
                 <div className="relative">
                   <Inp
@@ -559,7 +560,7 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
                           className={`pr-16 ${transportExceedsBalance ? 'border-orange-400 bg-orange-50' : ''}`}
                           onChange={(e) => { transportTouchedRef.current = true; setForm((p) => ({ ...p, transportAmount: e.target.value })); }}
                           max={transportDue} min={0}
-                          placeholder={transportDue > 0 ? `Max ${fmt(transportDue)}` : 'None due'}
+                          placeholder={transportDue > 0 ? `Max ${fmt(transportDue)}` : 'No dues'}
                       />
                       {transportDue > 0 && (
                           <button type="button"
@@ -648,10 +649,22 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
                     <CheckCircle size={11} /> Discount of {fmt(discountNum)} applied
                   </p>
               )}
-              <textarea value={form.discountReason} rows={2}
-                        onChange={(e) => setForm((p) => ({ ...p, discountReason: e.target.value }))}
-                        placeholder={COLLECTION_HISTORY_STRINGS.LBL_REASON}
-                        className="w-full mt-2 px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 resize-none" />
+              // AFTER
+              <Sel
+                  value={form.discountReason}
+                  onChange={(v) => setForm((p) => ({ ...p, discountReason: v }))}
+                  options={DISCOUNT_REASON_OPTIONS}
+                  placeholder={COLLECTION_HISTORY_STRINGS.LBL_REASON}
+                  className="w-full mt-2"
+              />
+              {form.discountReason === 'Others' && (
+                  <Inp
+                      value={form.discountReasonOther || ''}
+                      onChange={(e) => setForm((p) => ({ ...p, discountReasonOther: e.target.value }))}
+                      placeholder="Specify reason"
+                      className="mt-2"
+                  />
+              )}
             </div>
 
             {isOverdue && (
