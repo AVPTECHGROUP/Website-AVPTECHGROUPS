@@ -48,6 +48,14 @@ const EPS = 0.01;
 
 const HISTORY_TABLE_HEADERS = ['Receipt No.', 'Date', 'Student', 'Class', 'Period', 'Collected', 'Discount', 'Late Fine', 'Recorded By', 'Action'];
 
+// Dropdown options for discount reason (replaces free-text entry)
+const DISCOUNT_REASON_OPTIONS = [
+  { value: 'Scholarship', label: 'Scholarship' },
+  { value: 'Sibling Discount', label: 'Sibling Discount' },
+  { value: 'Academic Excellence Discount', label: 'Academic Excellence Discount' },
+  { value: 'Others', label: 'Others' },
+];
+
 const sanitizeNonNegativeAmount = (raw) => String(raw ?? '').replace(/[^0-9]/g, '');
 
 const reconcilePaidAmount = (totalFee, balanceDue, reportedPaid) => {
@@ -368,7 +376,7 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
   const [form, setForm] = useState({
     academicAmount: '', transportAmount: '',
     paymentMode: STATUSES.CASH, paymentDate: getTodayDate(),
-    referenceNo: '', discount: '', discountReason: '', lateFine: '', remarks: '',
+    referenceNo: '', discount: '', discountReason: '', discountReasonOther: '', lateFine: '', remarks: '',
   });
   const [loading, setLoading] = useState(false);
   const [periodStructures, setPeriodStructures] = useState([]);
@@ -434,7 +442,16 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
       const balance = Number(initialStudent.balance) || 0;
       const paidAmount = reconcilePaidAmount(totalFee, balance, initialStudent.paidAmount);
 
-      setActiveStudent({ ...initialStudent, totalFee, balance, paidAmount });
+      setActiveStudent({
+        ...initialStudent,
+        totalFee,
+        balance,
+        paidAmount,
+        // Roll number has no dedicated backend field — falls back to studentId,
+        // consistent with the receipt-printing convention used elsewhere.
+        rollNo: initialStudent.rollNo || initialStudent.studentId,
+        section: initialStudent.section || initialStudent.sectionName || '',
+      });
       const matched =
           periodOptions.find((p) => String(p.value) === String(initialStudent.feePeriodId)) ||
           periodOptions.find((p) => p.label?.trim().toLowerCase() === initialStudent.period?.trim().toLowerCase()) ||
@@ -444,11 +461,11 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
         academicAmount: balance > 0 ? String(balance) : '',
         transportAmount: '',
         paymentMode: STATUSES.CASH, paymentDate: getTodayDate(),
-        referenceNo: '', discountReason: '', discount: '', lateFine: '', remarks: '',
+        referenceNo: '', discountReason: '', discountReasonOther: '', discount: '', lateFine: '', remarks: '',
       });
     } else {
       setActiveStudent(null); setSelectedPeriodId('');
-      setForm({ academicAmount: '', transportAmount: '', paymentMode: STATUSES.CASH, paymentDate: getTodayDate(), referenceNo: '', discount: '', discountReason: '', lateFine: '', remarks: '' });
+      setForm({ academicAmount: '', transportAmount: '', paymentMode: STATUSES.CASH, paymentDate: getTodayDate(), referenceNo: '', discount: '', discountReason: '', discountReasonOther: '', lateFine: '', remarks: '' });
     }
   }, [open, initialStudent, periodOptions]);
 
@@ -600,7 +617,10 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
       studentId: s.id || s.studentId,
       studentName: fullName,
       studentCode: s.admissionNumber || s.studentCode,
+      // Roll number has no dedicated backend field — falls back to studentId.
+      rollNo: s.rollNumber || s.rollNo || s.id || s.studentId,
       class: s.className || s.class || classObj?.name || '',
+      section: s.sectionName || s.section || '',
       feeStructureId: s.feeStructureId,
       feePeriodId: selectedPeriodId,
       balance: studentBalance,
@@ -633,6 +653,12 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
     if (discountNum < 0) { toast.warning('Invalid discount', 'Discount cannot be negative.'); return; }
     if (lateFineNum < 0) { toast.warning('Invalid late fine', 'Late fine cannot be negative.'); return; }
 
+    // Resolve the actual discount reason text to send — "Others" pulls from the free-text follow-up field.
+    const resolvedDiscountReason =
+        form.discountReason === 'Others'
+            ? (form.discountReasonOther || 'Others')
+            : (form.discountReason || null);
+
     try {
       setLoading(true);
       const res = await createFeeCollection({
@@ -640,7 +666,7 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
         feeStructureId: activeStudent.feeStructureId ?? 0,
         amountPaid: netAcademicAmount,
         discount: discountNum || 0,
-        discountReason: form.discountReason || null,
+        discountReason: resolvedDiscountReason,
         lateFine: lateFineNum || 0,
         paymentMode: form.paymentMode,
         paymentDate: form.paymentDate,
@@ -789,7 +815,12 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
                   <Av name={activeStudent.studentName} status={activeStudent.status} size="lg" />
                   <div className="min-w-0 flex-1">
                     <div className="font-bold text-gray-900 truncate">{activeStudent.studentName}</div>
-                    <div className="text-xs text-gray-600 truncate">{activeStudent.studentCode} · Class {activeStudent.class}</div>
+                    {/* Class comes straight from the API — no hardcoded "Class" label duplication */}
+                    <div className="text-xs text-gray-600 truncate">{activeStudent.studentCode} · {activeStudent.class}</div>
+                    {/* Roll number and section shown below student name */}
+                    <div className="text-[11px] text-gray-500 truncate">
+                      Roll No: {activeStudent.rollNo || activeStudent.studentId || '—'} · Section: {activeStudent.section || '—'}
+                    </div>
                     {activeStudent.parentName && <div className="text-[11px] text-gray-500 mt-0.5 truncate">Parent: {activeStudent.parentName}</div>}
                     {isFullyPaid && (
                         <div className="flex items-center gap-1 mt-1">
@@ -813,7 +844,7 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
 
                   {hasAcademicStructure && (
                       <LineItemBlock
-                          title="Academic Fee"
+                          title="Academic Subtotal"
                           icon={<IndianRupee size={12} />}
                           items={academicItems}
                           subtotal={academicSubtotal}
@@ -823,7 +854,7 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
 
                   {canViewTransport && (
                       <LineItemBlock
-                          title="Transport Fee"
+                          title="Transport Subtotal"
                           icon={<Bus size={12} />}
                           items={transportLoading ? [] : transportItems}
                           subtotal={transportDue}
@@ -851,7 +882,7 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                  Academic Amount <span className="text-gray-400">*</span>
+                  Amount to collect <span className="text-gray-400">*</span>
                 </label>
                 <div className="relative">
                   <Inp
@@ -892,7 +923,7 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
                           className={`pr-16 ${transportExceedsBalance ? 'border-orange-400 bg-orange-50' : ''}`}
                           onChange={(e) => { transportTouchedRef.current = true; setForm((p) => ({ ...p, transportAmount: sanitizeNonNegativeAmount(e.target.value) })); }}
                           max={transportDue} min={0}
-                          placeholder={transportDue > 0 ? `Max ${fmt(transportDue)}` : 'None due'}
+                          placeholder={transportDue > 0 ? `Max ${fmt(transportDue)}` : 'No dues'}
                       />
                       {transportDue > 0 && (
                           <button type="button"
@@ -974,10 +1005,22 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
                     <CheckCircle size={11} /> Discount of {fmt(discountNum)} applied
                   </p>
               )}
-              <textarea value={form.discountReason} rows={2}
-                        onChange={(e) => setForm((p) => ({ ...p, discountReason: e.target.value }))}
-                        placeholder={COLLECTION_HISTORY_STRINGS.LBL_REASON}
-                        className="w-full mt-2 px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 resize-none" />
+              {/* Discount reason: dropdown instead of free-text, with an "Others" follow-up field */}
+              <Sel
+                  value={form.discountReason}
+                  onChange={(v) => setForm((p) => ({ ...p, discountReason: v, discountReasonOther: v === 'Others' ? p.discountReasonOther : '' }))}
+                  options={DISCOUNT_REASON_OPTIONS}
+                  placeholder={COLLECTION_HISTORY_STRINGS.LBL_REASON}
+                  className="w-full mt-2"
+              />
+              {form.discountReason === 'Others' && (
+                  <Inp
+                      value={form.discountReasonOther}
+                      onChange={(e) => setForm((p) => ({ ...p, discountReasonOther: e.target.value }))}
+                      placeholder="Specify reason"
+                      className="mt-2"
+                  />
+              )}
             </div>
 
             {isOverdue && (
@@ -1057,7 +1100,11 @@ const BulkCollectModal = ({ open, onClose, students, onSuccess, canCollect, canV
   };
   const applyAll = () => setRows((p) => p.map((r) => ({ ...r, paymentMode: commonMode, paymentDate: commonDate })));
 
-  const academicGrandTotal = rows.reduce((s, r) => s + (parseFloat(r.academicCollect) || 0), 0);
+  // AFTER
+  const academicGrandTotal = rows.reduce(
+      (s, r) => s + Math.max(0, (parseFloat(r.academicCollect) || 0) - (parseFloat(r.discount) || 0)),
+      0
+  );
   const transportGrandTotal = rows.reduce((s, r) => s + (parseFloat(r.transportCollect) || 0), 0);
   const combinedGrandTotal = academicGrandTotal + (canViewTransport ? transportGrandTotal : 0);
 
@@ -1482,6 +1529,11 @@ const CollectionsHistory = () => {
       const records = res.data?.content || res.records || [];
       setHistory(records.map((r) => ({
         id: r.id, receiptNo: r.receiptNo, date: r.paymentDate, studentName: r.studentName,
+        // NOTE: studentId is carried through here now so handleViewReceipt's
+        // error-fallback path (when the receipt-by-id fetch fails) still has
+        // a value to use as Roll No. — it previously had nothing to fall
+        // back on.
+        studentId: r.studentId,
         studentCode: r.admissionNumber,
         class: `${r.className}${r.sectionName ? ' ' + r.sectionName : ''}`,
         period: r.feePeriodName, amount: r.amountPaid, discount: r.discount || 0,
@@ -1541,6 +1593,13 @@ const CollectionsHistory = () => {
   const handleCollectSuccess = (response, student, extra = {}) => {
     setCollectModal({ open: false, student: null });
     const data = response?.data || response;
+    // FIX: the API wraps the payload as { success, data, timestamp } — the
+    // real collection time lives on the OUTER `response.timestamp`, not on
+    // `data` (which is just the inner object and has no timestamp field of
+    // its own). Reading data.timestamp always evaluated to '', which is
+    // why a freshly-collected receipt never showed a time even though
+    // "view past receipt" (which correctly reads res?.timestamp) did.
+    const generatedAt = response?.timestamp || data?.timestamp || '';
     const transportPaid = extra.transportPaid || 0;
     const academicItems = (extra.academicItems || []).map((it) => ({ name: it.label, amount: it.amount }));
     const transportItems = (extra.transportItems || []).map((it) => ({ name: it.label, amount: it.amount }));
@@ -1550,16 +1609,21 @@ const CollectionsHistory = () => {
       receipt: {
         receiptNo: data.receiptNo,
         date: data.paymentDate,
+        generatedAt: data.timestamp || '',
         studentName: data.studentName || student.studentName,
         studentCode: data.admissionNumber || student.studentCode,
+        rollNo: student.rollNo || data.studentId || student.studentId,
         class: data.className || student.class,
+        section: data.sectionName || student.section,   // ← add this
         period: data.feePeriodName || student.period,
         academicComponents: academicItems.length ? academicItems : (data.components || [{ name: 'Academic Fee', amount: data.amountPaid }]),
         academicCollected: data.amountPaid ?? 0,
         transportComponents: transportItems,
         transportCollected: transportPaid,
         discount: data.discount || 0,
+        discountReason: data.discountReason || '',       // ← add this
         lateFine: data.lateFine || 0,
+        totalDue: data.totalDue || 0,                     // ← add this
         paymentMode: data.paymentMode,
         referenceNo: data.referenceNo,
         balanceAfter: data.balanceAfter,
@@ -1569,29 +1633,42 @@ const CollectionsHistory = () => {
     fetchOutstanding(); setSelected([]);
   };
 
+
   const handleBulkSuccess = (responses, rows) => {
     setBulkModal({ open: false, students: [] });
-    toast.success(COLLECTION_HISTORY_STRINGS.TOAST_BULK_PROCESSED, `${Array.isArray(responses) ? responses.length : '?'} receipts generated.`);
+    // Toast already shown inside BulkCollectModal.handleSubmit — don't double it here.
     fetchOutstanding(); setSelected([]);
   };
 
   const handleViewReceipt = async (item) => {
     try {
-      const data = await getFeeReceiptById(item.id);
+      const res = await getFeeReceiptById(item.id);
+      const data = res?.data || res; // API wraps payload in { success, data, timestamp }
       setReceiptModal({
         open: true,
         receipt: {
           receiptNo: data.receiptNo, date: data.paymentDate,
-          studentName: data.studentName, studentCode: data.studentCode,
-          class: data.className, period: data.periodName,
-          academicComponents: data.components || [{ name: 'Academic Fee', amount: item.amount }],
+          generatedAt: res?.timestamp || '',
+          studentName: data.studentName,
+          // FIX: same admissionNumber/rollNo split as handleCollectSuccess —
+          // admissionNumber from the backend field, rollNo from studentId.
+          admissionNumber: data.admissionNumber,
+          rollNo: data.studentId,
+          class: data.className,
+          section: data.sectionName,
+          period: data.feePeriodName,
+          academicComponents: (data.components || []).map(c => ({ name: c.customName || c.componentType, amount: c.amount })),
           academicCollected: data.amountPaid ?? item.amount,
           transportComponents: [],
           transportCollected: data.transportAmount || 0,
           discount: data.discount || 0,
-          lateFine: data.lateFine || 0, paymentMode: data.paymentMode,
-          referenceNo: data.referenceNo, balanceAfter: data.balanceAfter,
-          recordedBy: data.recordedBy,
+          discountReason: data.discountReason || '',
+          lateFine: data.lateFine || 0,
+          totalDue: data.totalDue || 0,
+          paymentMode: data.paymentMode,
+          referenceNo: data.referenceNo,
+          balanceAfter: data.balanceAfter,
+          recordedBy: data.collectedBy,
         },
       });
     } catch {
@@ -1599,8 +1676,11 @@ const CollectionsHistory = () => {
         open: true,
         receipt: {
           receiptNo: item.receiptNo, date: item.date,
-          studentName: item.studentName, studentCode: item.studentCode,
-          class: item.class, period: item.period,
+          studentName: item.studentName,
+          admissionNumber: item.studentCode,
+          rollNo: item.studentId,
+          class: item.class,
+          period: item.period,
           academicComponents: [{ name: 'Academic Fee', amount: item.amount }],
           academicCollected: item.amount,
           transportComponents: [],
