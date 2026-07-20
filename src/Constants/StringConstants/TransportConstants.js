@@ -299,7 +299,7 @@ export const TOAST_MESSAGES = {
 export const FEE_PLAN_UI_TEXT = {
   // Page Level
   PAGE_TITLE: "Fees Management",
-  PAGE_SUBTITLE: "Create and manage transport fee plans — define amounts, frequencies, route-specific or distance-based pricing.",
+  PAGE_SUBTITLE: "Manage transport fee collection, payments, concessions, and adjustments.",
   SECTION_TITLE: "Transport Fee Plans",
   ADD_BTN: "Add Fee Plan",
   SEARCH_PLACEHOLDER: "Search plan name or route...",
