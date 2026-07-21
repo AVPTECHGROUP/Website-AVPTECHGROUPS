@@ -75,6 +75,11 @@ const TeachersTable = ({
     teacher.avatar || (resolveTeacherName(teacher)[0] || 'U').toUpperCase();
 
   const handleToggleStatus = async (teacher) => {
+    // If deactivating currently selected teacher, unselect them
+    if (teacher.id === selectedTeacherId && onRowSelect) {
+      onRowSelect(teacher);
+    }
+
     // 1. Optimistic row flip
     setTeachers((prev) =>
       prev.map((t) =>
@@ -187,26 +192,29 @@ const TeachersTable = ({
           />
         ) : (
           teachers.map((teacher) => {
-            const isSelected = selectedTeacherId === teacher.id;
+            const isActive = teacher.status === 'ACTIVE';
+            const isSelected = isActive && selectedTeacherId === teacher.id;
+
             return (
               <div
                 key={teacher.id}
                 onClick={() => {
-                  if (!isUserTable && onRowSelect) onRowSelect(teacher);
+                  if (!isUserTable && isActive && onRowSelect) onRowSelect(teacher);
                 }}
-                className={`bg-white rounded-xl border p-4 shadow-sm transition-all cursor-pointer ${isSelected
-                  ? 'border-blue-400 ring-1 ring-blue-300 bg-blue-50/40'
-                  : 'border-gray-200 hover:shadow-md'
+                className={`bg-white rounded-xl border p-4 shadow-sm transition-all ${isActive ? 'cursor-pointer hover:shadow-md' : 'cursor-default'
+                  } ${isSelected
+                    ? 'border-blue-400 ring-1 ring-blue-300 bg-blue-50/40'
+                    : 'border-gray-200'
                   }`}
               >
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
-                    {/* Checkbox indicator on mobile */}
-                    {!isUserTable && (
+                    {/* Checkbox indicator on mobile for active teachers only */}
+                    {!isUserTable && isActive && (
                       <div
                         className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-all ${isSelected
-                          ? 'bg-blue-600 border-blue-600'
-                          : 'border-gray-300 bg-white'
+                            ? 'bg-blue-600 border-blue-600'
+                            : 'border-gray-300 bg-white'
                           }`}
                       >
                         {isSelected && (
@@ -256,14 +264,14 @@ const TeachersTable = ({
                   </div>
                   <span
                     className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs rounded-full ${teacher.status === 'ACTIVE'
-                      ? 'bg-green-50 text-green-700'
-                      : 'bg-red-50 text-red-700'
+                        ? 'bg-green-50 text-green-700'
+                        : 'bg-red-50 text-red-700'
                       }`}
                   >
                     <span
                       className={`w-1.5 h-1.5 rounded-full ${teacher.status === 'ACTIVE'
-                        ? 'bg-green-500'
-                        : 'bg-red-500'
+                          ? 'bg-green-500'
+                          : 'bg-red-500'
                         }`}
                     />
                     {teacher.status}
@@ -299,8 +307,8 @@ const TeachersTable = ({
                       </span>
                       <span
                         className={`inline-block px-2.5 py-1 text-xs rounded-full ${teacher.salaryType === 'MONTHLY'
-                          ? 'bg-teal-50 text-teal-700'
-                          : 'bg-yellow-50 text-yellow-700'
+                            ? 'bg-teal-50 text-teal-700'
+                            : 'bg-yellow-50 text-yellow-700'
                           }`}
                       >
                         {teacher.salaryType}
@@ -312,8 +320,8 @@ const TeachersTable = ({
                       <span className="text-sm text-gray-500">Attendance:</span>
                       <span
                         className={`inline-block px-2.5 py-1 text-xs rounded ${teacher.attendance === 'ALLOWED'
-                          ? 'bg-blue-50 text-blue-700'
-                          : 'bg-gray-100 text-gray-700'
+                            ? 'bg-blue-50 text-blue-700'
+                            : 'bg-gray-100 text-gray-700'
                           }`}
                       >
                         {teacher.attendance}
@@ -325,8 +333,8 @@ const TeachersTable = ({
                       <span className="text-sm text-gray-500">Payroll:</span>
                       <span
                         className={`inline-block px-2.5 py-1 text-xs rounded ${teacher.payroll === 'INCLUDED'
-                          ? 'bg-teal-50 text-teal-700'
-                          : 'bg-gray-100 text-gray-700'
+                            ? 'bg-teal-50 text-teal-700'
+                            : 'bg-gray-100 text-gray-700'
                           }`}
                       >
                         {teacher.payroll}
@@ -405,9 +413,7 @@ const TeachersTable = ({
 
             <tbody className="bg-white divide-y divide-gray-200">
               {loading ? (
-
                 <ListLoader rows={7} />
-
               ) : error ? (
                 <tr>
                   <td
@@ -439,54 +445,58 @@ const TeachersTable = ({
                 </tr>
               ) : (
                 teachers.map((teacher) => {
-                  const isSelected = selectedTeacherId === teacher.id;
+                  const isActive = teacher.status === 'ACTIVE';
+                  const isSelected = isActive && selectedTeacherId === teacher.id;
                   const isVisibleCheckbox =
-                    isSelected || hoveredId === teacher.id;
+                    isActive && (isSelected || hoveredId === teacher.id);
 
                   return (
                     <tr
                       key={teacher.id}
                       onMouseEnter={() =>
-                        !isUserTable && setHoveredId(teacher.id)
+                        !isUserTable && isActive && setHoveredId(teacher.id)
                       }
                       onMouseLeave={() => !isUserTable && setHoveredId(null)}
                       onClick={() => {
-                        if (!isUserTable && onRowSelect) onRowSelect(teacher);
+                        if (!isUserTable && isActive && onRowSelect) onRowSelect(teacher);
                       }}
-                      className={`transition-colors duration-100 py-0 cursor-pointer ${isSelected
-                        ? 'bg-blue-50'
-                        : hoveredId === teacher.id
-                          ? 'bg-gray-50'
-                          : 'bg-white'
+                      className={`transition-colors duration-100 py-0 ${isActive ? 'cursor-pointer' : 'cursor-default'
+                        } ${isSelected
+                          ? 'bg-blue-50'
+                          : hoveredId === teacher.id && isActive
+                            ? 'bg-gray-50'
+                            : 'bg-white'
                         }`}
                     >
                       {/* ── Checkbox cell ── */}
                       {!isUserTable && (
                         <td className="pl-4 pr-1 py-2 w-10">
-                          <div
-                            className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-all duration-100 select-none ${isSelected
-                              ? 'bg-blue-600 border-blue-600'
-                              : isVisibleCheckbox
-                                ? 'border-gray-400 bg-white hover:border-blue-400'
-                                : 'border-transparent bg-transparent'
-                              }`}
-                          >
-                            {isSelected && (
-                              <svg
-                                className="w-2.5 h-2.5 text-white"
-                                viewBox="0 0 12 12"
-                                fill="none"
-                              >
-                                <path
-                                  d="M2 6l3 3 5-5"
-                                  stroke="currentColor"
-                                  strokeWidth="2"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                />
-                              </svg>
-                            )}
-                          </div>
+                          {isActive && (
+                            <div
+                              className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-all duration-100 select-none ${isSelected
+                                  ? 'bg-blue-600 border-blue-600'
+                                  : isVisibleCheckbox
+                                    ? 'border-gray-400 bg-white hover:border-blue-400'
+                                    : 'border-transparent bg-transparent'
+                                }`}
+                            >
+                              {isSelected && (
+                                <svg
+                                  className="w-2.5 h-2.5 text-white"
+                                  viewBox="0 0 12 12"
+                                  fill="none"
+                                >
+                                  <path
+                                    d="M2 6l3 3 5-5"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  />
+                                </svg>
+                              )}
+                            </div>
+                          )}
                         </td>
                       )}
 
@@ -527,8 +537,8 @@ const TeachersTable = ({
                         <td className="px-3 py-2 whitespace-nowrap">
                           <span
                             className={`inline-block px-3 py-1 text-xs rounded-full ${teacher.salaryType === 'MONTHLY'
-                              ? 'bg-teal-50 text-teal-700'
-                              : 'bg-yellow-50 text-yellow-700'
+                                ? 'bg-teal-50 text-teal-700'
+                                : 'bg-yellow-50 text-yellow-700'
                               }`}
                           >
                             {teacher.salaryType}
@@ -539,14 +549,14 @@ const TeachersTable = ({
                       <td className="px-3 py-2 whitespace-nowrap">
                         <span
                           className={`inline-flex items-center gap-1 px-3 py-1 text-xs rounded-full ${teacher.status === 'ACTIVE'
-                            ? 'bg-green-50 text-green-700'
-                            : 'bg-red-50 text-red-700'
+                              ? 'bg-green-50 text-green-700'
+                              : 'bg-red-50 text-red-700'
                             }`}
                         >
                           <span
                             className={`w-1.5 h-1.5 rounded-full ${teacher.status === 'ACTIVE'
-                              ? 'bg-green-500'
-                              : 'bg-red-500'
+                                ? 'bg-green-500'
+                                : 'bg-red-500'
                               }`}
                           />
                           {teacher.status}
@@ -558,8 +568,8 @@ const TeachersTable = ({
                           <td className="px-3 py-2 whitespace-nowrap">
                             <span
                               className={`inline-block px-3 py-1 text-xs rounded ${teacher.attendance === 'ALLOWED'
-                                ? 'bg-blue-50 text-blue-700'
-                                : 'bg-gray-100 text-gray-700'
+                                  ? 'bg-blue-50 text-blue-700'
+                                  : 'bg-gray-100 text-gray-700'
                                 }`}
                             >
                               {teacher.attendance}
@@ -568,8 +578,8 @@ const TeachersTable = ({
                           <td className="px-3 py-2 whitespace-nowrap">
                             <span
                               className={`inline-block px-3 py-1 text-xs rounded ${teacher.payroll === 'INCLUDED'
-                                ? 'bg-teal-50 text-teal-700'
-                                : 'bg-gray-100 text-gray-700'
+                                  ? 'bg-teal-50 text-teal-700'
+                                  : 'bg-gray-100 text-gray-700'
                                 }`}
                             >
                               {teacher.payroll}
@@ -651,8 +661,7 @@ const TeachersTable = ({
                 <button
                   key={num}
                   onClick={() => setPage(num)}
-                  className={`${base} ${page === num ? active : inactive
-                    }`}
+                  className={`${base} ${page === num ? active : inactive}`}
                 >
                   {num}
                 </button>
@@ -765,8 +774,8 @@ const TeachersTable = ({
                     key={idx + 1}
                     onClick={() => setPage(idx + 1)}
                     className={`px-3 py-1 rounded transition-all ${page === idx + 1
-                      ? 'bg-blue-500 text-white'
-                      : 'text-gray-600 hover:bg-gray-100'
+                        ? 'bg-blue-500 text-white'
+                        : 'text-gray-600 hover:bg-gray-100'
                       }`}
                   >
                     {idx + 1}
@@ -777,8 +786,8 @@ const TeachersTable = ({
                   <button
                     onClick={() => setPage(1)}
                     className={`px-3 py-1 rounded ${page === 1
-                      ? 'bg-blue-500 text-white'
-                      : 'text-gray-600 hover:bg-gray-100'
+                        ? 'bg-blue-500 text-white'
+                        : 'text-gray-600 hover:bg-gray-100'
                       }`}
                   >
                     1
@@ -798,8 +807,8 @@ const TeachersTable = ({
                   <button
                     onClick={() => setPage(totalPages)}
                     className={`px-3 py-1 rounded ${page === totalPages
-                      ? 'bg-blue-500 text-white'
-                      : 'text-gray-600 hover:bg-gray-100'
+                        ? 'bg-blue-500 text-white'
+                        : 'text-gray-600 hover:bg-gray-100'
                       }`}
                   >
                     {totalPages}
