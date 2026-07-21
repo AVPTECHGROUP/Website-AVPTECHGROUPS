@@ -1094,7 +1094,7 @@ function GenerateBillingModal({ feePeriods, routes, defaultPeriodId, onClose, on
   };
 
   return (
-    <ModalShell onClose={onClose} title="Generate Transport Billing" icon={RefreshCcw}>
+    <ModalShell onClose={onClose} title="Generate Transport Fees" icon={RefreshCcw}>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-1.5">Fee Period *</label>
@@ -1103,20 +1103,20 @@ function GenerateBillingModal({ feePeriods, routes, defaultPeriodId, onClose, on
             onChange={(e) => setFeePeriodId(e.target.value)}
             className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-200 font-medium text-gray-700 cursor-pointer"
           >
-            <option value="">Select period</option>
+            <option value="">Select Fee Period</option>
             {feePeriods.map((p) => (
               <option key={p.id} value={String(p.id)}>{p.name || p.label}</option>
             ))}
           </select>
         </div>
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-1.5">Route *</label>
+          <label className="block text-sm font-semibold text-gray-700 mb-1.5">Transport Route *</label>
           <select
             value={routeId}
             onChange={(e) => setRouteId(e.target.value)}
             className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-200 font-medium text-gray-700 cursor-pointer"
           >
-            <option value="">Select a Route</option>
+            <option value="">Select Transport Route</option>
             {routes.map((r) => (
               <option key={r.id} value={String(r.id)}>{r.routeName || r.name}</option>
             ))}
@@ -1125,11 +1125,11 @@ function GenerateBillingModal({ feePeriods, routes, defaultPeriodId, onClose, on
       </div>
 
       <div className="bg-gray-50 rounded-xl p-4 mb-6 space-y-2.5 text-sm border border-gray-100">
-        <p className="font-bold text-gray-700 mb-2 text-xs uppercase tracking-wider">Summary Details</p>
-        <Row label="Target Fee Period" value={period?.name || period?.label || "—"} colorClass="text-indigo-700 font-semibold" />
+        <p className="font-bold text-gray-700 mb-2 text-xs uppercase tracking-wider">Summary</p>
+        <Row label="Fee Period" value={period?.name || period?.label || "—"} colorClass="text-indigo-700 font-semibold" />
         <Row label="Selected Route" value={route ? `${route.routeName || route.name}` : "—"} colorClass="text-blue-700 font-semibold" />
-        <Row label="Base Rate Source" value="Predefined Stop Fee Allocation" colorClass="text-gray-700" />
-        <Row label="Preserve Custom Overrides" value="✓ Yes (Will keep modified records)" colorClass="text-green-600 font-medium" />
+        {/* <Row label="Base Rate Source" value="Predefined Stop Fee Allocation" colorClass="text-gray-700" />
+        <Row label="Preserve Custom Overrides" value="✓ Yes (Will keep modified records)" colorClass="text-green-600 font-medium" /> */}
       </div>
 
       <div className="flex justify-end gap-3">
