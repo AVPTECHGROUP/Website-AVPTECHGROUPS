@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import {
   Users, Search, ChevronDown, AlertTriangle,
   Pencil, ToggleLeft, ToggleRight, Plus, SlidersHorizontal,
-  XCircle, Phone,
+  XCircle, Phone, MapPin, Calendar, FileText
 } from "lucide-react";
 import AddStaffCard from "../../Components/Transport/AddStaffCard";
 import ActionDropDownComp from "../../Components/CommonComp/ActionDropDownComp";
@@ -25,7 +25,7 @@ import {
   STAFF_UI_TEXT,
   COMMON_UI_TEXT,
   ACTION_MESSAGES
-} from "../../Constants/StringConstants/TransportConstants"; // Adjust import path as needed
+} from "../../Constants/StringConstants/TransportConstants";
 
 // ─── Helpers ──────────────────────────────────────────────────────
 function fmtDate(dateStr) {
@@ -46,48 +46,90 @@ function isExpired(dateStr) {
 function StaffCard({ s, onAction }) {
   const licExpired = isExpired(s.licenseExpiryDate);
   const licWarn = !licExpired && isExpiringSoon(s.licenseExpiryDate);
+  const avatarLetter = (s.fullName || "S")[0].toUpperCase();
+
   return (
-    <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 flex flex-col gap-3">
-      <div className="flex items-start justify-between gap-2">
-        <div>
-          <p className="font-bold text-gray-900 text-sm">{s.fullName}</p>
-          <span className="flex items-center gap-1 text-xs text-gray-500 mt-0.5">
-            <Phone className="w-3 h-3" /> {s.contactNumber}
+    <div className="bg-white rounded-xl border border-gray-200 shadow-2xs p-3.5 sm:p-4 flex flex-col gap-3 hover:border-gray-300 transition-all min-w-0 w-full">
+      {/* Header Row */}
+      <div className="flex items-start justify-between gap-2 border-b border-gray-100 pb-3 min-w-0">
+        <div className="flex items-start gap-2.5 min-w-0 flex-1">
+          <div className="w-9 h-9 rounded-full bg-teal-50 border border-teal-100 flex items-center justify-center text-teal-700 font-bold text-xs shrink-0">
+            {avatarLetter}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="font-bold text-gray-900 text-sm leading-tight truncate">{s.fullName}</p>
+
+            <a
+              href={`tel:${s.contactNumber}`}
+              className="inline-flex items-center gap-1 text-xs text-blue-600 font-medium hover:underline mt-1 min-w-0"
+            >
+              <Phone className="w-3 h-3 text-blue-500 shrink-0" />
+              <span className="truncate">{s.contactNumber}</span>
+            </a>
+
+            {s.alternateContact && (
+              <span className="block text-[11px] text-gray-400 font-medium mt-0.5 truncate">
+                {STAFF_UI_TEXT.LBL_ALT_CONTACT} {s.alternateContact}
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className="flex flex-col items-end gap-1 shrink-0">
+          <span className={`text-[10px] sm:text-[11px] font-semibold px-2 py-0.5 rounded-full ${ROLE_COLORS[s.staffRole] || "bg-gray-100 text-gray-600"}`}>
+            {s.staffRole}
           </span>
-          {s.alternateContact && (
-            <span className="block text-[11px] text-gray-400 mt-0.5 pl-4 font-medium">
-              {STAFF_UI_TEXT.LBL_ALT_CONTACT} {s.alternateContact}
-            </span>
-          )}
-        </div>
-        <div className="flex flex-col items-end gap-1.5 shrink-0">
-          <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${ROLE_COLORS[s.staffRole] || "bg-gray-100 text-gray-600"}`}>{s.staffRole}</span>
           {s.status === STATUS.ACTIVE
-            ? <span className="inline-flex items-center gap-1 bg-green-50 text-green-700 text-xs font-bold px-2.5 py-1 rounded-full border border-green-200"><span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse inline-block" /> {COMMON_UI_TEXT.ACTIVE}</span>
-            : <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-500 text-xs font-bold px-2.5 py-1 rounded-full border border-gray-200"><span className="w-1.5 h-1.5 rounded-full bg-gray-400 inline-block" /> {COMMON_UI_TEXT.INACTIVE}</span>
+            ? <span className="inline-flex items-center gap-1 bg-green-50 text-green-700 text-[10px] sm:text-[11px] font-bold px-2 py-0.5 rounded-full border border-green-200"><span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse inline-block" /> {COMMON_UI_TEXT.ACTIVE}</span>
+            : <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-500 text-[10px] sm:text-[11px] font-bold px-2 py-0.5 rounded-full border border-gray-200"><span className="w-1.5 h-1.5 rounded-full bg-gray-400 inline-block" /> {COMMON_UI_TEXT.INACTIVE}</span>
           }
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-2 text-xs">
-        <div className="bg-gray-50 rounded-lg px-3 py-2">
-          <p className="text-gray-400 font-medium mb-0.5">{STAFF_UI_TEXT.LBL_LICENSE_NO}</p>
-          <p className="font-mono font-semibold text-gray-700 truncate">{s.licenseNumber || "—"}</p>
+
+      {/* Grid Details */}
+      <div className="grid grid-cols-2 gap-2 text-xs min-w-0">
+        <div className="bg-gray-50/80 rounded-lg p-2 border border-gray-100 min-w-0">
+          <p className="text-gray-400 font-medium text-[10px] sm:text-[11px] mb-0.5 truncate">{STAFF_UI_TEXT.LBL_LICENSE_NO}</p>
+          <p className="font-mono font-semibold text-gray-800 truncate text-[11px] sm:text-xs">{s.licenseNumber || "—"}</p>
         </div>
-        <div className="bg-gray-50 rounded-lg px-3 py-2">
-          <p className="text-gray-400 font-medium mb-0.5">{STAFF_UI_TEXT.LBL_LICENSE_EXPIRY}</p>
+
+        <div className="bg-gray-50/80 rounded-lg p-2 border border-gray-100 min-w-0">
+          <p className="text-gray-400 font-medium text-[10px] sm:text-[11px] mb-0.5 truncate">{STAFF_UI_TEXT.LBL_LICENSE_EXPIRY}</p>
           {licExpired
-            ? <span className="inline-flex items-center gap-1 text-red-600 font-bold"><XCircle className="w-3 h-3" /> EXPIRED</span>
+            ? <span className="inline-flex items-center gap-1 text-red-600 font-bold truncate text-[11px]"><XCircle className="w-3 h-3 shrink-0" /> EXPIRED</span>
             : licWarn
-              ? <span className="inline-flex items-center gap-1 text-orange-600 font-semibold"><AlertTriangle className="w-3 h-3" />{fmtDate(s.licenseExpiryDate)}</span>
-              : <p className="font-semibold text-gray-700">{fmtDate(s.licenseExpiryDate)}</p>
+              ? <span className="inline-flex items-center gap-1 text-orange-600 font-semibold truncate text-[11px]"><AlertTriangle className="w-3 h-3 shrink-0" />{fmtDate(s.licenseExpiryDate)}</span>
+              : <p className="font-semibold text-gray-700 truncate text-[11px] sm:text-xs">{fmtDate(s.licenseExpiryDate)}</p>
           }
         </div>
-        <div className="bg-gray-50 rounded-lg px-3 py-2 col-span-2">
-          <p className="text-gray-400 font-medium mb-0.5">{STAFF_UI_TEXT.LBL_JOINING_DATE}</p>
-          <p className="font-semibold text-gray-700">{fmtDate(s.joiningDate)}</p>
+
+        <div className="bg-gray-50/80 rounded-lg p-2 border border-gray-100 col-span-2 flex items-center justify-between min-w-0">
+          <div className="min-w-0">
+            <p className="text-gray-400 font-medium text-[10px] sm:text-[11px] mb-0.5 truncate">{STAFF_UI_TEXT.LBL_JOINING_DATE}</p>
+            <p className="font-semibold text-gray-800 truncate text-[11px] sm:text-xs">{fmtDate(s.joiningDate)}</p>
+          </div>
+          <Calendar className="w-4 h-4 text-gray-400 shrink-0 ml-1" />
         </div>
       </div>
-      <div className="mt-1 flex justify-end">
+
+      {/* Address */}
+      {s.address && (
+        <div className="flex items-start gap-1.5 text-xs text-gray-600 bg-gray-50/60 p-2 rounded-lg border border-gray-100 min-w-0">
+          <MapPin className="w-3.5 h-3.5 text-gray-400 shrink-0 mt-0.5" />
+          <span className="line-clamp-2 leading-tight text-[11px] sm:text-xs min-w-0 flex-1">{s.address}</span>
+        </div>
+      )}
+
+      {/* Remarks */}
+      {s.remarks && (
+        <div className="flex items-start gap-1.5 text-xs text-gray-500 bg-amber-50/40 p-2 rounded-lg border border-amber-100 min-w-0">
+          <FileText className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
+          <span className="line-clamp-2 leading-tight text-[11px] sm:text-xs min-w-0 flex-1">{s.remarks}</span>
+        </div>
+      )}
+
+      {/* Actions */}
+      <div className="pt-1 flex justify-end min-w-0">
         <ActionDropDownComp
           onAction={(val) => onAction(s, val)}
           actionOptions={[
@@ -185,66 +227,70 @@ export default function Driver_Attendants() {
       <div className="min-h-screen bg-[#f0f2f8] font-sans w-full max-w-full overflow-x-hidden min-w-0 flex flex-col">
 
         {/* Top Header Section */}
-        <div className="px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8 pb-2 w-full max-w-full">
-          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 flex items-center gap-2">
-            <Users className="w-6 h-6 sm:w-7 sm:h-7 text-teal-600 shrink-0" />
-            {STAFF_UI_TEXT.PAGE_TITLE}
+        <div className="px-3 sm:px-5 lg:px-6 pt-4 sm:pt-6 pb-2 w-full max-w-full min-w-0">
+          <h1 className="text-lg sm:text-2xl font-bold text-gray-900 flex items-center gap-2 min-w-0">
+            <Users className="w-5 h-5 sm:w-6 sm:h-6 text-teal-600 shrink-0" />
+            <span className="truncate">{STAFF_UI_TEXT.PAGE_TITLE}</span>
           </h1>
-          <p className="text-gray-500 text-xs sm:text-sm mt-1 max-w-2xl">
+          <p className="text-gray-500 text-xs sm:text-sm mt-1 max-w-2xl line-clamp-2 sm:line-clamp-none">
             {STAFF_UI_TEXT.PAGE_SUBTITLE}
           </p>
         </div>
 
-        {/* Main Card Container View */}
-        <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6 w-full max-w-full min-w-0 flex-1">
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden w-full max-w-full min-w-0 flex flex-col">
+        {/* Main Container */}
+        <div className="px-2.5 sm:px-5 lg:px-6 py-3 sm:py-4 w-full max-w-full min-w-0 flex-1">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-2xs overflow-hidden w-full max-w-full min-w-0 flex flex-col">
 
-            {/* Table Action Controls Header */}
-            <div className="px-4 sm:px-6 py-4 sm:py-5 flex flex-row items-center justify-between gap-4 border-b border-gray-100 w-full min-w-0">
-              <div>
-                <h2 className="text-base sm:text-lg font-bold text-gray-900 flex items-center gap-2">
-                  <SlidersHorizontal className="w-4 h-4 text-teal-500" />
-                  {STAFF_UI_TEXT.SECTION_TITLE}
-                </h2>
-                <p className="text-xs text-gray-400 mt-0.5">{totalItems} {totalItems !== 1 ? STAFF_UI_TEXT.STAFF_MEMBERS : STAFF_UI_TEXT.STAFF_MEMBER} {COMMON_UI_TEXT.FOUND}</p>
-              </div>
-              <button
-                onClick={() => { setEditStaff(null); setShowModal(true); }}
-                className="inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors shadow-sm shrink-0"
-              >
-                <Plus className="w-4 h-4" /> {STAFF_UI_TEXT.BTN_ADD_STAFF}
-              </button>
+            {/* Section Header */}
+            <div className="px-3.5 sm:px-5 py-3 sm:py-3.5 border-b border-gray-100 w-full min-w-0">
+              <h2 className="text-sm sm:text-base lg:text-lg font-bold text-gray-900 flex items-center gap-1.5 sm:gap-2 min-w-0">
+                <SlidersHorizontal className="w-4 h-4 text-teal-500 shrink-0" />
+                <span className="truncate">{STAFF_UI_TEXT.SECTION_TITLE}</span>
+              </h2>
+              <p className="text-[11px] sm:text-xs text-gray-400 mt-0.5 truncate">
+                {totalItems} {totalItems !== 1 ? STAFF_UI_TEXT.STAFF_MEMBERS : STAFF_UI_TEXT.STAFF_MEMBER} {COMMON_UI_TEXT.FOUND}
+              </p>
             </div>
 
-            {/* Filters Row Component */}
-            <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-50 flex flex-col md:flex-row gap-3 w-full max-w-full min-w-0 items-center">
-              <div className="relative flex-1 w-full">
-                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            {/* Integrated Toolbar: Search, Filters & Add Staff Button */}
+            <div className="px-3.5 sm:px-5 py-3 border-b border-gray-50 flex flex-col md:flex-row gap-2.5 w-full max-w-full min-w-0 items-center bg-gray-50/50">
+              {/* Search Bar */}
+              <div className="relative flex-1 w-full min-w-0">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 shrink-0" />
                 <input
                   type="text" placeholder={STAFF_UI_TEXT.SEARCH_PLACEHOLDER}
                   value={searchInput} onChange={(e) => setSearchInput(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-200 bg-gray-50 placeholder-gray-400"
+                  className="w-full pl-9 pr-3 py-2 text-xs sm:text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-200 bg-white placeholder-gray-400 min-w-0"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-3 w-full md:w-auto shrink-0 min-w-0">
+              {/* Filters & Add Staff Group */}
+              <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full md:w-auto shrink-0 min-w-0">
                 {[
                   { val: roleFilter, set: setRoleFilter, opts: ROLE_OPTIONS },
                   { val: statusFilter, set: setStatusFilter, opts: STATUS_OPTIONS },
                 ].map(({ val, set, opts }, fi) => (
-                  <div key={fi} className="relative flex-1 sm:flex-none">
+                  <div key={fi} className="relative flex-1 sm:flex-none min-w-0">
                     <select value={val} onChange={(e) => set(e.target.value)}
-                      className="appearance-none w-full pl-3 pr-8 py-2.5 text-sm border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-200 cursor-pointer sm:min-w-[140px]">
+                      className="appearance-none w-full pl-2.5 pr-7 py-2 text-xs sm:text-sm border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-200 cursor-pointer sm:min-w-[120px] min-w-0 text-gray-700 font-medium">
                       {opts.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                     </select>
-                    <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+                    <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none shrink-0" />
                   </div>
                 ))}
+
+                {/* Compact Add Staff Button inside Toolbar */}
+                <button
+                  onClick={() => { setEditStaff(null); setShowModal(true); }}
+                  className="inline-flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs sm:text-sm font-semibold px-3.5 py-2 rounded-xl transition-colors shadow-2xs shrink-0 cursor-pointer w-full sm:w-auto whitespace-nowrap"
+                >
+                  <Plus className="w-4 h-4 shrink-0" /> {STAFF_UI_TEXT.BTN_ADD_STAFF}
+                </button>
               </div>
             </div>
 
-            {/* Mobile Stack Cards view */}
-            <div className="block xl:hidden px-4 py-4 space-y-3 bg-gray-50/50">
+            {/* Mobile / Tablet Cards View (< xl / < 1280px) */}
+            <div className="block xl:hidden px-2.5 sm:px-4 py-3 sm:py-4 bg-gray-50/30 min-w-0">
               {loading ? (
                 <div className="bg-white rounded-xl p-4"><ListLoader rows={4} avatar={false} /></div>
               ) : allStaff.length === 0 ? (
@@ -253,17 +299,21 @@ export default function Driver_Attendants() {
                   <p className="font-medium text-sm">{STAFF_UI_TEXT.EMPTY_TITLE}</p>
                   <p className="text-xs mt-1">{STAFF_UI_TEXT.EMPTY_SUBTITLE}</p>
                 </div>
-              ) : allStaff.map((s) => <StaffCard key={s.id} s={s} onAction={handleAction} />)}
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-3 min-w-0">
+                  {allStaff.map((s) => <StaffCard key={s.id} s={s} onAction={handleAction} />)}
+                </div>
+              )}
             </div>
 
-            {/* Laptop & Desktop Table View Container Box */}
+            {/* Desktop Table View (≥ xl / ≥ 1280px) */}
             <div className="hidden xl:block w-full max-w-full min-w-0 overflow-x-auto">
               <div className="inline-block min-w-full align-middle">
                 <table className="w-full text-xs xl:text-sm text-left border-collapse table-auto min-w-[1000px]">
                   <thead>
                     <tr className="bg-gray-50 border-b border-gray-100">
                       {STAFF_TABLE_COLUMNS.map((h) => (
-                        <th key={h} className="px-3 xl:px-4 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wider text-left whitespace-nowrap">
+                        <th key={h} className="px-3 xl:px-4 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wider text-center whitespace-nowrap">
                           {h}
                         </th>
                       ))}
@@ -290,35 +340,35 @@ export default function Driver_Attendants() {
                             <p className="font-bold text-gray-900 whitespace-nowrap">{s.fullName}</p>
                             {s.address && <p className="text-xs text-gray-400 mt-0.5 max-w-[160px] truncate" title={s.address}>{s.address}</p>}
                           </td>
-                          <td className="px-3 xl:px-4 py-4 whitespace-nowrap">
-                            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap ${ROLE_COLORS[s.staffRole] || "bg-gray-100 text-gray-600"}`}>{s.staffRole}</span>
+                          <td className="px-3 xl:px-4 py-4 whitespace-nowrap text-center">
+                            <span className={`text-xs font-semibold px-3 py-1 rounded-full whitespace-nowrap ${ROLE_COLORS[s.staffRole] || "bg-gray-100 text-gray-600"}`}>{s.staffRole}</span>
                           </td>
 
                           <td className="px-3 xl:px-4 py-4 text-gray-600 font-medium whitespace-nowrap">
-                            <span className="flex items-center gap-1.5">
+                            <span className="flex items-center gap-1.5 justify-center">
                               <Phone className="w-3.5 h-3.5 text-gray-400 shrink-0" />
                               {s.contactNumber}
                             </span>
                             {s.alternateContact && (
-                              <p className="text-[12px] text-gray-400 font-normal mt-0.5 pl-2">
+                              <p className="text-[12px] text-gray-400 font-normal mt-0.5 pl-2 text-center">
                                 {STAFF_UI_TEXT.LBL_ALT_CONTACT} {s.alternateContact}
                               </p>
                             )}
                           </td>
 
-                          <td className="px-3 xl:px-4 py-4 text-gray-600 font-mono text-xs whitespace-nowrap">{s.licenseNumber || <span className="text-gray-300">—</span>}</td>
-                          <td className="px-3 xl:px-4 py-4 whitespace-nowrap">
+                          <td className="px-3 xl:px-4 py-4 text-gray-600 text-center font-mono text-xs whitespace-nowrap">{s.licenseNumber || <span className="text-gray-300">—</span>}</td>
+                          <td className="px-3 xl:px-4 py-4 whitespace-nowrap text-center">
                             {!s.licenseExpiryDate ? (
                               <span className="text-gray-300">—</span>
                             ) : licExpired ? (
-                              <div className="flex flex-col text-xs font-bold text-red-600">
+                              <div className="flex flex-col items-center text-xs font-bold text-red-600">
                                 <span>{fmtDate(s.licenseExpiryDate)}</span>
                                 <span className="inline-flex items-center gap-1 bg-red-100 text-red-600 px-1.5 py-0.5 rounded w-fit mt-0.5">
                                   <XCircle className="w-3 h-3" /> EXPIRED
                                 </span>
                               </div>
                             ) : licWarn ? (
-                              <span className="inline-flex items-center gap-1 text-orange-600 text-xs font-semibold">
+                              <span className="inline-flex items-center justify-center gap-1 text-orange-600 text-xs font-semibold">
                                 <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
                                 {fmtDate(s.licenseExpiryDate)}
                               </span>
@@ -326,8 +376,8 @@ export default function Driver_Attendants() {
                               <span className="text-gray-600">{fmtDate(s.licenseExpiryDate)}</span>
                             )}
                           </td>
-                          <td className="px-3 xl:px-4 py-4 text-gray-600 whitespace-nowrap">{fmtDate(s.joiningDate)}</td>
-                          <td className="px-3 xl:px-4 py-4 whitespace-nowrap">
+                          <td className="px-3 xl:px-4 py-4 text-gray-600 whitespace-nowrap text-center">{fmtDate(s.joiningDate)}</td>
+                          <td className="px-3 xl:px-4 py-4 whitespace-nowrap text-center">
                             {isBusy ? (
                               <span className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full bg-gray-100 text-gray-400 border border-gray-200 animate-pulse">{COMMON_UI_TEXT.WAIT}</span>
                             ) : s.status === STATUS.ACTIVE ? (
@@ -336,7 +386,7 @@ export default function Driver_Attendants() {
                               <span className="inline-flex items-center gap-1.5 bg-gray-100 text-gray-500 text-xs font-bold px-3 py-1.5 rounded-full border border-gray-200 whitespace-nowrap"><span className="w-1.5 h-1.5 rounded-full bg-gray-400 inline-block" />{COMMON_UI_TEXT.INACTIVE}</span>
                             )}
                           </td>
-                          <td className="px-3 xl:px-4 py-4 text-center whitespace-nowrap">
+                          <td className="px-3 xl:px-4 py-4 whitespace-nowrap">
                             <ActionDropDownComp
                               onAction={(val) => handleAction(s, val)}
                               actionOptions={[
@@ -363,23 +413,23 @@ export default function Driver_Attendants() {
 
             {/* Pagination Controls */}
             {!loading && totalPages > 1 && (
-              <div className="px-4 sm:px-6 py-4 border-t border-gray-100 flex items-center justify-between gap-4 flex-wrap bg-white mt-auto">
-                <p className="text-xs text-gray-400 font-medium">
+              <div className="px-3.5 sm:px-6 py-3.5 border-t border-gray-100 flex items-center justify-between gap-3 flex-wrap bg-white mt-auto">
+                <p className="text-[11px] sm:text-xs text-gray-400 font-medium">
                   Showing {totalItems === 0 ? 0 : page * PAGINATION.ITEMS_PER_PAGE + 1}–{Math.min((page + 1) * PAGINATION.ITEMS_PER_PAGE, totalItems)} of {totalItems}
                 </p>
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1">
                   <button onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0}
-                    className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+                    className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
                     <ChevronDown className="w-3.5 h-3.5 rotate-90" />
                   </button>
                   {pageNumbers().map((p) => (
                     <button key={p} onClick={() => setPage(p)}
-                      className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold transition-colors ${page === p ? "bg-blue-600 text-white shadow-sm" : "border border-gray-200 text-gray-600 hover:bg-gray-50"}`}>
+                      className={`w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-lg text-xs font-semibold transition-colors ${page === p ? "bg-blue-600 text-white shadow-2xs" : "border border-gray-200 text-gray-600 hover:bg-gray-50"}`}>
                       {p + 1}
                     </button>
                   ))}
                   <button onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))} disabled={page === totalPages - 1}
-                    className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+                    className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
                     <ChevronDown className="w-3.5 h-3.5 -rotate-90" />
                   </button>
                 </div>

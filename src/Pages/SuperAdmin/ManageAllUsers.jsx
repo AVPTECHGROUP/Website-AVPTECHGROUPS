@@ -29,6 +29,7 @@ import TooltipComponent from '../../Components/CommonComp/Tooltip_comp/TooltipCo
 import ConfirmationModal from '../../Components/CommonComp/ConfirmationModel/ConfirmationModal';
 import { PERMISSIONS as P } from '../../Constants/Permission';
 import USER_MANAGEMENT_STRINGS from '../../Constants/StringConstants/UserManagemetConstant';
+import { useAuth } from '../../hooks/useAuth';
 
 const ManageAllUsers = () => {
     const strings = USER_MANAGEMENT_STRINGS.MANAGE_USERS;
@@ -52,6 +53,7 @@ const ManageAllUsers = () => {
     const [roleOptions, setRoleOptions] = useState([]);
     const [sorting, setSorting] = useState('firstName,asc');
     const { user } = useContext(UserContext);
+    const { hasPermission } = useAuth();
     const [isResetOpen, setisResetOpen] = useState(false);
     const [selectedUser, setSelectedUser] = useState(null);
     const [refressStat, setRefressStat] = useState(0);
@@ -83,7 +85,6 @@ const ManageAllUsers = () => {
         const timer = setTimeout(() => setDebouncedSearch(search), 1100);
         return () => clearTimeout(timer);
     }, [search]);
-
 
     const [isStatLoading, setStatLoading] = useState(false);
     useEffect(() => {
@@ -184,7 +185,7 @@ const ManageAllUsers = () => {
                 return prev.map(u => u.id === id ? { ...u, status: newStatus } : u);
             });
             if (statusFilter !== 'All Status') {
-                set_noUserFound(pev => {
+                set_noUserFound(() => {
                     const remaining = sysUsers.filter(u => u.id !== id);
                     return remaining.length === 0;
                 });
@@ -197,9 +198,7 @@ const ManageAllUsers = () => {
     const renderPageButtons = () => {
         if (totalPages <= 1) return null;
 
-        const base =
-            'min-w-[32px] h-8 px-2 rounded text-sm transition-all font-medium';
-
+        const base = 'min-w-[32px] h-8 px-2 rounded text-sm transition-all font-medium';
         const active = 'bg-blue-500 text-white';
         const inactive = 'text-gray-600 hover:bg-gray-100';
 
@@ -207,8 +206,7 @@ const ManageAllUsers = () => {
             <button
                 key={num}
                 onClick={() => setpage(num)}
-                className={`${base} ${page === num ? active : inactive
-                    }`}
+                className={`${base} ${page === num ? active : inactive}`}
             >
                 {num}
             </button>
@@ -224,44 +222,23 @@ const ManageAllUsers = () => {
         );
 
         if (totalPages <= 7) {
-            return Array.from(
-                { length: totalPages },
-                (_, i) => btn(i + 1)
-            );
+            return Array.from({ length: totalPages }, (_, i) => btn(i + 1));
         }
 
-        const pages = new Set([
-            1,
-            2,
-            totalPages - 1,
-            totalPages,
-        ]);
+        const pages = new Set([1, 2, totalPages - 1, totalPages]);
 
-        for (
-            let i = Math.max(1, page - 1);
-            i <= Math.min(totalPages, page + 1);
-            i++
-        ) {
+        for (let i = Math.max(1, page - 1); i <= Math.min(totalPages, page + 1); i++) {
             pages.add(i);
         }
 
-        const sorted = Array.from(pages).sort(
-            (a, b) => a - b
-        );
+        const sorted = Array.from(pages).sort((a, b) => a - b);
 
         return sorted.reduce((acc, num, idx) => {
-
-            if (
-                idx > 0 &&
-                num - sorted[idx - 1] > 1
-            ) {
+            if (idx > 0 && num - sorted[idx - 1] > 1) {
                 acc.push(dots(`d${idx}`));
             }
-
             acc.push(btn(num));
-
             return acc;
-
         }, []);
     };
 
@@ -269,8 +246,8 @@ const ManageAllUsers = () => {
         <button
             onClick={() => setpage((p) => Math.max(1, p - 1))}
             disabled={page === 1 || loading || !!error}
-            className={`flex items-center justify-center rounded transition-all disabled:opacity-40 disabled:cursor-not-allowed
-                ${mobile ? 'w-8 h-8 bg-gray-100 hover:bg-gray-200' : 'px-2 py-1 hover:bg-gray-100 text-gray-600'}`}
+            className={`flex items-center justify-center rounded transition-all disabled:opacity-40 disabled:cursor-not-allowed ${mobile ? 'w-8 h-8 bg-gray-100 hover:bg-gray-200' : 'px-2 py-1 hover:bg-gray-100 text-gray-600'
+                }`}
         >
             <ChevronLeft className="w-4 h-4" />
         </button>
@@ -280,13 +257,12 @@ const ManageAllUsers = () => {
         <button
             onClick={() => setpage((p) => Math.min(totalPages, p + 1))}
             disabled={page === totalPages || loading || !!error}
-            className={`flex items-center justify-center rounded transition-all disabled:opacity-40 disabled:cursor-not-allowed
-                ${mobile ? 'w-8 h-8 bg-gray-100 hover:bg-gray-200' : 'px-2 py-1 hover:bg-gray-100 text-gray-600'}`}
+            className={`flex items-center justify-center rounded transition-all disabled:opacity-40 disabled:cursor-not-allowed ${mobile ? 'w-8 h-8 bg-gray-100 hover:bg-gray-200' : 'px-2 py-1 hover:bg-gray-100 text-gray-600'
+                }`}
         >
             <ChevronRight className="w-4 h-4" />
         </button>
     );
-    // ────────────────────────────────────────────────────────────────────────
 
     const cardsArray = [
         { IconName: UsersIcon, keyName: strings.CARDS.TOTAL_USERS, val: statistics.totalUsers, iconTxColor: "text-blue-600", iconBgColor: "bg-blue-50" },
@@ -297,25 +273,26 @@ const ManageAllUsers = () => {
     const tabledataItemsStyle = 'px-2 py-2 text-left text-gray-700 text-sm';
 
     const getActionOptions = (sys_user) => {
-        const baseOptions = [
+        const options = [
             { value: "viewUser", label: strings.ACTIONS.VIEW, icon: Eye, text: "text-gray-600", bg: "bg-gray-50", hover: "hover:bg-gray-200" },
-            { value: "editUser", label: strings.ACTIONS.EDIT, icon: UserPenIcon, text: "text-blue-600", bg: "bg-blue-50", hover: "hover:bg-blue-100" },
-            {
-                value: "toogleStatus",
-                label: sys_user.status === 'ACTIVE' ? strings.ACTIONS.DEACTIVATE : strings.ACTIONS.ACTIVATE,
-                icon: Power,
-                text: sys_user.status === 'ACTIVE' ? "text-red-600" : "text-green-600",
-                bg: sys_user.status === 'ACTIVE' ? "bg-red-50" : "bg-green-50",
-                hover: sys_user.status === 'ACTIVE' ? "hover:bg-red-100" : "hover:bg-green-100",
-            },
-            { value: "resetPassword", label: strings.ACTIONS.RESET_PASSWORD, icon: KeyIcon, text: "text-green-600", bg: "bg-green-50", hover: "hover:bg-green-100" },
         ];
 
-        return baseOptions.filter(option =>
-            (user.userType === 'SUPER_ADMIN' || user.userType === 'GLOBAL_ADMIN')
-                ? true
-                : option.value !== "resetPassword"
-        );
+        if (hasPermission(P.USER_EDIT) || user?.userType === 'SUPER_ADMIN' || user?.userType === 'GLOBAL_ADMIN') {
+            options.push(
+                { value: "editUser", label: strings.ACTIONS.EDIT, icon: UserPenIcon, text: "text-blue-600", bg: "bg-blue-50", hover: "hover:bg-blue-100" },
+                {
+                    value: "toogleStatus",
+                    label: sys_user.status === 'ACTIVE' ? strings.ACTIONS.DEACTIVATE : strings.ACTIONS.ACTIVATE,
+                    icon: Power,
+                    text: sys_user.status === 'ACTIVE' ? "text-red-600" : "text-green-600",
+                    bg: sys_user.status === 'ACTIVE' ? "bg-red-50" : "bg-green-50",
+                    hover: sys_user.status === 'ACTIVE' ? "hover:bg-red-100" : "hover:bg-green-100",
+                },
+                { value: "resetPassword", label: strings.ACTIONS.RESET_PASSWORD, icon: KeyIcon, text: "text-green-600", bg: "bg-green-50", hover: "hover:bg-green-100" }
+            );
+        }
+
+        return options;
     };
 
     const callAllActions = async (optVal, sys_user) => {
@@ -346,6 +323,7 @@ const ManageAllUsers = () => {
         }
         return str;
     };
+
     const getRoleDisplay = (roleVal) => {
         if (!roleVal || roleVal === commonStrings.N_A) return commonStrings.N_A;
         const found = roleOptions.find((r) => r.roleVal === roleVal);
@@ -435,14 +413,8 @@ const ManageAllUsers = () => {
                         userName={selectedUser?.name} onReset={() => resetPassword(selectedUser?.id)}
                         currUserId={selectedUser?.id} />
 
-                    {/* ── Filters Bar ─────────────────────────────────────────────────────────
-                        mobile/tablet  (<lg)  : stacked column layout — ek ke niche ek
-                        desktop 1024px (lg)   : single row, search flex-1, rest shrink-0
-                        desktop 1440px (xl)   : same single row, more breathing room
-                    ────────────────────────────────────────────────────────────────────── */}
+                    {/* Filters Bar */}
                     <div className="bg-white flex flex-col lg:flex-row lg:items-center gap-2 px-3 py-3 rounded-xl border border-gray-200 mb-4 mt-4 w-full">
-
-                        {/* 1. Search — grows to fill leftover space on lg+ */}
                         <div className="w-full lg:flex-1 lg:min-w-0 flex items-center gap-2 border rounded-lg border-gray-200 bg-gray-100 px-3 py-2 focus-within:shadow-sm focus-within:shadow-blue-200 transition-all">
                             <SearchIcon className="w-4 h-4 text-gray-500 shrink-0" />
                             <input
@@ -453,7 +425,6 @@ const ManageAllUsers = () => {
                             />
                         </div>
 
-                        {/* 2. Status + Role dropdowns — side-by-side on mobile too (saves vertical space) */}
                         <div className="flex items-center gap-2 w-full lg:w-auto lg:shrink-0">
                             <select
                                 value={statusFilter}
@@ -477,7 +448,6 @@ const ManageAllUsers = () => {
                             </select>
                         </div>
 
-                        {/* 3. Action buttons — side-by-side on mobile, shrink-0 on desktop */}
                         <div className="flex items-center gap-2 w-full lg:w-auto lg:shrink-0">
                             <button
                                 onClick={() => navigate('/manageUsers/adduser')}
@@ -494,7 +464,6 @@ const ManageAllUsers = () => {
                                 {strings.ACTIONS.EXPORT_CSV}
                             </button>
                         </div>
-
                     </div>
 
                     {/* MOBILE / TABLET CARDS */}
@@ -527,7 +496,7 @@ const ManageAllUsers = () => {
                             <div key={sys_user.id} className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
                                 <div className="flex items-center gap-3 mb-3">
                                     <div
-                                        className={`w-12 h-12 rounded-full overflow-hidden ${!sys_user.image || !sys_user.image !== '' || !sys_user.image !== null || !sys_user.image !== undefined ? getAvatarColor(sys_user.name) : ""} flex items-center justify-center text-white font-semibold`}
+                                        className={`w-12 h-12 rounded-full overflow-hidden ${!sys_user.image ? getAvatarColor(sys_user.name) : ""} flex items-center justify-center text-white font-semibold`}
                                     >
                                         {sys_user.image ? (
                                             <img
@@ -632,11 +601,11 @@ const ManageAllUsers = () => {
                                             </td>
                                         </tr>
                                     ) : sysUsers.map((sys_user) => (
-                                        <tr key={sys_user.id} onClick={() => console.log(user.userType)}>
+                                        <tr key={sys_user.id}>
                                             <td className={tabledataItemsStyle}>
                                                 <div className="flex items-center gap-3">
                                                     <div
-                                                        className={`w-8 h-8 rounded-full overflow-hidden ${!sys_user.image || !sys_user.image !== '' || !sys_user.image !== null || !sys_user.image !== undefined ? getAvatarColor(sys_user.name) : ""} flex items-center justify-center text-white font-semibold`}
+                                                        className={`w-8 h-8 rounded-full overflow-hidden ${!sys_user.image ? getAvatarColor(sys_user.name) : ""} flex items-center justify-center text-white font-semibold`}
                                                     >
                                                         {sys_user.image ? (
                                                             <img
