@@ -55,15 +55,12 @@ export const getFeeCollectionHistory = async ({ fromDate, toDate, classId, perio
 };
 
 /**
- * FIX: previously only accepted { classId, periodId } — `status`, `page`,
- * `size` passed in by callers were silently dropped since they weren't
- * destructured or appended to the query string. This is why filtering by
- * status (OVERDUE/PARTIAL/PENDING) and pagination appeared to "not load all
- * data" — every call actually hit the backend's default page regardless of
- * what the UI had selected. Now matches the documented Swagger contract:
- * classId, periodId, status (query) + page/size (pageable, sent as flat
- * query params — Spring's Pageable binds page/size/sort from query string,
- * the "pageable" object in Swagger UI is just its editor representation).
+ * FIX: `status`, `page`, `size` are now sent straight through to the
+ * backend (which supports OVERDUE / PARTIAL / PENDING natively), matching
+ * the documented Swagger contract: classId, periodId, status (query) +
+ * page/size (pageable, sent as flat query params — Spring's Pageable binds
+ * page/size/sort from query string, the "pageable" object in Swagger UI is
+ * just its editor representation).
  */
 export const getOutstandingFees = async ({ classId, periodId, status, page = 0, size = 20 } = {}) => {
   const qs = buildQueryParams({ classId, periodId, status, page, size });
@@ -85,11 +82,28 @@ export const getOutstandingFees = async ({ classId, periodId, status, page = 0, 
   };
 };
 
+/**
+ * FIX: this previously returned ONLY `json.data`, silently discarding the
+ * outer `json.timestamp` field from the API response (the response shape
+ * is `{ success, data, timestamp }`). CollectionsHistory.jsx's
+ * handleViewReceipt reads `res?.timestamp` to get the real collection time
+ * for the receipt's "Time" row — with the old return value that was always
+ * undefined, so "View Receipt" from history never showed a time even
+ * though the backend actually sends one. Now returns both pieces so the
+ * caller can use `res.data` and `res.timestamp` exactly like the other
+ * wrapped endpoints (createFeeCollection, getOutstandingFees, etc.).
+ */
 export const getFeeReceiptById = async (id) => {
   if (!id) throw new Error("Receipt ID is required");
 
   const res = await authFetch(API_ENDPOINTS.feeReceiptById(id), { method: "GET" });
   if (!res.ok) throw new Error(await res.text() || "Failed to fetch fee receipt");
 
-  return (await res.json()).data || {};
+  const json = await res.json();
+  const data = json?.data || {};
+  // FIX: some backend responses may carry the timestamp at the top level,
+  // others might carry it inside `data` (e.g. data.timestamp / data.createdAt).
+  // Check all known shapes instead of assuming only json.timestamp exists.
+  const timestamp = json?.timestamp || data?.timestamp || data?.generatedAt || data?.createdAt || '';
+  return { data, timestamp };
 };
