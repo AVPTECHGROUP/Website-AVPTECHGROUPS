@@ -1446,12 +1446,16 @@ const CollectionsHistory = () => {
   const fetchOutstanding = useCallback(async () => {
     try {
       setLoading(true); setError(null);
-      const usingClientPaging = !!statusF;
-      const params = usingClientPaging
-          ? { page: 0, size: 500 }
-          : { page: page - 1, size: pageSize };
+      // FIX: `status` is now sent straight through to the backend (which
+      // supports OVERDUE / PARTIAL / PENDING natively per the API contract),
+      // instead of over-fetching 500 records and filtering/paginating on
+      // the client. This means filtering by status now returns the correct
+      // total count and page set directly from the server, and stays in
+      // sync with classId/periodId filters exactly like before.
+      const params = { page: page - 1, size: pageSize };
       if (classF) params.classId = classF;
       if (periodF) params.periodId = periodF;
+      if (statusF) params.status = statusF;
       const res = await getOutstandingFees(params);
       const raw = res?.records ?? [];
       let records = Array.isArray(raw) ? raw : [];
@@ -1504,14 +1508,11 @@ const CollectionsHistory = () => {
       });
 
       setOutstanding(mapped);
-      if (usingClientPaging) {
-        const matchCount = mapped.filter((s) => s.status === statusF).length;
-        setOutstandingTotalPages(Math.max(1, Math.ceil(matchCount / pageSize)));
-        setOutstandingTotalElements(matchCount);
-      } else {
-        setOutstandingTotalPages(res?.pagination?.totalPages || 1);
-        setOutstandingTotalElements(res?.pagination?.totalElements ?? records.length);
-      }
+      // FIX: pagination now always comes straight from the server response
+      // (server already applied the status filter), so no more client-side
+      // recomputation of total pages/elements from a locally-filtered slice.
+      setOutstandingTotalPages(res?.pagination?.totalPages || 1);
+      setOutstandingTotalElements(res?.pagination?.totalElements ?? records.length);
     } catch (e) {
       setError(e.message || COLLECTION_HISTORY_STRINGS.ERR_LOAD_OUTSTANDING);
       setOutstanding([]);
@@ -1568,15 +1569,18 @@ const CollectionsHistory = () => {
   const filteredOut = outstanding.filter((s) => {
     const q = search.toLowerCase();
     const matchesSearch = !q || s.studentName.toLowerCase().includes(q) || (s.studentCode || '').toLowerCase().includes(q);
-    const matchesStatus = !statusF || s.status === statusF;
-    return matchesSearch && matchesStatus;
+    return matchesSearch;
   });
   const filteredHist = history.filter((h) => {
     const q = search.toLowerCase();
     return !q || h.studentName.toLowerCase().includes(q) || (h.receiptNo || '').toLowerCase().includes(q);
   });
 
-  const pagedOut = statusF ? filteredOut.slice((page - 1) * pageSize, page * pageSize) : filteredOut;
+  // FIX: status filtering + pagination is now handled entirely server-side
+  // by fetchOutstanding, so the current page's records (already the
+  // correct status + page slice) are used directly — only the free-text
+  // search box still filters client-side, same as before.
+  const pagedOut = filteredOut;
   const totalOutPages = outstandingTotalPages;
   const overdueCount = outstanding.filter((s) => s.status === STATUSES.OVERDUE).length;
 
@@ -1599,7 +1603,7 @@ const CollectionsHistory = () => {
     // its own). Reading data.timestamp always evaluated to '', which is
     // why a freshly-collected receipt never showed a time even though
     // "view past receipt" (which correctly reads res?.timestamp) did.
-    const generatedAt = response?.timestamp || data?.timestamp || '';
+    const generatedAt = response?.timestamp || data?.timestamp || data?.generatedAt || data?.createdAt || '';
     const transportPaid = extra.transportPaid || 0;
     const academicItems = (extra.academicItems || []).map((it) => ({ name: it.label, amount: it.amount }));
     const transportItems = (extra.transportItems || []).map((it) => ({ name: it.label, amount: it.amount }));
@@ -1609,7 +1613,7 @@ const CollectionsHistory = () => {
       receipt: {
         receiptNo: data.receiptNo,
         date: data.paymentDate,
-        generatedAt: data.timestamp || '',
+        generatedAt: generatedAt,
         studentName: data.studentName || student.studentName,
         studentCode: data.admissionNumber || student.studentCode,
         rollNo: student.rollNo || data.studentId || student.studentId,
@@ -1643,11 +1647,13 @@ const CollectionsHistory = () => {
   const handleViewReceipt = async (item) => {
     try {
       const res = await getFeeReceiptById(item.id);
-      const data = res?.data || res; // API wraps payload in { success, data, timestamp }
+      const data = res?.data || res;
+      const generatedAt = res?.timestamp || data?.timestamp || data?.generatedAt || data?.createdAt || '';
       setReceiptModal({
         open: true,
         receipt: {
           receiptNo: data.receiptNo, date: data.paymentDate,
+
           generatedAt: res?.timestamp || '',
           studentName: data.studentName,
           // FIX: same admissionNumber/rollNo split as handleCollectSuccess —
