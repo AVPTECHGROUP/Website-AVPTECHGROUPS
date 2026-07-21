@@ -127,7 +127,7 @@ export default function Fee_Plans() {
       <div className="px-4 sm:px-6 xl:px-8 pt-8 pb-0 w-full max-w-full bg-white border-b border-gray-200">
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center gap-2">
           <CreditCard className="w-7 h-7 text-indigo-600 shrink-0" />
-          Fee Management
+          Transport Fee Management
         </h1>
         <p className="text-gray-500 text-sm mt-1 max-w-2xl">
           {FEE_PLAN_UI_TEXT.PAGE_SUBTITLE}
@@ -137,9 +137,9 @@ export default function Fee_Plans() {
         <div className="flex flex-wrap gap-2 sm:gap-6 mt-6 border-b border-transparent">
           {[
             // { id: "fee-plan", label: "Fee Plan" },
-            { id: "billing", label: "Transport Billing" },
+            { id: "billing", label: "Fee Collection" },
             // { id: "collection", label: "Collection View" },
-            { id: "config", label: "Fee Config" },
+            { id: "config", label: "Fee Configuration" },
           ].map((tab) => (
             <button
               key={tab.id}
