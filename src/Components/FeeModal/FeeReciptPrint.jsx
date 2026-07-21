@@ -36,6 +36,18 @@ const FALLBACK_SCHOOL = {
     schoolLogo: '',
 };
 
+// FIX: JS Date only reliably supports up to 3-digit (millisecond)
+// fractional seconds. Backend timestamps like
+// "2026-07-21T15:02:29.199059362" carry 9 fractional digits, which some
+// browsers (Safari/Firefox in particular) fail to parse — silently
+// returning an Invalid Date and dropping the Time row entirely, even
+// though Chrome-based devtools testing looks fine. Truncate to 3
+// fractional digits before handing the string to `new Date(...)`.
+const normalizeTimestamp = (val) => {
+    if (typeof val !== 'string') return val;
+    return val.replace(/(\.\d{3})\d+/, '$1');
+};
+
 // FIX: previously the "Date" row printed data.date raw (an unformatted
 // ISO string like "2026-07-20"), and the optional "Generated At" row
 // printed data.generatedAt raw as well (e.g. "2026-07-20T14:09:55.287558741"),
@@ -46,7 +58,7 @@ const FALLBACK_SCHOOL = {
 const formatDateOnly = (val) => {
     if (!val) return '';
     try {
-        const d = new Date(val);
+        const d = new Date(normalizeTimestamp(val));
         if (isNaN(d.getTime())) return val;
         return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
     } catch {
@@ -56,7 +68,7 @@ const formatDateOnly = (val) => {
 const formatTimeOnly = (val) => {
     if (!val) return '';
     try {
-        const d = new Date(val);
+        const d = new Date(normalizeTimestamp(val));
         if (isNaN(d.getTime())) return '';
         return d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
     } catch {
