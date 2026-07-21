@@ -5,7 +5,7 @@ import Badge from '../../Components/FeeModal/Badge.jsx';
 import Modal from '../../Components/FeeModal/Modal.jsx';
 import Select from '../../Components/FeeModal/Select.jsx';
 import Input from '../../Components/FeeModal/Input.jsx';
-import { Plus, X, Pencil, Eye, Trash2, AlertTriangle, CheckCircle2, Info, AlertCircle, Calendar, Users, Layers, IndianRupee } from 'lucide-react';
+import { Plus, X, Pencil, Eye, Trash2, AlertTriangle, CheckCircle2, Info, AlertCircle, Calendar, Layers } from 'lucide-react';
 import {
   getFeeStructures,
   createFeeStructure,
@@ -148,7 +148,7 @@ const formatCurrency = (amount) => {
   return '₹' + amount.toLocaleString('en-IN');
 };
 
-// ─── Status Pill ──────────────────────────────────────────────────────────────
+// ─── Status Pill (used inside the modals — unchanged) ─────────────────────────
 const StatusPill = ({ status }) => {
   const statusKey = status?.toUpperCase() || STATUSES.DRAFT;
   const bgStyle = STATUS_PILL_STYLES[statusKey] || STATUS_PILL_STYLES[STATUSES.DRAFT];
@@ -158,6 +158,30 @@ const StatusPill = ({ status }) => {
       <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-[11.5px] font-semibold ${bgStyle}`}>
       <span className={`w-1.5 h-1.5 rounded-full ${statusKey === STATUSES.ACTIVE ? 'bg-emerald-500' : statusKey === STATUSES.DRAFT ? 'bg-amber-500' : 'bg-gray-400'
       }`} />
+        {label}
+    </span>
+  );
+};
+
+// Simple text-dot status — mirrors the plain, quiet style used on the Fee
+// Periods card (dot + text, no pill background) so both pages read the
+// same way.
+const STATUS_DOT = {
+  [STATUSES.ACTIVE]: 'bg-emerald-500',
+  [STATUSES.DRAFT]: 'bg-amber-500',
+  [STATUSES.LOCKED]: 'bg-gray-400',
+};
+const STATUS_TEXT_COLOR = {
+  [STATUSES.ACTIVE]: 'text-emerald-700',
+  [STATUSES.DRAFT]: 'text-amber-700',
+  [STATUSES.LOCKED]: 'text-gray-500',
+};
+const StatusDotText = ({ status }) => {
+  const key = status?.toUpperCase() || STATUSES.DRAFT;
+  const label = key === STATUSES.ACTIVE ? 'Active' : key === STATUSES.DRAFT ? 'Draft' : 'Locked';
+  return (
+      <span className={`inline-flex items-center gap-1.5 text-[11.5px] font-semibold whitespace-nowrap ${STATUS_TEXT_COLOR[key] || 'text-gray-500'}`}>
+      <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${STATUS_DOT[key] || 'bg-gray-400'}`} />
         {label}
     </span>
   );
@@ -699,7 +723,13 @@ function StructureModal({ isOpen, onClose, structure, periods, classes, onSucces
   );
 }
 
-// ─── Fee Structure Card ───────────────────────────────────────────────────────
+// ─── Fee Structure Card (redesigned — matches the quiet FeePeriods style) ─────
+// FIX: dropped the Students stat entirely (per request), dropped the
+// gradient top bar and boxed stat tiles, and fixed the footer so it never
+// clips the Delete button at 1024px — actions are icon-only with tooltips
+// (mirrors PeriodCard) so three buttons always fit even in a 4-column grid
+// on a 1024px-wide viewport. Class chips and the components line now share
+// consistent padding/line-height with the rest of the card.
 const FeeStructureCard = ({ s, periods, onView, onEdit, onDelete }) => {
   const statusKey = s.status?.toUpperCase() || STATUSES.DRAFT;
   const periodName = s.feePeriod?.name || periods.find((p) => p.id === s.feePeriodId)?.name || '—';
@@ -707,115 +737,74 @@ const FeeStructureCard = ({ s, periods, onView, onEdit, onDelete }) => {
   const compPreview = s.components?.slice(0, 3).map((c) => c.customName || c.componentType?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())).join(', ') || '—';
   const canDelete = statusKey === STATUSES.DRAFT || (statusKey === STATUSES.ACTIVE && !s.studentCount);
 
-  // Status accent color for card top border
-  const accentColor =
-      statusKey === STATUSES.ACTIVE ? 'from-emerald-400 to-teal-500' :
-          statusKey === STATUSES.LOCKED ? 'from-gray-300 to-gray-400' :
-              'from-amber-400 to-orange-400';
-
   return (
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden group flex flex-col">
-        {/* Colored top accent bar */}
-        <div className={`h-1 w-full bg-gradient-to-r ${accentColor}`} />
-
+      <div className="h-full bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-gray-300 transition-all duration-200 overflow-hidden flex flex-col">
         {/* Card body */}
-        <div className="p-5 flex-1 flex flex-col gap-4">
-          {/* Header row: period name + status */}
+        <div className="p-4 flex-1 flex flex-col gap-3">
+          {/* Row 1: Period name + status */}
           <div className="flex items-start justify-between gap-2">
             <div className="flex items-center gap-2 min-w-0">
-              <div className="w-8 h-8 rounded-lg bg-[#1E3A5F]/8 flex items-center justify-center flex-shrink-0">
-                <Calendar size={14} className="text-[#1E3A5F]" />
+              <div className="w-7 h-7 rounded-lg bg-[#1E3A5F]/8 flex items-center justify-center flex-shrink-0">
+                <Calendar size={13} className="text-[#1E3A5F]" />
               </div>
-              <div className="min-w-0">
-                <div className="text-[13px] font-bold text-gray-900 truncate">{periodName}</div>
-                <div className="text-[10.5px] text-gray-400 mt-0.5">{FEE_STRUCTURE_STRINGS.LBL_PERIOD}</div>
-              </div>
+              <h3 className="text-[15px] font-bold text-gray-900 truncate" title={periodName}>{periodName}</h3>
             </div>
-            <StatusPill status={statusKey} />
+            <StatusDotText status={statusKey} />
           </div>
 
-          {/* Divider */}
-          <div className="border-t border-gray-100" />
-
-          {/* Stats row */}
-          <div className="grid grid-cols-3 gap-3">
-            {/* Classes */}
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center gap-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
-                <Layers size={10} /> {FEE_STRUCTURE_STRINGS.LBL_CLASSES}
-              </div>
-              <div className="flex flex-wrap gap-1">
-                {s.classes?.slice(0, 3).map((c) => (
-                    <span key={c.id} className="px-1.5 py-0.5 bg-blue-50 text-blue-700 border border-blue-100 text-[10px] font-semibold rounded-md">
+          {/* Class chips — consistent padding/line-height so they always
+              align cleanly regardless of how many wrap */}
+          <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-gray-100">
+            {s.classes?.slice(0, 4).map((c) => (
+                <span key={c.id} className="px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-100 text-[11px] font-semibold rounded-md leading-5">
                   {c.name}
                 </span>
-                ))}
-                {(s.classes?.length || 0) > 3 && (
-                    <span className="px-1.5 py-0.5 bg-gray-50 text-gray-500 border border-gray-100 text-[10px] font-semibold rounded-md">
-                  +{s.classes.length - 3}
+            ))}
+            {(s.classes?.length || 0) > 4 && (
+                <span className="px-2 py-0.5 bg-gray-50 text-gray-500 border border-gray-100 text-[11px] font-semibold rounded-md leading-5">
+                  +{s.classes.length - 4}
                 </span>
-                )}
-                {(!s.classes || s.classes.length === 0) && <span className="text-xs text-gray-300">—</span>}
-              </div>
-            </div>
-
-            {/* Students */}
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center gap-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
-                <Users size={10} /> {FEE_STRUCTURE_STRINGS.LBL_STUDENTS}
-              </div>
-              <div className="text-sm font-bold text-gray-800">
-                {s.studentCount > 0 ? s.studentCount : <span className="text-gray-300 font-normal text-xs">—</span>}
-              </div>
-            </div>
-
-            {/* Components count */}
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center gap-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
-                <Layers size={10} /> Items
-              </div>
-              <div className="text-sm font-bold text-gray-800">{compCount}</div>
-            </div>
+            )}
+            {(!s.classes || s.classes.length === 0) && <span className="text-xs text-gray-300">No classes assigned</span>}
           </div>
 
-          {/* Component preview */}
-          {compCount > 0 && (
-              <div className="bg-gray-50 rounded-lg px-3 py-2 border border-gray-100">
-                <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Components</div>
-                <div className="text-xs text-gray-600 truncate" title={compPreview}>{compPreview}</div>
-                {compCount > 3 && (
-                    <div className="text-[10px] text-gray-400 mt-0.5">+{compCount - 3} more</div>
-                )}
-              </div>
-          )}
+          {/* Items count + component preview — plain text row, same
+              treatment as the Structures/Students row on Fee Periods */}
+          <div className="flex items-start gap-1.5 text-xs text-gray-500">
+            <Layers size={12} className="text-gray-400 flex-shrink-0 mt-0.5" />
+            <span className="min-w-0">
+              <span className="font-semibold text-gray-800">{compCount}</span> item{compCount !== 1 ? 's' : ''}
+              {compCount > 0 && <span className="text-gray-400"> · </span>}
+              {compCount > 0 && <span className="truncate">{compPreview}{compCount > 3 ? ` +${compCount - 3} more` : ''}</span>}
+            </span>
+          </div>
         </div>
 
-        {/* Footer: total + actions */}
-        <div className="border-t border-gray-100 bg-gray-50/60 px-5 py-3 flex items-center justify-between gap-3">
-          {/* Total amount */}
-          <div>
+        {/* Footer: total + actions — icon-only with tooltips so View/Edit/
+            Delete always fit without clipping, even at 1024px in a 4-col grid */}
+        <div className="border-t border-gray-100 px-4 py-2.5 flex items-center justify-between gap-2">
+          <div className="min-w-0">
             <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">{FEE_STRUCTURE_STRINGS.LBL_TOTAL}</div>
-            <div className="text-base font-extrabold text-[#1E3A5F]">{formatCurrency(s.totalAmount)}</div>
+            <div className="text-sm font-extrabold text-[#1E3A5F] truncate">{formatCurrency(s.totalAmount)}</div>
           </div>
 
-          {/* Action buttons */}
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1 flex-shrink-0">
             {statusKey !== STATUSES.DRAFT && (
-                <button onClick={() => onView(s)}
-                        className="flex items-center gap-1 px-2.5 py-1.5 text-[11.5px] font-semibold text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors whitespace-nowrap">
-                  <Eye size={12} /> View
+                <button onClick={() => onView(s)} title="View details"
+                        className="h-7 w-7 rounded-lg flex items-center justify-center text-blue-600 bg-blue-50 ">
+                  <Eye size={13} />
                 </button>
             )}
             {statusKey !== STATUSES.LOCKED && (
-                <button onClick={() => onEdit(s)}
-                        className="flex items-center gap-1 px-2.5 py-1.5 text-[11.5px] font-semibold text-[#1E3A5F] border border-[#1E3A5F]/20 rounded-lg hover:bg-blue-50 transition-colors whitespace-nowrap">
-                  <Pencil size={12} /> {statusKey === STATUSES.DRAFT ? 'Edit Draft' : 'Edit'}
+                <button onClick={() => onEdit(s)} title={statusKey === STATUSES.DRAFT ? 'Edit draft' : 'Edit'}
+                        className="h-7 w-7 rounded-lg flex items-center justify-center  text-[#1E3A5F] bg-blue-50 ">
+                  <Pencil size={13} />
                 </button>
             )}
             {canDelete && (
-                <button onClick={() => onDelete(s)}
-                        className="flex items-center gap-1 px-2.5 py-1.5 text-[11.5px] font-semibold text-red-500 border border-red-200 rounded-lg hover:bg-red-50 transition-colors whitespace-nowrap">
-                  <Trash2 size={12} />
+                <button onClick={() => onDelete(s)} title="Delete structure"
+                        className="h-7 w-7 rounded-lg flex items-center justify-center text-red-600 bg-red-50 ">
+                  <Trash2 size={13} />
                 </button>
             )}
           </div>
@@ -996,25 +985,25 @@ const FeeStructures = ({ initialPeriodId: initialPeriodIdProp }) => {
   }
 
   return (
-      <div className="space-y-5">
+      <div className="max-w-[1440px] mx-auto space-y-5 px-3 sm:px-4 lg:px-6">
         <ToastContainer />
 
         {/* ── Page header ─────────────────────────────────────────────────── */}
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
           <div>
-            <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">{FEE_STRUCTURE_STRINGS.HEADER_TITLE}</h1>
-            <p className="text-sm text-gray-400 mt-0.5">{FEE_STRUCTURE_STRINGS.HEADER_SUBTITLE} {academicYearLabel}</p>
+            <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900 tracking-tight">{FEE_STRUCTURE_STRINGS.HEADER_TITLE}</h1>
+            <p className="text-xs sm:text-sm text-gray-400 mt-0.5">{FEE_STRUCTURE_STRINGS.HEADER_SUBTITLE} {academicYearLabel}</p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
             <select
                 value={periodFilter}
                 onChange={(e) => handlePeriodFilterChange(e.target.value)}
-                className="px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white text-gray-700 outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all w-44">
+                className="px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white text-gray-700 outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all w-full sm:w-44">
               <option value="">All Periods</option>
               {periods.map((p) => <option key={p.id} value={p.id.toString()}>{p.name}</option>)}
             </select>
             <button onClick={openCreate}
-                    className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-[#2563EB] rounded-lg hover:bg-blue-700 transition-colors shadow-sm">
+                    className="flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-[#2563EB] rounded-lg hover:bg-blue-700 transition-colors shadow-sm">
               <Plus size={15} /> {FEE_STRUCTURE_STRINGS.BTN_ADD_STRUCTURE}
             </button>
           </div>
@@ -1031,7 +1020,7 @@ const FeeStructures = ({ initialPeriodId: initialPeriodIdProp }) => {
         {/* ── Cards section ───────────────────────────────────────────────── */}
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
           {/* Section header */}
-          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+          <div className="flex flex-wrap items-center justify-between gap-2 px-4 sm:px-5 py-4 border-b border-gray-100">
             <h2 className="text-sm font-bold text-gray-800 flex items-center gap-2">
               <span className="w-1 h-4 rounded-full bg-[#2563EB] inline-block" />
               {FEE_STRUCTURE_STRINGS.HEADER_TITLE}
@@ -1065,8 +1054,8 @@ const FeeStructures = ({ initialPeriodId: initialPeriodIdProp }) => {
                 </button>
               </div>
           ) : (
-              <div className="p-5">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              <div className="p-4 sm:p-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 auto-rows-fr">
                   {filtered.map((s) => (
                       <FeeStructureCard
                           key={s.id}
@@ -1083,7 +1072,7 @@ const FeeStructures = ({ initialPeriodId: initialPeriodIdProp }) => {
 
           {/* Footer count */}
           {filtered.length > 0 && (
-              <div className="px-5 py-3 border-t border-gray-100 bg-gray-50/50">
+              <div className="px-4 sm:px-5 py-3 border-t border-gray-100 bg-gray-50/50">
                 <p className="text-xs text-gray-400">Showing {filtered.length} structure{filtered.length !== 1 ? 's' : ''}</p>
               </div>
           )}
