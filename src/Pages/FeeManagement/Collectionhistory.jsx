@@ -1528,6 +1528,8 @@ const CollectionsHistory = () => {
           dueDate: r.dueDate,
           status,
           transportDue: canViewTransport ? (transportMap.get(`${r.studentId}-${feePeriodId}`) || 0) : 0,
+          parentName: r.parentName,
+          parentPhone: r.parentMobile || r.parentPhone,
         };
       });
 
@@ -1557,6 +1559,8 @@ const CollectionsHistory = () => {
         period: r.feePeriodName, amount: r.amountPaid, discount: r.discount || 0,
         lateFine: r.lateFine || 0, mode: r.paymentMode, referenceNo: r.referenceNo,
         recordedBy: r.collectedBy, status: STATUSES.COMPLETED,
+        parentName: r.parentName,
+        parentPhone: r.parentMobile || r.parentPhone,
       })));
       setTotalPages(res?.data?.totalPages || res?.pagination?.totalPages || 1);
       setHistoryTotalElements(res?.data?.totalElements ?? res?.pagination?.totalElements ?? records.length);
@@ -1627,6 +1631,13 @@ const CollectionsHistory = () => {
         class: data.className || student.class,
         section: data.sectionName || student.section,
         period: data.feePeriodName || student.period,
+        // Parent name/mobile: prefer whatever the collection API returned
+        // (data.parentName / data.parentMobile), falling back to the
+        // student record already held in the modal (student.parentName /
+        // student.parentPhone) so the receipt still shows it even if the
+        // collection response omits these fields.
+        parentName: data.parentName || student.parentName || '',
+        parentPhone: data.parentMobile || data.parentPhone || student.parentPhone || '',
         academicComponents: academicItems.length ? academicItems : (data.components || [{ name: 'Academic Fee', amount: data.amountPaid }]),
         academicCollected: data.amountPaid ?? 0,
         transportComponents: transportItems,
@@ -1667,6 +1678,12 @@ const CollectionsHistory = () => {
           class: data.className,
           section: data.sectionName,
           period: data.feePeriodName,
+          // Parent name/mobile straight from the receipt-by-id response,
+          // with a fallback to whatever was already on the history row
+          // (item.parentName / item.parentPhone) in case this particular
+          // receipt lookup doesn't return them.
+          parentName: data.parentName || item.parentName || '',
+          parentPhone: data.parentMobile || data.parentPhone || item.parentPhone || '',
           academicComponents: (data.components || []).map(c => ({ name: c.customName || c.componentType, amount: c.amount })),
           academicCollected: data.amountPaid ?? item.amount,
           transportComponents: [],
@@ -1691,6 +1708,8 @@ const CollectionsHistory = () => {
           rollNo: item.studentId,
           class: item.class,
           period: item.period,
+          parentName: item.parentName || '',
+          parentPhone: item.parentPhone || '',
           academicComponents: [{ name: 'Academic Fee', amount: item.amount }],
           academicCollected: item.amount,
           transportComponents: [],
