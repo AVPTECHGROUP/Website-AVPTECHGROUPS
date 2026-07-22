@@ -37,18 +37,29 @@ function staffToForm(s) {
 }
 
 // ─── Field Component ──────────────────────────────────────────────
-function Field({ label, required, children }) {
+function Field({ label, required, error, children }) {
   return (
     <div className="flex flex-col gap-1.5">
       <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
         {label}{required && <span className="text-red-500 ml-0.5">*</span>}
       </label>
       {children}
+      {error && (
+        <span className="text-xs font-medium text-red-500 flex items-center gap-1 mt-0.5">
+          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+          {error}
+        </span>
+      )}
     </div>
   );
 }
 
-const inputCls = "w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-300 placeholder-gray-400 transition-all";
+const baseInputCls = "w-full px-3.5 py-2.5 text-sm border rounded-xl bg-gray-50 focus:outline-none focus:ring-2 placeholder-gray-400 transition-all";
+const getInputCls = (hasError) =>
+  hasError
+    ? `${baseInputCls} border-red-300 bg-red-50/20 focus:ring-red-200 focus:border-red-400`
+    : `${baseInputCls} border-gray-200 focus:ring-blue-200 focus:border-blue-300`;
+
 const disabledCls = "w-full px-3.5 py-2.5 text-sm border border-gray-100 rounded-xl bg-gray-100 text-gray-400 cursor-not-allowed";
 
 // ─── Modal ────────────────────────────────────────────────────────
@@ -56,6 +67,7 @@ export default function AddStaffCard({ isOpen, onClose, onSaved, editData }) {
   const isEditMode = Boolean(editData);
 
   const [form, setForm] = useState(EMPTY_FORM);
+  const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
   const [apiError, setApiError] = useState("");
 
@@ -63,57 +75,89 @@ export default function AddStaffCard({ isOpen, onClose, onSaved, editData }) {
   useEffect(() => {
     if (isOpen) {
       setForm(isEditMode ? staffToForm(editData) : EMPTY_FORM);
+      setErrors({});
       setApiError("");
     }
   }, [isOpen, editData]);
 
   if (!isOpen) return null;
 
-  const set = (field) => (e) => setForm((prev) => ({ ...prev, [field]: e.target.value }));
+  const set = (field) => (e) => {
+    setForm((prev) => ({ ...prev, [field]: e.target.value }));
+    if (errors[field]) {
+      setErrors((prev) => ({ ...prev, [field]: "" }));
+    }
+  };
 
   // Sanitize numeric keystrokes on entry level
   const setNumeric = (field) => (e) => {
     const cleanDigits = e.target.value.replace(/\D/g, "");
     setForm((prev) => ({ ...prev, [field]: cleanDigits }));
+    if (errors[field]) {
+      setErrors((prev) => ({ ...prev, [field]: "" }));
+    }
   };
 
   const handleSubmit = async () => {
     const contactClean = form.contactNumber.trim();
     const altContactClean = form.alternateContact.trim();
     const aadharClean = form.aadharNumber.trim();
+    const newErrors = {};
 
-    // ─── Core Form Validation ───
+    // ─── Core Form Field Validations ───
     if (!form.fullName.trim()) {
-      setApiError("Full name is required.");
-      return;
+      newErrors.fullName = "Full name is required.";
     }
+
     if (!form.staffRole) {
-      setApiError("Staff role is required.");
-      return;
+      newErrors.staffRole = "Staff role is required.";
     }
 
-    // Primary Phone Rule Validation
     if (!contactClean) {
-      setApiError("Contact number is required.");
-      return;
-    }
-    if (!/^\d{10}$/.test(contactClean)) {
-      setApiError("Contact number must be exactly 10 digits.");
-      return;
+      newErrors.contactNumber = "Contact number is required.";
+    } else if (!/^\d{10}$/.test(contactClean)) {
+      newErrors.contactNumber = "Contact number must be exactly 10 digits.";
     }
 
-    // Optional Alternate Phone Validation
+    // Driver-specific validation
+    if (form.staffRole === "DRIVER") {
+      if (!form.licenseNumber.trim()) {
+        newErrors.licenseNumber = "License number is required.";
+      }
+
+      if (!form.licenseExpiryDate) {
+        newErrors.licenseExpiryDate = "License expiry date is required.";
+      }
+    }
+
+    // Joining Date
+    if (!form.joiningDate) {
+      newErrors.joiningDate = "Joining date is required.";
+    }
+
+    // Aadhar Validation
+    if (!aadharClean) {
+      newErrors.aadharNumber = "Aadhar number is required.";
+    } else if (!/^\d{12}$/.test(aadharClean)) {
+      newErrors.aadharNumber = "Aadhar number must be exactly 12 digits.";
+    }
+
+    // Address
+    if (!form.address.trim()) {
+      newErrors.address = "Address is required.";
+    }
+
+    // Optional Alternate Contact
     if (altContactClean && !/^\d{10}$/.test(altContactClean)) {
-      setApiError("Alternate contact number must be exactly 10 digits.");
+      newErrors.alternateContact = "Alternate contact number must be exactly 10 digits.";
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       return;
     }
 
-    // Optional Secondary Identification Field Integrity
-    if (aadharClean && !/^\d{12}$/.test(aadharClean)) {
-      setApiError("Aadhar number must be exactly 12 digits.");
-      return;
-    }
-
+    setErrors({});
     setApiError("");
     setSaving(true);
 
@@ -187,20 +231,20 @@ export default function AddStaffCard({ isOpen, onClose, onSaved, editData }) {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
             {/* Full Name */}
-            <Field label="Full Name" required>
+            <Field label="Full Name" required error={errors.fullName}>
               <input
                 type="text" placeholder="e.g. Ramesh Kumar"
                 value={form.fullName} onChange={set("fullName")}
-                className={inputCls}
+                className={getInputCls(errors.fullName)}
               />
             </Field>
 
             {/* Staff Role */}
-            <Field label="Staff Role" required>
+            <Field label="Staff Role" required error={errors.staffRole}>
               <select
                 value={form.staffRole} onChange={set("staffRole")}
                 disabled={isEditMode}
-                className={isEditMode ? disabledCls : `${inputCls} cursor-pointer`}
+                className={isEditMode ? disabledCls : `${getInputCls(errors.staffRole)} cursor-pointer`}
               >
                 <option value="DRIVER">Driver</option>
                 <option value="ATTENDANT">Attendant</option>
@@ -208,88 +252,88 @@ export default function AddStaffCard({ isOpen, onClose, onSaved, editData }) {
             </Field>
 
             {/* Contact Number */}
-            <Field label="Contact Number" required>
+            <Field label="Contact Number" required error={errors.contactNumber}>
               <input
                 type="tel" placeholder="10-digit mobile number"
                 maxLength={10} value={form.contactNumber} onChange={setNumeric("contactNumber")}
-                className={inputCls}
+                className={getInputCls(errors.contactNumber)}
               />
             </Field>
 
             {/* Alternate Contact */}
-            <Field label="Alternate Contact">
+            <Field label="Alternate Contact" error={errors.alternateContact}>
               <input
                 type="tel" placeholder="Optional"
                 maxLength={10} value={form.alternateContact} onChange={setNumeric("alternateContact")}
-                className={inputCls}
+                className={getInputCls(errors.alternateContact)}
               />
             </Field>
 
             {/* License Number — only for DRIVER */}
             {form.staffRole === "DRIVER" && (
-              <Field label="License Number">
+              <Field label="License Number" required error={errors.licenseNumber}>
                 <input
-                  type="text" placeholder="e.g. MH1220120001" required
+                  type="text" placeholder="e.g. MH1220120001"
                   value={form.licenseNumber} onChange={set("licenseNumber")}
-                  className={inputCls}
+                  className={getInputCls(errors.licenseNumber)}
                 />
               </Field>
             )}
 
             {/* License Expiry — only for DRIVER */}
             {form.staffRole === "DRIVER" && (
-              <Field label="License Expiry Date">
+              <Field label="License Expiry Date" required error={errors.licenseExpiryDate}>
                 <input
-                  type="date" required
+                  type="date"
                   value={form.licenseExpiryDate} onChange={set("licenseExpiryDate")}
-                  className={inputCls}
+                  className={getInputCls(errors.licenseExpiryDate)}
                 />
               </Field>
             )}
 
             {/* Joining Date */}
-            <Field label="Joining Date">
+            <Field label="Joining Date" required error={errors.joiningDate}>
               <input
                 type="date"
                 value={form.joiningDate} onChange={set("joiningDate")}
-                className={inputCls}
+                className={getInputCls(errors.joiningDate)}
               />
             </Field>
 
             {/* Aadhar Number */}
-            <Field label="Aadhar Number">
+            <Field label="Aadhar Number" required error={errors.aadharNumber}>
               <input
                 type="text" placeholder="12-digit Aadhar"
                 maxLength={12} value={form.aadharNumber} onChange={setNumeric("aadharNumber")}
-                className={inputCls}
+                className={getInputCls(errors.aadharNumber)}
               />
             </Field>
 
             {/* Address — full width */}
             <div className="sm:col-span-2">
-              <Field label="Address">
+              <Field label="Address" required error={errors.address}>
                 <textarea
                   rows={2} placeholder="Residential address…"
                   value={form.address} onChange={set("address")}
-                  className={`${inputCls} resize-none`}
+                  className={`${getInputCls(errors.address)} resize-none`}
                 />
               </Field>
             </div>
 
             {/* Remarks — full width */}
             <div className="sm:col-span-2">
-              <Field label="Remarks">
+              <Field label="Remarks" error={errors.remarks}>
                 <textarea
                   rows={2} placeholder="Any additional notes…"
                   value={form.remarks} onChange={set("remarks")}
-                  className={`${inputCls} resize-none`}
+                  className={`${getInputCls(errors.remarks)} resize-none`}
                 />
               </Field>
             </div>
 
           </div>
 
-          {/* API Error Box */}
+          {/* Backend API Error Box (Server/Network level failures only) */}
           {apiError && (
             <div className="mt-4 flex items-center gap-2.5 bg-red-50 border border-red-200 text-red-700 text-sm font-medium px-4 py-3 rounded-xl">
               <AlertCircle className="w-4 h-4 shrink-0" />
