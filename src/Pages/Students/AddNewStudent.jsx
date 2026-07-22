@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, User, Users, Camera, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, User, Users, Camera, X, FileBadge2, Landmark } from 'lucide-react';
 import { toast } from 'react-toastify';
 import AddStudentPersonalDetails from '../../Components/Students/AddStudentPersonalDetails';
+import AddStudentIdentityDocuments from '../../Components/Students/AddStudentIdenetityDocuments';
 import AddStudentFamilyDetails from '../../Components/Students/AddStudentFamilyDetails';
+import AddStudentOtherDetails from '../../Components/Students/AddStudentOtherDetails';
 import { createStudents } from '../../Api/Students/StudentsApi';
 import { getAllSections } from '../../Api/Teachers/TeachersAPI';
 import STUDENT_MODULE_STRINGS from '../../Constants/StringConstants/StudentsConst';
@@ -11,10 +13,12 @@ import STUDENT_MODULE_STRINGS from '../../Constants/StringConstants/StudentsCons
 const AS = STUDENT_MODULE_STRINGS.ADD_STUDENT;
 const C = STUDENT_MODULE_STRINGS.COMMON;
 
+const TAB_ORDER = ['personal', 'identity', 'family', 'other'];
+
 function AddNewStudent() {
     const navigate = useNavigate();
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [familyErrors, setFamilyErrors] = useState({});
+    const [formErrors, setFormErrors] = useState({});
     const [sections, setSections] = useState([]);
     const [sectionsLoading, setSectionsLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('personal');
@@ -25,6 +29,16 @@ function AddNewStudent() {
     const fileInputRef = useRef(null);
     const formTopRef = useRef(null);
 
+    const [documents, setDocuments] = useState({
+        birthCertificate: null,
+        transferCertificate: null,
+        reportCard: null,
+        fatherPhoto: null,
+        motherPhoto: null,
+        guardianPhoto: null,
+        genericDocuments: [], // [{ id, file }]
+    });
+
     const [formData, setFormData] = useState({
         name: '', gender: '', email: '', mobile: '', address: '', dob: '',
         admissionNumber: '', admissionDate: '', academicYear: '2025-2026',
@@ -34,6 +48,21 @@ function AddNewStudent() {
         fatherEmail: '', motherName: '', motherOccupation: '', motherPhone: '',
         motherEmail: '', guardianName: '', guardianRelation: '', guardianPhone: '',
         guardianEmail: '', emergencyContact: '', hostelRequired: false, transportRequired: false,
+
+        // Personal — identity/contact additions
+        category: '', whatsappNumber: '', sameAsMobile: false,
+        studentHouse: '', abcId: '', isTransferStudent: false,
+
+        // Identity & Documents
+        studentAadhaar: '', aparId: '', pen: '', familyId: '', ssmId: '',
+
+        // Family — Aadhaar, guardian address, siblings
+        fatherAadhaar: '', motherAadhaar: '',
+        guardianAddress: '', sameAsCurrentAddress: false,
+        siblings: [], // [{ id, name, className }]
+
+        // Other — hostel room & bank
+        hostelRoomNumber: '', bankAccountNumber: '', bankName: '', ifscCode: '',
     });
 
     useEffect(() => {
@@ -77,8 +106,8 @@ function AddNewStudent() {
     const handleInputChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
-        if (familyErrors[name]) {
-            setFamilyErrors(prev => { const n = { ...prev }; delete n[name]; return n; });
+        if (formErrors[name]) {
+            setFormErrors(prev => { const n = { ...prev }; delete n[name]; return n; });
         }
     };
 
@@ -105,7 +134,7 @@ function AddNewStudent() {
                 guardianName: '', guardianRelation: '', guardianPhone: '', guardianEmail: '',
             }));
         }
-        setFamilyErrors(prev => {
+        setFormErrors(prev => {
             const n = { ...prev };
             delete n.guardianName; delete n.guardianRelation;
             delete n.guardianPhone; delete n.guardianEmail;
@@ -113,8 +142,63 @@ function AddNewStudent() {
         });
     };
 
+    // ── Document (file) handlers — shared by Identity & Family tabs ──
+    const handleDocumentChange = (key, e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
+        if (!validTypes.includes(file.type)) { toast.error('Only PDF, JPG or PNG files are allowed'); return; }
+        if (file.size > 10 * 1024 * 1024) { toast.error('File must be under 10MB'); return; }
+        setDocuments(prev => ({ ...prev, [key]: file }));
+        if (formErrors[key]) {
+            setFormErrors(prev => { const n = { ...prev }; delete n[key]; return n; });
+        }
+    };
+
+    const handleDocumentRemove = (key) => {
+        setDocuments(prev => ({ ...prev, [key]: null }));
+    };
+
+    const handleGenericDocAdd = (e) => {
+        const files = Array.from(e.target.files || []);
+        if (!files.length) return;
+        setDocuments(prev => ({
+            ...prev,
+            genericDocuments: [
+                ...prev.genericDocuments,
+                ...files.map(f => ({ id: `${Date.now()}-${f.name}`, file: f })),
+            ],
+        }));
+        e.target.value = '';
+    };
+
+    const handleGenericDocRemove = (id) => {
+        setDocuments(prev => ({ ...prev, genericDocuments: prev.genericDocuments.filter(d => d.id !== id) }));
+    };
+
+    // ── Sibling handlers — Family tab ──
+    const handleAddSibling = () => {
+        setFormData(prev => ({
+            ...prev,
+            siblings: [...prev.siblings, { id: Date.now(), name: '', className: '' }],
+        }));
+    };
+
+    const handleSiblingChange = (id, field, value) => {
+        setFormData(prev => ({
+            ...prev,
+            siblings: prev.siblings.map(s => s.id === id ? { ...s, [field]: value } : s),
+        }));
+    };
+
+    const handleRemoveSibling = (id) => {
+        setFormData(prev => ({ ...prev, siblings: prev.siblings.filter(s => s.id !== id) }));
+    };
+
     const phoneRegex = /^[0-9]{10}$/;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const aadhaarRegex = /^[0-9]{12}$/;
+    const ifscRegex = /^[A-Z]{4}0[A-Z0-9]{6}$/;
 
     const validatePersonalDetails = () => {
         if (!profileImage) { toast.error(AS.ERRORS.PHOTO_REQUIRED); return false; }
@@ -123,12 +207,35 @@ function AddNewStudent() {
         }
         if (!formData.rollNumber.trim()) { toast.error(AS.ERRORS.ROLL_REQUIRED); return false; }
         if (!formData.sectionId) { toast.error(AS.ERRORS.SECTION_REQUIRED); return false; }
+        if (!formData.category) { toast.error("Please select the student's category"); return false; }
         if (!phoneRegex.test(formData.mobile)) { toast.error(AS.ERRORS.MOBILE_INVALID); return false; }
+        if (formData.whatsappNumber && !phoneRegex.test(formData.whatsappNumber)) { toast.error('WhatsApp number must be exactly 10 digits'); return false; }
         if (formData.email && !emailRegex.test(formData.email)) { toast.error(AS.ERRORS.EMAIL_INVALID); return false; }
         if (formData.status !== 'ACTIVE') { toast.error(AS.ERRORS.STATUS_INVALID); return false; }
         const today = new Date(); today.setHours(0, 0, 0, 0);
         if (new Date(formData.dob) >= today) { toast.error(AS.ERRORS.DOB_INVALID); return false; }
         if (new Date(formData.admissionDate) > today) { toast.error(AS.ERRORS.ADMISSION_DATE_INVALID); return false; }
+        return true;
+    };
+
+    const buildIdentityErrors = (data, docs) => {
+        const e = {};
+        if (!data.studentAadhaar) e.studentAadhaar = "Student's Aadhaar number is required";
+        else if (!aadhaarRegex.test(data.studentAadhaar)) e.studentAadhaar = 'Must be exactly 12 digits';
+        if (!data.aparId.trim()) e.aparId = 'APAR ID is required';
+        if (!docs.birthCertificate) e.birthCertificate = 'Birth certificate is required';
+        if (data.isTransferStudent && !docs.transferCertificate) e.transferCertificate = 'Transfer certificate is required for transfer students';
+        return e;
+    };
+
+    const validateIdentityDetails = () => {
+        const errors = buildIdentityErrors(formData, documents);
+        if (Object.keys(errors).length > 0) { setFormErrors(prev => ({ ...prev, ...errors })); return false; }
+        setFormErrors(prev => {
+            const n = { ...prev };
+            ['studentAadhaar', 'aparId', 'birthCertificate', 'transferCertificate'].forEach(k => delete n[k]);
+            return n;
+        });
         return true;
     };
 
@@ -139,9 +246,11 @@ function AddNewStudent() {
         if (!data.fatherPhone) e.fatherPhone = "Father's phone is required";
         else if (!phoneRegex.test(data.fatherPhone)) e.fatherPhone = 'Must be exactly 10 digits';
         if (data.fatherEmail && !emailRegex.test(data.fatherEmail)) e.fatherEmail = 'Invalid email format';
+        if (data.fatherAadhaar && !aadhaarRegex.test(data.fatherAadhaar)) e.fatherAadhaar = 'Must be exactly 12 digits';
         if (!data.motherName.trim()) e.motherName = "Mother's name is required";
         if (data.motherPhone && !phoneRegex.test(data.motherPhone)) e.motherPhone = 'Must be exactly 10 digits';
         if (data.motherEmail && !emailRegex.test(data.motherEmail)) e.motherEmail = 'Invalid email format';
+        if (data.motherAadhaar && !aadhaarRegex.test(data.motherAadhaar)) e.motherAadhaar = 'Must be exactly 12 digits';
         if (data.guardianPhone && !phoneRegex.test(data.guardianPhone)) e.guardianPhone = 'Must be exactly 10 digits';
         if (data.guardianEmail && !emailRegex.test(data.guardianEmail)) e.guardianEmail = 'Invalid email format';
         if (data.emergencyContact && !phoneRegex.test(data.emergencyContact)) e.emergencyContact = 'Must be exactly 10 digits';
@@ -150,21 +259,77 @@ function AddNewStudent() {
 
     const validateFamilyDetails = () => {
         const errors = buildFamilyErrors(formData);
-        if (Object.keys(errors).length > 0) { setFamilyErrors(errors); return false; }
-        setFamilyErrors({});
+        if (Object.keys(errors).length > 0) { setFormErrors(prev => ({ ...prev, ...errors })); return false; }
+        setFormErrors(prev => {
+            const n = { ...prev };
+            ['fatherName', 'fatherOccupation', 'fatherPhone', 'fatherEmail', 'fatherAadhaar',
+                'motherName', 'motherPhone', 'motherEmail', 'motherAadhaar',
+                'guardianPhone', 'guardianEmail', 'emergencyContact'].forEach(k => delete n[k]);
+            return n;
+        });
+        return true;
+    };
+
+    const buildOtherErrors = (data) => {
+        const e = {};
+        if (data.hostelRequired && !data.hostelRoomNumber.trim()) e.hostelRoomNumber = 'Room number is required when hostel is enabled';
+        const bankFieldsTouched = data.bankAccountNumber || data.bankName || data.ifscCode;
+        if (bankFieldsTouched) {
+            if (!data.bankAccountNumber.trim()) e.bankAccountNumber = 'Account number is required';
+            if (!data.bankName.trim()) e.bankName = 'Bank name is required';
+            if (!data.ifscCode.trim()) e.ifscCode = 'IFSC code is required';
+            else if (!ifscRegex.test(data.ifscCode)) e.ifscCode = 'Invalid IFSC format';
+        }
+        return e;
+    };
+
+    const validateOtherDetails = () => {
+        const errors = buildOtherErrors(formData);
+        if (Object.keys(errors).length > 0) { setFormErrors(prev => ({ ...prev, ...errors })); return false; }
+        setFormErrors(prev => {
+            const n = { ...prev };
+            ['hostelRoomNumber', 'bankAccountNumber', 'bankName', 'ifscCode'].forEach(k => delete n[k]);
+            return n;
+        });
+        return true;
+    };
+
+    const validateTab = (tab) => {
+        if (tab === 'personal') return validatePersonalDetails();
+        if (tab === 'identity') return validateIdentityDetails();
+        if (tab === 'family') return validateFamilyDetails();
+        if (tab === 'other') return validateOtherDetails();
         return true;
     };
 
     const scrollToTop = () => formTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
     const handleNextTab = () => {
-        if (!validatePersonalDetails()) return;
-        setActiveTab('family');
-        scrollToTop();
+        if (!validateTab(activeTab)) return;
+        const idx = TAB_ORDER.indexOf(activeTab);
+        if (idx < TAB_ORDER.length - 1) {
+            setActiveTab(TAB_ORDER[idx + 1]);
+            scrollToTop();
+        }
+    };
+
+    const handleBackTab = () => {
+        const idx = TAB_ORDER.indexOf(activeTab);
+        if (idx > 0) {
+            setActiveTab(TAB_ORDER[idx - 1]);
+            scrollToTop();
+        }
     };
 
     const handleTabClick = (tab) => {
-        if (tab === 'family' && !validatePersonalDetails()) return;
+        const targetIdx = TAB_ORDER.indexOf(tab);
+        const currentIdx = TAB_ORDER.indexOf(activeTab);
+        // Only gate validation when moving forward past the current step
+        if (targetIdx > currentIdx) {
+            for (let i = currentIdx; i < targetIdx; i++) {
+                if (!validateTab(TAB_ORDER[i])) return;
+            }
+        }
         setActiveTab(tab);
         scrollToTop();
     };
@@ -173,7 +338,9 @@ function AddNewStudent() {
 
     const handleSaveDetails = async () => {
         if (!validatePersonalDetails()) { setActiveTab('personal'); return; }
-        if (!validateFamilyDetails()) return;
+        if (!validateIdentityDetails()) { setActiveTab('identity'); return; }
+        if (!validateFamilyDetails()) { setActiveTab('family'); return; }
+        if (!validateOtherDetails()) { setActiveTab('other'); return; }
         setIsSubmitting(true);
         const loadingToast = toast.loading(AS.LOADING);
         try {
@@ -189,9 +356,11 @@ function AddNewStudent() {
                 rollNumber: formData.rollNumber.trim() || null,
                 firstName,
                 lastName,
+                category: formData.category.toUpperCase() || null,
                 personalDetails: {
                     fullName: formData.name.trim(),
                     mobile: formData.mobile,
+                    whatsappNumber: formData.whatsappNumber || formData.mobile || null,
                     email: formData.email.trim() || null,
                     gender: formData.gender.toUpperCase(),
                     dateOfBirth: formData.dob,
@@ -199,6 +368,15 @@ function AddNewStudent() {
                     emergencyContact: formData.emergencyContact || null,
                     emergencyContactName: formData.guardianName.trim() || null,
                     emergencyContactRelation: formData.guardianRelation || null,
+                    studentHouse: formData.studentHouse.trim() || null,
+                    abcId: formData.abcId.trim() || null,
+                },
+                identityDetails: {
+                    aadhaarNumber: formData.studentAadhaar || null,
+                    aparId: formData.aparId.trim() || null,
+                    pen: formData.pen.trim() || null,
+                    familyId: formData.familyId.trim() || null,
+                    ssmId: formData.ssmId.trim() || null,
                 },
                 sectionId: Number(formData.sectionId),
                 admissionDate: formData.admissionDate,
@@ -206,24 +384,40 @@ function AddNewStudent() {
                 status: formData.status,
                 bloodGroup: formData.bloodGroup || null,
                 previousSchool: formData.previousSchool.trim() || null,
+                isTransferStudent: formData.isTransferStudent,
                 hostelRequired: formData.hostelRequired,
+                hostelRoomNumber: formData.hostelRequired ? (formData.hostelRoomNumber.trim() || null) : null,
                 transportRequired: formData.transportRequired,
                 fatherName: formData.fatherName.trim() || null,
                 fatherOccupation: formData.fatherOccupation.trim() || null,
                 fatherPhone: formData.fatherPhone || null,
                 fatherEmail: formData.fatherEmail.trim() || null,
+                fatherAadhaar: formData.fatherAadhaar || null,
                 motherName: formData.motherName.trim() || null,
                 motherOccupation: formData.motherOccupation.trim() || null,
                 motherPhone: formData.motherPhone || null,
                 motherEmail: formData.motherEmail.trim() || null,
+                motherAadhaar: formData.motherAadhaar || null,
                 guardianName: formData.guardianName.trim() || null,
                 guardianRelation: formData.guardianRelation || null,
                 guardianPhone: formData.guardianPhone || null,
                 guardianEmail: formData.guardianEmail.trim() || null,
+                guardianAddress: formData.guardianAddress.trim() || null,
+                siblings: formData.siblings
+                    .filter(s => s.name.trim())
+                    .map(s => ({ name: s.name.trim(), className: s.className.trim() || null })),
+                bankDetails: (formData.bankAccountNumber || formData.bankName || formData.ifscCode) ? {
+                    accountNumber: formData.bankAccountNumber.trim(),
+                    bankName: formData.bankName.trim(),
+                    ifscCode: formData.ifscCode.trim(),
+                } : null,
                 remarks: null,
             };
 
-            const response = await createStudents(apiPayload, profileImage);
+            // profileImage + the `documents` bundle (birth/transfer certificates, report card,
+            // parent/guardian photos, generic uploads) are sent as multipart files alongside
+            // apiPayload — see createStudents in StudentsApi.js for the multipart wiring.
+            const response = await createStudents(apiPayload, profileImage, documents);
             console.log('✅ Create Student Response:', response);
             toast.dismiss(loadingToast);
             toast.success(AS.SUCCESS);
@@ -238,6 +432,16 @@ function AddNewStudent() {
     };
 
     const handleDiscard = () => navigate('/students');
+
+    const isFirstTab = activeTab === TAB_ORDER[0];
+    const isLastTab = activeTab === TAB_ORDER[TAB_ORDER.length - 1];
+
+    const TABS = [
+        { key: 'personal', label: AS.TABS.PERSONAL, short: 'Personal', Icon: User },
+        { key: 'identity', label: 'Identity & Documents', short: 'Identity', Icon: FileBadge2 },
+        { key: 'family', label: AS.TABS.FAMILY, short: 'Family', Icon: Users },
+        { key: 'other', label: 'Other Details', short: 'Other', Icon: Landmark },
+    ];
 
     return (
         <div ref={formTopRef} className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-4">
@@ -255,18 +459,14 @@ function AddNewStudent() {
                     <div className="bg-white rounded-lg shadow">
                         <div className="border-b border-gray-200">
                             <nav className="flex flex-wrap -mb-px">
-                                <button type="button" onClick={() => setActiveTab('personal')}
-                                    className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'personal' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
-                                    <User size={20} />
-                                    <span className="hidden sm:inline">{AS.TABS.PERSONAL}</span>
-                                    <span className="sm:hidden">Personal</span>
-                                </button>
-                                <button type="button" onClick={() => handleTabClick('family')}
-                                    className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'family' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
-                                    <Users size={20} />
-                                    <span className="hidden sm:inline">{AS.TABS.FAMILY}</span>
-                                    <span className="sm:hidden">Family</span>
-                                </button>
+                                {TABS.map(({ key, label, short, Icon }) => (
+                                    <button key={key} type="button" onClick={() => handleTabClick(key)}
+                                        className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === key ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
+                                        <Icon size={20} />
+                                        <span className="hidden sm:inline">{label}</span>
+                                        <span className="sm:hidden">{short}</span>
+                                    </button>
+                                ))}
                             </nav>
                         </div>
                         <div className="p-4 sm:p-6 lg:p-8">
@@ -346,6 +546,7 @@ function AddNewStudent() {
                                     <AddStudentPersonalDetails
                                         formData={formData} setFormData={setFormData}
                                         handleInputChange={handleInputChange}
+                                        errors={formErrors}
                                         sections={sections} sectionsLoading={sectionsLoading}
                                     />
                                     <div className="grid lg:grid-cols-2 sm:grid-cols-1 gap-4 mt-4">
@@ -363,13 +564,38 @@ function AddNewStudent() {
                                     </div>
                                 </>
                             )}
+                            {activeTab === 'identity' && (
+                                <AddStudentIdentityDocuments
+                                    formData={formData}
+                                    handleInputChange={handleInputChange}
+                                    errors={formErrors}
+                                    documents={documents}
+                                    onDocumentChange={handleDocumentChange}
+                                    onDocumentRemove={handleDocumentRemove}
+                                    onGenericDocAdd={handleGenericDocAdd}
+                                    onGenericDocRemove={handleGenericDocRemove}
+                                />
+                            )}
                             {activeTab === 'family' && (
                                 <AddStudentFamilyDetails
                                     formData={formData} setFormData={setFormData}
                                     handleInputChange={handleInputChange}
-                                    errors={familyErrors} setErrors={setFamilyErrors}
+                                    errors={formErrors} setErrors={setFormErrors}
                                     guardianSource={guardianSource}
                                     onGuardianSource={handleGuardianSource}
+                                    documents={documents}
+                                    onDocumentChange={handleDocumentChange}
+                                    onDocumentRemove={handleDocumentRemove}
+                                    onAddSibling={handleAddSibling}
+                                    onSiblingChange={handleSiblingChange}
+                                    onRemoveSibling={handleRemoveSibling}
+                                />
+                            )}
+                            {activeTab === 'other' && (
+                                <AddStudentOtherDetails
+                                    formData={formData} setFormData={setFormData}
+                                    handleInputChange={handleInputChange}
+                                    errors={formErrors}
                                 />
                             )}
                         </div>
@@ -379,10 +605,16 @@ function AddNewStudent() {
                                     className="px-6 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
                                     {C.DISCARD_CHANGES}
                                 </button>
-                                {activeTab === 'personal' ? (
+                                {!isFirstTab && (
+                                    <button type="button" onClick={handleBackTab}
+                                        className="px-6 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2">
+                                        <ChevronLeft className="w-4 h-4" /> Back
+                                    </button>
+                                )}
+                                {!isLastTab ? (
                                     <button type="button" onClick={handleNextTab}
                                         className="px-6 py-2.5 text-sm font-medium rounded-lg transition-all bg-blue-500 hover:bg-blue-600 cursor-pointer text-white flex items-center gap-2">
-                                        {AS.NEXT} <ChevronLeft className="w-4 h-4 rotate-180" />
+                                        {AS.NEXT} <ChevronRight className="w-4 h-4" />
                                     </button>
                                 ) : (
                                     <button disabled={isSubmitting} type="button" onClick={handleSaveDetails}
