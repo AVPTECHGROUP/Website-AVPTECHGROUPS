@@ -251,13 +251,21 @@ const ReceiptCopy = ({ config, school, data, copyLabel }) => {
                 no dedicated roll-number field of its own). Previously a
                 single row was labeled "Roll No." but was actually being
                 fed the admission number, which was simply wrong. */}
+                    {/* FIX: Parent Name and Parent Mobile are now shown as
+                two additional rows, sourced from the backend's parentName /
+                parentMobile fields (with a parentPhone fallback for older
+                shapes). Row is skipped entirely if neither value exists,
+                so blank rows don't clutter old receipts that lack the
+                fields. */}
                     {[
                         ['Admission No.', data.admissionNumber],
                         ['Roll No.',  data.rollNo],
                         ['Name',      data.studentName],
                         ['Class',     data.class],
                         ['Section',   data.section],
-                        ['School',    school.schoolName],
+
+                        ...(data.parentName ? [['Parent Name', data.parentName]] : []),
+                        ...(data.parentPhone ? [['Parent Mobile', data.parentPhone]] : []),
                     ].map(([k, v]) => (
                         <div key={k} style={{ display: 'flex', gap: 6, marginBottom: 3 }}>
                             <span style={{ fontWeight: 'bold', minWidth: 60, color: '#444' }}>{k}:</span>
@@ -281,6 +289,7 @@ const ReceiptCopy = ({ config, school, data, copyLabel }) => {
                     {[
                         ['Receipt No.',  data.receiptNo],
                         ['Fee Period',   data.period],
+                        ['School',    school.schoolName],
                         ['Date',         formatDateOnly(data.generatedAt || data.date)],
                         ...(data.generatedAt ? [['Time', formatTimeOnly(data.generatedAt)]] : []),
                         ['Mode',         data.paymentMode],
@@ -444,6 +453,11 @@ export default function FeeReceiptPrint({ receipt, onClose }) {
     // are kept as two distinct fields: admissionNumber comes from the
     // backend's own admissionNumber field, while rollNo is derived from
     // studentId (there's no dedicated roll-number field on the backend).
+    //
+    // ✅ FIX: parentName / parentPhone are now carried through too — sourced
+    // from the backend's parentName field and, for the phone number,
+    // parentMobile (with parentPhone kept as a fallback for any older
+    // shape that used that name instead).
     const editData = {
         receiptNo:   receipt?.receiptNo   || '',
         date:        receipt?.date        || new Date().toLocaleDateString('en-IN'),
@@ -454,6 +468,8 @@ export default function FeeReceiptPrint({ receipt, onClose }) {
         class:       receipt?.class       || receipt?.className   || '',
         section:     receipt?.section     || receipt?.sectionName || '',
         period:      receipt?.period      || receipt?.feePeriodName || '',
+        parentName:  receipt?.parentName  || '',
+        parentPhone: receipt?.parentPhone || receipt?.parentMobile || '',
         paymentMode: receipt?.paymentMode || 'CASH',
         referenceNo: receipt?.referenceNo || '',
         remarks:     receipt?.remarks     || '',

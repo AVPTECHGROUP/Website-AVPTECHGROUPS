@@ -3,7 +3,7 @@ import Input from '../../Components/FeeModal/Input';
 import Select from '../../Components/FeeModal/Select';
 import {
   Plus, X, Pencil, Trash2, ArrowRight, Calendar, Users, Layers,
-  CheckCircle2, AlertCircle, AlertTriangle, Info, Clock, Lock,
+  CheckCircle2, AlertCircle, AlertTriangle, Info, Clock, Lock, Unlock,
 } from 'lucide-react';
 import {
   getFeePeriods,
@@ -11,9 +11,8 @@ import {
   updateFeePeriod,
   deleteFeePeriod,
   closeFeePeriod,
+  reopenFeePeriod,
 } from '../../Api/FeeManagement/FeePeriods';
-// NOTE: adjust this import path if your academic-year API module lives elsewhere.
-import { getAcademicYears } from '../../Api/AcademicYears/AcademicYear.js';
 import { UserContext } from '../../ContextAPI/UserContext';
 
 // Import Constants
@@ -150,6 +149,40 @@ const CloseConfirmModal = ({ open, onClose, onConfirm, loading, periodName }) =>
   );
 };
 
+// ─── Reopen Period Confirm Modal ──────────────────────────────────────────────
+const ReopenConfirmModal = ({ open, onClose, onConfirm, loading, periodName }) => {
+  if (!open) return null;
+  return (
+      <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+          <div className="flex items-start gap-4 mb-5">
+            <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+              <Unlock size={18} className="text-emerald-600" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-gray-900">Reopen Fee Period?</h3>
+              <p className="text-sm text-gray-500 mt-1">
+                Are you sure you want to reopen <strong className="text-gray-700">{periodName}</strong>? Payments
+                can be recorded against this period again once it's reopened.
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-2 justify-end">
+            <button onClick={onClose} disabled={loading}
+                    className="px-4 py-2 text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors">
+              Cancel
+            </button>
+            <button onClick={onConfirm} disabled={loading}
+                    className="px-4 py-2 text-sm font-semibold text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-colors flex items-center gap-2">
+              {loading && <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />}
+              {loading ? 'Reopening…' : 'Reopen Period'}
+            </button>
+          </div>
+        </div>
+      </div>
+  );
+};
+
 // ─── Constants & Helpers ──────────────────────────────────────────────────────
 const getStatusInfo = (period) => {
   const dueDate = new Date(period.dueDate);
@@ -219,11 +252,16 @@ const LifecycleStatusText = ({ status }) => {
 };
 
 // ─── Period Modal ─────────────────────────────────────────────────────────────
+// FIX: Academic Year is never user-selectable here anymore — it's always
+// pinned to the school's current academic year (from UserContext), for both
+// create and edit. The dropdown + the getAcademicYears fetch that used to
+// back it have been removed entirely.
+// FIX: Type is only editable while creating a new period. Once a period
+// exists, its Type is locked (shown read-only) — only Name, Due Date, and
+// Notes remain editable on the edit flow.
 function PeriodModal({ isOpen, onClose, period, academicYear, onSuccess }) {
   const isEdit = !!period;
   const [loading, setLoading] = useState(false);
-  const [academicYears, setAcademicYears] = useState([]);
-  const [ayLoading, setAyLoading] = useState(false);
   const [form, setForm] = useState({
     name: '', type: PERIOD_TYPES.QUARTERLY, academicYearId: '', academicYearLabel: '', dueDate: '', notes: '',
   });
@@ -234,6 +272,7 @@ function PeriodModal({ isOpen, onClose, period, academicYear, onSuccess }) {
       setForm({
         name: period.name || '',
         type: period.type || PERIOD_TYPES.QUARTERLY,
+        // Always the period's own AY when editing — never user-changeable.
         academicYearId: period.academicYearId || academicYear?.id || '',
         academicYearLabel: period.academicYearLabel || academicYear?.label || '',
         dueDate: period.dueDate ? period.dueDate.split('T')[0] : '',
@@ -243,6 +282,7 @@ function PeriodModal({ isOpen, onClose, period, academicYear, onSuccess }) {
       setForm({
         name: '',
         type: PERIOD_TYPES.QUARTERLY,
+        // New periods are always created under the current academic year.
         academicYearId: academicYear?.id || '',
         academicYearLabel: academicYear?.label || '',
         dueDate: '',
@@ -251,36 +291,10 @@ function PeriodModal({ isOpen, onClose, period, academicYear, onSuccess }) {
     }
   }, [isOpen, period, academicYear]);
 
-  // Load the list of academic years for the dropdown — only needed when
-  // creating a new period. Editing keeps the period pinned to the AY it
-  // was created under (see the read-only block in the JSX below).
-  useEffect(() => {
-    if (!isOpen || isEdit) return;
-    let cancelled = false;
-    const loadYears = async () => {
-      setAyLoading(true);
-      try {
-        const years = await getAcademicYears();
-        if (!cancelled) setAcademicYears(Array.isArray(years) ? years : []);
-      } catch (err) {
-        if (!cancelled) toast.error('Failed to load', err.message || 'Could not load academic years');
-      } finally {
-        if (!cancelled) setAyLoading(false);
-      }
-    };
-    loadYears();
-    return () => { cancelled = true; };
-  }, [isOpen, isEdit]);
-
   // FIX: Period Name is letters/spaces only — strip any digit or symbol as
   // the user types or pastes, same rule as Custom Name in FeeStructures.jsx.
   // Every other field goes through unchanged.
   const set = (k, v) => setForm((p) => ({ ...p, [k]: k === 'name' ? sanitizeNameInput(v) : v }));
-
-  const handleAcademicYearChange = (id) => {
-    const selected = academicYears.find((y) => String(y.id) === String(id));
-    setForm((p) => ({ ...p, academicYearId: id, academicYearLabel: selected?.label || '' }));
-  };
 
   const handleSubmit = async () => {
     if (!form.name.trim()) { toast.error(FEE_PERIOD_STRINGS.TOAST_VALIDATION, FEE_PERIOD_STRINGS.TOAST_VALIDATION_NAME); return; }
@@ -347,18 +361,27 @@ function PeriodModal({ isOpen, onClose, period, academicYear, onSuccess }) {
               <div className="text-xs text-gray-400 mt-1">{FEE_PERIOD_STRINGS.HELP_NAME}</div>
             </div>
 
+            {/* Type: editable only when creating. Locked (read-only) once the
+                period exists, since changing it after structures/payments
+                are attached would be structurally inconsistent. */}
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                {FEE_PERIOD_STRINGS.LABEL_TYPE} <span className="text-red-500">*</span>
+                {FEE_PERIOD_STRINGS.LABEL_TYPE} {!isEdit && <span className="text-red-500">*</span>}
               </label>
-              <Select
-                  value={form.type}
-                  onChange={(v) => set('type', v)}
-                  options={Object.keys(PERIOD_TYPES).map(key => ({
-                    value: PERIOD_TYPES[key],
-                    label: PERIOD_TYPE_LABELS[PERIOD_TYPES[key]]
-                  }))}
-              />
+              {isEdit ? (
+                  <div className="px-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 text-gray-700 font-semibold">
+                    {PERIOD_TYPE_LABELS[form.type] || form.type}
+                  </div>
+              ) : (
+                  <Select
+                      value={form.type}
+                      onChange={(v) => set('type', v)}
+                      options={Object.keys(PERIOD_TYPES).map(key => ({
+                        value: PERIOD_TYPES[key],
+                        label: PERIOD_TYPE_LABELS[PERIOD_TYPES[key]]
+                      }))}
+                  />
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -372,29 +395,15 @@ function PeriodModal({ isOpen, onClose, period, academicYear, onSuccess }) {
                   required
               />
 
-              {isEdit ? (
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1.5">{FEE_PERIOD_STRINGS.LABEL_ACADEMIC_YEAR}</label>
-                    <div className="px-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 text-gray-700 font-semibold">
-                      {form.academicYearLabel || '—'}
-                    </div>
-                  </div>
-              ) : (
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                      {FEE_PERIOD_STRINGS.LABEL_ACADEMIC_YEAR} <span className="text-red-500">*</span>
-                    </label>
-                    <Select
-                        value={form.academicYearId}
-                        onChange={handleAcademicYearChange}
-                        placeholder={ayLoading ? 'Loading…' : 'Select academic year'}
-                        options={academicYears.map((y) => ({
-                          value: y.id,
-                          label: y.id === academicYear?.id ? `${y.label} (Current)` : y.label,
-                        }))}
-                    />
-                  </div>
-              )}
+              {/* Academic Year: never a dropdown — always the school's
+                  current academic year, shown read-only, for both create
+                  and edit. */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5">{FEE_PERIOD_STRINGS.LABEL_ACADEMIC_YEAR}</label>
+                <div className="px-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 text-gray-700 font-semibold truncate">
+                  {form.academicYearLabel || academicYear?.label || '—'}
+                </div>
+              </div>
             </div>
 
             <div>
@@ -427,7 +436,7 @@ function PeriodModal({ isOpen, onClose, period, academicYear, onSuccess }) {
 }
 
 // ─── Period Card (redesigned — simpler, quieter, easier to scan) ──────────────
-const PeriodCard = ({ p, onEdit, onDelete, onClosePeriod, onGoToStructures }) => {
+const PeriodCard = ({ p, onEdit, onDelete, onClosePeriod, onReopenPeriod, onGoToStructures }) => {
   const statusKey = getStatusInfo(p);
   const isClosed = p.status === 'CLOSED';
   const canDelete = p.structureCount === 0 && statusKey !== STATUSES.PAID && !isClosed;
@@ -464,7 +473,7 @@ const PeriodCard = ({ p, onEdit, onDelete, onClosePeriod, onGoToStructures }) =>
               <Layers size={12} className="text-gray-400" />
               <span className="font-semibold text-gray-800">{p.structureCount || 0}</span> Structures
             </span>
-            
+
           </div>
 
           {/* Collection progress — only when there's data */}
@@ -493,7 +502,14 @@ const PeriodCard = ({ p, onEdit, onDelete, onClosePeriod, onGoToStructures }) =>
           </button>
 
           <div className="flex items-center gap-1">
-            {!isClosed && (
+            {isClosed ? (
+                <button
+                    onClick={(e) => { e.stopPropagation(); onReopenPeriod(p); }}
+                    title="Reopen period"
+                    className="h-7 w-7 rounded-lg flex items-center justify-center text-emerald-600">
+                  <Unlock size={13} />
+                </button>
+            ) : (
                 <button
                     onClick={(e) => { e.stopPropagation(); onClosePeriod(p); }}
                     title="Close period"
@@ -534,6 +550,7 @@ const FeePeriods = ({ onGoToStructures }) => {
   const [loading, setLoading] = useState(false);
   const [deleteModal, setDeleteModal] = useState({ open: false, period: null, loading: false });
   const [closeModal, setCloseModal] = useState({ open: false, period: null, loading: false });
+  const [reopenModal, setReopenModal] = useState({ open: false, period: null, loading: false });
 
   const fetchPeriods = async () => {
     if (!academicYearId) return;
@@ -596,6 +613,25 @@ const FeePeriods = ({ onGoToStructures }) => {
     } catch (error) {
       setCloseModal((prev) => ({ ...prev, loading: false }));
       toast.error('Close Failed', error.message || 'Could not close the fee period. Please try again.');
+    }
+  };
+
+  // ── Reopen period flow ─────────────────────────────────────────────────────
+  const promptReopen = (p) => setReopenModal({ open: true, period: p, loading: false });
+  const cancelReopen = () => setReopenModal({ open: false, period: null, loading: false });
+
+  const confirmReopen = async () => {
+    const p = reopenModal.period;
+    if (!p) return;
+    setReopenModal((prev) => ({ ...prev, loading: true }));
+    try {
+      await reopenFeePeriod(p.id);
+      toast.success('Period Reopened', `"${p.name}" is now open again. Payments can be recorded against it.`);
+      cancelReopen();
+      fetchPeriods();
+    } catch (error) {
+      setReopenModal((prev) => ({ ...prev, loading: false }));
+      toast.error('Reopen Failed', error.message || 'Could not reopen the fee period. Please try again.');
     }
   };
 
@@ -686,6 +722,7 @@ const FeePeriods = ({ onGoToStructures }) => {
                           onEdit={openEdit}
                           onDelete={promptDelete}
                           onClosePeriod={promptClose}
+                          onReopenPeriod={promptReopen}
                           onGoToStructures={goToStructures}
                       />
                   ))}
@@ -735,6 +772,14 @@ const FeePeriods = ({ onGoToStructures }) => {
             onConfirm={confirmClose}
             loading={closeModal.loading}
             periodName={closeModal.period?.name || ''}
+        />
+
+        <ReopenConfirmModal
+            open={reopenModal.open}
+            onClose={cancelReopen}
+            onConfirm={confirmReopen}
+            loading={reopenModal.loading}
+            periodName={reopenModal.period?.name || ''}
         />
       </div>
   );
