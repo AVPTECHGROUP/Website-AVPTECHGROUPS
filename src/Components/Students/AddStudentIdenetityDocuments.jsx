@@ -62,7 +62,7 @@ const AddStudentIdentityDocuments = ({
                 <div className="grid lg:grid-cols-2 sm:grid-cols-1 gap-4">
                     <div>
                         <label className='block font-semibold text-gray-600 text-sm mb-2'>
-                            Student Aadhaar Number<span className="text-red-500 ml-1">*</span>
+                            Student Aadhaar Number
                         </label>
                         <input type="text" name="studentAadhaar" value={formData.studentAadhaar} onChange={handleInputChange}
                             placeholder="12 digit Aadhaar number" maxLength={12} inputMode="numeric"
@@ -71,7 +71,7 @@ const AddStudentIdentityDocuments = ({
                     </div>
                     <div>
                         <label className='block font-semibold text-gray-600 text-sm mb-2'>
-                            APAR ID<span className="text-red-500 ml-1">*</span>
+                            APAR ID
                         </label>
                         <input type="text" name="aparId" value={formData.aparId} onChange={handleInputChange}
                             placeholder="Automated Permanent Academic Registry ID" className={inputClass('aparId')} />
@@ -115,11 +115,11 @@ const AddStudentIdentityDocuments = ({
                     <h2 className='text-xl font-medium text-gray-700'>Document Uploads</h2>
                 </div>
                 <div className="grid lg:grid-cols-2 sm:grid-cols-1 gap-4">
-                    <FileUploadField docKey="birthCertificate" label="Birth Certificate" required
+                    <FileUploadField docKey="birthCertificate" label="Birth Certificate"
                         helperText="PDF or image, max 10MB" />
 
                     {formData.isTransferStudent && (
-                        <FileUploadField docKey="transferCertificate" label="Transfer Certificate" required
+                        <FileUploadField docKey="transferCertificate" label="Transfer Certificate"
                             helperText="Required for students transferring from another school" />
                     )}
 

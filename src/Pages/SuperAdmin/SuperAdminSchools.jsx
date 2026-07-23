@@ -13,9 +13,9 @@ import { UserContext } from "../../ContextAPI/UserContext";
 
 const boardBadge = (board) => {
   const map = {
-    CBSE:         "bg-blue-500/10 text-blue-400 border border-blue-500/20",
-    ICSE:         "bg-amber-500/10 text-amber-400 border border-amber-500/20",
-    "STATE BOARD":"bg-purple-500/10 text-purple-400 border border-purple-500/20",
+    CBSE: "bg-blue-500/10 text-blue-400 border border-blue-500/20",
+    ICSE: "bg-amber-500/10 text-amber-400 border border-amber-500/20",
+    "STATE BOARD": "bg-purple-500/10 text-purple-400 border border-purple-500/20",
   };
   return map[(board || "").toUpperCase()] ?? "bg-white/5 text-slate-400 border border-white/10";
 };
@@ -85,7 +85,7 @@ const StatCard = ({ keyName, val, IconName, accentBar, iconBg, iconColor, sub, p
     if (barClass.includes("amber") || barClass.includes("orange")) return "from-[#F5A623] to-[#FFD166]";
     return "from-slate-500/40 to-slate-500/10";
   };
-  
+
   const accentGradient = getAccentColor(accentBar);
 
   return (
@@ -227,23 +227,23 @@ export default function SuperAdminSchools() {
     navigate("/login");
   };
 
-  const [schools,       setSchools]       = useState([]);
-  const [statsData,     setStatsData]     = useState([]);
-  const [loading,       setLoading]       = useState(true);
-  const [statsLoading,  setStatsLoading]  = useState(true);
-  const [error,         setError]         = useState(null);
-  const [selectedId,    setSelectedId]    = useState(null);
-  const [modalSchool,   setModalSchool]   = useState(null);
+  const [schools, setSchools] = useState([]);
+  const [statsData, setStatsData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [selectedId, setSelectedId] = useState(null);
+  const [modalSchool, setModalSchool] = useState(null);
 
-  const [searchInput,   setSearchInput]   = useState("");
-  const [search,        setSearch]        = useState("");
-  const [boardFilter,   setBoardFilter]   = useState("");
-  const [statusFilter,  setStatusFilter]  = useState("ACTIVE");
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
+  const [boardFilter, setBoardFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ACTIVE");
 
-  const [page,          setPage]          = useState(0);
+  const [page, setPage] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
-  const [totalPages,    setTotalPages]    = useState(1);
-  const PAGE_SIZE   = 20;
+  const [totalPages, setTotalPages] = useState(1);
+  const PAGE_SIZE = 20;
   const debounceRef = useRef(null);
 
   useEffect(() => {
@@ -259,9 +259,9 @@ export default function SuperAdminSchools() {
     setError(null);
     try {
       const isActive =
-        statusFilter === "ACTIVE"   ? true  :
-        statusFilter === "INACTIVE" ? false :
-        undefined;
+        statusFilter === "ACTIVE" ? true :
+          statusFilter === "INACTIVE" ? false :
+            undefined;
 
       const res = await getMySchools(page, PAGE_SIZE, search, boardFilter, isActive);
 
@@ -300,8 +300,8 @@ export default function SuperAdminSchools() {
   const getStatusBadge = (school) => {
     const active = school.isActive || school.status === "ACTIVE";
     return active
-      ? { label: "Active",   cls: "text-emerald-400 bg-emerald-500/10 border-emerald-500/25", dot: "bg-emerald-500" }
-      : { label: "Inactive", cls: "text-red-400 bg-red-500/10 border-red-500/25",             dot: "bg-red-400"     };
+      ? { label: "Active", cls: "text-emerald-400 bg-emerald-500/10 border-emerald-500/25", dot: "bg-emerald-500" }
+      : { label: "Inactive", cls: "text-red-400 bg-red-500/10 border-red-500/25", dot: "bg-red-400" };
   };
 
   return (
@@ -311,9 +311,9 @@ export default function SuperAdminSchools() {
         <div className="absolute inset-0 pointer-events-none opacity-[0.4]" style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
         {/* Ambient background glowing blobs */}
         <div className="pointer-events-none absolute -top-40 -left-40 w-[600px] h-[600px] rounded-full opacity-[0.22] blur-[120px]"
-            style={{ background: 'radial-gradient(circle, #00C9B1, transparent 70%)' }} />
+          style={{ background: 'radial-gradient(circle, #00C9B1, transparent 70%)' }} />
         <div className="pointer-events-none absolute -bottom-40 -right-40 w-[600px] h-[600px] rounded-full opacity-[0.18] blur-[120px]"
-            style={{ background: 'radial-gradient(circle, #F5A623, transparent 70%)' }} />
+          style={{ background: 'radial-gradient(circle, #F5A623, transparent 70%)' }} />
 
         {/* ── Navbar ── */}
         <nav className="sticky top-0 z-50 backdrop-blur-md bg-theme-nav/80 border-b border-theme-border shadow-lg transition-colors duration-300">
@@ -336,7 +336,7 @@ export default function SuperAdminSchools() {
                 </div>
                 <span className="hidden sm:inline text-xs font-semibold text-theme-subtext max-w-fit text-nowrap">{displayName}</span>
               </div>
-              
+
               {/* Theme Toggle Button */}
               <button
                 onClick={toggleTheme}
@@ -446,7 +446,7 @@ export default function SuperAdminSchools() {
                 )
                 : schools.map((school) => {
                   const isSelected = selectedId === school.id;
-                  const badge      = getStatusBadge(school);
+                  const badge = getStatusBadge(school);
                   return (
                     <div
                       key={school.id}
@@ -457,22 +457,22 @@ export default function SuperAdminSchools() {
                           : "shadow-md hover:shadow-2xl hover:shadow-cyan-950/30"
                         }`}
                       style={{
-                          border: '1px solid transparent',
-                          background: isSelected
-                            ? 'linear-gradient(var(--theme-card-grad-start), var(--theme-card-grad-end)) padding-box, linear-gradient(135deg, #00C9B1, #F5A623) border-box'
-                            : 'linear-gradient(var(--theme-card-grad-start), var(--theme-card-grad-end)) padding-box, linear-gradient(135deg, var(--theme-card-border-light), var(--theme-card-border-light)) border-box',
+                        border: '1px solid transparent',
+                        background: isSelected
+                          ? 'linear-gradient(var(--theme-card-grad-start), var(--theme-card-grad-end)) padding-box, linear-gradient(135deg, #00C9B1, #F5A623) border-box'
+                          : 'linear-gradient(var(--theme-card-grad-start), var(--theme-card-grad-end)) padding-box, linear-gradient(135deg, var(--theme-card-border-light), var(--theme-card-border-light)) border-box',
                       }}
                       onMouseEnter={e => {
-                          if (!isSelected) {
-                              e.currentTarget.style.transform = 'translateY(-4px)';
-                              e.currentTarget.style.background = 'linear-gradient(var(--theme-card-grad-start), var(--theme-card-grad-end)) padding-box, linear-gradient(135deg, #00C9B1, rgba(245, 166, 35, 0.4)) border-box';
-                          }
+                        if (!isSelected) {
+                          e.currentTarget.style.transform = 'translateY(-4px)';
+                          e.currentTarget.style.background = 'linear-gradient(var(--theme-card-grad-start), var(--theme-card-grad-end)) padding-box, linear-gradient(135deg, #00C9B1, rgba(245, 166, 35, 0.4)) border-box';
+                        }
                       }}
                       onMouseLeave={e => {
-                          if (!isSelected) {
-                              e.currentTarget.style.transform = 'translateY(0)';
-                              e.currentTarget.style.background = 'linear-gradient(var(--theme-card-grad-start), var(--theme-card-grad-end)) padding-box, linear-gradient(135deg, var(--theme-card-border-light), var(--theme-card-border-light)) border-box';
-                          }
+                        if (!isSelected) {
+                          e.currentTarget.style.transform = 'translateY(0)';
+                          e.currentTarget.style.background = 'linear-gradient(var(--theme-card-grad-start), var(--theme-card-grad-end)) padding-box, linear-gradient(135deg, var(--theme-card-border-light), var(--theme-card-border-light)) border-box';
+                        }
                       }}
                     >
                       <div className="p-4 sm:p-5">

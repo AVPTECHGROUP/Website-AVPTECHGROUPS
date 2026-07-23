@@ -271,6 +271,15 @@ export const API_ENDPOINTS = {
   studentByClass: (id) => `${BASE_URL_DOUBLE_V1}/students/class/${id}`,
   studentBySection: (sectionId) => `${BASE_URL_DOUBLE_V1}/students/section/${sectionId}`,
 
+  // ─── Student Documents ───
+  STUDENT_DOCUMENTS: (id) => `${BASE_URL_DOUBLE_V1}/students/${id}/documents`,
+  UPLOAD_STUDENT_DOCUMENT: (id, docType) =>
+    `${BASE_URL_DOUBLE_V1}/students/${id}/documents/${docType}`,
+
+  // ─── Parent / Guardian Photos ───
+  UPLOAD_PARENT_PHOTO: (id, photoType) =>
+    `${BASE_URL_DOUBLE_V1}/students/${id}/photos/${photoType}`,
+
   // ─── Student Store (Class Item Configs) ───
   CLASS_ITEM_CONFIGS: `${BASE_URL_DOUBLE_V1}/stock/class-item-configs`,
   CLASS_ITEM_CONFIGS_STATS: `${BASE_URL_DOUBLE_V1}/stock/class-item-configs/stats`,

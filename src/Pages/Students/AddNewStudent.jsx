@@ -6,7 +6,7 @@ import AddStudentPersonalDetails from '../../Components/Students/AddStudentPerso
 import AddStudentIdentityDocuments from '../../Components/Students/AddStudentIdenetityDocuments';
 import AddStudentFamilyDetails from '../../Components/Students/AddStudentFamilyDetails';
 import AddStudentOtherDetails from '../../Components/Students/AddStudentOtherDetails';
-import { createStudents } from '../../Api/Students/StudentsApi';
+import { createStudents, uploadStudentDocument, uploadParentPhoto } from '../../Api/Students/StudentsApi';
 import { getAllSections } from '../../Api/Teachers/TeachersAPI';
 import STUDENT_MODULE_STRINGS from '../../Constants/StringConstants/StudentsConst';
 
@@ -21,7 +21,7 @@ function AddNewStudent() {
     const [formErrors, setFormErrors] = useState({});
     const [sections, setSections] = useState([]);
     const [sectionsLoading, setSectionsLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState('personal');
+    const [activeTab, setActiveTab] = useState('other');
     const [guardianSource, setGuardianSource] = useState(null);
 
     const [profileImage, setProfileImage] = useState(null);
@@ -33,6 +33,9 @@ function AddNewStudent() {
         birthCertificate: null,
         transferCertificate: null,
         reportCard: null,
+        studentAadhaarDoc: null,
+        fatherAadhaarDoc: null,
+        motherAadhaarDoc: null,
         fatherPhoto: null,
         motherPhoto: null,
         guardianPhoto: null,
@@ -41,7 +44,7 @@ function AddNewStudent() {
 
     const [formData, setFormData] = useState({
         name: '', gender: '', email: '', mobile: '', address: '', dob: '',
-        admissionNumber: '', admissionDate: '', academicYear: '2025-2026',
+        admissionNumber: '', admissionDate: new Date().toISOString().slice(0, 10), academicYear: '2025-2026',
         rollNumber: '',
         status: 'ACTIVE', bloodGroup: '', previousSchool: '', profileImageUrl: '',
         sectionId: '', fatherName: '', fatherOccupation: '', fatherPhone: '',
@@ -49,20 +52,20 @@ function AddNewStudent() {
         motherEmail: '', guardianName: '', guardianRelation: '', guardianPhone: '',
         guardianEmail: '', emergencyContact: '', hostelRequired: false, transportRequired: false,
 
-        // Personal — identity/contact additions
-        category: '', whatsappNumber: '', sameAsMobile: false,
+        // Personal additions
+        category: 'GENERAL', religion: 'HINDU', whatsappNumber: '', sameAsMobile: false,
         studentHouse: '', abcId: '', isTransferStudent: false,
 
         // Identity & Documents
         studentAadhaar: '', aparId: '', pen: '', familyId: '', ssmId: '',
 
-        // Family — Aadhaar, guardian address, siblings
+        // Family additions
         fatherAadhaar: '', motherAadhaar: '',
-        guardianAddress: '', sameAsCurrentAddress: false,
+        guardianAddress: '', guardianOccupation: '', sameAsCurrentAddress: false,
         siblings: [], // [{ id, name, className }]
 
-        // Other — hostel room & bank
-        hostelRoomNumber: '', bankAccountNumber: '', bankName: '', ifscCode: '',
+        // Other additions
+        hostelRoomNumber: '', bankAccountNumber: '', bankName: '', ifscCode: '', remarks: '',
     });
 
     useEffect(() => {
@@ -73,11 +76,11 @@ function AddNewStudent() {
                     const activeSections = res.data.filter(sec => sec.status === 'ACTIVE');
                     setSections(activeSections);
                 } else {
-                    toast.error(S.EDIT_STUDENT.ERRORS.SECTION_LOAD_FAILED);
+                    toast.error(AS.ERRORS?.SECTION_LOAD_FAILED || "Failed to load sections");
                 }
             } catch (err) {
                 console.error('fetchSections error:', err);
-                toast.error(S.EDIT_STUDENT.ERRORS.SECTION_LOAD_RETRY);
+                toast.error(AS.ERRORS?.SECTION_LOAD_RETRY || "Error loading sections");
             } finally {
                 setSectionsLoading(false);
             }
@@ -115,14 +118,14 @@ function AddNewStudent() {
         const newSource = guardianSource === source ? null : source;
         setGuardianSource(newSource);
         if (newSource === 'father') {
-            if (!formData.fatherName) { toast.warning(S.FAMILY_FORM.GUARDIAN_ALERT_FATHER); return; }
+            if (!formData.fatherName) { toast.warning("Please fill Father's details first"); return; }
             setFormData(prev => ({
                 ...prev,
                 guardianName: prev.fatherName, guardianRelation: 'Father',
                 guardianPhone: prev.fatherPhone, guardianEmail: prev.fatherEmail,
             }));
         } else if (newSource === 'mother') {
-            if (!formData.motherName) { toast.warning(S.FAMILY_FORM.GUARDIAN_ALERT_MOTHER); return; }
+            if (!formData.motherName) { toast.warning("Please fill Mother's details first"); return; }
             setFormData(prev => ({
                 ...prev,
                 guardianName: prev.motherName, guardianRelation: 'Mother',
@@ -142,13 +145,13 @@ function AddNewStudent() {
         });
     };
 
-    // ── Document (file) handlers — shared by Identity & Family tabs ──
+    // ── Document handlers ──
     const handleDocumentChange = (key, e) => {
         const file = e.target.files[0];
         if (!file) return;
         const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
-        if (!validTypes.includes(file.type)) { toast.error('Only PDF, JPG or PNG files are allowed'); return; }
-        if (file.size > 10 * 1024 * 1024) { toast.error('File must be under 10MB'); return; }
+        if (!validTypes.includes(file.type)) { toast.error('Only PDF, JPG or PNG files allowed'); return; }
+        if (file.size > 10 * 1024 * 1024) { toast.error('File size must be under 10MB'); return; }
         setDocuments(prev => ({ ...prev, [key]: file }));
         if (formErrors[key]) {
             setFormErrors(prev => { const n = { ...prev }; delete n[key]; return n; });
@@ -176,7 +179,7 @@ function AddNewStudent() {
         setDocuments(prev => ({ ...prev, genericDocuments: prev.genericDocuments.filter(d => d.id !== id) }));
     };
 
-    // ── Sibling handlers — Family tab ──
+    // ── Sibling handlers ──
     const handleAddSibling = () => {
         setFormData(prev => ({
             ...prev,
@@ -197,108 +200,21 @@ function AddNewStudent() {
 
     const phoneRegex = /^[0-9]{10}$/;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const aadhaarRegex = /^[0-9]{12}$/;
-    const ifscRegex = /^[A-Z]{4}0[A-Z0-9]{6}$/;
 
     const validatePersonalDetails = () => {
         if (!profileImage) { toast.error(AS.ERRORS.PHOTO_REQUIRED); return false; }
-        if (!formData.name.trim() || !formData.gender || !formData.mobile || !formData.dob || !formData.admissionDate || !formData.academicYear) {
+        if (!formData.name.trim() || !formData.gender || !formData.mobile || !formData.dob || !formData.admissionDate) {
             toast.error(AS.ERRORS.REQUIRED_FIELDS); return false;
         }
         if (!formData.rollNumber.trim()) { toast.error(AS.ERRORS.ROLL_REQUIRED); return false; }
         if (!formData.sectionId) { toast.error(AS.ERRORS.SECTION_REQUIRED); return false; }
-        if (!formData.category) { toast.error("Please select the student's category"); return false; }
         if (!phoneRegex.test(formData.mobile)) { toast.error(AS.ERRORS.MOBILE_INVALID); return false; }
-        if (formData.whatsappNumber && !phoneRegex.test(formData.whatsappNumber)) { toast.error('WhatsApp number must be exactly 10 digits'); return false; }
         if (formData.email && !emailRegex.test(formData.email)) { toast.error(AS.ERRORS.EMAIL_INVALID); return false; }
-        if (formData.status !== 'ACTIVE') { toast.error(AS.ERRORS.STATUS_INVALID); return false; }
-        const today = new Date(); today.setHours(0, 0, 0, 0);
-        if (new Date(formData.dob) >= today) { toast.error(AS.ERRORS.DOB_INVALID); return false; }
-        if (new Date(formData.admissionDate) > today) { toast.error(AS.ERRORS.ADMISSION_DATE_INVALID); return false; }
-        return true;
-    };
-
-    const buildIdentityErrors = (data, docs) => {
-        const e = {};
-        if (!data.studentAadhaar) e.studentAadhaar = "Student's Aadhaar number is required";
-        else if (!aadhaarRegex.test(data.studentAadhaar)) e.studentAadhaar = 'Must be exactly 12 digits';
-        if (!data.aparId.trim()) e.aparId = 'APAR ID is required';
-        if (!docs.birthCertificate) e.birthCertificate = 'Birth certificate is required';
-        if (data.isTransferStudent && !docs.transferCertificate) e.transferCertificate = 'Transfer certificate is required for transfer students';
-        return e;
-    };
-
-    const validateIdentityDetails = () => {
-        const errors = buildIdentityErrors(formData, documents);
-        if (Object.keys(errors).length > 0) { setFormErrors(prev => ({ ...prev, ...errors })); return false; }
-        setFormErrors(prev => {
-            const n = { ...prev };
-            ['studentAadhaar', 'aparId', 'birthCertificate', 'transferCertificate'].forEach(k => delete n[k]);
-            return n;
-        });
-        return true;
-    };
-
-    const buildFamilyErrors = (data) => {
-        const e = {};
-        if (!data.fatherName.trim()) e.fatherName = "Father's name is required";
-        if (!data.fatherOccupation.trim()) e.fatherOccupation = "Father's occupation is required";
-        if (!data.fatherPhone) e.fatherPhone = "Father's phone is required";
-        else if (!phoneRegex.test(data.fatherPhone)) e.fatherPhone = 'Must be exactly 10 digits';
-        if (data.fatherEmail && !emailRegex.test(data.fatherEmail)) e.fatherEmail = 'Invalid email format';
-        if (data.fatherAadhaar && !aadhaarRegex.test(data.fatherAadhaar)) e.fatherAadhaar = 'Must be exactly 12 digits';
-        if (!data.motherName.trim()) e.motherName = "Mother's name is required";
-        if (data.motherPhone && !phoneRegex.test(data.motherPhone)) e.motherPhone = 'Must be exactly 10 digits';
-        if (data.motherEmail && !emailRegex.test(data.motherEmail)) e.motherEmail = 'Invalid email format';
-        if (data.motherAadhaar && !aadhaarRegex.test(data.motherAadhaar)) e.motherAadhaar = 'Must be exactly 12 digits';
-        if (data.guardianPhone && !phoneRegex.test(data.guardianPhone)) e.guardianPhone = 'Must be exactly 10 digits';
-        if (data.guardianEmail && !emailRegex.test(data.guardianEmail)) e.guardianEmail = 'Invalid email format';
-        if (data.emergencyContact && !phoneRegex.test(data.emergencyContact)) e.emergencyContact = 'Must be exactly 10 digits';
-        return e;
-    };
-
-    const validateFamilyDetails = () => {
-        const errors = buildFamilyErrors(formData);
-        if (Object.keys(errors).length > 0) { setFormErrors(prev => ({ ...prev, ...errors })); return false; }
-        setFormErrors(prev => {
-            const n = { ...prev };
-            ['fatherName', 'fatherOccupation', 'fatherPhone', 'fatherEmail', 'fatherAadhaar',
-                'motherName', 'motherPhone', 'motherEmail', 'motherAadhaar',
-                'guardianPhone', 'guardianEmail', 'emergencyContact'].forEach(k => delete n[k]);
-            return n;
-        });
-        return true;
-    };
-
-    const buildOtherErrors = (data) => {
-        const e = {};
-        if (data.hostelRequired && !data.hostelRoomNumber.trim()) e.hostelRoomNumber = 'Room number is required when hostel is enabled';
-        const bankFieldsTouched = data.bankAccountNumber || data.bankName || data.ifscCode;
-        if (bankFieldsTouched) {
-            if (!data.bankAccountNumber.trim()) e.bankAccountNumber = 'Account number is required';
-            if (!data.bankName.trim()) e.bankName = 'Bank name is required';
-            if (!data.ifscCode.trim()) e.ifscCode = 'IFSC code is required';
-            else if (!ifscRegex.test(data.ifscCode)) e.ifscCode = 'Invalid IFSC format';
-        }
-        return e;
-    };
-
-    const validateOtherDetails = () => {
-        const errors = buildOtherErrors(formData);
-        if (Object.keys(errors).length > 0) { setFormErrors(prev => ({ ...prev, ...errors })); return false; }
-        setFormErrors(prev => {
-            const n = { ...prev };
-            ['hostelRoomNumber', 'bankAccountNumber', 'bankName', 'ifscCode'].forEach(k => delete n[k]);
-            return n;
-        });
         return true;
     };
 
     const validateTab = (tab) => {
         if (tab === 'personal') return validatePersonalDetails();
-        if (tab === 'identity') return validateIdentityDetails();
-        if (tab === 'family') return validateFamilyDetails();
-        if (tab === 'other') return validateOtherDetails();
         return true;
     };
 
@@ -324,7 +240,6 @@ function AddNewStudent() {
     const handleTabClick = (tab) => {
         const targetIdx = TAB_ORDER.indexOf(tab);
         const currentIdx = TAB_ORDER.indexOf(activeTab);
-        // Only gate validation when moving forward past the current step
         if (targetIdx > currentIdx) {
             for (let i = currentIdx; i < targetIdx; i++) {
                 if (!validateTab(TAB_ORDER[i])) return;
@@ -338,94 +253,106 @@ function AddNewStudent() {
 
     const handleSaveDetails = async () => {
         if (!validatePersonalDetails()) { setActiveTab('personal'); return; }
-        if (!validateIdentityDetails()) { setActiveTab('identity'); return; }
-        if (!validateFamilyDetails()) { setActiveTab('family'); return; }
-        if (!validateOtherDetails()) { setActiveTab('other'); return; }
         setIsSubmitting(true);
-        const loadingToast = toast.loading(AS.LOADING);
+        const loadingToast = toast.loading(AS.LOADING || "Adding student...");
+
         try {
             const nameParts = formData.name.trim().split(' ');
             const firstName = nameParts[0];
             const lastName = nameParts.slice(1).join(' ').trim() || firstName;
             const generatedAdmissionNumber = formData.admissionNumber.trim()
                 ? formData.admissionNumber.trim()
-                : `DPIS-${Math.floor(10000 + Math.random() * 90000)}`;
+                : `ADM-${Math.floor(100000 + Math.random() * 900000)}`;
 
+            // Correct OpenAPI aligned payload
             const apiPayload = {
                 admissionNumber: generatedAdmissionNumber,
                 rollNumber: formData.rollNumber.trim() || null,
                 firstName,
                 lastName,
-                category: formData.category.toUpperCase() || null,
-                personalDetails: {
-                    fullName: formData.name.trim(),
-                    mobile: formData.mobile,
-                    whatsappNumber: formData.whatsappNumber || formData.mobile || null,
-                    email: formData.email.trim() || null,
-                    gender: formData.gender.toUpperCase(),
-                    dateOfBirth: formData.dob,
-                    address: formData.address.trim() || null,
-                    emergencyContact: formData.emergencyContact || null,
-                    emergencyContactName: formData.guardianName.trim() || null,
-                    emergencyContactRelation: formData.guardianRelation || null,
-                    studentHouse: formData.studentHouse.trim() || null,
-                    abcId: formData.abcId.trim() || null,
-                },
-                identityDetails: {
-                    aadhaarNumber: formData.studentAadhaar || null,
-                    aparId: formData.aparId.trim() || null,
-                    pen: formData.pen.trim() || null,
-                    familyId: formData.familyId.trim() || null,
-                    ssmId: formData.ssmId.trim() || null,
-                },
+                fullName: formData.name.trim(),
                 sectionId: Number(formData.sectionId),
                 admissionDate: formData.admissionDate,
-                academicYear: formData.academicYear,
-                status: formData.status,
+                academicYear: formData.academicYear || "2025-2026",
+                status: formData.status || "ACTIVE",
                 bloodGroup: formData.bloodGroup || null,
                 previousSchool: formData.previousSchool.trim() || null,
-                isTransferStudent: formData.isTransferStudent,
-                hostelRequired: formData.hostelRequired,
-                hostelRoomNumber: formData.hostelRequired ? (formData.hostelRoomNumber.trim() || null) : null,
-                transportRequired: formData.transportRequired,
+                transportRequired: Boolean(formData.transportRequired),
+                hostelRequired: Boolean(formData.hostelRequired),
+                category: (formData.category || "GENERAL").toUpperCase(),
+                religion: (formData.religion || "HINDU").toUpperCase(),
+                whatsappNumber: formData.whatsappNumber || formData.mobile || null,
+                studentHouse: formData.studentHouse.trim() || null,
+                aadhaarNumber: formData.studentAadhaar.trim() || null,
+                abcId: formData.abcId.trim() || null,
+                aparId: formData.aparId.trim() || null,
                 fatherName: formData.fatherName.trim() || null,
                 fatherOccupation: formData.fatherOccupation.trim() || null,
                 fatherPhone: formData.fatherPhone || null,
                 fatherEmail: formData.fatherEmail.trim() || null,
-                fatherAadhaar: formData.fatherAadhaar || null,
+                fatherAadhaar: formData.fatherAadhaar.trim() || null,
                 motherName: formData.motherName.trim() || null,
                 motherOccupation: formData.motherOccupation.trim() || null,
                 motherPhone: formData.motherPhone || null,
                 motherEmail: formData.motherEmail.trim() || null,
-                motherAadhaar: formData.motherAadhaar || null,
+                motherAadhaar: formData.motherAadhaar.trim() || null,
                 guardianName: formData.guardianName.trim() || null,
                 guardianRelation: formData.guardianRelation || null,
                 guardianPhone: formData.guardianPhone || null,
                 guardianEmail: formData.guardianEmail.trim() || null,
                 guardianAddress: formData.guardianAddress.trim() || null,
-                siblings: formData.siblings
-                    .filter(s => s.name.trim())
-                    .map(s => ({ name: s.name.trim(), className: s.className.trim() || null })),
-                bankDetails: (formData.bankAccountNumber || formData.bankName || formData.ifscCode) ? {
-                    accountNumber: formData.bankAccountNumber.trim(),
-                    bankName: formData.bankName.trim(),
-                    ifscCode: formData.ifscCode.trim(),
-                } : null,
-                remarks: null,
+                guardianOccupation: formData.guardianOccupation.trim() || null,
+                currentAddress: formData.address.trim() || null,
+                permanentAddress: formData.address.trim() || null,
+                hostelRoomDescription: formData.hostelRequired ? (formData.hostelRoomNumber.trim() || null) : null,
+                bankAccountNumber: formData.bankAccountNumber.trim() || null,
+                bankName: formData.bankName.trim() || null,
+                bankIfscCode: formData.ifscCode.trim() || null,
+                penNumber: formData.pen.trim() || null,
+                ssmId: formData.ssmId.trim() || null,
+                familyId: formData.familyId.trim() || null,
+                remarks: formData.remarks || null,
+                personalDetails: {
+                    fullName: formData.name.trim(),
+                    mobile: formData.mobile,
+                    email: formData.email.trim() || null,
+                    gender: (formData.gender || "MALE").toUpperCase(),
+                    dateOfBirth: formData.dob,
+                    address: formData.address.trim() || null,
+                    emergencyContact: formData.emergencyContact || formData.guardianPhone || formData.fatherPhone || null,
+                    emergencyContactName: formData.guardianName || formData.fatherName || null,
+                    emergencyContactRelation: formData.guardianRelation || "Father",
+                }
             };
 
-            // profileImage + the `documents` bundle (birth/transfer certificates, report card,
-            // parent/guardian photos, generic uploads) are sent as multipart files alongside
-            // apiPayload — see createStudents in StudentsApi.js for the multipart wiring.
-            const response = await createStudents(apiPayload, profileImage, documents);
-            console.log('✅ Create Student Response:', response);
+            // 1. Create Student Core Payload
+            const res = await createStudents(apiPayload, profileImage);
+            const createdStudentId = res?.data?.id || res?.id;
+
+            // 2. Automated Upload of optional documents & photos
+            if (createdStudentId) {
+                const uploadPromises = [];
+                if (documents.birthCertificate) uploadPromises.push(uploadStudentDocument(createdStudentId, 'BIRTH_CERTIFICATE', documents.birthCertificate));
+                if (documents.studentAadhaarDoc) uploadPromises.push(uploadStudentDocument(createdStudentId, 'STUDENT_AADHAAR', documents.studentAadhaarDoc));
+                if (documents.fatherAadhaarDoc) uploadPromises.push(uploadStudentDocument(createdStudentId, 'FATHER_AADHAAR', documents.fatherAadhaarDoc));
+                if (documents.motherAadhaarDoc) uploadPromises.push(uploadStudentDocument(createdStudentId, 'MOTHER_AADHAAR', documents.motherAadhaarDoc));
+
+                if (documents.fatherPhoto) uploadPromises.push(uploadParentPhoto(createdStudentId, 'FATHER', documents.fatherPhoto));
+                if (documents.motherPhoto) uploadPromises.push(uploadParentPhoto(createdStudentId, 'MOTHER', documents.motherPhoto));
+                if (documents.guardianPhoto) uploadPromises.push(uploadParentPhoto(createdStudentId, 'GUARDIAN', documents.guardianPhoto));
+
+                if (uploadPromises.length > 0) {
+                    await Promise.allSettled(uploadPromises);
+                }
+            }
+
             toast.dismiss(loadingToast);
-            toast.success(AS.SUCCESS);
+            toast.success(AS.SUCCESS || "Student added successfully!");
             setTimeout(() => navigate('/students'), 500);
         } catch (err) {
             toast.dismiss(loadingToast);
             toast.error(err.message || 'Failed to add student ❌');
-            console.error('❌ Submit error:', err);
+            console.error('Submit error:', err);
         } finally {
             setIsSubmitting(false);
         }
