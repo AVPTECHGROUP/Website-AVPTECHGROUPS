@@ -421,7 +421,7 @@ export default function Items() {
                                 <thead className="border-b border-gray-200">
                                     <tr>
                                         {[
-                                            ["#", "w-10", "text-left"],
+                                            [ITEMS_CONSTS.TABLE_HEADERS.SNO, "w-10", "text-left"],
                                             [ITEMS_CONSTS.TABLE_HEADERS.ITEM, "", "text-left"],
                                             [ITEMS_CONSTS.TABLE_HEADERS.CATEGORY, "", "text-left"],
                                             [ITEMS_CONSTS.TABLE_HEADERS.UNIT, "", "text-left"],
