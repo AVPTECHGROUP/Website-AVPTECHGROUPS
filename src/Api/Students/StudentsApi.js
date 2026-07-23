@@ -36,6 +36,26 @@ export const getStudentById = async (id) => {
 };
 
 /**
+ * Fetch active or filtered students belonging to a specific section.
+ */
+export const getStudentsBySection = async (sectionId, status = "ACTIVE") => {
+  try {
+    const url = API_ENDPOINTS.studentsBySection
+      ? API_ENDPOINTS.studentsBySection(sectionId, status)
+      : `${API_ENDPOINTS.STUDENTS}/section/${sectionId}?status=${status}`;
+
+    const res = await authFetch(url, { method: "GET" });
+    const data = await res.json();
+
+    if (!res.ok) throw new Error(data?.message || data?.error || "Failed to fetch students by section");
+    return data?.data || data;
+  } catch (error) {
+    console.error("getStudentsBySection error:", error.message);
+    throw error;
+  }
+};
+
+/**
  * Search and filter students using POST payload.
  */
 export const searchStudents = async (filters = {}, page = 0, size = 10, sort = ['id']) => {

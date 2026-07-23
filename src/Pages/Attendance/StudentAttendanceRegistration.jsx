@@ -11,6 +11,7 @@ import { getEnrollmentStats, getStudentEnrollment, getSectionEnrollmentStats, en
 import { getClasses, getSectionsByClass } from "../../Api/Teachers/TeachersAPI";
 import { getStudentsBySection } from "../../Api/Students/StudentsApi";
 import { STUDENT_AVATAR_BG as AVATAR_BG, FACE_ANGLES as ANGLES, UI_STRINGS } from "../../Constants/StringConstants/AttendanceConstants";
+
 function getInitials(name = "") {
     return name.split(" ").filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join("");
 }
@@ -379,7 +380,7 @@ export default function StudentAttendanceRegistration() {
         if (!sectionId) return;
         try {
             setStudentsLoading(true);
-            export const data = await getStudentsBySection(sectionId, "ACTIVE");
+            const data = await getStudentsBySection(sectionId, "ACTIVE");
             setStudents(data);
         } catch (e) { console.error(e); } finally { setStudentsLoading(false); }
     }, []);
