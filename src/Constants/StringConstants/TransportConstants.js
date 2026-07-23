@@ -180,7 +180,7 @@ export const SHARED_INPUT_STYLES = {
 
 // ─── Table Columns ──────────────────────────────────────────────────
 export const VEHICLE_TABLE_COLUMNS = [
-  { label: "#", extra: "px-4 sm:px-6 w-8" },
+  { label: "S.No", extra: "px-4 sm:px-6 w-8" },
   { label: "Vehicle", extra: "px-3 sm:px-4" },
   { label: "Type", extra: "px-3 sm:px-4" },
   { label: "Capacity", extra: "px-3 sm:px-4" },
