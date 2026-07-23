@@ -155,7 +155,7 @@ const PersonalDetailsTab = ({ formData, setFormData, handleInputChange, onSave, 
                 {/* Address */}
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Residential Address
+                       Current  Address <span className="text-red-600">*</span>
                     </label>
                     <div className="relative">
                         <div className="absolute top-3 left-0 pl-3 pointer-events-none">
