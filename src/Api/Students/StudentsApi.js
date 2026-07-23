@@ -5,6 +5,10 @@ import { API_ENDPOINTS } from "../../Constants/Endpoints";
 
 /**
  * Fetch a paginated list of all students.
+ * @param {number} page - The page number (0-indexed)
+ * @param {number} size - The number of records per page
+ * @param {string} sort - The sorting parameter (e.g., 'id')
+ * @returns {Promise<Object>} Paginated student data
  */
 export const getStudents = async (page = 0, size = 10, sort = 'id') => {
   try {
@@ -21,6 +25,8 @@ export const getStudents = async (page = 0, size = 10, sort = 'id') => {
 
 /**
  * Fetch a single student record by their unique ID.
+ * @param {string|number} id - The student ID
+ * @returns {Promise<Object>} Student details object
  */
 export const getStudentById = async (id) => {
   try {
@@ -36,19 +42,40 @@ export const getStudentById = async (id) => {
 };
 
 /**
- * Fetch active or filtered students belonging to a specific section.
+ * Fetch all ACTIVE students belonging to a specific class.
+ * @param {string|number} id - The class ID
+ * @returns {Promise<Array>} List of active students in the class
+ */
+export const getStudentByClass = async (id) => {
+  try {
+    const res = await authFetch(`${API_ENDPOINTS.studentByClass(id)}?status=ACTIVE`, { method: "GET" });
+    const data = await res.json();
+
+    if (!res.ok) throw new Error(data?.message || data?.error || "Failed to fetch student by class");
+    return data?.data;
+  } catch (error) {
+    console.error("getStudentByClass error:", error.message);
+    throw error;
+  }
+};
+
+/**
+ * Fetch students filtered by section ID and an optional status.
+ * @param {string|number} sectionId - The section ID
+ * @param {string} status - Student status filter (defaults to "ACTIVE")
+ * @returns {Promise<Array>} List of students matching the section and status
  */
 export const getStudentsBySection = async (sectionId, status = "ACTIVE") => {
   try {
-    const url = API_ENDPOINTS.studentsBySection
-      ? API_ENDPOINTS.studentsBySection(sectionId, status)
-      : `${API_ENDPOINTS.STUDENTS}/section/${sectionId}?status=${status}`;
+    if (!sectionId) throw new Error("sectionId is required");
 
-    const res = await authFetch(url, { method: "GET" });
+    const query = status ? `?status=${status}` : "";
+    const res = await authFetch(`${API_ENDPOINTS.studentBySection(sectionId)}${query}`, { method: "GET" });
+
+    if (!res.ok) throw new Error(await res.text() || "Failed to fetch students by section");
+
     const data = await res.json();
-
-    if (!res.ok) throw new Error(data?.message || data?.error || "Failed to fetch students by section");
-    return data?.data || data;
+    return data?.data || [];
   } catch (error) {
     console.error("getStudentsBySection error:", error.message);
     throw error;
@@ -56,7 +83,12 @@ export const getStudentsBySection = async (sectionId, status = "ACTIVE") => {
 };
 
 /**
- * Search and filter students using POST payload.
+ * Search and filter students using an advanced POST payload.
+ * @param {Object} filters - Search filter criteria
+ * @param {number} page - Page number
+ * @param {number} size - Records per page
+ * @param {Array|string} sort - Sort configuration
+ * @returns {Promise<Object>} Paginated search results
  */
 export const searchStudents = async (filters = {}, page = 0, size = 10, sort = ['id']) => {
   try {
@@ -79,16 +111,17 @@ export const searchStudents = async (filters = {}, page = 0, size = 10, sort = [
 // ==================== WRITE OPERATIONS ====================
 
 /**
- * Create a new student record.
+ * Create a new student record, supporting optional profile image uploads.
+ * @param {Object} studentData - The student's biographical/academic data
+ * @param {File} [imageFile] - Optional image file for the student's avatar
+ * @returns {Promise<Object>} The created student response
  */
 export const createStudents = async (studentData, imageFile) => {
   try {
     const formData = new FormData();
     formData.append("data", new Blob([JSON.stringify(studentData)], { type: "application/json" }));
 
-    if (imageFile) {
-      formData.append("image", imageFile);
-    }
+    if (imageFile) formData.append("image", imageFile);
 
     const res = await authFetch(API_ENDPOINTS.STUDENTS, {
       method: "POST",
@@ -106,16 +139,18 @@ export const createStudents = async (studentData, imageFile) => {
 };
 
 /**
- * Update an existing student record.
+ * Update an existing student record, supporting optional image replacement.
+ * @param {string|number} id - The student ID to update
+ * @param {Object} updatedStudent - The modified student payload
+ * @param {File} [imageFile] - Optional new image file
+ * @returns {Promise<Object>} The updated student response
  */
 export const updateStudent = async (id, updatedStudent, imageFile) => {
   try {
     const formData = new FormData();
     formData.append("data", new Blob([JSON.stringify(updatedStudent)], { type: "application/json" }));
 
-    if (imageFile) {
-      formData.append("image", imageFile);
-    }
+    if (imageFile) formData.append("image", imageFile);
 
     const res = await authFetch(API_ENDPOINTS.studentById(id), {
       method: "PUT",
@@ -132,10 +167,12 @@ export const updateStudent = async (id, updatedStudent, imageFile) => {
   }
 };
 
-// ==================== DOCUMENTS & PHOTOS OPERATIONS ====================
+// ==================== STUDENT DOCUMENTS ====================
 
 /**
  * Fetch all uploaded documents for a student.
+ * @param {string|number} id - Student ID
+ * @returns {Promise<Array>}
  */
 export const getStudentDocuments = async (id) => {
   try {
@@ -144,7 +181,10 @@ export const getStudentDocuments = async (id) => {
     });
 
     const data = await res.json();
-    if (!res.ok) throw new Error(data?.message || "Failed to fetch student documents");
+
+    if (!res.ok) {
+      throw new Error(data?.message || "Failed to fetch student documents");
+    }
 
     return data?.data || [];
   } catch (error) {
@@ -155,7 +195,16 @@ export const getStudentDocuments = async (id) => {
 
 /**
  * Upload a student document.
- * Supported docTypes: STUDENT_AADHAAR, FATHER_AADHAAR, MOTHER_AADHAAR, BIRTH_CERTIFICATE
+ * Supported docTypes:
+ * STUDENT_AADHAAR
+ * FATHER_AADHAAR
+ * MOTHER_AADHAAR
+ * BIRTH_CERTIFICATE
+ *
+ * @param {string|number} id
+ * @param {string} docType
+ * @param {File} file
+ * @returns {Promise<Object>}
  */
 export const uploadStudentDocument = async (id, docType, file) => {
   try {
@@ -171,7 +220,10 @@ export const uploadStudentDocument = async (id, docType, file) => {
     );
 
     const data = await res.json();
-    if (!res.ok) throw new Error(data?.message || "Failed to upload document");
+
+    if (!res.ok) {
+      throw new Error(data?.message || "Failed to upload document");
+    }
 
     return data;
   } catch (error) {
@@ -182,7 +234,16 @@ export const uploadStudentDocument = async (id, docType, file) => {
 
 /**
  * Upload Father/Mother/Guardian photo.
- * Supported photoTypes: FATHER, MOTHER, GUARDIAN
+ *
+ * Supported photoTypes:
+ * FATHER
+ * MOTHER
+ * GUARDIAN
+ *
+ * @param {string|number} id
+ * @param {string} photoType
+ * @param {File} file
+ * @returns {Promise<Object>}
  */
 export const uploadParentPhoto = async (id, photoType, file) => {
   try {
@@ -198,7 +259,10 @@ export const uploadParentPhoto = async (id, photoType, file) => {
     );
 
     const data = await res.json();
-    if (!res.ok) throw new Error(data?.message || "Failed to upload parent photo");
+
+    if (!res.ok) {
+      throw new Error(data?.message || "Failed to upload parent photo");
+    }
 
     return data;
   } catch (error) {
