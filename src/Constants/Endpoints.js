@@ -150,6 +150,7 @@ export const API_ENDPOINTS = {
   FEE_PERIODS_ACADEMIC_YEARS: `${BASE_URL_V1}/fee/periods/academic-years`,
   feePeriodById: (id) => `${BASE_URL_V1}/fee/periods/${id}`,
   feePeriodClose: (id) => `${BASE_URL_V1}/fee/periods/${id}/close`,
+  feePeriodreopen:(id)=> `${BASE_URL_V1}/fee/periods/${id}/reopen`,
 
   // ─── Fee Structures ───
   FEE_STRUCTURES: `${BASE_URL_V1}/fee/structures`,
@@ -270,6 +271,15 @@ export const API_ENDPOINTS = {
   studentById: (id) => `${BASE_URL_DOUBLE_V1}/students/${id}`,
   studentByClass: (id) => `${BASE_URL_DOUBLE_V1}/students/class/${id}`,
   studentBySection: (sectionId) => `${BASE_URL_DOUBLE_V1}/students/section/${sectionId}`,
+
+  // ─── Student Documents ───
+  STUDENT_DOCUMENTS: (id) => `${BASE_URL_DOUBLE_V1}/students/${id}/documents`,
+  UPLOAD_STUDENT_DOCUMENT: (id, docType) =>
+    `${BASE_URL_DOUBLE_V1}/students/${id}/documents/${docType}`,
+
+  // ─── Parent / Guardian Photos ───
+  UPLOAD_PARENT_PHOTO: (id, photoType) =>
+    `${BASE_URL_DOUBLE_V1}/students/${id}/photos/${photoType}`,
 
   // ─── Student Store (Class Item Configs) ───
   CLASS_ITEM_CONFIGS: `${BASE_URL_DOUBLE_V1}/stock/class-item-configs`,

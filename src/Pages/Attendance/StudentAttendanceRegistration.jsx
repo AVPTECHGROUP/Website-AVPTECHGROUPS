@@ -1,17 +1,16 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import Webcam from "react-webcam"; // ⚡ Added webcam support
+import Webcam from "react-webcam";
 import {
     Users, UserCheck, UserX, Search, CheckCircle, AlertTriangle,
     RefreshCw, ChevronRight, Trash2, X, Zap, Camera, BookOpen,
-    GraduationCap, FileText, AlertCircle, Upload // ⚡ Added Upload icon
+    GraduationCap, FileText, AlertCircle, Upload, RotateCcw
 } from "lucide-react";
 import CardComponent from "../../Components/CommonComp/CardComponent";
 import CardLoader from "../../Components/CommonComp/CardLoader";
-import { getEnrollmentStats, getStudentEnrollment, getSectionEnrollmentStats, enrollUserFaces, removeEnrollment, } from "../../Api/Attendance/AttendanceApi";
+import { getEnrollmentStats, getStudentEnrollment, getSectionEnrollmentStats, enrollUserFaces, removeEnrollment } from "../../Api/Attendance/AttendanceApi";
 import { getClasses, getSectionsByClass } from "../../Api/Teachers/TeachersAPI";
 import { getStudentsBySection } from "../../Api/Students/StudentsApi";
 import { STUDENT_AVATAR_BG as AVATAR_BG, FACE_ANGLES as ANGLES, UI_STRINGS } from "../../Constants/StringConstants/AttendanceConstants";
-
 function getInitials(name = "") {
     return name.split(" ").filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join("");
 }
@@ -380,7 +379,7 @@ export default function StudentAttendanceRegistration() {
         if (!sectionId) return;
         try {
             setStudentsLoading(true);
-            const data = await getStudentsBySection(sectionId, "ACTIVE");
+            export const data = await getStudentsBySection(sectionId, "ACTIVE");
             setStudents(data);
         } catch (e) { console.error(e); } finally { setStudentsLoading(false); }
     }, []);

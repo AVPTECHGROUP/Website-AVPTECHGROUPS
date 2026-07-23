@@ -56,6 +56,15 @@ const DISCOUNT_REASON_OPTIONS = [
   { value: 'Others', label: 'Others' },
 ];
 
+// Reference-number field text varies by payment mode. Cash needs no
+// reference at all (nothing to key against), so it is intentionally
+// omitted here and hidden in the UI.
+const REFERENCE_FIELD_CONFIG = {
+  [STATUSES.ONLINE]: { label: 'Transaction Number', placeholder: 'Enter transaction number' },
+  [STATUSES.CHEQUE]: { label: 'Cheque Number', placeholder: 'Enter cheque number' },
+  [STATUSES.DD]: { label: 'Demand Draft Number', placeholder: 'Enter DD number' },
+};
+
 const sanitizeNonNegativeAmount = (raw) => String(raw ?? '').replace(/[^0-9]/g, '');
 
 const reconcilePaidAmount = (totalFee, balanceDue, reportedPaid) => {
@@ -416,6 +425,11 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
   const transportExceedsBalance = transportAmountNum > transportDue + EPS && transportDue > 0;
   const discountExceedsAmount = discountNum > academicAmountNum + EPS;
 
+  // Reference-field label/placeholder for the currently selected payment
+  // mode. Cash has no entry here by design — the field is hidden for Cash.
+  const referenceFieldConfig = REFERENCE_FIELD_CONFIG[form.paymentMode] || null;
+  const showReferenceField = form.paymentMode !== STATUSES.CASH;
+
   const activeStructure = useMemo(() => {
     if (!periodStructures.length) return null;
     if (activeStudent?.feeStructureId) {
@@ -523,7 +537,7 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
             if (!sid) return;
             paidByStudent.set(sid, (paidByStudent.get(sid) || 0) + (Number(h.amountPaid) || 0));
           });
-        } catch { /* falls through */ }
+        } catch { /* falls through to "never billed" below */ }
 
         const matchedStructure = periodStructures.find((st) => (st.classes || []).some((c) => String(c.id) === selectedClassId));
         const structureComponents = matchedStructure?.components || matchedStructure?.feeComponents || [];
@@ -670,7 +684,8 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
         lateFine: lateFineNum || 0,
         paymentMode: form.paymentMode,
         paymentDate: form.paymentDate,
-        referenceNo: form.referenceNo || null,
+        // Cash payments carry no reference number by design.
+        referenceNo: showReferenceField ? (form.referenceNo || null) : null,
         remarks: form.remarks || null,
         transportAmount: canViewTransport ? (transportAmountNum || 0) : 0,
       });
@@ -955,7 +970,16 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {PAYMENT_MODES_WITH_ICON.map(([mode, icon, label]) => (
-                    <button key={mode} type="button" onClick={() => setForm((p) => ({ ...p, paymentMode: mode }))}
+                    <button key={mode} type="button"
+                            onClick={() => setForm((p) => ({
+                              ...p,
+                              paymentMode: mode,
+                              // Cash carries no reference number — clear any
+                              // value typed while a different mode was active
+                              // so a stale TXN/cheque/DD number can never be
+                              // silently submitted with a cash payment.
+                              referenceNo: mode === STATUSES.CASH ? '' : p.referenceNo,
+                            }))}
                             className={`flex flex-col items-center gap-1 sm:gap-1.5 px-2 py-2 sm:py-2.5 rounded-xl border-2 transition-all ${form.paymentMode === mode
                                 ? 'border-[#1E3A5F] bg-blue-50 text-[#1E3A5F]'
                                 : 'border-gray-200 bg-white text-gray-600 hover:border-[#1E3A5F]/40'
@@ -967,7 +991,7 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className={`grid grid-cols-1 ${showReferenceField ? 'sm:grid-cols-2' : ''} gap-3`}>
               <div>
                 <label className="block text-xs font-semibold text-gray-700 mb-1.5">
                   {COLLECTION_HISTORY_STRINGS.LBL_PAYMENT_DATE} <span className="text-gray-400">*</span>
@@ -975,11 +999,18 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
                 <Inp type="date" value={form.paymentDate}
                      onChange={(e) => setForm((p) => ({ ...p, paymentDate: e.target.value }))} />
               </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5">{COLLECTION_HISTORY_STRINGS.LBL_REFERENCE_NO}</label>
-                <Inp value={form.referenceNo} placeholder="TXN / Cheque no."
-                     onChange={(e) => setForm((p) => ({ ...p, referenceNo: e.target.value }))} />
-              </div>
+              {/* Reference field label/placeholder changes per payment mode;
+                  hidden entirely for Cash since there's nothing to reference. */}
+              {showReferenceField && (
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                      {referenceFieldConfig?.label || COLLECTION_HISTORY_STRINGS.LBL_REFERENCE_NO}
+                    </label>
+                    <Inp value={form.referenceNo}
+                         placeholder={referenceFieldConfig?.placeholder || 'Reference no.'}
+                         onChange={(e) => setForm((p) => ({ ...p, referenceNo: e.target.value }))} />
+                  </div>
+              )}
             </div>
 
             <div>
@@ -1100,7 +1131,6 @@ const BulkCollectModal = ({ open, onClose, students, onSuccess, canCollect, canV
   };
   const applyAll = () => setRows((p) => p.map((r) => ({ ...r, paymentMode: commonMode, paymentDate: commonDate })));
 
-  // AFTER
   const academicGrandTotal = rows.reduce(
       (s, r) => s + Math.max(0, (parseFloat(r.academicCollect) || 0) - (parseFloat(r.discount) || 0)),
       0
@@ -1446,12 +1476,6 @@ const CollectionsHistory = () => {
   const fetchOutstanding = useCallback(async () => {
     try {
       setLoading(true); setError(null);
-      // FIX: `status` is now sent straight through to the backend (which
-      // supports OVERDUE / PARTIAL / PENDING natively per the API contract),
-      // instead of over-fetching 500 records and filtering/paginating on
-      // the client. This means filtering by status now returns the correct
-      // total count and page set directly from the server, and stays in
-      // sync with classId/periodId filters exactly like before.
       const params = { page: page - 1, size: pageSize };
       if (classF) params.classId = classF;
       if (periodF) params.periodId = periodF;
@@ -1504,13 +1528,12 @@ const CollectionsHistory = () => {
           dueDate: r.dueDate,
           status,
           transportDue: canViewTransport ? (transportMap.get(`${r.studentId}-${feePeriodId}`) || 0) : 0,
+          parentName: r.parentName,
+          parentPhone: r.parentMobile || r.parentPhone,
         };
       });
 
       setOutstanding(mapped);
-      // FIX: pagination now always comes straight from the server response
-      // (server already applied the status filter), so no more client-side
-      // recomputation of total pages/elements from a locally-filtered slice.
       setOutstandingTotalPages(res?.pagination?.totalPages || 1);
       setOutstandingTotalElements(res?.pagination?.totalElements ?? records.length);
     } catch (e) {
@@ -1530,16 +1553,14 @@ const CollectionsHistory = () => {
       const records = res.data?.content || res.records || [];
       setHistory(records.map((r) => ({
         id: r.id, receiptNo: r.receiptNo, date: r.paymentDate, studentName: r.studentName,
-        // NOTE: studentId is carried through here now so handleViewReceipt's
-        // error-fallback path (when the receipt-by-id fetch fails) still has
-        // a value to use as Roll No. — it previously had nothing to fall
-        // back on.
         studentId: r.studentId,
         studentCode: r.admissionNumber,
         class: `${r.className}${r.sectionName ? ' ' + r.sectionName : ''}`,
         period: r.feePeriodName, amount: r.amountPaid, discount: r.discount || 0,
         lateFine: r.lateFine || 0, mode: r.paymentMode, referenceNo: r.referenceNo,
         recordedBy: r.collectedBy, status: STATUSES.COMPLETED,
+        parentName: r.parentName,
+        parentPhone: r.parentMobile || r.parentPhone,
       })));
       setTotalPages(res?.data?.totalPages || res?.pagination?.totalPages || 1);
       setHistoryTotalElements(res?.data?.totalElements ?? res?.pagination?.totalElements ?? records.length);
@@ -1576,10 +1597,6 @@ const CollectionsHistory = () => {
     return !q || h.studentName.toLowerCase().includes(q) || (h.receiptNo || '').toLowerCase().includes(q);
   });
 
-  // FIX: status filtering + pagination is now handled entirely server-side
-  // by fetchOutstanding, so the current page's records (already the
-  // correct status + page slice) are used directly — only the free-text
-  // search box still filters client-side, same as before.
   const pagedOut = filteredOut;
   const totalOutPages = outstandingTotalPages;
   const overdueCount = outstanding.filter((s) => s.status === STATUSES.OVERDUE).length;
@@ -1597,12 +1614,6 @@ const CollectionsHistory = () => {
   const handleCollectSuccess = (response, student, extra = {}) => {
     setCollectModal({ open: false, student: null });
     const data = response?.data || response;
-    // FIX: the API wraps the payload as { success, data, timestamp } — the
-    // real collection time lives on the OUTER `response.timestamp`, not on
-    // `data` (which is just the inner object and has no timestamp field of
-    // its own). Reading data.timestamp always evaluated to '', which is
-    // why a freshly-collected receipt never showed a time even though
-    // "view past receipt" (which correctly reads res?.timestamp) did.
     const generatedAt = response?.timestamp || data?.timestamp || data?.generatedAt || data?.createdAt || '';
     const transportPaid = extra.transportPaid || 0;
     const academicItems = (extra.academicItems || []).map((it) => ({ name: it.label, amount: it.amount }));
@@ -1618,16 +1629,23 @@ const CollectionsHistory = () => {
         studentCode: data.admissionNumber || student.studentCode,
         rollNo: student.rollNo || data.studentId || student.studentId,
         class: data.className || student.class,
-        section: data.sectionName || student.section,   // ← add this
+        section: data.sectionName || student.section,
         period: data.feePeriodName || student.period,
+        // Parent name/mobile: prefer whatever the collection API returned
+        // (data.parentName / data.parentMobile), falling back to the
+        // student record already held in the modal (student.parentName /
+        // student.parentPhone) so the receipt still shows it even if the
+        // collection response omits these fields.
+        parentName: data.parentName || student.parentName || '',
+        parentPhone: data.parentMobile || data.parentPhone || student.parentPhone || '',
         academicComponents: academicItems.length ? academicItems : (data.components || [{ name: 'Academic Fee', amount: data.amountPaid }]),
         academicCollected: data.amountPaid ?? 0,
         transportComponents: transportItems,
         transportCollected: transportPaid,
         discount: data.discount || 0,
-        discountReason: data.discountReason || '',       // ← add this
+        discountReason: data.discountReason || '',
         lateFine: data.lateFine || 0,
-        totalDue: data.totalDue || 0,                     // ← add this
+        totalDue: data.totalDue || 0,
         paymentMode: data.paymentMode,
         referenceNo: data.referenceNo,
         balanceAfter: data.balanceAfter,
@@ -1640,7 +1658,6 @@ const CollectionsHistory = () => {
 
   const handleBulkSuccess = (responses, rows) => {
     setBulkModal({ open: false, students: [] });
-    // Toast already shown inside BulkCollectModal.handleSubmit — don't double it here.
     fetchOutstanding(); setSelected([]);
   };
 
@@ -1656,13 +1673,17 @@ const CollectionsHistory = () => {
 
           generatedAt: res?.timestamp || '',
           studentName: data.studentName,
-          // FIX: same admissionNumber/rollNo split as handleCollectSuccess —
-          // admissionNumber from the backend field, rollNo from studentId.
           admissionNumber: data.admissionNumber,
           rollNo: data.studentId,
           class: data.className,
           section: data.sectionName,
           period: data.feePeriodName,
+          // Parent name/mobile straight from the receipt-by-id response,
+          // with a fallback to whatever was already on the history row
+          // (item.parentName / item.parentPhone) in case this particular
+          // receipt lookup doesn't return them.
+          parentName: data.parentName || item.parentName || '',
+          parentPhone: data.parentMobile || data.parentPhone || item.parentPhone || '',
           academicComponents: (data.components || []).map(c => ({ name: c.customName || c.componentType, amount: c.amount })),
           academicCollected: data.amountPaid ?? item.amount,
           transportComponents: [],
@@ -1687,6 +1708,8 @@ const CollectionsHistory = () => {
           rollNo: item.studentId,
           class: item.class,
           period: item.period,
+          parentName: item.parentName || '',
+          parentPhone: item.parentPhone || '',
           academicComponents: [{ name: 'Academic Fee', amount: item.amount }],
           academicCollected: item.amount,
           transportComponents: [],

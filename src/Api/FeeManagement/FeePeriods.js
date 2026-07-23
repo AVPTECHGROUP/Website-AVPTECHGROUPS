@@ -83,3 +83,16 @@ export const closeFeePeriod = async (id) => {
 
   return data;
 };
+export const reopenFeePeriod = async (id) => {
+  const res = await authFetch(API_ENDPOINTS.feePeriodreopen(id), {
+    method: "PATCH",
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data?.message || "Failed to reopen fee period");
+  }
+
+  return data;
+};

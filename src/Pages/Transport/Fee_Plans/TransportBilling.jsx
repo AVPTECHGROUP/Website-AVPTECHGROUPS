@@ -64,7 +64,7 @@ const STATUS_STYLES = {
   HAS_OVERRIDE: "bg-purple-50 text-purple-700 border-purple-200",
 };
 
-const STATUS_OPTIONS = ["All Statuses", "PENDING", "PAID", "PARTIAL", "HAS_OVERRIDE"];
+const STATUS_OPTIONS = ["All Status", "PENDING", "PAID", "PARTIAL", "HAS_OVERRIDE"];
 
 /* Backend exact match enum options */
 const PAYMENT_MODES = [
@@ -497,7 +497,7 @@ export default function TransportBilling() {
                 className="appearance-none w-full pl-3.5 pr-8 py-2.5 text-sm border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-200 cursor-pointer font-medium text-gray-700 truncate"
               >
                 {STATUS_OPTIONS.map((s) => (
-                  <option key={s} value={s}>{s === "All Statuses" ? s : statusLabel(s)}</option>
+                  <option key={s} value={s}>{s === "All Status" ? s : statusLabel(s)}</option>
                 ))}
               </select>
               <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
