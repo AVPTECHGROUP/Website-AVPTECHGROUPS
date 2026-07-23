@@ -21,7 +21,7 @@ function AddNewStudent() {
     const [formErrors, setFormErrors] = useState({});
     const [sections, setSections] = useState([]);
     const [sectionsLoading, setSectionsLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState('other');
+    const [activeTab, setActiveTab] = useState('personal');
     const [guardianSource, setGuardianSource] = useState(null);
 
     const [profileImage, setProfileImage] = useState(null);
