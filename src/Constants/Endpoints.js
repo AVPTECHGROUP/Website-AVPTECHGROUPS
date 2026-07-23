@@ -150,6 +150,7 @@ export const API_ENDPOINTS = {
   FEE_PERIODS_ACADEMIC_YEARS: `${BASE_URL_V1}/fee/periods/academic-years`,
   feePeriodById: (id) => `${BASE_URL_V1}/fee/periods/${id}`,
   feePeriodClose: (id) => `${BASE_URL_V1}/fee/periods/${id}/close`,
+  feePeriodreopen:(id)=> `${BASE_URL_V1}/fee/periods/${id}/reopen`,
 
   // ─── Fee Structures ───
   FEE_STRUCTURES: `${BASE_URL_V1}/fee/structures`,
