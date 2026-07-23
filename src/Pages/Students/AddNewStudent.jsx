@@ -1,23 +1,27 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, User, Users, Camera, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, User, Users, Camera, X, FileBadge2, Landmark } from 'lucide-react';
 import { toast } from 'react-toastify';
 import AddStudentPersonalDetails from '../../Components/Students/AddStudentPersonalDetails';
+import AddStudentIdentityDocuments from '../../Components/Students/AddStudentIdenetityDocuments';
 import AddStudentFamilyDetails from '../../Components/Students/AddStudentFamilyDetails';
-import { createStudents } from '../../Api/Students/StudentsApi';
+import AddStudentOtherDetails from '../../Components/Students/AddStudentOtherDetails';
+import { createStudents, uploadStudentDocument, uploadParentPhoto } from '../../Api/Students/StudentsApi';
 import { getAllSections } from '../../Api/Teachers/TeachersAPI';
 import STUDENT_MODULE_STRINGS from '../../Constants/StringConstants/StudentsConst';
 
 const AS = STUDENT_MODULE_STRINGS.ADD_STUDENT;
 const C = STUDENT_MODULE_STRINGS.COMMON;
 
+const TAB_ORDER = ['personal', 'identity', 'family', 'other'];
+
 function AddNewStudent() {
     const navigate = useNavigate();
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [familyErrors, setFamilyErrors] = useState({});
+    const [formErrors, setFormErrors] = useState({});
     const [sections, setSections] = useState([]);
     const [sectionsLoading, setSectionsLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState('personal');
+    const [activeTab, setActiveTab] = useState('other');
     const [guardianSource, setGuardianSource] = useState(null);
 
     const [profileImage, setProfileImage] = useState(null);
@@ -25,15 +29,43 @@ function AddNewStudent() {
     const fileInputRef = useRef(null);
     const formTopRef = useRef(null);
 
+    const [documents, setDocuments] = useState({
+        birthCertificate: null,
+        transferCertificate: null,
+        reportCard: null,
+        studentAadhaarDoc: null,
+        fatherAadhaarDoc: null,
+        motherAadhaarDoc: null,
+        fatherPhoto: null,
+        motherPhoto: null,
+        guardianPhoto: null,
+        genericDocuments: [], // [{ id, file }]
+    });
+
     const [formData, setFormData] = useState({
         name: '', gender: '', email: '', mobile: '', address: '', dob: '',
-        admissionNumber: '', admissionDate: '', academicYear: '2025-2026',
+        admissionNumber: '', admissionDate: new Date().toISOString().slice(0, 10), academicYear: '2025-2026',
         rollNumber: '',
         status: 'ACTIVE', bloodGroup: '', previousSchool: '', profileImageUrl: '',
         sectionId: '', fatherName: '', fatherOccupation: '', fatherPhone: '',
         fatherEmail: '', motherName: '', motherOccupation: '', motherPhone: '',
         motherEmail: '', guardianName: '', guardianRelation: '', guardianPhone: '',
         guardianEmail: '', emergencyContact: '', hostelRequired: false, transportRequired: false,
+
+        // Personal additions
+        category: 'GENERAL', religion: 'HINDU', whatsappNumber: '', sameAsMobile: false,
+        studentHouse: '', abcId: '', isTransferStudent: false,
+
+        // Identity & Documents
+        studentAadhaar: '', aparId: '', pen: '', familyId: '', ssmId: '',
+
+        // Family additions
+        fatherAadhaar: '', motherAadhaar: '',
+        guardianAddress: '', guardianOccupation: '', sameAsCurrentAddress: false,
+        siblings: [], // [{ id, name, className }]
+
+        // Other additions
+        hostelRoomNumber: '', bankAccountNumber: '', bankName: '', ifscCode: '', remarks: '',
     });
 
     useEffect(() => {
@@ -44,11 +76,11 @@ function AddNewStudent() {
                     const activeSections = res.data.filter(sec => sec.status === 'ACTIVE');
                     setSections(activeSections);
                 } else {
-                    toast.error(S.EDIT_STUDENT.ERRORS.SECTION_LOAD_FAILED);
+                    toast.error(AS.ERRORS?.SECTION_LOAD_FAILED || "Failed to load sections");
                 }
             } catch (err) {
                 console.error('fetchSections error:', err);
-                toast.error(S.EDIT_STUDENT.ERRORS.SECTION_LOAD_RETRY);
+                toast.error(AS.ERRORS?.SECTION_LOAD_RETRY || "Error loading sections");
             } finally {
                 setSectionsLoading(false);
             }
@@ -77,8 +109,8 @@ function AddNewStudent() {
     const handleInputChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
-        if (familyErrors[name]) {
-            setFamilyErrors(prev => { const n = { ...prev }; delete n[name]; return n; });
+        if (formErrors[name]) {
+            setFormErrors(prev => { const n = { ...prev }; delete n[name]; return n; });
         }
     };
 
@@ -86,14 +118,14 @@ function AddNewStudent() {
         const newSource = guardianSource === source ? null : source;
         setGuardianSource(newSource);
         if (newSource === 'father') {
-            if (!formData.fatherName) { toast.warning(S.FAMILY_FORM.GUARDIAN_ALERT_FATHER); return; }
+            if (!formData.fatherName) { toast.warning("Please fill Father's details first"); return; }
             setFormData(prev => ({
                 ...prev,
                 guardianName: prev.fatherName, guardianRelation: 'Father',
                 guardianPhone: prev.fatherPhone, guardianEmail: prev.fatherEmail,
             }));
         } else if (newSource === 'mother') {
-            if (!formData.motherName) { toast.warning(S.FAMILY_FORM.GUARDIAN_ALERT_MOTHER); return; }
+            if (!formData.motherName) { toast.warning("Please fill Mother's details first"); return; }
             setFormData(prev => ({
                 ...prev,
                 guardianName: prev.motherName, guardianRelation: 'Mother',
@@ -105,7 +137,7 @@ function AddNewStudent() {
                 guardianName: '', guardianRelation: '', guardianPhone: '', guardianEmail: '',
             }));
         }
-        setFamilyErrors(prev => {
+        setFormErrors(prev => {
             const n = { ...prev };
             delete n.guardianName; delete n.guardianRelation;
             delete n.guardianPhone; delete n.guardianEmail;
@@ -113,58 +145,106 @@ function AddNewStudent() {
         });
     };
 
+    // ── Document handlers ──
+    const handleDocumentChange = (key, e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
+        if (!validTypes.includes(file.type)) { toast.error('Only PDF, JPG or PNG files allowed'); return; }
+        if (file.size > 10 * 1024 * 1024) { toast.error('File size must be under 10MB'); return; }
+        setDocuments(prev => ({ ...prev, [key]: file }));
+        if (formErrors[key]) {
+            setFormErrors(prev => { const n = { ...prev }; delete n[key]; return n; });
+        }
+    };
+
+    const handleDocumentRemove = (key) => {
+        setDocuments(prev => ({ ...prev, [key]: null }));
+    };
+
+    const handleGenericDocAdd = (e) => {
+        const files = Array.from(e.target.files || []);
+        if (!files.length) return;
+        setDocuments(prev => ({
+            ...prev,
+            genericDocuments: [
+                ...prev.genericDocuments,
+                ...files.map(f => ({ id: `${Date.now()}-${f.name}`, file: f })),
+            ],
+        }));
+        e.target.value = '';
+    };
+
+    const handleGenericDocRemove = (id) => {
+        setDocuments(prev => ({ ...prev, genericDocuments: prev.genericDocuments.filter(d => d.id !== id) }));
+    };
+
+    // ── Sibling handlers ──
+    const handleAddSibling = () => {
+        setFormData(prev => ({
+            ...prev,
+            siblings: [...prev.siblings, { id: Date.now(), name: '', className: '' }],
+        }));
+    };
+
+    const handleSiblingChange = (id, field, value) => {
+        setFormData(prev => ({
+            ...prev,
+            siblings: prev.siblings.map(s => s.id === id ? { ...s, [field]: value } : s),
+        }));
+    };
+
+    const handleRemoveSibling = (id) => {
+        setFormData(prev => ({ ...prev, siblings: prev.siblings.filter(s => s.id !== id) }));
+    };
+
     const phoneRegex = /^[0-9]{10}$/;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     const validatePersonalDetails = () => {
         if (!profileImage) { toast.error(AS.ERRORS.PHOTO_REQUIRED); return false; }
-        if (!formData.name.trim() || !formData.gender || !formData.mobile || !formData.dob || !formData.admissionDate || !formData.academicYear) {
+        if (!formData.name.trim() || !formData.gender || !formData.mobile || !formData.dob || !formData.admissionDate) {
             toast.error(AS.ERRORS.REQUIRED_FIELDS); return false;
         }
         if (!formData.rollNumber.trim()) { toast.error(AS.ERRORS.ROLL_REQUIRED); return false; }
         if (!formData.sectionId) { toast.error(AS.ERRORS.SECTION_REQUIRED); return false; }
         if (!phoneRegex.test(formData.mobile)) { toast.error(AS.ERRORS.MOBILE_INVALID); return false; }
         if (formData.email && !emailRegex.test(formData.email)) { toast.error(AS.ERRORS.EMAIL_INVALID); return false; }
-        if (formData.status !== 'ACTIVE') { toast.error(AS.ERRORS.STATUS_INVALID); return false; }
-        const today = new Date(); today.setHours(0, 0, 0, 0);
-        if (new Date(formData.dob) >= today) { toast.error(AS.ERRORS.DOB_INVALID); return false; }
-        if (new Date(formData.admissionDate) > today) { toast.error(AS.ERRORS.ADMISSION_DATE_INVALID); return false; }
         return true;
     };
 
-    const buildFamilyErrors = (data) => {
-        const e = {};
-        if (!data.fatherName.trim()) e.fatherName = "Father's name is required";
-        if (!data.fatherOccupation.trim()) e.fatherOccupation = "Father's occupation is required";
-        if (!data.fatherPhone) e.fatherPhone = "Father's phone is required";
-        else if (!phoneRegex.test(data.fatherPhone)) e.fatherPhone = 'Must be exactly 10 digits';
-        if (data.fatherEmail && !emailRegex.test(data.fatherEmail)) e.fatherEmail = 'Invalid email format';
-        if (!data.motherName.trim()) e.motherName = "Mother's name is required";
-        if (data.motherPhone && !phoneRegex.test(data.motherPhone)) e.motherPhone = 'Must be exactly 10 digits';
-        if (data.motherEmail && !emailRegex.test(data.motherEmail)) e.motherEmail = 'Invalid email format';
-        if (data.guardianPhone && !phoneRegex.test(data.guardianPhone)) e.guardianPhone = 'Must be exactly 10 digits';
-        if (data.guardianEmail && !emailRegex.test(data.guardianEmail)) e.guardianEmail = 'Invalid email format';
-        if (data.emergencyContact && !phoneRegex.test(data.emergencyContact)) e.emergencyContact = 'Must be exactly 10 digits';
-        return e;
-    };
-
-    const validateFamilyDetails = () => {
-        const errors = buildFamilyErrors(formData);
-        if (Object.keys(errors).length > 0) { setFamilyErrors(errors); return false; }
-        setFamilyErrors({});
+    const validateTab = (tab) => {
+        if (tab === 'personal') return validatePersonalDetails();
         return true;
     };
 
     const scrollToTop = () => formTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
     const handleNextTab = () => {
-        if (!validatePersonalDetails()) return;
-        setActiveTab('family');
-        scrollToTop();
+        if (!validateTab(activeTab)) return;
+        const idx = TAB_ORDER.indexOf(activeTab);
+        if (idx < TAB_ORDER.length - 1) {
+            setActiveTab(TAB_ORDER[idx + 1]);
+            scrollToTop();
+        }
+    };
+
+    const handleBackTab = () => {
+        const idx = TAB_ORDER.indexOf(activeTab);
+        if (idx > 0) {
+            setActiveTab(TAB_ORDER[idx - 1]);
+            scrollToTop();
+        }
     };
 
     const handleTabClick = (tab) => {
-        if (tab === 'family' && !validatePersonalDetails()) return;
+        const targetIdx = TAB_ORDER.indexOf(tab);
+        const currentIdx = TAB_ORDER.indexOf(activeTab);
+        if (targetIdx > currentIdx) {
+            for (let i = currentIdx; i < targetIdx; i++) {
+                if (!validateTab(TAB_ORDER[i])) return;
+            }
+        }
         setActiveTab(tab);
         scrollToTop();
     };
@@ -173,71 +253,122 @@ function AddNewStudent() {
 
     const handleSaveDetails = async () => {
         if (!validatePersonalDetails()) { setActiveTab('personal'); return; }
-        if (!validateFamilyDetails()) return;
         setIsSubmitting(true);
-        const loadingToast = toast.loading(AS.LOADING);
+        const loadingToast = toast.loading(AS.LOADING || "Adding student...");
+
         try {
             const nameParts = formData.name.trim().split(' ');
             const firstName = nameParts[0];
             const lastName = nameParts.slice(1).join(' ').trim() || firstName;
             const generatedAdmissionNumber = formData.admissionNumber.trim()
                 ? formData.admissionNumber.trim()
-                : `DPIS-${Math.floor(10000 + Math.random() * 90000)}`;
+                : `ADM-${Math.floor(100000 + Math.random() * 900000)}`;
 
+            // Correct OpenAPI aligned payload
             const apiPayload = {
                 admissionNumber: generatedAdmissionNumber,
                 rollNumber: formData.rollNumber.trim() || null,
                 firstName,
                 lastName,
-                personalDetails: {
-                    fullName: formData.name.trim(),
-                    mobile: formData.mobile,
-                    email: formData.email.trim() || null,
-                    gender: formData.gender.toUpperCase(),
-                    dateOfBirth: formData.dob,
-                    address: formData.address.trim() || null,
-                    emergencyContact: formData.emergencyContact || null,
-                    emergencyContactName: formData.guardianName.trim() || null,
-                    emergencyContactRelation: formData.guardianRelation || null,
-                },
+                fullName: formData.name.trim(),
                 sectionId: Number(formData.sectionId),
                 admissionDate: formData.admissionDate,
-                academicYear: formData.academicYear,
-                status: formData.status,
+                academicYear: formData.academicYear || "2025-2026",
+                status: formData.status || "ACTIVE",
                 bloodGroup: formData.bloodGroup || null,
                 previousSchool: formData.previousSchool.trim() || null,
-                hostelRequired: formData.hostelRequired,
-                transportRequired: formData.transportRequired,
+                transportRequired: Boolean(formData.transportRequired),
+                hostelRequired: Boolean(formData.hostelRequired),
+                category: (formData.category || "GENERAL").toUpperCase(),
+                religion: (formData.religion || "HINDU").toUpperCase(),
+                whatsappNumber: formData.whatsappNumber || formData.mobile || null,
+                studentHouse: formData.studentHouse.trim() || null,
+                aadhaarNumber: formData.studentAadhaar.trim() || null,
+                abcId: formData.abcId.trim() || null,
+                aparId: formData.aparId.trim() || null,
                 fatherName: formData.fatherName.trim() || null,
                 fatherOccupation: formData.fatherOccupation.trim() || null,
                 fatherPhone: formData.fatherPhone || null,
                 fatherEmail: formData.fatherEmail.trim() || null,
+                fatherAadhaar: formData.fatherAadhaar.trim() || null,
                 motherName: formData.motherName.trim() || null,
                 motherOccupation: formData.motherOccupation.trim() || null,
                 motherPhone: formData.motherPhone || null,
                 motherEmail: formData.motherEmail.trim() || null,
+                motherAadhaar: formData.motherAadhaar.trim() || null,
                 guardianName: formData.guardianName.trim() || null,
                 guardianRelation: formData.guardianRelation || null,
                 guardianPhone: formData.guardianPhone || null,
                 guardianEmail: formData.guardianEmail.trim() || null,
-                remarks: null,
+                guardianAddress: formData.guardianAddress.trim() || null,
+                guardianOccupation: formData.guardianOccupation.trim() || null,
+                currentAddress: formData.address.trim() || null,
+                permanentAddress: formData.address.trim() || null,
+                hostelRoomDescription: formData.hostelRequired ? (formData.hostelRoomNumber.trim() || null) : null,
+                bankAccountNumber: formData.bankAccountNumber.trim() || null,
+                bankName: formData.bankName.trim() || null,
+                bankIfscCode: formData.ifscCode.trim() || null,
+                penNumber: formData.pen.trim() || null,
+                ssmId: formData.ssmId.trim() || null,
+                familyId: formData.familyId.trim() || null,
+                remarks: formData.remarks || null,
+                personalDetails: {
+                    fullName: formData.name.trim(),
+                    mobile: formData.mobile,
+                    email: formData.email.trim() || null,
+                    gender: (formData.gender || "MALE").toUpperCase(),
+                    dateOfBirth: formData.dob,
+                    address: formData.address.trim() || null,
+                    emergencyContact: formData.emergencyContact || formData.guardianPhone || formData.fatherPhone || null,
+                    emergencyContactName: formData.guardianName || formData.fatherName || null,
+                    emergencyContactRelation: formData.guardianRelation || "Father",
+                }
             };
 
-            const response = await createStudents(apiPayload, profileImage);
-            console.log('✅ Create Student Response:', response);
+            // 1. Create Student Core Payload
+            const res = await createStudents(apiPayload, profileImage);
+            const createdStudentId = res?.data?.id || res?.id;
+
+            // 2. Automated Upload of optional documents & photos
+            if (createdStudentId) {
+                const uploadPromises = [];
+                if (documents.birthCertificate) uploadPromises.push(uploadStudentDocument(createdStudentId, 'BIRTH_CERTIFICATE', documents.birthCertificate));
+                if (documents.studentAadhaarDoc) uploadPromises.push(uploadStudentDocument(createdStudentId, 'STUDENT_AADHAAR', documents.studentAadhaarDoc));
+                if (documents.fatherAadhaarDoc) uploadPromises.push(uploadStudentDocument(createdStudentId, 'FATHER_AADHAAR', documents.fatherAadhaarDoc));
+                if (documents.motherAadhaarDoc) uploadPromises.push(uploadStudentDocument(createdStudentId, 'MOTHER_AADHAAR', documents.motherAadhaarDoc));
+
+                if (documents.fatherPhoto) uploadPromises.push(uploadParentPhoto(createdStudentId, 'FATHER', documents.fatherPhoto));
+                if (documents.motherPhoto) uploadPromises.push(uploadParentPhoto(createdStudentId, 'MOTHER', documents.motherPhoto));
+                if (documents.guardianPhoto) uploadPromises.push(uploadParentPhoto(createdStudentId, 'GUARDIAN', documents.guardianPhoto));
+
+                if (uploadPromises.length > 0) {
+                    await Promise.allSettled(uploadPromises);
+                }
+            }
+
             toast.dismiss(loadingToast);
-            toast.success(AS.SUCCESS);
+            toast.success(AS.SUCCESS || "Student added successfully!");
             setTimeout(() => navigate('/students'), 500);
         } catch (err) {
             toast.dismiss(loadingToast);
             toast.error(err.message || 'Failed to add student ❌');
-            console.error('❌ Submit error:', err);
+            console.error('Submit error:', err);
         } finally {
             setIsSubmitting(false);
         }
     };
 
     const handleDiscard = () => navigate('/students');
+
+    const isFirstTab = activeTab === TAB_ORDER[0];
+    const isLastTab = activeTab === TAB_ORDER[TAB_ORDER.length - 1];
+
+    const TABS = [
+        { key: 'personal', label: AS.TABS.PERSONAL, short: 'Personal', Icon: User },
+        { key: 'identity', label: 'Identity & Documents', short: 'Identity', Icon: FileBadge2 },
+        { key: 'family', label: AS.TABS.FAMILY, short: 'Family', Icon: Users },
+        { key: 'other', label: 'Other Details', short: 'Other', Icon: Landmark },
+    ];
 
     return (
         <div ref={formTopRef} className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-4">
@@ -255,18 +386,14 @@ function AddNewStudent() {
                     <div className="bg-white rounded-lg shadow">
                         <div className="border-b border-gray-200">
                             <nav className="flex flex-wrap -mb-px">
-                                <button type="button" onClick={() => setActiveTab('personal')}
-                                    className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'personal' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
-                                    <User size={20} />
-                                    <span className="hidden sm:inline">{AS.TABS.PERSONAL}</span>
-                                    <span className="sm:hidden">Personal</span>
-                                </button>
-                                <button type="button" onClick={() => handleTabClick('family')}
-                                    className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'family' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
-                                    <Users size={20} />
-                                    <span className="hidden sm:inline">{AS.TABS.FAMILY}</span>
-                                    <span className="sm:hidden">Family</span>
-                                </button>
+                                {TABS.map(({ key, label, short, Icon }) => (
+                                    <button key={key} type="button" onClick={() => handleTabClick(key)}
+                                        className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === key ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
+                                        <Icon size={20} />
+                                        <span className="hidden sm:inline">{label}</span>
+                                        <span className="sm:hidden">{short}</span>
+                                    </button>
+                                ))}
                             </nav>
                         </div>
                         <div className="p-4 sm:p-6 lg:p-8">
@@ -346,6 +473,7 @@ function AddNewStudent() {
                                     <AddStudentPersonalDetails
                                         formData={formData} setFormData={setFormData}
                                         handleInputChange={handleInputChange}
+                                        errors={formErrors}
                                         sections={sections} sectionsLoading={sectionsLoading}
                                     />
                                     <div className="grid lg:grid-cols-2 sm:grid-cols-1 gap-4 mt-4">
@@ -363,13 +491,38 @@ function AddNewStudent() {
                                     </div>
                                 </>
                             )}
+                            {activeTab === 'identity' && (
+                                <AddStudentIdentityDocuments
+                                    formData={formData}
+                                    handleInputChange={handleInputChange}
+                                    errors={formErrors}
+                                    documents={documents}
+                                    onDocumentChange={handleDocumentChange}
+                                    onDocumentRemove={handleDocumentRemove}
+                                    onGenericDocAdd={handleGenericDocAdd}
+                                    onGenericDocRemove={handleGenericDocRemove}
+                                />
+                            )}
                             {activeTab === 'family' && (
                                 <AddStudentFamilyDetails
                                     formData={formData} setFormData={setFormData}
                                     handleInputChange={handleInputChange}
-                                    errors={familyErrors} setErrors={setFamilyErrors}
+                                    errors={formErrors} setErrors={setFormErrors}
                                     guardianSource={guardianSource}
                                     onGuardianSource={handleGuardianSource}
+                                    documents={documents}
+                                    onDocumentChange={handleDocumentChange}
+                                    onDocumentRemove={handleDocumentRemove}
+                                    onAddSibling={handleAddSibling}
+                                    onSiblingChange={handleSiblingChange}
+                                    onRemoveSibling={handleRemoveSibling}
+                                />
+                            )}
+                            {activeTab === 'other' && (
+                                <AddStudentOtherDetails
+                                    formData={formData} setFormData={setFormData}
+                                    handleInputChange={handleInputChange}
+                                    errors={formErrors}
                                 />
                             )}
                         </div>
@@ -379,10 +532,16 @@ function AddNewStudent() {
                                     className="px-6 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
                                     {C.DISCARD_CHANGES}
                                 </button>
-                                {activeTab === 'personal' ? (
+                                {!isFirstTab && (
+                                    <button type="button" onClick={handleBackTab}
+                                        className="px-6 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2">
+                                        <ChevronLeft className="w-4 h-4" /> Back
+                                    </button>
+                                )}
+                                {!isLastTab ? (
                                     <button type="button" onClick={handleNextTab}
                                         className="px-6 py-2.5 text-sm font-medium rounded-lg transition-all bg-blue-500 hover:bg-blue-600 cursor-pointer text-white flex items-center gap-2">
-                                        {AS.NEXT} <ChevronLeft className="w-4 h-4 rotate-180" />
+                                        {AS.NEXT} <ChevronRight className="w-4 h-4" />
                                     </button>
                                 ) : (
                                     <button disabled={isSubmitting} type="button" onClick={handleSaveDetails}

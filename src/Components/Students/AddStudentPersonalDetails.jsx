@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { getAcademicYears, getCurrentAcademicYear } from "../../Api/AcademicYears/AcademicYear";
 
-const AddStudentPersonalDetails = ({ formData, setFormData, handleInputChange, sections = [], sectionsLoading = false }) => {
+const AddStudentPersonalDetails = ({ formData, setFormData, handleInputChange, errors = {}, sections = [], sectionsLoading = false }) => {
 
     // Group sections by className for the <optgroup> UX
     const groupedSections = sections.reduce((acc, section) => {
@@ -11,9 +11,9 @@ const AddStudentPersonalDetails = ({ formData, setFormData, handleInputChange, s
         return acc;
     }, {});
 
-    const [academicYears,        setAcademicYears]        = useState([]);
+    const [academicYears, setAcademicYears] = useState([]);
     const [academicYearsLoading, setAcademicYearsLoading] = useState(false);
-    const [currentYearId,        setCurrentYearId]        = useState(null);
+    const [currentYearId, setCurrentYearId] = useState(null);
 
     useEffect(() => {
         const fetchAcademicYears = async () => {
@@ -21,13 +21,13 @@ const AddStudentPersonalDetails = ({ formData, setFormData, handleInputChange, s
             try {
                 // Handle all known API shapes
                 const unwrap = (r) =>
-                    Array.isArray(r)                 ? r :
-                    Array.isArray(r?.years)          ? r.years :
-                    Array.isArray(r?.data)           ? r.data :
-                    Array.isArray(r?.content)        ? r.content :
-                    Array.isArray(r?.data?.years)    ? r.data.years :
-                    Array.isArray(r?.data?.data)     ? r.data.data :
-                    Array.isArray(r?.data?.content)  ? r.data.content : [];
+                    Array.isArray(r) ? r :
+                        Array.isArray(r?.years) ? r.years :
+                            Array.isArray(r?.data) ? r.data :
+                                Array.isArray(r?.content) ? r.content :
+                                    Array.isArray(r?.data?.years) ? r.data.years :
+                                        Array.isArray(r?.data?.data) ? r.data.data :
+                                            Array.isArray(r?.data?.content) ? r.data.content : [];
 
                 const [yearsRes, currentRes] = await Promise.allSettled([
                     getAcademicYears(),
@@ -90,6 +90,25 @@ const AddStudentPersonalDetails = ({ formData, setFormData, handleInputChange, s
     const selectedId = formData.academicYearId || formData.academicYear || "";
     const isSelectedCurrent = selectedId !== "" && currentYearId != null && Number(selectedId) === Number(currentYearId);
 
+    const inputClass = (field) =>
+        `bg-gray-100 font-normal text-gray-800 border p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors[field] ? 'border-red-400 bg-red-50' : 'border-gray-300'
+        }`;
+
+    const ErrorMsg = ({ field }) =>
+        errors[field] ? (
+            <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                <span>⚠</span> {errors[field]}
+            </p>
+        ) : null;
+
+    const handleWhatsappSameAsMobile = (checked) => {
+        setFormData(prev => ({
+            ...prev,
+            sameAsMobile: checked,
+            whatsappNumber: checked ? prev.mobile : '',
+        }));
+    };
+
     return (
         <div className="space-y-8">
             {/* ─── Personal Details Section ─── */}
@@ -132,6 +151,24 @@ const AddStudentPersonalDetails = ({ formData, setFormData, handleInputChange, s
                     </div>
 
                     <div>
+                        <label className='flex items-center justify-between font-semibold text-gray-600 text-sm mb-2'>
+                            <span>WhatsApp Number
+                                <span className="text-gray-400 text-xs font-normal ml-2">(optional)</span>
+                            </span>
+                            <span className="flex items-center gap-1.5 font-normal cursor-pointer select-none">
+                                <input type="checkbox" className="w-3.5 h-3.5 accent-blue-600"
+                                    checked={!!formData.sameAsMobile}
+                                    onChange={(e) => handleWhatsappSameAsMobile(e.target.checked)} />
+                                <span className="text-xs text-gray-500">Same as mobile</span>
+                            </span>
+                        </label>
+                        <input type="tel" name="whatsappNumber" value={formData.whatsappNumber} onChange={handleInputChange}
+                            placeholder='10 digit WhatsApp number' maxLength={10} disabled={!!formData.sameAsMobile}
+                            className={inputClass('whatsappNumber')} />
+                        <ErrorMsg field="whatsappNumber" />
+                    </div>
+
+                    <div>
                         <label className='block font-semibold text-gray-600 text-sm mb-2'>Email Address</label>
                         <input type="email" name="email" value={formData.email} onChange={handleInputChange}
                             placeholder='Enter email address'
@@ -161,6 +198,30 @@ const AddStudentPersonalDetails = ({ formData, setFormData, handleInputChange, s
                             <option value="O+">O+</option>
                             <option value="O-">O-</option>
                         </select>
+                    </div>
+
+                    <div>
+                        <label className='block font-semibold text-gray-600 text-sm mb-2'>
+                            Category<span className="text-red-600 ml-1">*</span>
+                        </label>
+                        <select name="category" value={formData.category} onChange={handleInputChange} required
+                            className={inputClass('category')}>
+                            <option value="">Select Category</option>
+                            <option value="General">General</option>
+                            <option value="OBC">OBC</option>
+                            <option value="SC">SC</option>
+                            <option value="ST">ST</option>
+                        </select>
+                        <ErrorMsg field="category" />
+                    </div>
+
+                    <div>
+                        <label className='block font-semibold text-gray-600 text-sm mb-2'>
+                            SR Number
+                            <span className="text-gray-400 text-xs font-normal ml-2">(auto-generated)</span>
+                        </label>
+                        <input type="text" value="Assigned automatically on save" disabled readOnly
+                            className='bg-gray-200 font-normal text-gray-500 border border-gray-300 p-2 px-4 w-full rounded-md cursor-not-allowed' />
                     </div>
 
                     <div>
@@ -255,10 +316,49 @@ const AddStudentPersonalDetails = ({ formData, setFormData, handleInputChange, s
                     </div>
 
                     <div>
+                        <label className='block font-semibold text-gray-600 text-sm mb-2'>Student House
+                            <span className="text-gray-400 text-xs font-normal ml-2">(optional)</span>
+                        </label>
+                        <input type="text" name="studentHouse" value={formData.studentHouse} onChange={handleInputChange}
+                            placeholder='e.g. Red House' list="student-house-options"
+                            className={inputClass('studentHouse')} />
+                        <datalist id="student-house-options">
+                            <option value="Red House" />
+                            <option value="Blue House" />
+                            <option value="Green House" />
+                            <option value="Yellow House" />
+                        </datalist>
+                        <ErrorMsg field="studentHouse" />
+                    </div>
+
+                    <div>
+                        <label className='block font-semibold text-gray-600 text-sm mb-2'>ABC ID
+                            <span className="text-gray-400 text-xs font-normal ml-2">(optional)</span>
+                        </label>
+                        <input type="text" name="abcId" value={formData.abcId} onChange={handleInputChange}
+                            placeholder='Academic Bank of Credits ID' className={inputClass('abcId')} />
+                        <ErrorMsg field="abcId" />
+                    </div>
+
+                    <div>
                         <label className='block font-semibold text-gray-600 text-sm mb-2'>Previous School</label>
                         <input type="text" name="previousSchool" value={formData.previousSchool} onChange={handleInputChange}
                             placeholder='Enter previous school name'
                             className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500' />
+                    </div>
+
+                    <div>
+                        <label className='block font-semibold text-gray-600 text-sm mb-2'>Transfer Student</label>
+                        <button type="button"
+                            onClick={() => setFormData(prev => ({ ...prev, isTransferStudent: !prev.isTransferStudent }))}
+                            className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors duration-300 ${formData.isTransferStudent ? "bg-blue-500" : "bg-gray-300"}`}>
+                            <div className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform duration-300 ${formData.isTransferStudent ? "translate-x-6" : "translate-x-0"}`} />
+                        </button>
+                        <p className="text-xs text-gray-500 mt-1">
+                            {formData.isTransferStudent
+                                ? 'Transfer & report card documents required in the next step'
+                                : 'Toggle on if transferring from another school'}
+                        </p>
                     </div>
 
                     <div>
@@ -284,34 +384,6 @@ const AddStudentPersonalDetails = ({ formData, setFormData, handleInputChange, s
                         <textarea rows={3} name="address" value={formData.address} onChange={handleInputChange}
                             placeholder='Enter residential address'
                             className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500' />
-                    </div>
-                </div>
-            </div>
-
-            {/* ─── Additional Requirements Section ─── */}
-            <div>
-                <div className="flex justify-start items-center mb-4 pb-3 border-b border-gray-200">
-                    <i className="fa-solid fa-cog text-xl lg:text-2xl text-blue-500 mr-3"></i>
-                    <h2 className='text-xl font-medium text-gray-700'>Additional Requirements</h2>
-                </div>
-                <div className="grid lg:grid-cols-2 sm:grid-cols-1 gap-6">
-                    <div>
-                        <label className='block font-semibold text-gray-600 text-sm mb-2'>Hostel Required</label>
-                        <button type="button"
-                            onClick={() => setFormData(prev => ({ ...prev, hostelRequired: !prev.hostelRequired }))}
-                            className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors duration-300 ${formData.hostelRequired ? "bg-blue-500" : "bg-gray-300"}`}>
-                            <div className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform duration-300 ${formData.hostelRequired ? "translate-x-6" : "translate-x-0"}`} />
-                        </button>
-                        <p className="text-xs text-gray-500 mt-1">{formData.hostelRequired ? 'Hostel accommodation enabled' : 'Hostel accommodation disabled'}</p>
-                    </div>
-                    <div>
-                        <label className='block font-semibold text-gray-600 text-sm mb-2'>Transport Required</label>
-                        <button type="button"
-                            onClick={() => setFormData(prev => ({ ...prev, transportRequired: !prev.transportRequired }))}
-                            className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors duration-300 ${formData.transportRequired ? "bg-blue-500" : "bg-gray-300"}`}>
-                            <div className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform duration-300 ${formData.transportRequired ? "translate-x-6" : "translate-x-0"}`} />
-                        </button>
-                        <p className="text-xs text-gray-500 mt-1">{formData.transportRequired ? 'School transport enabled' : 'School transport disabled'}</p>
                     </div>
                 </div>
             </div>
