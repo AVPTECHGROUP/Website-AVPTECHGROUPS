@@ -121,6 +121,7 @@ export const ITEMS_CONSTS = {
         CATEGORIES_COVERED: "Categories Covered",
     },
     TABLE_HEADERS: {
+        SNO: "S.No",
         ITEM: "Item",
         CATEGORY: "Category",
         UNIT: "Unit",
@@ -286,6 +287,7 @@ export const STORES_CONSTS = {
         LOW_STOCK: "Low Stock",
     },
     TABLE_HEADERS: {
+        SNO: "S.No",
         STORE_NAME: "Store Name",
         CODE: "Code",
         LOCATION: "Location",
@@ -361,6 +363,7 @@ export const TRANSACTIONS_CONSTS = {
         SEARCH_DEBOUNCE_MS: 400,
     },
     TABLE_HEADERS: {
+        SNO: "S.No",
         ITEM: "Item",
         CATEGORY: "Category",
         UNIT: "Unit",
@@ -593,6 +596,7 @@ export const STUDENT_ORDERS_CONSTS = {
         CANCELLED_ORDERS: "Cancelled Orders",
     },
     TABLE_HEADERS: {
+        SNO: "S.No",
         STUDENT: "Student",
         CLASS: "Class",
         STORE: "Store",
