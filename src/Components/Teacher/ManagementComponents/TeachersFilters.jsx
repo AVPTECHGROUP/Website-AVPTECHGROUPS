@@ -21,6 +21,13 @@ const TeachersFilters = ({
     })),
   ];
 
+  const schoolFeatures = (() => {
+    try { return JSON.parse(localStorage.getItem('school'))?.features || {}; }
+    catch { return {}; }
+  })();
+
+  const isPayrollEnabled = schoolFeatures.payrollEnabled ?? true;
+
   return (
     <div className="
         bg-white
@@ -122,27 +129,20 @@ const TeachersFilters = ({
 
 
       {/* Salary */}
-      <select
-        value={salaryFilter}
-        onChange={(e) => {
-          setSalaryFilter(e.target.value);
-          setPage(1);
-        }}
-        className="
-          px-3
-          py-2
-          border
-          border-gray-200
-          bg-gray-100
-          rounded-lg
-          text-sm
-          focus:outline-none
-        "
-      >
-        <option value="All Salary Types">All Salary</option>
-        <option value="Monthly">Monthly</option>
-        <option value="Per Day">Per Day</option>
-      </select>
+      {isPayrollEnabled && (
+        <select
+          value={salaryFilter}
+          onChange={(e) => {
+            setSalaryFilter(e.target.value);
+            setPage(1);
+          }}
+          className="px-3 py-2 border border-gray-200 bg-gray-100 rounded-lg text-sm focus:outline-none"
+        >
+          <option value="All Salary Types">All Salary</option>
+          <option value="Monthly">Monthly</option>
+          <option value="Per Day">Per Day</option>
+        </select>
+      )}
 
 
     </div>

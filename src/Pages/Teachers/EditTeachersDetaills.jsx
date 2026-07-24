@@ -19,6 +19,17 @@ function EditTeachersDetails() {
     const [imagePreview, setImagePreview] = useState(null);
     const [existingImageUrl, setExistingImageUrl] = useState(null);
     const fileInputRef = useRef(null);
+
+    // Feature Flag Check for Payroll
+    const isPayrollEnabled = (() => {
+        try {
+            const school = JSON.parse(localStorage.getItem('school'));
+            return school?.features?.payrollEnabled ?? true;
+        } catch {
+            return true;
+        }
+    })();
+
     const [formData, setFormData] = useState({
         name: '',
         gender: '',
@@ -91,7 +102,6 @@ function EditTeachersDetails() {
         }
     }, [teacher]);
 
-    // ── Shared: build the teacher payload from formData ──────────────────────
     const buildTeacherPayload = () => ({
         personalDetails: {
             fullName: formData.name,
@@ -111,7 +121,6 @@ function EditTeachersDetails() {
         accountAccessStatus: formData.accountStatus ? 'ALLOWED' : 'BLOCKED',
     });
 
-    // ── Personal: Save and stay ───────────────────────────────────────────────
     const handleSavePersonal = async () => {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -129,6 +138,9 @@ function EditTeachersDetails() {
             if (profileImage) {
                 toast.info(strings.EDIT_TEACHER.PHOTO_REFRESH_NOTICE, { autoClose: 4000 });
             }
+            if (!isPayrollEnabled) {
+                navigate('/teachers');
+            }
         } catch (err) {
             console.error(err);
             toast.dismiss(loadingToast);
@@ -138,7 +150,6 @@ function EditTeachersDetails() {
         }
     };
 
-    // ── Personal: Save and move to Salary tab ────────────────────────────────
     const handleSaveAndNextPersonal = async () => {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -152,7 +163,12 @@ function EditTeachersDetails() {
         try {
             await updateTeacher(id, buildTeacherPayload(), profileImage);
             toast.dismiss(loadingToast);
-            setActiveTab('salary');          // silently move to next tab — no success toast
+            if (isPayrollEnabled) {
+                setActiveTab('salary');
+            } else {
+                toast.success(strings.EDIT_TEACHER.PERSONAL_SAVE_SUCCESS);
+                navigate('/teachers');
+            }
         } catch (err) {
             console.error(err);
             toast.dismiss(loadingToast);
@@ -162,7 +178,6 @@ function EditTeachersDetails() {
         }
     };
 
-    // ── Salary: Save (footer button) ─────────────────────────────────────────
     const handleSaveSalary = async () => {
         if (!formData.salaryType || !formData.baseSalary) {
             toast.warning(strings.EDIT_TEACHER.SALARY_WARNING);
@@ -242,23 +257,7 @@ function EditTeachersDetails() {
         } catch (err) {
             console.error("Salary Catch Error:", err);
             toast.dismiss(loadingToast);
-
-            // API validation mapping checks
-            const validationData = err?.response?.data?.data || err?.data?.data || err?.errorData?.data;
-            let errorMessage = "";
-
-            if (validationData && typeof validationData === 'object') {
-                const firstFieldError = Object.values(validationData)[0];
-                if (firstFieldError && typeof firstFieldError === 'string') {
-                    errorMessage = firstFieldError;
-                }
-            }
-
-            if (!errorMessage) {
-                errorMessage = err?.response?.data?.message || err?.data?.message || err?.message || strings.EDIT_TEACHER.SALARY_SAVE_ERROR;
-            }
-
-            toast.error(errorMessage);
+            toast.error(err?.message || strings.EDIT_TEACHER.SALARY_SAVE_ERROR);
         } finally {
             setIsLoading(false);
         }
@@ -316,7 +315,6 @@ function EditTeachersDetails() {
     return (
         <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-4">
             <div className="mx-auto">
-                {/* Back Button */}
                 <button
                     onClick={() => navigate(-1)}
                     className="flex items-center cursor-pointer bg-gray-600 p-2 rounded-xl text-white gap-2 hover:bg-gray-900 transition-colors mb-4"
@@ -325,7 +323,6 @@ function EditTeachersDetails() {
                     <span className="hidden sm:inline">Back to List</span>
                 </button>
 
-                {/* Header */}
                 <div className="mb-6">
                     <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
                         {strings.ADD_TEACHER.PAGE_TITLE}: {formData.name}
@@ -336,41 +333,40 @@ function EditTeachersDetails() {
                 </div>
 
                 <div className="bg-white rounded-lg shadow">
-                    {/* Tabs */}
                     <div className="border-b border-gray-200">
                         <nav className="flex flex-wrap -mb-px">
                             <button
                                 type="button"
                                 onClick={() => setActiveTab('personal')}
                                 className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'personal'
-                                        ? 'border-blue-600 text-blue-600'
-                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                    ? 'border-blue-600 text-blue-600'
+                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                                     }`}
                             >
                                 <User size={20} />
                                 <span className="hidden sm:inline">{strings.ADD_TEACHER.TABS.PERSONAL}</span>
                                 <span className="sm:hidden">{strings.ADD_TEACHER.LABELS.PERSONAL}</span>
                             </button>
-                            <button
-                                type="button"
-                                onClick={() => setActiveTab('salary')}
-                                className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'salary'
+                            {isPayrollEnabled && (
+                                <button
+                                    type="button"
+                                    onClick={() => setActiveTab('salary')}
+                                    className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'salary'
                                         ? 'border-blue-600 text-blue-600'
                                         : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                                    }`}
-                            >
-                                <IndianRupee size={18} />
-                                <span className="hidden sm:inline">{strings.ADD_TEACHER.TABS.SALARY}</span>
-                                <span className="sm:hidden">Salary</span>
-                            </button>
+                                        }`}
+                                >
+                                    <IndianRupee size={18} />
+                                    <span className="hidden sm:inline">{strings.ADD_TEACHER.TABS.SALARY}</span>
+                                    <span className="sm:hidden">Salary</span>
+                                </button>
+                            )}
                         </nav>
                     </div>
 
-                    {/* Tab Content */}
                     <div className="p-4 sm:p-6 lg:p-8">
                         {activeTab === 'personal' && (
                             <>
-                                {/* Profile Photo */}
                                 <div className="mb-6">
                                     <label className="block font-semibold text-gray-600 text-sm mb-3">
                                         {strings.EDIT_TEACHER.UPLOAD.LABEL}{' '}
@@ -456,7 +452,6 @@ function EditTeachersDetails() {
                                     />
                                 </div>
 
-                                {/* Personal Details Tab */}
                                 <PersonalDetailsTab
                                     formData={formData}
                                     setFormData={setFormData}
@@ -468,7 +463,7 @@ function EditTeachersDetails() {
                             </>
                         )}
 
-                        {activeTab === 'salary' && (
+                        {activeTab === 'salary' && isPayrollEnabled && (
                             <SalaryStructureTab
                                 formData={formData}
                                 setFormData={setFormData}
@@ -478,8 +473,7 @@ function EditTeachersDetails() {
                         )}
                     </div>
 
-                    {/* Footer — only shown on Salary tab */}
-                    {activeTab === 'salary' && (
+                    {activeTab === 'salary' && isPayrollEnabled && (
                         <div className="border-t border-gray-200 px-4 sm:px-6 lg:px-8 py-4 bg-gray-50 rounded-b-lg">
                             <div className="flex flex-col sm:flex-row justify-end gap-3">
                                 <button
@@ -494,8 +488,8 @@ function EditTeachersDetails() {
                                     onClick={handleSaveSalary}
                                     disabled={isLoading}
                                     className={`px-6 py-2.5 text-sm font-semibold rounded-lg transition-all flex items-center justify-center gap-2 ${isLoading
-                                            ? 'bg-blue-300 cursor-not-allowed text-white'
-                                            : 'bg-blue-500 hover:bg-blue-600 cursor-pointer text-white'
+                                        ? 'bg-blue-300 cursor-not-allowed text-white'
+                                        : 'bg-blue-500 hover:bg-blue-600 cursor-pointer text-white'
                                         }`}
                                 >
                                     {isLoading ? (

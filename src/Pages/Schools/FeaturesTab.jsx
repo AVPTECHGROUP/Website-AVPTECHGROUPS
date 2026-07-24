@@ -4,7 +4,7 @@ import {
     Award, CalendarOff, Clock, CreditCard,
     CheckCircle, Save, Loader2, AlertCircle, Sliders
 } from "lucide-react";
-import { updateSchool, getSchoolById } from "../../Api/SchoolConfiguration/schoolconfig";
+import { updateSchoolFeatures } from "../../Api/SchoolConfiguration/schoolconfig";
 import { toast } from "react-toastify";
 
 const DEFAULT_FEATURES = {
@@ -97,7 +97,7 @@ function SaveButton({ saveState, onClick, disabled = false }) {
     );
 }
 
-export default function FeaturesTab({ schoolId, schoolData, initialFeatures, schoolName, onFeaturesUpdated }) {
+export default function FeaturesTab({ schoolId, initialFeatures, schoolName, onFeaturesUpdated }) {
     const [features, setFeatures] = useState(initialFeatures || DEFAULT_FEATURES);
     const [saveState, setSaveState] = useState("idle");
 
@@ -119,40 +119,28 @@ export default function FeaturesTab({ schoolId, schoolData, initialFeatures, sch
         setSaveState("saving");
 
         try {
-            // Send updated features along with the existing school payload
-            const payload = {
-                name: schoolData?.name?.trim() || "",
-                code: schoolData?.code?.trim() || "",
-                board: schoolData?.board || "CBSE",
-                establishedYear: parseInt(schoolData?.establishedYear) || 0,
-                status: schoolData?.status ? schoolData.status.toUpperCase() : "ACTIVE",
-                phone: schoolData?.phone?.trim() || "",
-                email: schoolData?.email?.trim() || "",
-                website: schoolData?.website?.trim() || "",
-                principalName: schoolData?.principalName?.trim() || "",
-                address: schoolData?.address?.trim() || "",
-                city: schoolData?.city?.trim() || "",
-                state: schoolData?.state?.trim() || "",
-                pincode: schoolData?.pincode?.trim() || "",
-                affiliationNumber: schoolData?.affiliationNumber?.trim() || "",
-                logoUrl: schoolData?.logoUrl || null,
-                features: features,
-            };
+            const res = await updateSchoolFeatures(schoolId, features);
 
-            await updateSchool(schoolId, payload);
+            const updatedFeatures = res?.data?.features || features;
+            setFeatures(updatedFeatures);
 
-            const fresh = await getSchoolById(schoolId);
-            if (fresh?.data?.features) {
-                setFeatures(fresh.data.features);
-                if (onFeaturesUpdated) onFeaturesUpdated(fresh.data.features);
+            const currentSchool = JSON.parse(localStorage.getItem("school") || "{}");
+            localStorage.setItem("school", JSON.stringify({
+                ...currentSchool,
+                features: updatedFeatures
+            }));
+            window.dispatchEvent(new Event("storage"));
+
+            if (onFeaturesUpdated) {
+                onFeaturesUpdated(updatedFeatures);
             }
 
-            toast.success("School features updated successfully!");
+            toast.success(res?.message || "School features updated successfully!");
             setSaveState("saved");
             setTimeout(() => setSaveState("idle"), 2500);
         } catch (err) {
             console.error("Features save error:", err);
-            toast.error("Failed to update school features.");
+            toast.error(err.message || "Failed to update school features.");
             setSaveState("error");
             setTimeout(() => setSaveState("idle"), 3000);
         }
@@ -186,8 +174,8 @@ export default function FeaturesTab({ schoolId, schoolData, initialFeatures, sch
                             <div
                                 key={item.key}
                                 className={`flex items-center gap-4 p-4 rounded-2xl border transition-all ${isEnabled
-                                        ? "border-blue-200 bg-blue-50/30"
-                                        : "border-slate-200 bg-slate-50/50 opacity-75"
+                                    ? "border-blue-200 bg-blue-50/30"
+                                    : "border-slate-200 bg-slate-50/50 opacity-75"
                                     }`}
                             >
                                 <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${item.color}`}>
@@ -199,8 +187,8 @@ export default function FeaturesTab({ schoolId, schoolData, initialFeatures, sch
                                         <p className="font-semibold text-slate-800 text-sm truncate">{item.title}</p>
                                         <span
                                             className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${isEnabled
-                                                    ? "bg-emerald-100 text-emerald-700"
-                                                    : "bg-slate-200 text-slate-600"
+                                                ? "bg-emerald-100 text-emerald-700"
+                                                : "bg-slate-200 text-slate-600"
                                                 }`}
                                         >
                                             {isEnabled ? "Enabled" : "Disabled"}

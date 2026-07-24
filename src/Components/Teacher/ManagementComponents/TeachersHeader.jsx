@@ -10,6 +10,14 @@ import CardLoader from '../../CommonComp/CardLoader';
 import TooltipComponent from '../../CommonComp/Tooltip_comp/TooltipComp';
 
 const TeachersHeader = ({ stats, loading }) => {
+  const schoolFeatures = (() => {
+    try {
+      return JSON.parse(localStorage.getItem('school'))?.features || {};
+    } catch { return {}; }
+  })();
+
+  const isPayrollEnabled = schoolFeatures.payrollEnabled ?? true;
+
   const cards = [
     {
       iconName: Users2,
@@ -32,20 +40,22 @@ const TeachersHeader = ({ stats, loading }) => {
       iconTxColor: 'text-red-600',
       iconBgColor: 'bg-red-50',
     },
-    {
-      iconName: IndianRupee,
-      keyName: 'Monthly Salary',
-      val: stats.monthlyTeachers,
-      iconTxColor: 'text-teal-600',
-      iconBgColor: 'bg-teal-50',
-    },
-    {
-      iconName: ShieldBanIcon,
-      keyName: 'Per Day Salary',
-      val: stats.perDayTeachers,
-      iconTxColor: 'text-orange-600',
-      iconBgColor: 'bg-orange-50',
-    },
+    ...(isPayrollEnabled ? [
+      {
+        iconName: IndianRupee,
+        keyName: 'Monthly Salary',
+        val: stats.monthlyTeachers,
+        iconTxColor: 'text-teal-600',
+        iconBgColor: 'bg-teal-50',
+      },
+      {
+        iconName: ShieldBanIcon,
+        keyName: 'Per Day Salary',
+        val: stats.perDayTeachers,
+        iconTxColor: 'text-orange-600',
+        iconBgColor: 'bg-orange-50',
+      }
+    ] : [])
   ];
 
   return (

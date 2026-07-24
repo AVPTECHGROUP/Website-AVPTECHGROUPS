@@ -150,7 +150,7 @@ export const API_ENDPOINTS = {
   FEE_PERIODS_ACADEMIC_YEARS: `${BASE_URL_V1}/fee/periods/academic-years`,
   feePeriodById: (id) => `${BASE_URL_V1}/fee/periods/${id}`,
   feePeriodClose: (id) => `${BASE_URL_V1}/fee/periods/${id}/close`,
-  feePeriodreopen:(id)=> `${BASE_URL_V1}/fee/periods/${id}/reopen`,
+  feePeriodreopen: (id) => `${BASE_URL_V1}/fee/periods/${id}/reopen`,
 
   // ─── Fee Structures ───
   FEE_STRUCTURES: `${BASE_URL_V1}/fee/structures`,
@@ -218,7 +218,7 @@ export const API_ENDPOINTS = {
   schoolDeactivate: (id) => `${BASE_URL_DOUBLE_V1}/schools/${id}/deactivate`,
   schoolAttendanceConfig: (id) => `${BASE_URL_DOUBLE_V1}/schools/${id}/attendance-config`,
   schoolLogo: (id) => `${BASE_URL_DOUBLE_V1}/schools/${id}/logo`,
-
+  schoolFeatures: (id) => `${BASE_URL_DOUBLE_V1}/schools/${id}/features`,
   // ─── Section Subjects ───
   SECTION_SUBJECTS_ASSIGN: `${BASE_URL_V1}/section-subjects/assign`,
   sectionSubjectsBySection: (sectionId) => `${BASE_URL_V1}/section-subjects/section/${sectionId}`,
