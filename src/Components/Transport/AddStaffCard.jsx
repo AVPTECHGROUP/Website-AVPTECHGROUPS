@@ -320,6 +320,26 @@ export default function AddStaffCard({ isOpen, onClose, onSaved, editData }) {
               </Field>
             </div>
 
+            {/* Police Verification Document */}
+            <div className="sm:col-span-2">
+              <Field label="Police Verification Document (Optional)">
+                <input
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  onChange={(e) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      policeVerificationFile: e.target.files?.[0] || null,
+                    }))
+                  }
+                  className={getInputCls(false)}
+                />
+                <p className="text-xs text-gray-400 mt-1">
+                  Upload PDF, JPG or PNG (Optional)
+                </p>
+              </Field>
+            </div>
+
             {/* Remarks — full width */}
             <div className="sm:col-span-2">
               <Field label="Remarks" error={errors.remarks}>

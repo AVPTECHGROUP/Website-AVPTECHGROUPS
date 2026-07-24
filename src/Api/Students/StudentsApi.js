@@ -1,5 +1,5 @@
 import { authFetch } from "../../Authfetch/Authfetch";
-import {API_ENDPOINTS} from "../../Constants/Endpoints";
+import { API_ENDPOINTS } from "../../Constants/Endpoints";
 
 // ==================== READ OPERATIONS ====================
 
@@ -163,6 +163,110 @@ export const updateStudent = async (id, updatedStudent, imageFile) => {
     return data;
   } catch (error) {
     console.error("UPDATE STUDENT ERROR:", error.message);
+    throw error;
+  }
+};
+
+// ==================== STUDENT DOCUMENTS ====================
+
+/**
+ * Fetch all uploaded documents for a student.
+ * @param {string|number} id - Student ID
+ * @returns {Promise<Array>}
+ */
+export const getStudentDocuments = async (id) => {
+  try {
+    const res = await authFetch(API_ENDPOINTS.STUDENT_DOCUMENTS(id), {
+      method: "GET",
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data?.message || "Failed to fetch student documents");
+    }
+
+    return data?.data || [];
+  } catch (error) {
+    console.error("getStudentDocuments error:", error.message);
+    throw error;
+  }
+};
+
+/**
+ * Upload a student document.
+ * Supported docTypes:
+ * STUDENT_AADHAAR
+ * FATHER_AADHAAR
+ * MOTHER_AADHAAR
+ * BIRTH_CERTIFICATE
+ *
+ * @param {string|number} id
+ * @param {string} docType
+ * @param {File} file
+ * @returns {Promise<Object>}
+ */
+export const uploadStudentDocument = async (id, docType, file) => {
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const res = await authFetch(
+      API_ENDPOINTS.UPLOAD_STUDENT_DOCUMENT(id, docType),
+      {
+        method: "POST",
+        body: formData,
+      }
+    );
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data?.message || "Failed to upload document");
+    }
+
+    return data;
+  } catch (error) {
+    console.error("uploadStudentDocument error:", error.message);
+    throw error;
+  }
+};
+
+/**
+ * Upload Father/Mother/Guardian photo.
+ *
+ * Supported photoTypes:
+ * FATHER
+ * MOTHER
+ * GUARDIAN
+ *
+ * @param {string|number} id
+ * @param {string} photoType
+ * @param {File} file
+ * @returns {Promise<Object>}
+ */
+export const uploadParentPhoto = async (id, photoType, file) => {
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const res = await authFetch(
+      API_ENDPOINTS.UPLOAD_PARENT_PHOTO(id, photoType),
+      {
+        method: "PATCH",
+        body: formData,
+      }
+    );
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data?.message || "Failed to upload parent photo");
+    }
+
+    return data;
+  } catch (error) {
+    console.error("uploadParentPhoto error:", error.message);
     throw error;
   }
 };

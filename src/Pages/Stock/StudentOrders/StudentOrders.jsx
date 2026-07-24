@@ -380,7 +380,7 @@ export default function StudentOrders() {
             </div>
 
             {/* Filters */}
-            <div className="flex flex-wrap items-center gap-3 px-4 py-3 border-b border-gray-100">
+            <div className="flex flex-wrap items-end gap-3 px-4 py-3 border-b border-gray-100">
               <div className="flex flex-1 min-w-45 items-center gap-2 border rounded-lg border-gray-200 bg-gray-50 px-3 py-2 focus-within:ring-2 focus-within:ring-blue-200 focus-within:border-blue-400 transition">
                 <SearchIcon className="w-4 h-4 text-gray-400 shrink-0" />
                 <input
@@ -512,7 +512,7 @@ export default function StudentOrders() {
                 <table className="w-full min-w-225">
                   <thead className="border-b border-gray-200">
                     <tr>
-                      <th className="px-2 py-3 text-left   text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10 w-10">#</th>
+                      <th className="px-2 py-3 text-left   text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10 w-10">{STUDENT_ORDERS_CONSTS.TABLE_HEADERS.SNO}</th>
                       <th className="px-2 py-3 text-left   text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10">{STUDENT_ORDERS_CONSTS.TABLE_HEADERS.STUDENT}</th>
                       <th className="px-2 py-3 text-left   text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10">{STUDENT_ORDERS_CONSTS.TABLE_HEADERS.CLASS}</th>
                       <th className="px-2 py-3 text-center text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10">{STUDENT_ORDERS_CONSTS.TABLE_HEADERS.STORE}</th>

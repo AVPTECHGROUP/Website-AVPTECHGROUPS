@@ -1,6 +1,11 @@
 import React from 'react';
+import { Upload, X, Plus, Trash2 } from 'lucide-react';
 
-const AddStudentFamilyDetails = ({ formData, setFormData, handleInputChange, errors = {}, setErrors, guardianSource, onGuardianSource }) => {
+const AddStudentFamilyDetails = ({
+    formData, setFormData, handleInputChange, errors = {}, setErrors, guardianSource, onGuardianSource,
+    documents, onDocumentChange, onDocumentRemove,
+    onAddSibling, onSiblingChange, onRemoveSibling,
+}) => {
 
     const handleGuardianCheckbox = (source) => {
         if (typeof onGuardianSource !== 'function') {
@@ -19,8 +24,7 @@ const AddStudentFamilyDetails = ({ formData, setFormData, handleInputChange, err
     };
 
     const inputClass = (field) =>
-        `bg-gray-100 font-normal text-gray-800 border p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-            errors[field] ? 'border-red-400 bg-red-50' : 'border-gray-300'
+        `bg-gray-100 font-normal text-gray-800 border p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors[field] ? 'border-red-400 bg-red-50' : 'border-gray-300'
         }`;
 
     const readOnlyClass = `bg-gray-200 font-normal text-gray-500 border border-gray-300 p-2 px-4 w-full rounded-md cursor-not-allowed`;
@@ -31,6 +35,35 @@ const AddStudentFamilyDetails = ({ formData, setFormData, handleInputChange, err
                 <span>⚠</span> {errors[field]}
             </p>
         ) : null;
+
+    const hasGuardian = !!guardianSource || !!formData.guardianName.trim();
+
+    const PhotoUploadField = ({ docKey, label }) => {
+        const file = documents?.[docKey];
+        return (
+            <div>
+                <label className='block font-semibold text-gray-600 text-sm mb-2'>
+                    {label}
+                    <span className="text-gray-400 text-xs font-normal ml-2">(optional)</span>
+                </label>
+                {!file ? (
+                    <label className="flex items-center justify-center gap-2 border-2 border-dashed border-gray-300 hover:border-blue-400 bg-gray-50 hover:bg-blue-50 rounded-md p-3 cursor-pointer transition-colors">
+                        <Upload className="w-4 h-4 text-gray-400 shrink-0" />
+                        <span className="text-sm text-gray-500">Upload photo</span>
+                        <input type="file" accept="image/jpeg,image/jpg,image/png" onChange={(e) => onDocumentChange(docKey, e)} className="hidden" />
+                    </label>
+                ) : (
+                    <div className="flex items-center justify-between gap-2 border border-green-200 bg-green-50 rounded-md p-2 px-3">
+                        <span className="text-sm text-green-700 truncate">{file.name}</span>
+                        <button type="button" onClick={() => onDocumentRemove(docKey)}
+                            className="text-red-500 hover:text-red-700 shrink-0">
+                            <X className="w-4 h-4" />
+                        </button>
+                    </div>
+                )}
+            </div>
+        );
+    };
 
     return (
         <div className="space-y-8">
@@ -75,6 +108,16 @@ const AddStudentFamilyDetails = ({ formData, setFormData, handleInputChange, err
                             placeholder="Enter father's email" className={inputClass('fatherEmail')} />
                         <ErrorMsg field="fatherEmail" />
                     </div>
+                    <div>
+                        <label className='block font-semibold text-gray-600 text-sm mb-2'>
+                            Father's Aadhaar Number
+                            <span className="text-gray-400 text-xs font-normal ml-2">(optional)</span>
+                        </label>
+                        <input type="text" name="fatherAadhaar" value={formData.fatherAadhaar} onChange={handleInputChange}
+                            placeholder="12 digit Aadhaar number" maxLength={12} inputMode="numeric" className={inputClass('fatherAadhaar')} />
+                        <ErrorMsg field="fatherAadhaar" />
+                    </div>
+                    <PhotoUploadField docKey="fatherPhoto" label="Father's Photo" />
                 </div>
             </div>
 
@@ -120,6 +163,16 @@ const AddStudentFamilyDetails = ({ formData, setFormData, handleInputChange, err
                             placeholder="Enter mother's email" className={inputClass('motherEmail')} />
                         <ErrorMsg field="motherEmail" />
                     </div>
+                    <div>
+                        <label className='block font-semibold text-gray-600 text-sm mb-2'>
+                            Mother's Aadhaar Number
+                            <span className="text-gray-400 text-xs font-normal ml-2">(optional)</span>
+                        </label>
+                        <input type="text" name="motherAadhaar" value={formData.motherAadhaar} onChange={handleInputChange}
+                            placeholder="12 digit Aadhaar number" maxLength={12} inputMode="numeric" className={inputClass('motherAadhaar')} />
+                        <ErrorMsg field="motherAadhaar" />
+                    </div>
+                    <PhotoUploadField docKey="motherPhoto" label="Mother's Photo" />
                 </div>
             </div>
 
@@ -233,7 +286,74 @@ const AddStudentFamilyDetails = ({ formData, setFormData, handleInputChange, err
                             placeholder='10 digit emergency contact' maxLength={10} className={inputClass('emergencyContact')} />
                         <ErrorMsg field="emergencyContact" />
                     </div>
+
+                    {hasGuardian && <PhotoUploadField docKey="guardianPhoto" label="Guardian's Photo" />}
+
+                    <div className="lg:col-span-2">
+                        <label className='flex items-center gap-2 font-semibold text-gray-600 text-sm mb-2 cursor-pointer select-none'>
+                            <input
+                                type="checkbox"
+                                className="w-4 h-4 accent-blue-600"
+                                checked={!!formData.sameAsCurrentAddress}
+                                onChange={(e) => {
+                                    const checked = e.target.checked;
+                                    setFormData(prev => ({
+                                        ...prev,
+                                        sameAsCurrentAddress: checked,
+                                        guardianAddress: checked ? prev.address : '',
+                                    }));
+                                }}
+                            />
+                            Guardian Address same as Permanent/Current Address
+                        </label>
+                        <textarea rows={3} name="guardianAddress" value={formData.guardianAddress} onChange={handleInputChange}
+                            disabled={!!formData.sameAsCurrentAddress}
+                            placeholder="Enter guardian's address"
+                            className={formData.sameAsCurrentAddress ? readOnlyClass : inputClass('guardianAddress')} />
+                        <ErrorMsg field="guardianAddress" />
+                    </div>
                 </div>
+            </div>
+
+            {/* Sibling Details */}
+            <div>
+                <div className="flex justify-between items-center mb-4 pb-3 border-b border-gray-200">
+                    <div className="flex items-center">
+                        <i className="fa-solid fa-people-roof text-xl lg:text-2xl text-blue-500 mr-3"></i>
+                        <h2 className='text-xl font-medium text-gray-700'>Sibling Details</h2>
+                    </div>
+                    <button type="button" onClick={onAddSibling}
+                        className="flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 px-3 py-1.5 rounded-md hover:bg-blue-50 transition-colors">
+                        <Plus className="w-4 h-4" /> Add Sibling
+                    </button>
+                </div>
+
+                {(!formData.siblings || formData.siblings.length === 0) ? (
+                    <p className="text-sm text-gray-400">No siblings added. Use "Add Sibling" if applicable.</p>
+                ) : (
+                    <div className="space-y-3">
+                        {formData.siblings.map((sibling) => (
+                            <div key={sibling.id} className="flex flex-col sm:flex-row gap-3 items-start sm:items-center p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                                <input
+                                    type="text" value={sibling.name}
+                                    onChange={(e) => onSiblingChange(sibling.id, 'name', e.target.value)}
+                                    placeholder="Sibling's name"
+                                    className="bg-white font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full sm:flex-1 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                                <input
+                                    type="text" value={sibling.className}
+                                    onChange={(e) => onSiblingChange(sibling.id, 'className', e.target.value)}
+                                    placeholder="Class / School"
+                                    className="bg-white font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full sm:flex-1 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                                <button type="button" onClick={() => onRemoveSibling(sibling.id)}
+                                    className="w-9 h-9 shrink-0 flex items-center justify-center bg-white border border-red-200 text-red-500 rounded-md hover:bg-red-50 transition-colors">
+                                    <Trash2 className="w-4 h-4" />
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                )}
             </div>
 
         </div>
