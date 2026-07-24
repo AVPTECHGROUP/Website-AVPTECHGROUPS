@@ -1132,10 +1132,10 @@ const Overview = ({ onNavigate }) => {
                           <div className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Structures</div>
                           <div className="text-sm font-bold text-gray-800 mt-0.5">{p.structureCount ?? 0}</div>
                         </div>
-                        <div>
-                          <div className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Students</div>
-                          <div className="text-sm font-bold text-gray-800 mt-0.5">{p.studentCount ?? 0}</div>
-                        </div>
+                        {/*<div>*/}
+                        {/*  <div className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Students</div>*/}
+                        {/*  <div className="text-sm font-bold text-gray-800 mt-0.5">{p.studentCount ?? 0}</div>*/}
+                        {/*</div>*/}
                       </div>
                     </div>
                   </div>
