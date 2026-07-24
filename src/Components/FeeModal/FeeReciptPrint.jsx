@@ -32,6 +32,18 @@ const FALLBACK_SCHOOL = {
     schoolLogo: '',
 };
 
+// FIX (requested): reference-number field label now varies by payment
+// mode — Cheque Number for Cheque, Demand Draft Number for DD, and
+// Transaction ID for Online — mirroring REFERENCE_FIELD_CONFIG used in
+// CollectionsHistory.jsx's collect modal, so the printed receipt always
+// uses the correct term instead of a generic "Ref. No." regardless of how
+// the payment was actually made.
+const REFERENCE_LABEL_BY_MODE = {
+    ONLINE: 'Transaction ID',
+    CHEQUE: 'Cheque Number',
+    DD: 'Demand Draft Number',
+};
+
 // FIX: JS Date only reliably supports up to 3-digit (millisecond)
 // fractional seconds. Backend timestamps like
 // "2026-07-21T15:02:29.199059362" carry 9 fractional digits, which some
@@ -63,9 +75,7 @@ const formatTimeOnly = (val) => {
     }
 };
 
-// FIX (requested): Date and Time used to render as two separate rows in
-// the Receipt Info block ("Date: 21 Jul 2026" then "Time: 3:02 PM" on the
-// next line). They're now combined into a single "Date & Time" row, e.g.
+// Date and Time render as a single combined "Date & Time" row, e.g.
 // "21 Jul 2026, 3:02 PM". Falls back to date-only (no comma/time) when
 // generatedAt isn't available and only the date-only `date` field is.
 const formatDateTimeLine = (generatedAt, dateOnly) => {
@@ -177,6 +187,14 @@ const ReceiptCopy = ({ config, school, data, copyLabel }) => {
     // transparency, not subtracted again.
     const grandTotal = academicCollected + lateFine + transportCollected;
 
+    // FIX (requested): "Ref. No." is now labeled per payment mode —
+    // "Cheque Number" for Cheque, "Transaction ID" for Online, "Demand
+    // Draft Number" for DD — instead of a generic "Ref. No." regardless of
+    // how the payment was made. Falls back to the generic label for
+    // Cash/unknown modes (Cash carries no reference number by design, so
+    // this only matters when a reference number is actually present).
+    const referenceLabel = REFERENCE_LABEL_BY_MODE[(data.paymentMode || '').toUpperCase()] || 'Ref. No.';
+
     const renderTable = (items, sectionLabel, accent) => (
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11, marginTop: 4 }}>
             <thead>
@@ -256,12 +274,12 @@ const ReceiptCopy = ({ config, school, data, copyLabel }) => {
                     <div style={{ background: accentColor, fontWeight: 'bold', fontSize: 9, textTransform: 'uppercase', padding: '3px 6px', marginBottom: 6, letterSpacing: 0.5 }}>
                         Receipt Info
                     </div>
-                    {/* FIX (requested): Date and Time are now ONE combined
-                        row ("Date & Time: 21 Jul 2026, 3:02 PM") instead of
-                        two separate rows. Prefers data.generatedAt (the real
-                        collection timestamp) for both parts; falls back to
-                        the date-only data.date with no time shown when
-                        generatedAt isn't available. */}
+                    {/* Date and Time render as ONE combined row ("Date &
+                        Time: 21 Jul 2026, 3:02 PM"). Prefers
+                        data.generatedAt (the real collection timestamp)
+                        for both parts; falls back to the date-only
+                        data.date with no time shown when generatedAt isn't
+                        available. */}
                     {[
                         ['Receipt No.',  data.receiptNo],
                         ['Fee Period',   data.period],
@@ -335,17 +353,17 @@ const ReceiptCopy = ({ config, school, data, copyLabel }) => {
             <div style={{ borderTop: '1px solid #ddd', padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
                 <div style={{ fontSize: 10, color: '#555' }}>
                     <div>Recorded by: <strong>{data.recordedBy || 'Admin'}</strong></div>
-                    {data.totalDue > 0 && (
-                        <div style={{ marginTop: 3 }}>
-                            Total Due (Period): <strong>{fmt(data.totalDue)}</strong>
-                        </div>
-                    )}
+                    {/*{data.totalDue > 0 && (*/}
+                        // <div style={{ marginTop: 3 }}>
+                        //     Total Due (Period): <strong>{fmt(data.totalDue)}</strong>
+                        // </div>
+                    {/*)}*/}
                     {(parseFloat(data.balanceAfter) || 0) >= 0 && (
                         <div style={{ marginTop: 3 }}>
                             Remaining Balance: <strong style={{ color: parseFloat(data.balanceAfter) > 0 ? '#e11d48' : '#16a34a' }}>{fmt(data.balanceAfter)}</strong>
                         </div>
                     )}
-                    {data.referenceNo && <div>Ref. No.: <strong>{data.referenceNo}</strong></div>}
+                    {data.referenceNo && <div>{referenceLabel}: <strong>{data.referenceNo}</strong></div>}
                 </div>
                 {showSignatureLine && (
                     <div style={{ textAlign: 'center', fontSize: 10, color: '#555' }}>
@@ -405,10 +423,10 @@ export default function FeeReceiptPrint({ receipt, onClose }) {
     const config = DEFAULT_CONFIG;
     const [showConfig, setShowConfig] = useState(false);
 
-    // FIX: `period` is taken as-is from the `receipt` prop, which the
-    // caller (CollectionsHistory.jsx) now populates with whichever Fee
-    // Period was actually selected at the moment of collection — so a
-    // mid-collection period change is reflected correctly here too.
+    // `period` is taken as-is from the `receipt` prop, which the caller
+    // (CollectionsHistory.jsx) populates with whichever Fee Period was
+    // actually selected at the moment of collection — so a mid-collection
+    // period change is reflected correctly here too.
     const editData = {
         receiptNo:   receipt?.receiptNo   || '',
         date:        receipt?.date        || new Date().toLocaleDateString('en-IN'),
