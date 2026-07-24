@@ -319,7 +319,7 @@ export const COLLECTION_HISTORY_STRINGS = {
     LBL_PAYMENT_DATE: "Payment Date",
     LBL_REFERENCE_NO: "Reference No.",
     LBL_DISCOUNT: "Discount",
-    LBL_REASON: "Reason e.g. Sibling discount, scholarship…",
+    LBL_REASON: "Please Select a Reason..",
     LBL_REMARKS: "Remarks",
     LBL_OPTIONAL_NOTE: "Optional note…",
     MSG_EXCEEDS_BALANCE: "Net amount exceeds balance due",

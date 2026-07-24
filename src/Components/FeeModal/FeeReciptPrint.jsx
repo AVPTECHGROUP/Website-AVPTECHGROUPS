@@ -7,12 +7,8 @@ import { UserContext } from '../../ContextAPI/UserContext.jsx'; // TODO: confirm
 // '../../Api/SchoolConfiguration/Schools').
 import { getSchoolById } from '../../Api/SchoolConfiguration/schoolconfig.js';
 
-// FIX: this was missing from the file, which is what caused the
-// "ReferenceError: DEFAULT_CONFIG is not defined" crash in the console.
-// School identity fields (name/address/phone/email/logo) have been
-// REMOVED from this config — they are no longer hardcoded defaults or
-// user-editable. They now come exclusively from the school's record via
-// getSchoolById(schoolId), fetched below and rendered read-only.
+// School identity fields (name/address/phone/email/logo) live in `school`
+// (sourced from getSchoolById), never hardcoded here or user-editable.
 const DEFAULT_CONFIG = {
     headerColor:   '#2E7D32',
     accentColor:   '#C8E6C9',
@@ -36,25 +32,28 @@ const FALLBACK_SCHOOL = {
     schoolLogo: '',
 };
 
+// FIX (requested): reference-number field label now varies by payment
+// mode — Cheque Number for Cheque, Demand Draft Number for DD, and
+// Transaction ID for Online — mirroring REFERENCE_FIELD_CONFIG used in
+// CollectionsHistory.jsx's collect modal, so the printed receipt always
+// uses the correct term instead of a generic "Ref. No." regardless of how
+// the payment was actually made.
+const REFERENCE_LABEL_BY_MODE = {
+    ONLINE: 'Transaction ID',
+    CHEQUE: 'Cheque Number',
+    DD: 'Demand Draft Number',
+};
+
 // FIX: JS Date only reliably supports up to 3-digit (millisecond)
 // fractional seconds. Backend timestamps like
 // "2026-07-21T15:02:29.199059362" carry 9 fractional digits, which some
 // browsers (Safari/Firefox in particular) fail to parse — silently
-// returning an Invalid Date and dropping the Time row entirely, even
-// though Chrome-based devtools testing looks fine. Truncate to 3
-// fractional digits before handing the string to `new Date(...)`.
+// returning an Invalid Date. Truncate to 3 fractional digits first.
 const normalizeTimestamp = (val) => {
     if (typeof val !== 'string') return val;
     return val.replace(/(\.\d{3})\d+/, '$1');
 };
 
-// FIX: previously the "Date" row printed data.date raw (an unformatted
-// ISO string like "2026-07-20"), and the optional "Generated At" row
-// printed data.generatedAt raw as well (e.g. "2026-07-20T14:09:55.287558741"),
-// which is why the receipt effectively showed no usable time. These two
-// helpers turn either into a clean, human-readable date and time, and
-// generatedAt (the real collection timestamp, when available) is now used
-// to derive BOTH the Date and the Time rows so they always agree.
 const formatDateOnly = (val) => {
     if (!val) return '';
     try {
@@ -76,12 +75,19 @@ const formatTimeOnly = (val) => {
     }
 };
 
+// Date and Time render as a single combined "Date & Time" row, e.g.
+// "21 Jul 2026, 3:02 PM". Falls back to date-only (no comma/time) when
+// generatedAt isn't available and only the date-only `date` field is.
+const formatDateTimeLine = (generatedAt, dateOnly) => {
+    if (generatedAt) {
+        const d = formatDateOnly(generatedAt);
+        const t = formatTimeOnly(generatedAt);
+        return t ? `${d}, ${t}` : d;
+    }
+    return formatDateOnly(dateOnly);
+};
+
 // ─── Config Panel (read-only view — nothing here is editable) ─────────────────
-// FIX: this used to be an edit form (text inputs, color pickers, toggle
-// switches) for the branding/copy/currency/footer settings. Per request,
-// the whole panel is now a plain read-only display of the current
-// settings — no `onChange` wiring left anywhere in here. `config` and
-// `school` are shown, never mutated, from this component.
 const ConfigPanel = ({ config, onClose, school, schoolLoading }) => {
     const readOnlyField = (label, value) => (
         <div>
@@ -166,11 +172,6 @@ const ConfigPanel = ({ config, onClose, school, schoolLoading }) => {
 };
 
 // ─── Single Receipt Copy ──────────────────────────────────────────────────────
-// FIX: school identity is now a separate `school` prop sourced from the API,
-// instead of living inside `config`.
-// FIX: school phone/email were being fetched (and shown in the read-only
-// Config panel) but never actually rendered on the printed receipt itself.
-// They're now shown in the header, under the address, whenever present.
 const ReceiptCopy = ({ config, school, data, copyLabel }) => {
     const { currency, headerColor, accentColor, transportAccentColor, showSignatureLine, footerNote } = config;
     const fmt = (n) => currency + (Number(n) || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 });
@@ -185,6 +186,14 @@ const ReceiptCopy = ({ config, school, data, copyLabel }) => {
     // submitted to the backend) — discount is shown below only for
     // transparency, not subtracted again.
     const grandTotal = academicCollected + lateFine + transportCollected;
+
+    // FIX (requested): "Ref. No." is now labeled per payment mode —
+    // "Cheque Number" for Cheque, "Transaction ID" for Online, "Demand
+    // Draft Number" for DD — instead of a generic "Ref. No." regardless of
+    // how the payment was made. Falls back to the generic label for
+    // Cash/unknown modes (Cash carries no reference number by design, so
+    // this only matters when a reference number is actually present).
+    const referenceLabel = REFERENCE_LABEL_BY_MODE[(data.paymentMode || '').toUpperCase()] || 'Ref. No.';
 
     const renderTable = (items, sectionLabel, accent) => (
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11, marginTop: 4 }}>
@@ -244,19 +253,6 @@ const ReceiptCopy = ({ config, school, data, copyLabel }) => {
                     <div style={{ background: accentColor, fontWeight: 'bold', fontSize: 9, textTransform: 'uppercase', padding: '3px 6px', marginBottom: 6, letterSpacing: 0.5 }}>
                         Student Details
                     </div>
-                    {/* FIX: Admission No. and Roll No. are two different
-                things and are now two separate rows. Admission No. comes
-                straight from the backend's admissionNumber field; Roll No.
-                is derived from studentId (per your call — the backend has
-                no dedicated roll-number field of its own). Previously a
-                single row was labeled "Roll No." but was actually being
-                fed the admission number, which was simply wrong. */}
-                    {/* FIX: Parent Name and Parent Mobile are now shown as
-                two additional rows, sourced from the backend's parentName /
-                parentMobile fields (with a parentPhone fallback for older
-                shapes). Row is skipped entirely if neither value exists,
-                so blank rows don't clutter old receipts that lack the
-                fields. */}
                     {[
                         ['Admission No.', data.admissionNumber],
                         ['Roll No.',  data.rollNo],
@@ -278,20 +274,17 @@ const ReceiptCopy = ({ config, school, data, copyLabel }) => {
                     <div style={{ background: accentColor, fontWeight: 'bold', fontSize: 9, textTransform: 'uppercase', padding: '3px 6px', marginBottom: 6, letterSpacing: 0.5 }}>
                         Receipt Info
                     </div>
-                    {/* FIX: Date is now derived from data.generatedAt (the
-                real collection timestamp) whenever it's available, falling
-                back to the date-only data.date otherwise — both are run
-                through formatDateOnly instead of being printed as a raw
-                ISO string. A separate Time row is shown alongside it
-                whenever generatedAt is present, since paymentDate itself
-                is date-only and previously left the receipt with no time
-                on it at all. */}
+                    {/* Date and Time render as ONE combined row ("Date &
+                        Time: 21 Jul 2026, 3:02 PM"). Prefers
+                        data.generatedAt (the real collection timestamp)
+                        for both parts; falls back to the date-only
+                        data.date with no time shown when generatedAt isn't
+                        available. */}
                     {[
                         ['Receipt No.',  data.receiptNo],
                         ['Fee Period',   data.period],
                         ['School',    school.schoolName],
-                        ['Date',         formatDateOnly(data.generatedAt || data.date)],
-                        ...(data.generatedAt ? [['Time', formatTimeOnly(data.generatedAt)]] : []),
+                        ['Date & Time',  formatDateTimeLine(data.generatedAt, data.date)],
                         ['Mode',         data.paymentMode],
                     ].map(([k, v]) => (
                         <div key={k} style={{ display: 'flex', gap: 6, marginBottom: 3 }}>
@@ -340,7 +333,7 @@ const ReceiptCopy = ({ config, school, data, copyLabel }) => {
             <div style={{ borderTop: '2px solid #333', padding: '6px 12px' }}>
                 <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                     <div style={{ minWidth: 220, display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: 13 }}>
-                        <span>TOTAL COLLECTED:</span>
+                        <span>TOTAL AMOUNT COLLECTED:</span>
                         <span>{fmt(grandTotal)}</span>
                     </div>
                 </div>
@@ -360,17 +353,17 @@ const ReceiptCopy = ({ config, school, data, copyLabel }) => {
             <div style={{ borderTop: '1px solid #ddd', padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
                 <div style={{ fontSize: 10, color: '#555' }}>
                     <div>Recorded by: <strong>{data.recordedBy || 'Admin'}</strong></div>
-                    {data.totalDue > 0 && (
-                        <div style={{ marginTop: 3 }}>
-                            Total Due (Period): <strong>{fmt(data.totalDue)}</strong>
-                        </div>
-                    )}
+                    {/*{data.totalDue > 0 && (*/}
+                        // <div style={{ marginTop: 3 }}>
+                        //     Total Due (Period): <strong>{fmt(data.totalDue)}</strong>
+                        // </div>
+                    {/*)}*/}
                     {(parseFloat(data.balanceAfter) || 0) >= 0 && (
                         <div style={{ marginTop: 3 }}>
-                            Balance After Payment: <strong style={{ color: parseFloat(data.balanceAfter) > 0 ? '#e11d48' : '#16a34a' }}>{fmt(data.balanceAfter)}</strong>
+                            Remaining Balance: <strong style={{ color: parseFloat(data.balanceAfter) > 0 ? '#e11d48' : '#16a34a' }}>{fmt(data.balanceAfter)}</strong>
                         </div>
                     )}
-                    {data.referenceNo && <div>Ref. No.: <strong>{data.referenceNo}</strong></div>}
+                    {data.referenceNo && <div>{referenceLabel}: <strong>{data.referenceNo}</strong></div>}
                 </div>
                 {showSignatureLine && (
                     <div style={{ textAlign: 'center', fontSize: 10, color: '#555' }}>
@@ -390,11 +383,6 @@ const ReceiptCopy = ({ config, school, data, copyLabel }) => {
 export default function FeeReceiptPrint({ receipt, onClose }) {
     const { schoolId, schoolInfo } = useContext(UserContext);
 
-    // FIX: school identity is now its own state, fetched fresh from the
-    // backend for the logged-in school's schoolId — never hardcoded and
-    // never user-editable. We seed it from the lightweight `schoolInfo`
-    // already in UserContext (name/logo) so the header isn't blank while
-    // the fuller record (address/phone/email) loads.
     const [school, setSchool] = useState({
         ...FALLBACK_SCHOOL,
         schoolName: schoolInfo?.schoolName || FALLBACK_SCHOOL.schoolName,
@@ -414,9 +402,6 @@ export default function FeeReceiptPrint({ receipt, onClose }) {
                     // TODO: confirm these field names against the actual
                     // getSchoolById response shape and adjust the right-hand side
                     // keys if they differ (e.g. contactNumber vs phone).
-                    // ✅ FIX: widened fallback chain so phone/email reliably show up in
-                    // the Config panel regardless of which field name the backend
-                    // actually uses for them.
                     setSchool({
                         schoolName: data.name || data.schoolName || schoolInfo?.schoolName || FALLBACK_SCHOOL.schoolName,
                         schoolAddress: data.address || data.schoolAddress || '',
@@ -435,29 +420,13 @@ export default function FeeReceiptPrint({ receipt, onClose }) {
         return () => { cancelled = true; };
     }, [schoolId, schoolInfo]);
 
-    // FIX: config is fixed formatting defaults, shown read-only in the
-    // Config panel — there's no editing UI left to call a setter from, so
-    // this no longer needs to be mutable state.
     const config = DEFAULT_CONFIG;
-
     const [showConfig, setShowConfig] = useState(false);
 
-    // FIX: receipt data is now fixed at open-time from the `receipt` prop.
-    // The "Edit Data" panel (and every setter that mutated it) has been
-    // removed per request — this now only feeds the read-only preview/print
-    // output, it is never mutated after mount.
-    //
-    // ✅ FIX: admissionNumber, section, totalDue, discountReason, and
-    // generatedAt are all pulled through from the real
-    // /v1/fee/collections/receipt/{id} response. Admission No. and Roll No.
-    // are kept as two distinct fields: admissionNumber comes from the
-    // backend's own admissionNumber field, while rollNo is derived from
-    // studentId (there's no dedicated roll-number field on the backend).
-    //
-    // ✅ FIX: parentName / parentPhone are now carried through too — sourced
-    // from the backend's parentName field and, for the phone number,
-    // parentMobile (with parentPhone kept as a fallback for any older
-    // shape that used that name instead).
+    // `period` is taken as-is from the `receipt` prop, which the caller
+    // (CollectionsHistory.jsx) populates with whichever Fee Period was
+    // actually selected at the moment of collection — so a mid-collection
+    // period change is reflected correctly here too.
     const editData = {
         receiptNo:   receipt?.receiptNo   || '',
         date:        receipt?.date        || new Date().toLocaleDateString('en-IN'),
@@ -479,10 +448,6 @@ export default function FeeReceiptPrint({ receipt, onClose }) {
         discount:    receipt?.discount    || 0,
         discountReason: receipt?.discountReason || '',
         lateFine:    receipt?.lateFine    || 0,
-        // Academic and transport are tracked separately, matching the
-        // two-column collection. Falls back to legacy `components` (single
-        // list) if this receipt was generated before the split, so old
-        // receipts still render sensibly.
         academicComponents: receipt?.academicComponents?.length
             ? receipt.academicComponents
             : (receipt?.components?.length ? receipt.components : [{ name: 'Tuition Fee', amount: 0 }]),
