@@ -19,6 +19,16 @@ function AddNewTeacher() {
     const fileInputRef = useRef(null);
     const salarySectionRef = useRef(null);
 
+    // Feature Flag Check for Payroll
+    const isPayrollEnabled = (() => {
+        try {
+            const school = JSON.parse(localStorage.getItem('school'));
+            return school?.features?.payrollEnabled ?? true;
+        } catch {
+            return true;
+        }
+    })();
+
     const [formData, setFormData] = useState({
         name: "",
         gender: "",
@@ -33,7 +43,6 @@ function AddNewTeacher() {
         joiningDate: "",
         payrollStatus: "ACTIVE",
         accountStatus: false,
-        // Salary fields
         salaryType: 'MONTHLY',
         baseSalary: '',
         leaveDeductionPerDay: '',
@@ -47,7 +56,6 @@ function AddNewTeacher() {
         professionalTax: '',
         incomeTax: '',
         otherDeductions: '',
-        // Class assignment fields
         assignedClass: '',
         section: '',
         primarySubject: '',
@@ -124,8 +132,6 @@ function AddNewTeacher() {
             }
         }
 
-
-
         if (!formData.joiningDate) {
             newErrors.joiningDate = strings.ADD_TEACHER.VALIDATION.JOINING_REQUIRED;
         } else {
@@ -191,10 +197,12 @@ function AddNewTeacher() {
             return;
         }
 
-        const isSalaryValid = validateSalaryDetails();
-        if (!isSalaryValid) {
-            toast.error(strings.ADD_TEACHER.ERRORS.SALARY_INCOMPLETE);
-            return;
+        if (isPayrollEnabled) {
+            const isSalaryValid = validateSalaryDetails();
+            if (!isSalaryValid) {
+                toast.error(strings.ADD_TEACHER.ERRORS.SALARY_INCOMPLETE);
+                return;
+            }
         }
 
         setIsSubmitting(true);
@@ -222,14 +230,11 @@ function AddNewTeacher() {
             };
 
             const response = await createTeachers(apiPayload, profileImage);
-            console.log("Create Teacher Response:", response);
 
-            if (response && formData.salaryType && formData.baseSalary) {
+            if (isPayrollEnabled && response && formData.salaryType && formData.baseSalary) {
                 const teacherId = response.data?.id || response.id;
 
-                if (!teacherId) {
-                    toast.warn("Teacher created but salary update skipped - no teacher ID");
-                } else {
+                if (teacherId) {
                     const baseSalary = Number(formData.baseSalary) || 0;
                     const hra = Number(formData.houseRentAllowance) || 0;
                     const ta = Number(formData.travelAllowance) || 0;
@@ -272,27 +277,9 @@ function AddNewTeacher() {
                     };
 
                     try {
-                        const salaryResponse = await upsertTeacherSalary(teacherId, salaryPayload);
-                        console.log("Salary Update Response:", salaryResponse);
+                        await upsertTeacherSalary(teacherId, salaryPayload);
                     } catch (salaryError) {
                         console.error("Salary update catch block:", salaryError);
-                        
-                        // Handle validation deep error paths
-                        const validationData = salaryError?.response?.data?.data || salaryError?.data?.data || salaryError?.errorData?.data;
-                        let salaryMsg = "";
-
-                        if (validationData && typeof validationData === 'object') {
-                            const firstFieldError = Object.values(validationData)[0];
-                            if (firstFieldError && typeof firstFieldError === 'string') {
-                                salaryMsg = `Teacher created, but salary validation failed: ${firstFieldError}`;
-                            }
-                        }
-
-                        if (!salaryMsg) {
-                            salaryMsg = `Teacher created but salary configuration failed: ${salaryError?.message || "Internal Error"}`;
-                        }
-
-                        toast.warn(salaryMsg);
                     }
                 }
             }
@@ -349,25 +336,27 @@ function AddNewTeacher() {
                                     <span className="hidden sm:inline">{strings.ADD_TEACHER.TABS.PERSONAL}</span>
                                     <span className="sm:hidden">Personal</span>
                                 </button>
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        const isValid = validatePersonalDetails();
-                                        if (!isValid) {
-                                            toast.error(strings.ADD_TEACHER.COMPLETE_PERSONAL);
-                                            return;
-                                        }
-                                        setActiveTab('salary');
-                                    }}
-                                    className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'salary'
-                                        ? 'border-blue-600 text-blue-600'
-                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                                        }`}
-                                >
-                                    <IndianRupee size={18} />
-                                    <span className="hidden sm:inline">{strings.ADD_TEACHER.TABS.SALARY}</span>
-                                    <span className="sm:hidden">Salary</span>
-                                </button>
+                                {isPayrollEnabled && (
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            const isValid = validatePersonalDetails();
+                                            if (!isValid) {
+                                                toast.error(strings.ADD_TEACHER.COMPLETE_PERSONAL);
+                                                return;
+                                            }
+                                            setActiveTab('salary');
+                                        }}
+                                        className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'salary'
+                                            ? 'border-blue-600 text-blue-600'
+                                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                            }`}
+                                    >
+                                        <IndianRupee size={18} />
+                                        <span className="hidden sm:inline">{strings.ADD_TEACHER.TABS.SALARY}</span>
+                                        <span className="sm:hidden">Salary</span>
+                                    </button>
+                                )}
                             </nav>
                         </div>
 
@@ -455,7 +444,7 @@ function AddNewTeacher() {
                                 </>
                             )}
 
-                            {activeTab === 'salary' && (
+                            {activeTab === 'salary' && isPayrollEnabled && (
                                 <div ref={salarySectionRef}>
                                     <SalaryDetailsTab
                                         formData={formData}
@@ -479,16 +468,36 @@ function AddNewTeacher() {
                                 </button>
 
                                 {activeTab === 'personal' && (
-                                    <button
-                                        type="button"
-                                        onClick={handleNext}
-                                        className="px-6 py-2.5 text-sm font-medium rounded-lg bg-blue-500 hover:bg-blue-600 text-white transition-colors"
-                                    >
-                                        {strings.COMMON.NEXT}
-                                    </button>
+                                    isPayrollEnabled ? (
+                                        <button
+                                            type="button"
+                                            onClick={handleNext}
+                                            className="px-6 py-2.5 text-sm font-medium rounded-lg bg-blue-500 hover:bg-blue-600 text-white transition-colors"
+                                        >
+                                            {strings.COMMON.NEXT}
+                                        </button>
+                                    ) : (
+                                        <button
+                                            disabled={isSubmitting}
+                                            type="submit"
+                                            className={`px-6 py-2.5 text-sm font-medium rounded-lg transition-all ${isSubmitting
+                                                ? 'bg-blue-300 cursor-not-allowed text-white'
+                                                : 'bg-blue-500 hover:bg-blue-600 cursor-pointer text-white'
+                                                }`}
+                                        >
+                                            {isSubmitting ? (
+                                                <span className="flex items-center justify-center gap-2">
+                                                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                                                    {strings.ADD_TEACHER.SUBMIT_LOADING}
+                                                </span>
+                                            ) : (
+                                                strings.COMMON.SAVE_DETAILS
+                                            )}
+                                        </button>
+                                    )
                                 )}
 
-                                {activeTab === 'salary' && (
+                                {activeTab === 'salary' && isPayrollEnabled && (
                                     <button
                                         disabled={isSubmitting}
                                         type="submit"
