@@ -1,5 +1,5 @@
 import { authFetch } from "../../Authfetch/Authfetch";
-import {API_ENDPOINTS} from "../../Constants/Endpoints";
+import { API_ENDPOINTS } from "../../Constants/Endpoints";
 
 export const getSchools = async ({ page, size, search, isActive, board } = {}) => {
   const params = new URLSearchParams();
@@ -42,6 +42,24 @@ export const updateSchool = async (id, payload) => {
   });
 
   if (!res.ok) throw new Error(await res.text() || "Failed to update school");
+  return await res.json();
+};
+
+export const updateSchoolFeatures = async (id, features) => {
+  if (!id) throw new Error("School ID is required");
+
+  const res = await authFetch(API_ENDPOINTS.schoolFeatures(id), {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(features),
+  });
+
+  if (!res.ok) {
+    throw new Error((await res.text()) || "Failed to update school features");
+  }
+
   return await res.json();
 };
 

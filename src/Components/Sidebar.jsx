@@ -2,8 +2,8 @@ import dpis from '../assets/Images/dpis.jpg'
 import { useNavigate, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, Calendar, FileText, Users, LogOut,
-  ChevronDown, UserCog, Package, Bus, Shield, ChevronUp, 
-  ArrowLeftRight, BookOpenText, GraduationCap, SchoolIcon, 
+  ChevronDown, UserCog, Package, Bus, Shield, ChevronUp,
+  ArrowLeftRight, BookOpenText, GraduationCap, SchoolIcon,
   MessageSquare, IndianRupee, Mail, Phone
 } from 'lucide-react'
 import { useState, useEffect, useContext, useRef, useMemo } from 'react'
@@ -48,12 +48,13 @@ const menuSections = [
         subItems: [
           { label: 'Subjects', route: '/subjectMaster', permission: P.ACADEMIC_VIEW },
           { label: 'Class & Sections', route: '/academics/classSections', permission: P.ACADEMIC_YEAR_MANAGE },
-          { label: 'HomeWork', route: '/homework', permission: P.HOMEWORK_VIEW },
-          { label: 'Time Table', route: '/schedule', permission: P.TIMETABLE_VIEW },
+          { label: 'HomeWork', route: '/homework', permission: P.HOMEWORK_VIEW, featureFlag: 'homeworkEnabled' },
+          { label: 'Time Table', route: '/schedule', permission: P.TIMETABLE_VIEW, featureFlag: 'timetableEnabled' },
           {
             id: 'exams',
             label: 'Exams',
             route: '/exams',
+            featureFlag: 'examEnabled',
             permissions: [P.EXAM_VIEW, P.EXAM_MARKS_VIEW_CLASS, P.EXAM_MARKS_ENTER],
             childItems: [
               { label: 'Exam Overview', route: '/exams', permissions: [P.EXAM_VIEW, P.EXAM_MARKS_VIEW_CLASS, P.EXAM_MARKS_ENTER] },
@@ -76,18 +77,23 @@ const menuSections = [
     items: [
       {
         id: 'attendance', icon: Calendar, label: 'Attendance', route: '/attendance',
-        permissions: [P.ATTENDANCE_VIEW, P.ATTENDANCE_CREATE, P.ATTENDANCE_EDIT],
         subItems: [
-          { label: 'Attendance Overview', route: '/attendance', permission: P.ATTENDANCE_VIEW },
-          { label: 'Staff Enrollment', route: '/attendance/staffImgReg', permission: P.ATTENDANCE_APPROVE },
-          { label: 'Staff Attendance', route: '/attendance/markUserAttendance', permission: P.ATTENDANCE_CREATE },
-          { label: 'Student Enrollment', route: '/attendance/studentImgReg', permission: P.ATTENDANCE_APPROVE },
-          { label: 'Student Attendance', route: '/attendance/studentAttendance', permission: P.ATTENDANCE_CREATE },
+          {
+            label: 'Attendance Overview',
+            route: '/attendance',
+            permission: P.ATTENDANCE_VIEW,
+            showIf: (perms, features) => (features?.staffAttendanceEnabled || features?.studentAttendanceEnabled)
+          },
+          { label: 'Staff Enrollment', route: '/attendance/staffImgReg', permission: P.ATTENDANCE_APPROVE, featureFlag: 'staffAttendanceEnabled' },
+          { label: 'Staff Attendance', route: '/attendance/markUserAttendance', permission: P.ATTENDANCE_CREATE, featureFlag: 'staffAttendanceEnabled' },
+          { label: 'Student Enrollment', route: '/attendance/studentImgReg', permission: P.ATTENDANCE_APPROVE, featureFlag: 'studentAttendanceEnabled' },
+          { label: 'Student Attendance', route: '/attendance/studentAttendance', permission: P.ATTENDANCE_CREATE, featureFlag: 'studentAttendanceEnabled' },
         ]
       },
       {
         id: 'leaves', icon: FileText, label: 'Leaves', route: '/leaves/applyLeaves',
         permission: P.LEAVE_VIEW,
+        featureFlag: 'leaveEnabled',
         subItems: [
           { label: 'Manage Leave', route: '/leaves', permission: P.LEAVE_APPROVE },
           { label: 'My Leaves', route: '/leaves/myLeaves', permission: P.LEAVE_VIEW },
@@ -154,6 +160,7 @@ const menuSections = [
       {
         id: 'transport', icon: Bus, label: 'Transport', route: '/route',
         permission: P.TRANSPORT_VIEW,
+        featureFlag: 'transportEnabled',
         subItems: [
           { label: 'Vehicles', route: '/route/vehicles', permission: P.TRANSPORT_VIEW },
           { label: 'Driver & Attendants', route: '/route/Driver&Attendants', permission: P.TRANSPORT_VIEW },
@@ -201,7 +208,9 @@ const roleBadgeStyles = {
   STORE_SELLER: 'bg-indigo-100 text-indigo-700',
 }
 
-const checkAccess = (item, userPermissions, userRole) => {
+// ── Strict Access Checker ──
+const checkAccess = (item, userPermissions, userRole, features) => {
+  // 1. System Role Lock Check
   if (item.systemRole) {
     const map = {
       Permission: SYSTEM_ROLES.ROLE_MANAGE,
@@ -209,12 +218,28 @@ const checkAccess = (item, userPermissions, userRole) => {
     }
     return (map[item.id] || []).includes(userRole)
   }
-  if (typeof item.showIf === 'function') return item.showIf(userPermissions)
-  if (item.permission) return userPermissions.includes(item.permission)
-  if (item.permissions) return item.permissions.some(p => userPermissions.includes(p))
-  if (item.subItems) return item.subItems.some(sub => checkAccess(sub, userPermissions, userRole))
-  if (item.childItems) return item.childItems.some(child => checkAccess(child, userPermissions, userRole))
-  return true
+
+  // 2. Feature Flag Check
+  if (item.featureFlag && features) {
+    if (features[item.featureFlag] === false) return false;
+  }
+
+  // 3. Custom showIf Function Check
+  if (typeof item.showIf === 'function') {
+    if (!item.showIf(userPermissions, features)) return false;
+  }
+
+  // 4. Permission Check
+  if (item.permission && !userPermissions.includes(item.permission)) return false;
+  if (item.permissions && !item.permissions.some(p => userPermissions.includes(p))) return false;
+
+  // 5. SubItems Check: If all sub-items are hidden, hide parent menu item too
+  if (item.subItems && item.subItems.length > 0) {
+    const hasValidSubItem = item.subItems.some(sub => checkAccess(sub, userPermissions, userRole, features));
+    if (!hasValidSubItem) return false;
+  }
+
+  return true;
 }
 
 const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
@@ -256,6 +281,20 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
   const userRole = ctxUser?.userType || (Array.isArray(ctxUser?.roles) ? ctxUser.roles[0] : null) || (Array.isArray(storedUser?.roles) ? storedUser.roles[0] : null) || null
   const userPermissions = ctxUser?.permissions || storedUser?.permissions || []
 
+  // Feature Flags State (Fallback to true if features key isn't populated yet)
+  const features = useMemo(() => {
+    return schoolInfo?.features || {
+      staffAttendanceEnabled: true,
+      studentAttendanceEnabled: true,
+      transportEnabled: true,
+      homeworkEnabled: true,
+      examEnabled: true,
+      leaveEnabled: true,
+      timetableEnabled: true,
+      payrollEnabled: true,
+    };
+  }, [schoolInfo]);
+
   const schoolDisplayName = schoolInfo?.schoolName || 'Delhi Public International School'
   const schoolDisplayCode = schoolInfo?.schoolCode || ''
   const schoolLogoUrl = schoolInfo?.logoUrl || dpis
@@ -265,28 +304,28 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
     navigate('/superAdmin')
   }
 
-  // ── Modified filtration map logic across category tiers ──
+  // Filter sections dynamically based on permissions & active feature flags
   const filteredSections = useMemo(() => {
     return menuSections
       .map(section => {
         const items = section.items
-          .filter(item => checkAccess(item, userPermissions, userRole))
+          .filter(item => checkAccess(item, userPermissions, userRole, features))
           .map(item => ({
             ...item,
             route: item.id === 'leaves' && !userPermissions.includes(P.LEAVE_APPROVE) ? '/leaves/myLeaves' : item.route,
             subItems: item.subItems
               ? item.subItems
-                  .filter(sub => checkAccess(sub, userPermissions, userRole))
-                  .map(sub => ({
-                    ...sub,
-                    childItems: sub.childItems ? sub.childItems.filter(child => checkAccess(child, userPermissions, userRole)) : undefined
-                  }))
+                .filter(sub => checkAccess(sub, userPermissions, userRole, features))
+                .map(sub => ({
+                  ...sub,
+                  childItems: sub.childItems ? sub.childItems.filter(child => checkAccess(child, userPermissions, userRole, features)) : undefined
+                }))
               : undefined
           }));
         return { ...section, items };
       })
       .filter(section => section.items.length > 0);
-  }, [userPermissions, userRole]);
+  }, [userPermissions, userRole, features]);
 
   const onLogout = () => {
     localStorage.removeItem('token')
@@ -378,7 +417,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
 
   return (
     <div className={`bg-[#F8FAFC] border-r border-gray-200/80 flex flex-col transition-all duration-300 h-full ${sidebarOpen ? 'w-64' : 'w-20'}`}>
-      
+
       {/* ── Logo Heading Section ── */}
       <div className="p-5 border-b border-gray-100 shrink-0">
         <div className="flex items-center gap-3">
@@ -414,11 +453,10 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
         </div>
       </div>
 
-      {/* ── Navigation Items Menu with Section Grouping labels ── */}
+      {/* ── Navigation Items Menu ── */}
       <nav className="flex-1 p-3 overflow-y-auto sidebar-scroll space-y-4">
         {filteredSections.map((section) => (
           <div key={section.section}>
-            {/* Display uppercase label when sidebar is expanded */}
             {sidebarOpen && (
               <div className="px-3.5 py-1.5 text-[10px] font-bold text-slate-400 tracking-wider uppercase select-none">
                 {section.section}
@@ -483,7 +521,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
                                   className={`w-full flex items-center justify-between px-3 py-1.5 rounded-lg
                                     text-[12.5px] transition-all duration-150 text-left select-none cursor-pointer
                                     ${isSubActive ? 'bg-blue-50/60 text-blue-600 font-bold' : 'text-slate-500 hover:bg-gray-50 hover:text-slate-800'}`}
-                                Skid={subItem.id}>
+                                >
                                   <div className="flex items-center gap-2 min-w-0">
                                     <span className={`w-1 h-1 rounded-full shrink-0 transition-all duration-150
                                       ${isSubActive ? 'bg-blue-500 scale-125' : 'bg-gray-300'}`}
