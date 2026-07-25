@@ -5,7 +5,7 @@ import Badge from '../../Components/FeeModal/Badge.jsx';
 import Modal from '../../Components/FeeModal/Modal.jsx';
 import Select from '../../Components/FeeModal/Select.jsx';
 import Input from '../../Components/FeeModal/Input.jsx';
-import { Plus, X, Pencil, Eye, Trash2, AlertTriangle, CheckCircle2, Info, AlertCircle, Calendar, Layers } from 'lucide-react';
+import { Plus, X, Pencil, Eye, Trash2, AlertTriangle, CheckCircle2, Info, AlertCircle, Calendar, Layers, FileText } from 'lucide-react';
 import {
   getFeeStructures,
   createFeeStructure,
@@ -48,6 +48,13 @@ const sanitizeNameInput = (val) => val.replace(/[^A-Za-z\s]/g, '');
 // be typed or pasted in, and the stepper increments 0 → 1 → 2 instead of
 // crawling up by 0.01).
 const sanitizeAmountInput = (val) => val.replace(/[^0-9]/g, '');
+
+// Structure Name is a free-text label (e.g. "Regular Fee Structure",
+// "Sibling Discount Structure") used purely for display, so it allows
+// letters, numbers, spaces and a small set of common punctuation — not
+// restricted to letters-only like the component Custom Name field.
+const sanitizeStructureNameInput = (val) => val.replace(/[^A-Za-z0-9\s&\-',.()/]/g, '');
+const STRUCTURE_NAME_MAX_LEN = 60;
 
 // ─── Toast ────────────────────────────────────────────────────────────────────
 let _dispatch = null;
@@ -192,12 +199,17 @@ const StatusDotText = ({ status }) => {
 // is why Period/Students previously showed blank or "—".
 // FIX (issue 3): backdrop click-to-close removed — only the X button closes
 // this modal now.
+// UPDATE: added a "Structure Name" field to the top grid (now a clean 2×2
+// layout: Structure Name, Period, Classes, Status) so the label given at
+// creation time is visible here too, not just on the card.
 function ViewDetailsModal({ isOpen, onClose, structure, periods = [], allClasses = [] }) {
   if (!isOpen || !structure) return null;
 
   const periodName = structure.feePeriod?.name
       || periods.find((p) => p.id === structure.feePeriodId)?.name
       || '—';
+
+  const structureName = structure.structureName || structure.name || '—';
 
   const computedTotal = structure.components?.reduce((s, c) => s + (Number(c.amount) || 0), 0);
   const displayTotal = structure.totalAmount ?? computedTotal ?? 0;
@@ -221,10 +233,10 @@ function ViewDetailsModal({ isOpen, onClose, structure, periods = [], allClasses
           <div className="px-6 py-5 space-y-5">
             <div className="grid grid-cols-2 gap-3">
               {[
+                ['Structure Name', structureName],
                 [FEE_STRUCTURE_STRINGS.LBL_PERIOD, periodName],
                 [FEE_STRUCTURE_STRINGS.LBL_CLASSES, structure.classes?.map((c) => c.name).join(', ') || '—'],
                 [FEE_STRUCTURE_STRINGS.LBL_STATUS, null],
-                // [FEE_STRUCTURE_STRINGS.LBL_STUDENTS, studentCount || '—'],
               ].map(([label, val]) => (
                   <div key={label} className="bg-gray-50 rounded-xl px-4 py-3 border border-gray-100">
                     <div className="text-[10.5px] font-semibold text-gray-400 uppercase tracking-wider mb-1">{label}</div>
@@ -284,11 +296,18 @@ function ViewDetailsModal({ isOpen, onClose, structure, periods = [], allClasses
 // FIX (issue 3): backdrop click-to-close removed — only the X button closes
 // this modal now, so an accidental click on the page behind the dialog no
 // longer discards in-progress form data.
+//
+// UPDATE: added an optional "Structure Name" field (Step 1, between
+// Academic Year and Fee Period) so a structure can be given a short,
+// human-readable label — e.g. "Regular Fee Structure" or "Sibling Discount
+// Structure" — that's shown on the card and in View Details instead of
+// forcing everyone to identify structures purely by period + class list.
 function StructureModal({ isOpen, onClose, structure, periods, classes, onSuccess, academicYear, lockedPeriodId, lockedPeriodName }) {
   const isEdit = !!structure;
   const [loading, setLoading] = useState(false);
 
   const [form, setForm] = useState({
+    structureName: '',
     feePeriodId: '',
     classIds: [],
     components: [{ componentType: 'TUITION_FEE', customName: '', amount: '', displayOrder: 0 }],
@@ -298,6 +317,7 @@ function StructureModal({ isOpen, onClose, structure, periods, classes, onSucces
     if (!isOpen) return;
     if (structure) {
       setForm({
+        structureName: structure.structureName || structure.name || '',
         feePeriodId: structure.feePeriodId?.toString() || '',
         classIds: structure.classes?.map((c) => c.id) || [],
         components: structure.components?.map((comp, idx) => ({
@@ -309,6 +329,7 @@ function StructureModal({ isOpen, onClose, structure, periods, classes, onSucces
       });
     } else {
       setForm({
+        structureName: '',
         // FIX: when a specific period was clicked into (lockedPeriodId),
         // pre-fill and pin the form to that period instead of leaving it
         // blank / open to any period.
@@ -318,6 +339,9 @@ function StructureModal({ isOpen, onClose, structure, periods, classes, onSucces
       });
     }
   }, [isOpen, structure, lockedPeriodId]);
+
+  const handleStructureNameChange = (val) =>
+      setForm((p) => ({ ...p, structureName: sanitizeStructureNameInput(val).slice(0, STRUCTURE_NAME_MAX_LEN) }));
 
   const toggleClass = (id) =>
       setForm((p) => ({ ...p, classIds: p.classIds.includes(id) ? p.classIds.filter((x) => x !== id) : [...p.classIds, id] }));
@@ -439,6 +463,7 @@ function StructureModal({ isOpen, onClose, structure, periods, classes, onSucces
     setLoading(true);
     try {
       const payload = {
+        structureName: form.structureName.trim() || null,
         feePeriodId: parseInt(form.feePeriodId),
         classIds: form.classIds,
         components: form.components.map((c, idx) => ({
@@ -493,6 +518,25 @@ function StructureModal({ isOpen, onClose, structure, periods, classes, onSucces
                   and edit. */}
               <div className="mb-3 px-3 py-2 bg-white border border-blue-100 rounded-lg text-sm text-blue-700">
                 Academic Year: <strong>{displayYearLabel}</strong>
+              </div>
+
+              {/* Structure Name: optional short label used to identify this
+                  structure at a glance (e.g. "Regular Fee Structure",
+                  "Sibling Discount Structure"). Purely descriptive — not
+                  sent as an identifier, just shown on the card and in View
+                  Details. Falls back to the period name everywhere if left
+                  blank, so existing structures are unaffected. */}
+              <div className="mb-3">
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                  Structure Name <span className="text-gray-400 font-normal normal-case">(optional)</span>
+                </label>
+                <Input
+                    value={form.structureName}
+                    onChange={handleStructureNameChange}
+                    placeholder="e.g. Regular Fee Structure, Sibling Discount Structure"
+                />
+                <p className="text-[11px] text-gray-400 mt-1">A short label to identify Fees Breakdown
+                </p>
               </div>
 
               <label className="block text-xs font-semibold text-gray-700 mb-1.5">
@@ -667,9 +711,17 @@ function StructureModal({ isOpen, onClose, structure, periods, classes, onSucces
 // (mirrors PeriodCard) so three buttons always fit even in a 4-column grid
 // on a 1024px-wide viewport. Class chips and the components line now share
 // consistent padding/line-height with the rest of the card.
+// UPDATE: the card title now leads with the Structure Name when one was
+// given at creation time (e.g. "Sibling Discount Structure"), with the fee
+// period shown as a small subtitle underneath — instead of the period name
+// being the only identifier. If no structure name was set, the card falls
+// back to exactly the previous behaviour (period name as the title, no
+// subtitle), so older structures still read cleanly.
 const FeeStructureCard = ({ s, periods, onView, onEdit, onDelete }) => {
   const statusKey = s.status?.toUpperCase() || STATUSES.DRAFT;
   const periodName = s.feePeriod?.name || periods.find((p) => p.id === s.feePeriodId)?.name || '—';
+  const structureName = s.structureName || s.name || '';
+  const cardTitle = structureName || periodName;
   const compCount = s.components?.length || 0;
   const compPreview = s.components?.slice(0, 3).map((c) => c.customName || c.componentType?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())).join(', ') || '—';
   const canDelete = statusKey === STATUSES.DRAFT || (statusKey === STATUSES.ACTIVE && !s.studentCount);
@@ -678,13 +730,23 @@ const FeeStructureCard = ({ s, periods, onView, onEdit, onDelete }) => {
       <div className="h-full bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-gray-300 transition-all duration-200 overflow-hidden flex flex-col">
         {/* Card body */}
         <div className="p-4 flex-1 flex flex-col gap-3">
-          {/* Row 1: Period name + status */}
+          {/* Row 1: Structure name (or period name as fallback) + status */}
           <div className="flex items-start justify-between gap-2">
             <div className="flex items-center gap-2 min-w-0">
               <div className="w-7 h-7 rounded-lg bg-[#1E3A5F]/8 flex items-center justify-center flex-shrink-0">
-                <Calendar size={13} className="text-[#1E3A5F]" />
+                {structureName
+                    ? <FileText size={13} className="text-[#1E3A5F]" />
+                    : <Calendar size={13} className="text-[#1E3A5F]" />}
               </div>
-              <h3 className="text-[15px] font-bold text-gray-900 truncate" title={periodName}>{periodName}</h3>
+              <div className="min-w-0">
+                <h3 className="text-[15px] font-bold text-gray-900 truncate" title={cardTitle}>{cardTitle}</h3>
+                {structureName && (
+                    <div className="flex items-center gap-1 text-[11px] text-gray-400 mt-0.5">
+                      <Calendar size={10} className="flex-shrink-0" />
+                      <span className="truncate">{periodName}</span>
+                    </div>
+                )}
+              </div>
             </div>
             <StatusDotText status={statusKey} />
           </div>
@@ -936,7 +998,7 @@ const FeeStructures = ({ initialPeriodId: initialPeriodIdProp }) => {
       : structures;
 
   const deleteStructureName = deleteModal.structure
-      ? `${deleteModal.structure.feePeriod?.name || 'Period'} — ${deleteModal.structure.classes?.map((c) => c.name).join(', ') || 'Classes'}`
+      ? `${deleteModal.structure.structureName || deleteModal.structure.feePeriod?.name || 'Period'} — ${deleteModal.structure.classes?.map((c) => c.name).join(', ') || 'Classes'}`
       : '';
 
   if (!academicYearId) {

@@ -121,11 +121,22 @@ const AddStudentPersonalDetails = ({ formData, setFormData, handleInputChange, e
                 <div className="grid lg:grid-cols-2 sm:grid-cols-1 gap-4">
                     <div>
                         <label className='block font-semibold text-gray-600 text-sm mb-2'>
-                            Full Name<span className="text-red-600 ml-1">*</span>
+                            First Name<span className="text-red-600 ml-1">*</span>
                         </label>
-                        <input type="text" name="name" value={formData.name} onChange={handleInputChange}
-                            placeholder='Enter full name' required
-                            className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500' />
+                        <input type="text" name="firstName" value={formData.firstName} onChange={handleInputChange}
+                               placeholder='Enter first name' required
+                               className={inputClass('firstName')} />
+                        <ErrorMsg field="firstName" />
+                    </div>
+
+                    <div>
+                        <label className='block font-semibold text-gray-600 text-sm mb-2'>
+                            Last Name<span className="text-red-600 ml-1">*</span>
+                        </label>
+                        <input type="text" name="lastName" value={formData.lastName} onChange={handleInputChange}
+                               placeholder='Enter last name' required
+                               className={inputClass('lastName')} />
+                        <ErrorMsg field="lastName" />
                     </div>
 
                     <div>
@@ -133,7 +144,7 @@ const AddStudentPersonalDetails = ({ formData, setFormData, handleInputChange, e
                             Gender<span className="text-red-600 ml-1">*</span>
                         </label>
                         <select name="gender" value={formData.gender} onChange={handleInputChange} required
-                            className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'>
+                                className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'>
                             <option value="">Select Gender</option>
                             <option value="Male">Male</option>
                             <option value="Female">Female</option>
@@ -145,8 +156,8 @@ const AddStudentPersonalDetails = ({ formData, setFormData, handleInputChange, e
                             Mobile Number<span className="text-red-600 ml-1">*</span>
                         </label>
                         <input type="tel" name="mobile" value={formData.mobile} onChange={handleInputChange}
-                            placeholder='10 digit mobile number' maxLength={10} pattern="[0-9]{10}" required
-                            className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500' />
+                               placeholder='10 digit mobile number' maxLength={10} pattern="[0-9]{10}" required
+                               className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500' />
                         <p className="text-xs text-gray-500 mt-1">Must be exactly 10 digits</p>
                     </div>
 
@@ -157,22 +168,22 @@ const AddStudentPersonalDetails = ({ formData, setFormData, handleInputChange, e
                             </span>
                             <span className="flex items-center gap-1.5 font-normal cursor-pointer select-none">
                                 <input type="checkbox" className="w-3.5 h-3.5 accent-blue-600"
-                                    checked={!!formData.sameAsMobile}
-                                    onChange={(e) => handleWhatsappSameAsMobile(e.target.checked)} />
+                                       checked={!!formData.sameAsMobile}
+                                       onChange={(e) => handleWhatsappSameAsMobile(e.target.checked)} />
                                 <span className="text-xs text-gray-500">Same as mobile</span>
                             </span>
                         </label>
                         <input type="tel" name="whatsappNumber" value={formData.whatsappNumber} onChange={handleInputChange}
-                            placeholder='10 digit WhatsApp number' maxLength={10} disabled={!!formData.sameAsMobile}
-                            className={inputClass('whatsappNumber')} />
+                               placeholder='10 digit WhatsApp number' maxLength={10} disabled={!!formData.sameAsMobile}
+                               className={inputClass('whatsappNumber')} />
                         <ErrorMsg field="whatsappNumber" />
                     </div>
 
                     <div>
                         <label className='block font-semibold text-gray-600 text-sm mb-2'>Email Address</label>
                         <input type="email" name="email" value={formData.email} onChange={handleInputChange}
-                            placeholder='Enter email address'
-                            className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500' />
+                               placeholder='Enter email address'
+                               className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500' />
                         <p className="text-xs text-gray-500 mt-1">Valid email format required if provided</p>
                     </div>
 
@@ -181,13 +192,13 @@ const AddStudentPersonalDetails = ({ formData, setFormData, handleInputChange, e
                             Date of Birth<span className="text-red-600 ml-1">*</span>
                         </label>
                         <input type="date" name="dob" value={formData.dob} onChange={handleInputChange} required
-                            className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500' />
+                               className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500' />
                     </div>
 
                     <div>
                         <label className='block font-semibold text-gray-600 text-sm mb-2'>Blood Group</label>
                         <select name="bloodGroup" value={formData.bloodGroup} onChange={handleInputChange}
-                            className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'>
+                                className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'>
                             <option value="">Select Blood Group</option>
                             <option value="A+">A+</option>
                             <option value="A-">A-</option>
@@ -205,7 +216,7 @@ const AddStudentPersonalDetails = ({ formData, setFormData, handleInputChange, e
                             Category<span className="text-red-600 ml-1">*</span>
                         </label>
                         <select name="category" value={formData.category} onChange={handleInputChange} required
-                            className={inputClass('category')}>
+                                className={inputClass('category')}>
                             <option value="">Select Category</option>
                             <option value="General">General</option>
                             <option value="OBC">OBC</option>
@@ -221,14 +232,14 @@ const AddStudentPersonalDetails = ({ formData, setFormData, handleInputChange, e
                             <span className="text-gray-400 text-xs font-normal ml-2">(auto-generated)</span>
                         </label>
                         <input type="text" value="Assigned automatically on save" disabled readOnly
-                            className='bg-gray-200 font-normal text-gray-500 border border-gray-300 p-2 px-4 w-full rounded-md cursor-not-allowed' />
+                               className='bg-gray-200 font-normal text-gray-500 border border-gray-300 p-2 px-4 w-full rounded-md cursor-not-allowed' />
                     </div>
 
                     <div>
                         <label className='block font-semibold text-gray-600 text-sm mb-2'>Admission Number</label>
                         <input type="text" name="admissionNumber" value={formData.admissionNumber} onChange={handleInputChange}
-                            placeholder='Auto-generated if left empty'
-                            className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500' />
+                               placeholder='Auto-generated if left empty'
+                               className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500' />
                         <p className="text-xs text-gray-500 mt-1">Leave empty for auto-generation</p>
                     </div>
 
@@ -275,7 +286,7 @@ const AddStudentPersonalDetails = ({ formData, setFormData, handleInputChange, e
                             Date of Admission<span className="text-red-600 ml-1">*</span>
                         </label>
                         <input type="date" name="admissionDate" value={formData.admissionDate} onChange={handleInputChange} required max={new Date().toISOString().split("T")[0]}
-                            className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500' />
+                               className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500' />
                     </div>
 
                     {/* ─── Academic Year Dropdown ─── */}
@@ -320,8 +331,8 @@ const AddStudentPersonalDetails = ({ formData, setFormData, handleInputChange, e
                             <span className="text-gray-400 text-xs font-normal ml-2">(optional)</span>
                         </label>
                         <input type="text" name="studentHouse" value={formData.studentHouse} onChange={handleInputChange}
-                            placeholder='e.g. Red House' list="student-house-options"
-                            className={inputClass('studentHouse')} />
+                               placeholder='e.g. Red House' list="student-house-options"
+                               className={inputClass('studentHouse')} />
                         <datalist id="student-house-options">
                             <option value="Red House" />
                             <option value="Blue House" />
@@ -336,22 +347,22 @@ const AddStudentPersonalDetails = ({ formData, setFormData, handleInputChange, e
                             <span className="text-gray-400 text-xs font-normal ml-2">(optional)</span>
                         </label>
                         <input type="text" name="abcId" value={formData.abcId} onChange={handleInputChange}
-                            placeholder='Academic Bank of Credits ID' className={inputClass('abcId')} />
+                               placeholder='Academic Bank of Credits ID' className={inputClass('abcId')} />
                         <ErrorMsg field="abcId" />
                     </div>
 
                     <div>
                         <label className='block font-semibold text-gray-600 text-sm mb-2'>Previous School</label>
                         <input type="text" name="previousSchool" value={formData.previousSchool} onChange={handleInputChange}
-                            placeholder='Enter previous school name'
-                            className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500' />
+                               placeholder='Enter previous school name'
+                               className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500' />
                     </div>
 
                     <div>
                         <label className='block font-semibold text-gray-600 text-sm mb-2'>Transfer Student</label>
                         <button type="button"
-                            onClick={() => setFormData(prev => ({ ...prev, isTransferStudent: !prev.isTransferStudent }))}
-                            className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors duration-300 ${formData.isTransferStudent ? "bg-blue-500" : "bg-gray-300"}`}>
+                                onClick={() => setFormData(prev => ({ ...prev, isTransferStudent: !prev.isTransferStudent }))}
+                                className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors duration-300 ${formData.isTransferStudent ? "bg-blue-500" : "bg-gray-300"}`}>
                             <div className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform duration-300 ${formData.isTransferStudent ? "translate-x-6" : "translate-x-0"}`} />
                         </button>
                         <p className="text-xs text-gray-500 mt-1">
@@ -366,8 +377,8 @@ const AddStudentPersonalDetails = ({ formData, setFormData, handleInputChange, e
                             Status<span className="text-red-600 ml-1">*</span>
                         </label>
                         <button type="button"
-                            onClick={() => setFormData(prev => ({ ...prev, status: prev.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE' }))}
-                            className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors duration-300 ${formData.status === 'ACTIVE' ? "bg-blue-500" : "bg-gray-300"}`}>
+                                onClick={() => setFormData(prev => ({ ...prev, status: prev.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE' }))}
+                                className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors duration-300 ${formData.status === 'ACTIVE' ? "bg-blue-500" : "bg-gray-300"}`}>
                             <div className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform duration-300 ${formData.status === 'ACTIVE' ? "translate-x-6" : "translate-x-0"}`} />
                         </button>
                         <p className="text-xs text-gray-500 mt-1">
@@ -382,8 +393,8 @@ const AddStudentPersonalDetails = ({ formData, setFormData, handleInputChange, e
                         <label className='block font-semibold text-gray-600 text-sm mb-2'>Current Address   <span className="text-red-600 ml-1">*</span></label>
 
                         <textarea rows={3} name="address" value={formData.address} onChange={handleInputChange}
-                            placeholder='Enter residential address'
-                            className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500' />
+                                  placeholder='Enter residential address'
+                                  className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500' />
                     </div>
                 </div>
             </div>
