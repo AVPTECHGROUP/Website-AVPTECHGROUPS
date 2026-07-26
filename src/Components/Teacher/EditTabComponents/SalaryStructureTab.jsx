@@ -40,22 +40,16 @@ const SalaryStructureTab = ({ formData, setFormData, handleInputChange, teacherI
 
     const DEDUCTION_OPTIONS = [
         { label: 'Professional Tax', key: 'professionalTax' },
-        { label: 'Income Tax',       key: 'incomeTax' },
+        { label: 'Income Tax', key: 'incomeTax' },
         { label: 'Other Deductions', key: 'otherDeductions' },
     ];
 
-    // ✅ FIX: block '-', '+', 'e', 'E' so amounts can never be typed as negative or
-    // in scientific notation. Applied to every amount input below (allowance amount
-    // was previously missing ANY guard at all — that's how "-500" got through and
-    // was then ADDED into the net total, silently subtracting it).
     const blockNonPositiveKeys = (e) => {
         if (["-", "+", "e", "E"].includes(e.key)) {
             e.preventDefault();
         }
     };
 
-    // ✅ FIX: strip any '-', '+', 'e' that slips in via paste/autofill/drag-drop,
-    // which onKeyDown alone can't catch.
     const sanitizeAmountInput = (value) => value.replace(/[-+eE]/g, '');
 
     useEffect(() => {
@@ -69,18 +63,18 @@ const SalaryStructureTab = ({ formData, setFormData, handleInputChange, teacherI
 
                 setFormData(prev => ({
                     ...prev,
-                    salaryId:             data.id,
-                    salaryType:           data.salaryType           || '',
-                    baseSalary:           data.baseSalary           || '',
-                    houseRentAllowance:   data.houseRentAllowance   || 0,
-                    travelAllowance:      data.travelAllowance      || 0,
-                    dearnessAllowance:    data.dearnessAllowance    || 0,
-                    specialAllowance:     data.specialAllowance     || 0,
-                    otherAllowances:      data.otherAllowances      || 0,
-                    providentFund:        data.providentFund        || 0,
-                    professionalTax:      data.professionalTax      || 0,
-                    incomeTax:            data.incomeTax            || 0,
-                    otherDeductions:      data.otherDeductions      || 0,
+                    salaryId: data.id,
+                    salaryType: data.salaryType || '',
+                    baseSalary: data.baseSalary || '',
+                    houseRentAllowance: data.houseRentAllowance || 0,
+                    travelAllowance: data.travelAllowance || 0,
+                    dearnessAllowance: data.dearnessAllowance || 0,
+                    specialAllowance: data.specialAllowance || 0,
+                    otherAllowances: data.otherAllowances || 0,
+                    providentFund: data.providentFund || 0,
+                    professionalTax: data.professionalTax || 0,
+                    incomeTax: data.incomeTax || 0,
+                    otherDeductions: data.otherDeductions || 0,
                     leaveDeductionPerDay: data.leaveDeductionPerDay || 0,
                 }));
 
@@ -115,12 +109,10 @@ const SalaryStructureTab = ({ formData, setFormData, handleInputChange, teacherI
         fetchSalary();
     }, [teacherId]);
 
-    // ✅ FIX: leaveDeductionPerDay is a daily RATE used during payroll processing,
-    // not a fixed monthly deduction — exclude it from the config-time net estimate.
     const calculateNet = () => {
-        const base           = parseFloat(formData.baseSalary) || 0;
+        const base = parseFloat(formData.baseSalary) || 0;
         const allowanceTotal = allowances.reduce((sum, a) => sum + parseFloat(a.amount || 0), 0);
-        const penaltyTotal   = penalties.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
+        const penaltyTotal = penalties.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
         return base + allowanceTotal - penaltyTotal;
     };
 
@@ -137,9 +129,6 @@ const SalaryStructureTab = ({ formData, setFormData, handleInputChange, teacherI
     const handleAddAllowance = (e) => {
         e.preventDefault();
         if (!newAllowance.name || !newAllowance.amount) return;
-        // ✅ FIX: force a non-negative amount even if a negative value somehow reaches
-        // here (paste, autofill, or browser quirks bypassing onKeyDown), and reject
-        // a zero/invalid amount outright instead of silently adding a 0-value row.
         const amount = Math.abs(parseFloat(newAllowance.amount)) || 0;
         if (amount <= 0) return;
         setAllowances(prev => [...prev, { id: Date.now(), name: newAllowance.name, amount }]);
@@ -177,18 +166,18 @@ const SalaryStructureTab = ({ formData, setFormData, handleInputChange, teacherI
         setNewPenalty({ name: '', amount: '' });
         setFormData(prev => ({
             ...prev,
-            salaryType:           '',
-            baseSalary:           '',
+            salaryType: '',
+            baseSalary: '',
             leaveDeductionPerDay: 0,
-            houseRentAllowance:   0,
-            travelAllowance:      0,
-            dearnessAllowance:    0,
-            specialAllowance:     0,
-            otherAllowances:      0,
-            providentFund:        0,
-            professionalTax:      0,
-            incomeTax:            0,
-            otherDeductions:      0,
+            houseRentAllowance: 0,
+            travelAllowance: 0,
+            dearnessAllowance: 0,
+            specialAllowance: 0,
+            otherAllowances: 0,
+            providentFund: 0,
+            professionalTax: 0,
+            incomeTax: 0,
+            otherDeductions: 0,
         }));
         setLeaveDeductionEnabled(true);
         setShowAddAllowanceForm(false);
@@ -251,7 +240,7 @@ const SalaryStructureTab = ({ formData, setFormData, handleInputChange, teacherI
                                         className={`py-2.5 px-3 rounded-lg text-sm font-medium transition-colors border-2 ${formData.salaryType === 'MONTHLY'
                                             ? 'bg-blue-50 text-blue-700 border-blue-500'
                                             : 'bg-gray-50 text-gray-700 border-transparent hover:bg-gray-100'
-                                        }`}
+                                            }`}
                                     >
                                         Monthly
                                     </button>
@@ -261,7 +250,7 @@ const SalaryStructureTab = ({ formData, setFormData, handleInputChange, teacherI
                                         className={`py-2.5 px-3 rounded-lg text-sm font-medium transition-colors border-2 ${formData.salaryType === 'PER_DAY'
                                             ? 'bg-blue-50 text-blue-700 border-blue-500'
                                             : 'bg-gray-50 text-gray-700 border-transparent hover:bg-gray-100'
-                                        }`}
+                                            }`}
                                     >
                                         Per Day
                                     </button>
@@ -319,48 +308,25 @@ const SalaryStructureTab = ({ formData, setFormData, handleInputChange, teacherI
                             </label>
                         </div>
 
-                        {/* Stack always on narrow, side-by-side when card has room */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                            <div>
-                                <label className="block text-xs font-semibold text-gray-500 mb-1.5 tracking-widest uppercase">
-                                    Unpaid Leave / Day
-                                </label>
-                                <div className="relative">
-                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">₹</span>
-                                    <input
-                                        type="number"
-                                        name="leaveDeductionPerDay"
-                                        onKeyDown={blockNonPositiveKeys}
-                                        value={formData.leaveDeductionPerDay}
-                                        onChange={handleInputChange}
-                                        disabled={!leaveDeductionEnabled}
-                                        min="0"
-                                        placeholder="0"
-                                        className="w-full pl-8 pr-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed"
-                                    />
-                                </div>
-                                <p className="text-xs text-gray-400 mt-1">Applied per absent day at payroll</p>
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-500 mb-1.5 tracking-widest uppercase">
+                                Unpaid Leave / Day
+                            </label>
+                            <div className="relative">
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">₹</span>
+                                <input
+                                    type="number"
+                                    name="leaveDeductionPerDay"
+                                    onKeyDown={blockNonPositiveKeys}
+                                    value={formData.leaveDeductionPerDay}
+                                    onChange={handleInputChange}
+                                    disabled={!leaveDeductionEnabled}
+                                    min="0"
+                                    placeholder="0"
+                                    className="w-full pl-8 pr-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed"
+                                />
                             </div>
-                            <div>
-                                <label className="block text-xs font-semibold text-gray-500 mb-1.5 tracking-widest uppercase">
-                                    Late Arrival / 15 min
-                                </label>
-                                <div className="relative">
-                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">₹</span>
-                                    <input
-                                        type="number"
-                                        name="lateArrivalPenalty"
-                                        onKeyDown={blockNonPositiveKeys}
-                                        value={formData.lateArrivalPenalty || ''}
-                                        onChange={handleInputChange}
-                                        disabled={!leaveDeductionEnabled}
-                                        min="0"
-                                        placeholder="0"
-                                        className="w-full pl-8 pr-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed"
-                                    />
-                                </div>
-                                <p className="text-xs text-gray-400 mt-1">Deducted per 15 min delay</p>
-                            </div>
+                            <p className="text-xs text-gray-400 mt-1">Applied per absent day at payroll</p>
                         </div>
                     </div>
                 </div>
@@ -429,15 +395,12 @@ const SalaryStructureTab = ({ formData, setFormData, handleInputChange, teacherI
 
                             {allowances.map((allowance) => (
                                 <div key={allowance.id} className="flex items-center gap-2 p-2.5 rounded-lg border border-gray-100 bg-white hover:bg-gray-50 transition">
-                                    {/* icon */}
                                     <div className="w-8 h-8 bg-blue-50 text-blue-600 rounded-md flex items-center justify-center shrink-0">
                                         <IndianRupee className="w-4 h-4" />
                                     </div>
-                                    {/* label — takes all leftover space, truncates */}
                                     <p className="flex-1 min-w-0 font-medium text-gray-800 text-xs truncate">
                                         {ALLOWANCE_LABELS[allowance.name]}
                                     </p>
-                                    {/* amount + delete — never shrinks */}
                                     <div className="flex items-center gap-1.5 shrink-0">
                                         <span className="font-semibold text-gray-900 text-xs tabular-nums">
                                             ₹{allowance.amount.toLocaleString()}
@@ -514,15 +477,12 @@ const SalaryStructureTab = ({ formData, setFormData, handleInputChange, teacherI
 
                             {penalties.map((penalty) => (
                                 <div key={penalty.id} className="flex items-center gap-2 p-2.5 rounded-lg hover:bg-gray-50 border border-gray-100 transition">
-                                    {/* icon */}
                                     <div className="w-8 h-8 bg-orange-50 rounded-lg flex items-center justify-center shrink-0">
                                         <RotateCcw className="w-4 h-4 text-orange-400" />
                                     </div>
-                                    {/* label — flex-1 with min-w-0 prevents overflow */}
                                     <div className="flex-1 min-w-0">
                                         <div className="font-medium text-gray-800 text-xs truncate">{penalty.label}</div>
                                     </div>
-                                    {/* amount + delete — never shrinks */}
                                     <div className="flex items-center gap-1.5 shrink-0">
                                         <div className="font-semibold text-red-500 text-xs tabular-nums whitespace-nowrap">
                                             −₹{penalty.amount.toLocaleString()}
@@ -553,7 +513,7 @@ const SalaryStructureTab = ({ formData, setFormData, handleInputChange, teacherI
                         </div>
                         <p className="text-xs text-gray-500 leading-relaxed">
                             Base + allowances − fixed deductions.<br />
-                            <span className="text-gray-400">Leave & penalty rates apply at payroll time.</span>
+                            <span className="text-gray-400">Leave rates apply at payroll time.</span>
                         </p>
                     </div>
                 </div>
