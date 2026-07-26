@@ -393,7 +393,7 @@ const ConfirmDialog = ({ message, onConfirm, onCancel }) => {
 // ─────────────────────────────────────────────────────────────────────────────
 //  Main Component Layout Block
 // ─────────────────────────────────────────────────────────────────────────────
-export default function SectionSubjectAssignment() {
+export default function SectionSubjectAssignment({ refreshKey }) {
   const [classes, setClasses] = useState([]);
   const [sections, setSections] = useState([]);
   const [subjects, setSubjects] = useState([]);
@@ -444,7 +444,7 @@ export default function SectionSubjectAssignment() {
   useEffect(() => {
     loadClasses();
     SectionSubjectService.getAllSubjects().then(setAllSubjects);
-  }, [loadClasses]);
+  }, [loadClasses,refreshKey]);
 
   useEffect(() => {
     if (selectedClassId) loadSections(selectedClassId);

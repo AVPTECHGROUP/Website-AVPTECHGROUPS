@@ -5,7 +5,7 @@ import Badge from '../../Components/FeeModal/Badge.jsx';
 import Modal from '../../Components/FeeModal/Modal.jsx';
 import Select from '../../Components/FeeModal/Select.jsx';
 import Input from '../../Components/FeeModal/Input.jsx';
-import { Plus, X, Pencil, Eye, Trash2, AlertTriangle, CheckCircle2, Info, AlertCircle, Calendar, Layers } from 'lucide-react';
+import { Plus, X, Pencil, Eye, Trash2, AlertTriangle, CheckCircle2, Info, AlertCircle, Calendar, Layers, FileText } from 'lucide-react';
 import {
   getFeeStructures,
   createFeeStructure,
@@ -14,9 +14,6 @@ import {
   deleteFeeStructure,
 } from '../../Api/FeeManagement/FeeStructures.js';
 import { getFeePeriods } from '../../Api/FeeManagement/FeePeriods.js';
-// NOTE: confirm this path — I've placed it alongside ClassSectionAPI since
-// both are Academics-domain APIs, but please confirm the exact filename.
-import { getAcademicYears, getCurrentAcademicYear } from '../../Api/AcademicYears/AcademicYear.js';
 import { UserContext } from '../../ContextAPI/UserContext.jsx';
 import SectionSubjectService from '../../Api/Academics/SectionSubjectService.js';
 // NOTE: confirm this path matches where you actually export getStudentByClass.
@@ -51,6 +48,13 @@ const sanitizeNameInput = (val) => val.replace(/[^A-Za-z\s]/g, '');
 // be typed or pasted in, and the stepper increments 0 → 1 → 2 instead of
 // crawling up by 0.01).
 const sanitizeAmountInput = (val) => val.replace(/[^0-9]/g, '');
+
+// Structure Name is a free-text label (e.g. "Regular Fee Structure",
+// "Sibling Discount Structure") used purely for display, so it allows
+// letters, numbers, spaces and a small set of common punctuation — not
+// restricted to letters-only like the component Custom Name field.
+const sanitizeStructureNameInput = (val) => val.replace(/[^A-Za-z0-9\s&\-',.()/]/g, '');
+const STRUCTURE_NAME_MAX_LEN = 60;
 
 // ─── Toast ────────────────────────────────────────────────────────────────────
 let _dispatch = null;
@@ -195,12 +199,17 @@ const StatusDotText = ({ status }) => {
 // is why Period/Students previously showed blank or "—".
 // FIX (issue 3): backdrop click-to-close removed — only the X button closes
 // this modal now.
+// UPDATE: added a "Structure Name" field to the top grid (now a clean 2×2
+// layout: Structure Name, Period, Classes, Status) so the label given at
+// creation time is visible here too, not just on the card.
 function ViewDetailsModal({ isOpen, onClose, structure, periods = [], allClasses = [] }) {
   if (!isOpen || !structure) return null;
 
   const periodName = structure.feePeriod?.name
       || periods.find((p) => p.id === structure.feePeriodId)?.name
       || '—';
+
+  const structureName = structure.structureName || structure.name || '—';
 
   const computedTotal = structure.components?.reduce((s, c) => s + (Number(c.amount) || 0), 0);
   const displayTotal = structure.totalAmount ?? computedTotal ?? 0;
@@ -224,10 +233,10 @@ function ViewDetailsModal({ isOpen, onClose, structure, periods = [], allClasses
           <div className="px-6 py-5 space-y-5">
             <div className="grid grid-cols-2 gap-3">
               {[
+                ['Structure Name', structureName],
                 [FEE_STRUCTURE_STRINGS.LBL_PERIOD, periodName],
                 [FEE_STRUCTURE_STRINGS.LBL_CLASSES, structure.classes?.map((c) => c.name).join(', ') || '—'],
                 [FEE_STRUCTURE_STRINGS.LBL_STATUS, null],
-                [FEE_STRUCTURE_STRINGS.LBL_STUDENTS, studentCount || '—'],
               ].map(([label, val]) => (
                   <div key={label} className="bg-gray-50 rounded-xl px-4 py-3 border border-gray-100">
                     <div className="text-[10.5px] font-semibold text-gray-400 uppercase tracking-wider mb-1">{label}</div>
@@ -266,101 +275,49 @@ function ViewDetailsModal({ isOpen, onClose, structure, periods = [], allClasses
 }
 
 // ─── Structure Modal (Create / Edit) ─────────────────────────────────────────
-// FIX: create mode now has a real Academic Year dropdown (fetched via
-// getAcademicYears, cross-referenced against getCurrentAcademicYear to tag
-// exactly one entry "(Current)" — every other year still appears in the
-// list). Selecting a year refetches the Fee Period list scoped to that year,
-// since periods are year-scoped. Edit mode keeps the year as a locked label
-// — an existing structure is already anchored to a period/year via
-// feePeriodId, and changing the year there would require also changing the
-// period, which is out of scope for "edit an existing structure."
+// FIX: Academic Year is NEVER a dropdown anymore, in either create or edit
+// mode. It's always the school's current academic year (passed in via the
+// `academicYear` prop, sourced from UserContext), shown as a plain
+// read-only label — exactly the same pattern FeePeriods.jsx already uses
+// for its own modal. All the getAcademicYears/getCurrentAcademicYear
+// fetching and the year-scoped period refetch have been removed entirely,
+// since there is nothing left to switch years for.
+//
+// FIX: Fee Period is now lockable via `lockedPeriodId` / `lockedPeriodName`.
+// When the user arrives here from a specific period's "View Structures"
+// button (FeePeriods.jsx → onGoToStructures), the parent passes that
+// period's id in on create, and the Fee Period field is shown as a locked,
+// read-only value instead of a dropdown — so a structure created from
+// "June" can only ever be created for June, not silently redirected to any
+// other period/month. When there's no locked period (e.g. navigating to
+// Fee Structures directly and clicking "Add Structure"), the dropdown still
+// works as before, scoped to the current academic year's periods.
+//
 // FIX (issue 3): backdrop click-to-close removed — only the X button closes
 // this modal now, so an accidental click on the page behind the dialog no
 // longer discards in-progress form data.
-function StructureModal({ isOpen, onClose, structure, periods, classes, onSuccess, academicYear }) {
+//
+// UPDATE: added an optional "Structure Name" field (Step 1, between
+// Academic Year and Fee Period) so a structure can be given a short,
+// human-readable label — e.g. "Regular Fee Structure" or "Sibling Discount
+// Structure" — that's shown on the card and in View Details instead of
+// forcing everyone to identify structures purely by period + class list.
+function StructureModal({ isOpen, onClose, structure, periods, classes, onSuccess, academicYear, lockedPeriodId, lockedPeriodName }) {
   const isEdit = !!structure;
   const [loading, setLoading] = useState(false);
 
-  // Create-mode-only academic year + period state
-  const [academicYears, setAcademicYears] = useState([]); // [{ id, label, isCurrent }]
-  const [loadingYears, setLoadingYears] = useState(false);
-  const [selectedYearId, setSelectedYearId] = useState('');
-  const [selectedYearLabel, setSelectedYearLabel] = useState('');
-  const [yearPeriods, setYearPeriods] = useState([]);
-  const [loadingYearPeriods, setLoadingYearPeriods] = useState(false);
-
   const [form, setForm] = useState({
+    structureName: '',
     feePeriodId: '',
     classIds: [],
     components: [{ componentType: 'TUITION_FEE', customName: '', amount: '', displayOrder: 0 }],
   });
 
-  // Load the full academic year list + figure out which one is current,
-  // only relevant for create mode.
-  useEffect(() => {
-    if (!isOpen || isEdit) return;
-    let cancelled = false;
-    (async () => {
-      setLoadingYears(true);
-      try {
-        const [years, currentYear] = await Promise.all([
-          getAcademicYears(),
-          getCurrentAcademicYear().catch(() => null), // fall back below if this fails
-        ]);
-        if (cancelled) return;
-
-        const rawList = Array.isArray(years) ? years : [];
-        // Prefer the dedicated "current" endpoint's id; if that call failed,
-        // fall back to whatever academicYear (from UserContext) already
-        // resolved to, so the dropdown still tags something as current.
-        const currentId = currentYear?.id ?? academicYear?.id ?? null;
-
-        const list = rawList
-            .map((y) => ({ ...y, isCurrent: currentId != null && y.id === currentId }))
-            // current year first, then the rest in whatever order the API gave
-            .sort((a, b) => (b.isCurrent ? 1 : 0) - (a.isCurrent ? 1 : 0));
-
-        setAcademicYears(list);
-
-        const defaultYear = list.find((y) => y.isCurrent) || list[0];
-        setSelectedYearId((defaultYear?.id ?? '').toString());
-        setSelectedYearLabel(defaultYear?.label || '');
-      } catch {
-        toast.error(FEE_STRUCTURE_STRINGS.TOAST_FETCH_FAILED, 'Could not load academic years.');
-      } finally {
-        if (!cancelled) setLoadingYears(false);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [isOpen, isEdit, academicYear]);
-
-  // Refetch periods whenever the selected year changes (create mode only)
-  useEffect(() => {
-    if (!isOpen || isEdit || !selectedYearId) return;
-    let cancelled = false;
-    (async () => {
-      setLoadingYearPeriods(true);
-      try {
-        const list = await getFeePeriods(parseInt(selectedYearId));
-        if (cancelled) return;
-        setYearPeriods(Array.isArray(list) ? list : []);
-        // Reset the selected period if it no longer belongs to this year's list
-        setForm((p) => (
-            list.some((per) => per.id.toString() === p.feePeriodId) ? p : { ...p, feePeriodId: '' }
-        ));
-      } catch {
-        toast.error(FEE_STRUCTURE_STRINGS.TOAST_FETCH_FAILED, 'Could not load fee periods for this year.');
-      } finally {
-        if (!cancelled) setLoadingYearPeriods(false);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [isOpen, isEdit, selectedYearId]);
-
   useEffect(() => {
     if (!isOpen) return;
     if (structure) {
       setForm({
+        structureName: structure.structureName || structure.name || '',
         feePeriodId: structure.feePeriodId?.toString() || '',
         classIds: structure.classes?.map((c) => c.id) || [],
         components: structure.components?.map((comp, idx) => ({
@@ -372,18 +329,19 @@ function StructureModal({ isOpen, onClose, structure, periods, classes, onSucces
       });
     } else {
       setForm({
-        feePeriodId: '',
+        structureName: '',
+        // FIX: when a specific period was clicked into (lockedPeriodId),
+        // pre-fill and pin the form to that period instead of leaving it
+        // blank / open to any period.
+        feePeriodId: lockedPeriodId ? lockedPeriodId.toString() : '',
         classIds: [],
         components: [{ componentType: 'TUITION_FEE', customName: '', amount: '', displayOrder: 0 }],
       });
     }
-  }, [isOpen, structure]);
+  }, [isOpen, structure, lockedPeriodId]);
 
-  const handleYearChange = (idStr) => {
-    const year = academicYears.find((y) => y.id.toString() === idStr);
-    setSelectedYearId(idStr);
-    setSelectedYearLabel(year?.label || '');
-  };
+  const handleStructureNameChange = (val) =>
+      setForm((p) => ({ ...p, structureName: sanitizeStructureNameInput(val).slice(0, STRUCTURE_NAME_MAX_LEN) }));
 
   const toggleClass = (id) =>
       setForm((p) => ({ ...p, classIds: p.classIds.includes(id) ? p.classIds.filter((x) => x !== id) : [...p.classIds, id] }));
@@ -418,10 +376,18 @@ function StructureModal({ isOpen, onClose, structure, periods, classes, onSucces
   const selectedClasses = classes.filter((c) => form.classIds.includes(c.id));
   const totalStudents = selectedClasses.reduce((s, c) => s + (c.studentCount || 0), 0);
 
-  // In create mode, use the year-scoped period list; in edit mode, use the
-  // page-level `periods` prop (already scoped to the structure's context).
-  const periodOptions = isEdit ? periods : yearPeriods;
-  const displayYearLabel = isEdit ? (academicYear?.label || '—') : (selectedYearLabel || '—');
+  // Fee Period options are always just the current academic year's periods
+  // (the `periods` prop, fetched once by the parent for currentAcademicYear
+  // — there's no year switching left to complicate this).
+  const periodOptions = periods;
+  const displayYearLabel = academicYear?.label || '—';
+
+  // Resolve the locked period's display name: prefer what the parent
+  // explicitly passed in (works even before `periods` has loaded), fall
+  // back to looking it up in `periods`.
+  const resolvedLockedPeriodName = !isEdit && lockedPeriodId
+      ? (lockedPeriodName || periods.find((p) => p.id === lockedPeriodId)?.name || '—')
+      : null;
 
   // FIX (issue 2 — duplicate components): a component type that doesn't
   // require a custom name (e.g. Tuition Fee, Library Fee) can only appear
@@ -497,6 +463,7 @@ function StructureModal({ isOpen, onClose, structure, periods, classes, onSucces
     setLoading(true);
     try {
       const payload = {
+        structureName: form.structureName.trim() || null,
         feePeriodId: parseInt(form.feePeriodId),
         classIds: form.classIds,
         components: form.components.map((c, idx) => ({
@@ -546,42 +513,56 @@ function StructureModal({ isOpen, onClose, structure, periods, classes, onSucces
                 <span className="text-xs font-bold text-gray-600 uppercase tracking-wider">{FEE_STRUCTURE_STRINGS.STEP_1_TITLE}</span>
               </div>
 
-              {isEdit ? (
-                  <div className="mb-3 px-3 py-2 bg-white border border-blue-100 rounded-lg text-sm text-blue-700">
-                    Academic Year: <strong>{displayYearLabel}</strong>
-                  </div>
-              ) : (
-                  <div className="mb-3">
-                    <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                      Academic Year <span className="text-red-500">*</span>
-                      {loadingYears && <span className="text-gray-400 font-normal ml-1">(loading…)</span>}
-                    </label>
-                    <Select
-                        value={selectedYearId}
-                        onChange={handleYearChange}
-                        disabled={loadingYears}
-                        options={academicYears.map((y) => ({
-                          value: y.id.toString(),
-                          label: y.isCurrent ? `${y.label} (Current)` : y.label,
-                        }))}
-                    />
-                  </div>
-              )}
+              {/* Academic Year: never a dropdown — always the school's
+                  current academic year, shown read-only, for both create
+                  and edit. */}
+              <div className="mb-3 px-3 py-2 bg-white border border-blue-100 rounded-lg text-sm text-blue-700">
+                Academic Year: <strong>{displayYearLabel}</strong>
+              </div>
+
+              {/* Structure Name: optional short label used to identify this
+                  structure at a glance (e.g. "Regular Fee Structure",
+                  "Sibling Discount Structure"). Purely descriptive — not
+                  sent as an identifier, just shown on the card and in View
+                  Details. Falls back to the period name everywhere if left
+                  blank, so existing structures are unaffected. */}
+              <div className="mb-3">
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                  Structure Name <span className="text-gray-400 font-normal normal-case">(optional)</span>
+                </label>
+                <Input
+                    value={form.structureName}
+                    onChange={handleStructureNameChange}
+                    placeholder="e.g. Regular Fee Structure, Sibling Discount Structure"
+                />
+                <p className="text-[11px] text-gray-400 mt-1">A short label to identify Fees Breakdown
+                </p>
+              </div>
 
               <label className="block text-xs font-semibold text-gray-700 mb-1.5">
                 Fee Period <span className="text-red-500">*</span>
               </label>
-              <Select
-                  value={form.feePeriodId}
-                  onChange={(v) => setForm((p) => ({ ...p, feePeriodId: v }))}
-                  disabled={!isEdit && loadingYearPeriods}
-                  options={[
-                    { value: '', label: (!isEdit && loadingYearPeriods) ? 'Loading periods…' : '-- Select a period --' },
-                    ...periodOptions.map((p) => ({ value: p.id.toString(), label: p.name })),
-                  ]}
-              />
-              {!isEdit && !loadingYearPeriods && periodOptions.length === 0 && selectedYearId && (
-                  <p className="text-[11px] text-amber-600 mt-1.5">No fee periods exist for {selectedYearLabel} yet — create one first from the Fee Periods tab.</p>
+
+              {/* Fee Period: locked to a single period (read-only) when the
+                  user arrived here via a specific period's "View
+                  Structures" button; otherwise a normal dropdown scoped to
+                  the current academic year's periods. */}
+              {resolvedLockedPeriodName ? (
+                  <div className="px-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 text-gray-700 font-semibold">
+                    {resolvedLockedPeriodName}
+                  </div>
+              ) : (
+                  <Select
+                      value={form.feePeriodId}
+                      onChange={(v) => setForm((p) => ({ ...p, feePeriodId: v }))}
+                      options={[
+                        { value: '', label: '-- Select a period --' },
+                        ...periodOptions.map((p) => ({ value: p.id.toString(), label: p.name })),
+                      ]}
+                  />
+              )}
+              {!isEdit && !resolvedLockedPeriodName && periodOptions.length === 0 && (
+                  <p className="text-[11px] text-amber-600 mt-1.5">No fee periods exist for {displayYearLabel} yet — create one first from the Fee Periods tab.</p>
               )}
             </div>
 
@@ -730,9 +711,17 @@ function StructureModal({ isOpen, onClose, structure, periods, classes, onSucces
 // (mirrors PeriodCard) so three buttons always fit even in a 4-column grid
 // on a 1024px-wide viewport. Class chips and the components line now share
 // consistent padding/line-height with the rest of the card.
+// UPDATE: the card title now leads with the Structure Name when one was
+// given at creation time (e.g. "Sibling Discount Structure"), with the fee
+// period shown as a small subtitle underneath — instead of the period name
+// being the only identifier. If no structure name was set, the card falls
+// back to exactly the previous behaviour (period name as the title, no
+// subtitle), so older structures still read cleanly.
 const FeeStructureCard = ({ s, periods, onView, onEdit, onDelete }) => {
   const statusKey = s.status?.toUpperCase() || STATUSES.DRAFT;
   const periodName = s.feePeriod?.name || periods.find((p) => p.id === s.feePeriodId)?.name || '—';
+  const structureName = s.structureName || s.name || '';
+  const cardTitle = structureName || periodName;
   const compCount = s.components?.length || 0;
   const compPreview = s.components?.slice(0, 3).map((c) => c.customName || c.componentType?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())).join(', ') || '—';
   const canDelete = statusKey === STATUSES.DRAFT || (statusKey === STATUSES.ACTIVE && !s.studentCount);
@@ -741,13 +730,23 @@ const FeeStructureCard = ({ s, periods, onView, onEdit, onDelete }) => {
       <div className="h-full bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-gray-300 transition-all duration-200 overflow-hidden flex flex-col">
         {/* Card body */}
         <div className="p-4 flex-1 flex flex-col gap-3">
-          {/* Row 1: Period name + status */}
+          {/* Row 1: Structure name (or period name as fallback) + status */}
           <div className="flex items-start justify-between gap-2">
             <div className="flex items-center gap-2 min-w-0">
               <div className="w-7 h-7 rounded-lg bg-[#1E3A5F]/8 flex items-center justify-center flex-shrink-0">
-                <Calendar size={13} className="text-[#1E3A5F]" />
+                {structureName
+                    ? <FileText size={13} className="text-[#1E3A5F]" />
+                    : <Calendar size={13} className="text-[#1E3A5F]" />}
               </div>
-              <h3 className="text-[15px] font-bold text-gray-900 truncate" title={periodName}>{periodName}</h3>
+              <div className="min-w-0">
+                <h3 className="text-[15px] font-bold text-gray-900 truncate" title={cardTitle}>{cardTitle}</h3>
+                {structureName && (
+                    <div className="flex items-center gap-1 text-[11px] text-gray-400 mt-0.5">
+                      <Calendar size={10} className="flex-shrink-0" />
+                      <span className="truncate">{periodName}</span>
+                    </div>
+                )}
+              </div>
             </div>
             <StatusDotText status={statusKey} />
           </div>
@@ -821,6 +820,14 @@ const FeeStructures = ({ initialPeriodId: initialPeriodIdProp }) => {
   const location = useLocation();
 
   const [periodFilter, setPeriodFilter] = useState('');
+  // FIX: when the user arrives here via a specific period's "View
+  // Structures" button, `lockedPeriodId` pins the page to that single
+  // period — the filter dropdown is locked to it and "Add Structure" can
+  // only create structures for that period. `lockedPeriodName` is cached
+  // separately so the lock still displays correctly even before `periods`
+  // has finished loading.
+  const [lockedPeriodId, setLockedPeriodId] = useState(null);
+  const [lockedPeriodName, setLockedPeriodName] = useState('');
   const [modal, setModal] = useState(null);
   const [activeStructure, setActiveStructure] = useState(null);
   const [structures, setStructures] = useState([]);
@@ -893,7 +900,16 @@ const FeeStructures = ({ initialPeriodId: initialPeriodIdProp }) => {
     if (!academicYearId) return;
     const incomingId = initialPeriodIdProp ?? location.state?.periodId;
     const resolvedId = incomingId ? incomingId.toString() : '';
-    if (resolvedId) setPeriodFilter(resolvedId);
+    // FIX: an incoming period id (from FeePeriods → "View Structures") now
+    // locks the page to that period, not just pre-selects the filter.
+    if (resolvedId) {
+      setPeriodFilter(resolvedId);
+      setLockedPeriodId(parseInt(resolvedId));
+      setLockedPeriodName(location.state?.periodName || '');
+    } else {
+      setLockedPeriodId(null);
+      setLockedPeriodName('');
+    }
     const init = async () => {
       setLoading(true);
       try {
@@ -905,6 +921,14 @@ const FeeStructures = ({ initialPeriodId: initialPeriodIdProp }) => {
     init();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [academicYearId, initialPeriodIdProp]);
+
+  // Once `periods` loads, backfill the locked period's display name if we
+  // didn't already have it from navigation state.
+  useEffect(() => {
+    if (!lockedPeriodId || lockedPeriodName) return;
+    const match = periods.find((p) => p.id === lockedPeriodId);
+    if (match) setLockedPeriodName(match.name);
+  }, [periods, lockedPeriodId, lockedPeriodName]);
 
   const openCreate = () => { setActiveStructure(null); setModal('create'); };
 
@@ -953,8 +977,20 @@ const FeeStructures = ({ initialPeriodId: initialPeriodIdProp }) => {
   };
 
   const handlePeriodFilterChange = (value) => {
+    // Locked periods can't be changed via the filter — guard just in case
+    // the (disabled) select still fires an event.
+    if (lockedPeriodId) return;
     setPeriodFilter(value);
     fetchStructures(value ? parseInt(value) : null);
+  };
+
+  // FIX: lets the user step out of a locked period (e.g. they came in via
+  // "View Structures" for June but now want to browse/manage every period).
+  const clearPeriodLock = () => {
+    setLockedPeriodId(null);
+    setLockedPeriodName('');
+    setPeriodFilter('');
+    fetchStructures(null);
   };
 
   const filtered = periodFilter
@@ -962,7 +998,7 @@ const FeeStructures = ({ initialPeriodId: initialPeriodIdProp }) => {
       : structures;
 
   const deleteStructureName = deleteModal.structure
-      ? `${deleteModal.structure.feePeriod?.name || 'Period'} — ${deleteModal.structure.classes?.map((c) => c.name).join(', ') || 'Classes'}`
+      ? `${deleteModal.structure.structureName || deleteModal.structure.feePeriod?.name || 'Period'} — ${deleteModal.structure.classes?.map((c) => c.name).join(', ') || 'Classes'}`
       : '';
 
   if (!academicYearId) {
@@ -998,8 +1034,9 @@ const FeeStructures = ({ initialPeriodId: initialPeriodIdProp }) => {
             <select
                 value={periodFilter}
                 onChange={(e) => handlePeriodFilterChange(e.target.value)}
-                className="px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white text-gray-700 outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all w-full sm:w-44">
-              <option value="">All Periods</option>
+                disabled={!!lockedPeriodId}
+                className="px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white text-gray-700 outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all w-full sm:w-44 disabled:opacity-70 disabled:cursor-not-allowed">
+              {!lockedPeriodId && <option value="">All Periods</option>}
               {periods.map((p) => <option key={p.id} value={p.id.toString()}>{p.name}</option>)}
             </select>
             <button onClick={openCreate}
@@ -1008,6 +1045,20 @@ const FeeStructures = ({ initialPeriodId: initialPeriodIdProp }) => {
             </button>
           </div>
         </div>
+
+        {/* ── Locked-period banner ─────────────────────────────────────────── */}
+        {lockedPeriodId && (
+            <div className="flex flex-wrap items-center gap-2 bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 text-sm text-amber-800">
+              <Info size={15} className="flex-shrink-0 text-amber-500" />
+              <span>
+                Showing and creating structures for <strong>{lockedPeriodName || '…'}</strong> only.
+              </span>
+              <button onClick={clearPeriodLock}
+                      className="ml-auto text-xs font-semibold text-amber-700 underline hover:text-amber-900">
+                View all periods
+              </button>
+            </div>
+        )}
 
         {/* ── Info banner ─────────────────────────────────────────────────── */}
         <div className="flex items-start gap-3 bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 text-sm text-blue-700">
@@ -1086,6 +1137,8 @@ const FeeStructures = ({ initialPeriodId: initialPeriodIdProp }) => {
             classes={classes}
             onSuccess={handleSuccess}
             academicYear={currentAcademicYear}
+            lockedPeriodId={lockedPeriodId}
+            lockedPeriodName={lockedPeriodName}
         />
         <StructureModal
             isOpen={modal === 'edit'}
