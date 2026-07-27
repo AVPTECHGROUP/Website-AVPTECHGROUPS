@@ -14,6 +14,17 @@ function getGrade(pct) {
     return { label: "F", color: "text-red-700", bg: "bg-red-50", border: "border-red-300", bar: "bg-red-500" };
 }
 
+function getGradeObj(pct, gradeStr) {
+    if (gradeStr === "F") return { label: "F", color: "text-red-700", bg: "bg-red-50", border: "border-red-300", bar: "bg-red-500" };
+    if (gradeStr === "A+") return { label: "A+", color: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-300", bar: "bg-emerald-500" };
+    if (gradeStr === "A") return { label: "A", color: "text-green-700", bg: "bg-green-50", border: "border-green-300", bar: "bg-green-500" };
+    if (gradeStr === "B+") return { label: "B+", color: "text-blue-700", bg: "bg-blue-50", border: "border-blue-300", bar: "bg-blue-500" };
+    if (gradeStr === "B") return { label: "B", color: "text-blue-600", bg: "bg-blue-50", border: "border-blue-200", bar: "bg-blue-400" };
+    if (gradeStr === "C") return { label: "C", color: "text-violet-700", bg: "bg-violet-50", border: "border-violet-300", bar: "bg-violet-500" };
+    if (gradeStr === "D") return { label: "D", color: "text-orange-700", bg: "bg-orange-50", border: "border-orange-300", bar: "bg-orange-500" };
+    return getGrade(pct);
+}
+
 function getSchoolInfo() {
     try {
         const school = JSON.parse(localStorage.getItem("school"));
@@ -73,14 +84,9 @@ export default function StudentReportCard({ student, examId, onClose, onUpdateRe
         <>
             <style>{`
                 @media print {
-                    /* Hide everything first */
                     body * { visibility: hidden !important; }
-
-                    /* Make only the report content visible */
                     .rc-print-content,
                     .rc-print-content * { visibility: visible !important; }
-
-                    /* Stretch the content to fill the printed page */
                     .rc-print-content {
                         position: fixed !important;
                         inset: 0 !important;
@@ -91,21 +97,15 @@ export default function StudentReportCard({ student, examId, onClose, onUpdateRe
                         max-height: none !important;
                         padding: 16px !important;
                     }
-
-                    /* Remove scroll clipping so nothing gets cut off */
                     .rc-scroll {
                         overflow: visible !important;
                         height: auto !important;
                         max-height: none !important;
                     }
-
-                    /* Hide the sticky header and footer (buttons etc.) */
                     .rc-no-print {
                         display: none !important;
                         visibility: hidden !important;
                     }
-
-                    /* Prevent subject rows splitting across pages */
                     tr { page-break-inside: avoid; }
                 }
 
@@ -147,7 +147,7 @@ export default function StudentReportCard({ student, examId, onClose, onUpdateRe
                         </div>
                     </div>
 
-                    {/* ── Scrollable Content (this is what gets printed) ── */}
+                    {/* ── Scrollable Content ── */}
                     <div className="rc-scroll rc-print-content overflow-y-auto flex-1">
                         <div className="p-3 sm:p-4 lg:p-6 space-y-3 sm:space-y-4">
 
@@ -251,8 +251,15 @@ export default function StudentReportCard({ student, examId, onClose, onUpdateRe
                                                 const subPct = sub.maxMarks
                                                     ? Math.round((sub.totalMarks / sub.maxMarks) * 100)
                                                     : 0;
-                                                const g = getGrade(subPct);
-                                                const pass = !sub.isAbsent && sub.totalMarks >= (sub.passingMarks ?? 0);
+
+                                                const g = getGradeObj(subPct, sub.grade);
+
+                                                // Fixed Pass/Fail Condition: Check grade !== 'F' & percentage >= 33%
+                                                const pass = !sub.isAbsent && sub.grade !== "F" && (
+                                                    sub.passingMarks != null
+                                                        ? sub.totalMarks >= sub.passingMarks
+                                                        : subPct >= 33
+                                                );
 
                                                 return (
                                                     <tr key={`${sub.subjectId}-${i}`}
@@ -441,7 +448,6 @@ export default function StudentReportCard({ student, examId, onClose, onUpdateRe
                                     </div>
                                 </div>
 
-                                {/* Edit mode action buttons */}
                                 {editingRemarks && (
                                     <div className="rc-no-print flex items-center justify-end gap-2 px-4 pb-4">
                                         <button

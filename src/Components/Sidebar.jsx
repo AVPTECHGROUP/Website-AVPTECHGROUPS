@@ -4,7 +4,8 @@ import {
   LayoutDashboard, Calendar, FileText, Users, LogOut,
   ChevronDown, UserCog, Package, Bus, Shield, ChevronUp,
   ArrowLeftRight, BookOpenText, GraduationCap, SchoolIcon,
-  MessageSquare, IndianRupee, Mail, Phone
+  MessageSquare, IndianRupee, Mail, Phone, Printer, CreditCard,
+  Ticket, Award, Receipt
 } from 'lucide-react'
 import { useState, useEffect, useContext, useRef, useMemo } from 'react'
 import { UserContext } from '../ContextAPI/UserContext'
@@ -176,6 +177,21 @@ const menuSections = [
         subItems: [
           { label: 'Fee Config', route: '/feeManagement/config', permission: P.FEE_STRUCTURE_MANAGE },
           { label: 'Collection and History', route: '/feeManagement/collections', permission: P.FEE_COLLECT },
+        ]
+      }
+    ]
+  },
+  {
+    section: 'PRINT & TEMPLATES',
+    items: [
+      {
+        id: 'templates', icon: Printer, label: 'Templates', route: '/templates/reportCard',
+        subItems: [
+          { label: 'Report Card Templates', route: '/templates/reportCard', icon: FileText },
+          { label: 'ID Card Templates', route: '/templates/idCard', icon: CreditCard },
+          { label: 'Admit Card Templates', route: '/templates/admitCard', icon: Ticket },
+          { label: 'Certificate Templates', route: '/templates/certificate', icon: Award },
+          { label: 'Fee Receipt Templates', route: '/templates/feeReceipt', icon: Receipt },
         ]
       }
     ]
