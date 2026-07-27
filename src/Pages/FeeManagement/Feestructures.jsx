@@ -533,7 +533,7 @@ function StructureModal({ isOpen, onClose, structure, periods, classes, onSucces
                 <Input
                     value={form.structureName}
                     onChange={handleStructureNameChange}
-                    placeholder="e.g. Regular Fee Structure, Sibling Discount Structure"
+
                 />
                 <p className="text-[11px] text-gray-400 mt-1">A short label to identify Fees Breakdown
                 </p>

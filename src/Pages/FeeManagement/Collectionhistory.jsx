@@ -1487,6 +1487,12 @@ const BulkCollectModal = ({ open, onClose, students, onSuccess, canCollect, canV
         discount: 0,
         lateFine: s.status === STATUSES.OVERDUE ? '' : null,
         daysLate: s.daysLate || 0, paymentMode: STATUSES.CASH, paymentDate: getTodayDate(),
+        // FIX: bulk rows never carried a reference number field at all, so
+        // Online/Cheque/DD payments collected in bulk had nowhere to record
+        // a Transaction ID / Cheque Number / DD Number — see the new
+        // "Reference No." column below, which mirrors REFERENCE_FIELD_CONFIG
+        // already used by the single-student modal.
+        referenceNo: '',
       })));
     }
   }, [open, students]);
@@ -1495,7 +1501,9 @@ const BulkCollectModal = ({ open, onClose, students, onSuccess, canCollect, canV
   // (their ceiling is genuinely meant to be large), but Discount and Late
   // Fine are now clamped live to that row's academicCollect value — same
   // "restrict entering a value greater than the amount to collect"
-  // treatment as the single-student modal above.
+  // treatment as the single-student modal above. Switching a row's
+  // payment mode to Cash also clears any reference number typed while a
+  // different mode was active, same convention as the single modal.
   const update = (id, field, val) => {
     setRows((p) => p.map((r) => {
       if (r.id !== id) return r;
@@ -1506,17 +1514,26 @@ const BulkCollectModal = ({ open, onClose, students, onSuccess, canCollect, canV
         const cap = parseFloat(r.academicCollect) || 0;
         return { ...r, [field]: clampToCeiling(val, cap) };
       }
+      if (field === 'paymentMode') {
+        return { ...r, paymentMode: val, referenceNo: val === STATUSES.CASH ? '' : r.referenceNo };
+      }
       return { ...r, [field]: val };
     }));
   };
-  const applyAll = () => setRows((p) => p.map((r) => ({ ...r, paymentMode: commonMode, paymentDate: commonDate })));
+  const applyAll = () => setRows((p) => p.map((r) => ({ ...r, paymentMode: commonMode, paymentDate: commonDate, referenceNo: commonMode === STATUSES.CASH ? '' : r.referenceNo })));
 
   const academicGrandTotal = rows.reduce(
       (s, r) => s + Math.max(0, (parseFloat(r.academicCollect) || 0) - (parseFloat(r.discount) || 0)),
       0
   );
+  // FIX: late fine was being collected/validated per row but never
+  // actually folded into the grand total shown at the bottom of the bulk
+  // modal — the combined figure silently underreported by the sum of all
+  // late fines, unlike the single-collection modal's netTotal, which does
+  // include lateFineNum. This now mirrors that calculation.
+  const lateFineGrandTotal = rows.reduce((s, r) => s + (parseFloat(r.lateFine) || 0), 0);
   const transportGrandTotal = rows.reduce((s, r) => s + (parseFloat(r.transportCollect) || 0), 0);
-  const combinedGrandTotal = academicGrandTotal + (canViewTransport ? transportGrandTotal : 0);
+  const combinedGrandTotal = academicGrandTotal + lateFineGrandTotal + (canViewTransport ? transportGrandTotal : 0);
 
   const handleSubmit = async () => {
     const bad = rows.find((r) => (parseFloat(r.academicCollect) || 0) <= 0 && (!canViewTransport || (parseFloat(r.transportCollect) || 0) <= 0));
@@ -1550,7 +1567,12 @@ const BulkCollectModal = ({ open, onClose, students, onSuccess, canCollect, canV
                 discountReason: null,
                 lateFine: r.lateFine !== null && r.lateFine !== '' ? parseFloat(r.lateFine) : null,
                 paymentMode: r.paymentMode, paymentDate: r.paymentDate,
-                referenceNo: null, remarks: null,
+                // FIX: Cash carries no reference number by design (same
+                // convention as the single-collection modal). Every other
+                // mode now sends whatever was typed into that row's
+                // Reference No. column instead of always sending null.
+                referenceNo: r.paymentMode !== STATUSES.CASH ? (r.referenceNo || null) : null,
+                remarks: null,
                 transportAmount: canViewTransport ? (parseFloat(r.transportCollect) || 0) : 0,
               };
             }),
@@ -1592,7 +1614,7 @@ const BulkCollectModal = ({ open, onClose, students, onSuccess, canCollect, canV
           <Btn variant="ghost" size="sm" onClick={applyAll} className="w-full sm:w-auto mt-2 sm:mt-0">{COLLECTION_HISTORY_STRINGS.BTN_APPLY_ALL}</Btn>
         </div>
         <div className="overflow-x-auto ch-table-scroll rounded-xl border border-gray-200 -mx-1 px-1 sm:mx-0 sm:px-0">
-          <table className="w-full text-sm min-w-[820px]">
+          <table className="w-full text-sm min-w-[980px]">
             <thead>
             <tr className="bg-gray-50 border-b border-gray-200">
               <th className="px-3 py-2.5 text-left text-[10.5px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Student</th>
@@ -1607,6 +1629,7 @@ const BulkCollectModal = ({ open, onClose, students, onSuccess, canCollect, canV
               <th className="px-3 py-2.5 text-left text-[10.5px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Discount</th>
               <th className="px-3 py-2.5 text-left text-[10.5px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Late Fine</th>
               <th className="px-3 py-2.5 text-left text-[10.5px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Mode</th>
+              <th className="px-3 py-2.5 text-left text-[10.5px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Reference No.</th>
             </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
@@ -1677,6 +1700,27 @@ const BulkCollectModal = ({ open, onClose, students, onSuccess, canCollect, canV
                         {PAYMENT_MODE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                       </select>
                     </td>
+                    <td className="px-3 py-2.5">
+                      {/* FIX: reference field now exists per row, hidden for
+                          Cash and labeled per mode (Transaction ID / Cheque
+                          Number / Demand Draft Number) — mirrors
+                          REFERENCE_FIELD_CONFIG used in the single-student
+                          modal. Previously there was no input at all here,
+                          so an Online/Cheque/DD payment collected in bulk
+                          had nowhere to record its reference number. */}
+                      {row.paymentMode === STATUSES.CASH ? (
+                          <span className="text-xs text-gray-300 whitespace-nowrap">N/A</span>
+                      ) : (
+                          <input
+                              type="text"
+                              value={row.referenceNo}
+                              onChange={(e) => update(row.id, 'referenceNo', e.target.value)}
+                              placeholder={REFERENCE_FIELD_CONFIG[row.paymentMode]?.placeholder || 'Reference no.'}
+                              title={REFERENCE_FIELD_CONFIG[row.paymentMode]?.label || 'Reference No.'}
+                              className="w-28 px-2 py-1 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-blue-400"
+                          />
+                      )}
+                    </td>
                   </tr>
               );
             })}
@@ -1689,7 +1733,9 @@ const BulkCollectModal = ({ open, onClose, students, onSuccess, canCollect, canV
           </div>
           <div className="text-right">
             <div className="text-white font-extrabold text-base">
-              Academic: {fmt(academicGrandTotal)} {canViewTransport && `· 🚌 Transport: ${fmt(transportGrandTotal)}`}
+              Academic: {fmt(academicGrandTotal)}
+              {lateFineGrandTotal > 0 && ` + ${fmt(lateFineGrandTotal)} fine`}
+              {canViewTransport && ` · 🚌 Transport: ${fmt(transportGrandTotal)}`}
             </div>
             <div className="text-white/50 text-[11px]">Combined: {fmt(combinedGrandTotal)}</div>
           </div>
@@ -2039,7 +2085,18 @@ const CollectionsHistory = () => {
         parentPhone: data.parentMobile || data.parentPhone || student.parentPhone || '',
         academicComponents: academicItems.length ? academicItems : (data.components || [{ name: 'Academic Fee', amount: data.amountPaid }]),
         academicCollected: data.amountPaid ?? 0,
-        transportComponents: transportItems,
+        // FIX: transportItems can come back empty (e.g. the transport
+        // billing record didn't carry recognizable month/flat-override
+        // fields, or the modal's transport lookup was still loading at
+        // submit time) even though a transport amount was genuinely
+        // collected. Previously that left the receipt's "Transport Fee"
+        // section rendering "None" while "Transport Amount Collected"
+        // still showed the real, non-zero total right below it — fall
+        // back to a single lump-sum line so the itemized breakdown always
+        // accounts for whatever was actually collected.
+        transportComponents: transportItems.length
+            ? transportItems
+            : (transportPaid > 0 ? [{ name: 'Transport Fee', amount: transportPaid }] : []),
         transportCollected: transportPaid,
         discount: data.discount || 0,
         discountReason: data.discountReason || '',
@@ -2085,7 +2142,15 @@ const CollectionsHistory = () => {
           parentPhone: data.parentMobile || data.parentPhone || item.parentPhone || '',
           academicComponents: (data.components || []).map(c => ({ name: c.customName || c.componentType, amount: c.amount })),
           academicCollected: data.amountPaid ?? item.amount,
-          transportComponents: [],
+          // FIX: same "don't show an empty Transport Fee section when a
+          // transport amount was actually collected" fallback as
+          // handleCollectSuccess above. This endpoint may return itemized
+          // transportComponents directly — use them when present — but
+          // previously this always hardcoded an empty array regardless of
+          // whether data.transportAmount was greater than zero.
+          transportComponents: (data.transportComponents || []).length
+              ? data.transportComponents.map((c) => ({ name: c.customName || c.componentType || c.name, amount: c.amount }))
+              : ((data.transportAmount || 0) > 0 ? [{ name: 'Transport Fee', amount: data.transportAmount }] : []),
           transportCollected: data.transportAmount || 0,
           discount: data.discount || 0,
           discountReason: data.discountReason || '',

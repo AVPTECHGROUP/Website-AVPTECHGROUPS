@@ -72,32 +72,46 @@ function EditStudentDetails() {
       try {
         setLoading(true);
         const student = await getStudentById(id);
+
+        // DEBUG: keep this until the "required fields" issue (if any) on this page
+        // is confirmed fixed, then remove it. It shows exactly what the API returned
+        // so any field-name mismatch (e.g. nested sectionId, different casing on
+        // gender, etc.) can be spotted immediately.
+        console.log('[EditStudent] raw API response:', student);
+
         if (student?.profileImageUrl) setExistingImageUrl(student.profileImageUrl);
 
         const pd = student?.personalDetails || {};
 
         // Derive first/last name from dedicated fields if present, else split fullName as a fallback
-        let firstName = student?.firstName || '';
-        let lastName = student?.lastName || '';
+        let firstName = student?.firstName || pd.firstName || '';
+        let lastName = student?.lastName || pd.lastName || '';
         if (!firstName && !lastName) {
-          const fullName = student?.fullName || '';
+          const fullName = student?.fullName || pd.fullName || '';
           const parts = fullName.trim().split(' ');
           firstName = parts[0] || '';
           lastName = parts.slice(1).join(' ').trim();
         }
 
+        // sectionId can come back flat (student.sectionId) or nested under a
+        // section object (student.section.id) depending on the backend DTO.
+        const sectionId = student?.sectionId ?? student?.section?.id ?? '';
+
         setFormData({
           firstName,
           lastName,
-          gender: pd.gender || student?.gender || '',
-          email: pd.email || student?.fatherEmail || '',
-          mobile: pd.mobile || student?.fatherPhone || '',
+          gender: (pd.gender || student?.gender || '').toString().toUpperCase(),
+          // NOTE: previously this fell back to the FATHER's email/mobile when the
+          // student's own value was missing, which is wrong — it should only ever
+          // fall back to the student's own top-level fields, never a parent's.
+          email: pd.email || student?.email || '',
+          mobile: pd.mobile || student?.mobile || '',
           address: student?.currentAddress || pd.address || '',
-          dob: pd.dateOfBirth || '',
+          dob: pd.dateOfBirth || student?.dob || '',
           admissionNumber: student?.admissionNumber || '',
           admissionDate: student?.admissionDate || '',
           rollNumber: student?.rollNumber || '',
-          sectionId: student?.sectionId || '',
+          sectionId,
           status: student?.status || 'ACTIVE',
           category: student?.category || 'GENERAL',
           studentHouse: student?.studentHouse || '',
@@ -199,6 +213,8 @@ function EditStudentDetails() {
       bankAccountNumber: formData.bankAccountNumber.trim() || null,
       bankIfscCode: formData.bankIfscCode.trim() || null,
       personalDetails: {
+        firstName,
+        lastName,
         fullName,
         mobile: formData.mobile,
         email: formData.email.trim() || null,

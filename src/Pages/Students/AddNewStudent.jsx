@@ -43,8 +43,9 @@ function AddNewStudent() {
     });
 
     const [formData, setFormData] = useState({
-        name: '', gender: '', email: '', mobile: '', address: '', dob: '',
+        firstName: '', lastName: '', gender: '', email: '', mobile: '', address: '', dob: '',
         admissionNumber: '', admissionDate: new Date().toISOString().slice(0, 10), academicYear: '2025-2026',
+        academicYearId: '',
         rollNumber: '',
         status: 'ACTIVE', bloodGroup: '', previousSchool: '', profileImageUrl: '',
         sectionId: '', fatherName: '', fatherOccupation: '', fatherPhone: '',
@@ -204,7 +205,14 @@ function AddNewStudent() {
     // ── Validations ──
     const validatePersonalDetails = () => {
         if (!profileImage) { toast.error(AS.ERRORS.PHOTO_REQUIRED); return false; }
-        if (!formData.name.trim() || !formData.gender || !formData.mobile || !formData.dob || !formData.admissionDate) {
+        if (
+            !formData.firstName.trim() ||
+            !formData.lastName.trim() ||
+            !formData.gender ||
+            !formData.mobile ||
+            !formData.dob ||
+            !formData.admissionDate
+        ) {
             toast.error(AS.ERRORS.REQUIRED_FIELDS); return false;
         }
         if (!formData.rollNumber.trim()) { toast.error(AS.ERRORS.ROLL_REQUIRED); return false; }
@@ -329,9 +337,10 @@ function AddNewStudent() {
         const loadingToast = toast.loading(AS.LOADING || "Adding student...");
 
         try {
-            const nameParts = formData.name.trim().split(' ');
-            const firstName = nameParts[0];
-            const lastName = nameParts.slice(1).join(' ').trim() || firstName;
+            const firstName = formData.firstName.trim();
+            const lastName = formData.lastName.trim();
+            const fullName = `${firstName} ${lastName}`.trim();
+
             const generatedAdmissionNumber = formData.admissionNumber.trim()
                 ? formData.admissionNumber.trim()
                 : `ADM-${Math.floor(100000 + Math.random() * 900000)}`;
@@ -342,9 +351,10 @@ function AddNewStudent() {
                 rollNumber: formData.rollNumber.trim() || null,
                 firstName,
                 lastName,
-                fullName: formData.name.trim(),
+                fullName,
                 sectionId: Number(formData.sectionId),
                 admissionDate: formData.admissionDate,
+                academicYearId: formData.academicYearId ? Number(formData.academicYearId) : null,
                 academicYear: formData.academicYear || "2025-2026",
                 status: formData.status || "ACTIVE",
                 bloodGroup: formData.bloodGroup || null,
@@ -385,7 +395,9 @@ function AddNewStudent() {
                 familyId: formData.familyId.trim() || null,
                 remarks: formData.remarks || null,
                 personalDetails: {
-                    fullName: formData.name.trim(),
+                    firstName,
+                    lastName,
+                    fullName,
                     mobile: formData.mobile,
                     email: formData.email.trim() || null,
                     gender: (formData.gender || "MALE").toUpperCase(),
@@ -446,7 +458,7 @@ function AddNewStudent() {
         <div ref={formTopRef} className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-4">
             <div className="mx-auto">
                 <button onClick={() => navigate(-1)}
-                    className="flex items-center cursor-pointer bg-gray-600 p-2 rounded-xl text-white gap-2 hover:bg-gray-900 transition-colors mb-4">
+                        className="flex items-center cursor-pointer bg-gray-600 p-2 rounded-xl text-white gap-2 hover:bg-gray-900 transition-colors mb-4">
                     <ChevronLeft className="w-5 h-5" />
                     <span className="hidden sm:inline">{C.BACK_TO_LIST}</span>
                 </button>
@@ -460,7 +472,7 @@ function AddNewStudent() {
                             <nav className="flex flex-wrap -mb-px">
                                 {TABS.map(({ key, label, short, Icon }) => (
                                     <button key={key} type="button" onClick={() => handleTabClick(key)}
-                                        className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === key ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
+                                            className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === key ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
                                         <Icon size={20} />
                                         <span className="hidden sm:inline">{label}</span>
                                         <span className="sm:hidden">{short}</span>
@@ -601,23 +613,23 @@ function AddNewStudent() {
                         <div className="border-t border-gray-200 px-4 sm:px-6 lg:px-8 py-4 bg-gray-50 rounded-b-lg">
                             <div className="flex flex-col sm:flex-row justify-end gap-3">
                                 <button type="button" onClick={handleDiscard}
-                                    className="px-6 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                                        className="px-6 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
                                     {C.DISCARD_CHANGES}
                                 </button>
                                 {!isFirstTab && (
                                     <button type="button" onClick={handleBackTab}
-                                        className="px-6 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2">
+                                            className="px-6 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2">
                                         <ChevronLeft className="w-4 h-4" /> Back
                                     </button>
                                 )}
                                 {!isLastTab ? (
                                     <button type="button" onClick={handleNextTab}
-                                        className="px-6 py-2.5 text-sm font-medium rounded-lg transition-all bg-blue-500 hover:bg-blue-600 cursor-pointer text-white flex items-center gap-2">
+                                            className="px-6 py-2.5 text-sm font-medium rounded-lg transition-all bg-blue-500 hover:bg-blue-600 cursor-pointer text-white flex items-center gap-2">
                                         {AS.NEXT} <ChevronRight className="w-4 h-4" />
                                     </button>
                                 ) : (
                                     <button disabled={isSubmitting} type="button" onClick={handleSaveDetails}
-                                        className={`px-6 py-2.5 text-sm font-medium rounded-lg transition-all ${isSubmitting ? 'bg-blue-300 cursor-not-allowed text-white' : 'bg-blue-500 hover:bg-blue-600 cursor-pointer text-white'}`}>
+                                            className={`px-6 py-2.5 text-sm font-medium rounded-lg transition-all ${isSubmitting ? 'bg-blue-300 cursor-not-allowed text-white' : 'bg-blue-500 hover:bg-blue-600 cursor-pointer text-white'}`}>
                                         {isSubmitting ? (
                                             <span className="flex items-center justify-center gap-2">
                                                 <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
