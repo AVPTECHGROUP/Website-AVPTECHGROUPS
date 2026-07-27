@@ -202,6 +202,7 @@ function AddNewStudent() {
     const phoneRegex = /^[0-9]{10}$/;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+    // ── Validations ──
     const validatePersonalDetails = () => {
         if (!profileImage) { toast.error(AS.ERRORS.PHOTO_REQUIRED); return false; }
         if (
@@ -221,8 +222,74 @@ function AddNewStudent() {
         return true;
     };
 
+    const validateIdentityDetails = () => {
+        return true;
+    };
+
+    const validateFamilyDetails = () => {
+        if (!formData.fatherName?.trim()) {
+            toast.error("Father's Name is required");
+            return false;
+        }
+        if (!formData.fatherOccupation?.trim()) {
+            toast.error("Father's Occupation is required");
+            return false;
+        }
+        if (!formData.fatherPhone) {
+            toast.error("Father's Phone number is required");
+            return false;
+        }
+        if (!phoneRegex.test(formData.fatherPhone)) {
+            toast.error("Father's Phone must be a valid 10-digit number");
+            return false;
+        }
+        if (formData.fatherEmail && !emailRegex.test(formData.fatherEmail)) {
+            toast.error("Father's Email is invalid");
+            return false;
+        }
+
+        if (!formData.motherName?.trim()) {
+            toast.error("Mother's Name is required");
+            return false;
+        }
+        if (formData.motherPhone && !phoneRegex.test(formData.motherPhone)) {
+            toast.error("Mother's Phone must be a valid 10-digit number");
+            return false;
+        }
+        if (formData.motherEmail && !emailRegex.test(formData.motherEmail)) {
+            toast.error("Mother's Email is invalid");
+            return false;
+        }
+
+        if (formData.guardianPhone && !phoneRegex.test(formData.guardianPhone)) {
+            toast.error("Guardian's Phone must be a valid 10-digit number");
+            return false;
+        }
+        if (formData.guardianEmail && !emailRegex.test(formData.guardianEmail)) {
+            toast.error("Guardian's Email is invalid");
+            return false;
+        }
+        if (formData.emergencyContact && !phoneRegex.test(formData.emergencyContact)) {
+            toast.error("Emergency Contact must be a valid 10-digit number");
+            return false;
+        }
+
+        return true;
+    };
+
+    const validateOtherDetails = () => {
+        if (formData.hostelRequired && !formData.hostelRoomNumber?.trim()) {
+            toast.error("Hostel Room Number is required when hostel accommodation is enabled");
+            return false;
+        }
+        return true;
+    };
+
     const validateTab = (tab) => {
         if (tab === 'personal') return validatePersonalDetails();
+        if (tab === 'identity') return validateIdentityDetails();
+        if (tab === 'family') return validateFamilyDetails();
+        if (tab === 'other') return validateOtherDetails();
         return true;
     };
 
@@ -260,7 +327,12 @@ function AddNewStudent() {
     const handleSubmit = (e) => e.preventDefault();
 
     const handleSaveDetails = async () => {
-        if (!validatePersonalDetails()) { setActiveTab('personal'); return; }
+        // Validate all tabs before submitting
+        if (!validatePersonalDetails()) { setActiveTab('personal'); scrollToTop(); return; }
+        if (!validateIdentityDetails()) { setActiveTab('identity'); scrollToTop(); return; }
+        if (!validateFamilyDetails()) { setActiveTab('family'); scrollToTop(); return; }
+        if (!validateOtherDetails()) { setActiveTab('other'); scrollToTop(); return; }
+
         setIsSubmitting(true);
         const loadingToast = toast.loading(AS.LOADING || "Adding student...");
 

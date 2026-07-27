@@ -1,4 +1,4 @@
-import { User, Mail, Phone, ChevronLeft, GraduationCap, DollarSign, UserCheck, Briefcase, LogIn, Clock } from 'lucide-react';
+import { User, Mail, Phone, ChevronLeft, GraduationCap, DollarSign, UserCheck, Briefcase, LogIn, Clock, IndianRupee } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { getTeacherById } from '../../Api/Teachers/TeachersAPI';
@@ -196,7 +196,7 @@ const DetailsView = () => {
           {isPayrollEnabled && (
             <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
               <div className="flex items-center gap-2 mb-4 sm:mb-6">
-                <DollarSign className="w-5 h-5 text-blue-600" />
+                <IndianRupee className="w-5 h-5 text-blue-600" />
                 <h3 className="text-lg font-bold text-gray-900">{strings.DETAILS.SALARY_TAB}</h3>
               </div>
               <div className="space-y-4">

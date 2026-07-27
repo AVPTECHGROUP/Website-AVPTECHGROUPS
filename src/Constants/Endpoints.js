@@ -21,6 +21,20 @@ export const API_ENDPOINTS = {
   circularApprove: (id) => `${BASE_URL_V1}/circulars/${id}/approve`,
   circularReject: (id) => `${BASE_URL_V1}/circulars/${id}/reject`,
 
+  //Templates-->
+
+  // ─── Print Templates ───────────────────────────────────────────────────────
+  PRINT_TEMPLATES: `${BASE_URL_V1}/print-templates`,
+
+  printTemplateById: (id) =>
+    `${BASE_URL_V1}/print-templates/${id}`,
+
+  printTemplateSetDefault: (id) =>
+    `${BASE_URL_V1}/print-templates/${id}/set-default`,
+
+  printTemplateDefault: (type) =>
+    `${BASE_URL_V1}/print-templates/default?type=${encodeURIComponent(type)}`,
+
   // ─── School Events 
   SCHOOL_EVENTS: `${BASE_URL_V1}/school-events`,
   EVENTS_PENDING: `${BASE_URL_V1}/school-events/pending-approval`,
