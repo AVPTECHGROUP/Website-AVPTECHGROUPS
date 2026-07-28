@@ -450,13 +450,14 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
   const [transportLoading, setTransportLoading] = useState(false);
 
   // FIX: whenever the Fee Period dropdown changes for an already-selected
-  // student — in BOTH quick-collect mode (opened from a table row) and
-  // manual mode — this refetches that student's academic balance/fee
-  // structure for the NEWLY selected period. Previously, changing the
-  // period after a student was already loaded left `activeStudent.balance`
-  // / `feeStructureId` pinned to whichever period was active at selection
-  // time, so e.g. switching from "July" to "August" would still submit
-  // (and receipt) July's fee structure/amount against an August payment.
+  // student — in manual mode only (see the `disabled={!isManualMode}` on
+  // the select below) — this refetches that student's academic
+  // balance/fee structure for the NEWLY selected period. Previously,
+  // changing the period after a student was already loaded left
+  // `activeStudent.balance` / `feeStructureId` pinned to whichever period
+  // was active at selection time, so e.g. switching from "July" to
+  // "August" would still submit (and receipt) July's fee structure/amount
+  // against an August payment.
   const [periodSyncLoading, setPeriodSyncLoading] = useState(false);
   const lastPeriodSyncRef = useRef(''); // `${studentId}:${periodId}` already synced
 
@@ -536,6 +537,13 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
   const academicExceedsBalance = netAcademicAmount > academicBalance + EPS;
   const transportExceedsBalance = transportAmountNum > transportDue + EPS;
   const discountExceedsAmount = discountNum > academicAmountNum + EPS;
+  // FIX (requested): a discount can no longer be submitted without a
+  // reason — if "Others" is chosen, the free-text follow-up must also be
+  // filled in. A discount of ₹0 (i.e. none entered) never triggers this.
+  const discountReasonMissing = discountNum > 0 && (
+      !form.discountReason ||
+      (form.discountReason === 'Others' && !form.discountReasonOther?.trim())
+  );
   // FIX: late fine must never exceed the academic amount being collected —
   // previously any late fine value (however large) was accepted as long as
   // it was non-negative. The input itself is now also live-clamped to this
@@ -553,7 +561,15 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
   // remain outstanding on each column once this payment goes through.
   // Shown for partial payments so the person can see the effect of what
   // they're about to collect before they submit.
-  const academicBalanceAfterPayment = Math.max(0, academicBalance - netAcademicAmount);
+  //
+  // FIX (bug reported): this must be computed against the full amount
+  // being applied to the balance (academicAmountNum) — which includes any
+  // discount waived — not just the net cash actually collected
+  // (netAcademicAmount). E.g. a ₹100 due with a ₹100 discount fully clears
+  // the balance (₹0 remaining) even though the cash collected is ₹0;
+  // using netAcademicAmount here previously left the balance showing as
+  // if nothing had been applied at all.
+  const academicBalanceAfterPayment = Math.max(0, academicBalance - academicAmountNum);
   const transportBalanceAfterPayment = Math.max(0, transportDue - transportAmountNum);
 
   // Reference-field label/placeholder for the currently selected payment
@@ -590,16 +606,24 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
   // (see handleSubmit's catch block) can re-pull the authoritative balance
   // for the current student + period from the server, instead of trusting
   // a value that may already be stale by the time the person clicks
-  // Submit. TODO: confirm getOutstandingFees accepts a `studentId` filter
-  // param on your backend (it already accepts periodId/classId elsewhere
-  // in this file) — adjust the param name below if your API expects
-  // something else (e.g. `student_id`).
-  const resyncBalanceForCurrentPeriod = useCallback(async (studentId, periodId) => {
+  // Submit.
+  //
+  // FIX (bug reported): "fee period exists for this student but changing
+  // the period says it doesn't". The outstanding-fees endpoint's
+  // studentId filter isn't reliable enough to trust on its own — an empty
+  // `records` array from it does NOT necessarily mean no fee applies.
+  // Before concluding "no academic fee this period" (which previously
+  // zeroed out the student's balance/structure outright), this now falls
+  // back to checking the period's actual fee structures against the
+  // student's class — the same match the roster-building logic uses
+  // elsewhere in this file — and derives the balance from the structure
+  // total minus whatever history shows as already paid.
+  const resyncBalanceForCurrentPeriod = useCallback(async (studentId, periodId, studentClassName) => {
     if (!studentId || !periodId) return;
     setPeriodSyncLoading(true);
     try {
       const res = await getOutstandingFees({ periodId, studentId, page: 0, size: 1 });
-      const rec = (res?.records || [])[0];
+      const rec = (res?.records || []).find((r) => String(r.studentId) === String(studentId));
       lastPeriodSyncRef.current = `${studentId}:${periodId}`;
 
       if (rec) {
@@ -631,13 +655,68 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
             return p;
           });
         }
+        return;
+      }
+
+      // No outstanding-fees row came back for this student — cross-check
+      // against the period's actual fee structures before assuming there
+      // genuinely is no fee this period.
+      let structures = periodStructures;
+      if (!structures.length) {
+        try { structures = await getFeeStructures(parseInt(periodId)); } catch { structures = []; }
+      }
+      const className = (studentClassName || '').trim().toLowerCase();
+      const matched = structures.find((s) => (s.classes || []).some((c) =>
+          String(c.id) === String(selectedClassId) ||
+          (c.name || c.className || '').trim().toLowerCase() === className
+      ));
+
+      if (matched) {
+        const comps = matched.components || matched.feeComponents || [];
+        const totalFee = Array.isArray(comps) && comps.length > 0
+            ? comps.reduce((sum, c) => sum + (Number(c.amount) || 0), 0)
+            : Number(matched.totalAmount || matched.amount) || 0;
+
+        // TODO: confirm getFeeCollectionHistory accepts a `studentId`
+        // filter param on your backend (it already accepts
+        // classId/periodId elsewhere in this file) — adjust the param
+        // name below if your API expects something else.
+        let paidSoFar = 0;
+        try {
+          const hist = await getFeeCollectionHistory({ studentId, periodId, page: 0, size: 500 });
+          paidSoFar = (hist?.records || [])
+              .filter((h) => String(h.studentId ?? h.student?.id ?? '') === String(studentId))
+              .reduce((s, h) => s + (Number(h.amountPaid) || 0), 0);
+        } catch { /* assume nothing paid yet if history lookup fails */ }
+
+        const balanceDue = Math.max(0, totalFee - paidSoFar);
+        setActiveStudent((p) => (p && p.studentId === studentId) ? {
+          ...p,
+          feePeriodId: periodId,
+          totalFee,
+          balance: balanceDue,
+          paidAmount: paidSoFar,
+          feeStructureId: matched.id,
+          overdueDays: 0,
+          daysLate: 0,
+          status: deriveStatus(balanceDue, paidSoFar, 0),
+        } : p);
+        if (!academicTouchedRef.current) {
+          setForm((p) => ({ ...p, academicAmount: balanceDue > 0 ? String(balanceDue) : '' }));
+        } else {
+          setForm((p) => {
+            const typed = parseFloat(p.academicAmount) || 0;
+            if (typed > balanceDue) return { ...p, academicAmount: balanceDue > 0 ? String(balanceDue) : '' };
+            return p;
+          });
+        }
       } else {
+        // Genuinely no fee structure applies to this student's class for
+        // this period.
         setActiveStudent((p) => (p && p.studentId === studentId) ? {
           ...p, feePeriodId: periodId, balance: 0, totalFee: 0, feeStructureId: null,
         } : p);
         if (!academicTouchedRef.current) {
-          setForm((p) => ({ ...p, academicAmount: '' }));
-        } else {
           setForm((p) => ({ ...p, academicAmount: '' }));
         }
       }
@@ -647,7 +726,7 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
     } finally {
       setPeriodSyncLoading(false);
     }
-  }, []);
+  }, [periodStructures, selectedClassId]);
 
   useEffect(() => {
     if (!open) return;
@@ -829,7 +908,7 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
     const syncKey = `${activeStudent.studentId}:${selectedPeriodId}`;
     if (lastPeriodSyncRef.current === syncKey) return;
     let cancelled = false;
-    resyncBalanceForCurrentPeriod(activeStudent.studentId, selectedPeriodId).then(() => {
+    resyncBalanceForCurrentPeriod(activeStudent.studentId, selectedPeriodId, activeStudent.class).then(() => {
       if (cancelled) return;
     });
     return () => { cancelled = true; };
@@ -900,6 +979,8 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
     if (academicExceedsBalance) { toast.warning(COLLECTION_HISTORY_STRINGS.TOAST_AMOUNT_TOO_HIGH, `Academic amount cannot exceed ${fmt(academicBalance)}.`); return; }
     if (canViewTransport && transportExceedsBalance) { toast.warning(COLLECTION_HISTORY_STRINGS.TOAST_AMOUNT_TOO_HIGH, `Transport amount cannot exceed ${fmt(transportDue)}.`); return; }
     if (discountExceedsAmount) { toast.warning(COLLECTION_HISTORY_STRINGS.TOAST_DISCOUNT_TOO_HIGH, COLLECTION_HISTORY_STRINGS.TOAST_DISCOUNT_EXCEEDS); return; }
+    // FIX (requested): discount can never be submitted without a reason.
+    if (discountReasonMissing) { toast.warning('Discount reason required', 'Please select a reason for the discount before recording this payment.'); return; }
     if (lateFineExceedsAmount) { toast.warning('Late fine too high', 'Late fine cannot exceed the academic amount being collected.'); return; }
     if (!selectedPeriodId) { toast.warning(COLLECTION_HISTORY_STRINGS.TOAST_NO_PERIOD_SELECTED, COLLECTION_HISTORY_STRINGS.TOAST_PLEASE_SELECT_PERIOD); return; }
     if (academicAmountNum > 0 && !activeStudent.feeStructureId) { toast.error(COLLECTION_HISTORY_STRINGS.TOAST_FEE_STRUCTURE_MISSING, COLLECTION_HISTORY_STRINGS.TOAST_NO_FEE_STRUCTURE_FOUND); return; }
@@ -957,7 +1038,7 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
       // now known to be wrong.
       lastPeriodSyncRef.current = '';
       if (activeStudent?.studentId && selectedPeriodId) {
-        resyncBalanceForCurrentPeriod(activeStudent.studentId, selectedPeriodId);
+        resyncBalanceForCurrentPeriod(activeStudent.studentId, selectedPeriodId, activeStudent.class);
       }
     } finally { setLoading(false); }
   };
@@ -967,7 +1048,8 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
       (academicAmountNum > 0 && structureMismatch) ||
       (academicAmountNum <= 0 && (!canViewTransport || transportAmountNum <= 0)) ||
       academicBelowMinimum || (canViewTransport && transportBelowMinimum) ||
-      academicExceedsBalance || (canViewTransport && transportExceedsBalance) || discountExceedsAmount || lateFineExceedsAmount;
+      academicExceedsBalance || (canViewTransport && transportExceedsBalance) || discountExceedsAmount || lateFineExceedsAmount ||
+      discountReasonMissing;
 
   return (
       <Modal open={open} onClose={onClose}
@@ -998,10 +1080,23 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
                 {periodSyncLoading && <span className="text-blue-500 font-normal ml-1">(syncing balance…)</span>}
               </label>
               <select value={selectedPeriodId} onChange={(e) => setSelectedPeriodId(e.target.value)}
-                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all bg-white">
+                      disabled={!isManualMode}
+                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all bg-white disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed">
                 <option value="">-- Select fee period --</option>
                 {periodOptions.map((p) => <option key={p.value} value={String(p.value)}>{p.label}</option>)}
               </select>
+              {/* FIX (requested): when this modal is opened via a table
+                  row's "Collect" button (quick-collect mode), the period
+                  is fixed to whatever that row represents — changing it
+                  here would silently collect against a different period
+                  than the one the person clicked into. Manual mode
+                  (opened from the header "Collect Fee" button, no
+                  pre-selected student) still allows picking any period
+                  freely, and the resync logic below keeps the balance
+                  accurate whenever it's changed. */}
+              {!isManualMode && (
+                  <p className="text-[10.5px] text-gray-400 mt-1">Period is fixed for this collection.</p>
+              )}
               {activeStudent && periodSyncLoading && (
                   <p className="text-[10.5px] text-blue-600 font-medium mt-1 flex items-center gap-1.5">
                     <span className="w-2.5 h-2.5 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
@@ -1040,7 +1135,7 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
                 </div>
             )}
 
-            {isManualMode && selectedClassId && (
+            {isManualMode && selectedClassId && !activeStudent && (
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1.5">
                     Student <span className="text-gray-400">*</span>
@@ -1123,6 +1218,19 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
                         </div>
                     )}
                   </div>
+                  {/* FIX (requested): once a student is selected, the
+                      search/list panel above hides itself (see the
+                      `!activeStudent` guard added to that block) so the
+                      person isn't looking at a picker and a selected-card
+                      at the same time. This "Change" link is the only way
+                      back into the picker in manual mode. */}
+                  {isManualMode && (
+                      <button type="button"
+                              onClick={() => { setActiveStudent(null); setStudentSearch(''); }}
+                              className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 flex-shrink-0 self-start">
+                        Change
+                      </button>
+                  )}
                 </div>
             )}
 
@@ -1382,7 +1490,8 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
                     <CheckCircle size={11} /> Discount of {fmt(discountNum)} applied
                   </p>
               )}
-              {/* Discount reason: dropdown instead of free-text, with an "Others" follow-up field */}
+              {/* Discount reason: dropdown instead of free-text, with an "Others" follow-up field.
+                  FIX (requested): mandatory whenever a discount is entered. */}
               <Sel
                   value={form.discountReason}
                   onChange={(v) => setForm((p) => ({ ...p, discountReason: v, discountReasonOther: v === 'Others' ? p.discountReasonOther : '' }))}
@@ -1397,6 +1506,11 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
                       placeholder="Specify reason"
                       className="mt-2"
                   />
+              )}
+              {discountReasonMissing && (
+                  <p className="text-[11px] text-orange-600 font-medium mt-1 flex items-center gap-1">
+                    <AlertCircle size={11} /> A reason is required when a discount is applied.
+                  </p>
               )}
             </div>
 
@@ -1453,7 +1567,9 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
                   {canViewTransport && transportAmountNum > 0 ? ` + Transport ${fmt(transportAmountNum)}` : ''}
                 </div>
                 {/* FIX (requested): combined remaining-balance preview
-                    after this payment, across both columns. */}
+                    after this payment, across both columns. Now correctly
+                    reflects discount-waived amounts (see
+                    academicBalanceAfterPayment above). */}
                 {(academicBalanceAfterPayment > 0 || (canViewTransport && transportBalanceAfterPayment > 0)) && (academicAmountNum > 0 || transportAmountNum > 0) && (
                     <div className="text-[10px] text-amber-300 mt-1">
                       Remaining after this payment: {fmt(academicBalanceAfterPayment + (canViewTransport ? transportBalanceAfterPayment : 0))}

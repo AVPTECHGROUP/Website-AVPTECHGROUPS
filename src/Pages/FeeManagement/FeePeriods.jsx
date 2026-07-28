@@ -32,6 +32,34 @@ import {
 const NAME_ONLY_REGEX = /^[A-Za-z\s]*$/;
 const sanitizeNameInput = (val) => val.replace(/[^A-Za-z\s]/g, '');
 
+// FIX: Pull start/end bounds for the current academic year off whatever
+// shape `currentAcademicYear` happens to have. UserContext.js isn't visible
+// from here, so this tries a few common field-name variants. If none match,
+// it silently falls back to "no upper bound / today as lower bound" so the
+// form still works — but the AY-only restriction won't actually apply until
+// the correct field name is confirmed.
+const getAcademicYearBounds = (academicYear) => {
+  const rawStart = academicYear?.startDate || academicYear?.fromDate || academicYear?.start || academicYear?.beginDate;
+  const rawEnd = academicYear?.endDate || academicYear?.toDate || academicYear?.end || academicYear?.finishDate;
+
+  const toDateStr = (d) => {
+    if (!d) return null;
+    const parsed = new Date(d);
+    return isNaN(parsed.getTime()) ? null : parsed.toISOString().split('T')[0];
+  };
+
+  const todayStr = new Date().toISOString().split('T')[0];
+  const ayStartStr = toDateStr(rawStart);
+  const ayEndStr = toDateStr(rawEnd);
+
+  // Due date can't be before today, and can't be before the AY start either —
+  // whichever is later wins as the lower bound.
+  const minDate = ayStartStr && ayStartStr > todayStr ? ayStartStr : todayStr;
+  const maxDate = ayEndStr || undefined;
+
+  return { minDate, maxDate };
+};
+
 // ─── Toast (self-contained, matches FeeStructures) ────────────────────────────
 let _dispatch = null;
 
@@ -184,12 +212,15 @@ const ReopenConfirmModal = ({ open, onClose, onConfirm, loading, periodName }) =
 };
 
 // ─── Constants & Helpers ──────────────────────────────────────────────────────
+// FIX: closed periods should never show as Overdue — once a period is
+// closed, the due-date-vs-today check is skipped entirely and the status
+// falls back to Paid / Partial / Pending based on actual collection.
 const getStatusInfo = (period) => {
   const dueDate = new Date(period.dueDate);
   const today = new Date();
   if (period.collectedAmount && period.totalAmount && period.collectedAmount >= period.totalAmount)
     return STATUSES.PAID;
-  if (dueDate < today) return STATUSES.OVERDUE;
+  if (period.status !== 'CLOSED' && dueDate < today) return STATUSES.OVERDUE;
   if (period.collectedAmount && period.collectedAmount > 0) return STATUSES.PARTIAL;
   return STATUSES.PENDING;
 };
@@ -266,6 +297,11 @@ function PeriodModal({ isOpen, onClose, period, academicYear, onSuccess }) {
     name: '', type: PERIOD_TYPES.QUARTERLY, academicYearId: '', academicYearLabel: '', dueDate: '', notes: '',
   });
 
+  // FIX: due date is now bounded to the current academic year's start/end
+  // (never before today, never outside the AY), instead of just "today
+  // onward" — prevents picking a due date like 1999 or a past AY.
+  const { minDate, maxDate } = getAcademicYearBounds(academicYear);
+
   useEffect(() => {
     if (!isOpen) return;
     if (period) {
@@ -304,6 +340,10 @@ function PeriodModal({ isOpen, onClose, period, academicYear, onSuccess }) {
     if (!form.type) { toast.error(FEE_PERIOD_STRINGS.TOAST_VALIDATION, FEE_PERIOD_STRINGS.TOAST_VALIDATION_TYPE); return; }
     if (!form.academicYearId) { toast.error(FEE_PERIOD_STRINGS.TOAST_VALIDATION, 'Please select an academic year'); return; }
     if (!form.dueDate) { toast.error(FEE_PERIOD_STRINGS.TOAST_VALIDATION, FEE_PERIOD_STRINGS.TOAST_VALIDATION_DATE); return; }
+    // FIX: reject a due date outside the current academic year's bounds
+    // even if it was somehow typed in manually rather than picked.
+    if (minDate && form.dueDate < minDate) { toast.error(FEE_PERIOD_STRINGS.TOAST_VALIDATION, `Due date can't be before ${formatDate(minDate)}`); return; }
+    if (maxDate && form.dueDate > maxDate) { toast.error(FEE_PERIOD_STRINGS.TOAST_VALIDATION, `Due date can't be after ${formatDate(maxDate)} (end of ${form.academicYearLabel || academicYear?.label})`); return; }
 
     setLoading(true);
     try {
@@ -389,9 +429,9 @@ function PeriodModal({ isOpen, onClose, period, academicYear, onSuccess }) {
                   label={FEE_PERIOD_STRINGS.LABEL_DUE_DATE}
                   type="date"
                   value={form.dueDate}
-                  min={new Date().toISOString().split("T")[0]}
+                  min={minDate}
+                  max={maxDate}
                   onChange={(v) => set('dueDate', v)}
-
                   required
               />
 
@@ -442,6 +482,13 @@ const PeriodCard = ({ p, onEdit, onDelete, onClosePeriod, onReopenPeriod, onGoTo
   const canDelete = p.structureCount === 0 && statusKey !== STATUSES.PAID && !isClosed;
   const canEdit = statusKey !== STATUSES.PAID && !isClosed;
 
+  // FIX: a closed period that isn't Paid/Partial used to fall back to
+  // STATUSES.PENDING, whose label is "Upcoming" — wrong once the period is
+  // closed and its due date has already passed. Show a neutral "Unpaid"
+  // instead in that case; Paid/Partial still render normally since those
+  // reflect real collection data.
+  const showAsUnpaid = isClosed && statusKey !== STATUSES.PAID && statusKey !== STATUSES.PARTIAL;
+
   return (
       <div className={`h-full bg-white rounded-xl border shadow-sm hover:shadow-md hover:border-gray-300 transition-all duration-200 overflow-hidden flex flex-col ${isClosed ? 'border-gray-150 bg-gray-50/40' : 'border-gray-200'}`}>
         {/* Card body */}
@@ -458,7 +505,11 @@ const PeriodCard = ({ p, onEdit, onDelete, onClosePeriod, onReopenPeriod, onGoTo
           <div className="flex items-center gap-2 text-xs text-gray-500 -mt-1">
             <span className="font-medium">{PERIOD_TYPE_LABELS[p.type] || p.type}</span>
             <span className="text-gray-300">•</span>
-            <PaymentStatusText statusKey={statusKey} />
+            {showAsUnpaid ? (
+                <StatusText dotColorClass="bg-gray-400" textColorClass="text-gray-500" label="Unpaid" />
+            ) : (
+                <PaymentStatusText statusKey={statusKey} />
+            )}
           </div>
 
           {/* Due date */}
