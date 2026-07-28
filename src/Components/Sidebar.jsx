@@ -186,6 +186,7 @@ const menuSections = [
     items: [
       {
         id: 'templates', icon: Printer, label: 'Templates', route: '/templates/reportCard',
+        systemRole: true, // 👈 Added System Role Protection
         subItems: [
           { label: 'Report Card Templates', route: '/templates/reportCard', icon: FileText },
           { label: 'ID Card Templates', route: '/templates/idCard', icon: CreditCard },
@@ -231,6 +232,7 @@ const checkAccess = (item, userPermissions, userRole, features) => {
     const map = {
       Permission: SYSTEM_ROLES.ROLE_MANAGE,
       schoolConfig: SYSTEM_ROLES.SCHOOL_CONFIG_MANAGE,
+      templates: SYSTEM_ROLES.GLOBAL_ADMIN_ONLY || ['GLOBAL_ADMIN'],
     }
     return (map[item.id] || []).includes(userRole)
   }
@@ -242,7 +244,7 @@ const checkAccess = (item, userPermissions, userRole, features) => {
 
   // 3. Custom showIf Function Check
   if (typeof item.showIf === 'function') {
-    if (!item.showIf(userPermissions, features)) return false;
+    if (!item.showIf(userPermissions, features, userRole)) return false;
   }
 
   // 4. Permission Check

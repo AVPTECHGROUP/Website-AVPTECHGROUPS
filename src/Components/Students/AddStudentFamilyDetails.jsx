@@ -43,8 +43,7 @@ const AddStudentFamilyDetails = ({
         return (
             <div>
                 <label className='block font-semibold text-gray-600 text-sm mb-2'>
-                    {label}
-                    <span className="text-gray-400 text-xs font-normal ml-2">(optional)</span>
+                    {label} <span className="text-gray-400 text-xs font-normal ml-2">(optional)</span>
                 </label>
                 {!file ? (
                     <label className="flex items-center justify-center gap-2 border-2 border-dashed border-gray-300 hover:border-blue-400 bg-gray-50 hover:bg-blue-50 rounded-md p-3 cursor-pointer transition-colors">
@@ -67,7 +66,6 @@ const AddStudentFamilyDetails = ({
 
     return (
         <div className="space-y-8">
-
             {/* Father's Details */}
             <div>
                 <div className="flex justify-start items-center mb-4 pb-3 border-b border-gray-200">
@@ -79,7 +77,7 @@ const AddStudentFamilyDetails = ({
                         <label className='block font-semibold text-gray-600 text-sm mb-2'>
                             Father's Name<span className="text-red-500 ml-1">*</span>
                         </label>
-                        <input type="text" name="fatherName" value={formData.fatherName} onChange={handleInputChange}
+                        <input type="text" name="fatherName" value={formData.fatherName || ''} onChange={handleInputChange}
                             placeholder="Enter father's name" className={inputClass('fatherName')} />
                         <ErrorMsg field="fatherName" />
                     </div>
@@ -87,33 +85,33 @@ const AddStudentFamilyDetails = ({
                         <label className='block font-semibold text-gray-600 text-sm mb-2'>
                             Father's Occupation<span className="text-red-500 ml-1">*</span>
                         </label>
-                        <input type="text" name="fatherOccupation" value={formData.fatherOccupation} onChange={handleInputChange}
+                        <input type="text" name="fatherOccupation" value={formData.fatherOccupation || ''} onChange={handleInputChange}
                             placeholder="Enter father's occupation" className={inputClass('fatherOccupation')} />
                         <ErrorMsg field="fatherOccupation" />
                     </div>
+                    {/* Father Phone (Bugs 1 & 4) */}
                     <div>
                         <label className='block font-semibold text-gray-600 text-sm mb-2'>
                             Father's Phone<span className="text-red-500 ml-1">*</span>
                         </label>
-                        <input type="tel" name="fatherPhone" value={formData.fatherPhone} onChange={handleInputChange}
-                            placeholder='10 digit phone number' maxLength={10} className={inputClass('fatherPhone')} />
+                        <input type="tel" name="fatherPhone" value={formData.fatherPhone || ''} onChange={handleInputChange}
+                            placeholder='10 digit phone number' maxLength={10} pattern="[6-9][0-9]{9}" inputMode="numeric" className={inputClass('fatherPhone')} />
                         <ErrorMsg field="fatherPhone" />
                     </div>
                     <div>
                         <label className='block font-semibold text-gray-600 text-sm mb-2'>
-                            Father's Email
-                            <span className="text-gray-400 text-xs font-normal ml-2">(optional)</span>
+                            Father's Email <span className="text-gray-400 text-xs font-normal ml-2">(optional)</span>
                         </label>
-                        <input type="email" name="fatherEmail" value={formData.fatherEmail} onChange={handleInputChange}
+                        <input type="email" name="fatherEmail" value={formData.fatherEmail || ''} onChange={handleInputChange}
                             placeholder="Enter father's email" className={inputClass('fatherEmail')} />
                         <ErrorMsg field="fatherEmail" />
                     </div>
+                    {/* Father Aadhaar (Bug 3) */}
                     <div>
                         <label className='block font-semibold text-gray-600 text-sm mb-2'>
-                            Father's Aadhaar Number
-                            <span className="text-gray-400 text-xs font-normal ml-2">(optional)</span>
+                            Father's Aadhaar Number <span className="text-gray-400 text-xs font-normal ml-2">(optional)</span>
                         </label>
-                        <input type="text" name="fatherAadhaar" value={formData.fatherAadhaar} onChange={handleInputChange}
+                        <input type="text" name="fatherAadhaar" value={formData.fatherAadhaar || ''} onChange={handleInputChange}
                             placeholder="12 digit Aadhaar number" maxLength={12} inputMode="numeric" className={inputClass('fatherAadhaar')} />
                         <ErrorMsg field="fatherAadhaar" />
                     </div>
@@ -132,43 +130,41 @@ const AddStudentFamilyDetails = ({
                         <label className='block font-semibold text-gray-600 text-sm mb-2'>
                             Mother's Name<span className="text-red-500 ml-1">*</span>
                         </label>
-                        <input type="text" name="motherName" value={formData.motherName} onChange={handleInputChange}
+                        <input type="text" name="motherName" value={formData.motherName || ''} onChange={handleInputChange}
                             placeholder="Enter mother's name" className={inputClass('motherName')} />
                         <ErrorMsg field="motherName" />
                     </div>
                     <div>
                         <label className='block font-semibold text-gray-600 text-sm mb-2'>
-                            Mother's Occupation
-                            <span className="text-gray-400 text-xs font-normal ml-2">(optional)</span>
+                            Mother's Occupation <span className="text-gray-400 text-xs font-normal ml-2">(optional)</span>
                         </label>
-                        <input type="text" name="motherOccupation" value={formData.motherOccupation} onChange={handleInputChange}
+                        <input type="text" name="motherOccupation" value={formData.motherOccupation || ''} onChange={handleInputChange}
                             placeholder="Enter mother's occupation" className={inputClass('motherOccupation')} />
                         <ErrorMsg field="motherOccupation" />
                     </div>
+                    {/* Mother Phone (Bugs 1 & 4) */}
                     <div>
                         <label className='block font-semibold text-gray-600 text-sm mb-2'>
-                            Mother's Phone
-                            <span className="text-gray-400 text-xs font-normal ml-2">(optional)</span>
+                            Mother's Phone <span className="text-gray-400 text-xs font-normal ml-2">(optional)</span>
                         </label>
-                        <input type="tel" name="motherPhone" value={formData.motherPhone} onChange={handleInputChange}
-                            placeholder='10 digit phone number' maxLength={10} className={inputClass('motherPhone')} />
+                        <input type="tel" name="motherPhone" value={formData.motherPhone || ''} onChange={handleInputChange}
+                            placeholder='10 digit phone number' maxLength={10} pattern="[6-9][0-9]{9}" inputMode="numeric" className={inputClass('motherPhone')} />
                         <ErrorMsg field="motherPhone" />
                     </div>
                     <div>
                         <label className='block font-semibold text-gray-600 text-sm mb-2'>
-                            Mother's Email
-                            <span className="text-gray-400 text-xs font-normal ml-2">(optional)</span>
+                            Mother's Email <span className="text-gray-400 text-xs font-normal ml-2">(optional)</span>
                         </label>
-                        <input type="email" name="motherEmail" value={formData.motherEmail} onChange={handleInputChange}
+                        <input type="email" name="motherEmail" value={formData.motherEmail || ''} onChange={handleInputChange}
                             placeholder="Enter mother's email" className={inputClass('motherEmail')} />
                         <ErrorMsg field="motherEmail" />
                     </div>
+                    {/* Mother Aadhaar (Bug 3) */}
                     <div>
                         <label className='block font-semibold text-gray-600 text-sm mb-2'>
-                            Mother's Aadhaar Number
-                            <span className="text-gray-400 text-xs font-normal ml-2">(optional)</span>
+                            Mother's Aadhaar Number <span className="text-gray-400 text-xs font-normal ml-2">(optional)</span>
                         </label>
-                        <input type="text" name="motherAadhaar" value={formData.motherAadhaar} onChange={handleInputChange}
+                        <input type="text" name="motherAadhaar" value={formData.motherAadhaar || ''} onChange={handleInputChange}
                             placeholder="12 digit Aadhaar number" maxLength={12} inputMode="numeric" className={inputClass('motherAadhaar')} />
                         <ErrorMsg field="motherAadhaar" />
                     </div>
@@ -176,27 +172,21 @@ const AddStudentFamilyDetails = ({
                 </div>
             </div>
 
-            {/* Set Guardian from Father / Mother */}
+            {/* Set Guardian Switcher */}
             <div className="flex flex-wrap items-center gap-6 p-4 bg-blue-50 border border-blue-100 rounded-lg">
                 <p className="text-sm font-semibold text-blue-700 w-full sm:w-auto">
                     Set Guardian from:
                 </p>
                 <label className="flex items-center gap-2 cursor-pointer select-none">
-                    <input
-                        type="checkbox"
-                        className="w-4 h-4 accent-blue-600"
+                    <input type="checkbox" className="w-4 h-4 accent-blue-600"
                         checked={guardianSource === 'father'}
-                        onChange={() => handleGuardianCheckbox('father')}
-                    />
+                        onChange={() => handleGuardianCheckbox('father')} />
                     <span className="text-sm text-gray-700 font-medium">Use Father as Guardian</span>
                 </label>
                 <label className="flex items-center gap-2 cursor-pointer select-none">
-                    <input
-                        type="checkbox"
-                        className="w-4 h-4 accent-blue-600"
+                    <input type="checkbox" className="w-4 h-4 accent-blue-600"
                         checked={guardianSource === 'mother'}
-                        onChange={() => handleGuardianCheckbox('mother')}
-                    />
+                        onChange={() => handleGuardianCheckbox('mother')} />
                     <span className="text-sm text-gray-700 font-medium">Use Mother as Guardian</span>
                 </label>
             </div>
@@ -207,37 +197,25 @@ const AddStudentFamilyDetails = ({
                     <i className="fa-solid fa-shield-halved text-xl lg:text-2xl text-blue-500 mr-3"></i>
                     <h2 className='text-xl font-medium text-gray-700'>Guardian Details</h2>
                 </div>
-                <p className="text-sm text-gray-500 mb-4">
-                    Fill this section only if a guardian (other than parents) is responsible for the student.
-                </p>
                 <div className="grid lg:grid-cols-2 sm:grid-cols-1 gap-4">
                     <div>
                         <label className='block font-semibold text-gray-600 text-sm mb-2'>
-                            Guardian's Name
-                            <span className="text-gray-400 text-xs font-normal ml-2">(optional)</span>
+                            Guardian's Name <span className="text-gray-400 text-xs font-normal ml-2">(optional)</span>
                         </label>
-                        <input
-                            type="text" name="guardianName" value={formData.guardianName}
+                        <input type="text" name="guardianName" value={formData.guardianName || ''}
                             onChange={handleInputChange} placeholder="Enter guardian's name"
                             className={guardianSource ? readOnlyClass : inputClass('guardianName')}
-                            readOnly={!!guardianSource}
-                        />
+                            readOnly={!!guardianSource} />
                         <ErrorMsg field="guardianName" />
                     </div>
                     <div>
                         <label className='block font-semibold text-gray-600 text-sm mb-2'>
-                            Relation to Student
-                            <span className="text-gray-400 text-xs font-normal ml-2">(optional)</span>
+                            Relation to Student <span className="text-gray-400 text-xs font-normal ml-2">(optional)</span>
                         </label>
                         {guardianSource ? (
-                            <input
-                                type="text"
-                                value={formData.guardianRelation}
-                                readOnly
-                                className={readOnlyClass}
-                            />
+                            <input type="text" value={formData.guardianRelation || ''} readOnly className={readOnlyClass} />
                         ) : (
-                            <select name="guardianRelation" value={formData.guardianRelation} onChange={handleInputChange}
+                            <select name="guardianRelation" value={formData.guardianRelation || ''} onChange={handleInputChange}
                                 className={inputClass('guardianRelation')}>
                                 <option value="">Select Relation</option>
                                 <option value="Uncle">Uncle</option>
@@ -250,40 +228,35 @@ const AddStudentFamilyDetails = ({
                         )}
                         <ErrorMsg field="guardianRelation" />
                     </div>
+                    {/* Guardian Phone (Bugs 1 & 4) */}
                     <div>
                         <label className='block font-semibold text-gray-600 text-sm mb-2'>
-                            Guardian's Phone
-                            <span className="text-gray-400 text-xs font-normal ml-2">(optional)</span>
+                            Guardian's Phone <span className="text-gray-400 text-xs font-normal ml-2">(optional)</span>
                         </label>
-                        <input
-                            type="tel" name="guardianPhone" value={formData.guardianPhone}
+                        <input type="tel" name="guardianPhone" value={formData.guardianPhone || ''}
                             onChange={handleInputChange} placeholder='10 digit phone number'
-                            maxLength={10}
+                            maxLength={10} pattern="[6-9][0-9]{9}" inputMode="numeric"
                             className={guardianSource ? readOnlyClass : inputClass('guardianPhone')}
-                            readOnly={!!guardianSource}
-                        />
+                            readOnly={!!guardianSource} />
                         <ErrorMsg field="guardianPhone" />
                     </div>
                     <div>
                         <label className='block font-semibold text-gray-600 text-sm mb-2'>
-                            Guardian's Email
-                            <span className="text-gray-400 text-xs font-normal ml-2">(optional)</span>
+                            Guardian's Email <span className="text-gray-400 text-xs font-normal ml-2">(optional)</span>
                         </label>
-                        <input
-                            type="email" name="guardianEmail" value={formData.guardianEmail}
+                        <input type="email" name="guardianEmail" value={formData.guardianEmail || ''}
                             onChange={handleInputChange} placeholder="Enter guardian's email"
                             className={guardianSource ? readOnlyClass : inputClass('guardianEmail')}
-                            readOnly={!!guardianSource}
-                        />
+                            readOnly={!!guardianSource} />
                         <ErrorMsg field="guardianEmail" />
                     </div>
+                    {/* Emergency Contact Phone (Bugs 1 & 4) */}
                     <div>
                         <label className='block font-semibold text-gray-600 text-sm mb-2'>
-                            Emergency Contact Number
-                            <span className="text-gray-400 text-xs font-normal ml-2">(optional)</span>
+                            Emergency Contact Number <span className="text-gray-400 text-xs font-normal ml-2">(optional)</span>
                         </label>
-                        <input type="tel" name="emergencyContact" value={formData.emergencyContact} onChange={handleInputChange}
-                            placeholder='10 digit emergency contact' maxLength={10} className={inputClass('emergencyContact')} />
+                        <input type="tel" name="emergencyContact" value={formData.emergencyContact || ''} onChange={handleInputChange}
+                            placeholder='10 digit emergency contact' maxLength={10} pattern="[6-9][0-9]{9}" inputMode="numeric" className={inputClass('emergencyContact')} />
                         <ErrorMsg field="emergencyContact" />
                     </div>
 
@@ -291,9 +264,7 @@ const AddStudentFamilyDetails = ({
 
                     <div className="lg:col-span-2">
                         <label className='flex items-center gap-2 font-semibold text-gray-600 text-sm mb-2 cursor-pointer select-none'>
-                            <input
-                                type="checkbox"
-                                className="w-4 h-4 accent-blue-600"
+                            <input type="checkbox" className="w-4 h-4 accent-blue-600"
                                 checked={!!formData.sameAsCurrentAddress}
                                 onChange={(e) => {
                                     const checked = e.target.checked;
@@ -302,13 +273,11 @@ const AddStudentFamilyDetails = ({
                                         sameAsCurrentAddress: checked,
                                         guardianAddress: checked ? prev.address : '',
                                     }));
-                                }}
-                            />
+                                }} />
                             Guardian Address same as Permanent/Current Address
                         </label>
-                        <textarea rows={3} name="guardianAddress" value={formData.guardianAddress} onChange={handleInputChange}
-                            disabled={!!formData.sameAsCurrentAddress}
-                            placeholder="Enter guardian's address"
+                        <textarea rows={3} name="guardianAddress" value={formData.guardianAddress || ''} onChange={handleInputChange}
+                            disabled={!!formData.sameAsCurrentAddress} placeholder="Enter guardian's address"
                             className={formData.sameAsCurrentAddress ? readOnlyClass : inputClass('guardianAddress')} />
                         <ErrorMsg field="guardianAddress" />
                     </div>
@@ -334,18 +303,14 @@ const AddStudentFamilyDetails = ({
                     <div className="space-y-3">
                         {formData.siblings.map((sibling) => (
                             <div key={sibling.id} className="flex flex-col sm:flex-row gap-3 items-start sm:items-center p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                                <input
-                                    type="text" value={sibling.name}
+                                <input type="text" value={sibling.name || ''}
                                     onChange={(e) => onSiblingChange(sibling.id, 'name', e.target.value)}
                                     placeholder="Sibling's name"
-                                    className="bg-white font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full sm:flex-1 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                />
-                                <input
-                                    type="text" value={sibling.className}
+                                    className="bg-white font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full sm:flex-1 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                                <input type="text" value={sibling.className || ''}
                                     onChange={(e) => onSiblingChange(sibling.id, 'className', e.target.value)}
                                     placeholder="Class / School"
-                                    className="bg-white font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full sm:flex-1 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                />
+                                    className="bg-white font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full sm:flex-1 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
                                 <button type="button" onClick={() => onRemoveSibling(sibling.id)}
                                     className="w-9 h-9 shrink-0 flex items-center justify-center bg-white border border-red-200 text-red-500 rounded-md hover:bg-red-50 transition-colors">
                                     <Trash2 className="w-4 h-4" />
@@ -355,7 +320,6 @@ const AddStudentFamilyDetails = ({
                     </div>
                 )}
             </div>
-
         </div>
     );
 };

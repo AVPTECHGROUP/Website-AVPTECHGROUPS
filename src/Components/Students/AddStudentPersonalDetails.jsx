@@ -3,7 +3,6 @@ import { getAcademicYears, getCurrentAcademicYear } from "../../Api/AcademicYear
 
 const AddStudentPersonalDetails = ({ formData, setFormData, handleInputChange, errors = {}, sections = [], sectionsLoading = false }) => {
 
-    // Group sections by className for the <optgroup> UX
     const groupedSections = sections.reduce((acc, section) => {
         const key = section.className;
         if (!acc[key]) acc[key] = [];
@@ -19,7 +18,6 @@ const AddStudentPersonalDetails = ({ formData, setFormData, handleInputChange, e
         const fetchAcademicYears = async () => {
             setAcademicYearsLoading(true);
             try {
-                // Handle all known API shapes
                 const unwrap = (r) =>
                     Array.isArray(r) ? r :
                         Array.isArray(r?.years) ? r.years :
@@ -35,15 +33,6 @@ const AddStudentPersonalDetails = ({ formData, setFormData, handleInputChange, e
                 ]);
 
                 const list = yearsRes.status === "fulfilled" ? unwrap(yearsRes.value) : [];
-
-                if (yearsRes.status === "rejected") {
-                    console.error("getAcademicYears failed:", yearsRes.reason);
-                }
-                if (currentRes.status === "rejected") {
-                    console.error("getCurrentAcademicYear failed:", currentRes.reason);
-                }
-
-                // current year from dedicated endpoint or isCurrent flag in list
                 const currentPayload = currentRes.status === "fulfilled" ? currentRes.value : null;
                 const currentYear = currentPayload?.id
                     ? currentPayload
@@ -56,9 +45,6 @@ const AddStudentPersonalDetails = ({ formData, setFormData, handleInputChange, e
                     ?? list.find(y => y.isCurrent)?.id
                     ?? null;
 
-                console.log("[AcademicYear debug]", { list, currentPayload, currentYear, curId });
-
-                // Sort: current first, then newest to oldest
                 const sorted = [...list].sort((a, b) => {
                     if (a.id === curId) return -1;
                     if (b.id === curId) return 1;
@@ -68,7 +54,6 @@ const AddStudentPersonalDetails = ({ formData, setFormData, handleInputChange, e
                 setAcademicYears(sorted);
                 setCurrentYearId(curId);
 
-                // Auto-select current year by default (unless already set)
                 if (curId != null) {
                     setFormData(prev => {
                         const existing = prev.academicYearId || prev.academicYear;
@@ -86,7 +71,6 @@ const AddStudentPersonalDetails = ({ formData, setFormData, handleInputChange, e
         fetchAcademicYears();
     }, []);
 
-    // Which year id is currently selected (support both academicYearId and academicYear field names)
     const selectedId = formData.academicYearId || formData.academicYear || "";
     const isSelectedCurrent = selectedId !== "" && currentYearId != null && Number(selectedId) === Number(currentYearId);
 
@@ -111,7 +95,6 @@ const AddStudentPersonalDetails = ({ formData, setFormData, handleInputChange, e
 
     return (
         <div className="space-y-8">
-            {/* ─── Personal Details Section ─── */}
             <div>
                 <div className="flex justify-start items-center mb-4 pb-3 border-b border-gray-200">
                     <i className="fa-solid fa-user text-xl lg:text-2xl text-blue-500 mr-3"></i>
@@ -123,19 +106,17 @@ const AddStudentPersonalDetails = ({ formData, setFormData, handleInputChange, e
                         <label className='block font-semibold text-gray-600 text-sm mb-2'>
                             First Name<span className="text-red-600 ml-1">*</span>
                         </label>
-                        <input type="text" name="firstName" value={formData.firstName} onChange={handleInputChange}
-                               placeholder='Enter first name' required
-                               className={inputClass('firstName')} />
+                        <input type="text" name="firstName" value={formData.firstName || ''} onChange={handleInputChange}
+                            placeholder='Enter first name' required className={inputClass('firstName')} />
                         <ErrorMsg field="firstName" />
                     </div>
 
                     <div>
                         <label className='block font-semibold text-gray-600 text-sm mb-2'>
-                            Last Name<span className="text-red-600 ml-1">*</span>
+                            Last Name
                         </label>
-                        <input type="text" name="lastName" value={formData.lastName} onChange={handleInputChange}
-                               placeholder='Enter last name' required
-                               className={inputClass('lastName')} />
+                        <input type="text" name="lastName" value={formData.lastName || ''} onChange={handleInputChange}
+                            placeholder='Enter last name' className={inputClass('lastName')} />
                         <ErrorMsg field="lastName" />
                     </div>
 
@@ -143,8 +124,8 @@ const AddStudentPersonalDetails = ({ formData, setFormData, handleInputChange, e
                         <label className='block font-semibold text-gray-600 text-sm mb-2'>
                             Gender<span className="text-red-600 ml-1">*</span>
                         </label>
-                        <select name="gender" value={formData.gender} onChange={handleInputChange} required
-                                className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'>
+                        <select name="gender" value={formData.gender || ''} onChange={handleInputChange} required
+                            className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'>
                             <option value="">Select Gender</option>
                             <option value="Male">Male</option>
                             <option value="Female">Female</option>
@@ -155,10 +136,10 @@ const AddStudentPersonalDetails = ({ formData, setFormData, handleInputChange, e
                         <label className='block font-semibold text-gray-600 text-sm mb-2'>
                             Mobile Number<span className="text-red-600 ml-1">*</span>
                         </label>
-                        <input type="tel" name="mobile" value={formData.mobile} onChange={handleInputChange}
-                               placeholder='10 digit mobile number' maxLength={10} pattern="[0-9]{10}" required
-                               className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500' />
-                        <p className="text-xs text-gray-500 mt-1">Must be exactly 10 digits</p>
+                        <input type="tel" name="mobile" value={formData.mobile || ''} onChange={handleInputChange}
+                            placeholder='10 digit mobile number' maxLength={10} pattern="[6-9][0-9]{9}" inputMode="numeric" required
+                            className={inputClass('mobile')} />
+                        <ErrorMsg field="mobile" />
                     </div>
 
                     <div>
@@ -168,22 +149,22 @@ const AddStudentPersonalDetails = ({ formData, setFormData, handleInputChange, e
                             </span>
                             <span className="flex items-center gap-1.5 font-normal cursor-pointer select-none">
                                 <input type="checkbox" className="w-3.5 h-3.5 accent-blue-600"
-                                       checked={!!formData.sameAsMobile}
-                                       onChange={(e) => handleWhatsappSameAsMobile(e.target.checked)} />
+                                    checked={!!formData.sameAsMobile}
+                                    onChange={(e) => handleWhatsappSameAsMobile(e.target.checked)} />
                                 <span className="text-xs text-gray-500">Same as mobile</span>
                             </span>
                         </label>
-                        <input type="tel" name="whatsappNumber" value={formData.whatsappNumber} onChange={handleInputChange}
-                               placeholder='10 digit WhatsApp number' maxLength={10} disabled={!!formData.sameAsMobile}
-                               className={inputClass('whatsappNumber')} />
+                        <input type="tel" name="whatsappNumber" value={formData.whatsappNumber || ''} onChange={handleInputChange}
+                            placeholder='10 digit WhatsApp number' maxLength={10} pattern="[6-9][0-9]{9}" inputMode="numeric" disabled={!!formData.sameAsMobile}
+                            className={inputClass('whatsappNumber')} />
                         <ErrorMsg field="whatsappNumber" />
                     </div>
 
                     <div>
                         <label className='block font-semibold text-gray-600 text-sm mb-2'>Email Address</label>
-                        <input type="email" name="email" value={formData.email} onChange={handleInputChange}
-                               placeholder='Enter email address'
-                               className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500' />
+                        <input type="email" name="email" value={formData.email || ''} onChange={handleInputChange}
+                            placeholder='Enter email address'
+                            className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500' />
                         <p className="text-xs text-gray-500 mt-1">Valid email format required if provided</p>
                     </div>
 
@@ -191,14 +172,14 @@ const AddStudentPersonalDetails = ({ formData, setFormData, handleInputChange, e
                         <label className='block font-semibold text-gray-600 text-sm mb-2'>
                             Date of Birth<span className="text-red-600 ml-1">*</span>
                         </label>
-                        <input type="date" name="dob" value={formData.dob} onChange={handleInputChange} required
-                               className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500' />
+                        <input type="date" name="dob" value={formData.dob || ''} onChange={handleInputChange} required
+                            className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500' />
                     </div>
 
                     <div>
                         <label className='block font-semibold text-gray-600 text-sm mb-2'>Blood Group</label>
-                        <select name="bloodGroup" value={formData.bloodGroup} onChange={handleInputChange}
-                                className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'>
+                        <select name="bloodGroup" value={formData.bloodGroup || ''} onChange={handleInputChange}
+                            className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'>
                             <option value="">Select Blood Group</option>
                             <option value="A+">A+</option>
                             <option value="A-">A-</option>
@@ -215,8 +196,8 @@ const AddStudentPersonalDetails = ({ formData, setFormData, handleInputChange, e
                         <label className='block font-semibold text-gray-600 text-sm mb-2'>
                             Category<span className="text-red-600 ml-1">*</span>
                         </label>
-                        <select name="category" value={formData.category} onChange={handleInputChange} required
-                                className={inputClass('category')}>
+                        <select name="category" value={formData.category || ''} onChange={handleInputChange} required
+                            className={inputClass('category')}>
                             <option value="">Select Category</option>
                             <option value="General">General</option>
                             <option value="OBC">OBC</option>
@@ -226,31 +207,46 @@ const AddStudentPersonalDetails = ({ formData, setFormData, handleInputChange, e
                         <ErrorMsg field="category" />
                     </div>
 
+                    {/* ─── Fixed Religion Dropdown matching Backend Enum ─── */}
+                    <div>
+                        <label className='block font-semibold text-gray-600 text-sm mb-2'>
+                            Religion
+                        </label>
+                        <select name="religion" value={formData.religion || ''} onChange={handleInputChange}
+                            className={inputClass('religion')}>
+                            <option value="">Select Religion</option>
+                            <option value="HINDU">Hindu</option>
+                            <option value="MUSLIM">Muslim</option>
+                            <option value="CHRISTIAN">Christian</option>
+                            <option value="OTHER">Other</option>
+                        </select>
+                        <ErrorMsg field="religion" />
+                    </div>
+
                     <div>
                         <label className='block font-semibold text-gray-600 text-sm mb-2'>
                             SR Number
                             <span className="text-gray-400 text-xs font-normal ml-2">(auto-generated)</span>
                         </label>
                         <input type="text" value="Assigned automatically on save" disabled readOnly
-                               className='bg-gray-200 font-normal text-gray-500 border border-gray-300 p-2 px-4 w-full rounded-md cursor-not-allowed' />
+                            className='bg-gray-200 font-normal text-gray-500 border border-gray-300 p-2 px-4 w-full rounded-md cursor-not-allowed' />
                     </div>
 
                     <div>
                         <label className='block font-semibold text-gray-600 text-sm mb-2'>Admission Number</label>
-                        <input type="text" name="admissionNumber" value={formData.admissionNumber} onChange={handleInputChange}
-                               placeholder='Auto-generated if left empty'
-                               className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500' />
+                        <input type="text" name="admissionNumber" value={formData.admissionNumber || ''} onChange={handleInputChange}
+                            placeholder='Auto-generated if left empty'
+                            className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500' />
                         <p className="text-xs text-gray-500 mt-1">Leave empty for auto-generation</p>
                     </div>
 
-                    {/* ─── Section Dropdown ─── */}
                     <div>
                         <label className='block font-semibold text-gray-600 text-sm mb-2'>
                             Section<span className="text-red-600 ml-1">*</span>
                         </label>
                         <select
                             name="sectionId"
-                            value={formData.sectionId}
+                            value={formData.sectionId || ''}
                             onChange={handleInputChange}
                             required
                             disabled={sectionsLoading}
@@ -269,27 +265,16 @@ const AddStudentPersonalDetails = ({ formData, setFormData, handleInputChange, e
                                 </optgroup>
                             ))}
                         </select>
-                        <p className="text-xs text-gray-500 mt-1">
-                            {formData.sectionId
-                                ? (() => {
-                                    const found = sections.find(s => s.id === Number(formData.sectionId));
-                                    return found
-                                        ? `${found.className} · ${found.name} · ${found.currentStrength}/${found.capacity} students`
-                                        : '';
-                                })()
-                                : 'Choose the class section for this student'}
-                        </p>
                     </div>
 
                     <div>
                         <label className='block font-semibold text-gray-600 text-sm mb-2'>
                             Date of Admission<span className="text-red-600 ml-1">*</span>
                         </label>
-                        <input type="date" name="admissionDate" value={formData.admissionDate} onChange={handleInputChange} required max={new Date().toISOString().split("T")[0]}
-                               className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500' />
+                        <input type="date" name="admissionDate" value={formData.admissionDate || ''} onChange={handleInputChange} required max={new Date().toISOString().split("T")[0]}
+                            className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500' />
                     </div>
 
-                    {/* ─── Academic Year Dropdown ─── */}
                     <div>
                         <label className='block font-semibold text-gray-600 text-sm mb-2'>
                             Academic Year<span className="text-red-600 ml-1">*</span>
@@ -314,8 +299,6 @@ const AddStudentPersonalDetails = ({ formData, setFormData, handleInputChange, e
                                 );
                             })}
                         </select>
-
-                        {/* Current year green badge */}
                         {!academicYearsLoading && isSelectedCurrent && (
                             <div className="mt-1.5">
                                 <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-green-50 border border-green-200">
@@ -330,9 +313,9 @@ const AddStudentPersonalDetails = ({ formData, setFormData, handleInputChange, e
                         <label className='block font-semibold text-gray-600 text-sm mb-2'>Student House
                             <span className="text-gray-400 text-xs font-normal ml-2">(optional)</span>
                         </label>
-                        <input type="text" name="studentHouse" value={formData.studentHouse} onChange={handleInputChange}
-                               placeholder='e.g. Red House' list="student-house-options"
-                               className={inputClass('studentHouse')} />
+                        <input type="text" name="studentHouse" value={formData.studentHouse || ''} onChange={handleInputChange}
+                            placeholder='e.g. Red House' list="student-house-options"
+                            className={inputClass('studentHouse')} />
                         <datalist id="student-house-options">
                             <option value="Red House" />
                             <option value="Blue House" />
@@ -346,30 +329,25 @@ const AddStudentPersonalDetails = ({ formData, setFormData, handleInputChange, e
                         <label className='block font-semibold text-gray-600 text-sm mb-2'>ABC ID
                             <span className="text-gray-400 text-xs font-normal ml-2">(optional)</span>
                         </label>
-                        <input type="text" name="abcId" value={formData.abcId} onChange={handleInputChange}
-                               placeholder='Academic Bank of Credits ID' className={inputClass('abcId')} />
+                        <input type="text" name="abcId" value={formData.abcId || ''} onChange={handleInputChange}
+                            placeholder='Academic Bank of Credits ID' className={inputClass('abcId')} />
                         <ErrorMsg field="abcId" />
                     </div>
 
                     <div>
                         <label className='block font-semibold text-gray-600 text-sm mb-2'>Previous School</label>
-                        <input type="text" name="previousSchool" value={formData.previousSchool} onChange={handleInputChange}
-                               placeholder='Enter previous school name'
-                               className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500' />
+                        <input type="text" name="previousSchool" value={formData.previousSchool || ''} onChange={handleInputChange}
+                            placeholder='Enter previous school name'
+                            className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500' />
                     </div>
 
                     <div>
                         <label className='block font-semibold text-gray-600 text-sm mb-2'>Transfer Student</label>
                         <button type="button"
-                                onClick={() => setFormData(prev => ({ ...prev, isTransferStudent: !prev.isTransferStudent }))}
-                                className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors duration-300 ${formData.isTransferStudent ? "bg-blue-500" : "bg-gray-300"}`}>
+                            onClick={() => setFormData(prev => ({ ...prev, isTransferStudent: !prev.isTransferStudent }))}
+                            className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors duration-300 ${formData.isTransferStudent ? "bg-blue-500" : "bg-gray-300"}`}>
                             <div className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform duration-300 ${formData.isTransferStudent ? "translate-x-6" : "translate-x-0"}`} />
                         </button>
-                        <p className="text-xs text-gray-500 mt-1">
-                            {formData.isTransferStudent
-                                ? 'Transfer & report card documents required in the next step'
-                                : 'Toggle on if transferring from another school'}
-                        </p>
                     </div>
 
                     <div>
@@ -377,28 +355,23 @@ const AddStudentPersonalDetails = ({ formData, setFormData, handleInputChange, e
                             Status<span className="text-red-600 ml-1">*</span>
                         </label>
                         <button type="button"
-                                onClick={() => setFormData(prev => ({ ...prev, status: prev.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE' }))}
-                                className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors duration-300 ${formData.status === 'ACTIVE' ? "bg-blue-500" : "bg-gray-300"}`}>
+                            onClick={() => setFormData(prev => ({ ...prev, status: prev.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE' }))}
+                            className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors duration-300 ${formData.status === 'ACTIVE' ? "bg-blue-500" : "bg-gray-300"}`}>
                             <div className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform duration-300 ${formData.status === 'ACTIVE' ? "translate-x-6" : "translate-x-0"}`} />
                         </button>
-                        <p className="text-xs text-gray-500 mt-1">
-                            {formData.status === 'ACTIVE'
-                                ? <span className="text-green-600 font-medium">● Active</span>
-                                : <span className="text-red-600 font-medium">● Inactive</span>}
-                        </p>
                     </div>
 
                     <div className="lg:col-span-2">
-
-                        <label className='block font-semibold text-gray-600 text-sm mb-2'>Current Address   <span className="text-red-600 ml-1">*</span></label>
-
-                        <textarea rows={3} name="address" value={formData.address} onChange={handleInputChange}
-                                  placeholder='Enter residential address'
-                                  className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500' />
+                        <label className='block font-semibold text-gray-600 text-sm mb-2'>
+                            Current Address <span className="text-red-600 ml-1">*</span>
+                        </label>
+                        <textarea rows={3} name="address" value={formData.address || ''} onChange={handleInputChange} required
+                            placeholder='Enter residential address'
+                            className={inputClass('address')} />
+                        <ErrorMsg field="address" />
                     </div>
                 </div>
             </div>
-
         </div>
     );
 };
