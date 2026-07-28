@@ -52,8 +52,6 @@ const AddSalaryDetails = ({ formData, setFormData, handleInputChange, errors = {
         { label: 'Other Deductions', key: 'otherDeductions' },
     ];
 
-    // ✅ FIX: leaveDeductionPerDay is a daily RATE used during payroll processing,
-    // not a fixed monthly deduction — exclude it from the config-time net estimate.
     const calculateNet = () => {
         const base = parseFloat(formData.baseSalary) || 0;
         const allowanceTotal = allowances.reduce((sum, a) => sum + parseFloat(a.amount || 0), 0);
@@ -71,10 +69,6 @@ const AddSalaryDetails = ({ formData, setFormData, handleInputChange, errors = {
         return DEDUCTION_OPTIONS.filter(option => !selectedKeys.includes(option.key));
     };
 
-    // ✅ FIX: block '-', '+', 'e', 'E' so an allowance amount can never be typed as negative
-    // (previously only the deduction/penalty input had this guard — the allowance input
-    // was missing it, which let a value like "-034903" slip in and get ADDED to the net,
-    // effectively subtracting it instead of adding an allowance).
     const blockNonPositiveKeys = (e) => {
         if (["-", "+", "e", "E"].includes(e.key)) {
             e.preventDefault();
@@ -84,8 +78,6 @@ const AddSalaryDetails = ({ formData, setFormData, handleInputChange, errors = {
     const handleAddAllowance = (e) => {
         e.preventDefault();
         if (!newAllowance.name || !newAllowance.amount) return;
-        // ✅ FIX: force a non-negative amount even if a negative value somehow reaches here
-        // (e.g. via paste, autofill, or browser quirks that bypass onKeyDown).
         const amount = Math.abs(parseFloat(newAllowance.amount)) || 0;
         if (amount <= 0) return;
         setAllowances(prev => [...prev, { id: Date.now(), name: newAllowance.name, amount }]);
@@ -126,7 +118,6 @@ const AddSalaryDetails = ({ formData, setFormData, handleInputChange, errors = {
             salaryType: 'MONTHLY',
             baseSalary: '',
             leaveDeductionPerDay: '',
-            lateArrivalPenalty: '',
             houseRentAllowance: 0,
             travelAllowance: 0,
             dearnessAllowance: 0,
@@ -208,7 +199,7 @@ const AddSalaryDetails = ({ formData, setFormData, handleInputChange, errors = {
                                             : errors?.salaryType
                                                 ? 'bg-red-50 text-red-600 border-red-300 hover:border-red-400'
                                                 : 'bg-gray-50 text-gray-700 border-transparent hover:bg-gray-100'
-                                        }`}
+                                            }`}
                                     >
                                         Monthly
                                     </button>
@@ -220,7 +211,7 @@ const AddSalaryDetails = ({ formData, setFormData, handleInputChange, errors = {
                                             : errors?.salaryType
                                                 ? 'bg-red-50 text-red-600 border-red-300 hover:border-red-400'
                                                 : 'bg-gray-50 text-gray-700 border-transparent hover:bg-gray-100'
-                                        }`}
+                                            }`}
                                     >
                                         Per Day
                                     </button>
@@ -246,7 +237,7 @@ const AddSalaryDetails = ({ formData, setFormData, handleInputChange, errors = {
                                         className={`w-full pl-7 sm:pl-8 pr-28 sm:pr-32 py-2.5 sm:py-3 border-2 rounded-lg text-base sm:text-lg font-semibold focus:outline-none focus:ring-2 transition-colors ${errors?.baseSalary
                                             ? 'border-red-400 bg-red-50 focus:ring-red-300 focus:border-red-500'
                                             : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
-                                        }`}
+                                            }`}
                                     />
                                     <span className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 text-xs sm:text-sm text-gray-500 whitespace-nowrap">
                                         {formData.salaryType === 'PER_DAY' ? 'INR / DAY' : 'INR / MONTH'}
@@ -273,7 +264,7 @@ const AddSalaryDetails = ({ formData, setFormData, handleInputChange, errors = {
                                     onChange={(e) => {
                                         setLeaveDeductionEnabled(e.target.checked);
                                         if (!e.target.checked) {
-                                            setFormData(prev => ({ ...prev, leaveDeductionPerDay: '', lateArrivalPenalty: '' }));
+                                            setFormData(prev => ({ ...prev, leaveDeductionPerDay: '' }));
                                         }
                                     }}
                                     className="sr-only peer"
@@ -282,49 +273,25 @@ const AddSalaryDetails = ({ formData, setFormData, handleInputChange, errors = {
                             </label>
                         </div>
 
-                        {/* ✅ Stack on mobile, side-by-side on sm+ */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                            <div>
-                                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2 sm:mb-3 tracking-wide uppercase">
-                                    Unpaid Leave (Daily Rate)
-                                </label>
-                                <div className="relative">
-                                    <span className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm">₹</span>
-                                    <input
-                                        type="number"
-                                        name="leaveDeductionPerDay"
-                                        onKeyDown={blockNonPositiveKeys}
-                                        value={formData.leaveDeductionPerDay}
-                                        onChange={handleInputChange}
-                                        disabled={!leaveDeductionEnabled}
-                                        min="0"
-                                        placeholder="0"
-                                        className="w-full pl-7 sm:pl-8 pr-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed"
-                                    />
-                                </div>
-                                {/* ✅ Clarify it's a rate, not deducted here */}
-                                <p className="text-xs text-gray-500 mt-1.5">Rate applied per absent day during payroll</p>
+                        <div>
+                            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2 sm:mb-3 tracking-wide uppercase">
+                                Unpaid Leave (Daily Rate)
+                            </label>
+                            <div className="relative">
+                                <span className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm">₹</span>
+                                <input
+                                    type="number"
+                                    name="leaveDeductionPerDay"
+                                    onKeyDown={blockNonPositiveKeys}
+                                    value={formData.leaveDeductionPerDay}
+                                    onChange={handleInputChange}
+                                    disabled={!leaveDeductionEnabled}
+                                    min="0"
+                                    placeholder="0"
+                                    className="w-full pl-7 sm:pl-8 pr-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed"
+                                />
                             </div>
-                            <div>
-                                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2 sm:mb-3 tracking-wide uppercase">
-                                    Late Arrival Penalty
-                                </label>
-                                <div className="relative">
-                                    <span className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm">₹</span>
-                                    <input
-                                        type="number"
-                                        name="lateArrivalPenalty"
-                                        onKeyDown={blockNonPositiveKeys}
-                                        value={formData.lateArrivalPenalty || ''}
-                                        onChange={handleInputChange}
-                                        disabled={!leaveDeductionEnabled}
-                                        min="0"
-                                        placeholder="0"
-                                        className="w-full pl-7 sm:pl-8 pr-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed"
-                                    />
-                                </div>
-                                <p className="text-xs text-gray-500 mt-1.5">Deducted per 15 minutes of delay</p>
-                            </div>
+                            <p className="text-xs text-gray-500 mt-1.5">Rate applied per absent day during payroll</p>
                         </div>
                     </div>
                 </div>
@@ -370,8 +337,6 @@ const AddSalaryDetails = ({ formData, setFormData, handleInputChange, errors = {
                                                     value={newAllowance.amount}
                                                     onKeyDown={blockNonPositiveKeys}
                                                     onChange={(e) => {
-                                                        // ✅ FIX: also guard on change (covers paste/drag-drop which
-                                                        // bypasses onKeyDown) by stripping a negative sign / '+' / 'e'.
                                                         const raw = e.target.value;
                                                         const sanitized = raw.replace(/[-+eE]/g, '');
                                                         setNewAllowance(prev => ({
@@ -515,10 +480,9 @@ const AddSalaryDetails = ({ formData, setFormData, handleInputChange, errors = {
                                 {formData.salaryType === 'PER_DAY' ? '/day' : '/month'}
                             </span>
                         </div>
-                        {/* ✅ Updated copy — make it clear leave rates are excluded */}
                         <p className="text-xs text-gray-500">
                             Base + allowances − fixed deductions.
-                            Leave & late-arrival rates are applied during payroll processing.
+                            Leave rates are applied during payroll processing.
                         </p>
                     </div>
                 </div>

@@ -2,27 +2,35 @@ import { authFetch } from "../../Authfetch/Authfetch";
 import { API_ENDPOINTS } from "../../Constants/Endpoints";
 
 // ==================== READ OPERATIONS ====================
-
-/**
- * Fetch a paginated list of all students.
- * @param {number} page - The page number (0-indexed)
- * @param {number} size - The number of records per page
- * @param {string} sort - The sorting parameter (e.g., 'id')
- * @returns {Promise<Object>} Paginated student data
- */
-export const getStudents = async (page = 0, size = 10, sort = 'id') => {
+// ==================== GET STUDENTS ====================
+export const getStudents = async (page = 0, size = 10, sort = "id") => {
   try {
-    const res = await authFetch(`${API_ENDPOINTS.STUDENTS_PAGINATED}?page=${page}&size=${size}&sort=${sort}`, {
-      method: "GET",
+    const params = new URLSearchParams({
+      page: page.toString(),
+      size: size.toString(),
+      sort,
     });
-    if (!res.ok) throw new Error(await res.text() || "Failed to fetch students");
+
+    const res = await authFetch(
+      `${API_ENDPOINTS.STUDENTS_PAGINATED}?${params.toString()}`,
+      {
+        method: "GET",
+      }
+    );
+
+    if (!res.ok) {
+      throw new Error(
+        (await res.json().catch(() => ({}))).message ||
+        "Failed to fetch students"
+      );
+    }
+
     return await res.json();
   } catch (error) {
     console.error("getStudents error:", error.message);
     throw error;
   }
 };
-
 /**
  * Fetch a single student record by their unique ID.
  * @param {string|number} id - The student ID
@@ -82,32 +90,44 @@ export const getStudentsBySection = async (sectionId, status = "ACTIVE") => {
   }
 };
 
-/**
- * Search and filter students using an advanced POST payload.
- * @param {Object} filters - Search filter criteria
- * @param {number} page - Page number
- * @param {number} size - Records per page
- * @param {Array|string} sort - Sort configuration
- * @returns {Promise<Object>} Paginated search results
- */
-export const searchStudents = async (filters = {}, page = 0, size = 10, sort = ['id']) => {
-  try {
-    const pageable = encodeURIComponent(JSON.stringify({ page, size, sort }));
 
-    const res = await authFetch(`${API_ENDPOINTS.STUDENTS_SEARCH}?pageable=${pageable}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(filters),
+export const searchStudents = async (
+  filters = {},
+  page = 0,
+  size = 10,
+  sort = "id"
+) => {
+  try {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      size: size.toString(),
+      sort,
     });
 
-    if (!res.ok) throw new Error(await res.text() || 'Failed to Search Students...');
+    const res = await authFetch(
+      `${API_ENDPOINTS.STUDENTS_SEARCH}?${params.toString()}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(filters),
+      }
+    );
+
+    if (!res.ok) {
+      throw new Error(
+        (await res.json().catch(() => ({}))).message ||
+        "Failed to search students"
+      );
+    }
+
     return await res.json();
   } catch (error) {
-    console.error('searchStudents error:', error.message);
+    console.error("searchStudents error:", error.message);
     throw error;
   }
 };
-
 // ==================== WRITE OPERATIONS ====================
 
 /**

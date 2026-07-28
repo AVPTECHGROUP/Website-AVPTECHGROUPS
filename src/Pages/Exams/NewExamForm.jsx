@@ -1,9 +1,9 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   X, ClipboardList, Loader2, Check, ChevronRight, ChevronLeft,
-  AlertCircle, Rocket,
+  AlertCircle, Rocket, AlertTriangle
 } from "lucide-react";
-import { createExamEvent } from "../../Api/Academics/Exams";
+import { createExamEvent, getExamEvents } from "../../Api/Academics/Exams";
 import { getSectionSubjectsByClass, getSectionsByClass } from "../../Api/Teachers/TeachersAPI";
 import { EXAM_CONSTS } from "../../Constants/StringConstants/AcademicsConstants";
 
@@ -104,6 +104,38 @@ export default function CreateExamEventWizard({
     endDate: "",
     description: "",
   });
+
+  // Active Events & Busy Classes (Result Pending)
+  const [existingEvents, setExistingEvents] = useState([]);
+  const [loadingEvents, setLoadingEvents] = useState(false);
+
+  useEffect(() => {
+    const fetchEvents = async () => {
+      setLoadingEvents(true);
+      try {
+        const res = await getExamEvents(form.academicYearId ? { academicYearId: form.academicYearId } : {});
+        setExistingEvents(Array.isArray(res) ? res : []);
+      } catch (err) {
+        console.error("Failed to load existing events:", err);
+      } finally {
+        setLoadingEvents(false);
+      }
+    };
+    fetchEvents();
+  }, [form.academicYearId]);
+
+  // Extract class IDs with pending result (resultDeclared === false)
+  const busyClassIds = useMemo(() => {
+    const busySet = new Set();
+    existingEvents.forEach(evt => {
+      (evt.exams || []).forEach(exam => {
+        if (exam.resultDeclared === false && exam.schoolClassId) {
+          busySet.add(Number(exam.schoolClassId));
+        }
+      });
+    });
+    return busySet;
+  }, [existingEvents]);
 
   // Step 2 — Select Classes
   const [selectedClassIds, setSelectedClassIds] = useState([]);
@@ -209,7 +241,6 @@ export default function CreateExamEventWizard({
   const updateRow = (key, patch) =>
     setRows(prev => prev.map(r => (r.key === key ? { ...r, ...patch } : r)));
 
-  // Compact (same-across-sections) mode: propagate changes to all rows sharing subjectId in that class
   const updateCompactRow = (classId, subjectId, patch) =>
     setRows(prev => prev.map(r => (r.classId === classId && r.subjectId === subjectId ? { ...r, ...patch } : r)));
 
@@ -340,6 +371,8 @@ export default function CreateExamEventWizard({
           {step === 2 && (
             <Step2SelectClasses
               classes={classes}
+              busyClassIds={busyClassIds}
+              loadingEvents={loadingEvents}
               selectedClassIds={selectedClassIds}
               setSelectedClassIds={setSelectedClassIds}
               defaultMarks={defaultMarks}
@@ -509,14 +542,22 @@ function Step1EventDetails({ form, setForm, examTypes, academicYears, currentAca
 // ══════════════════════════════════════════════════════════════════
 // STEP 2 — Select Classes
 // ══════════════════════════════════════════════════════════════════
-function Step2SelectClasses({ classes, selectedClassIds, setSelectedClassIds, defaultMarks, setDefaultMarks }) {
+function Step2SelectClasses({
+  classes, busyClassIds, loadingEvents,
+  selectedClassIds, setSelectedClassIds,
+  defaultMarks, setDefaultMarks
+}) {
   const toggleClass = id => {
     const numId = Number(id);
+    if (busyClassIds.has(numId)) return; // prevent toggle if result pending
+
     setSelectedClassIds(prev =>
       prev.includes(numId) ? prev.filter(c => c !== numId) : [...prev, numId]
     );
   };
-  const selectAllClasses = () => setSelectedClassIds(classes.map(c => Number(c.id)));
+
+  const availableClasses = classes.filter(c => !busyClassIds.has(Number(c.id)));
+  const selectAllClasses = () => setSelectedClassIds(availableClasses.map(c => Number(c.id)));
   const clearAllClasses = () => setSelectedClassIds([]);
 
   return (
@@ -533,39 +574,69 @@ function Step2SelectClasses({ classes, selectedClassIds, setSelectedClassIds, de
           <button
             type="button"
             onClick={selectAllClasses}
-            className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-green-700 bg-green-50 border border-green-200 rounded-full hover:bg-green-100"
+            disabled={loadingEvents || availableClasses.length === 0}
+            className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-green-700 bg-green-50 border border-green-200 rounded-full hover:bg-green-100 disabled:opacity-50"
           >
             <Check className="w-3 h-3" /> {NX.BTN_SEL_ALL}
           </button>
           <button
             type="button"
             onClick={clearAllClasses}
-            className="px-3 py-1.5 text-xs font-semibold text-gray-700 border border-gray-300 rounded-full hover:bg-gray-50"
+            disabled={selectedClassIds.length === 0}
+            className="px-3 py-1.5 text-xs font-semibold text-gray-700 border border-gray-300 rounded-full hover:bg-gray-50 disabled:opacity-50"
           >
             {NX.BTN_CLEAR}
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5 mb-5">
-        {classes.map(c => {
-          const id = Number(c.id);
-          const isSelected = selectedClassIds.includes(id);
-          return (
-            <label
-              key={c.id}
-              className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border cursor-pointer transition-all select-none text-sm font-medium
-                ${isSelected
-                  ? "border-indigo-400 bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200"
-                  : "border-gray-200 text-gray-700 bg-white hover:border-gray-300"
-                }`}
-            >
-              <input type="checkbox" className="hidden" checked={isSelected} onChange={() => toggleClass(id)} />
-              {c.name}
-            </label>
-          );
-        })}
-      </div>
+      {loadingEvents ? (
+        <div className="py-8 flex items-center justify-center gap-2 text-gray-400 text-xs">
+          <Loader2 className="w-4 h-4 animate-spin" /> Checking ongoing exams...
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5 mb-5">
+          {classes.map(c => {
+            const id = Number(c.id);
+            const isBusy = busyClassIds.has(id);
+            const isSelected = selectedClassIds.includes(id);
+
+            if (isBusy) {
+              return (
+                <div
+                  key={c.id}
+                  title="Exam in progress / Result pending"
+                  className="flex flex-col items-center justify-center p-2 rounded-lg border border-amber-200 bg-amber-50/60 text-amber-700 cursor-not-allowed select-none opacity-80"
+                >
+                  <span className="text-sm font-semibold line-through text-gray-500">{c.name}</span>
+                  <span className="text-[10px] font-bold text-amber-600 flex items-center gap-1 mt-0.5">
+                    <AlertTriangle className="w-3 h-3 shrink-0" /> Result Pending
+                  </span>
+                </div>
+              );
+            }
+
+            return (
+              <label
+                key={c.id}
+                className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border cursor-pointer transition-all select-none text-sm font-medium
+                  ${isSelected
+                    ? "border-indigo-400 bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200"
+                    : "border-gray-200 text-gray-700 bg-white hover:border-gray-300"
+                  }`}
+              >
+                <input
+                  type="checkbox"
+                  className="hidden"
+                  checked={isSelected}
+                  onChange={() => toggleClass(id)}
+                />
+                {c.name}
+              </label>
+            );
+          })}
+        </div>
+      )}
 
       {/* Default marks */}
       <div className="bg-blue-50/60 border border-blue-100 rounded-xl p-4">
@@ -606,8 +677,9 @@ function Step2SelectClasses({ classes, selectedClassIds, setSelectedClassIds, de
       </div>
 
       <p className="mt-3 text-xs text-gray-400">
-        {NX.TXT_SELECTED_OF(selectedClassIds.length, classes.length)}
-        {selectedClassIds.length === classes.length && classes.length > 0 ? NX.TXT_ALL_CLASSES : ""}
+        {NX.TXT_SELECTED_OF(selectedClassIds.length, availableClasses.length)}
+        {selectedClassIds.length === availableClasses.length && availableClasses.length > 0 ? NX.TXT_ALL_CLASSES : ""}
+        {busyClassIds.size > 0 && ` (${busyClassIds.size} class(es) disabled due to undeclared exam results)`}
       </p>
     </div>
   );

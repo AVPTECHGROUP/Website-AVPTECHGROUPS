@@ -4,9 +4,8 @@ import {
   RefreshCw, Package, Bus, FileBarChart,
   CheckSquare, UserPlus, Eye, BookOpen,
   Star, ArrowRight, Zap, Wallet,
-  Receipt, TrendingUp, CircleDollarSign,
+  TrendingUp,
   CheckCircle2, IndianRupee,
-  CircleAlert,
   Clock,
 } from "lucide-react";
 import { Chart, ArcElement, Tooltip, Legend } from "chart.js";
@@ -20,6 +19,9 @@ import { getFeeDashboardStats } from "../../Api/FeeManagement/FeeDashboard";
 import { useNavigate } from "react-router-dom";
 import { DASHBOARD_CONST, ACCENT } from "../../Constants/StringConstants/DashboardConstants";
 
+// ── Context Import ────────────────────────────────────────────────────────────
+import { useDecodedUser } from "../../ContextAPI/UserContext";
+
 Chart.register(ArcElement, Tooltip, Legend);
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -29,6 +31,19 @@ function getGreeting() {
   if (h < 17) return DASHBOARD_CONST.GREETINGS.AFTERNOON;
   return DASHBOARD_CONST.GREETINGS.EVENING;
 }
+
+// Extract active Academic Year ID safely from array, object, or primitive
+const getActiveYearId = (yearData) => {
+  if (!yearData) return null;
+  if (Array.isArray(yearData)) {
+    const active = yearData.find((y) => y.isCurrent) || yearData[0];
+    return active?.id ?? null;
+  }
+  if (typeof yearData === "object") {
+    return yearData.id ?? null;
+  }
+  return yearData;
+};
 
 const formatHolidayDate = (dateStr) => {
   const d = new Date(dateStr);
@@ -141,6 +156,7 @@ export default function Dashboard() {
   const [userName, setUserName] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
 
+  const { currentAcademicYear } = useDecodedUser();
   const navigate = useNavigate();
 
   const today = new Date().toLocaleDateString("en-GB", {
@@ -157,13 +173,25 @@ export default function Dashboard() {
     setLoading(true);
     setError(null);
 
-    const storedId = localStorage.getItem("academicYearId");
-    const resolvedYearId = storedId || "11";
+    // Resolve active Academic Year ID with Context + localStorage fallback
+    const resolvedAcademicYearId = getActiveYearId(currentAcademicYear) || (() => {
+      try {
+        const saved = JSON.parse(localStorage.getItem("currentAcademicYear"));
+        return getActiveYearId(saved);
+      } catch {
+        return null;
+      }
+    })();
+
+    if (!resolvedAcademicYearId) {
+      setLoading(false);
+      return;
+    }
 
     Promise.all([
       getDashboardAnalytics(),
       getUpcomingHolidays(4),
-      getFeeDashboardStats(resolvedYearId).catch((err) => {
+      getFeeDashboardStats(resolvedAcademicYearId).catch((err) => {
         console.error("Fee Stats error handled gracefully:", err);
         return null;
       }),
@@ -183,8 +211,9 @@ export default function Dashboard() {
         setError("Failed to load dashboard data. Please refresh.");
       })
       .finally(() => { if (!cancelled) setLoading(false); });
+
     return () => { cancelled = true; };
-  }, [refreshKey]);
+  }, [refreshKey, currentAcademicYear]);
 
   // ── Derived values ──────────────────────────────────────────────────────────
   const peopleStats = stats ? [
@@ -231,7 +260,7 @@ export default function Dashboard() {
         : [1, 0, 0, 0, 0],
       backgroundColor: attendanceTotalRecords > 0
         ? ["#22C55E", "#F59E0B", "#EF4444", "#3B82F6", "#FB923C"]
-        : ["#22C55E"], // Image ke anusar No-Data me complete green ring banegi
+        : ["#22C55E"],
       borderWidth: 0,
       hoverOffset: 4,
     }],
@@ -324,50 +353,48 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* ── ACTION REQUIRED BANNER ────────────────────────────────────────── */}
         {!loading && stats && (
-          <div className="flex flex-col gap-3 bg-amber-50 border border-amber-200 rounded-2xl p-2.5 mb-4 w-full">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-9 h-9 bg-amber-100 rounded-xl flex items-center justify-center shrink-0">
-                  <AlertTriangle className="w-4 h-4 text-amber-600" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-black text-amber-900">{DASHBOARD_CONST.LABELS.ACTION_REQUIRED}</p>
-                  <p className="text-xs text-amber-500 font-medium truncate">{DASHBOARD_CONST.LABELS.SOME_ITEMS_ATTENTION}</p>
-                </div>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-amber-50 border border-amber-200 rounded-2xl p-3 mb-4 w-full">
+            {/* Left Side: Icon + Title & Subtitle */}
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-9 h-9 bg-amber-100 rounded-xl flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-4 h-4 text-amber-600" />
               </div>
-
-              {noPendingItems && (
-                <span className="flex items-center justify-center gap-1.5 text-xs font-bold text-green-600 bg-white border
-                                  border-green-200 px-3 py-1.5 rounded-xl whitespace-nowrap w-full sm:w-fit shrink-0">
-                  <CheckCircle2 className="w-3.5 h-3.5" /> {DASHBOARD_CONST.LABELS.ALL_CAUGHT_UP}
-                </span>
-              )}
+              <div className="min-w-0">
+                <p className="text-sm font-black text-amber-900">{DASHBOARD_CONST.LABELS.ACTION_REQUIRED}</p>
+                <p className="text-xs text-amber-500 font-medium truncate">{DASHBOARD_CONST.LABELS.SOME_ITEMS_ATTENTION}</p>
+              </div>
             </div>
 
-            {!noPendingItems && (
-              <div className="flex flex-wrap gap-2 w-full">
-                {stats.pendingLeaveRequests > 0 && (
-                  <span
-                    onClick={() => navigate("/leaves")}
-                    className="text-xs font-bold cursor-pointer text-red-600 bg-white border border-red-200
-                               px-3 py-1.5 rounded-xl hover:bg-red-50 transition-colors whitespace-normal text-center flex-1 sm:flex-none"
-                  >
-                    ✕ {stats.pendingLeaveRequests} Leave Request{stats.pendingLeaveRequests !== 1 ? "s" : ""} Pending
-                  </span>
-                )}
-                {stats.pendingAttendanceApprovals > 0 && (
-                  <span
-                    onClick={() => navigate("/attendance/usersAttendance")}
-                    className="text-xs font-bold cursor-pointer text-orange-600 bg-white border border-orange-200
-                               px-3 py-1.5 rounded-xl hover:bg-orange-50 transition-colors whitespace-normal text-center flex-1 sm:flex-none"
-                  >
-                    ⚠ {stats.pendingAttendanceApprovals} Attendance Review{stats.pendingAttendanceApprovals !== 1 ? "s" : ""}
-                  </span>
-                )}
-              </div>
-            )}
+            {/* Right Side: Pending Action Badges */}
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
+              {noPendingItems ? (
+                <span className="flex items-center justify-center gap-1.5 text-xs font-bold text-green-600 bg-white border border-green-200 px-3 py-1.5 rounded-xl whitespace-nowrap w-full sm:w-fit">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> {DASHBOARD_CONST.LABELS.ALL_CAUGHT_UP}
+                </span>
+              ) : (
+                <>
+                  {stats.pendingLeaveRequests > 0 && (
+                    <span
+                      onClick={() => navigate("/leaves")}
+                      className="text-xs font-bold cursor-pointer text-red-600 bg-white border border-red-200
+                         px-3 py-1.5 rounded-xl hover:bg-red-50 transition-colors whitespace-nowrap"
+                    >
+                      ✕ {stats.pendingLeaveRequests} Leave Request{stats.pendingLeaveRequests !== 1 ? "s" : ""} Pending
+                    </span>
+                  )}
+                  {stats.pendingAttendanceApprovals > 0 && (
+                    <span
+                      onClick={() => navigate("/attendance/usersAttendance")}
+                      className="text-xs font-bold cursor-pointer text-orange-600 bg-white border border-orange-200
+                         px-3 py-1.5 rounded-xl hover:bg-orange-50 transition-colors whitespace-nowrap"
+                    >
+                      ⚠ {stats.pendingAttendanceApprovals} Attendance Review{stats.pendingAttendanceApprovals !== 1 ? "s" : ""}
+                    </span>
+                  )}
+                </>
+              )}
+            </div>
           </div>
         )}
 
@@ -408,10 +435,10 @@ export default function Dashboard() {
           }
         </div>
 
-        {/* ── SIDE-BY-SIDE SIDE GRID (Fee Collections & Staff Attendance) ─── */}
+        {/* ── SIDE-BY-SIDE GRID (Fee Collections & Staff Attendance) ── */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 mb-5 items-stretch">
 
-          {/* ── STAFF ATTENDANCE (8 Columns wide on large screens) ── */}
+          {/* ── STAFF ATTENDANCE ── */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col lg:col-span-8 justify-between">
             <div>
               <div className="flex items-center justify-between gap-2 px-4 py-3.5 border-b border-gray-100">
@@ -469,7 +496,6 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Image layout ke anusaar bottom pills container */}
             <div className="flex flex-wrap gap-2 px-4 pb-4 pt-2 border-t border-gray-50 bg-gray-50/30">
               <span className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 bg-slate-50 text-slate-600 rounded-lg border border-slate-200">
                 <span className="w-1.5 h-1.5 rounded-full bg-slate-500" /> Total <span className="font-bold text-gray-950">{attendanceTotalRecords}</span>
@@ -492,7 +518,7 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* ── FEE OVERVIEW (4 Columns wide on large screens) ── */}
+          {/* ── FEE OVERVIEW (4 Columns wide) ── */}
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col lg:col-span-4">
             <div className="flex items-center justify-between gap-2 px-4 py-3.5 border-b border-gray-100">
               <div className="flex items-center gap-3 min-w-0">

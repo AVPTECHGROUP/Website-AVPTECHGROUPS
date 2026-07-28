@@ -386,7 +386,7 @@ function AddClassModal({ event, allClasses, onSave, onCancel, loading }) {
 
     return (
         <ModalShell title={`+ Add Class to Exam Event — ${event.name}`} icon={Plus} onClose={onCancel} maxW="max-w-3xl">
-           
+
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
                 {allClasses.map(c => {
                     const id = Number(c.id);
@@ -408,8 +408,8 @@ function AddClassModal({ event, allClasses, onSave, onCancel, loading }) {
                             type="button"
                             onClick={() => toggle(id)}
                             className={`px-3 py-2.5 rounded-lg border text-sm font-medium transition-all flex items-center gap-2.5 text-left cursor-pointer select-none focus:outline-none focus:ring-2 focus:ring-blue-500/20 ${isSelected
-                                    ? "border-blue-600 bg-blue-50/50 text-blue-700 font-semibold ring-1 ring-blue-600"
-                                    : "border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50"
+                                ? "border-blue-600 bg-blue-50/50 text-blue-700 font-semibold ring-1 ring-blue-600"
+                                : "border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50"
                                 }`}
                         >
                             <input
@@ -601,7 +601,6 @@ function SubjectsModal({ event, exam, onClose, onChanged }) {
     }, [event.eventId, exam.schoolClassId]);
 
     useEffect(() => { load(); }, [load]);
-
     const handleDelete = async (configId) => {
         setBusyId(configId);
         try {
@@ -609,9 +608,11 @@ function SubjectsModal({ event, exam, onClose, onChanged }) {
             toast.success("Subject config removed safely!");
             await load();
             onChanged?.();
-        } catch {
-            toast.error(EXAM_CONSTS.EXAMS.ERRORS.REMOVE_SUB);
-        } finally { setBusyId(null); }
+        } catch (err) {
+            toast.error(err?.message || EXAM_CONSTS.EXAMS.ERRORS.REMOVE_SUB);
+        } finally {
+            setBusyId(null);
+        }
     };
 
     return (
@@ -694,7 +695,10 @@ export default function ExamEvents() {
 
                 setClasses(Array.isArray(cls) ? cls : []);
                 setAcademicYears(Array.isArray(yearsList) ? yearsList : []);
-                setExamTypes(Array.isArray(types) ? types : []);
+
+                // Filter only active exam types here:
+                const activeTypes = Array.isArray(types) ? types.filter(t => t.isActive === true) : [];
+                setExamTypes(activeTypes);
             } catch {
                 setErrorMeta(EXAM_CONSTS.EXAMS.ERR_FILTERS);
                 toast.error(EXAM_CONSTS.EXAMS.ERR_FILTERS);

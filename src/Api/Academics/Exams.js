@@ -1,5 +1,5 @@
 import { authFetch } from "../../Authfetch/Authfetch";
-import {API_ENDPOINTS} from "../../Constants/Endpoints";
+import { API_ENDPOINTS } from "../../Constants/Endpoints";
 
 /** Extracts backend error messages reliably */
 const extractError = async (res, fallback) => {
@@ -48,17 +48,34 @@ export const getGradeConfigs = async () => {
   if (!res.ok) throw new Error(await extractError(res, "Failed to fetch grade configs"));
   return (await res.json())?.data || [];
 };
-
 export const createGradeConfig = async (gradeData) => {
-  const res = await authFetch(API_ENDPOINTS.GRADE_CONFIGS, { method: "POST", body: JSON.stringify(gradeData) });
-  if (!res.ok) throw new Error(await extractError(res, "Failed to create grade config"));
-  return await res.json();
+  const res = await authFetch(API_ENDPOINTS.GRADE_CONFIGS, {
+    method: "POST",
+    body: JSON.stringify(gradeData),
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data?.message || "Failed to create grade config");
+  }
+
+  return data;
 };
 
 export const updateGradeConfig = async (id, gradeData) => {
-  const res = await authFetch(API_ENDPOINTS.gradeConfigById(id), { method: "PUT", body: JSON.stringify(gradeData) });
-  if (!res.ok) throw new Error(await extractError(res, "Failed to update grade config"));
-  return await res.json();
+  const res = await authFetch(API_ENDPOINTS.gradeConfigById(id), {
+    method: "PUT",
+    body: JSON.stringify(gradeData),
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data?.message || "Failed to update grade config");
+  }
+
+  return data;
 };
 
 export const deleteGradeConfig = async (id) => {
