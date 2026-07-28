@@ -318,7 +318,7 @@ export default function Stores() {
               <table className="w-full">
                 <thead className="border-b border-gray-200">
                   <tr>
-                    <th className="px-2 py-3 text-left text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10 w-10">#</th>
+                    <th className="px-2 py-3 text-left text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10 w-10">{STORES_CONSTS.TABLE_HEADERS.SNO}</th>
                     <th className="px-2 py-3 text-left text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10">{STORES_CONSTS.TABLE_HEADERS.STORE_NAME}</th>
                     <th className="px-2 py-3 text-left text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10">{STORES_CONSTS.TABLE_HEADERS.CODE}</th>
                     <th className="px-2 py-3 text-left text-sm font-medium text-gray-500 uppercase sticky top-0 bg-gray-50 z-10">{STORES_CONSTS.TABLE_HEADERS.LOCATION}</th>

@@ -422,6 +422,7 @@ export default function SubjectsMaster() {
   const [deleteTarget, setDeleteTarget] = useState(null);
 
   const [activeTab, setActiveTab] = useState("materSubject");
+  const [subjectsVersion, setSubjectsVersion] = useState(0);
 
   // ── Debounce ──────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -476,8 +477,8 @@ export default function SubjectsMaster() {
     fetchCategories();
   }, []);
 
-  const handleSaved = () => { setModal(null); fetchSubjects(); };
-  const handleDeleted = () => { setDeleteTarget(null); fetchSubjects(); };
+  const handleSaved = () => { setModal(null); fetchSubjects();setSubjectsVersion(v => v + 1); };
+  const handleDeleted = () => { setDeleteTarget(null); fetchSubjects();setSubjectsVersion(v => v + 1); };
 
   return (
     <>
@@ -528,7 +529,7 @@ export default function SubjectsMaster() {
 
         {/* ── ASSIGNMENT TAB ── */}
         <div className={activeTab === "materSubject" ? "hidden" : ""}>
-          <SectionSubjectAssignment />
+          <SectionSubjectAssignment refreshKey={subjectsVersion} />
         </div>
 
         {/* ── SUBJECTS TAB ── */}
@@ -665,7 +666,7 @@ export default function SubjectsMaster() {
                         { h: "Category", cls: "w-36" },
                         { h: "Description", cls: "" },
                         { h: "Status", cls: "text-center w-24" },
-                        { h: "Actions", cls: "text-right  w-36" },
+                        { h: "Actions", cls: "text-center w-36" },
                       ].map(({ h, cls }) => (
                         <th key={h}
                           className={`py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap ${cls}`}
@@ -696,7 +697,7 @@ export default function SubjectsMaster() {
                             <StatusBadge active={isActive} />
                           </td>
                           <td className="py-3 px-4 whitespace-nowrap">
-                            <div className="flex items-center justify-end gap-2">
+                            <div className="flex items-center justify-center gap-2">
                               <button
                                 onClick={() => setViewSubject(s)}
                                 className="flex items-center cursor-pointer gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-600 border border-blue-200 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"

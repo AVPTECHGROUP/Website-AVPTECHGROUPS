@@ -121,6 +121,7 @@ export const ITEMS_CONSTS = {
         CATEGORIES_COVERED: "Categories Covered",
     },
     TABLE_HEADERS: {
+        SNO: "S.No",
         ITEM: "Item",
         CATEGORY: "Category",
         UNIT: "Unit",
@@ -286,6 +287,7 @@ export const STORES_CONSTS = {
         LOW_STOCK: "Low Stock",
     },
     TABLE_HEADERS: {
+        SNO: "S.No",
         STORE_NAME: "Store Name",
         CODE: "Code",
         LOCATION: "Location",
@@ -361,6 +363,7 @@ export const TRANSACTIONS_CONSTS = {
         SEARCH_DEBOUNCE_MS: 400,
     },
     TABLE_HEADERS: {
+        SNO: "S.No",
         ITEM: "Item",
         CATEGORY: "Category",
         UNIT: "Unit",
@@ -401,7 +404,7 @@ export const CREATE_STUDENT_ORDER_CONSTS = {
         ISSUE_FROM_STORE: "Issue from Store",
         SELECT_STORE_PLACEHOLDER: "-- Select a store --",
         ORDER_DATE: "Order Date",
-        PARENTS_NAME: "Parents Name",
+        PARENTS_NAME: "Parent's Name",
         REVIEW_EDIT_ITEMS: "Review & Edit Items",
         STOCK_ISSUE_DETECTED: "Stock issue detected",
         STOCK_ISSUE_BODY: "Some quantities exceed available stock. Reduce them to confirm. You can still",
@@ -415,7 +418,7 @@ export const CREATE_STUDENT_ORDER_CONSTS = {
         REVIEW_BEFORE_SUBMIT: "Review your order before submitting.",
         STORE_LABEL: "Store",
         ORDER_DATE_LABEL: "Order Date:",
-        PARENTS_LABEL: "Parents:",
+        PARENTS_LABEL: "Parent:",
         PAYMENT_METHOD: "Payment Method",
         SELECT_METHOD_PLACEHOLDER: "— Select method —",
         TXN_REF_NO: "Transaction / Reference No.",
@@ -593,6 +596,7 @@ export const STUDENT_ORDERS_CONSTS = {
         CANCELLED_ORDERS: "Cancelled Orders",
     },
     TABLE_HEADERS: {
+        SNO: "S.No",
         STUDENT: "Student",
         CLASS: "Class",
         STORE: "Store",

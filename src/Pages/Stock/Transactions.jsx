@@ -625,13 +625,14 @@ export default function Transactions() {
 
                     {/* ================================================================
                         TABLE VIEW — Wide Desktop screens (>=1280px)
-                        ================================================================ */}
+          
+                    ======================================================== */}
                     <div className="hidden xl:block overflow-x-auto">
                         <table className="w-full border-collapse">
                             <thead className="border-b border-gray-200 bg-gray-50">
                                 <tr>
                                     <th className="px-2 md:px-3 xl:px-4 py-2.5 md:py-3 text-left text-[10px] md:text-xs font-semibold text-gray-500 uppercase tracking-wider w-8 md:w-10">
-                                        #
+                                        {TRANSACTIONS_CONSTS.TABLE_HEADERS.SNO}
                                     </th>
                                     <th className="px-2 md:px-3 xl:px-4 py-2.5 md:py-3 text-left text-[10px] md:text-xs font-semibold text-gray-500 uppercase tracking-wider min-w-30 md:min-w-37.5 xl:min-w-45">
                                         {TRANSACTIONS_CONSTS.TABLE_HEADERS.ITEM}

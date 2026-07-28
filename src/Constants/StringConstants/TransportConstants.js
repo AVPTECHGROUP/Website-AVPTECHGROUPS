@@ -180,7 +180,7 @@ export const SHARED_INPUT_STYLES = {
 
 // ─── Table Columns ──────────────────────────────────────────────────
 export const VEHICLE_TABLE_COLUMNS = [
-  { label: "#", extra: "px-4 sm:px-6 w-8" },
+  { label: "S.No", extra: "px-4 sm:px-6 w-8" },
   { label: "Vehicle", extra: "px-3 sm:px-4" },
   { label: "Type", extra: "px-3 sm:px-4" },
   { label: "Capacity", extra: "px-3 sm:px-4" },
@@ -299,7 +299,7 @@ export const TOAST_MESSAGES = {
 export const FEE_PLAN_UI_TEXT = {
   // Page Level
   PAGE_TITLE: "Fees Management",
-  PAGE_SUBTITLE: "Create and manage transport fee plans — define amounts, frequencies, route-specific or distance-based pricing.",
+  PAGE_SUBTITLE: "Manage transport fee collection, payments, concessions, and adjustments.",
   SECTION_TITLE: "Transport Fee Plans",
   ADD_BTN: "Add Fee Plan",
   SEARCH_PLACEHOLDER: "Search plan name or route...",

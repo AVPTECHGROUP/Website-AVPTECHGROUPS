@@ -12,10 +12,12 @@ import {
 } from "../../Api/Academics/Exams";
 import { getActiveClasses, getAllSections } from "../../Api/Teachers/TeachersAPI";
 import { EXAM_CONSTS } from "../../Constants/StringConstants/AcademicsConstants";
+
 // ─── Grade colour helper ──────────────────────────────────────────────────────
 function getGrade(marks, max, absent) {
     if (absent || !max) return { label: "AB", bg: "bg-gray-100 text-gray-600" };
-    const pct = (marks / max) * 100;
+    if (marks === "" || marks === null || marks === undefined) return { label: "—", bg: "bg-gray-100 text-gray-500" };
+    const pct = (Number(marks) / max) * 100;
     if (pct >= 91) return { label: "A+", bg: "bg-green-100 text-green-700" };
     if (pct >= 81) return { label: "A", bg: "bg-green-100 text-green-600" };
     if (pct >= 71) return { label: "B+", bg: "bg-blue-100 text-blue-700" };
@@ -27,8 +29,8 @@ function getGrade(marks, max, absent) {
 
 function getRowBg(marks, max, absent) {
     if (absent) return "bg-blue-50/40";
-    if (!max) return "";
-    const pct = (marks / max) * 100;
+    if (!max || marks === "" || marks === null || marks === undefined) return "";
+    const pct = (Number(marks) / max) * 100;
     if (pct >= 60) return "bg-yellow-50/50";
     if (pct >= 33) return "";
     return "bg-red-50/40";
@@ -68,14 +70,20 @@ function Select({ value, onChange, options = [], placeholder, disabled, classNam
 }
 
 // ─── Controlled marks input ───────────────────────────────────────────────────
-function MarksInput({ value, max, disabled, onChange }) {
-    const [raw, setRaw] = useState(String(value ?? 0));
+function MarksInput({ value, max, disabled, isError, onChange }) {
+    const [raw, setRaw] = useState(value === "" || value === null || value === undefined ? "" : String(value));
 
-    useEffect(() => { setRaw(String(value ?? 0)); }, [value]);
+    useEffect(() => {
+        setRaw(value === "" || value === null || value === undefined ? "" : String(value));
+    }, [value]);
 
     const handleChange = (e) => {
         const input = e.target.value;
-        if (input === "") { setRaw(""); onChange(0); return; }
+        if (input === "") {
+            setRaw("");
+            onChange("");
+            return;
+        }
         if (!/^\d+$/.test(input)) return;
         const clamped = Math.min(parseInt(input, 10), max);
         setRaw(String(clamped));
@@ -83,7 +91,10 @@ function MarksInput({ value, max, disabled, onChange }) {
     };
 
     const handleBlur = () => {
-        if (raw === "" || isNaN(parseInt(raw, 10))) { setRaw("0"); onChange(0); }
+        if (raw !== "" && isNaN(parseInt(raw, 10))) {
+            setRaw("");
+            onChange("");
+        }
     };
 
     return (
@@ -95,7 +106,10 @@ function MarksInput({ value, max, disabled, onChange }) {
             disabled={disabled}
             onChange={handleChange}
             onBlur={handleBlur}
-            className="w-full max-w-[5rem] border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-gray-800 text-center focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-400 transition-all"
+            className={`w-full max-w-[5rem] border rounded-lg px-2 py-1.5 text-sm text-gray-800 text-center focus:outline-none focus:ring-2 transition-all ${isError && !disabled
+                    ? "border-red-400 bg-red-50 focus:ring-red-500"
+                    : "border-gray-200 focus:ring-blue-500"
+                } disabled:bg-gray-50 disabled:text-gray-400`}
         />
     );
 }
@@ -191,7 +205,7 @@ export default function MarksEntry() {
         load();
     }, []);
 
-    // Section Auto-Sync Effect cuando cambia la clase
+    // Section Auto-Sync Effect
     useEffect(() => {
         if (!selectedClassId || sections.length === 0) return;
 
@@ -316,9 +330,9 @@ export default function MarksEntry() {
                 subjectName: s.subjectName ?? "",
                 maxMarks: s.maxMarks ?? 100,
                 isAbsent: s.isAbsent ?? false,
-                totalMarks: s.totalMarks ?? 0,
-                theoryMarks: s.theoryMarks ?? 0,
-                practicalMarks: s.practicalMarks ?? 0,
+                totalMarks: s.totalMarks ?? "",
+                theoryMarks: s.theoryMarks ?? "",
+                practicalMarks: s.practicalMarks ?? "",
                 remarks: s.remarks ?? "",
                 grade: s.grade ?? "",
             }));
@@ -358,7 +372,7 @@ export default function MarksEntry() {
         setLocalRows((prev) =>
             prev.map((r) =>
                 r.studentId === studentId
-                    ? { ...r, isAbsent: checked, totalMarks: 0, theoryMarks: 0, practicalMarks: 0 }
+                    ? { ...r, isAbsent: checked, totalMarks: checked ? 0 : "", theoryMarks: checked ? 0 : "", practicalMarks: checked ? 0 : "" }
                     : r
             )
         );
@@ -371,7 +385,7 @@ export default function MarksEntry() {
         setSaveError(null);
     };
 
-    // ── Save / Update ─────────────────────────────────────────────────────────
+    // ── Save / Update with Validation ─────────────────────────────────────────
     const handleSave = async () => {
         if (!selectedExamId) {
             setSaveError(EXAM_CONSTS.MARKS_ENTRY.ERR_NO_EXAM);
@@ -381,6 +395,35 @@ export default function MarksEntry() {
         const resolvedConfigId = examSubjectConfigId;
         if (!resolvedConfigId) {
             setSaveError(EXAM_CONSTS.MARKS_ENTRY.ERR_NO_CONFIG);
+            return;
+        }
+
+        // ── Validation: Student must have marks entered OR be marked absent ────
+        const unenteredStudents = [];
+        for (const row of localRows) {
+            if (!row.isAbsent) {
+                if (hasTheoryPractical) {
+                    const theoryMissing = row.theoryMarks === "" || row.theoryMarks === null || row.theoryMarks === undefined;
+                    const practicalMissing = row.practicalMarks === "" || row.practicalMarks === null || row.practicalMarks === undefined;
+                    if (theoryMissing || practicalMissing) {
+                        unenteredStudents.push(row.studentName);
+                    }
+                } else {
+                    const totalMissing = row.totalMarks === "" || row.totalMarks === null || row.totalMarks === undefined;
+                    if (totalMissing) {
+                        unenteredStudents.push(row.studentName);
+                    }
+                }
+            }
+        }
+
+        if (unenteredStudents.length > 0) {
+            const firstFew = unenteredStudents.slice(0, 3).join(", ");
+            const extraCount = unenteredStudents.length - 3;
+            const extraLabel = extraCount > 0 ? ` and ${extraCount} others` : "";
+            setSaveError(
+                `Please enter marks for all non-absent students or mark them as absent. Missing: ${firstFew}${extraLabel}.`
+            );
             return;
         }
 
@@ -397,9 +440,9 @@ export default function MarksEntry() {
                     if (!saved) return true;
                     return (
                         row.isAbsent !== saved.isAbsent ||
-                        row.totalMarks !== saved.totalMarks ||
-                        row.theoryMarks !== saved.theoryMarks ||
-                        row.practicalMarks !== saved.practicalMarks ||
+                        String(row.totalMarks) !== String(saved.totalMarks) ||
+                        String(row.theoryMarks) !== String(saved.theoryMarks) ||
+                        String(row.practicalMarks) !== String(saved.practicalMarks) ||
                         row.remarks !== saved.remarks
                     );
                 });
@@ -420,9 +463,9 @@ export default function MarksEntry() {
                             examSubjectConfigId: row.examSubjectConfigId ?? resolvedConfigId,
                             studentId: row.studentId,
                             isAbsent: row.isAbsent,
-                            totalMarks: row.isAbsent ? 0 : row.totalMarks,
-                            theoryMarks: row.isAbsent ? 0 : row.theoryMarks,
-                            practicalMarks: row.isAbsent ? 0 : row.practicalMarks,
+                            totalMarks: row.isAbsent ? 0 : Number(row.totalMarks),
+                            theoryMarks: row.isAbsent ? 0 : Number(row.theoryMarks),
+                            practicalMarks: row.isAbsent ? 0 : Number(row.practicalMarks),
                             remarks: row.remarks,
                         });
                     })
@@ -434,9 +477,9 @@ export default function MarksEntry() {
                         examSubjectConfigId: row.examSubjectConfigId ?? resolvedConfigId,
                         studentId: row.studentId,
                         isAbsent: row.isAbsent,
-                        totalMarks: row.isAbsent ? 0 : row.totalMarks,
-                        theoryMarks: row.isAbsent ? 0 : row.theoryMarks,
-                        practicalMarks: row.isAbsent ? 0 : row.practicalMarks,
+                        totalMarks: row.isAbsent ? 0 : Number(row.totalMarks),
+                        theoryMarks: row.isAbsent ? 0 : Number(row.theoryMarks),
+                        practicalMarks: row.isAbsent ? 0 : Number(row.practicalMarks),
                         remarks: row.remarks,
                     })),
                 };
@@ -637,9 +680,16 @@ function MarksSheet({
             {/* Mobile cards */}
             <div className="block xl:hidden divide-y divide-gray-100">
                 {rows.map((row) => {
-                    const displayMarks = hasTheoryPractical ? row.theoryMarks + row.practicalMarks : row.totalMarks;
+                    const displayMarks = hasTheoryPractical
+                        ? (row.theoryMarks !== "" && row.practicalMarks !== "" ? Number(row.theoryMarks) + Number(row.practicalMarks) : "")
+                        : row.totalMarks;
                     const grade = getGrade(displayMarks, maxMarks, row.isAbsent);
                     const rowBg = getRowBg(displayMarks, maxMarks, row.isAbsent);
+
+                    const isTheoryError = Boolean(saveError) && !row.isAbsent && row.theoryMarks === "";
+                    const isPracticalError = Boolean(saveError) && !row.isAbsent && row.practicalMarks === "";
+                    const isTotalError = Boolean(saveError) && !row.isAbsent && row.totalMarks === "";
+
                     return (
                         <div key={row.studentId} className={`p-4 ${rowBg}`}>
                             <div className="flex items-center justify-between mb-3">
@@ -654,17 +704,17 @@ function MarksSheet({
                                     <>
                                         <div className="flex items-center gap-2">
                                             <label className="text-xs text-gray-500 whitespace-nowrap">{EXAM_CONSTS.MARKS_ENTRY.TH_THEORY(maxTheory)}</label>
-                                            <MarksInput value={row.isAbsent ? 0 : row.theoryMarks} max={maxTheory} disabled={row.isAbsent} onChange={(v) => onUpdateRow(row.studentId, "theoryMarks", v)} />
+                                            <MarksInput value={row.isAbsent ? 0 : row.theoryMarks} max={maxTheory} disabled={row.isAbsent} isError={isTheoryError} onChange={(v) => onUpdateRow(row.studentId, "theoryMarks", v)} />
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <label className="text-xs text-gray-500 whitespace-nowrap">{EXAM_CONSTS.MARKS_ENTRY.TH_PRACTICAL(maxPractical)}</label>
-                                            <MarksInput value={row.isAbsent ? 0 : row.practicalMarks} max={maxPractical} disabled={row.isAbsent} onChange={(v) => onUpdateRow(row.studentId, "practicalMarks", v)} />
+                                            <MarksInput value={row.isAbsent ? 0 : row.practicalMarks} max={maxPractical} disabled={row.isAbsent} isError={isPracticalError} onChange={(v) => onUpdateRow(row.studentId, "practicalMarks", v)} />
                                         </div>
                                     </>
                                 ) : (
                                     <div className="flex items-center gap-2">
                                         <label className="text-xs text-gray-500 whitespace-nowrap">{EXAM_CONSTS.MARKS_ENTRY.TH_MARKS(maxMarks)}</label>
-                                        <MarksInput value={row.isAbsent ? 0 : row.totalMarks} max={maxMarks} disabled={row.isAbsent} onChange={(v) => onUpdateRow(row.studentId, "totalMarks", v)} />
+                                        <MarksInput value={row.isAbsent ? 0 : row.totalMarks} max={maxMarks} disabled={row.isAbsent} isError={isTotalError} onChange={(v) => onUpdateRow(row.studentId, "totalMarks", v)} />
                                     </div>
                                 )}
                                 <label className="flex items-center gap-1.5 text-xs text-gray-500 font-medium cursor-pointer">
@@ -691,9 +741,16 @@ function MarksSheet({
                     </thead>
                     <tbody>
                         {rows.map((row, idx) => {
-                            const displayMarks = hasTheoryPractical ? row.theoryMarks + row.practicalMarks : row.totalMarks;
+                            const displayMarks = hasTheoryPractical
+                                ? (row.theoryMarks !== "" && row.practicalMarks !== "" ? Number(row.theoryMarks) + Number(row.practicalMarks) : "")
+                                : row.totalMarks;
                             const grade = getGrade(displayMarks, maxMarks, row.isAbsent);
                             const rowBg = getRowBg(displayMarks, maxMarks, row.isAbsent);
+
+                            const isTheoryError = Boolean(saveError) && !row.isAbsent && row.theoryMarks === "";
+                            const isPracticalError = Boolean(saveError) && !row.isAbsent && row.practicalMarks === "";
+                            const isTotalError = Boolean(saveError) && !row.isAbsent && row.totalMarks === "";
+
                             return (
                                 <tr key={row.studentId} className={`border-b border-gray-50 transition-colors ${rowBg}`}>
                                     <td className="px-4 py-3 text-gray-500">{idx + 1}</td>
@@ -702,12 +759,12 @@ function MarksSheet({
                                     <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{row.admissionNumber || "—"}</td>
                                     {hasTheoryPractical ? (
                                         <>
-                                            <td className="px-4 py-3"><MarksInput value={row.isAbsent ? 0 : row.theoryMarks} max={maxTheory} disabled={row.isAbsent} onChange={(v) => onUpdateRow(row.studentId, "theoryMarks", v)} /></td>
-                                            <td className="px-4 py-3"><MarksInput value={row.isAbsent ? 0 : row.practicalMarks} max={maxPractical} disabled={row.isAbsent} onChange={(v) => onUpdateRow(row.studentId, "practicalMarks", v)} /></td>
-                                            <td className="px-4 py-3 font-bold text-gray-800">{row.isAbsent ? 0 : row.theoryMarks + row.practicalMarks}</td>
+                                            <td className="px-4 py-3"><MarksInput value={row.isAbsent ? 0 : row.theoryMarks} max={maxTheory} disabled={row.isAbsent} isError={isTheoryError} onChange={(v) => onUpdateRow(row.studentId, "theoryMarks", v)} /></td>
+                                            <td className="px-4 py-3"><MarksInput value={row.isAbsent ? 0 : row.practicalMarks} max={maxPractical} disabled={row.isAbsent} isError={isPracticalError} onChange={(v) => onUpdateRow(row.studentId, "practicalMarks", v)} /></td>
+                                            <td className="px-4 py-3 font-bold text-gray-800">{row.isAbsent ? 0 : (row.theoryMarks !== "" && row.practicalMarks !== "" ? Number(row.theoryMarks) + Number(row.practicalMarks) : "—")}</td>
                                         </>
                                     ) : (
-                                        <td className="px-4 py-3"><MarksInput value={row.isAbsent ? 0 : row.totalMarks} max={maxMarks} disabled={row.isAbsent} onChange={(v) => onUpdateRow(row.studentId, "totalMarks", v)} /></td>
+                                        <td className="px-4 py-3"><MarksInput value={row.isAbsent ? 0 : row.totalMarks} max={maxMarks} disabled={row.isAbsent} isError={isTotalError} onChange={(v) => onUpdateRow(row.studentId, "totalMarks", v)} /></td>
                                     )}
                                     <td className="px-4 py-3">
                                         <input type="checkbox" checked={row.isAbsent} onChange={(e) => onAbsent(row.studentId, e.target.checked)} className="w-4 h-4 rounded accent-blue-600 cursor-pointer" />

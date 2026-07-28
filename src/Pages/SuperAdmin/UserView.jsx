@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { User, Mail, Phone, ChevronLeft, GraduationCap, DollarSign, UserCheck, LogIn, Clock } from 'lucide-react';
+import { User, Mail, Phone, ChevronLeft, GraduationCap, DollarSign, UserCheck, LogIn, Clock, IndianRupee } from 'lucide-react';
 import { getUserById } from '../../Api/StaffManagement/UserManagementAPI';
 import USER_MANAGEMENT_STRINGS from '../../Constants/StringConstants/UserManagemetConstant';
 
@@ -154,7 +154,7 @@ const UserView = () => {
                     {/* Section 3: Salary & Payroll */}
                     <div className="bg-white rounded-2xl border border-gray-100 p-5 sm:p-6 shadow-xs">
                         <div className="flex items-center gap-2.5 mb-5 border-b border-gray-50 pb-3">
-                            <DollarSign className="w-5 h-5 text-blue-600" />
+                            <IndianRupee className="w-5 h-5 text-blue-600" />
                             <h3 className="text-md font-bold text-gray-900">{strings.SALARY_PAYROLL}</h3>
                         </div>
                         <div className="divide-y divide-gray-100/70 text-sm">
