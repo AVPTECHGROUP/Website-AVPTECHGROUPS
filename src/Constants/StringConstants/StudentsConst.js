@@ -24,7 +24,7 @@ const STUDENT_MODULE_STRINGS = {
   STUDENTS_LIST: {
     PAGE_TITLE: 'Manage All Students',
     TOOLTIP: 'Efficiently manage all student records, class assignments and account status.',
-    SEARCH_PLACEHOLDER: 'Search name, email or admission no…',
+    SEARCH_PLACEHOLDER: 'Search name, or admission no…',
     LOADING: 'Loading students…',
     ERROR: 'Error loading students',
     RETRY: 'Retry',
