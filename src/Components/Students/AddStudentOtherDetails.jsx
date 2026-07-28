@@ -15,7 +15,6 @@ const AddStudentOtherDetails = ({ formData, setFormData, handleInputChange, erro
 
     return (
         <div className="space-y-8">
-
             {/* Hostel & Transport */}
             <div>
                 <div className="flex justify-start items-center mb-4 pb-3 border-b border-gray-200">
@@ -30,7 +29,6 @@ const AddStudentOtherDetails = ({ formData, setFormData, handleInputChange, erro
                             className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors duration-300 ${formData.hostelRequired ? "bg-blue-500" : "bg-gray-300"}`}>
                             <div className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform duration-300 ${formData.hostelRequired ? "translate-x-6" : "translate-x-0"}`} />
                         </button>
-                        <p className="text-xs text-gray-500 mt-1">{formData.hostelRequired ? 'Hostel accommodation enabled' : 'Hostel accommodation disabled'}</p>
                     </div>
 
                     {formData.hostelRequired && (
@@ -38,7 +36,7 @@ const AddStudentOtherDetails = ({ formData, setFormData, handleInputChange, erro
                             <label className='block font-semibold text-gray-600 text-sm mb-2'>
                                 Hostel Room Number<span className="text-red-500 ml-1">*</span>
                             </label>
-                            <input type="text" name="hostelRoomNumber" value={formData.hostelRoomNumber} onChange={handleInputChange}
+                            <input type="text" name="hostelRoomNumber" value={formData.hostelRoomNumber || ''} onChange={handleInputChange}
                                 placeholder="e.g. B-204" className={inputClass('hostelRoomNumber')} />
                             <ErrorMsg field="hostelRoomNumber" />
                         </div>
@@ -51,7 +49,6 @@ const AddStudentOtherDetails = ({ formData, setFormData, handleInputChange, erro
                             className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors duration-300 ${formData.transportRequired ? "bg-blue-500" : "bg-gray-300"}`}>
                             <div className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform duration-300 ${formData.transportRequired ? "translate-x-6" : "translate-x-0"}`} />
                         </button>
-                        <p className="text-xs text-gray-500 mt-1">{formData.transportRequired ? 'School transport enabled' : 'School transport disabled'}</p>
                     </div>
                 </div>
             </div>
@@ -62,39 +59,36 @@ const AddStudentOtherDetails = ({ formData, setFormData, handleInputChange, erro
                     <i className="fa-solid fa-building-columns text-xl lg:text-2xl text-blue-500 mr-3"></i>
                     <h2 className='text-xl font-medium text-gray-700'>Bank Details</h2>
                 </div>
-                <p className="text-sm text-gray-500 mb-4">Used for scholarship or fee-refund transfers. Optional, but if provided all three fields are required.</p>
                 <div className="grid lg:grid-cols-2 sm:grid-cols-1 gap-4">
+                    {/* Bug Fix 5 & 6: Bank Account Number numeric-only and 9 to 18 digits */}
                     <div>
                         <label className='block font-semibold text-gray-600 text-sm mb-2'>
-                            Bank Account Number
-                            <span className="text-gray-400 text-xs font-normal ml-2">(optional)</span>
+                            Bank Account Number <span className="text-gray-400 text-xs font-normal ml-2">(optional)</span>
                         </label>
-                        <input type="text" name="bankAccountNumber" value={formData.bankAccountNumber} onChange={handleInputChange}
-                            placeholder="Enter account number" inputMode="numeric" className={inputClass('bankAccountNumber')} />
+                        <input type="text" name="bankAccountNumber" value={formData.bankAccountNumber || ''} onChange={handleInputChange}
+                            placeholder="Enter account number" maxLength={18} inputMode="numeric" className={inputClass('bankAccountNumber')} />
+                        <p className="text-xs text-gray-500 mt-1">Must be numeric and between 9 to 18 digits</p>
                         <ErrorMsg field="bankAccountNumber" />
                     </div>
                     <div>
                         <label className='block font-semibold text-gray-600 text-sm mb-2'>
-                            Bank Name
-                            <span className="text-gray-400 text-xs font-normal ml-2">(optional)</span>
+                            Bank Name <span className="text-gray-400 text-xs font-normal ml-2">(optional)</span>
                         </label>
-                        <input type="text" name="bankName" value={formData.bankName} onChange={handleInputChange}
+                        <input type="text" name="bankName" value={formData.bankName || ''} onChange={handleInputChange}
                             placeholder="Enter bank name" className={inputClass('bankName')} />
                         <ErrorMsg field="bankName" />
                     </div>
                     <div>
                         <label className='block font-semibold text-gray-600 text-sm mb-2'>
-                            IFSC Code
-                            <span className="text-gray-400 text-xs font-normal ml-2">(optional)</span>
+                            IFSC Code <span className="text-gray-400 text-xs font-normal ml-2">(optional)</span>
                         </label>
-                        <input type="text" name="ifscCode" value={formData.ifscCode}
+                        <input type="text" name="ifscCode" value={formData.ifscCode || ''}
                             onChange={(e) => handleInputChange({ target: { name: 'ifscCode', value: e.target.value.toUpperCase() } })}
                             placeholder="e.g. SBIN0001234" maxLength={11} className={inputClass('ifscCode')} />
                         <ErrorMsg field="ifscCode" />
                     </div>
                 </div>
             </div>
-
         </div>
     );
 };

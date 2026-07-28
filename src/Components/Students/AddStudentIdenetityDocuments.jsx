@@ -52,19 +52,18 @@ const AddStudentIdentityDocuments = ({
 
     return (
         <div className="space-y-8">
-
-            {/* Identity Numbers */}
             <div>
                 <div className="flex justify-start items-center mb-4 pb-3 border-b border-gray-200">
                     <i className="fa-solid fa-id-card text-xl lg:text-2xl text-blue-500 mr-3"></i>
                     <h2 className='text-xl font-medium text-gray-700'>Identity Numbers</h2>
                 </div>
                 <div className="grid lg:grid-cols-2 sm:grid-cols-1 gap-4">
+                    {/* Bug Fix 3: Aadhaar Numbers only */}
                     <div>
                         <label className='block font-semibold text-gray-600 text-sm mb-2'>
                             Student Aadhaar Number
                         </label>
-                        <input type="text" name="studentAadhaar" value={formData.studentAadhaar} onChange={handleInputChange}
+                        <input type="text" name="studentAadhaar" value={formData.studentAadhaar || ''} onChange={handleInputChange}
                             placeholder="12 digit Aadhaar number" maxLength={12} inputMode="numeric"
                             className={inputClass('studentAadhaar')} />
                         <ErrorMsg field="studentAadhaar" />
@@ -73,42 +72,37 @@ const AddStudentIdentityDocuments = ({
                         <label className='block font-semibold text-gray-600 text-sm mb-2'>
                             APAR ID
                         </label>
-                        <input type="text" name="aparId" value={formData.aparId} onChange={handleInputChange}
+                        <input type="text" name="aparId" value={formData.aparId || ''} onChange={handleInputChange}
                             placeholder="Automated Permanent Academic Registry ID" className={inputClass('aparId')} />
                         <ErrorMsg field="aparId" />
                     </div>
                     <div>
                         <label className='block font-semibold text-gray-600 text-sm mb-2'>
-                            PEN
-                            <span className="text-gray-400 text-xs font-normal ml-2">(if applicable)</span>
+                            PEN <span className="text-gray-400 text-xs font-normal ml-2">(if applicable)</span>
                         </label>
-                        <input type="text" name="pen" value={formData.pen} onChange={handleInputChange}
+                        <input type="text" name="pen" value={formData.pen || ''} onChange={handleInputChange}
                             placeholder="Permanent Enrollment Number" className={inputClass('pen')} />
-                        <p className="text-xs text-gray-500 mt-1">State/school specific enrollment number</p>
                         <ErrorMsg field="pen" />
                     </div>
                     <div>
                         <label className='block font-semibold text-gray-600 text-sm mb-2'>
-                            Family ID
-                            <span className="text-gray-400 text-xs font-normal ml-2">(optional)</span>
+                            Family ID <span className="text-gray-400 text-xs font-normal ml-2">(optional)</span>
                         </label>
-                        <input type="text" name="familyId" value={formData.familyId} onChange={handleInputChange}
+                        <input type="text" name="familyId" value={formData.familyId || ''} onChange={handleInputChange}
                             placeholder="Links siblings under one family" className={inputClass('familyId')} />
                         <ErrorMsg field="familyId" />
                     </div>
                     <div>
                         <label className='block font-semibold text-gray-600 text-sm mb-2'>
-                            SSM ID
-                            <span className="text-gray-400 text-xs font-normal ml-2">(if applicable)</span>
+                            SSM ID <span className="text-gray-400 text-xs font-normal ml-2">(if applicable)</span>
                         </label>
-                        <input type="text" name="ssmId" value={formData.ssmId} onChange={handleInputChange}
+                        <input type="text" name="ssmId" value={formData.ssmId || ''} onChange={handleInputChange}
                             placeholder="Enter SSM ID" className={inputClass('ssmId')} />
                         <ErrorMsg field="ssmId" />
                     </div>
                 </div>
             </div>
 
-            {/* Document Uploads */}
             <div>
                 <div className="flex justify-start items-center mb-4 pb-3 border-b border-gray-200">
                     <i className="fa-solid fa-file-arrow-up text-xl lg:text-2xl text-blue-500 mr-3"></i>
@@ -129,11 +123,9 @@ const AddStudentIdentityDocuments = ({
                     )}
                 </div>
 
-                {/* Generic multi-document upload */}
                 <div className="mt-4">
                     <label className='block font-semibold text-gray-600 text-sm mb-2'>
-                        Other Documents
-                        <span className="text-gray-400 text-xs font-normal ml-2">(optional)</span>
+                        Other Documents <span className="text-gray-400 text-xs font-normal ml-2">(optional)</span>
                     </label>
                     <label className="flex items-center justify-center gap-2 border-2 border-dashed border-gray-300 hover:border-blue-400 bg-gray-50 hover:bg-blue-50 rounded-md p-3 cursor-pointer transition-colors">
                         <FilePlus2 className="w-4 h-4 text-gray-400 shrink-0" />
@@ -156,7 +148,6 @@ const AddStudentIdentityDocuments = ({
                     )}
                 </div>
             </div>
-
         </div>
     );
 };

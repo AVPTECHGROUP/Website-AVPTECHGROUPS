@@ -35,6 +35,13 @@ function formatEffectivePeriod(from, to) {
   return from || to;
 }
 
+// Formats Name and Contact gracefully when null or undefined
+function formatPersonContact(name, contact) {
+  if (!name && !contact) return "N/A";
+  if (name && contact) return `${name} · ${contact}`;
+  return name || contact;
+}
+
 // ─── Table Headers ────────────────────────────────────────────────
 const ROUTE_STUDENT_TABLE_HEADERS = [
   "Roll No.",
@@ -79,12 +86,17 @@ function exportToCSV(reportData) {
   rows.push([EXPORT_CONSTANTS.ROUTE_REPORT_TITLE || "Route Student List Report"]);
   rows.push([REPORT_UI_TEXT.ROUTE_META_LABELS.ROUTE, reportData.routeName]);
   rows.push([REPORT_UI_TEXT.ROUTE_META_LABELS.ROUTE_CODE, reportData.routeCode]);
-  rows.push([REPORT_UI_TEXT.ROUTE_META_LABELS.VEHICLE, `${reportData.vehicleNumber} (${reportData.vehicleType})`]);
-  rows.push([REPORT_UI_TEXT.ROUTE_META_LABELS.DRIVER, `${reportData.driverName} · ${reportData.driverContact}`]);
-  rows.push([REPORT_UI_TEXT.ROUTE_META_LABELS.ATTENDANT, `${reportData.attendantName} · ${reportData.attendantContact}`]);
-  rows.push([REPORT_UI_TEXT.ROUTE_META_LABELS.PICKUP_DROP, `${reportData.startTime} → ${reportData.returnTime}`]);
+  rows.push([
+    REPORT_UI_TEXT.ROUTE_META_LABELS.VEHICLE,
+    reportData.vehicleNumber
+      ? `${reportData.vehicleNumber}${reportData.vehicleType ? ` (${reportData.vehicleType})` : ""}`
+      : "N/A"
+  ]);
+  rows.push([REPORT_UI_TEXT.ROUTE_META_LABELS.DRIVER, formatPersonContact(reportData.driverName, reportData.driverContact)]);
+  rows.push([REPORT_UI_TEXT.ROUTE_META_LABELS.ATTENDANT, formatPersonContact(reportData.attendantName, reportData.attendantContact)]);
+  rows.push([REPORT_UI_TEXT.ROUTE_META_LABELS.PICKUP_DROP, `${reportData.startTime || "-"} → ${reportData.returnTime || "-"}`]);
 
-  const pct = Math.round(reportData.utilizationPercent);
+  const pct = Math.round(reportData.utilizationPercent || 0);
   rows.push([REPORT_UI_TEXT.ROUTE_META_LABELS.UTILISATION, `${reportData.totalAllocated}/${reportData.vehicleCapacity} (${pct}%)`]);
   rows.push([]);
 
@@ -179,16 +191,33 @@ function RouteStudentList() {
   }, [selectedRouteId, fetchReport]);
 
   const isLoading = loadingRoutes || loadingReport;
-  const pct = reportData ? Math.round(reportData.utilizationPercent) : 0;
+  const pct = reportData ? Math.round(reportData.utilizationPercent || 0) : 0;
   const utilColor = pct >= 100 ? "text-red-500" : pct >= 80 ? "text-orange-500" : "text-blue-600";
 
   const metaFields = reportData
     ? [
-      { label: REPORT_UI_TEXT.ROUTE_META_LABELS.ROUTE, val: `${reportData.routeName} (${reportData.routeCode})` },
-      { label: REPORT_UI_TEXT.ROUTE_META_LABELS.VEHICLE, val: `${reportData.vehicleNumber} (${reportData.vehicleType})` },
-      { label: REPORT_UI_TEXT.ROUTE_META_LABELS.DRIVER, val: `${reportData.driverName} · ${reportData.driverContact}` },
-      { label: REPORT_UI_TEXT.ROUTE_META_LABELS.ATTENDANT, val: `${reportData.attendantName} · ${reportData.attendantContact}` },
-      { label: REPORT_UI_TEXT.ROUTE_META_LABELS.PICKUP_DROP, val: `${reportData.startTime?.slice(0, 5)} → ${reportData.returnTime?.slice(0, 5)}` },
+      {
+        label: REPORT_UI_TEXT.ROUTE_META_LABELS.ROUTE,
+        val: `${reportData.routeName || "-"} (${reportData.routeCode || "-"})`
+      },
+      {
+        label: REPORT_UI_TEXT.ROUTE_META_LABELS.VEHICLE,
+        val: reportData.vehicleNumber
+          ? `${reportData.vehicleNumber}${reportData.vehicleType ? ` (${reportData.vehicleType})` : ""}`
+          : "N/A"
+      },
+      {
+        label: REPORT_UI_TEXT.ROUTE_META_LABELS.DRIVER,
+        val: formatPersonContact(reportData.driverName, reportData.driverContact)
+      },
+      {
+        label: REPORT_UI_TEXT.ROUTE_META_LABELS.ATTENDANT,
+        val: formatPersonContact(reportData.attendantName, reportData.attendantContact)
+      },
+      {
+        label: REPORT_UI_TEXT.ROUTE_META_LABELS.PICKUP_DROP,
+        val: `${reportData.startTime?.slice(0, 5) || "-"} → ${reportData.returnTime?.slice(0, 5) || "-"}`
+      },
       {
         label: REPORT_UI_TEXT.ROUTE_META_LABELS.UTILISATION,
         val: (
@@ -257,7 +286,7 @@ function RouteStudentList() {
 
       {!isLoading && reportData && (
         <>
-          {/* Metadata Cards: Responsive 3-col on 1024px Laptop & Tablet */}
+          {/* Metadata Cards */}
           <div className="mx-4 sm:mx-6 lg:mx-8 my-4 rounded-xl bg-blue-50/70 border border-blue-100 p-3.5 sm:p-4">
             <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-2.5 sm:gap-3 lg:gap-4 text-xs">
               {metaFields.map((c) => (
@@ -299,14 +328,13 @@ function RouteStudentList() {
                   </span>
                 </div>
 
-                {/* ─── GRID CARD VIEW (Active for Mobile, 768px Tablet & 1024px Laptop with Sidebar) ─── */}
+                {/* ─── GRID CARD VIEW ─── */}
                 <div className="xl:hidden p-3.5 sm:p-4 grid grid-cols-1 md:grid-cols-2 gap-3">
                   {stop.students?.map((s) => (
                     <div
                       key={s.allocationId}
                       className="bg-white border border-gray-100 hover:border-blue-200 rounded-xl p-3.5 shadow-2xs space-y-2.5 transition-all"
                     >
-                      {/* Top Bar: Roll No, Name, Pickup Badge */}
                       <div className="flex items-start justify-between gap-2 border-b border-gray-50 pb-2">
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5 flex-wrap">
@@ -322,12 +350,10 @@ function RouteStudentList() {
                         </span>
                       </div>
 
-                      {/* Middle Grid: Fee Source & Amount */}
                       <div className="grid grid-cols-2 gap-2 text-xs bg-gray-50/80 p-2.5 rounded-lg border border-gray-100">
                         <div>
                           <span className="text-gray-400 block text-[10px] uppercase font-semibold">Fee Source</span>
-                          <span className={`inline-block mt-0.5 font-medium text-xs ${s.feeSource === "OVERRIDE" ? "text-amber-700 font-semibold" : "text-gray-700"
-                            }`}>
+                          <span className={`inline-block mt-0.5 font-medium text-xs ${s.feeSource === "OVERRIDE" ? "text-amber-700 font-semibold" : "text-gray-700"}`}>
                             {formatFeeSource(s.feeSource, s.feePlanName)}
                           </span>
                         </div>
@@ -339,7 +365,6 @@ function RouteStudentList() {
                         </div>
                       </div>
 
-                      {/* Bottom Footer: Effective Dates */}
                       <div className="flex items-center justify-between text-xs text-gray-500 pt-0.5">
                         <span className="text-gray-400 text-[11px] flex items-center gap-1">
                           <Calendar className="w-3 h-3 text-gray-400" /> Effective:
@@ -352,7 +377,7 @@ function RouteStudentList() {
                   ))}
                 </div>
 
-                {/* ─── DESKTOP TABLE VIEW (Active on XL Screens 1280px+) ─── */}
+                {/* ─── DESKTOP TABLE VIEW ─── */}
                 <div className="hidden xl:block overflow-x-auto w-full">
                   <table className="w-full text-left border-collapse text-xs lg:text-sm">
                     <thead>
@@ -454,8 +479,7 @@ export default function Reports() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-semibold rounded-xl transition-all border
-                  ${activeTab === tab.id
+                className={`flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-semibold rounded-xl transition-all border ${activeTab === tab.id
                     ? "bg-blue-600 text-white border-blue-600 shadow-sm"
                     : "bg-white text-gray-500 border-gray-200 hover:border-blue-200 hover:text-blue-600"
                   }`}
@@ -473,8 +497,7 @@ export default function Reports() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`inline-flex items-center cursor-pointer gap-2 px-4 py-3 text-sm font-semibold whitespace-nowrap transition-all border-b-2 -mb-px
-                    ${activeTab === tab.id
+                  className={`inline-flex items-center cursor-pointer gap-2 px-4 py-3 text-sm font-semibold whitespace-nowrap transition-all border-b-2 -mb-px ${activeTab === tab.id
                       ? "border-blue-600 text-blue-600 bg-white rounded-t-lg"
                       : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                     }`}

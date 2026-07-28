@@ -39,7 +39,7 @@ function AddNewStudent() {
         fatherPhoto: null,
         motherPhoto: null,
         guardianPhoto: null,
-        genericDocuments: [], // [{ id, file }]
+        genericDocuments: [],
     });
 
     const [formData, setFormData] = useState({
@@ -53,7 +53,7 @@ function AddNewStudent() {
         motherEmail: '', guardianName: '', guardianRelation: '', guardianPhone: '',
         guardianEmail: '', emergencyContact: '', hostelRequired: false, transportRequired: false,
 
-        // Personal additions
+        // Personal additions (backend enum default: HINDU)
         category: 'GENERAL', religion: 'HINDU', whatsappNumber: '', sameAsMobile: false,
         studentHouse: '', abcId: '', isTransferStudent: false,
 
@@ -63,7 +63,7 @@ function AddNewStudent() {
         // Family additions
         fatherAadhaar: '', motherAadhaar: '',
         guardianAddress: '', guardianOccupation: '', sameAsCurrentAddress: false,
-        siblings: [], // [{ id, name, className }]
+        siblings: [],
 
         // Other additions
         hostelRoomNumber: '', bankAccountNumber: '', bankName: '', ifscCode: '', remarks: '',
@@ -107,8 +107,20 @@ function AddNewStudent() {
         if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
+    // Strip non-numeric characters for phone, Aadhaar & bank account numbers
     const handleInputChange = (e) => {
-        const { name, value } = e.target;
+        let { name, value } = e.target;
+
+        const numericFields = [
+            'mobile', 'whatsappNumber', 'fatherPhone', 'motherPhone',
+            'guardianPhone', 'emergencyContact', 'studentAadhaar',
+            'fatherAadhaar', 'motherAadhaar', 'bankAccountNumber'
+        ];
+
+        if (numericFields.includes(name)) {
+            value = value.replace(/\D/g, '');
+        }
+
         setFormData(prev => ({ ...prev, [name]: value }));
         if (formErrors[name]) {
             setFormErrors(prev => { const n = { ...prev }; delete n[name]; return n; });
@@ -146,7 +158,7 @@ function AddNewStudent() {
         });
     };
 
-    // ── Document handlers ──
+    // Document handlers
     const handleDocumentChange = (key, e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -180,7 +192,7 @@ function AddNewStudent() {
         setDocuments(prev => ({ ...prev, genericDocuments: prev.genericDocuments.filter(d => d.id !== id) }));
     };
 
-    // ── Sibling handlers ──
+    // Sibling handlers
     const handleAddSibling = () => {
         setFormData(prev => ({
             ...prev,
@@ -199,30 +211,45 @@ function AddNewStudent() {
         setFormData(prev => ({ ...prev, siblings: prev.siblings.filter(s => s.id !== id) }));
     };
 
-    const phoneRegex = /^[0-9]{10}$/;
+    // Regex Rules
+    const phoneRegex = /^[6-9]\d{9}$/;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const aadhaarRegex = /^\d{12}$/;
 
-    // ── Validations ──
+    // Validations
     const validatePersonalDetails = () => {
         if (!profileImage) { toast.error(AS.ERRORS.PHOTO_REQUIRED); return false; }
         if (
             !formData.firstName.trim() ||
-            !formData.lastName.trim() ||
+            // !formData.lastName.trim() ||
             !formData.gender ||
             !formData.mobile ||
             !formData.dob ||
-            !formData.admissionDate
+            !formData.admissionDate ||
+            !formData.address?.trim() // Mandatory Address check
         ) {
-            toast.error(AS.ERRORS.REQUIRED_FIELDS); return false;
+            toast.error(AS.ERRORS.REQUIRED_FIELDS || "Please fill all mandatory fields including Address");
+            return false;
         }
         if (!formData.rollNumber.trim()) { toast.error(AS.ERRORS.ROLL_REQUIRED); return false; }
         if (!formData.sectionId) { toast.error(AS.ERRORS.SECTION_REQUIRED); return false; }
-        if (!phoneRegex.test(formData.mobile)) { toast.error(AS.ERRORS.MOBILE_INVALID); return false; }
+        if (!phoneRegex.test(formData.mobile)) {
+            toast.error("Mobile number must be a valid 10-digit number starting with 6, 7, 8, or 9");
+            return false;
+        }
+        if (formData.whatsappNumber && !phoneRegex.test(formData.whatsappNumber)) {
+            toast.error("WhatsApp number must be a valid 10-digit number starting with 6, 7, 8, or 9");
+            return false;
+        }
         if (formData.email && !emailRegex.test(formData.email)) { toast.error(AS.ERRORS.EMAIL_INVALID); return false; }
         return true;
     };
 
     const validateIdentityDetails = () => {
+        if (formData.studentAadhaar && !aadhaarRegex.test(formData.studentAadhaar)) {
+            toast.error("Student Aadhaar Number must be exactly 12 numeric digits");
+            return false;
+        }
         return true;
     };
 
@@ -240,11 +267,15 @@ function AddNewStudent() {
             return false;
         }
         if (!phoneRegex.test(formData.fatherPhone)) {
-            toast.error("Father's Phone must be a valid 10-digit number");
+            toast.error("Father's Phone must be a valid 10-digit number starting with 6, 7, 8, or 9");
             return false;
         }
         if (formData.fatherEmail && !emailRegex.test(formData.fatherEmail)) {
             toast.error("Father's Email is invalid");
+            return false;
+        }
+        if (formData.fatherAadhaar && !aadhaarRegex.test(formData.fatherAadhaar)) {
+            toast.error("Father's Aadhaar Number must be exactly 12 numeric digits");
             return false;
         }
 
@@ -253,16 +284,20 @@ function AddNewStudent() {
             return false;
         }
         if (formData.motherPhone && !phoneRegex.test(formData.motherPhone)) {
-            toast.error("Mother's Phone must be a valid 10-digit number");
+            toast.error("Mother's Phone must be a valid 10-digit number starting with 6, 7, 8, or 9");
             return false;
         }
         if (formData.motherEmail && !emailRegex.test(formData.motherEmail)) {
             toast.error("Mother's Email is invalid");
             return false;
         }
+        if (formData.motherAadhaar && !aadhaarRegex.test(formData.motherAadhaar)) {
+            toast.error("Mother's Aadhaar Number must be exactly 12 numeric digits");
+            return false;
+        }
 
         if (formData.guardianPhone && !phoneRegex.test(formData.guardianPhone)) {
-            toast.error("Guardian's Phone must be a valid 10-digit number");
+            toast.error("Guardian's Phone must be a valid 10-digit number starting with 6, 7, 8, or 9");
             return false;
         }
         if (formData.guardianEmail && !emailRegex.test(formData.guardianEmail)) {
@@ -270,7 +305,7 @@ function AddNewStudent() {
             return false;
         }
         if (formData.emergencyContact && !phoneRegex.test(formData.emergencyContact)) {
-            toast.error("Emergency Contact must be a valid 10-digit number");
+            toast.error("Emergency Contact must be a valid 10-digit number starting with 6, 7, 8, or 9");
             return false;
         }
 
@@ -281,6 +316,12 @@ function AddNewStudent() {
         if (formData.hostelRequired && !formData.hostelRoomNumber?.trim()) {
             toast.error("Hostel Room Number is required when hostel accommodation is enabled");
             return false;
+        }
+        if (formData.bankAccountNumber) {
+            if (formData.bankAccountNumber.length < 9 || formData.bankAccountNumber.length > 18) {
+                toast.error("Bank Account Number must be between 9 and 18 digits");
+                return false;
+            }
         }
         return true;
     };
@@ -327,7 +368,6 @@ function AddNewStudent() {
     const handleSubmit = (e) => e.preventDefault();
 
     const handleSaveDetails = async () => {
-        // Validate all tabs before submitting
         if (!validatePersonalDetails()) { setActiveTab('personal'); scrollToTop(); return; }
         if (!validateIdentityDetails()) { setActiveTab('identity'); scrollToTop(); return; }
         if (!validateFamilyDetails()) { setActiveTab('family'); scrollToTop(); return; }
@@ -345,7 +385,7 @@ function AddNewStudent() {
                 ? formData.admissionNumber.trim()
                 : `ADM-${Math.floor(100000 + Math.random() * 900000)}`;
 
-            // Correct OpenAPI aligned payload
+            // JSON Payload matching Swagger Schema
             const apiPayload = {
                 admissionNumber: generatedAdmissionNumber,
                 rollNumber: formData.rollNumber.trim() || null,
@@ -362,7 +402,7 @@ function AddNewStudent() {
                 transportRequired: Boolean(formData.transportRequired),
                 hostelRequired: Boolean(formData.hostelRequired),
                 category: (formData.category || "GENERAL").toUpperCase(),
-                religion: (formData.religion || "HINDU").toUpperCase(),
+                religion: formData.religion ? formData.religion.toUpperCase() : "HINDU", // Backend Enum Match
                 whatsappNumber: formData.whatsappNumber || formData.mobile || null,
                 studentHouse: formData.studentHouse.trim() || null,
                 aadhaarNumber: formData.studentAadhaar.trim() || null,
@@ -409,11 +449,9 @@ function AddNewStudent() {
                 }
             };
 
-            // 1. Create Student Core Payload
             const res = await createStudents(apiPayload, profileImage);
             const createdStudentId = res?.data?.id || res?.id;
 
-            // 2. Automated Upload of optional documents & photos
             if (createdStudentId) {
                 const uploadPromises = [];
                 if (documents.birthCertificate) uploadPromises.push(uploadStudentDocument(createdStudentId, 'BIRTH_CERTIFICATE', documents.birthCertificate));
@@ -458,7 +496,7 @@ function AddNewStudent() {
         <div ref={formTopRef} className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-4">
             <div className="mx-auto">
                 <button onClick={() => navigate(-1)}
-                        className="flex items-center cursor-pointer bg-gray-600 p-2 rounded-xl text-white gap-2 hover:bg-gray-900 transition-colors mb-4">
+                    className="flex items-center cursor-pointer bg-gray-600 p-2 rounded-xl text-white gap-2 hover:bg-gray-900 transition-colors mb-4">
                     <ChevronLeft className="w-5 h-5" />
                     <span className="hidden sm:inline">{C.BACK_TO_LIST}</span>
                 </button>
@@ -472,7 +510,7 @@ function AddNewStudent() {
                             <nav className="flex flex-wrap -mb-px">
                                 {TABS.map(({ key, label, short, Icon }) => (
                                     <button key={key} type="button" onClick={() => handleTabClick(key)}
-                                            className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === key ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
+                                        className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === key ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
                                         <Icon size={20} />
                                         <span className="hidden sm:inline">{label}</span>
                                         <span className="sm:hidden">{short}</span>
@@ -483,7 +521,7 @@ function AddNewStudent() {
                         <div className="p-4 sm:p-6 lg:p-8">
                             {activeTab === 'personal' && (
                                 <>
-                                    {/* ── Profile Photo Upload ── */}
+                                    {/* Profile Photo Upload */}
                                     <div className="mb-6">
                                         <label className="block font-semibold text-gray-600 text-sm mb-3">
                                             {AS.PROFILE_PHOTO.LABEL} <span className="text-red-600 ml-1">*</span>
@@ -613,23 +651,23 @@ function AddNewStudent() {
                         <div className="border-t border-gray-200 px-4 sm:px-6 lg:px-8 py-4 bg-gray-50 rounded-b-lg">
                             <div className="flex flex-col sm:flex-row justify-end gap-3">
                                 <button type="button" onClick={handleDiscard}
-                                        className="px-6 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                                    className="px-6 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
                                     {C.DISCARD_CHANGES}
                                 </button>
                                 {!isFirstTab && (
                                     <button type="button" onClick={handleBackTab}
-                                            className="px-6 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2">
+                                        className="px-6 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2">
                                         <ChevronLeft className="w-4 h-4" /> Back
                                     </button>
                                 )}
                                 {!isLastTab ? (
                                     <button type="button" onClick={handleNextTab}
-                                            className="px-6 py-2.5 text-sm font-medium rounded-lg transition-all bg-blue-500 hover:bg-blue-600 cursor-pointer text-white flex items-center gap-2">
+                                        className="px-6 py-2.5 text-sm font-medium rounded-lg transition-all bg-blue-500 hover:bg-blue-600 cursor-pointer text-white flex items-center gap-2">
                                         {AS.NEXT} <ChevronRight className="w-4 h-4" />
                                     </button>
                                 ) : (
                                     <button disabled={isSubmitting} type="button" onClick={handleSaveDetails}
-                                            className={`px-6 py-2.5 text-sm font-medium rounded-lg transition-all ${isSubmitting ? 'bg-blue-300 cursor-not-allowed text-white' : 'bg-blue-500 hover:bg-blue-600 cursor-pointer text-white'}`}>
+                                        className={`px-6 py-2.5 text-sm font-medium rounded-lg transition-all ${isSubmitting ? 'bg-blue-300 cursor-not-allowed text-white' : 'bg-blue-500 hover:bg-blue-600 cursor-pointer text-white'}`}>
                                         {isSubmitting ? (
                                             <span className="flex items-center justify-center gap-2">
                                                 <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
