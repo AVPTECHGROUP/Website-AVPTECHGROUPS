@@ -43,6 +43,20 @@ const fmtDate = (d) => {
 const initials = (name = '') =>
     name.split(' ').slice(0, 2).map((w) => w[0] || '').join('').toUpperCase() || '??';
 
+// FIX (requested): shared helper so "Period · Fee Structure" is rendered
+// consistently everywhere (Outstanding table, History table, both mobile
+// cards, and the Collect Fee modal). Falls back to "Fee Structure #<id>"
+// when the backend hasn't set an explicit name yet (as in the sample
+// /fee/structures response, where every structure's `name` is null) —
+// so the UI never shows a blank instead of at least an identifiable
+// reference.
+const getStructureLabel = (name, id) => {
+  const trimmed = (name || '').toString().trim();
+  if (trimmed) return trimmed;
+  if (id != null) return `Fee Structure ${id}`;
+  return null;
+};
+
 const MONTH_NAMES = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const EPS = 0.01;
 
@@ -56,7 +70,7 @@ const MAX_AMOUNT = 999999;
 // be flagged inline instead of only failing silently at submit.
 const MIN_COLLECT_AMOUNT = 1;
 
-const HISTORY_TABLE_HEADERS = ['Receipt No.', 'Date', 'Student', 'Class', 'Period', 'Collected', 'Discount', 'Late Fine', 'Recorded By', 'Action'];
+const HISTORY_TABLE_HEADERS = ['Receipt No.', 'Date', 'Student', 'Class', 'Period', 'Fee Structure', 'Collected', 'Discount', 'Late Fine', 'Recorded By', 'Action'];
 
 // Dropdown options for discount reason (replaces free-text entry)
 const DISCOUNT_REASON_OPTIONS = [
@@ -427,7 +441,7 @@ const Pagination = ({ page, totalPages, pageSize, onPageSizeChange, onPageChange
 };
 
 // ─── Collect Fee Modal ───
-const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions, onSuccess, canCollect, canViewTransport }) => {
+const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions, realClasses = [], onSuccess, canCollect, canViewTransport }) => {
   const isManualMode = !initialStudent;
 
   const [selectedPeriodId, setSelectedPeriodId] = useState('');
@@ -585,6 +599,10 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
       () => periodOptions.find((p) => String(p.value) === String(selectedPeriodId))?.label || '',
       [periodOptions, selectedPeriodId]
   );
+  const selectedClassName = useMemo(
+      () => periodClasses.find((c) => String(c.id) === selectedClassId)?.name || '',
+      [periodClasses, selectedClassId]
+  );
 
   const activeStructure = useMemo(() => {
     if (!periodStructures.length) return null;
@@ -592,8 +610,21 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
       const byId = periodStructures.find((s) => s.id === activeStudent.feeStructureId);
       if (byId) return byId;
     }
-    return periodStructures.find((s) => (s.classes || []).some((c) => String(c.id) === selectedClassId)) || null;
-  }, [periodStructures, activeStudent, selectedClassId]);
+    // FIX (requested): match by the authoritative class ID first — the
+    // fee-structures API now returns the real class id directly on each
+    // structure's `classes[]` entry (confirmed against the sample
+    // /fee/structures?periodId=... response), so this is reliable. Name
+    // matching is kept only as a fallback for the rare case structures
+    // loaded before periodClasses resolved a name.
+    if (selectedClassId) {
+      const byClassId = periodStructures.find((s) => (s.classes || []).some((c) => String(c.id) === String(selectedClassId)));
+      if (byClassId) return byClassId;
+    }
+    const wanted = selectedClassName.trim().toLowerCase();
+    return periodStructures.find((s) => (s.classes || []).some((c) =>
+        (c.name || c.className || '').trim().toLowerCase() === wanted
+    )) || null;
+  }, [periodStructures, activeStudent, selectedClassId, selectedClassName]);
 
   const academicItems = useMemo(
       () => (activeStudent && hasAcademicStructure ? getAcademicLineItems(activeStructure, activeStudent.totalFee || academicBalance) : []),
@@ -799,9 +830,28 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
         const structures = await getFeeStructures(parseInt(selectedPeriodId));
         const arr = Array.isArray(structures) ? structures : [];
         setPeriodStructures(arr);
+
+        // FIX (requested): trust the class `id` returned directly on the
+        // fee structure's `classes[]` array — the backend now returns the
+        // real, authoritative class id here (confirmed against the sample
+        // /fee/structures?periodId=... response: ids like 71/72/73/74/76
+        // match the school's actual Class/Section records). The previous
+        // approach re-resolved every embedded class by NAME against
+        // realClasses (the page-level active-classes list) because the
+        // embedded id used to be unreliable in prod — but that
+        // name-matching is itself fragile (whitespace, "Class 1" vs
+        // "Class I", duplicate names across sections, etc. could silently
+        // swap in the WRONG id). Now we use the structure's own id as the
+        // source of truth, and only consult realClasses to prefer its
+        // canonical display label when the id is recognized there.
+        const labelById = new Map(
+            realClasses.map((rc) => [String(rc.value), rc.label])
+        );
         const seen = new Set(); const classes = [];
         arr.forEach((s) => (s.classes || []).forEach((c) => {
-          if (!seen.has(c.id)) { seen.add(c.id); classes.push({ id: c.id, name: c.name || c.className }); }
+          const resolvedId = String(c.id);
+          const label = labelById.get(resolvedId) || c.name || c.className || '';
+          if (!seen.has(resolvedId)) { seen.add(resolvedId); classes.push({ id: resolvedId, name: label }); }
         }));
         setPeriodClasses(classes);
       } catch {
@@ -809,8 +859,7 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
       } finally { setClassesLoading(false); }
     };
     load();
-  }, [selectedPeriodId]);
-
+  }, [selectedPeriodId, realClasses]);
   useEffect(() => {
     if (!selectedClassId || !selectedPeriodId) { setStudents([]); return; }
     let cancelled = false;
@@ -843,7 +892,13 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
           });
         } catch { /* falls through to "never billed" below */ }
 
-        const matchedStructure = periodStructures.find((st) => (st.classes || []).some((c) => String(c.id) === selectedClassId));
+        // FIX (requested): match by the authoritative class ID first (see
+        // periodClasses / activeStructure notes above), falling back to
+        // name matching only if no id match is found.
+        const matchedStructure = periodStructures.find((st) => (st.classes || []).some((c) =>
+            String(c.id) === String(selectedClassId) ||
+            (c.name || c.className || '').trim().toLowerCase() === selectedClassName.trim().toLowerCase()
+        ));
         const structureComponents = matchedStructure?.components || matchedStructure?.feeComponents || [];
         const structureTotal = Array.isArray(structureComponents) && structureComponents.length > 0
             ? structureComponents.reduce((sum, c) => sum + (Number(c.amount) || 0), 0)
@@ -861,6 +916,7 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
               paidAmount: reconcilePaidAmount(totalFee, balanceDueVal, rec.paidAmount),
               totalFee,
               feeStructureId: rec.feeStructureId ?? matchedStructure?.id ?? null,
+              feeStructureName: rec.feeStructureName ?? null,
               overdueDays: rec.overdueDays || 0,
               dueDate: rec.dueDate,
             };
@@ -873,6 +929,7 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
             paidAmount: Math.min(historyPaid, structureTotal),
             totalFee: structureTotal,
             feeStructureId: matchedStructure?.id ?? s.feeStructureId ?? null,
+            feeStructureName: matchedStructure?.name ?? matchedStructure?.structureName ?? null,
             overdueDays: 0,
             dueDate: null,
           };
@@ -965,6 +1022,7 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
       class: s.className || s.class || classObj?.name || '',
       section: s.sectionName || s.section || '',
       feeStructureId: s.feeStructureId,
+      feeStructureName: s.feeStructureName || null,
       feePeriodId: selectedPeriodId,
       balance: studentBalance,
       paidAmount: paidSoFar,
@@ -1106,6 +1164,16 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
                 <option value="">-- Select fee period --</option>
                 {periodOptions.map((p) => <option key={p.value} value={String(p.value)}>{p.label}</option>)}
               </select>
+              {/* FIX (requested): fee structure name shown immediately
+                  after the selected period, wherever a structure has been
+                  resolved for the current period/class/student — so the
+                  person can see at a glance which fee structure will be
+                  applied without needing to open the breakdown below. */}
+              {activeStructure && (
+                  <p className="text-[10.5px] text-gray-500 mt-1 truncate">
+                    Fee Structure: <span className="font-semibold text-gray-700">{getStructureLabel(activeStructure.name || activeStructure.structureName, activeStructure.id)}</span>
+                  </p>
+              )}
               {/* FIX (requested): when this modal is opened via a table
                   row's "Collect" button (quick-collect mode), the period
                   is fixed to whatever that row represents — changing it
@@ -1257,7 +1325,14 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
 
             {activeStudent && selectedPeriodId && (
                 <div className="space-y-2">
-                  <div className="text-[10.5px] font-bold text-gray-400 uppercase tracking-wider">Fee Breakdown</div>
+                  <div className="flex items-baseline justify-between gap-2 flex-wrap">
+                    <div className="text-[10.5px] font-bold text-gray-400 uppercase tracking-wider">Fee Breakdown</div>
+                    {hasAcademicStructure && activeStructure && (
+                        <div className="text-[10.5px] text-gray-400 truncate">
+                          {selectedPeriodLabel} · {getStructureLabel(activeStructure.name || activeStructure.structureName, activeStructure.id)}
+                        </div>
+                    )}
+                  </div>
 
                   {hasAcademicStructure ? (
                       <LineItemBlock
@@ -1617,6 +1692,7 @@ const BulkCollectModal = ({ open, onClose, students, onSuccess, canCollect, canV
       setRows(students.map((s) => ({
         id: s.id, studentId: s.studentId, studentName: s.studentName,
         studentCode: s.studentCode, class: s.class, period: s.period,
+        feeStructureName: s.feeStructureName || null,
         academicDue: s.balance, feeStructureId: s.feeStructureId,
         transportDue: s.transportDue || 0,
         academicCollect: s.balance > 0 ? String(Math.min(s.balance, MAX_AMOUNT)) : '',
@@ -1751,7 +1827,7 @@ const BulkCollectModal = ({ open, onClose, students, onSuccess, canCollect, canV
           <Btn variant="ghost" size="sm" onClick={applyAll} className="w-full sm:w-auto mt-2 sm:mt-0">{COLLECTION_HISTORY_STRINGS.BTN_APPLY_ALL}</Btn>
         </div>
         <div className="overflow-x-auto ch-table-scroll rounded-xl border border-gray-200 -mx-1 px-1 sm:mx-0 sm:px-0">
-          <table className="w-full text-sm min-w-[980px]">
+          <table className="w-full text-sm min-w-[1080px]">
             <thead>
             <tr className="bg-gray-50 border-b border-gray-200">
               <th className="px-3 py-2.5 text-left text-[10.5px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Student</th>
@@ -1780,6 +1856,15 @@ const BulkCollectModal = ({ open, onClose, students, onSuccess, canCollect, canV
                     <td className="px-3 py-2.5">
                       <div className="font-semibold text-gray-900 whitespace-nowrap">{row.studentName}</div>
                       <div className="text-xs text-gray-400 whitespace-nowrap">{row.studentCode} · {row.class}</div>
+                      {/* FIX (requested): period + fee structure name shown
+                          right under the student in the bulk table, same
+                          "Period · Fee Structure" convention used
+                          elsewhere. */}
+                      {(row.period || row.feeStructureName || row.feeStructureId) && (
+                          <div className="text-[10px] text-gray-400 whitespace-nowrap mt-0.5 truncate max-w-[180px]">
+                            {row.period}{row.period ? ' · ' : ''}{getStructureLabel(row.feeStructureName, row.feeStructureId)}
+                          </div>
+                      )}
                     </td>
                     <td className="px-3 py-2.5">
                       {row.daysLate > 0
@@ -1907,6 +1992,11 @@ const OutstandingCard = ({ s, selected, onToggle, onCollect, canCollect, canView
               <div className="text-xs text-gray-500">
                 <span className="text-gray-400">Period: </span>{s.period}
               </div>
+              {/* FIX (requested): fee structure name shown right after the
+                  period, same convention as the desktop table below. */}
+              <div className="text-xs text-gray-500 min-w-0 truncate max-w-full">
+                <span className="text-gray-400">Fee Structure: </span>{getStructureLabel(s.feeStructureName, s.feeStructureId) || '—'}
+              </div>
               <div className="text-xs text-gray-500">
                 <span className="text-gray-400">Due: </span>{fmtDate(s.dueDate)}
               </div>
@@ -1958,6 +2048,9 @@ const HistoryCard = ({ h, onView }) => (
         <span><span className="text-gray-400">Date: </span>{fmtDate(h.date)}</span>
         <span><span className="text-gray-400">Class: </span>{h.class}</span>
         <span><span className="text-gray-400">Period: </span>{h.period}</span>
+        {/* FIX (requested): fee structure name shown right after the
+            period, same convention as the desktop table below. */}
+        <span className="min-w-0 truncate max-w-full"><span className="text-gray-400">Fee Structure: </span>{getStructureLabel(h.feeStructureName, h.feeStructureId) || '—'}</span>
         <span><span className="text-gray-400">Discount: </span>{fmt(h.discount)}</span>
         <span className={h.lateFine > 0 ? 'text-amber-700' : ''}><span className="text-gray-400">Fine: </span>{fmt(h.lateFine)}</span>
       </div>
@@ -2103,6 +2196,10 @@ const CollectionsHistory = () => {
           paidAmount,
           daysLate: r.overdueDays || 0,
           feeStructureId: r.feeStructureId,
+          // FIX (requested): fee structure name straight from the
+          // outstanding-fees API (r.feeStructureName) — shown right after
+          // the period in both the desktop table and mobile card.
+          feeStructureName: r.feeStructureName || null,
           dueDate: r.dueDate,
           status,
           transportDue: canViewTransport ? (transportMap.get(`${r.studentId}-${feePeriodId}`) || 0) : 0,
@@ -2134,7 +2231,13 @@ const CollectionsHistory = () => {
         studentId: r.studentId,
         studentCode: r.admissionNumber,
         class: `${r.className}${r.sectionName ? ' ' + r.sectionName : ''}`,
-        period: r.feePeriodName, amount: r.amountPaid, discount: r.discount || 0,
+        period: r.feePeriodName,
+        feeStructureId: r.feeStructureId,
+        // FIX (requested): fee structure name from the collection-history
+        // API — shown right after the period in both the desktop table
+        // and mobile card.
+        feeStructureName: r.feeStructureName || null,
+        amount: r.amountPaid, discount: r.discount || 0,
         lateFine: r.lateFine || 0, mode: r.paymentMode, referenceNo: r.referenceNo,
         recordedBy: r.collectedBy, status: STATUSES.COMPLETED,
         parentName: r.parentName,
@@ -2473,7 +2576,7 @@ const CollectionsHistory = () => {
 
               <div className="hidden xl:block bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
                 <div className="overflow-x-auto ch-table-scroll">
-                  <table className="w-full min-w-[1120px]">
+                  <table className="w-full min-w-[1080px]">
                     <thead>
                     <tr className="bg-gray-50/80 border-b border-gray-100">
                       <th className="px-3 py-2.5 w-8">
@@ -2485,14 +2588,23 @@ const CollectionsHistory = () => {
                       <th className="px-3 py-2.5 text-left text-[10.5px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Student</th>
                       <th className="px-3 py-2.5 text-left text-[10.5px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Class</th>
                       <th className="px-3 py-2.5 text-left text-[10.5px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Period</th>
+                      <th className="px-3 py-2.5 text-left text-[10.5px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Fee Structure</th>
                       <th className="px-3 py-2.5 text-left text-[10.5px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Academic Fee</th>
                       <th className="px-3 py-2.5 text-left text-[10.5px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Paid</th>
                       <th className="px-3 py-2.5 text-left text-[10.5px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Academic Due</th>
                       {canViewTransport && (
                           <th className="px-3 py-2.5 text-left text-[10.5px] font-bold text-sky-700 uppercase tracking-wider whitespace-nowrap">🚌 Transport Due</th>
                       )}
-                      <th className="px-3 py-2.5 text-left text-[10.5px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Due Date</th>
-                      <th className="px-3 py-2.5 text-left text-[10.5px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Status</th>
+                      {/* FIX (responsive/1440px): Status merged into the Due
+                          Date cell (rendered below the date, same pattern
+                          as "Student Name" + "Admission No." below each
+                          other in the Student column) instead of its own
+                          column. That removes one full ~110px column from
+                          the table's minimum width, which is what was
+                          pushing the Action/Collect column off-screen or
+                          squeezing it at 1440px laptop widths. See the
+                          merged <td> below. */}
+                      <th className="px-3 py-2.5 text-left text-[10.5px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Due Date / Status</th>
                       <th className="px-3 py-2.5 text-left text-[10.5px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Action</th>
                     </tr>
                     </thead>
@@ -2526,6 +2638,11 @@ const CollectionsHistory = () => {
                               <span className="inline-block px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-100 text-xs font-semibold rounded-md whitespace-nowrap">{s.class}</span>
                             </td>
                             <td className="px-3 py-3 text-xs text-gray-600 whitespace-nowrap">{s.period}</td>
+                            {/* FIX (requested): Fee Structure column, shown
+                                immediately after Period. */}
+                            <td className="px-3 py-3 text-xs text-gray-500 whitespace-nowrap max-w-[160px] truncate" title={getStructureLabel(s.feeStructureName, s.feeStructureId) || ''}>
+                              {getStructureLabel(s.feeStructureName, s.feeStructureId) || '—'}
+                            </td>
                             <td className="px-3 py-3 text-sm text-gray-700 whitespace-nowrap">{fmt(s.totalFee)}</td>
                             <td className={`px-3 py-3 text-sm font-semibold whitespace-nowrap ${s.paidAmount > 0 ? 'text-emerald-600' : 'text-gray-400'}`}>
                               {fmt(s.paidAmount)}
@@ -2538,12 +2655,23 @@ const CollectionsHistory = () => {
                                   <span className="text-sky-700 font-semibold text-sm whitespace-nowrap">{fmt(s.transportDue)}</span>
                                 </td>
                             )}
-                            <td className="px-3 py-3 text-xs text-left text-gray-600 whitespace-nowrap">{fmtDate(s.dueDate)}</td>
-                            <td className="px-3 py-3">
-                              <StatusCell status={s.status} daysLate={s.daysLate} />
+                            {/* FIX (responsive/1440px): Due Date + Status
+                                combined into a single cell — date on top,
+                                status pill/overdue badge directly below,
+                                mirroring the Student column's
+                                name-over-admission-number layout. This is
+                                the single change that reclaims the width
+                                needed for the Collect button to render
+                                fully at 1440px without the table forcing
+                                extra horizontal scroll. */}
+                            <td className="px-3 py-3 text-left whitespace-nowrap">
+                              <div className="text-xs text-gray-600">{fmtDate(s.dueDate)}</div>
+                              <div className="mt-1">
+                                <StatusCell status={s.status} daysLate={s.daysLate} />
+                              </div>
                             </td>
                             <td className="px-3 py-3">
-                              <Btn variant="primary" size="xs" onClick={() => setCollectModal({ open: true, student: s })}>
+                              <Btn variant="primary" size="xs" onClick={() => setCollectModal({ open: true, student: s })} className="whitespace-nowrap">
                                 {COLLECTION_HISTORY_STRINGS.BTN_COLLECT}
                               </Btn>
                             </td>
@@ -2678,18 +2806,19 @@ const CollectionsHistory = () => {
 
               <div className="hidden xl:block bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
                 <div className="overflow-x-auto ch-table-scroll">
-                  <table className="w-full min-w-[980px] table-fixed">
+                  <table className="w-full min-w-[1100px] table-fixed">
                     <colgroup>
-                      <col className="w-[10%]" />
-                      <col className="w-[8%]" />
-                      <col className="w-[17%]" />
-                      <col className="w-[10%]" />
-                      <col className="w-[8%]" />
+                      <col className="w-[9%]" />
+                      <col className="w-[7%]" />
+                      <col className="w-[15%]" />
                       <col className="w-[9%]" />
                       <col className="w-[8%]" />
+                      <col className="w-[12%]" />
                       <col className="w-[8%]" />
-                      <col className="w-[13%]" />
+                      <col className="w-[8%]" />
+                      <col className="w-[7%]" />
                       <col className="w-[9%]" />
+                      <col className="w-[8%]" />
                     </colgroup>
                     <thead>
                     <tr className="bg-gray-50/80 border-b border-gray-100">
@@ -2701,13 +2830,13 @@ const CollectionsHistory = () => {
                     <tbody className="divide-y divide-gray-50">
                     {loading ? (
                         <tr>
-                          <td colSpan={10} className="text-center py-14">
+                          <td colSpan={11} className="text-center py-14">
                             <span className="w-7 h-7 border-2 border-blue-600 border-t-transparent rounded-full animate-spin inline-block mb-2" />
                             <div className="text-sm text-gray-400">{COLLECTION_HISTORY_STRINGS.MSG_LOADING_HISTORY}</div>
                           </td>
                         </tr>
                     ) : filteredHist.length === 0 ? (
-                        <tr><td colSpan={10} className="text-center py-14 text-sm text-gray-400">{COLLECTION_HISTORY_STRINGS.MSG_NO_HISTORY_RECORDS}</td></tr>
+                        <tr><td colSpan={11} className="text-center py-14 text-sm text-gray-400">{COLLECTION_HISTORY_STRINGS.MSG_NO_HISTORY_RECORDS}</td></tr>
                     ) : filteredHist.map((h) => (
                         <tr key={h.id} className="hover:bg-gray-50/60 transition-colors">
                           <td className="px-2.5 py-2.5 truncate"><span className="text-blue-600 font-bold text-xs truncate block">{h.receiptNo}</span></td>
@@ -2720,6 +2849,11 @@ const CollectionsHistory = () => {
                             <span className="inline-block max-w-full truncate px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-100 text-xs font-semibold rounded-md">{h.class}</span>
                           </td>
                           <td className="px-2.5 py-2.5 text-xs text-gray-600 truncate">{h.period}</td>
+                          {/* FIX (requested): Fee Structure column shown
+                              immediately after Period. */}
+                          <td className="px-2.5 py-2.5 text-xs text-gray-500 truncate" title={getStructureLabel(h.feeStructureName, h.feeStructureId) || ''}>
+                            {getStructureLabel(h.feeStructureName, h.feeStructureId) || '—'}
+                          </td>
                           <td className="px-2.5 py-2.5 font-bold text-emerald-600 text-sm truncate">{fmt(h.amount)}</td>
                           <td className="px-2.5 py-2.5 text-xs text-gray-500 truncate">{fmt(h.discount)}</td>
                           <td className="px-2.5 py-2.5 text-xs text-amber-700 truncate">{fmt(h.lateFine)}</td>
@@ -2783,6 +2917,7 @@ const CollectionsHistory = () => {
             onClose={() => setCollectModal({ open: false, student: null })}
             student={collectModal.student}
             periodOptions={periodOptions}
+            realClasses={classOptions}
             onSuccess={handleCollectSuccess}
             canCollect={canCollect}
             canViewTransport={canViewTransport}
