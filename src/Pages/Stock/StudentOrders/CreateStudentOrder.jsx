@@ -5,7 +5,7 @@ import {
     Loader2, Save, Check, AlertCircle, AlertTriangle, RefreshCw,
     ArrowLeft, CheckCircle, Plus, IndianRupee, CreditCard, Hash,
 } from "lucide-react";
-import {getActiveStores} from "../../../Api/Stock/StoreApi";
+import { getActiveStores } from "../../../Api/Stock/StoreApi";
 import { getStudents } from "../../../Api/Students/StudentsApi";
 import {
     createStudentOrder, confirmStudentOrder,
@@ -302,7 +302,11 @@ export default function CreateStudentOrder() {
             const raw = await getStudents(0, 1000, "id");
             const items = raw?.content || raw?.data?.content || raw?.students ||
                 (Array.isArray(raw?.data) ? raw.data : null) || (Array.isArray(raw) ? raw : []);
-            setStudents(items.map(parseStudent));
+
+            // Filter out INACTIVE students, keeping only ACTIVE ones
+            const activeStudents = items.filter((s) => s.status?.toUpperCase() === "ACTIVE");
+
+            setStudents(activeStudents.map(parseStudent));
         } catch (e) { console.error("loadStudents:", e); }
         finally { setStudentsLoading(false); }
     }, []); // eslint-disable-line
@@ -845,7 +849,6 @@ export default function CreateStudentOrder() {
                                     )}
                                 </div>
                             </div>
-
 
                             {/* ── Payment Details (optional) ── */}
                             <div className="border border-dashed border-gray-200 rounded-xl p-3 sm:p-4 space-y-3 bg-gray-50/50">

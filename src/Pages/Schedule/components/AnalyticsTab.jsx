@@ -145,38 +145,6 @@ export default function AnalyticsTab({
 
     return (
         <div className="p-3 sm:p-4 space-y-3 sm:space-y-4">
-
-            {/* ── Top stat cards ── */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
-                <div className="bg-white border border-orange-200 rounded-xl p-3 sm:p-4">
-                    <BarChart2 size={18} className="text-orange-400 mb-1" />
-                    <p className="text-2xl sm:text-3xl font-bold text-orange-500">{stats.completion}%</p>
-                    <p className="text-xs font-semibold text-gray-500 mt-0.5 uppercase tracking-wide">{TIMETABLE_CONSTS.ANALYTICS.LBL_COMPLETION}</p>
-                    <p className="text-xs text-gray-400 hidden sm:block">{stats.filledSlots} / {stats.totalSlots} {TIMETABLE_CONSTS.ANALYTICS.LBL_FILLED}</p>
-                </div>
-
-                <div className="bg-white border border-purple-200 rounded-xl p-3 sm:p-4">
-                    <Target size={16} className="text-purple-400 mb-1" />
-                    <p className="text-2xl sm:text-3xl font-bold text-purple-500">{stats.onTarget}</p>
-                    <p className="text-xs font-semibold text-gray-500 mt-0.5 uppercase tracking-wide">{TIMETABLE_CONSTS.ANALYTICS.LBL_ON_TARGET}</p>
-                    <p className="text-xs text-gray-400 hidden sm:block">{stats.subjectCoverage.length - stats.onTarget} {TIMETABLE_CONSTS.ANALYTICS.LBL_BEHIND}</p>
-                </div>
-
-                <div className="bg-white border border-gray-200 rounded-xl p-3 sm:p-4">
-                    <Grid size={16} className="text-gray-400 mb-1" />
-                    <p className="text-2xl sm:text-3xl font-bold text-gray-700">{stats.emptySlots}</p>
-                    <p className="text-xs font-semibold text-gray-500 mt-0.5 uppercase tracking-wide">{TIMETABLE_CONSTS.ANALYTICS.LBL_EMPTY_SLOTS}</p>
-                    <p className="text-xs text-gray-400 hidden sm:block">{TIMETABLE_CONSTS.ANALYTICS.LBL_AUTO_RES}</p>
-                </div>
-
-                <div className="bg-white border border-red-200 rounded-xl p-3 sm:p-4">
-                    <Users size={16} className="text-red-400 mb-1" />
-                    <p className="text-2xl sm:text-3xl font-bold text-red-500">{stats.overloaded}</p>
-                    <p className="text-xs font-semibold text-gray-500 mt-0.5 uppercase tracking-wide">{TIMETABLE_CONSTS.ANALYTICS.LBL_OVERLOADED}</p>
-                    <p className="text-xs text-gray-400 hidden sm:block">{TIMETABLE_CONSTS.ANALYTICS.LBL_ABOVE_PW}{stats.MAX_PERIODS}{TIMETABLE_CONSTS.ANALYTICS.LBL_PW}</p>
-                </div>
-            </div>
-
             {/* Bottom area - stacks on mobile, side-by-side on lg */}
             <div className="flex flex-col lg:flex-row gap-3 sm:gap-4">
 
