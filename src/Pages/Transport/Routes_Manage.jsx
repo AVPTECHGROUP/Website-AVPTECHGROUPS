@@ -363,7 +363,7 @@ export default function Routes_Manage() {
                           </span>
                           <span className="flex items-center gap-1">
                             <MapPin className="w-3.5 h-3.5 text-red-400" />
-                            {route.totalStops} {route.totalStops !== 1 ? ROUTES_UI_TEXT.LBL_STOPS : ROUTES_UI_TEXT.LBL_STOP}
+                            {route.totalActiveStops} {route.totalActiveStops !== 1 ? ROUTES_UI_TEXT.LBL_STOPS : ROUTES_UI_TEXT.LBL_STOP}
                           </span>
                         </div>
 
