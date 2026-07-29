@@ -609,20 +609,39 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
   // Submit.
   //
   // FIX (bug reported): "fee period exists for this student but changing
-  // the period says it doesn't". The outstanding-fees endpoint's
-  // studentId filter isn't reliable enough to trust on its own — an empty
-  // `records` array from it does NOT necessarily mean no fee applies.
-  // Before concluding "no academic fee this period" (which previously
-  // zeroed out the student's balance/structure outright), this now falls
-  // back to checking the period's actual fee structures against the
-  // student's class — the same match the roster-building logic uses
-  // elsewhere in this file — and derives the balance from the structure
-  // total minus whatever history shows as already paid.
+  // the period says it doesn't" / academic due showing an inflated number
+  // (e.g. 320 instead of the real 100). Root cause: the outstanding-fees
+  // endpoint does NOT support a `studentId` query filter — only
+  // classId/periodId/status are real, backend-recognized params (this is
+  // already how every other outstanding-fees call in this file queries
+  // it: see fetchOutstanding and the roster-loading effect below, both of
+  // which use classId+periodId). Sending `studentId` here previously did
+  // nothing server-side, and combined with `size: 1` it meant the single
+  // record that came back was essentially a random record from that
+  // period — almost never the intended student — so `rec` below came
+  // back `undefined` far more often than it should have.
+  //
+  // That, in turn, silently routed things into the "no outstanding row
+  // found" fallback branch, which reconstructs the balance client-side as
+  // `structureTotal - paidSoFar`. That reconstruction has no way to know
+  // about server-side adjustments to the true balance (discounts,
+  // waivers, etc), so for a student with totalFee 2200 / paid 1880 / a
+  // real balanceDue of 100 (a 220 discount already applied server-side),
+  // it computed 2200 - 1880 = 320 — exactly the wrong number reported.
+  //
+  // Fix: query with the SAME classId + periodId combination already
+  // proven reliable elsewhere in this file, with a real page size, and
+  // find the student's record client-side. This returns the authoritative
+  // balanceDue straight from the server instead of reconstructing it.
   const resyncBalanceForCurrentPeriod = useCallback(async (studentId, periodId, studentClassName) => {
     if (!studentId || !periodId) return;
     setPeriodSyncLoading(true);
     try {
-      const res = await getOutstandingFees({ periodId, studentId, page: 0, size: 1 });
+      const res = await getOutstandingFees(
+          selectedClassId
+              ? { periodId, classId: selectedClassId, page: 0, size: 500 }
+              : { periodId, page: 0, size: 500 }
+      );
       const rec = (res?.records || []).find((r) => String(r.studentId) === String(studentId));
       lastPeriodSyncRef.current = `${studentId}:${periodId}`;
 
@@ -677,13 +696,15 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
             ? comps.reduce((sum, c) => sum + (Number(c.amount) || 0), 0)
             : Number(matched.totalAmount || matched.amount) || 0;
 
-        // TODO: confirm getFeeCollectionHistory accepts a `studentId`
-        // filter param on your backend (it already accepts
-        // classId/periodId elsewhere in this file) — adjust the param
-        // name below if your API expects something else.
+        // Note: getFeeCollectionHistory does not support a `studentId`
+        // query filter either (see fetchHistory elsewhere in this file,
+        // which only ever sends classId/periodId/mode) — so this
+        // deliberately does NOT pass studentId to the API call and
+        // instead filters the returned records client-side below, the
+        // same pattern used for the outstanding-fees fallback above.
         let paidSoFar = 0;
         try {
-          const hist = await getFeeCollectionHistory({ studentId, periodId, page: 0, size: 500 });
+          const hist = await getFeeCollectionHistory({ periodId, page: 0, size: 500 });
           paidSoFar = (hist?.records || [])
               .filter((h) => String(h.studentId ?? h.student?.id ?? '') === String(studentId))
               .reduce((s, h) => s + (Number(h.amountPaid) || 0), 0);
