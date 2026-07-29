@@ -11,6 +11,7 @@ import TemplateEditorPanel from './TemplateEditorPanel'
 import ViewTemplateModal from './ViewTemplateModal'
 import DefaultPreviewModal from './DefaultPreviewModal'
 import { TEMPLATE_TYPES, fmtDate } from './templateTypesMeta'
+import { cacheDefaultTemplate, clearCachedDefaultTemplate } from '../../utils/TemplateStorage/templateCache'
 
 import {
   getPrintTemplates,
@@ -20,6 +21,7 @@ import {
   setDefaultPrintTemplate,
   getDefaultPrintTemplate,
 } from '../../Api/PrintTemplate/PrintTemplatesApi'
+
 
 // Icon-only action button — used on tablet widths (md–lg) and inside the mobile card list
 function IconAction({ icon: Icon, label, onClick, disabled, colorClass }) {
@@ -96,6 +98,18 @@ export default function PrintTemplatesPage({ type }) {
   }, [fetchTemplates])
 
   const defaultTemplate = useMemo(() => templates.find((t) => t.isDefault) || null, [templates])
+
+  // Keep the localStorage cache in sync with whichever template the backend
+  // currently considers "default" for this type — this runs on first load,
+  // after Set Default, after editing the default template's HTML, etc.
+  useEffect(() => {
+    if (!type) return
+    if (defaultTemplate) {
+      cacheDefaultTemplate(type, defaultTemplate)
+    } else {
+      clearCachedDefaultTemplate(type)
+    }
+  }, [type, defaultTemplate])
 
   const stats = useMemo(() => ({
     total: templates.length,
@@ -268,9 +282,7 @@ export default function PrintTemplatesPage({ type }) {
   )
 
   return (
-    // min-w-0 stops this from being stretched by wide children when it sits inside a flex shell (sidebar layout),
-    // which is what was clipping the toolbar/pagination on tablet & 1024px laptop screens.
-    <div className="w-full min-w-0 px-2 sm:px-3">
+    <div className="w-full min-w-0 px-2 sm:px-3 relative min-h-screen">
       {/* Breadcrumb */}
       <div className="flex items-center gap-1.5 text-xs sm:text-[12.5px] text-gray-500 mb-1.5">
       </div>
