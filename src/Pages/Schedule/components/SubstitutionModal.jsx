@@ -1,14 +1,15 @@
 import { useState, useEffect } from 'react';
 import { X, ArrowLeftRight, AlertCircle, ChevronDown } from 'lucide-react';
+import { toast } from 'react-toastify';
 import {
     getSubstitutions,
     createSubstitution,
     updateSubstitutionStatus,
     getAvailableTeachersForSlot,
 } from '../../../Api/Academics/ScheduleApi';
-import { TIMETABLE_CONSTS }  from '../../../Constants/StringConstants/TimetableConstants';
+import { TIMETABLE_CONSTS } from '../../../Constants/StringConstants/TimetableConstants';
 
-export default function SubstitutionModal({ timetableId, selectedSlots = [], onClose }) {
+export default function SubstitutionModal({ timetableId, selectedSlots = [], onClose, onSuccess }) {
     const [activeSlotIndex, setActiveSlotIndex] = useState(0);
     const activeSlot = selectedSlots[activeSlotIndex] || null;
 
@@ -118,8 +119,11 @@ export default function SubstitutionModal({ timetableId, selectedSlots = [], onC
         if (Object.keys(errs).length > 0) { setErrors(errs); return; }
         try {
             setSaving(true);
+            let successMsg = '';
+
             if (existingSubstitution) {
                 await updateSubstitutionStatus(timetableId, existingSubstitution.id, TIMETABLE_CONSTS.STATUS.CONFIRMED);
+                successMsg = 'Substitution updated successfully!';
             } else {
                 const payload = {
                     slotId: activeSlot?.slotId || null,
@@ -130,15 +134,25 @@ export default function SubstitutionModal({ timetableId, selectedSlots = [], onC
                     notes: form.notes,
                 };
                 await createSubstitution(timetableId, payload);
+                successMsg = 'Substitution arranged successfully!';
             }
+
+            // Toast show kar rahe hain
+            toast.success(successMsg);
+
             await loadSubstitutions();
+
+            // Multiple slots select hone par next slot par move karo, varna close karo
             if (activeSlotIndex < selectedSlots.length - 1) {
                 setActiveSlotIndex(i => i + 1);
             } else {
+                if (onSuccess) onSuccess(successMsg);
                 onClose();
             }
         } catch (err) {
-            setErrors({ submit: err.message || TIMETABLE_CONSTS.SUBSTITUTION.ERR_SUBMIT_GEN });
+            const errorMsg = err.message || TIMETABLE_CONSTS.SUBSTITUTION.ERR_SUBMIT_GEN;
+            toast.error(errorMsg);
+            setErrors({ submit: errorMsg });
         } finally {
             setSaving(false);
         }
@@ -353,6 +367,7 @@ export default function SubstitutionModal({ timetableId, selectedSlots = [], onC
                     </div>
                 </div>
 
+                {/* Footer / Buttons */}
                 <div className="flex gap-3 px-4 sm:px-6 py-3.5 sm:py-4 border-t border-gray-100">
                     <button onClick={onClose}
                         className="flex-1 sm:flex-none px-5 py-2.5 sm:py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 cursor-pointer transition text-center">
