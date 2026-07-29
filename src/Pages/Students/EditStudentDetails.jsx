@@ -146,10 +146,7 @@ function EditStudentDetails() {
 
   const validateForm = () => {
     const mobileRegex = /^[0-9]{10}$/;
-    if (!formData.firstName?.trim() || !formData.lastName?.trim() || !formData.mobile || !formData.gender) {
-      toast.error(ES.ERRORS?.REQUIRED_FIELDS || "Please fill mandatory fields");
-      return false;
-    }
+    
     if (!formData.rollNumber?.trim()) {
       toast.error(ES.ERRORS?.ROLL_REQUIRED || "Roll Number is required");
       return false;
@@ -370,9 +367,9 @@ function EditStudentDetails() {
                                placeholder="Enter first name" className={inputClass} required />
                       </div>
                       <div>
-                        <label className={labelClass}>Last Name<span className="text-red-600 ml-1">*</span></label>
+                        <label className={labelClass}>Last Name</label>
                         <input type="text" name="lastName" value={formData.lastName} onChange={handleInputChange}
-                               placeholder="Enter last name" className={inputClass} required />
+                               placeholder="Enter last name" className={inputClass}/>
                       </div>
                       <div>
                         <label className={labelClass}>{PF.GENDER}<span className="text-red-600 ml-1">*</span></label>
