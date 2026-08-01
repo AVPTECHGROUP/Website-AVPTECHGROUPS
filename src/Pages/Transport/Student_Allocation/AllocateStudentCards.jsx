@@ -236,12 +236,10 @@ export default function AllocateStudentCard({ isOpen, onClose, onSave, allocatio
       if (studRes.status === "fulfilled") {
         const list = studRes.value?.data || studRes.value || [];
 
-        // 🔹 Filter for transportRequired = true
-        const transportStudents = Array.isArray(list)
-          ? list.filter((s) => Boolean(s.transportRequired))
-          : [];
+        // 🔹 Map all students regardless of transport allocation
+        const allStudents = Array.isArray(list) ? list : [];
 
-        setStudents(transportStudents.map((s) => ({
+        setStudents(allStudents.map((s) => ({
           value: s.id,
           label: `Roll No. ${s.rollNumber} - ${s.fullName || `${s.firstName} ${s.lastName}`}${s.className ? ` — ${s.className}${s.sectionName ? " " + s.sectionName : ""}` : ""}`,
         })));
