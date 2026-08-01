@@ -43,18 +43,15 @@ const fmtDate = (d) => {
 const initials = (name = '') =>
     name.split(' ').slice(0, 2).map((w) => w[0] || '').join('').toUpperCase() || '??';
 
-// FIX (requested): shared helper so "Period · Fee Structure" is rendered
-// consistently everywhere (Outstanding table, History table, both mobile
-// cards, and the Collect Fee modal). Falls back to "Fee Structure #<id>"
-// when the backend hasn't set an explicit name yet (as in the sample
-// /fee/structures response, where every structure's `name` is null) —
-// so the UI never shows a blank instead of at least an identifiable
-// reference.
-const getStructureLabel = (name, id) => {
+// FIX (requested): the fee structure NAME is now sent directly by the
+// backend at structure-creation time and passed straight through on every
+// record that references it, so this simply displays that name. It NO
+// LONGER falls back to showing the numeric id — if no name is present,
+// this returns null so call sites decide how to render the empty state
+// (most already do `getStructureLabel(...) || '—'`).
+const getStructureLabel = (name) => {
   const trimmed = (name || '').toString().trim();
-  if (trimmed) return trimmed;
-  if (id != null) return `Fee Structure ${id}`;
-  return null;
+  return trimmed || null;
 };
 
 const MONTH_NAMES = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -916,7 +913,7 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
               paidAmount: reconcilePaidAmount(totalFee, balanceDueVal, rec.paidAmount),
               totalFee,
               feeStructureId: rec.feeStructureId ?? matchedStructure?.id ?? null,
-              feeStructureName: rec.feeStructureName ?? null,
+              feeStructureName: rec.feeStructureName ?? matchedStructure?.name ?? matchedStructure?.structureName ?? null,
               overdueDays: rec.overdueDays || 0,
               dueDate: rec.dueDate,
             };
@@ -1168,10 +1165,12 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
                   after the selected period, wherever a structure has been
                   resolved for the current period/class/student — so the
                   person can see at a glance which fee structure will be
-                  applied without needing to open the breakdown below. */}
-              {activeStructure && (
+                  applied without needing to open the breakdown below.
+                  getStructureLabel returns null when there's no name, so
+                  this line only renders when a name genuinely exists. */}
+              {activeStructure && getStructureLabel(activeStructure.name || activeStructure.structureName) && (
                   <p className="text-[10.5px] text-gray-500 mt-1 truncate">
-                    Fee Structure: <span className="font-semibold text-gray-700">{getStructureLabel(activeStructure.name || activeStructure.structureName, activeStructure.id)}</span>
+                    Fee Structure: <span className="font-semibold text-gray-700">{getStructureLabel(activeStructure.name || activeStructure.structureName)}</span>
                   </p>
               )}
               {/* FIX (requested): when this modal is opened via a table
@@ -1327,9 +1326,9 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
                 <div className="space-y-2">
                   <div className="flex items-baseline justify-between gap-2 flex-wrap">
                     <div className="text-[10.5px] font-bold text-gray-400 uppercase tracking-wider">Fee Breakdown</div>
-                    {hasAcademicStructure && activeStructure && (
+                    {hasAcademicStructure && activeStructure && getStructureLabel(activeStructure.name || activeStructure.structureName) && (
                         <div className="text-[10.5px] text-gray-400 truncate">
-                          {selectedPeriodLabel} · {getStructureLabel(activeStructure.name || activeStructure.structureName, activeStructure.id)}
+                          {selectedPeriodLabel} · {getStructureLabel(activeStructure.name || activeStructure.structureName)}
                         </div>
                     )}
                   </div>
@@ -1859,10 +1858,12 @@ const BulkCollectModal = ({ open, onClose, students, onSuccess, canCollect, canV
                       {/* FIX (requested): period + fee structure name shown
                           right under the student in the bulk table, same
                           "Period · Fee Structure" convention used
-                          elsewhere. */}
-                      {(row.period || row.feeStructureName || row.feeStructureId) && (
+                          elsewhere. getStructureLabel returns null when
+                          there's no name, so nothing renders after the
+                          period separator in that case. */}
+                      {(row.period || getStructureLabel(row.feeStructureName)) && (
                           <div className="text-[10px] text-gray-400 whitespace-nowrap mt-0.5 truncate max-w-[180px]">
-                            {row.period}{row.period ? ' · ' : ''}{getStructureLabel(row.feeStructureName, row.feeStructureId)}
+                            {row.period}{row.period && getStructureLabel(row.feeStructureName) ? ' · ' : ''}{getStructureLabel(row.feeStructureName)}
                           </div>
                       )}
                     </td>
@@ -1995,7 +1996,7 @@ const OutstandingCard = ({ s, selected, onToggle, onCollect, canCollect, canView
               {/* FIX (requested): fee structure name shown right after the
                   period, same convention as the desktop table below. */}
               <div className="text-xs text-gray-500 min-w-0 truncate max-w-full">
-                <span className="text-gray-400">Fee Structure: </span>{getStructureLabel(s.feeStructureName, s.feeStructureId) || '—'}
+                <span className="text-gray-400">Fee Structure: </span>{getStructureLabel(s.feeStructureName) || '—'}
               </div>
               <div className="text-xs text-gray-500">
                 <span className="text-gray-400">Due: </span>{fmtDate(s.dueDate)}
@@ -2050,7 +2051,7 @@ const HistoryCard = ({ h, onView }) => (
         <span><span className="text-gray-400">Period: </span>{h.period}</span>
         {/* FIX (requested): fee structure name shown right after the
             period, same convention as the desktop table below. */}
-        <span className="min-w-0 truncate max-w-full"><span className="text-gray-400">Fee Structure: </span>{getStructureLabel(h.feeStructureName, h.feeStructureId) || '—'}</span>
+        <span className="min-w-0 truncate max-w-full"><span className="text-gray-400">Fee Structure: </span>{getStructureLabel(h.feeStructureName) || '—'}</span>
         <span><span className="text-gray-400">Discount: </span>{fmt(h.discount)}</span>
         <span className={h.lateFine > 0 ? 'text-amber-700' : ''}><span className="text-gray-400">Fine: </span>{fmt(h.lateFine)}</span>
       </div>
@@ -2196,9 +2197,12 @@ const CollectionsHistory = () => {
           paidAmount,
           daysLate: r.overdueDays || 0,
           feeStructureId: r.feeStructureId,
-          // FIX (requested): fee structure name straight from the
-          // outstanding-fees API (r.feeStructureName) — shown right after
-          // the period in both the desktop table and mobile card.
+          // FIX (requested): the fee structure NAME is now sent directly by
+          // the backend at structure-creation time and passed straight
+          // through on every outstanding-fees record — no extra lookup
+          // needed. getStructureLabel() no longer falls back to the
+          // numeric id at all; it returns null when there's no name, and
+          // display call sites fall back to '—' instead.
           feeStructureName: r.feeStructureName || null,
           dueDate: r.dueDate,
           status,
@@ -2233,9 +2237,9 @@ const CollectionsHistory = () => {
         class: `${r.className}${r.sectionName ? ' ' + r.sectionName : ''}`,
         period: r.feePeriodName,
         feeStructureId: r.feeStructureId,
-        // FIX (requested): fee structure name from the collection-history
-        // API — shown right after the period in both the desktop table
-        // and mobile card.
+        // FIX (requested): same direct pass-through as fetchOutstanding —
+        // the collection-history API also carries the real structure name
+        // now, so it's used as-is instead of resolving it separately.
         feeStructureName: r.feeStructureName || null,
         amount: r.amountPaid, discount: r.discount || 0,
         lateFine: r.lateFine || 0, mode: r.paymentMode, referenceNo: r.referenceNo,
@@ -2640,8 +2644,8 @@ const CollectionsHistory = () => {
                             <td className="px-3 py-3 text-xs text-gray-600 whitespace-nowrap">{s.period}</td>
                             {/* FIX (requested): Fee Structure column, shown
                                 immediately after Period. */}
-                            <td className="px-3 py-3 text-xs text-gray-500 whitespace-nowrap max-w-[160px] truncate" title={getStructureLabel(s.feeStructureName, s.feeStructureId) || ''}>
-                              {getStructureLabel(s.feeStructureName, s.feeStructureId) || '—'}
+                            <td className="px-3 py-3 text-xs text-gray-500 whitespace-nowrap max-w-[160px] truncate" title={getStructureLabel(s.feeStructureName) || ''}>
+                              {getStructureLabel(s.feeStructureName) || '—'}
                             </td>
                             <td className="px-3 py-3 text-sm text-gray-700 whitespace-nowrap">{fmt(s.totalFee)}</td>
                             <td className={`px-3 py-3 text-sm font-semibold whitespace-nowrap ${s.paidAmount > 0 ? 'text-emerald-600' : 'text-gray-400'}`}>
@@ -2851,8 +2855,8 @@ const CollectionsHistory = () => {
                           <td className="px-2.5 py-2.5 text-xs text-gray-600 truncate">{h.period}</td>
                           {/* FIX (requested): Fee Structure column shown
                               immediately after Period. */}
-                          <td className="px-2.5 py-2.5 text-xs text-gray-500 truncate" title={getStructureLabel(h.feeStructureName, h.feeStructureId) || ''}>
-                            {getStructureLabel(h.feeStructureName, h.feeStructureId) || '—'}
+                          <td className="px-2.5 py-2.5 text-xs text-gray-500 truncate" title={getStructureLabel(h.feeStructureName) || ''}>
+                            {getStructureLabel(h.feeStructureName) || '—'}
                           </td>
                           <td className="px-2.5 py-2.5 font-bold text-emerald-600 text-sm truncate">{fmt(h.amount)}</td>
                           <td className="px-2.5 py-2.5 text-xs text-gray-500 truncate">{fmt(h.discount)}</td>

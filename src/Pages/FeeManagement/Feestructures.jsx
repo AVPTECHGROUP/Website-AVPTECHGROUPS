@@ -16,8 +16,6 @@ import {
 import { getFeePeriods } from '../../Api/FeeManagement/FeePeriods.js';
 import { UserContext } from '../../ContextAPI/UserContext.jsx';
 import SectionSubjectService from '../../Api/Academics/SectionSubjectService.js';
-// NOTE: confirm this path matches where you actually export getStudentByClass.
-import { getStudentByClass } from '../../Api/Students/StudentsApi.js';
 // Import Constants
 import {
   STATUSES,
@@ -374,7 +372,6 @@ function StructureModal({ isOpen, onClose, structure, periods, classes, onSucces
 
   const totalAmount = form.components.reduce((s, c) => s + (parseFloat(c.amount) || 0), 0);
   const selectedClasses = classes.filter((c) => form.classIds.includes(c.id));
-  const totalStudents = selectedClasses.reduce((s, c) => s + (c.studentCount || 0), 0);
 
   // Fee Period options are always just the current academic year's periods
   // (the `periods` prop, fetched once by the parent for currentAcademicYear
@@ -463,7 +460,12 @@ function StructureModal({ isOpen, onClose, structure, periods, classes, onSucces
     setLoading(true);
     try {
       const payload = {
-        structureName: form.structureName.trim() || null,
+        // FIX: backend's create/update schema calls this field `name`
+        // (see Swagger: "name": "string"), not `structureName`. Sending
+        // `structureName` meant the backend silently ignored it and always
+        // persisted name: null — which is why "Structure Name" never showed
+        // up anywhere downstream (card, View Details, outstanding report).
+        name: form.structureName.trim() || null,
         feePeriodId: parseInt(form.feePeriodId),
         classIds: form.classIds,
         components: form.components.map((c, idx) => ({
@@ -581,13 +583,12 @@ function StructureModal({ isOpen, onClose, structure, periods, classes, onSucces
                            }`}>
                       <input type="checkbox" className="sr-only" checked={form.classIds.includes(cls.id)} onChange={() => toggleClass(cls.id)} />
                       {cls.name}
-                      {cls.studentCount > 0 && <span className="text-[10px] opacity-60">({cls.studentCount})</span>}
                     </label>
                 ))}
               </div>
               {form.classIds.length > 0 && (
                   <div className="mt-2.5 px-3 py-2 bg-blue-50 border border-blue-100 rounded-lg text-xs text-blue-700">
-                    Selected: <strong>{selectedClasses.map((c) => c.name).join(', ')}</strong> · {totalStudents} students
+                    Selected: <strong>{selectedClasses.map((c) => c.name).join(', ')}</strong>
                   </div>
               )}
             </div>
@@ -865,12 +866,12 @@ const FeeStructures = ({ initialPeriodId: initialPeriodIdProp }) => {
     }
   }, [academicYearId]);
 
-  // FIX: SectionSubjectService.getActiveClasses() returns class metadata
-  // only — no student-count field. getStudentByClass(classId) is the only
-  // endpoint that actually knows the ACTIVE roster for a class, so we fetch
-  // that per class (in parallel) and use the array length as studentCount.
-  // This is what makes "Class 9 (21)" style counts show up correctly in the
-  // Step 2 class picker and in View Details.
+  // FIX: student counts are no longer shown anywhere in this page (Step 2
+  // class picker or the "Selected: ... students" summary), so the
+  // per-class getStudentByClass(cls.id) fan-out that used to run after
+  // loading classes has been removed. That was firing one extra network
+  // request per class just to populate a count nobody sees anymore — this
+  // now just uses SectionSubjectService.getActiveClasses() directly.
   const fetchClasses = useCallback(async () => {
     try {
       const classesData = await SectionSubjectService.getActiveClasses();
@@ -879,18 +880,7 @@ const FeeStructures = ({ initialPeriodId: initialPeriodIdProp }) => {
               Array.isArray(classesData?.data) ? classesData.data :
                   Array.isArray(classesData?.result) ? classesData.result : [];
 
-      const withCounts = await Promise.all(
-          rawList.map(async (cls) => {
-            try {
-              const students = await getStudentByClass(cls.id);
-              return { ...cls, studentCount: Array.isArray(students) ? students.length : 0 };
-            } catch {
-              return { ...cls, studentCount: 0 };
-            }
-          })
-      );
-
-      setClasses(withCounts);
+      setClasses(rawList);
     } catch {
       toast.error(FEE_STRUCTURE_STRINGS.TOAST_FETCH_FAILED, 'Could not load classes.');
     }
