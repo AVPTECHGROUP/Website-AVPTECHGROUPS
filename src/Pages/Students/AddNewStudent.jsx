@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, User, Users, Camera, X, FileBadge2, Landmark } from 'lucide-react';
+import { ChevronLeft, ChevronRight, User, Users, Camera, X, FileBadge2, Landmark, Image as ImageIcon, RefreshCcw } from 'lucide-react';
 import { toast } from 'react-toastify';
 import AddStudentPersonalDetails from '../../Components/Students/AddStudentPersonalDetails';
 import AddStudentIdentityDocuments from '../../Components/Students/AddStudentIdenetityDocuments';
@@ -12,7 +12,6 @@ import STUDENT_MODULE_STRINGS from '../../Constants/StringConstants/StudentsCons
 
 const AS = STUDENT_MODULE_STRINGS.ADD_STUDENT;
 const C = STUDENT_MODULE_STRINGS.COMMON;
-
 const TAB_ORDER = ['personal', 'identity', 'family', 'other'];
 
 function AddNewStudent() {
@@ -29,44 +28,91 @@ function AddNewStudent() {
     const fileInputRef = useRef(null);
     const formTopRef = useRef(null);
 
+    // --- CAMERA & POPUP STATE ---
+    const [showPhotoMenu, setShowPhotoMenu] = useState(false);
+    const [showCamera, setShowCamera] = useState(false);
+    const [facingMode, setFacingMode] = useState('user'); // Default front camera
+    const videoRef = useRef(null);
+    const streamRef = useRef(null);
+
+    useEffect(() => {
+        return () => stopCamera();
+    }, []);
+
+    const stopCamera = () => {
+        if (streamRef.current) {
+            streamRef.current.getTracks().forEach(track => track.stop());
+            streamRef.current = null;
+        }
+    };
+
+    const startCamera = async (mode = 'user') => {
+        stopCamera();
+        setShowCamera(true); // Open camera inside the same modal
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: mode } });
+            streamRef.current = stream;
+            setTimeout(() => {
+                if (videoRef.current) {
+                    videoRef.current.srcObject = stream;
+                }
+            }, 50);
+        } catch (err) {
+            toast.error("Camera access denied or unavailable.");
+            console.error(err);
+            setShowCamera(false);
+        }
+    };
+
+    const toggleCamera = () => {
+        const newMode = facingMode === 'user' ? 'environment' : 'user';
+        setFacingMode(newMode);
+        startCamera(newMode);
+    };
+
+    const closePhotoMenu = () => {
+        setShowPhotoMenu(false);
+        setShowCamera(false);
+        stopCamera();
+    };
+
+    const capturePhoto = () => {
+        const video = videoRef.current;
+        if (!video) return;
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+        if (facingMode === 'user') {
+            ctx.translate(canvas.width, 0);
+            ctx.scale(-1, 1);
+        }
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        canvas.toBlob((blob) => {
+            if (blob) {
+                const file = new File([blob], "camera_capture.jpg", { type: "image/jpeg" });
+                handleImageChange({ target: { files: [file] } });
+                closePhotoMenu(); // Close the modal and stop camera
+            }
+        }, "image/jpeg", 0.9);
+    };
+    // ----------------------------
+
     const [documents, setDocuments] = useState({
-        birthCertificate: null,
-        transferCertificate: null,
-        reportCard: null,
-        studentAadhaarDoc: null,
-        fatherAadhaarDoc: null,
-        motherAadhaarDoc: null,
-        fatherPhoto: null,
-        motherPhoto: null,
-        guardianPhoto: null,
-        genericDocuments: [],
+        birthCertificate: null, transferCertificate: null, reportCard: null, studentAadhaarDoc: null,
+        fatherAadhaarDoc: null, motherAadhaarDoc: null, fatherPhoto: null, motherPhoto: null, guardianPhoto: null, genericDocuments: [],
     });
 
     const [formData, setFormData] = useState({
-        firstName: '', lastName: '', gender: '', email: '', mobile: '', address: '', dob: '',
-        admissionNumber: '', admissionDate: new Date().toISOString().slice(0, 10), academicYear: '2025-2026',
-        academicYearId: '',
-        rollNumber: '',
-        status: 'ACTIVE', bloodGroup: '', previousSchool: '', profileImageUrl: '',
-        sectionId: '', fatherName: '', fatherOccupation: '', fatherPhone: '',
-        fatherEmail: '', motherName: '', motherOccupation: '', motherPhone: '',
-        motherEmail: '', guardianName: '', guardianRelation: '', guardianPhone: '',
-        guardianEmail: '', emergencyContact: '', hostelRequired: false, transportRequired: false,
-
-        // Personal additions (backend enum default: HINDU)
-        category: 'GENERAL', religion: 'HINDU', whatsappNumber: '', sameAsMobile: false,
-        studentHouse: '', abcId: '', isTransferStudent: false,
-
-        // Identity & Documents
-        studentAadhaar: '', aparId: '', pen: '', familyId: '', ssmId: '',
-
-        // Family additions
-        fatherAadhaar: '', motherAadhaar: '',
-        guardianAddress: '', guardianOccupation: '', sameAsCurrentAddress: false,
-        siblings: [],
-
-        // Other additions
-        hostelRoomNumber: '', bankAccountNumber: '', bankName: '', ifscCode: '', remarks: '',
+        firstName: '', lastName: '', gender: '', email: '', mobile: '', address: '', dob: '', admissionNumber: '',
+        admissionDate: new Date().toISOString().slice(0, 10), academicYear: '2025-2026', academicYearId: '', rollNumber: '',
+        status: 'ACTIVE', bloodGroup: '', previousSchool: '', profileImageUrl: '', sectionId: '', fatherName: '', fatherOccupation: '',
+        fatherPhone: '', fatherEmail: '', motherName: '', motherOccupation: '', motherPhone: '', motherEmail: '', guardianName: '',
+        guardianRelation: '', guardianPhone: '', guardianEmail: '', emergencyContact: '', hostelRequired: false, transportRequired: false,
+        category: 'GENERAL', religion: 'HINDU', whatsappNumber: '', sameAsMobile: false, studentHouse: '', abcId: '', isTransferStudent: false,
+        studentAadhaar: '', aparId: '', pen: '', familyId: '', ssmId: '', fatherAadhaar: '', motherAadhaar: '', guardianAddress: '',
+        guardianOccupation: '', sameAsCurrentAddress: false, siblings: [], hostelRoomNumber: '', bankAccountNumber: '', bankName: '',
+        ifscCode: '', remarks: '',
     });
 
     useEffect(() => {
@@ -74,17 +120,12 @@ function AddNewStudent() {
             try {
                 const res = await getAllSections();
                 if (res?.success && Array.isArray(res.data)) {
-                    const activeSections = res.data.filter(sec => sec.status === 'ACTIVE');
-                    setSections(activeSections);
-                } else {
-                    toast.error(AS.ERRORS?.SECTION_LOAD_FAILED || "Failed to load sections");
-                }
+                    setSections(res.data.filter(sec => sec.status === 'ACTIVE'));
+                } else toast.error(AS.ERRORS?.SECTION_LOAD_FAILED || "Failed to load sections");
             } catch (err) {
-                console.error('fetchSections error:', err);
+                console.error(err);
                 toast.error(AS.ERRORS?.SECTION_LOAD_RETRY || "Error loading sections");
-            } finally {
-                setSectionsLoading(false);
-            }
+            } finally { setSectionsLoading(false); }
         };
         fetchSections();
     }, []);
@@ -107,24 +148,12 @@ function AddNewStudent() {
         if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
-    // Strip non-numeric characters for phone, Aadhaar & bank account numbers
     const handleInputChange = (e) => {
         let { name, value } = e.target;
-
-        const numericFields = [
-            'mobile', 'whatsappNumber', 'fatherPhone', 'motherPhone',
-            'guardianPhone', 'emergencyContact', 'studentAadhaar',
-            'fatherAadhaar', 'motherAadhaar', 'bankAccountNumber'
-        ];
-
-        if (numericFields.includes(name)) {
-            value = value.replace(/\D/g, '');
-        }
-
+        const numericFields = ['mobile', 'whatsappNumber', 'fatherPhone', 'motherPhone', 'guardianPhone', 'emergencyContact', 'studentAadhaar', 'fatherAadhaar', 'motherAadhaar', 'bankAccountNumber'];
+        if (numericFields.includes(name)) value = value.replace(/\D/g, '');
         setFormData(prev => ({ ...prev, [name]: value }));
-        if (formErrors[name]) {
-            setFormErrors(prev => { const n = { ...prev }; delete n[name]; return n; });
-        }
+        if (formErrors[name]) setFormErrors(prev => { const n = { ...prev }; delete n[name]; return n; });
     };
 
     const handleGuardianSource = (source) => {
@@ -132,33 +161,16 @@ function AddNewStudent() {
         setGuardianSource(newSource);
         if (newSource === 'father') {
             if (!formData.fatherName) { toast.warning("Please fill Father's details first"); return; }
-            setFormData(prev => ({
-                ...prev,
-                guardianName: prev.fatherName, guardianRelation: 'Father',
-                guardianPhone: prev.fatherPhone, guardianEmail: prev.fatherEmail,
-            }));
+            setFormData(prev => ({ ...prev, guardianName: prev.fatherName, guardianRelation: 'Father', guardianPhone: prev.fatherPhone, guardianEmail: prev.fatherEmail }));
         } else if (newSource === 'mother') {
             if (!formData.motherName) { toast.warning("Please fill Mother's details first"); return; }
-            setFormData(prev => ({
-                ...prev,
-                guardianName: prev.motherName, guardianRelation: 'Mother',
-                guardianPhone: prev.motherPhone, guardianEmail: prev.motherEmail,
-            }));
+            setFormData(prev => ({ ...prev, guardianName: prev.motherName, guardianRelation: 'Mother', guardianPhone: prev.motherPhone, guardianEmail: prev.motherEmail }));
         } else {
-            setFormData(prev => ({
-                ...prev,
-                guardianName: '', guardianRelation: '', guardianPhone: '', guardianEmail: '',
-            }));
+            setFormData(prev => ({ ...prev, guardianName: '', guardianRelation: '', guardianPhone: '', guardianEmail: '' }));
         }
-        setFormErrors(prev => {
-            const n = { ...prev };
-            delete n.guardianName; delete n.guardianRelation;
-            delete n.guardianPhone; delete n.guardianEmail;
-            return n;
-        });
+        setFormErrors(prev => { const n = { ...prev }; delete n.guardianName; delete n.guardianRelation; delete n.guardianPhone; delete n.guardianEmail; return n; });
     };
 
-    // Document handlers
     const handleDocumentChange = (key, e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -166,162 +178,64 @@ function AddNewStudent() {
         if (!validTypes.includes(file.type)) { toast.error('Only PDF, JPG or PNG files allowed'); return; }
         if (file.size > 10 * 1024 * 1024) { toast.error('File size must be under 10MB'); return; }
         setDocuments(prev => ({ ...prev, [key]: file }));
-        if (formErrors[key]) {
-            setFormErrors(prev => { const n = { ...prev }; delete n[key]; return n; });
-        }
+        if (formErrors[key]) setFormErrors(prev => { const n = { ...prev }; delete n[key]; return n; });
     };
 
-    const handleDocumentRemove = (key) => {
-        setDocuments(prev => ({ ...prev, [key]: null }));
-    };
-
+    const handleDocumentRemove = (key) => setDocuments(prev => ({ ...prev, [key]: null }));
     const handleGenericDocAdd = (e) => {
         const files = Array.from(e.target.files || []);
         if (!files.length) return;
-        setDocuments(prev => ({
-            ...prev,
-            genericDocuments: [
-                ...prev.genericDocuments,
-                ...files.map(f => ({ id: `${Date.now()}-${f.name}`, file: f })),
-            ],
-        }));
+        setDocuments(prev => ({ ...prev, genericDocuments: [...prev.genericDocuments, ...files.map(f => ({ id: `${Date.now()}-${f.name}`, file: f }))] }));
         e.target.value = '';
     };
+    const handleGenericDocRemove = (id) => setDocuments(prev => ({ ...prev, genericDocuments: prev.genericDocuments.filter(d => d.id !== id) }));
+    const handleAddSibling = () => setFormData(prev => ({ ...prev, siblings: [...prev.siblings, { id: Date.now(), name: '', className: '' }] }));
+    const handleSiblingChange = (id, field, value) => setFormData(prev => ({ ...prev, siblings: prev.siblings.map(s => s.id === id ? { ...s, [field]: value } : s) }));
+    const handleRemoveSibling = (id) => setFormData(prev => ({ ...prev, siblings: prev.siblings.filter(s => s.id !== id) }));
 
-    const handleGenericDocRemove = (id) => {
-        setDocuments(prev => ({ ...prev, genericDocuments: prev.genericDocuments.filter(d => d.id !== id) }));
-    };
-
-    // Sibling handlers
-    const handleAddSibling = () => {
-        setFormData(prev => ({
-            ...prev,
-            siblings: [...prev.siblings, { id: Date.now(), name: '', className: '' }],
-        }));
-    };
-
-    const handleSiblingChange = (id, field, value) => {
-        setFormData(prev => ({
-            ...prev,
-            siblings: prev.siblings.map(s => s.id === id ? { ...s, [field]: value } : s),
-        }));
-    };
-
-    const handleRemoveSibling = (id) => {
-        setFormData(prev => ({ ...prev, siblings: prev.siblings.filter(s => s.id !== id) }));
-    };
-
-    // Regex Rules
     const phoneRegex = /^[6-9]\d{9}$/;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const aadhaarRegex = /^\d{12}$/;
 
-    // Validations
     const validatePersonalDetails = () => {
         if (!profileImage) { toast.error(AS.ERRORS.PHOTO_REQUIRED); return false; }
-        if (
-            !formData.firstName.trim() ||
-            // !formData.lastName.trim() ||
-            !formData.gender ||
-            !formData.mobile ||
-            !formData.dob ||
-            !formData.admissionDate ||
-            !formData.address?.trim() // Mandatory Address check
-        ) {
-            toast.error(AS.ERRORS.REQUIRED_FIELDS || "Please fill all mandatory fields including Address");
-            return false;
+        if (!formData.firstName.trim() || !formData.gender || !formData.mobile || !formData.dob || !formData.admissionDate || !formData.address?.trim()) {
+            toast.error(AS.ERRORS.REQUIRED_FIELDS || "Please fill all mandatory fields including Address"); return false;
         }
         if (!formData.rollNumber.trim()) { toast.error(AS.ERRORS.ROLL_REQUIRED); return false; }
         if (!formData.sectionId) { toast.error(AS.ERRORS.SECTION_REQUIRED); return false; }
-        if (!phoneRegex.test(formData.mobile)) {
-            toast.error("Mobile number must be a valid 10-digit number starting with 6, 7, 8, or 9");
-            return false;
-        }
-        if (formData.whatsappNumber && !phoneRegex.test(formData.whatsappNumber)) {
-            toast.error("WhatsApp number must be a valid 10-digit number starting with 6, 7, 8, or 9");
-            return false;
-        }
+        if (!phoneRegex.test(formData.mobile)) { toast.error("Mobile number must be a valid 10-digit number starting with 6, 7, 8, or 9"); return false; }
+        if (formData.whatsappNumber && !phoneRegex.test(formData.whatsappNumber)) { toast.error("WhatsApp number must be a valid 10-digit number starting with 6, 7, 8, or 9"); return false; }
         if (formData.email && !emailRegex.test(formData.email)) { toast.error(AS.ERRORS.EMAIL_INVALID); return false; }
         return true;
     };
 
     const validateIdentityDetails = () => {
-        if (formData.studentAadhaar && !aadhaarRegex.test(formData.studentAadhaar)) {
-            toast.error("Student Aadhaar Number must be exactly 12 numeric digits");
-            return false;
-        }
+        if (formData.studentAadhaar && !aadhaarRegex.test(formData.studentAadhaar)) { toast.error("Student Aadhaar Number must be exactly 12 numeric digits"); return false; }
         return true;
     };
 
     const validateFamilyDetails = () => {
-        if (!formData.fatherName?.trim()) {
-            toast.error("Father's Name is required");
-            return false;
-        }
-        if (!formData.fatherOccupation?.trim()) {
-            toast.error("Father's Occupation is required");
-            return false;
-        }
-        if (!formData.fatherPhone) {
-            toast.error("Father's Phone number is required");
-            return false;
-        }
-        if (!phoneRegex.test(formData.fatherPhone)) {
-            toast.error("Father's Phone must be a valid 10-digit number starting with 6, 7, 8, or 9");
-            return false;
-        }
-        if (formData.fatherEmail && !emailRegex.test(formData.fatherEmail)) {
-            toast.error("Father's Email is invalid");
-            return false;
-        }
-        if (formData.fatherAadhaar && !aadhaarRegex.test(formData.fatherAadhaar)) {
-            toast.error("Father's Aadhaar Number must be exactly 12 numeric digits");
-            return false;
-        }
-
-        if (!formData.motherName?.trim()) {
-            toast.error("Mother's Name is required");
-            return false;
-        }
-        if (formData.motherPhone && !phoneRegex.test(formData.motherPhone)) {
-            toast.error("Mother's Phone must be a valid 10-digit number starting with 6, 7, 8, or 9");
-            return false;
-        }
-        if (formData.motherEmail && !emailRegex.test(formData.motherEmail)) {
-            toast.error("Mother's Email is invalid");
-            return false;
-        }
-        if (formData.motherAadhaar && !aadhaarRegex.test(formData.motherAadhaar)) {
-            toast.error("Mother's Aadhaar Number must be exactly 12 numeric digits");
-            return false;
-        }
-
-        if (formData.guardianPhone && !phoneRegex.test(formData.guardianPhone)) {
-            toast.error("Guardian's Phone must be a valid 10-digit number starting with 6, 7, 8, or 9");
-            return false;
-        }
-        if (formData.guardianEmail && !emailRegex.test(formData.guardianEmail)) {
-            toast.error("Guardian's Email is invalid");
-            return false;
-        }
-        if (formData.emergencyContact && !phoneRegex.test(formData.emergencyContact)) {
-            toast.error("Emergency Contact must be a valid 10-digit number starting with 6, 7, 8, or 9");
-            return false;
-        }
-
+        if (!formData.fatherName?.trim()) { toast.error("Father's Name is required"); return false; }
+        if (!formData.fatherOccupation?.trim()) { toast.error("Father's Occupation is required"); return false; }
+        if (!formData.fatherPhone) { toast.error("Father's Phone number is required"); return false; }
+        if (!phoneRegex.test(formData.fatherPhone)) { toast.error("Father's Phone must be valid"); return false; }
+        if (formData.fatherEmail && !emailRegex.test(formData.fatherEmail)) { toast.error("Father's Email is invalid"); return false; }
+        if (formData.fatherAadhaar && !aadhaarRegex.test(formData.fatherAadhaar)) { toast.error("Father's Aadhaar must be 12 digits"); return false; }
+        if (!formData.motherName?.trim()) { toast.error("Mother's Name is required"); return false; }
+        if (formData.motherPhone && !phoneRegex.test(formData.motherPhone)) { toast.error("Mother's Phone must be valid"); return false; }
+        if (formData.motherEmail && !emailRegex.test(formData.motherEmail)) { toast.error("Mother's Email is invalid"); return false; }
+        if (formData.motherAadhaar && !aadhaarRegex.test(formData.motherAadhaar)) { toast.error("Mother's Aadhaar must be 12 digits"); return false; }
+        if (formData.guardianPhone && !phoneRegex.test(formData.guardianPhone)) { toast.error("Guardian's Phone must be valid"); return false; }
+        if (formData.guardianEmail && !emailRegex.test(formData.guardianEmail)) { toast.error("Guardian's Email is invalid"); return false; }
+        if (formData.emergencyContact && !phoneRegex.test(formData.emergencyContact)) { toast.error("Emergency Contact must be valid"); return false; }
         return true;
     };
 
     const validateOtherDetails = () => {
-        if (formData.hostelRequired && !formData.hostelRoomNumber?.trim()) {
-            toast.error("Hostel Room Number is required when hostel accommodation is enabled");
-            return false;
-        }
+        if (formData.hostelRequired && !formData.hostelRoomNumber?.trim()) { toast.error("Hostel Room Number is required"); return false; }
         if (formData.bankAccountNumber) {
-            if (formData.bankAccountNumber.length < 9 || formData.bankAccountNumber.length > 18) {
-                toast.error("Bank Account Number must be between 9 and 18 digits");
-                return false;
-            }
+            if (formData.bankAccountNumber.length < 9 || formData.bankAccountNumber.length > 18) { toast.error("Bank Account Number must be between 9 and 18 digits"); return false; }
         }
         return true;
     };
@@ -335,24 +249,15 @@ function AddNewStudent() {
     };
 
     const scrollToTop = () => formTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-
     const handleNextTab = () => {
         if (!validateTab(activeTab)) return;
         const idx = TAB_ORDER.indexOf(activeTab);
-        if (idx < TAB_ORDER.length - 1) {
-            setActiveTab(TAB_ORDER[idx + 1]);
-            scrollToTop();
-        }
+        if (idx < TAB_ORDER.length - 1) { setActiveTab(TAB_ORDER[idx + 1]); scrollToTop(); }
     };
-
     const handleBackTab = () => {
         const idx = TAB_ORDER.indexOf(activeTab);
-        if (idx > 0) {
-            setActiveTab(TAB_ORDER[idx - 1]);
-            scrollToTop();
-        }
+        if (idx > 0) { setActiveTab(TAB_ORDER[idx - 1]); scrollToTop(); }
     };
-
     const handleTabClick = (tab) => {
         const targetIdx = TAB_ORDER.indexOf(tab);
         const currentIdx = TAB_ORDER.indexOf(activeTab);
@@ -361,8 +266,7 @@ function AddNewStudent() {
                 if (!validateTab(TAB_ORDER[i])) return;
             }
         }
-        setActiveTab(tab);
-        scrollToTop();
+        setActiveTab(tab); scrollToTop();
     };
 
     const handleSubmit = (e) => e.preventDefault();
@@ -380,72 +284,29 @@ function AddNewStudent() {
             const firstName = formData.firstName.trim();
             const lastName = formData.lastName.trim();
             const fullName = `${firstName} ${lastName}`.trim();
+            const generatedAdmissionNumber = formData.admissionNumber.trim() ? formData.admissionNumber.trim() : `ADM-${Math.floor(100000 + Math.random() * 900000)}`;
 
-            const generatedAdmissionNumber = formData.admissionNumber.trim()
-                ? formData.admissionNumber.trim()
-                : `ADM-${Math.floor(100000 + Math.random() * 900000)}`;
-
-            // JSON Payload matching Swagger Schema
             const apiPayload = {
-                admissionNumber: generatedAdmissionNumber,
-                rollNumber: formData.rollNumber.trim() || null,
-                firstName,
-                lastName,
-                fullName,
-                sectionId: Number(formData.sectionId),
-                admissionDate: formData.admissionDate,
-                academicYearId: formData.academicYearId ? Number(formData.academicYearId) : null,
-                academicYear: formData.academicYear || "2025-2026",
-                status: formData.status || "ACTIVE",
-                bloodGroup: formData.bloodGroup || null,
-                previousSchool: formData.previousSchool.trim() || null,
-                transportRequired: Boolean(formData.transportRequired),
-                hostelRequired: Boolean(formData.hostelRequired),
-                category: (formData.category || "GENERAL").toUpperCase(),
-                religion: formData.religion ? formData.religion.toUpperCase() : "HINDU", // Backend Enum Match
-                whatsappNumber: formData.whatsappNumber || formData.mobile || null,
-                studentHouse: formData.studentHouse.trim() || null,
-                aadhaarNumber: formData.studentAadhaar.trim() || null,
-                abcId: formData.abcId.trim() || null,
-                aparId: formData.aparId.trim() || null,
-                fatherName: formData.fatherName.trim() || null,
-                fatherOccupation: formData.fatherOccupation.trim() || null,
-                fatherPhone: formData.fatherPhone || null,
-                fatherEmail: formData.fatherEmail.trim() || null,
-                fatherAadhaar: formData.fatherAadhaar.trim() || null,
-                motherName: formData.motherName.trim() || null,
-                motherOccupation: formData.motherOccupation.trim() || null,
-                motherPhone: formData.motherPhone || null,
-                motherEmail: formData.motherEmail.trim() || null,
-                motherAadhaar: formData.motherAadhaar.trim() || null,
-                guardianName: formData.guardianName.trim() || null,
-                guardianRelation: formData.guardianRelation || null,
-                guardianPhone: formData.guardianPhone || null,
-                guardianEmail: formData.guardianEmail.trim() || null,
-                guardianAddress: formData.guardianAddress.trim() || null,
-                guardianOccupation: formData.guardianOccupation.trim() || null,
-                currentAddress: formData.address.trim() || null,
-                permanentAddress: formData.address.trim() || null,
-                hostelRoomDescription: formData.hostelRequired ? (formData.hostelRoomNumber.trim() || null) : null,
-                bankAccountNumber: formData.bankAccountNumber.trim() || null,
-                bankName: formData.bankName.trim() || null,
-                bankIfscCode: formData.ifscCode.trim() || null,
-                penNumber: formData.pen.trim() || null,
-                ssmId: formData.ssmId.trim() || null,
-                familyId: formData.familyId.trim() || null,
-                remarks: formData.remarks || null,
+                admissionNumber: generatedAdmissionNumber, rollNumber: formData.rollNumber.trim() || null, firstName, lastName, fullName,
+                sectionId: Number(formData.sectionId), admissionDate: formData.admissionDate, academicYearId: formData.academicYearId ? Number(formData.academicYearId) : null,
+                academicYear: formData.academicYear || "2025-2026", status: formData.status || "ACTIVE", bloodGroup: formData.bloodGroup || null,
+                previousSchool: formData.previousSchool.trim() || null, transportRequired: Boolean(formData.transportRequired), hostelRequired: Boolean(formData.hostelRequired),
+                category: (formData.category || "GENERAL").toUpperCase(), religion: formData.religion ? formData.religion.toUpperCase() : "HINDU",
+                whatsappNumber: formData.whatsappNumber || formData.mobile || null, studentHouse: formData.studentHouse.trim() || null,
+                aadhaarNumber: formData.studentAadhaar.trim() || null, abcId: formData.abcId.trim() || null, aparId: formData.aparId.trim() || null,
+                fatherName: formData.fatherName.trim() || null, fatherOccupation: formData.fatherOccupation.trim() || null, fatherPhone: formData.fatherPhone || null,
+                fatherEmail: formData.fatherEmail.trim() || null, fatherAadhaar: formData.fatherAadhaar.trim() || null, motherName: formData.motherName.trim() || null,
+                motherOccupation: formData.motherOccupation.trim() || null, motherPhone: formData.motherPhone || null, motherEmail: formData.motherEmail.trim() || null,
+                motherAadhaar: formData.motherAadhaar.trim() || null, guardianName: formData.guardianName.trim() || null, guardianRelation: formData.guardianRelation || null,
+                guardianPhone: formData.guardianPhone || null, guardianEmail: formData.guardianEmail.trim() || null, guardianAddress: formData.guardianAddress.trim() || null,
+                guardianOccupation: formData.guardianOccupation.trim() || null, currentAddress: formData.address.trim() || null, permanentAddress: formData.address.trim() || null,
+                hostelRoomDescription: formData.hostelRequired ? (formData.hostelRoomNumber.trim() || null) : null, bankAccountNumber: formData.bankAccountNumber.trim() || null,
+                bankName: formData.bankName.trim() || null, bankIfscCode: formData.ifscCode.trim() || null, penNumber: formData.pen.trim() || null,
+                ssmId: formData.ssmId.trim() || null, familyId: formData.familyId.trim() || null, remarks: formData.remarks || null,
                 personalDetails: {
-                    firstName,
-                    lastName,
-                    fullName,
-                    mobile: formData.mobile,
-                    email: formData.email.trim() || null,
-                    gender: (formData.gender || "MALE").toUpperCase(),
-                    dateOfBirth: formData.dob,
-                    address: formData.address.trim() || null,
-                    emergencyContact: formData.emergencyContact || formData.guardianPhone || formData.fatherPhone || null,
-                    emergencyContactName: formData.guardianName || formData.fatherName || null,
-                    emergencyContactRelation: formData.guardianRelation || "Father",
+                    firstName, lastName, fullName, mobile: formData.mobile, email: formData.email.trim() || null, gender: (formData.gender || "MALE").toUpperCase(),
+                    dateOfBirth: formData.dob, address: formData.address.trim() || null, emergencyContact: formData.emergencyContact || formData.guardianPhone || formData.fatherPhone || null,
+                    emergencyContactName: formData.guardianName || formData.fatherName || null, emergencyContactRelation: formData.guardianRelation || "Father",
                 }
             };
 
@@ -458,14 +319,10 @@ function AddNewStudent() {
                 if (documents.studentAadhaarDoc) uploadPromises.push(uploadStudentDocument(createdStudentId, 'STUDENT_AADHAAR', documents.studentAadhaarDoc));
                 if (documents.fatherAadhaarDoc) uploadPromises.push(uploadStudentDocument(createdStudentId, 'FATHER_AADHAAR', documents.fatherAadhaarDoc));
                 if (documents.motherAadhaarDoc) uploadPromises.push(uploadStudentDocument(createdStudentId, 'MOTHER_AADHAAR', documents.motherAadhaarDoc));
-
                 if (documents.fatherPhoto) uploadPromises.push(uploadParentPhoto(createdStudentId, 'FATHER', documents.fatherPhoto));
                 if (documents.motherPhoto) uploadPromises.push(uploadParentPhoto(createdStudentId, 'MOTHER', documents.motherPhoto));
                 if (documents.guardianPhoto) uploadPromises.push(uploadParentPhoto(createdStudentId, 'GUARDIAN', documents.guardianPhoto));
-
-                if (uploadPromises.length > 0) {
-                    await Promise.allSettled(uploadPromises);
-                }
+                if (uploadPromises.length > 0) await Promise.allSettled(uploadPromises);
             }
 
             toast.dismiss(loadingToast);
@@ -474,14 +331,11 @@ function AddNewStudent() {
         } catch (err) {
             toast.dismiss(loadingToast);
             toast.error(err.message || 'Failed to add student ❌');
-            console.error('Submit error:', err);
-        } finally {
-            setIsSubmitting(false);
-        }
+            console.error(err);
+        } finally { setIsSubmitting(false); }
     };
 
     const handleDiscard = () => navigate('/students');
-
     const isFirstTab = activeTab === TAB_ORDER[0];
     const isLastTab = activeTab === TAB_ORDER[TAB_ORDER.length - 1];
 
@@ -495,8 +349,7 @@ function AddNewStudent() {
     return (
         <div ref={formTopRef} className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-4">
             <div className="mx-auto">
-                <button onClick={() => navigate(-1)}
-                    className="flex items-center cursor-pointer bg-gray-600 p-2 rounded-xl text-white gap-2 hover:bg-gray-900 transition-colors mb-4">
+                <button onClick={() => navigate(-1)} className="flex items-center cursor-pointer bg-gray-600 p-2 rounded-xl text-white gap-2 hover:bg-gray-900 transition-colors mb-4">
                     <ChevronLeft className="w-5 h-5" />
                     <span className="hidden sm:inline">{C.BACK_TO_LIST}</span>
                 </button>
@@ -521,7 +374,6 @@ function AddNewStudent() {
                         <div className="p-4 sm:p-6 lg:p-8">
                             {activeTab === 'personal' && (
                                 <>
-                                    {/* Profile Photo Upload */}
                                     <div className="mb-6">
                                         <label className="block font-semibold text-gray-600 text-sm mb-3">
                                             {AS.PROFILE_PHOTO.LABEL} <span className="text-red-600 ml-1">*</span>
@@ -535,22 +387,16 @@ function AddNewStudent() {
                                                         <User className="w-8 h-8 text-blue-400" />
                                                     )}
                                                 </div>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => fileInputRef.current?.click()}
-                                                    className="absolute bottom-0 right-0 w-6 h-6 bg-blue-500 hover:bg-blue-600 rounded-full flex items-center justify-center shadow transition-colors"
-                                                >
+                                                <button type="button" onClick={() => setShowPhotoMenu(true)}
+                                                    className="absolute bottom-0 right-0 w-6 h-6 bg-blue-500 hover:bg-blue-600 rounded-full flex items-center justify-center shadow transition-colors">
                                                     <Camera className="w-3.5 h-3.5 text-white" />
                                                 </button>
                                             </div>
 
                                             <div className="flex-1">
                                                 {!imagePreview ? (
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => fileInputRef.current?.click()}
-                                                        className="w-full border-2 border-dashed border-blue-300 hover:border-blue-500 bg-blue-50 hover:bg-blue-100 rounded-lg p-4 text-center transition-colors cursor-pointer"
-                                                    >
+                                                    <button type="button" onClick={() => setShowPhotoMenu(true)}
+                                                        className="w-full border-2 border-dashed border-blue-300 hover:border-blue-500 bg-blue-50 hover:bg-blue-100 rounded-lg p-4 text-center transition-colors cursor-pointer">
                                                         <Camera className="w-5 h-5 text-blue-400 mx-auto mb-1" />
                                                         <p className="text-sm font-medium text-blue-600">{AS.PROFILE_PHOTO.CTA}</p>
                                                         <p className="text-xs text-gray-400 mt-0.5">{AS.PROFILE_PHOTO.FORMAT_HELP}</p>
@@ -559,23 +405,15 @@ function AddNewStudent() {
                                                     <div className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-lg">
                                                         <div className="flex-1 min-w-0">
                                                             <p className="text-sm font-medium text-green-700 truncate">{profileImage?.name}</p>
-                                                            <p className="text-xs text-green-500 mt-0.5">
-                                                                {profileImage ? (profileImage.size / 1024).toFixed(1) + ' KB' : ''}
-                                                            </p>
+                                                            <p className="text-xs text-green-500 mt-0.5">{profileImage ? (profileImage.size / 1024).toFixed(1) + ' KB' : ''}</p>
                                                         </div>
                                                         <div className="flex gap-2 shrink-0">
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => fileInputRef.current?.click()}
-                                                                className="text-xs px-2.5 py-1 bg-white border border-green-300 text-green-700 rounded-md hover:bg-green-50 transition-colors"
-                                                            >
+                                                            <button type="button" onClick={() => setShowPhotoMenu(true)}
+                                                                className="text-xs px-2.5 py-1 bg-white border border-green-300 text-green-700 rounded-md hover:bg-green-50 transition-colors">
                                                                 {AS.PROFILE_PHOTO.CHANGE}
                                                             </button>
-                                                            <button
-                                                                type="button"
-                                                                onClick={handleRemoveImage}
-                                                                className="w-7 h-7 flex items-center justify-center bg-white border border-red-200 text-red-500 rounded-md hover:bg-red-50 transition-colors"
-                                                            >
+                                                            <button type="button" onClick={handleRemoveImage}
+                                                                className="w-7 h-7 flex items-center justify-center bg-white border border-red-200 text-red-500 rounded-md hover:bg-red-50 transition-colors">
                                                                 <X className="w-3.5 h-3.5" />
                                                             </button>
                                                         </div>
@@ -583,96 +421,43 @@ function AddNewStudent() {
                                                 )}
                                             </div>
                                         </div>
-                                        <input
-                                            ref={fileInputRef}
-                                            type="file"
-                                            accept="image/jpeg,image/jpg,image/png"
-                                            onChange={handleImageChange}
-                                            className="hidden"
-                                        />
+                                        <input ref={fileInputRef} type="file" accept="image/jpeg,image/jpg,image/png" onChange={handleImageChange} className="hidden" />
                                     </div>
 
-                                    <AddStudentPersonalDetails
-                                        formData={formData} setFormData={setFormData}
-                                        handleInputChange={handleInputChange}
-                                        errors={formErrors}
-                                        sections={sections} sectionsLoading={sectionsLoading}
-                                    />
+                                    <AddStudentPersonalDetails formData={formData} setFormData={setFormData} handleInputChange={handleInputChange} errors={formErrors} sections={sections} sectionsLoading={sectionsLoading} />
                                     <div className="grid lg:grid-cols-2 sm:grid-cols-1 gap-4 mt-4">
                                         <div>
                                             <label htmlFor="rollNumber" className="block font-semibold text-gray-600 text-sm mb-2">
                                                 {AS.ROLL_LABEL}<span className="text-red-600 ml-1">*</span>
                                             </label>
-                                            <input
-                                                type="text" id="rollNumber" name="rollNumber"
-                                                value={formData.rollNumber} onChange={handleInputChange}
-                                                placeholder={AS.ROLL_PLACEHOLDER}
-                                                className="bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                            />
+                                            <input type="text" id="rollNumber" name="rollNumber" value={formData.rollNumber} onChange={handleInputChange} placeholder={AS.ROLL_PLACEHOLDER}
+                                                className="bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
                                         </div>
                                     </div>
                                 </>
                             )}
-                            {activeTab === 'identity' && (
-                                <AddStudentIdentityDocuments
-                                    formData={formData}
-                                    handleInputChange={handleInputChange}
-                                    errors={formErrors}
-                                    documents={documents}
-                                    onDocumentChange={handleDocumentChange}
-                                    onDocumentRemove={handleDocumentRemove}
-                                    onGenericDocAdd={handleGenericDocAdd}
-                                    onGenericDocRemove={handleGenericDocRemove}
-                                />
-                            )}
-                            {activeTab === 'family' && (
-                                <AddStudentFamilyDetails
-                                    formData={formData} setFormData={setFormData}
-                                    handleInputChange={handleInputChange}
-                                    errors={formErrors} setErrors={setFormErrors}
-                                    guardianSource={guardianSource}
-                                    onGuardianSource={handleGuardianSource}
-                                    documents={documents}
-                                    onDocumentChange={handleDocumentChange}
-                                    onDocumentRemove={handleDocumentRemove}
-                                    onAddSibling={handleAddSibling}
-                                    onSiblingChange={handleSiblingChange}
-                                    onRemoveSibling={handleRemoveSibling}
-                                />
-                            )}
-                            {activeTab === 'other' && (
-                                <AddStudentOtherDetails
-                                    formData={formData} setFormData={setFormData}
-                                    handleInputChange={handleInputChange}
-                                    errors={formErrors}
-                                />
-                            )}
+                            {activeTab === 'identity' && <AddStudentIdentityDocuments formData={formData} handleInputChange={handleInputChange} errors={formErrors} documents={documents} onDocumentChange={handleDocumentChange} onDocumentRemove={handleDocumentRemove} onGenericDocAdd={handleGenericDocAdd} onGenericDocRemove={handleGenericDocRemove} />}
+                            {activeTab === 'family' && <AddStudentFamilyDetails formData={formData} setFormData={setFormData} handleInputChange={handleInputChange} errors={formErrors} setErrors={setFormErrors} guardianSource={guardianSource} onGuardianSource={handleGuardianSource} documents={documents} onDocumentChange={handleDocumentChange} onDocumentRemove={handleDocumentRemove} onAddSibling={handleAddSibling} onSiblingChange={handleSiblingChange} onRemoveSibling={handleRemoveSibling} />}
+                            {activeTab === 'other' && <AddStudentOtherDetails formData={formData} setFormData={setFormData} handleInputChange={handleInputChange} errors={formErrors} />}
                         </div>
                         <div className="border-t border-gray-200 px-4 sm:px-6 lg:px-8 py-4 bg-gray-50 rounded-b-lg">
                             <div className="flex flex-col sm:flex-row justify-end gap-3">
-                                <button type="button" onClick={handleDiscard}
-                                    className="px-6 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                                <button type="button" onClick={handleDiscard} className="px-6 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
                                     {C.DISCARD_CHANGES}
                                 </button>
                                 {!isFirstTab && (
-                                    <button type="button" onClick={handleBackTab}
-                                        className="px-6 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2">
+                                    <button type="button" onClick={handleBackTab} className="px-6 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2">
                                         <ChevronLeft className="w-4 h-4" /> Back
                                     </button>
                                 )}
                                 {!isLastTab ? (
-                                    <button type="button" onClick={handleNextTab}
-                                        className="px-6 py-2.5 text-sm font-medium rounded-lg transition-all bg-blue-500 hover:bg-blue-600 cursor-pointer text-white flex items-center gap-2">
+                                    <button type="button" onClick={handleNextTab} className="px-6 py-2.5 text-sm font-medium rounded-lg transition-all bg-blue-500 hover:bg-blue-600 cursor-pointer text-white flex items-center gap-2">
                                         {AS.NEXT} <ChevronRight className="w-4 h-4" />
                                     </button>
                                 ) : (
-                                    <button disabled={isSubmitting} type="button" onClick={handleSaveDetails}
-                                        className={`px-6 py-2.5 text-sm font-medium rounded-lg transition-all ${isSubmitting ? 'bg-blue-300 cursor-not-allowed text-white' : 'bg-blue-500 hover:bg-blue-600 cursor-pointer text-white'}`}>
+                                    <button disabled={isSubmitting} type="button" onClick={handleSaveDetails} className={`px-6 py-2.5 text-sm font-medium rounded-lg transition-all ${isSubmitting ? 'bg-blue-300 cursor-not-allowed text-white' : 'bg-blue-500 hover:bg-blue-600 cursor-pointer text-white'}`}>
                                         {isSubmitting ? (
-                                            <span className="flex items-center justify-center gap-2">
-                                                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                                {AS.SUBMIT_LOADING}
-                                            </span>
+                                            <span className="flex items-center justify-center gap-2"><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />{AS.SUBMIT_LOADING}</span>
                                         ) : AS.SAVE}
                                     </button>
                                 )}
@@ -680,6 +465,104 @@ function AddNewStudent() {
                         </div>
                     </div>
                 </form>
+
+                {/* --- PHOTO SELECTION & CAMERA MODAL --- */}
+                {showPhotoMenu && (
+                    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+                        <div className="bg-white w-full sm:w-[500px] rounded-xl shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
+                            {/* Header */}
+                            <div className="flex justify-between items-center p-4 border-b border-gray-100 bg-gray-50">
+                                <div className="flex items-center gap-3">
+                                    {showCamera && (
+                                        <button
+                                            type="button"
+                                            onClick={() => { setShowCamera(false); stopCamera(); }}
+                                            className="p-1.5 hover:bg-gray-200 rounded-full transition-colors"
+                                        >
+                                            <ChevronLeft className="w-5 h-5 text-gray-700" />
+                                        </button>
+                                    )}
+                                    <h3 className="font-semibold text-gray-800 text-lg">
+                                        {showCamera ? 'Live Camera' : 'Upload Profile Photo'}
+                                    </h3>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    {showCamera && (
+                                        <button
+                                            type="button"
+                                            onClick={toggleCamera}
+                                            className="text-sm font-medium text-blue-600 flex items-center gap-1.5 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors"
+                                        >
+                                            <RefreshCcw className="w-4 h-4" />
+                                            <span className="hidden sm:inline">Switch</span>
+                                        </button>
+                                    )}
+                                    <button
+                                        type="button"
+                                        onClick={closePhotoMenu}
+                                        className="p-1.5 hover:bg-gray-200 rounded-full transition-colors"
+                                    >
+                                        <X className="w-5 h-5 text-gray-500" />
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Body */}
+                            <div className="p-4">
+                                {!showCamera ? (
+                                    <div className="space-y-3">
+                                        <button
+                                            type="button"
+                                            onClick={() => startCamera(facingMode)}
+                                            className="w-full flex items-center gap-4 p-4 hover:bg-blue-50 border border-transparent hover:border-blue-100 rounded-xl transition-all text-left"
+                                        >
+                                            <div className="bg-blue-100 p-3 rounded-full">
+                                                <Camera className="w-6 h-6 text-blue-600" />
+                                            </div>
+                                            <div>
+                                                <p className="font-semibold text-gray-800">Open Live Camera</p>
+                                                <p className="text-sm text-gray-500">Take a picture right now</p>
+                                            </div>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => { closePhotoMenu(); fileInputRef.current?.click(); }}
+                                            className="w-full flex items-center gap-4 p-4 hover:bg-gray-50 border border-transparent hover:border-gray-200 rounded-xl transition-all text-left"
+                                        >
+                                            <div className="bg-gray-100 p-3 rounded-full">
+                                                <ImageIcon className="w-6 h-6 text-gray-600" />
+                                            </div>
+                                            <div>
+                                                <p className="font-semibold text-gray-800">Upload from Device</p>
+                                                <p className="text-sm text-gray-500">Choose an existing photo</p>
+                                            </div>
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-col items-center">
+                                        <div className="w-full aspect-video bg-black rounded-lg overflow-hidden relative shadow-inner">
+                                            <video
+                                                ref={videoRef}
+                                                autoPlay
+                                                playsInline
+                                                className={`w-full h-full object-cover ${facingMode === 'user' ? 'scale-x-[-1]' : ''}`}
+                                            />
+                                        </div>
+                                        <div className="mt-6 mb-2">
+                                            <button
+                                                type="button"
+                                                onClick={capturePhoto}
+                                                className="w-16 h-16 rounded-full bg-blue-500 hover:bg-blue-600 border-4 border-blue-100 shadow-lg hover:scale-105 transition-all flex items-center justify-center"
+                                            >
+                                                <Camera className="w-6 h-6 text-white" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
