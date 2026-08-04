@@ -131,7 +131,7 @@ const EventsPage = lazy(() => import('../Pages/Communication/Events/EventsPage')
 const CreateEventPage = lazy(() => import('../Pages/Communication/Events/CreateEventPage'));
 const ApprovalQueuePage = lazy(() => import('../Pages/Communication/ApprovalQueue/ApprovalQueuePage'));
 const NotificationsPage = lazy(() => import('../Pages/Communication/Notifications/NotificationsPage'));
-
+const DemoRequest = lazy(() => import('../../src/Pages/DemoRequest/Demorequest'));
 // ─── Suspense fallback — premium blue circle loader ────────────────────────────
 const PageLoader = () => (
   <div className="fixed inset-0 flex flex-col items-center justify-center gap-4 sm:gap-5 bg-white px-4">

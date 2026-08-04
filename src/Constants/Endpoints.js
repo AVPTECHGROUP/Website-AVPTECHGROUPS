@@ -357,8 +357,6 @@ export const API_ENDPOINTS = {
   userResetPassword: (id) => `${BASE_URL_V1}/users/${id}/reset-password`,
   userSetPassword: (id) => `${BASE_URL_V1}/users/${id}/set-password`,
 
-  // Add to your API_ENDPOINTS object:
-
   // ─── Roles & Permissions ─────────────────────────────────────────────────────
   ROLES: `${BASE_URL_V1}/roles`,
   ROLES_SUMMARY: `${BASE_URL_V1}/roles/summary`,
@@ -369,4 +367,8 @@ export const API_ENDPOINTS = {
   // Dynamic endpoints
   roleById: (roleId) => `${BASE_URL_V1}/roles/${roleId}`,
   rolePermissionsById: (roleId) => `${BASE_URL_V1}/roles/${roleId}/permissions`,
-}; 
+
+  // ─── Public (no auth) ────────────────────────────────────────────────────────
+  // "Book Your Free Demo" landing page form
+  DEMO_REQUEST: `${BASE_URL_V1}/public/demo-request`,
+};
