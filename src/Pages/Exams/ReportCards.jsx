@@ -246,7 +246,8 @@ export default function ReportCards() {
         };
         load();
         return () => { mounted = false; };
-    }, []);
+    }, [paramExamId]);
+
     // ── 1b. Load active sections when class changes ───────────────────────────────
     useEffect(() => {
         if (!selectedClassId) {
@@ -507,7 +508,7 @@ export default function ReportCards() {
                             className="w-full sm:w-40 lg:w-44 shrink-0"
                         />
 
-                        {/* Exam Select — flex-1 so it takes remaining space but never overflows */}
+                        {/* Exam Select */}
                         <Select
                             value={selectedExamId}
                             onChange={(v) => setSelectedExamId(v)}
@@ -718,6 +719,7 @@ export default function ReportCards() {
             {selectedStudent && (
                 <StudentReportCard
                     student={selectedStudent}
+                    examId={selectedExamId}
                     onClose={() => { setSelectedStudent(null); setStudentCardError(null); }}
                     onUpdateRemarks={handleUpdateRemarks}
                 />

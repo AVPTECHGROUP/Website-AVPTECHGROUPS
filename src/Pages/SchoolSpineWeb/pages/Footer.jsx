@@ -1,5 +1,5 @@
 import React, { useState, useContext } from 'react'
-import { FaFacebookF, FaWhatsapp } from 'react-icons/fa';
+import { FaFacebookF, FaWhatsapp, FaInstagram } from 'react-icons/fa';
 import { FaXTwitter } from 'react-icons/fa6'
 import { FiMail, FiPhone, FiMapPin, FiSend, FiArrowUp } from 'react-icons/fi'
 import Logo from '../../../assets/Images/SS_logo_3.png'
@@ -10,7 +10,7 @@ import { UserContext } from '../../../ContextAPI/UserContext'
 const footerLinks = {
     Product: [
         'Features',
-        'Pricing',
+        // 'Pricing',
         { name: 'Blog', path: '/blog' },
     ],
     Company: [
@@ -27,9 +27,23 @@ const footerLinks = {
     ],
 }
 
+// Updated social configurations with new links, Instagram addition, and labels
 const socialIcons = [
-    { icon: <FaFacebookF size={16} />, label: 'Facebook', href: 'https://www.facebook.com/profile.php?id=61591045064391' },
-    { icon: <FaWhatsapp size={16} />, label: 'WhatsApp', href: 'https://wa.me/919511117450' },
+    {
+        icon: <FaFacebookF size={16} />,
+        label: 'Facebook',
+        href: 'https://www.facebook.com/photo.php?fbid=122103899157384825&type=3&mibextid=wwXIfr&rdid=BiXSt0SFkJP0NL43&share_url=https%3A%2F%2Fwww.facebook.com%2Fshare%2F1HTJzS7tyF%2F%3Fmibextid%3DwwXIfr#'
+    },
+    {
+        icon: <FaInstagram size={16} />,
+        label: 'Instagram',
+        href: 'https://www.instagram.com/schoolspineofficial/'
+    },
+    {
+        icon: <FaWhatsapp size={16} />,
+        label: 'WhatsApp',
+        href: 'https://wa.me/919511117450'
+    },
 ];
 
 const Footer = () => {
@@ -57,14 +71,6 @@ const Footer = () => {
                 document.getElementById('features-section')?.scrollIntoView({ behavior: 'smooth' });
             } else {
                 navigate('/#features-section');
-            }
-        }
-        else if (label === 'Pricing') {
-            e.preventDefault();
-            if (location.pathname === '/') {
-                document.getElementById('pricing-section')?.scrollIntoView({ behavior: 'smooth' });
-            } else {
-                navigate('/#pricing-section');
             }
         }
         else if (label === 'Our Clients') {
@@ -210,7 +216,7 @@ const Footer = () => {
                             <li className="flex items-start gap-2.5">
                                 <FiMapPin size={16} className="text-[#00C9B1] mt-0.5 flex-shrink-0" />
                                 <span className="leading-5">Sushant Golf City, Lucknow, 226030</span>
-                            </li>
+                            </li >
                             <li className="flex items-center gap-2.5">
                                 <FiPhone size={15} className="text-[#00C9B1] flex-shrink-0" />
                                 <a href="tel:9511117450" className="hover:text-[#00C9B1] transition-colors">+91 9511117450</a>
@@ -229,24 +235,21 @@ const Footer = () => {
                 {/* ─── ROW 3: FOOTER BOTTOM BAR WITH BACK TO TOP TRIGGER ─── */}
                 <div className="flex flex-col md:flex-row-reverse items-center justify-between gap-6 pt-4 text-center md:text-left">
 
-                    {/* Left Section: Back to top interface matching image structures */}
+                    {/* Left Section: Back to top interface */}
                     <div onClick={handleScrollToTop}
                         className="group flex items-center gap-3 cursor-pointer"
                     >
                         <div className="w-12 h-12 rounded-full border border-[#00C9B1]/30 flex items-center justify-center relative overflow-hidden">
-
                             <div className="absolute inset-0 bg-[#00C9B1] scale-0 group-hover:scale-100 transition duration-500 rounded-full" />
-
                             <FiArrowUp
                                 size={20}
                                 className="relative z-10 text-[#00C9B1] group-hover:text-white transition"
                             />
-
                         </div>
-
                         <div>
                         </div>
                     </div>
+
                     {/* Middle Section: Copyright parameters */}
                     <div className="flex flex-col sm:flex-row items-center gap-2 text-xs md:text-sm" style={{ color: isDark ? '#94a3b8' : '#475569' }}>
                         <div className="flex items-center justify-center gap-1.5">
@@ -258,12 +261,14 @@ const Footer = () => {
                         </div>
                     </div>
 
-                    {/* Right Section: Social channels arranged dynamically matching image_de61a0.png layout */}
+                    {/* Right Section: Updated Social channels supporting target="_blank" dynamically */}
                     <div className="flex items-center gap-2.5">
                         {socialIcons.map(({ icon, label, href }) => (
                             <a
                                 key={label}
                                 href={href}
+                                target="_blank"
+                                rel="noopener noreferrer"
                                 aria-label={label}
                                 className="w-9 h-9 rounded-xl flex items-center justify-center border bg-white/[0.01] hover:text-[#00C9B1] hover:border-[#00C9B1]/30 hover:bg-[#00C9B1]/5 hover:scale-105 transition-all duration-200"
                                 style={{

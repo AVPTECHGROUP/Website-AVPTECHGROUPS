@@ -1,10 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
     ChevronLeft, LayoutGrid, BarChart2, Wand2, ArrowLeftRight,
     Settings, Send, Printer, Trash2, Undo2, Redo2, Plus,
     Search, AlertTriangle, X, Eye, Pencil, User, RefreshCw, Clock,
     PanelLeft, PanelLeftClose
 } from 'lucide-react';
+import { toast } from 'react-toastify';
+
 import AddSlotModal from './components/AddSlotModal';
 import TimetableSettings from './components/TimetableSettings';
 import SubstitutionModal from './components/SubstitutionModal';
@@ -24,7 +26,7 @@ import {
     getTimetableConfig,
 } from '../../Api/Academics/ScheduleApi';
 import SectionSubjectService from '../../Api/Academics/SectionSubjectService';
-import { TIMETABLE_CONSTS }  from '../../Constants/StringConstants/TimetableConstants';
+import { TIMETABLE_CONSTS } from '../../Constants/StringConstants/TimetableConstants';
 
 // ── Helper: generate periods + breaks from config ──
 const generatePeriodsFromConfig = (config) => {
@@ -129,7 +131,6 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
     const [substitutionTarget, setSubstitutionTarget] = useState(null);
     const [showPendingSubstitutions, setShowPendingSubstitutions] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
-    // const [showSubstitution, setShowSubstitution] = useState(false);
     const [showPublishConfirm, setShowPublishConfirm] = useState(false);
     const [draggedSubject, setDraggedSubject] = useState(null);
     const [dragOverCell, setDragOverCell] = useState(null);
@@ -137,7 +138,6 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
     const [subjectSearch, setSubjectSearch] = useState('');
     const [subjectFilter, setSubjectFilter] = useState(TIMETABLE_CONSTS.CREATE_SCHEDULE.FILTER_ALL);
     const [sidebarTab, setSidebarTab] = useState('subjects');
-    const [toastMsg, setToastMsg] = useState('');
     const [mobileDay, setMobileDay] = useState('Mon');
     const [showMobileSidebar, setShowMobileSidebar] = useState(false);
 
@@ -159,11 +159,6 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
             setMobileDay(workingDays[0]);
         }
     }, [workingDays, mobileDay]);
-
-    const showToast = (msg) => {
-        setToastMsg(msg);
-        setTimeout(() => setToastMsg(''), 3000);
-    };
 
     const loadConfig = async () => {
         try {
@@ -227,7 +222,7 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
             }
         } catch (err) {
             console.error('Failed to load timetable data:', err);
-            showToast(TIMETABLE_CONSTS.MESSAGES.ERR_LOAD_DATA);
+            toast.error(TIMETABLE_CONSTS.MESSAGES.ERR_LOAD_DATA);
         } finally {
             setLoadingSlots(false);
         }
@@ -240,33 +235,67 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
         setHistoryIdx(newHistory.length - 1);
     };
 
-    const undo = () => {
-        if (historyIdx > 0) {
-            setHistoryIdx(historyIdx - 1);
-            setSlots(history[historyIdx - 1]);
-        }
-    };
+    const undo = useCallback(() => {
+        setHistoryIdx((prevIdx) => {
+            if (prevIdx > 0) {
+                const nextIdx = prevIdx - 1;
+                setSlots(history[nextIdx]);
+                return nextIdx;
+            }
+            return prevIdx;
+        });
+    }, [history]);
 
-    const redo = () => {
-        if (historyIdx < history.length - 1) {
-            setHistoryIdx(historyIdx + 1);
-            setSlots(history[historyIdx + 1]);
-        }
-    };
+    const redo = useCallback(() => {
+        setHistoryIdx((prevIdx) => {
+            if (prevIdx < history.length - 1) {
+                const nextIdx = prevIdx + 1;
+                setSlots(history[nextIdx]);
+                return nextIdx;
+            }
+            return prevIdx;
+        });
+    }, [history]);
+
+    // ── Keydown Shortcuts (Ctrl + Z & Ctrl + Y) ──
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (isViewOnly) return;
+
+            // Ignore when user is actively typing in inputs
+            const activeElem = document.activeElement;
+            if (activeElem && ['INPUT', 'TEXTAREA', 'SELECT'].includes(activeElem.tagName)) {
+                return;
+            }
+
+            const isCtrlOrCmd = e.ctrlKey || e.metaKey;
+
+            if (isCtrlOrCmd && e.key.toLowerCase() === 'z') {
+                if (e.shiftKey) {
+                    e.preventDefault();
+                    redo();
+                } else {
+                    e.preventDefault();
+                    undo();
+                }
+            } else if (isCtrlOrCmd && e.key.toLowerCase() === 'y') {
+                e.preventDefault();
+                redo();
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [undo, redo, isViewOnly]);
 
     const getSlot = (day, periodId) =>
         slots.find(s => s.day === day && s.periodId === periodId);
 
     const toggleSlotSelection = (slot) => {
         const key = slotKey(slot);
-
-        setSelectedSlotKey(prev =>
-            prev === key ? null : key
-        );
+        setSelectedSlotKey(prev => prev === key ? null : key);
     };
-    const selectedSlots = slots.filter(
-        s => slotKey(s) === selectedSlotKey
-    );
+    const selectedSlots = slots.filter(s => slotKey(s) === selectedSlotKey);
 
     const handleOpenSubstitution = () => {
         if (selectedSlots.length === 0) return;
@@ -295,9 +324,8 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
             setSlots(newSlots);
             pushHistory(newSlots);
             setAddSlotTarget(null);
-            showToast(TIMETABLE_CONSTS.MESSAGES.SUCC_SLOT_SAVED);
         } catch (err) {
-            showToast(err.message || TIMETABLE_CONSTS.MESSAGES.ERR_SAVE_SLOT);
+            toast.error(err.message || TIMETABLE_CONSTS.MESSAGES.ERR_SAVE_SLOT);
         }
     };
 
@@ -312,32 +340,28 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
             if (selectedSlotKey === key) {
                 setSelectedSlotKey(null);
             }
-            showToast(TIMETABLE_CONSTS.MESSAGES.SUCC_SLOT_REMOVED);
+            toast.success(TIMETABLE_CONSTS.MESSAGES.SUCC_SLOT_REMOVED);
         } catch (err) {
-            showToast(err.message || TIMETABLE_CONSTS.MESSAGES.ERR_REMOVE_SLOT);
+            toast.error(err.message || TIMETABLE_CONSTS.MESSAGES.ERR_REMOVE_SLOT);
         }
     };
 
     const handleAutoFill = async () => {
         try {
             const result = await autoFillSlots(timetable.id);
-            showToast(TIMETABLE_CONSTS.MESSAGES.SUCC_AUTO_FILL(result?.filledCount));
+            toast.success(TIMETABLE_CONSTS.MESSAGES.SUCC_AUTO_FILL(result?.filledCount));
             await loadTimetableData();
         } catch (err) {
-            showToast(err.message || TIMETABLE_CONSTS.MESSAGES.ERR_AUTO_FILL);
+            toast.error(err.message || TIMETABLE_CONSTS.MESSAGES.ERR_AUTO_FILL);
         }
     };
 
-    const handleClearAll = async () => {
-        try {
-            await bulkSaveSlots(timetable.id, []);
-            setSlots([]);
-            setSelectedSlotKey(null);
-            pushHistory([]);
-            showToast(TIMETABLE_CONSTS.MESSAGES.SUCC_CLEAR_ALL);
-        } catch (err) {
-            showToast(err.message || TIMETABLE_CONSTS.MESSAGES.ERR_CLEAR_ALL);
-        }
+    // Directly clears all slots locally without calling API
+    const handleClearAll = () => {
+        setSlots([]);
+        setSelectedSlotKey(null);
+        pushHistory([]);
+        toast.success(TIMETABLE_CONSTS.MESSAGES.SUCC_CLEAR_ALL);
     };
 
     const handlePublish = async () => {
@@ -346,9 +370,9 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
             setStatus(TIMETABLE_CONSTS.STATUS.PUBLISHED);
             setShowDraftBanner(false);
             setShowPublishConfirm(false);
-            showToast(TIMETABLE_CONSTS.MESSAGES.SUCC_PUBLISHED);
+            toast.success(TIMETABLE_CONSTS.MESSAGES.SUCC_PUBLISHED);
         } catch (err) {
-            showToast(err.message || TIMETABLE_CONSTS.MESSAGES.ERR_PUBLISH);
+            toast.error(err.message || TIMETABLE_CONSTS.MESSAGES.ERR_PUBLISH);
         }
     };
 
@@ -357,9 +381,9 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
             setSavingAll(true);
             const apiSlots = slots.map(toApiSlot);
             await bulkSaveSlots(timetable.id, apiSlots);
-            showToast(TIMETABLE_CONSTS.MESSAGES.SUCC_SAVE_ALL);
+            toast.success(TIMETABLE_CONSTS.MESSAGES.SUCC_SAVE_ALL);
         } catch (err) {
-            showToast(err.message || TIMETABLE_CONSTS.MESSAGES.ERR_SAVE_ALL);
+            toast.error(err.message || TIMETABLE_CONSTS.MESSAGES.ERR_SAVE_ALL);
         } finally {
             setSavingAll(false);
         }
@@ -529,13 +553,6 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
     return (
         <div className="min-h-screen bg-[#f0f4f9] flex flex-col relative overflow-hidden">
 
-            {/* Toast */}
-            {toastMsg && (
-                <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-5 sm:max-w-sm z-[100] bg-[#1e293b] text-white text-sm px-4 py-2.5 rounded-xl shadow-xl animate-fade-in">
-                    {toastMsg}
-                </div>
-            )}
-
             {/* Draft Banner */}
             {showDraftBanner && status === TIMETABLE_CONSTS.STATUS.DRAFT && !isViewOnly && (
                 <div className="bg-amber-50 border-b border-amber-200 px-3 sm:px-4 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3">
@@ -598,11 +615,11 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
                         {!isViewOnly && (
                             <>
                                 <button onClick={undo} disabled={historyIdx === 0}
-                                    className="p-2 rounded-lg text-gray-500 cursor-pointer hover:bg-gray-100 disabled:opacity-30 transition" title="Undo">
+                                    className="p-2 rounded-lg text-gray-500 cursor-pointer hover:bg-gray-100 disabled:opacity-30 transition" title="Undo (Ctrl+Z)">
                                     <Undo2 size={16} />
                                 </button>
                                 <button onClick={redo} disabled={historyIdx === history.length - 1}
-                                    className="p-2 rounded-lg text-gray-500 cursor-pointer hover:bg-gray-100 disabled:opacity-30 transition" title="Redo">
+                                    className="p-2 rounded-lg text-gray-500 cursor-pointer hover:bg-gray-100 disabled:opacity-30 transition" title="Redo (Ctrl+Y)">
                                     <Redo2 size={16} />
                                 </button>
                                 <button onClick={handleAutoFill}
@@ -620,10 +637,6 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
                                     ) : (
                                         <><span className="sm:hidden">💾</span><span className="hidden sm:inline">{TIMETABLE_CONSTS.CREATE_SCHEDULE.BTN_SAVE_ALL}</span></>
                                     )}
-                                </button>
-                                <button onClick={() => setShowSettings(true)}
-                                    className="flex items-center gap-1.5 px-2 sm:px-3 cursor-pointer py-1.5 border border-gray-200 rounded-lg text-xs sm:text-sm text-gray-700 hover:bg-gray-50 transition">
-                                    <Settings size={14} /> <span className="hidden sm:inline">{TIMETABLE_CONSTS.CREATE_SCHEDULE.BTN_SETTINGS}</span>
                                 </button>
                                 {status === TIMETABLE_CONSTS.STATUS.DRAFT && (
                                     <button onClick={() => setShowPublishConfirm(true)}
@@ -899,8 +912,8 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
                                         </div>
                                     </div>
 
-                                    {/* Desktop table view - 100% BULLETPROOF WRAPPER */}
-                                    <div className="hidden lg:block flex-1 relative w-full  bg-white">
+                                    {/* Desktop table view */}
+                                    <div className="hidden lg:block flex-1 relative w-full bg-white">
                                         <div className="absolute inset-0 overflow-x-auto">
                                             <table className="w-full border-collapse min-w-max">
                                                 <thead>
@@ -1027,9 +1040,9 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
                             });
                             await loadTimetableData();
                             setAssignTeacherTarget(null);
-                            showToast(TIMETABLE_CONSTS.MESSAGES.SUCC_SAVE_TEACHER);
+                            toast.success(TIMETABLE_CONSTS.MESSAGES.SUCC_SAVE_TEACHER);
                         } catch (err) {
-                            showToast(err.message || TIMETABLE_CONSTS.MESSAGES.ERR_SAVE_TEACHER);
+                            toast.error(err.message || TIMETABLE_CONSTS.MESSAGES.ERR_SAVE_TEACHER);
                         }
                     }}
                 />
@@ -1044,10 +1057,15 @@ export default function CreateSchedule({ timetable, mode = 'edit', onBack }) {
                         setSubstitutionTarget(null);
                         setSelectedSlotKey(null);
                     }}
+                    onSuccess={(customMsg) => {
+                        loadTimetableData();
+                        setSubstitutionTarget(null);
+                        setSelectedSlotKey(null);
+                    }}
                 />
             )}
 
-            {/* Pending Substitutions Modal — separate popup */}
+            {/* Pending Substitutions Modal */}
             {showPendingSubstitutions && !isViewOnly && (
                 <PendingSubstitutionsModal
                     timetableId={timetable?.id}

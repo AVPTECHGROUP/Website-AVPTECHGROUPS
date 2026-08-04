@@ -172,7 +172,10 @@ function ClassAssignment() {
     });
   }, [formData.classAssignments]);
 
-  useEffect(() => { setSearchTerm(""); setCurrentPage(1); }, [searchTerm]);
+  // ── FIX: this effect was calling setSearchTerm("") on every keystroke, ──
+  // ── which wiped the input back to empty immediately. It should only ──
+  // ── reset pagination to page 1 when the search term changes. ──
+  useEffect(() => { setCurrentPage(1); }, [searchTerm]);
 
   useEffect(() => {
     return () => {
@@ -185,7 +188,15 @@ function ClassAssignment() {
   const fetchClasses = async () => {
     try {
       setDropdownLoading(prev => ({ ...prev, classes: true }));
-      setClasses(await getClasses());
+      const response = await getClasses();
+
+      // Ensure we extract the array properly whether it comes as direct array or { data: [...] }
+      const classList = Array.isArray(response) ? response : (response?.data || []);
+
+      // Filter the array to ONLY include active classes
+      const activeClasses = classList.filter(cls => cls.status === "ACTIVE");
+
+      setClasses(activeClasses);
     } catch (err) {
       setError(strings.ASSIGNMENT.MESSAGES.ERROR_FETCH);
       setTimeout(() => setError(null), 1000);

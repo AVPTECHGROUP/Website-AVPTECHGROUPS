@@ -87,7 +87,7 @@ const ManualStaffAttendance = ({ onClose, onSuccess }) => {
                     userId,
                     userType: getDisplayRole(raw),
                     userName: getDisplayName(raw),
-                    checkInTime: '09:00',
+                    checkInTime: getCurrentTime(),
                     remarks: '',
                 });
             }
@@ -95,6 +95,10 @@ const ManualStaffAttendance = ({ onClose, onSuccess }) => {
         });
     };
 
+    const getCurrentTime = () => {
+        const now = new Date();
+        return now.toTimeString().slice(0, 5); // HH:mm
+    };
     const updateSelection = (userId, field, value) => {
         setSelections((prev) => {
             const next = new Map(prev);

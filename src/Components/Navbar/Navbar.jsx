@@ -25,16 +25,9 @@ const Navbar = () => {
                 navigate("/#features-section");
             }
         }
-        // else if (link === "Pricing") {
-        //     if (location.pathname === "/") {
-        //         document.getElementById('pricing-section')?.scrollIntoView({ behavior: 'smooth' });
-        //     } else {
-        //         navigate("/#pricing-section");
-        //     }
-        // }
         else if (link === "Book A Demo") {
             navigate("/contact");
-        } 
+        }
         else if (link === "Blog") {
             navigate("/blog");
         } else if (link === "About Us") {
@@ -64,6 +57,7 @@ const Navbar = () => {
                         transparent
                     );
                     animation: custom-shimmer 4s infinite ease-in-out;
+                    z-index: 5;
                 }
             `}</style>
 
@@ -114,16 +108,43 @@ const Navbar = () => {
                             {theme === 'dark' ? <Sun size={18} className="text-[#F5A623]" /> : <Moon size={18} className="text-[#00C9B1]" />}
                         </button>
 
-                        <button onClick={() => window.open("/login", "_blank")} className="group relative overflow-hidden flex items-center gap-2 px-5 xl:px-6 py-2.5 rounded-xl font-bold tracking-wide text-slate-950 cursor-pointer bg-gradient-to-r from-[#00C9B1] via-[#00C9B1] to-[#F5A623] shadow-[0_4px_20px_rgba(0,201,177,0.22)] hover:shadow-[0_6px_24px_rgba(245,166,35,0.32)] hover:-translate-y-0.5 transition-all duration-300 active:scale-[0.98]">
+                        {/* Desktop Login Button */}
+                        <button
+                            onClick={() => window.open("/login", "_blank")}
+                            className={`group relative overflow-hidden flex items-center gap-2 px-5 xl:px-6 py-2.5 rounded-xl font-bold tracking-wide cursor-pointer border-2 border-teal-400 transition-all duration-300 active:scale-[0.98]
+                            ${theme === "light"
+                                    ? "bg-[#e8feff] shadow-[0_4px_20px_rgba(0,201,177,0.18)]"
+                                    : "bg-transparent shadow-[0_4px_20px_rgba(0,201,177,0.22)] hover:shadow-[0_6px_24px_rgba(245,166,35,0.32)]"
+                                } hover:-translate-y-0.5`}
+                        >
+                            {/* Center-expanding Background Layer */}
+                            <span className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-0 h-0 rounded-full transition-all duration-500 ease-out group-hover:w-[320px] group-hover:h-[320px] pointer-events-none z-0 ${theme === "light" ? "bg-[#D6FFF8]" : "bg-[#00C9B1]/20"
+                                }`} />
+
                             <div className="shimmer-effect" />
-                            <User size={16} className="text-slate-950 relative z-10 stroke-[2.5]" />
-                            <span className="text-sm xl:text-base relative z-10">Login</span>
+
+                            <User
+                                size={18}
+                                className="text-[#00C9B1] relative z-10 stroke-[2.5]"
+                            />
+
+                            <span className="text-sm xl:text-base relative z-10 text-[#00C9B1]">
+                                Login
+                            </span>
                         </button>
 
-                        {/* Desktop: Book A Demo Trigger */}
-                        <button onClick={() => handleNavLinkClick("Book A Demo")} className="group relative overflow-hidden flex items-center gap-2 px-4 xl:px-5 py-2.5 rounded-xl font-bold tracking-wide text-slate-950 cursor-pointer bg-gradient-to-r from-[#00C9B1] via-[#00C9B1] to-[#F5A623] shadow-[0_4px_20px_rgba(0,201,177,0.25)] hover:shadow-[0_6px_24px_rgba(245,166,35,0.35)] hover:-translate-y-0.5 transition-all duration-300 active:scale-[0.98]">
+                        {/* Desktop Book A Demo Button */}
+                        <button
+                            onClick={() => handleNavLinkClick("Book A Demo")}
+                            className="group relative overflow-hidden flex items-center gap-2 px-4 xl:px-5 py-2.5 rounded-xl font-bold tracking-wide text-slate-950 cursor-pointer bg-gradient-to-r from-[#F5A623] via-[#F7B347] to-[#FF8C00] shadow-[0_4px_20px_rgba(245,166,35,0.35)] hover:shadow-[0_6px_28px_rgba(255,140,0,0.45)] hover:-translate-y-0.5 hover:scale-[1.02] transition-all duration-300 active:scale-[0.98]"
+                        >
+                            {/* Center-expanding Background Layer */}
+                            <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-0 h-0 rounded-full bg-[#E07B00] transition-all duration-500 ease-out group-hover:w-[320px] group-hover:h-[320px] pointer-events-none z-0" />
+
                             <div className="shimmer-effect" />
-                            <span className="text-sm xl:text-base relative z-10">Book A Demo</span>
+                            <span className="text-sm xl:text-base relative z-10">
+                                Book A Demo
+                            </span>
                         </button>
                     </div>
                 </div>
@@ -168,14 +189,42 @@ const Navbar = () => {
                     </div>
 
                     <div className='px-6 mt-auto pb-8 flex flex-col gap-3 border-t border-theme-border/40 pt-4'>
-                        <button onClick={() => { window.open("/login", "_blank"); setMenuOpen(false); }} className='w-full py-3 text-sm relative overflow-hidden flex items-center justify-center gap-2 text-slate-950 bg-gradient-to-r from-[#00C9B1] to-[#F5A623] rounded-xl font-bold cursor-pointer transition-transform duration-200 shadow-md'>
+                        {/* Mobile Login Button */}
+                        <button
+                            onClick={() => {
+                                window.open("/login", "_blank");
+                                setMenuOpen(false);
+                            }}
+                            className={`w-full group py-3 text-sm relative overflow-hidden flex items-center justify-center gap-2 rounded-xl font-bold cursor-pointer border-2 border-teal-400 transition-all duration-300
+                            ${theme === "light"
+                                    ? "bg-[#E8FEFF] shadow-[0_4px_20px_rgba(0,201,177,0.18)]"
+                                    : "bg-transparent shadow-[0_4px_20px_rgba(0,201,177,0.22)] hover:shadow-[0_6px_24px_rgba(245,166,35,0.32)]"
+                                }`}
+                        >
+                            {/* Center-expanding Background Layer */}
+                            <span className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-0 h-0 rounded-full transition-all duration-500 ease-out group-hover:w-[450px] group-hover:h-[450px] pointer-events-none z-0 ${theme === "light" ? "bg-[#D6FFF8]" : "bg-[#00C9B1]/20"
+                                }`} />
+
                             <div className="shimmer-effect" />
-                            <User size={16} className="text-slate-950 relative z-10" />
-                            <span className="relative z-10">Login</span>
+
+                            <User
+                                size={16}
+                                className="text-[#00C9B1] relative z-10 stroke-[2.5]"
+                            />
+
+                            <span className="relative z-10 text-[#00C9B1]">
+                                Login
+                            </span>
                         </button>
 
-                        {/* Mobile: Book A Demo Trigger */}
-                        <button onClick={() => handleNavLinkClick("Book A Demo")} className='w-full py-3 text-sm relative overflow-hidden flex items-center justify-center gap-2 text-slate-950 bg-gradient-to-r from-[#00C9B1] to-[#F5A623] rounded-xl font-bold cursor-pointer transition-transform duration-200 shadow-md'>
+                        {/* Mobile: Book A Demo Button */}
+                        <button
+                            onClick={() => handleNavLinkClick("Book A Demo")}
+                            className='w-full group py-3 text-sm relative overflow-hidden flex items-center justify-center gap-2 text-slate-950 bg-gradient-to-r from-[#F5A623] via-[#F7B347] to-[#FF8C00] rounded-xl font-bold cursor-pointer shadow-[0_4px_20px_rgba(245,166,35,0.35)] hover:shadow-[0_6px_28px_rgba(255,140,0,0.45)] transition-all duration-300'
+                        >
+                            {/* Center-expanding Background Layer */}
+                            <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-0 h-0 rounded-full bg-[#E07B00] transition-all duration-500 ease-out group-hover:w-[450px] group-hover:h-[450px] pointer-events-none z-0" />
+
                             <div className="shimmer-effect" />
                             <span className="relative z-10">Book A Demo</span>
                             <div className="relative z-10 bg-slate-950/10 rounded-md p-0.5 flex items-center justify-center">

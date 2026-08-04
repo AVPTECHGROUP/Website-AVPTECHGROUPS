@@ -1,7 +1,10 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { X, Printer, Medal, CheckCircle, XCircle, Award, BookOpen, Star, Loader2 } from "lucide-react";
 import { updateReportCardRemarks } from "../../Api/Academics/Exams";
+import { getDefaultPrintTemplate } from "../../Api/PrintTemplate/PrintTemplatesApi";
 import { EXAM_CONSTS } from "../../Constants/StringConstants/AcademicsConstants";
+import { getCachedDefaultTemplate, cacheDefaultTemplate, clearCachedDefaultTemplate } from "../../utils/TemplateStorage/templateCache";
+import { renderTemplate, buildReportCardMergeData } from "../../utils/TemplateStorage/Templateengine";
 
 // ─── Grade helper ─────────────────────────────────────────────────────────────
 function getGrade(pct) {
@@ -47,6 +50,44 @@ export default function StudentReportCard({ student, examId, onClose, onUpdateRe
     const [savingRemarks, setSavingRemarks] = useState(false);
     const [remarksError, setRemarksError] = useState(null);
     const [remarksSaved, setRemarksSaved] = useState(false);
+
+    // ── Default print template ──────────────────────────────────────────────
+    // Source of truth is always the API (so every user/browser sees whatever
+    // is currently set as default on the backend). The localStorage cache is
+    // only used for an instant first paint and as an offline fallback if the
+    // API call fails — it is refreshed every time this screen opens.
+    const [defaultTemplate, setDefaultTemplate] = useState(() => getCachedDefaultTemplate("REPORT_CARD"));
+    const [templateLoading, setTemplateLoading] = useState(() => !getCachedDefaultTemplate("REPORT_CARD"));
+
+    useEffect(() => {
+        let cancelled = false;
+        getDefaultPrintTemplate("REPORT_CARD")
+            .then((data) => {
+                if (cancelled) return;
+                if (data) {
+                    setDefaultTemplate(data);
+                    cacheDefaultTemplate("REPORT_CARD", data);
+                } else {
+                    setDefaultTemplate(null);
+                    clearCachedDefaultTemplate("REPORT_CARD");
+                }
+            })
+            .catch(() => {
+                // Offline / request failed — keep whatever we already have
+                // (cached copy, or nothing, in which case the built-in
+                // design below is used instead).
+            })
+            .finally(() => {
+                if (!cancelled) setTemplateLoading(false);
+            });
+        return () => { cancelled = true; };
+    }, []);
+
+    const mergedTemplateHtml = useMemo(() => {
+        if (!defaultTemplate?.templateHtml) return null;
+        const data = buildReportCardMergeData(student, school, { teacherRemarks, principalRemarks });
+        return renderTemplate(defaultTemplate.templateHtml, data);
+    }, [defaultTemplate, student, school, teacherRemarks, principalRemarks]);
 
     const handleSaveRemarks = async () => {
         setSavingRemarks(true);
@@ -109,6 +150,11 @@ export default function StudentReportCard({ student, examId, onClose, onUpdateRe
                     tr { page-break-inside: avoid; }
                 }
 
+                .rc-custom-template { padding: 4px; }
+                @media print {
+                    .rc-custom-template { border: none !important; padding: 0 !important; }
+                }
+
                 .rc-scroll::-webkit-scrollbar { width: 4px; }
                 .rc-scroll::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 99px; }
                 .rc-scroll::-webkit-scrollbar-thumb { background: #c7d2fe; border-radius: 99px; }
@@ -129,6 +175,11 @@ export default function StudentReportCard({ student, examId, onClose, onUpdateRe
                             <span className="hidden sm:inline text-xs text-gray-400 truncate max-w-[180px]">
                                 — {student?.studentName}
                             </span>
+                            {defaultTemplate && (
+                                <span className="rc-no-print hidden md:inline-flex items-center gap-1 text-[10px] font-bold text-purple-600 bg-purple-50 border border-purple-200 px-2 py-0.5 rounded-full">
+                                    {defaultTemplate.templateName}
+                                </span>
+                            )}
                         </div>
                         <div className="flex items-center gap-2">
                             <button
@@ -151,225 +202,241 @@ export default function StudentReportCard({ student, examId, onClose, onUpdateRe
                     <div className="rc-scroll rc-print-content overflow-y-auto flex-1">
                         <div className="p-3 sm:p-4 lg:p-6 space-y-3 sm:space-y-4">
 
-                            {/* ══ School Header ══ */}
-                            <div
-                                className="relative rounded-2xl border-2 border-indigo-200 overflow-hidden"
-                                style={{ background: "linear-gradient(135deg,#eef2ff 0%,#f0f9ff 60%,#faf5ff 100%)" }}
-                            >
-                                <div className="absolute top-0 right-0 w-40 h-40 rounded-full opacity-30 blur-3xl"
-                                    style={{ background: "radial-gradient(circle,#818cf8,transparent)" }} />
-                                <div className="absolute bottom-0 left-0 w-28 h-28 rounded-full opacity-20 blur-2xl"
-                                    style={{ background: "radial-gradient(circle,#38bdf8,transparent)" }} />
-                                <div className="h-2 w-full" style={{ background: "linear-gradient(90deg,#6366f1,#3b82f6,#06b6d4)" }} />
-                                <div className="relative px-4 sm:px-5 py-4 sm:py-5 text-center">
-                                    <div className="flex justify-center mb-3">
-                                        {school.logoUrl ? (
-                                            <img src={school.logoUrl} alt="Logo"
-                                                className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl object-contain bg-white border-2 border-indigo-200 shadow-lg p-1"
-                                                onError={(e) => { e.currentTarget.style.display = "none"; }}
-                                            />
-                                        ) : (
-                                            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center shadow-lg border-2 border-indigo-300"
-                                                style={{ background: "linear-gradient(135deg,#6366f1,#3b82f6)" }}>
-                                                <span className="text-white text-base sm:text-lg font-black tracking-tight">{initials}</span>
+                            {templateLoading && !defaultTemplate ? (
+                                /* ══ First load in this browser — waiting on the live default-template check ══ */
+                                <div className="rc-no-print flex flex-col items-center justify-center gap-2 text-sm text-gray-400 py-16">
+                                    <Loader2 className="w-5 h-5 animate-spin" />
+                                    Loading report card template…
+                                </div>
+                            ) : mergedTemplateHtml ? (
+                                /* ══ Custom default template — themed HTML, filled with live API data ══ */
+                                <div
+                                    className="rc-custom-template rounded-2xl border border-gray-100 overflow-hidden bg-white"
+                                    dangerouslySetInnerHTML={{ __html: mergedTemplateHtml }}
+                                />
+                            ) : (
+                                <>
+                                    {/* ══ School Header ══ */}
+                                    <div
+                                        className="relative rounded-2xl border-2 border-indigo-200 overflow-hidden"
+                                        style={{ background: "linear-gradient(135deg,#eef2ff 0%,#f0f9ff 60%,#faf5ff 100%)" }}
+                                    >
+                                        <div className="absolute top-0 right-0 w-40 h-40 rounded-full opacity-30 blur-3xl"
+                                            style={{ background: "radial-gradient(circle,#818cf8,transparent)" }} />
+                                        <div className="absolute bottom-0 left-0 w-28 h-28 rounded-full opacity-20 blur-2xl"
+                                            style={{ background: "radial-gradient(circle,#38bdf8,transparent)" }} />
+                                        <div className="h-2 w-full" style={{ background: "linear-gradient(90deg,#6366f1,#3b82f6,#06b6d4)" }} />
+                                        <div className="relative px-4 sm:px-5 py-4 sm:py-5 text-center">
+                                            <div className="flex justify-center mb-3">
+                                                {school.logoUrl ? (
+                                                    <img src={school.logoUrl} alt="Logo"
+                                                        className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl object-contain bg-white border-2 border-indigo-200 shadow-lg p-1"
+                                                        onError={(e) => { e.currentTarget.style.display = "none"; }}
+                                                    />
+                                                ) : (
+                                                    <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center shadow-lg border-2 border-indigo-300"
+                                                        style={{ background: "linear-gradient(135deg,#6366f1,#3b82f6)" }}>
+                                                        <span className="text-white text-base sm:text-lg font-black tracking-tight">{initials}</span>
+                                                    </div>
+                                                )}
                                             </div>
+                                            <h1 className="text-base sm:text-lg lg:text-2xl font-black text-gray-900 tracking-tight leading-tight">{school.name}</h1>
+                                            {school.address && <p className="text-xs text-gray-400 mt-0.5">{school.address} &middot; {school.board}</p>}
+                                            <div className="mt-3 inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-1.5 rounded-full text-xs sm:text-sm font-bold text-white shadow-md"
+                                                style={{ background: "linear-gradient(90deg,#6366f1,#3b82f6)" }}>
+                                                <Star className="w-3 h-3" />
+                                                <span className="hidden sm:inline">{student?.examTypeName} — {student?.examName} {EXAM_CONSTS.STUDENT_REPORT.TITLE}</span>
+                                                <span className="sm:hidden">{student?.examTypeName}</span>
+                                                <Star className="w-3 h-3" />
+                                            </div>
+                                        </div>
+                                        <div className="h-1 w-full opacity-40" style={{ background: "linear-gradient(90deg,#6366f1,#3b82f6,#06b6d4)" }} />
+                                    </div>
+
+                                    {/* ══ Student Info ══ */}
+                                    <div className="rounded-xl border-2 border-gray-100 overflow-hidden">
+                                        <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-gray-50 to-slate-50 border-b border-gray-100">
+                                            <div className="w-1.5 h-4 rounded-full bg-indigo-500" />
+                                            <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">{EXAM_CONSTS.STUDENT_REPORT.INFO_TITLE}</p>
+                                        </div>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-gray-100">
+                                            <div className="p-3 sm:p-4 space-y-2 sm:space-y-2.5">
+                                                {[
+                                                    [EXAM_CONSTS.STUDENT_REPORT.INFO_LABELS[0], student?.studentName ?? EXAM_CONSTS.STUDENT_REPORT.FALLBACK_DASH],
+                                                    [EXAM_CONSTS.STUDENT_REPORT.INFO_LABELS[1], student?.admissionNumber ?? EXAM_CONSTS.STUDENT_REPORT.FALLBACK_DASH],
+                                                    [EXAM_CONSTS.STUDENT_REPORT.INFO_LABELS[2], student?.className ?? EXAM_CONSTS.STUDENT_REPORT.FALLBACK_DASH],
+                                                ].map(([label, val]) => (
+                                                    <div key={label} className="flex items-start sm:items-center gap-2">
+                                                        <span className="text-[11px] font-semibold text-indigo-400 w-24 sm:w-28 shrink-0 pt-0.5 sm:pt-0">{label}</span>
+                                                        <span className="text-sm font-bold text-gray-800">{val}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            <div className="p-3 sm:p-4 space-y-2 sm:space-y-2.5">
+                                                {[
+                                                    [EXAM_CONSTS.STUDENT_REPORT.INFO_LABELS[3], student?.sectionName ?? EXAM_CONSTS.STUDENT_REPORT.FALLBACK_DASH],
+                                                    [EXAM_CONSTS.STUDENT_REPORT.INFO_LABELS[4], student?.rollNumber ?? EXAM_CONSTS.STUDENT_REPORT.FALLBACK_DASH],
+                                                    [EXAM_CONSTS.STUDENT_REPORT.INFO_LABELS[5], student?.examTypeName ?? student?.examName ?? EXAM_CONSTS.STUDENT_REPORT.FALLBACK_DASH],
+                                                ].map(([label, val]) => (
+                                                    <div key={label} className="flex items-start sm:items-center gap-2">
+                                                        <span className="text-[11px] font-semibold text-indigo-400 w-24 sm:w-28 shrink-0 pt-0.5 sm:pt-0">{label}</span>
+                                                        <span className="text-sm font-bold text-gray-800">{val}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* ══ Marks Table ══ */}
+                                    <div className="rounded-xl border-2 border-indigo-100 overflow-hidden">
+                                        <div className="flex items-center gap-2 px-4 py-2 border-b border-indigo-100"
+                                            style={{ background: "linear-gradient(90deg,#eef2ff,#eff6ff)" }}>
+                                            <div className="w-1.5 h-4 rounded-full bg-indigo-500" />
+                                            <p className="text-xs font-bold text-indigo-500 uppercase tracking-widest">{EXAM_CONSTS.STUDENT_REPORT.MARKS_TITLE}</p>
+                                        </div>
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-sm min-w-[460px]">
+                                                <thead>
+                                                    <tr style={{ background: "linear-gradient(90deg,#6366f1,#3b82f6)" }}>
+                                                        {EXAM_CONSTS.STUDENT_REPORT.HEADERS.map((h) => (
+                                                            <th key={h} className="text-left px-2.5 sm:px-3 py-2 sm:py-2.5 text-[10px] sm:text-[11px] font-bold text-white uppercase tracking-wider whitespace-nowrap">
+                                                                {h}
+                                                            </th>
+                                                        ))}
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {subjects.length === 0 ? (
+                                                        <tr>
+                                                            <td colSpan={8} className="text-center text-xs text-gray-400 py-6">
+                                                                {EXAM_CONSTS.STUDENT_REPORT.NO_MARKS}
+                                                            </td>
+                                                        </tr>
+                                                    ) : subjects.map((sub, i) => {
+                                                        const subPct = sub.maxMarks
+                                                            ? Math.round((sub.totalMarks / sub.maxMarks) * 100)
+                                                            : 0;
+                                                        const g = getGrade(subPct);
+                                                        const pass = !sub.isAbsent && sub.totalMarks >= (sub.passingMarks ?? 0);
+
+                                                        return (
+                                                            <tr key={`${sub.subjectId}-${i}`}
+                                                                className={`border-t border-gray-100 ${i % 2 === 0 ? "bg-white" : "bg-slate-50/60"} hover:bg-indigo-50/30 transition-colors`}>
+                                                                <td className="px-2.5 sm:px-3 py-2 sm:py-2.5 font-semibold text-gray-800 whitespace-nowrap">
+                                                                    {sub.subjectName}
+                                                                </td>
+                                                                <td className="px-2.5 sm:px-3 py-2 text-gray-400 text-xs">{sub.maxMarks}</td>
+                                                                <td className="px-2.5 sm:px-3 py-2 text-gray-500 text-xs">
+                                                                    {sub.isAbsent ? <span className="text-blue-400 font-semibold">{EXAM_CONSTS.STUDENT_REPORT.ABSENT_MARK}</span>
+                                                                        : sub.theoryMarks != null ? sub.theoryMarks
+                                                                            : <span className="text-gray-200">{EXAM_CONSTS.STUDENT_REPORT.FALLBACK_DASH}</span>}
+                                                                </td>
+                                                                <td className="px-2.5 sm:px-3 py-2 text-gray-500 text-xs">
+                                                                    {sub.isAbsent ? <span className="text-blue-400 font-semibold">{EXAM_CONSTS.STUDENT_REPORT.ABSENT_MARK}</span>
+                                                                        : sub.practicalMarks != null ? sub.practicalMarks
+                                                                            : <span className="text-gray-200">{EXAM_CONSTS.STUDENT_REPORT.FALLBACK_DASH}</span>}
+                                                                </td>
+                                                                <td className="px-2.5 sm:px-3 py-2">
+                                                                    <span className="font-extrabold text-gray-900">
+                                                                        {sub.isAbsent ? <span className="text-blue-400 font-semibold">{EXAM_CONSTS.STUDENT_REPORT.ABSENT_MARK}</span> : sub.totalMarks}
+                                                                    </span>
+                                                                </td>
+                                                                <td className="px-2.5 sm:px-3 py-2">
+                                                                    <div className="flex items-center gap-1 sm:gap-1.5">
+                                                                        <div className="w-6 sm:w-8 h-1.5 rounded-full bg-gray-100 overflow-hidden hidden sm:block shrink-0">
+                                                                            <div className={`h-full rounded-full ${g.bar}`} style={{ width: `${subPct}%` }} />
+                                                                        </div>
+                                                                        <span className="text-xs font-semibold text-gray-600">
+                                                                            {sub.isAbsent ? EXAM_CONSTS.STUDENT_REPORT.FALLBACK_DASH : `${subPct}%`}
+                                                                        </span>
+                                                                    </div>
+                                                                </td>
+                                                                <td className="px-2.5 sm:px-3 py-2">
+                                                                    <span className={`inline-flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-full text-[10px] font-extrabold border-2 ${g.bg} ${g.color} ${g.border}`}>
+                                                                        {sub.isAbsent ? EXAM_CONSTS.STUDENT_REPORT.ABSENT_MARK : (sub.grade || g.label)}
+                                                                    </span>
+                                                                </td>
+                                                                <td className="px-2.5 sm:px-3 py-2">
+                                                                    {sub.isAbsent ? (
+                                                                        <span className="px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] font-bold border bg-gray-50 text-gray-500 border-gray-200">
+                                                                            {EXAM_CONSTS.STUDENT_REPORT.ABSENT_LBL}
+                                                                        </span>
+                                                                    ) : (
+                                                                        <span className={`px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] font-bold border ${pass ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-red-50 text-red-600 border-red-200"}`}>
+                                                                            {pass ? EXAM_CONSTS.STUDENT_REPORT.PASS_LBL : EXAM_CONSTS.STUDENT_REPORT.FAIL_LBL}
+                                                                        </span>
+                                                                    )}
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+
+                                    {/* ══ Summary Cards ══ */}
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+                                        <div className="col-span-2 sm:col-span-1 rounded-xl border-2 border-indigo-100 p-3 text-center"
+                                            style={{ background: "linear-gradient(135deg,#eef2ff,#eff6ff)" }}>
+                                            <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-1">{EXAM_CONSTS.STUDENT_REPORT.TOTAL_MARKS}</p>
+                                            <p className="text-lg sm:text-xl font-extrabold text-gray-900">
+                                                {student?.totalMarksObtained ?? EXAM_CONSTS.STUDENT_REPORT.FALLBACK_DASH}
+                                                <span className="text-xs font-semibold text-gray-400"> / {student?.totalMaxMarks ?? EXAM_CONSTS.STUDENT_REPORT.FALLBACK_DASH}</span>
+                                            </p>
+                                        </div>
+                                        <div className="rounded-xl border-2 border-blue-100 p-3 text-center"
+                                            style={{ background: "linear-gradient(135deg,#eff6ff,#f0f9ff)" }}>
+                                            <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-1">{EXAM_CONSTS.STUDENT_REPORT.PERCENTAGE}</p>
+                                            <p className="text-lg sm:text-xl font-extrabold text-gray-900">
+                                                {pct != null ? `${Number(pct).toFixed(1)}%` : EXAM_CONSTS.STUDENT_REPORT.FALLBACK_DASH}
+                                            </p>
+                                        </div>
+                                        <div className={`rounded-xl border-2 p-3 text-center ${overallGrade.bg} ${overallGrade.border}`}>
+                                            <p className="text-[10px] font-bold uppercase tracking-widest mb-1 text-gray-400">{EXAM_CONSTS.STUDENT_REPORT.LBL_GRADE}</p>
+                                            <span className={`text-2xl font-extrabold ${overallGrade.color}`}>
+                                                {student?.overallGrade || overallGrade.label}
+                                            </span>
+                                        </div>
+                                        <div className="rounded-xl border-2 border-amber-200 p-3 text-center"
+                                            style={{ background: "linear-gradient(135deg,#fffbeb,#fef9c3)" }}>
+                                            <p className="text-[10px] font-bold text-amber-500 uppercase tracking-widest mb-1">{EXAM_CONSTS.STUDENT_REPORT.CLASS_RANK}</p>
+                                            <div className="flex items-center justify-center gap-1">
+                                                <Medal className="w-4 h-4 text-amber-500" />
+                                                <span className="text-lg sm:text-xl font-extrabold text-gray-900">
+                                                    {student?.classRank ?? EXAM_CONSTS.STUDENT_REPORT.FALLBACK_DASH}
+                                                </span>
+                                            </div>
+                                            {student?.sectionRank && (
+                                                <p className="text-[10px] text-amber-400 font-medium mt-0.5">
+                                                    {EXAM_CONSTS.STUDENT_REPORT.SEC_RANK}{student.sectionRank}
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* ══ Result Banner ══ */}
+                                    <div className={`relative flex items-center justify-center gap-2 sm:gap-2.5 rounded-xl py-3 sm:py-3.5 font-bold text-xs sm:text-sm border-2 overflow-hidden ${isAbsent
+                                        ? "bg-gray-50 border-gray-200 text-gray-500"
+                                        : isPassed
+                                            ? "border-emerald-300 text-emerald-700"
+                                            : "border-red-300 text-red-600"
+                                        }`}
+                                        style={!isAbsent ? {
+                                            background: isPassed
+                                                ? "linear-gradient(90deg,#ecfdf5,#f0fdf4,#ecfdf5)"
+                                                : "linear-gradient(90deg,#fef2f2,#fff1f2,#fef2f2)"
+                                        } : {}}>
+                                        {isAbsent ? (
+                                            <><Award className="w-4 h-4 sm:w-5 sm:h-5" /> {EXAM_CONSTS.STUDENT_REPORT.RES_ABSENT}</>
+                                        ) : isPassed ? (
+                                            <><CheckCircle className="w-4 h-4 sm:w-5 sm:h-5" /> {EXAM_CONSTS.STUDENT_REPORT.RES_PASSED}</>
+                                        ) : (
+                                            <><XCircle className="w-4 h-4 sm:w-5 sm:h-5" /> {EXAM_CONSTS.STUDENT_REPORT.RES_FAILED}</>
                                         )}
                                     </div>
-                                    <h1 className="text-base sm:text-lg lg:text-2xl font-black text-gray-900 tracking-tight leading-tight">{school.name}</h1>
-                                    {school.address && <p className="text-xs text-gray-400 mt-0.5">{school.address} &middot; {school.board}</p>}
-                                    <div className="mt-3 inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-1.5 rounded-full text-xs sm:text-sm font-bold text-white shadow-md"
-                                        style={{ background: "linear-gradient(90deg,#6366f1,#3b82f6)" }}>
-                                        <Star className="w-3 h-3" />
-                                        <span className="hidden sm:inline">{student?.examTypeName} — {student?.examName} {EXAM_CONSTS.STUDENT_REPORT.TITLE}</span>
-                                        <span className="sm:hidden">{student?.examTypeName}</span>
-                                        <Star className="w-3 h-3" />
-                                    </div>
-                                </div>
-                                <div className="h-1 w-full opacity-40" style={{ background: "linear-gradient(90deg,#6366f1,#3b82f6,#06b6d4)" }} />
-                            </div>
-
-                            {/* ══ Student Info ══ */}
-                            <div className="rounded-xl border-2 border-gray-100 overflow-hidden">
-                                <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-gray-50 to-slate-50 border-b border-gray-100">
-                                    <div className="w-1.5 h-4 rounded-full bg-indigo-500" />
-                                    <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">{EXAM_CONSTS.STUDENT_REPORT.INFO_TITLE}</p>
-                                </div>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-gray-100">
-                                    <div className="p-3 sm:p-4 space-y-2 sm:space-y-2.5">
-                                        {[
-                                            [EXAM_CONSTS.STUDENT_REPORT.INFO_LABELS[0], student?.studentName ?? EXAM_CONSTS.STUDENT_REPORT.FALLBACK_DASH],
-                                            [EXAM_CONSTS.STUDENT_REPORT.INFO_LABELS[1], student?.admissionNumber ?? EXAM_CONSTS.STUDENT_REPORT.FALLBACK_DASH],
-                                            [EXAM_CONSTS.STUDENT_REPORT.INFO_LABELS[2], student?.className ?? EXAM_CONSTS.STUDENT_REPORT.FALLBACK_DASH],
-                                        ].map(([label, val]) => (
-                                            <div key={label} className="flex items-start sm:items-center gap-2">
-                                                <span className="text-[11px] font-semibold text-indigo-400 w-24 sm:w-28 shrink-0 pt-0.5 sm:pt-0">{label}</span>
-                                                <span className="text-sm font-bold text-gray-800">{val}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                    <div className="p-3 sm:p-4 space-y-2 sm:space-y-2.5">
-                                        {[
-                                            [EXAM_CONSTS.STUDENT_REPORT.INFO_LABELS[3], student?.sectionName ?? EXAM_CONSTS.STUDENT_REPORT.FALLBACK_DASH],
-                                            [EXAM_CONSTS.STUDENT_REPORT.INFO_LABELS[4], student?.rollNumber ?? EXAM_CONSTS.STUDENT_REPORT.FALLBACK_DASH],
-                                            [EXAM_CONSTS.STUDENT_REPORT.INFO_LABELS[5], student?.examTypeName ?? student?.examName ?? EXAM_CONSTS.STUDENT_REPORT.FALLBACK_DASH],
-                                        ].map(([label, val]) => (
-                                            <div key={label} className="flex items-start sm:items-center gap-2">
-                                                <span className="text-[11px] font-semibold text-indigo-400 w-24 sm:w-28 shrink-0 pt-0.5 sm:pt-0">{label}</span>
-                                                <span className="text-sm font-bold text-gray-800">{val}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* ══ Marks Table ══ */}
-                            <div className="rounded-xl border-2 border-indigo-100 overflow-hidden">
-                                <div className="flex items-center gap-2 px-4 py-2 border-b border-indigo-100"
-                                    style={{ background: "linear-gradient(90deg,#eef2ff,#eff6ff)" }}>
-                                    <div className="w-1.5 h-4 rounded-full bg-indigo-500" />
-                                    <p className="text-xs font-bold text-indigo-500 uppercase tracking-widest">{EXAM_CONSTS.STUDENT_REPORT.MARKS_TITLE}</p>
-                                </div>
-                                <div className="overflow-x-auto">
-                                    <table className="w-full text-sm min-w-[460px]">
-                                        <thead>
-                                            <tr style={{ background: "linear-gradient(90deg,#6366f1,#3b82f6)" }}>
-                                                {EXAM_CONSTS.STUDENT_REPORT.HEADERS.map((h) => (
-                                                    <th key={h} className="text-left px-2.5 sm:px-3 py-2 sm:py-2.5 text-[10px] sm:text-[11px] font-bold text-white uppercase tracking-wider whitespace-nowrap">
-                                                        {h}
-                                                    </th>
-                                                ))}
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {subjects.length === 0 ? (
-                                                <tr>
-                                                    <td colSpan={8} className="text-center text-xs text-gray-400 py-6">
-                                                        {EXAM_CONSTS.STUDENT_REPORT.NO_MARKS}
-                                                    </td>
-                                                </tr>
-                                            ) : subjects.map((sub, i) => {
-                                                const subPct = sub.maxMarks
-                                                    ? Math.round((sub.totalMarks / sub.maxMarks) * 100)
-                                                    : 0;
-                                                const g = getGrade(subPct);
-                                                const pass = !sub.isAbsent && sub.totalMarks >= (sub.passingMarks ?? 0);
-
-                                                return (
-                                                    <tr key={`${sub.subjectId}-${i}`}
-                                                        className={`border-t border-gray-100 ${i % 2 === 0 ? "bg-white" : "bg-slate-50/60"} hover:bg-indigo-50/30 transition-colors`}>
-                                                        <td className="px-2.5 sm:px-3 py-2 sm:py-2.5 font-semibold text-gray-800 whitespace-nowrap">
-                                                            {sub.subjectName}
-                                                        </td>
-                                                        <td className="px-2.5 sm:px-3 py-2 text-gray-400 text-xs">{sub.maxMarks}</td>
-                                                        <td className="px-2.5 sm:px-3 py-2 text-gray-500 text-xs">
-                                                            {sub.isAbsent ? <span className="text-blue-400 font-semibold">{EXAM_CONSTS.STUDENT_REPORT.ABSENT_MARK}</span>
-                                                                : sub.theoryMarks != null ? sub.theoryMarks
-                                                                    : <span className="text-gray-200">{EXAM_CONSTS.STUDENT_REPORT.FALLBACK_DASH}</span>}
-                                                        </td>
-                                                        <td className="px-2.5 sm:px-3 py-2 text-gray-500 text-xs">
-                                                            {sub.isAbsent ? <span className="text-blue-400 font-semibold">{EXAM_CONSTS.STUDENT_REPORT.ABSENT_MARK}</span>
-                                                                : sub.practicalMarks != null ? sub.practicalMarks
-                                                                    : <span className="text-gray-200">{EXAM_CONSTS.STUDENT_REPORT.FALLBACK_DASH}</span>}
-                                                        </td>
-                                                        <td className="px-2.5 sm:px-3 py-2">
-                                                            <span className="font-extrabold text-gray-900">
-                                                                {sub.isAbsent ? <span className="text-blue-400 font-semibold">{EXAM_CONSTS.STUDENT_REPORT.ABSENT_MARK}</span> : sub.totalMarks}
-                                                            </span>
-                                                        </td>
-                                                        <td className="px-2.5 sm:px-3 py-2">
-                                                            <div className="flex items-center gap-1 sm:gap-1.5">
-                                                                <div className="w-6 sm:w-8 h-1.5 rounded-full bg-gray-100 overflow-hidden hidden sm:block shrink-0">
-                                                                    <div className={`h-full rounded-full ${g.bar}`} style={{ width: `${subPct}%` }} />
-                                                                </div>
-                                                                <span className="text-xs font-semibold text-gray-600">
-                                                                    {sub.isAbsent ? EXAM_CONSTS.STUDENT_REPORT.FALLBACK_DASH : `${subPct}%`}
-                                                                </span>
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-2.5 sm:px-3 py-2">
-                                                            <span className={`inline-flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-full text-[10px] font-extrabold border-2 ${g.bg} ${g.color} ${g.border}`}>
-                                                                {sub.isAbsent ? EXAM_CONSTS.STUDENT_REPORT.ABSENT_MARK : (sub.grade || g.label)}
-                                                            </span>
-                                                        </td>
-                                                        <td className="px-2.5 sm:px-3 py-2">
-                                                            {sub.isAbsent ? (
-                                                                <span className="px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] font-bold border bg-gray-50 text-gray-500 border-gray-200">
-                                                                    {EXAM_CONSTS.STUDENT_REPORT.ABSENT_LBL}
-                                                                </span>
-                                                            ) : (
-                                                                <span className={`px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] font-bold border ${pass ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-red-50 text-red-600 border-red-200"}`}>
-                                                                    {pass ? EXAM_CONSTS.STUDENT_REPORT.PASS_LBL : EXAM_CONSTS.STUDENT_REPORT.FAIL_LBL}
-                                                                </span>
-                                                            )}
-                                                        </td>
-                                                    </tr>
-                                                );
-                                            })}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-
-                            {/* ══ Summary Cards ══ */}
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
-                                <div className="col-span-2 sm:col-span-1 rounded-xl border-2 border-indigo-100 p-3 text-center"
-                                    style={{ background: "linear-gradient(135deg,#eef2ff,#eff6ff)" }}>
-                                    <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-1">{EXAM_CONSTS.STUDENT_REPORT.TOTAL_MARKS}</p>
-                                    <p className="text-lg sm:text-xl font-extrabold text-gray-900">
-                                        {student?.totalMarksObtained ?? EXAM_CONSTS.STUDENT_REPORT.FALLBACK_DASH}
-                                        <span className="text-xs font-semibold text-gray-400"> / {student?.totalMaxMarks ?? EXAM_CONSTS.STUDENT_REPORT.FALLBACK_DASH}</span>
-                                    </p>
-                                </div>
-                                <div className="rounded-xl border-2 border-blue-100 p-3 text-center"
-                                    style={{ background: "linear-gradient(135deg,#eff6ff,#f0f9ff)" }}>
-                                    <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-1">{EXAM_CONSTS.STUDENT_REPORT.PERCENTAGE}</p>
-                                    <p className="text-lg sm:text-xl font-extrabold text-gray-900">
-                                        {pct != null ? `${Number(pct).toFixed(1)}%` : EXAM_CONSTS.STUDENT_REPORT.FALLBACK_DASH}
-                                    </p>
-                                </div>
-                                <div className={`rounded-xl border-2 p-3 text-center ${overallGrade.bg} ${overallGrade.border}`}>
-                                    <p className="text-[10px] font-bold uppercase tracking-widest mb-1 text-gray-400">{EXAM_CONSTS.STUDENT_REPORT.LBL_GRADE}</p>
-                                    <span className={`text-2xl font-extrabold ${overallGrade.color}`}>
-                                        {student?.overallGrade || overallGrade.label}
-                                    </span>
-                                </div>
-                                <div className="rounded-xl border-2 border-amber-200 p-3 text-center"
-                                    style={{ background: "linear-gradient(135deg,#fffbeb,#fef9c3)" }}>
-                                    <p className="text-[10px] font-bold text-amber-500 uppercase tracking-widest mb-1">{EXAM_CONSTS.STUDENT_REPORT.CLASS_RANK}</p>
-                                    <div className="flex items-center justify-center gap-1">
-                                        <Medal className="w-4 h-4 text-amber-500" />
-                                        <span className="text-lg sm:text-xl font-extrabold text-gray-900">
-                                            {student?.classRank ?? EXAM_CONSTS.STUDENT_REPORT.FALLBACK_DASH}
-                                        </span>
-                                    </div>
-                                    {student?.sectionRank && (
-                                        <p className="text-[10px] text-amber-400 font-medium mt-0.5">
-                                            {EXAM_CONSTS.STUDENT_REPORT.SEC_RANK}{student.sectionRank}
-                                        </p>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* ══ Result Banner ══ */}
-                            <div className={`relative flex items-center justify-center gap-2 sm:gap-2.5 rounded-xl py-3 sm:py-3.5 font-bold text-xs sm:text-sm border-2 overflow-hidden ${isAbsent
-                                ? "bg-gray-50 border-gray-200 text-gray-500"
-                                : isPassed
-                                    ? "border-emerald-300 text-emerald-700"
-                                    : "border-red-300 text-red-600"
-                                }`}
-                                style={!isAbsent ? {
-                                    background: isPassed
-                                        ? "linear-gradient(90deg,#ecfdf5,#f0fdf4,#ecfdf5)"
-                                        : "linear-gradient(90deg,#fef2f2,#fff1f2,#fef2f2)"
-                                } : {}}>
-                                {isAbsent ? (
-                                    <><Award className="w-4 h-4 sm:w-5 sm:h-5" /> {EXAM_CONSTS.STUDENT_REPORT.RES_ABSENT}</>
-                                ) : isPassed ? (
-                                    <><CheckCircle className="w-4 h-4 sm:w-5 sm:h-5" /> {EXAM_CONSTS.STUDENT_REPORT.RES_PASSED}</>
-                                ) : (
-                                    <><XCircle className="w-4 h-4 sm:w-5 sm:h-5" /> {EXAM_CONSTS.STUDENT_REPORT.RES_FAILED}</>
-                                )}
-                            </div>
+                                </>
+                            )}
 
                             {/* ══ Remarks ══ */}
                             <div className="rounded-xl border-2 border-indigo-100 overflow-hidden">

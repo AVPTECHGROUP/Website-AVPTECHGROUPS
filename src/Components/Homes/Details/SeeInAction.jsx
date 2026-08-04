@@ -219,7 +219,6 @@ function DesktopGrid({ images, isPhone, isDark, autoActiveIndex, setAutoActiveIn
 }
 
 // ─── MobileCarousel ───────────────────────────────────────────────────────────
-
 function MobileCarousel({ images, isPhone, isDark, active, setActive }) {
   const trackRef = useRef(null)
   const go = (dir) => setActive(p => (p + dir + images.length) % images.length)
@@ -275,12 +274,20 @@ function MobileCarousel({ images, isPhone, isDark, active, setActive }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: '1.1rem' }}>
         {[{ label: '‹', dir: -1 }, { label: '›', dir: 1 }].map(({ label, dir }, i) => (
           <button key={i} onClick={() => go(dir)} style={{
-            width: 40, height: 40, borderRadius: '50%',
+            width: 40,
+            height: 40,
+            borderRadius: '50%',
             border: '1px solid rgba(45,212,191,0.4)',
             background: 'rgba(45,212,191,0.07)',
-            color: '#2dd4bf', fontSize: '1.5rem',
-            cursor: 'pointer', display: 'flex', alignItems: 'center', justifycontent: 'center',
-            backdropFilter: 'blur(8px)', lineHeight: 1,
+            color: '#2dd4bf',
+            fontSize: '1.5rem',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backdropFilter: 'blur(8px)',
+            lineHeight: 0,
+            paddingBottom: '4px',
           }}>
             {label}
           </button>
@@ -378,8 +385,8 @@ export default function SeeInAction() {
         }}>
           <div style={{ ...S.slider, left: activeTab === 'admin' ? 4 : 'calc(50%)' }} />
           {[
-            { key: 'admin', e: '🖥️', t: 'Admin Dashboard' },
-            { key: 'parent', e: '📱', t: 'Parent App' },
+            { key: 'admin', e: '', t: 'Admin Dashboard' },
+            { key: 'parent', e: '', t: 'SchoolSpine App' },
           ].map(({ key, e, t }) => (
             <button
               key={key}

@@ -17,6 +17,8 @@ export default function AttendanceRoutes() {
     <>
       {/* Available to all authenticated users */}
       <Route path={ROUTE_PATHS.ATTENDANCE_MARK_USER} element={<MarkUserAttendance />} />
+      <Route path={ROUTE_PATHS.ATTENDANCE_USERS_WARNING} element={<WarningVerificationFailed />} />
+      <Route path={ROUTE_PATHS.ATTENDANCE_USERS_MANUAL} element={<ManualAttendance />} />
 
       {/* ADMIN, SUPER_ADMIN, GLOBAL_ADMIN, PRINCIPAL */}
       <Route element={<RoleProtectedRoute allowedRoles={ROLE_GROUPS.ADMIN_PRINCIPAL} />}>
@@ -24,8 +26,6 @@ export default function AttendanceRoutes() {
         <Route path={ROUTE_PATHS.ATTENDANCE_STAFF_IMG_REG} element={<StaffAttendanceRegistration />} />
         <Route path={ROUTE_PATHS.ATTENDANCE_STUDENT_IMG_REG} element={<StudentAttendanceRegistration />} />
         <Route path={ROUTE_PATHS.ATTENDANCE_USERS} element={<UsersAttendance />} />
-        <Route path={ROUTE_PATHS.ATTENDANCE_USERS_WARNING} element={<WarningVerificationFailed />} />
-        <Route path={ROUTE_PATHS.ATTENDANCE_USERS_MANUAL} element={<ManualAttendance />} />
       </Route>
 
       {/* ADMIN, SUPER_ADMIN, GLOBAL_ADMIN, PRINCIPAL, TEACHER */}

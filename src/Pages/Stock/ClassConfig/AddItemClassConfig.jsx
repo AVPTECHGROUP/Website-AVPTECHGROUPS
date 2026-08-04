@@ -137,6 +137,18 @@ export default function AddItemClassConfig({
     });
   };
 
+  const handleDirectQtyInputChange = (id, rawValue) => {
+    const val = parseInt(rawValue, 10);
+    setSelectedItems((prev) => {
+      if (isNaN(val) || val <= 0) {
+        const copy = { ...prev };
+        delete copy[id];
+        return copy;
+      }
+      return { ...prev, [id]: { quantity: val } };
+    });
+  };
+
   // ── Save ──
   const handleSave = async () => {
     const entries = Object.entries(selectedItems);
@@ -195,6 +207,16 @@ export default function AddItemClassConfig({
         .step-dot-active  { background: #3b82f6; width: 24px; }
         .step-dot-done    { background: #22c55e; }
         .step-dot-pending { background: #e5e7eb; }
+
+        /* Hide HTML5 number spinners */
+        input[type='number']::-webkit-inner-spin-button,
+        input[type='number']::-webkit-outer-spin-button {
+          -webkit-appearance: none;
+          margin: 0;
+        }
+        input[type='number'] {
+          -moz-appearance: textfield;
+        }
       `}</style>
 
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
@@ -267,7 +289,7 @@ export default function AddItemClassConfig({
             <div className="px-6 py-2 bg-gray-50 border-b border-gray-100 shrink-0">
               <div className="flex items-center gap-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">
                 <span className="flex-1">{ADD_ITEM_CLASS_CONFIG_CONSTS.TABLE_HEADERS.ITEM}</span>
-                <span className="w-28 text-center">{ADD_ITEM_CLASS_CONFIG_CONSTS.TABLE_HEADERS.QUANTITY}</span>
+                <span className="w-32 text-center">{ADD_ITEM_CLASS_CONFIG_CONSTS.TABLE_HEADERS.QUANTITY}</span>
               </div>
             </div>
 
@@ -333,27 +355,41 @@ export default function AddItemClassConfig({
                         </p>
                       </div>
 
-                      <div className="flex items-center gap-1.5 w-28 justify-center shrink-0">
+                      {/* Quantity Controls */}
+                      <div className="flex items-center gap-1 w-32 justify-center shrink-0">
                         <button
                           onClick={() => !isLocked && handleQtyChange(item.id, -1)}
                           disabled={isLocked}
-                          className={`w-7 h-7 flex items-center justify-center rounded-lg border transition-colors cursor-pointer ${isLocked ? "border-gray-100 text-gray-300 cursor-not-allowed bg-gray-50"
-                              : isSelected ? "border-orange-300 text-orange-500 hover:bg-orange-50"
-                                : "border-gray-200 text-gray-400 hover:bg-gray-100"
+                          className={`w-7 h-7 flex items-center justify-center rounded-lg border transition-colors cursor-pointer shrink-0 ${isLocked ? "border-gray-100 text-gray-300 cursor-not-allowed bg-gray-50"
+                            : isSelected ? "border-orange-300 text-orange-500 hover:bg-orange-50"
+                              : "border-gray-200 text-gray-400 hover:bg-gray-100"
                             }`}
                         >
                           <Minus size={12} />
                         </button>
-                        <span className={`w-8 text-center text-sm font-bold tabular-nums ${isLocked ? "text-gray-300" : isSelected ? "text-orange-500" : "text-gray-400"
-                          }`}>
-                          {qty}
-                        </span>
+
+                        <input
+                          type="number"
+                          min="0"
+                          disabled={isLocked}
+                          value={qty === 0 ? "" : qty}
+                          placeholder="0"
+                          onChange={(e) => !isLocked && handleDirectQtyInputChange(item.id, e.target.value)}
+                          onKeyDown={(e) => ["e", "E", "+", "-", "."].includes(e.key) && e.preventDefault()}
+                          className={`w-12 h-7 text-center text-sm font-bold tabular-nums rounded-md border focus:outline-none focus:ring-2 focus:ring-blue-300 transition ${isLocked
+                            ? "bg-transparent border-transparent text-gray-300 cursor-not-allowed"
+                            : isSelected
+                              ? "border-orange-300 text-orange-500 bg-white"
+                              : "border-gray-200 text-gray-400 bg-white"
+                            }`}
+                        />
+
                         <button
                           onClick={() => !isLocked && handleQtyChange(item.id, 1)}
                           disabled={isLocked}
-                          className={`w-7 h-7 flex items-center justify-center rounded-lg border transition-colors cursor-pointer ${isLocked ? "border-gray-100 text-gray-300 cursor-not-allowed bg-gray-50"
-                              : isSelected ? "border-orange-300 text-orange-500 hover:bg-orange-50"
-                                : "border-gray-200 text-gray-400 hover:bg-gray-100"
+                          className={`w-7 h-7 flex items-center justify-center rounded-lg border transition-colors cursor-pointer shrink-0 ${isLocked ? "border-gray-100 text-gray-300 cursor-not-allowed bg-gray-50"
+                            : isSelected ? "border-orange-300 text-orange-500 hover:bg-orange-50"
+                              : "border-gray-200 text-gray-400 hover:bg-gray-100"
                             }`}
                         >
                           <Plus size={12} />
@@ -413,7 +449,7 @@ export default function AddItemClassConfig({
             <div className="px-6 py-2 bg-gray-50 border-b border-gray-100 shrink-0">
               <div className="flex items-center gap-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">
                 <span className="flex-1">{ADD_ITEM_CLASS_CONFIG_CONSTS.TABLE_HEADERS.ITEM}</span>
-                <span className="w-28 text-center">{ADD_ITEM_CLASS_CONFIG_CONSTS.TABLE_HEADERS.QUANTITY}</span>
+                <span className="w-32 text-center">{ADD_ITEM_CLASS_CONFIG_CONSTS.TABLE_HEADERS.QUANTITY}</span>
               </div>
             </div>
 
@@ -439,12 +475,23 @@ export default function AddItemClassConfig({
                       <p className="text-xs text-gray-400 mt-0.5">{item.itemCode} · {item.unit}</p>
                     </div>
 
-                    <div className="flex items-center gap-1.5 w-28 justify-center shrink-0">
-                      <button onClick={() => handleQtyChange(item.id, -1)} className="w-7 h-7 flex items-center justify-center rounded-lg border border-orange-300 text-orange-500 hover:bg-orange-50 transition-colors cursor-pointer">
+                    {/* Quantity Controls */}
+                    <div className="flex items-center gap-1 w-32 justify-center shrink-0">
+                      <button onClick={() => handleQtyChange(item.id, -1)} className="w-7 h-7 flex items-center justify-center rounded-lg border border-orange-300 text-orange-500 hover:bg-orange-50 transition-colors cursor-pointer shrink-0">
                         <Minus size={12} />
                       </button>
-                      <span className="w-8 text-center text-sm font-bold tabular-nums text-orange-500">{item.quantity}</span>
-                      <button onClick={() => handleQtyChange(item.id, 1)} className="w-7 h-7 flex items-center justify-center rounded-lg border border-orange-300 text-orange-500 hover:bg-orange-50 transition-colors cursor-pointer">
+
+                      <input
+                        type="number"
+                        min="0"
+                        value={item.quantity === 0 ? "" : item.quantity}
+                        placeholder="0"
+                        onChange={(e) => handleDirectQtyInputChange(item.id, e.target.value)}
+                        onKeyDown={(e) => ["e", "E", "+", "-", "."].includes(e.key) && e.preventDefault()}
+                        className="w-12 h-7 text-center text-sm font-bold tabular-nums rounded-md border border-orange-300 text-orange-500 bg-white focus:outline-none focus:ring-2 focus:ring-blue-300 transition"
+                      />
+
+                      <button onClick={() => handleQtyChange(item.id, 1)} className="w-7 h-7 flex items-center justify-center rounded-lg border border-orange-300 text-orange-500 hover:bg-orange-50 transition-colors cursor-pointer shrink-0">
                         <Plus size={12} />
                       </button>
                     </div>

@@ -125,6 +125,51 @@ const Leaves = () => {
     fetchListOfValues();
   }, []);
 
+  const handleExportCSV = () => {
+    if (leaveReq.length === 0) {
+      toast.warning("No data available to export.");
+      return;
+    }
+
+    // 1. Define the CSV Headers matching your table structure
+    const headers = ["Employee Name", "Employee Code", "Leave Type", "From Date", "To Date", "Duration", "Status"];
+
+    // 2. Map row content and convert values to descriptive text labels
+    const rows = leaveReq.map(emp => [
+      emp.name,
+      emp.empCode || 'N/A',
+      getLabelFromValue(listOfLeaveType, emp.leaveType),
+      emp.fromDate,
+      emp.toDate,
+      getLeaveDurationText(emp),
+      emp.currEmpstatus
+    ]);
+
+    // 3. Assemble content string escaping dynamic text columns properly
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(row =>
+        row.map(val => {
+          const cleanVal = String(val ?? '').replace(/"/g, '""');
+          return cleanVal.includes(',') || cleanVal.includes('\n') || cleanVal.includes('"')
+            ? `"${cleanVal}"`
+            : cleanVal;
+        }).join(",")
+      )
+    ].join("\n");
+
+    // 4. Trigger localized window download target block
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Leave_Requests_Export_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   // ── Statistics ────────────────────────────────────────────────────────────────
   useEffect(() => {
     const fetchStatistics = async () => {
@@ -170,19 +215,19 @@ const Leaves = () => {
 
       setLeaveReq(
         leaveRequests.map((employee) => ({
-          leaveId:        employee.id,
-          id:             employee.userId,           // applicant's user ID
-          applicantRole:  employee.userType || '',   // applicant's role — used for hierarchy check
-          name:           employee.userName || 'Unknown',
-          leaveType:      employee.leaveType,
-          fromDate:       employee.fromDate,
-          toDate:         employee.toDate,
-          totalDays:      employee.totalDays,
-          reason:         employee.reason,
-          reviewRemarks:  employee.reviewRemarks,
-          status:         employee.status,
-          empCode:        employee.employeeCode,
-          avatar:         (employee.userName || 'U')[0].toUpperCase(),
+          leaveId: employee.id,
+          id: employee.userId,           // applicant's user ID
+          applicantRole: employee.userType || '',   // applicant's role — used for hierarchy check
+          name: employee.userName || 'Unknown',
+          leaveType: employee.leaveType,
+          fromDate: employee.fromDate,
+          toDate: employee.toDate,
+          totalDays: employee.totalDays,
+          reason: employee.reason,
+          reviewRemarks: employee.reviewRemarks,
+          status: employee.status,
+          empCode: employee.employeeCode,
+          avatar: (employee.userName || 'U')[0].toUpperCase(),
           isHalfDay:
             employee.isHalfDay === true ||
             employee.isHalfDay === 'true' ||
@@ -191,8 +236,8 @@ const Leaves = () => {
             employee.imageUrl ||
             employee.profileImage ||
             `https://ui-avatars.com/api/?name=${encodeURIComponent(employee.userName)}&background=random`,
-          role:           employee.userType || 'N/A',
-          currEmpstatus:  employee.status,
+          role: employee.userType || 'N/A',
+          currEmpstatus: employee.status,
         }))
       );
 
@@ -237,10 +282,10 @@ const Leaves = () => {
   function showApproveReject(emp) {
     if (emp.currEmpstatus !== 'PENDING') return false;
     return canViewerApprove({
-      viewerUserId:   currentUser?.id,
-      viewerRole:     currentUser?.userType,
+      viewerUserId: currentUser?.id,
+      viewerRole: currentUser?.userType,
       applicantUserId: emp.id,
-      applicantRole:  emp.applicantRole,
+      applicantRole: emp.applicantRole,
     });
   }
 
@@ -334,17 +379,17 @@ const Leaves = () => {
 
   // ── Pagination helpers ────────────────────────────────────────────────────────
   const safeTotalElements = Number(totalElements) || 0;
-  const safeRowsPerPage   = Number(rowsPerPage) || 10;
-  const safePage          = Number(page) || 1;
-  const showingFrom       = (safePage - 1) * safeRowsPerPage + 1;
-  const showingTo         = Math.min(safePage * safeRowsPerPage, safeTotalElements);
+  const safeRowsPerPage = Number(rowsPerPage) || 10;
+  const safePage = Number(page) || 1;
+  const showingFrom = (safePage - 1) * safeRowsPerPage + 1;
+  const showingTo = Math.min(safePage * safeRowsPerPage, safeTotalElements);
 
   const pageNumbers = () => {
-    const tp  = Number(totalPages) || 0;
+    const tp = Number(totalPages) || 0;
     const cur = Math.min(Math.max(1, Number(page) || 1), tp);
     if (tp <= 5) return [...Array(tp)].map((_, i) => i + 1);
     let start = Math.max(2, cur - 1);
-    let end   = Math.min(tp - 1, start + 2);
+    let end = Math.min(tp - 1, start + 2);
     if (end - start < 2) start = Math.max(2, end - 2);
     const pages = [1];
     for (let p = start; p <= end; p++) pages.push(p);
@@ -445,7 +490,7 @@ const Leaves = () => {
                 <div />
               )}
 
-              {/* Date range */}
+              {/* Date range & Export Actions */}
               <div className="sm:col-span-2 lg:col-span-2 flex items-center gap-2">
                 <input
                   value={fromDateFilter}
@@ -460,6 +505,14 @@ const Leaves = () => {
                   type="date"
                   className="px-3 py-2 border border-gray-200 bg-gray-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-200 text-sm w-full text-gray-600"
                 />
+                <button
+                  onClick={handleExportCSV}
+                  disabled={loading || leaveReq.length === 0}
+                  className="px-3 py-2 bg-blue-600 text-white font-medium rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm whitespace-nowrap cursor-pointer"
+                  title="Export current table view to CSV"
+                >
+                  Export CSV
+                </button>
               </div>
             </div>
 
@@ -751,9 +804,8 @@ const Leaves = () => {
                     )}
                     <button
                       onClick={() => setPage(pNum)}
-                      className={`w-7 h-7 text-xs rounded font-medium transition-all ${
-                        page === pNum ? 'bg-blue-500 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-100'
-                      }`}
+                      className={`w-7 h-7 text-xs rounded font-medium transition-all ${page === pNum ? 'bg-blue-500 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-100'
+                        }`}
                     >
                       {pNum}
                     </button>

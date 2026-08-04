@@ -319,7 +319,7 @@ export const COLLECTION_HISTORY_STRINGS = {
     LBL_PAYMENT_DATE: "Payment Date",
     LBL_REFERENCE_NO: "Reference No.",
     LBL_DISCOUNT: "Discount",
-    LBL_REASON: "Reason e.g. Sibling discount, scholarship…",
+    LBL_REASON: "Please Select a Reason..",
     LBL_REMARKS: "Remarks",
     LBL_OPTIONAL_NOTE: "Optional note…",
     MSG_EXCEEDS_BALANCE: "Net amount exceeds balance due",
@@ -362,6 +362,6 @@ export const COLLECTION_HISTORY_STRINGS = {
     TOAST_COULD_NOT_PROCESS_BULK: "Could not process bulk payments.",
 
     TABLE_OUTSTANDING_HEADERS: ['Student', 'Class', 'Period', 'Total Fee', 'Paid', 'Balance Due', 'Due Date', 'Status', 'Action'],
-    TABLE_HISTORY_HEADERS: ['Receipt No.', 'Date', 'Student', 'Class', 'Period', 'Collected', 'Discount', 'Late Fine', 'Mode', 'Ref. No.', 'Recorded By', ''],
+    TABLE_HISTORY_HEADERS: ['Receipt No.', 'Date', 'Student', 'Class', 'Period', 'Collected', 'Discount', 'Late Fine', 'Ref. No.', 'Recorded By', ''],
     TABLE_BULK_HEADERS: ['Student', 'Balance Due', 'Collect Amount', 'Discount', 'Late Fine', 'Mode']
 };

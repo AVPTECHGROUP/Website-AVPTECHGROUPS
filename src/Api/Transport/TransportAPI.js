@@ -86,17 +86,36 @@ export const getTransportStaff = async ({ page = 0, size = 20, searchTerm = "", 
   const data = await res.json();
   return { staff: data.data || [], pagination: data.pagination };
 };
-
 export const addTransportStaff = async (staffData) => {
-  const res = await authFetch(API_ENDPOINTS.TRANSPORT_STAFF, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(staffData) });
-  if (!res.ok) throw new Error("Failed to add staff");
-  return await res.json();
+  const res = await authFetch(API_ENDPOINTS.TRANSPORT_STAFF, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(staffData),
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.message || "Failed to add staff");
+  }
+
+  return data;
 };
 
 export const updateTransportStaff = async (id, staffData) => {
-  const res = await authFetch(API_ENDPOINTS.transportStaffById(id), { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(staffData) });
-  if (!res.ok) throw new Error("Failed to update staff");
-  return await res.json();
+  const res = await authFetch(API_ENDPOINTS.transportStaffById(id), {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(staffData),
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.message || "Failed to update staff");
+  }
+
+  return data;
 };
 
 export const activateTransportStaff = async (id) => {
@@ -175,14 +194,38 @@ export const getTransportAllocationById = async (id) => {
 };
 
 export const addTransportAllocation = async (allocationData) => {
-  const res = await authFetch(API_ENDPOINTS.TRANSPORT_ALLOCATIONS, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(allocationData) });
-  if (!res.ok) throw new Error("Failed to allocate student");
+  const res = await authFetch(API_ENDPOINTS.TRANSPORT_ALLOCATIONS, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(allocationData)
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.message || "Failed to allocate student");
+  }
+
   return await res.json();
 };
-
 export const updateTransportAllocation = async (id, allocationData) => {
-  const res = await authFetch(API_ENDPOINTS.transportAllocationById(id), { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(allocationData) });
-  if (!res.ok) throw new Error("Failed to update allocation");
+  const res = await authFetch(API_ENDPOINTS.transportAllocationById(id), {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(allocationData)
+  });
+
+  if (!res.ok) {
+    let errorMsg = "Failed to update allocation";
+    try {
+      const errorData = await res.json();
+      if (errorData && errorData.message) {
+        errorMsg = errorData.message;
+      }
+    } catch (e) {
+    }
+    throw new Error(errorMsg);
+  }
+
   return await res.json();
 };
 
@@ -388,7 +431,7 @@ export const payTransportBilling = async (
   return await res.json();
 };
 
-export const getTransportBillingConfig = async () => {
+export const getTransportbillingconfig = async () => {
   const res = await authFetch(
     API_ENDPOINTS.TRANSPORT_BILLING_CONFIG,
     {
@@ -402,7 +445,7 @@ export const getTransportBillingConfig = async () => {
   return (await res.json()).data;
 };
 
-export const updateTransportBillingConfig = async (
+export const updateTransportbillingconfig = async (
   config
 ) => {
   const res = await authFetch(
@@ -422,22 +465,20 @@ export const updateTransportBillingConfig = async (
   return await res.json();
 };
 
-export const generateTransportBilling = async (
-  payload
-) => {
-  const res = await authFetch(
-    API_ENDPOINTS.TRANSPORT_BILLING_GENERATE,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    }
-  );
+export const generateTransportBilling = async (payload) => {
+  const res = await authFetch(API_ENDPOINTS.TRANSPORT_BILLING_GENERATE, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
 
-  if (!res.ok)
-    throw new Error("Failed to generate transport billing");
+  if (!res.ok) {
+    // Read the explicit JSON error response payload from the backend
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.message || "Failed to generate transport billing");
+  }
 
   return await res.json();
 };

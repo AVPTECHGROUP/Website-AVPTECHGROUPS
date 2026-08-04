@@ -1,4 +1,4 @@
-import { User, Mail, Phone, ChevronLeft, GraduationCap, DollarSign, UserCheck, Briefcase, LogIn, Clock } from 'lucide-react';
+import { User, Mail, Phone, ChevronLeft, GraduationCap, DollarSign, UserCheck, Briefcase, LogIn, Clock, IndianRupee } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { getTeacherById } from '../../Api/Teachers/TeachersAPI';
@@ -9,17 +9,23 @@ const DetailsView = () => {
   const { id } = useParams();
 
   const [teacher, setTeacher] = useState(null);
+
+  // Feature Flag Check for Payroll
+  const isPayrollEnabled = (() => {
+    try {
+      const school = JSON.parse(localStorage.getItem('school'));
+      return school?.features?.payrollEnabled ?? true;
+    } catch {
+      return true;
+    }
+  })();
+
   useEffect(() => {
     const fetchTeacher = async () => {
       try {
         const res = await getTeacherById(id);
-        console.log("API response:", res);
-
         const t = res;
-        if (!t) {
-          console.error("Teacher data not found!");
-          return;
-        }
+        if (!t) return;
 
         const filteredTeacher = {
           id: t.id,
@@ -46,7 +52,6 @@ const DetailsView = () => {
             subjectName: a.subjectName,
             isClassTeacher: a.isClassTeacher,
           })) || [],
-          //subjects: t.assignments?.map(a => a.subjectName || "") || [],
         };
 
         setTeacher(filteredTeacher);
@@ -79,8 +84,7 @@ const DetailsView = () => {
     );
   };
 
-
-  const navigate = useNavigate()
+  const navigate = useNavigate();
 
   if (!teacher) {
     return (
@@ -98,7 +102,6 @@ const DetailsView = () => {
   return (
     <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
         <div className="mb-6 flex items-center justify-between">
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">{strings.DETAILS.PROFILE}</h1>
           <button onClick={() => navigate(-1)} className="flex items-center cursor-pointer bg-gray-600 p-2 rounded-xl text-white gap-2 hover:bg-gray-900 transition-colors">
@@ -107,7 +110,6 @@ const DetailsView = () => {
           </button>
         </div>
 
-        {/* Profile Header Card */}
         <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6 mb-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
             <div className="w-32 h-32 rounded-xl overflow-hidden bg-blue-500 flex items-center justify-center text-white text-2xl font-bold shrink-0 border-2 border-blue-200">
@@ -133,9 +135,8 @@ const DetailsView = () => {
               </div>
             </div>
           </div>
-
         </div>
-        {/* Main Content Grid */}
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Personal Details */}
           <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
@@ -178,10 +179,12 @@ const DetailsView = () => {
                 <span className="text-sm text-gray-600 font-medium">{strings.DETAILS.FIELDS.EXPERIENCE}</span>
                 <span className="text-sm text-gray-900 font-semibold text-left sm:text-right">{teacher.experience}</span>
               </div>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-2 gap-1 sm:gap-4">
-                <span className="text-sm text-gray-600 font-medium">{strings.DETAILS.FIELDS.SALARY_TYPE}</span>
-                <span className="text-sm text-gray-900 font-semibold text-left sm:text-right">{teacher.salaryType}</span>
-              </div>
+              {isPayrollEnabled && (
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-2 gap-1 sm:gap-4">
+                  <span className="text-sm text-gray-600 font-medium">{strings.DETAILS.FIELDS.SALARY_TYPE}</span>
+                  <span className="text-sm text-gray-900 font-semibold text-left sm:text-right">{teacher.salaryType}</span>
+                </div>
+              )}
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-2 gap-1 sm:gap-4">
                 <span className="text-sm text-gray-600 font-medium">{strings.DETAILS.FIELDS.JOINED}</span>
                 <span className="text-sm text-gray-900 font-semibold text-left sm:text-right">{teacher.joiningDate}</span>
@@ -189,31 +192,33 @@ const DetailsView = () => {
             </div>
           </div>
 
-          {/* Salary & Payroll */}
-          <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
-            <div className="flex items-center gap-2 mb-4 sm:mb-6">
-              <DollarSign className="w-5 h-5 text-blue-600" />
-              <h3 className="text-lg font-bold text-gray-900">{strings.DETAILS.SALARY_TAB}</h3>
+          {/* Salary & Payroll (Hidden when payrollEnabled is false) */}
+          {isPayrollEnabled && (
+            <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
+              <div className="flex items-center gap-2 mb-4 sm:mb-6">
+                <IndianRupee className="w-5 h-5 text-blue-600" />
+                <h3 className="text-lg font-bold text-gray-900">{strings.DETAILS.SALARY_TAB}</h3>
+              </div>
+              <div className="space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-2 gap-1 sm:gap-4">
+                  <span className="text-sm text-gray-600 font-medium">{strings.DETAILS.FIELDS.BASIC_SALARY}</span>
+                  <span className="text-sm text-gray-900 font-semibold text-left sm:text-right">
+                    ₹{teacher.baseSalary?.toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-2 gap-1 sm:gap-4">
+                  <span className="text-sm text-gray-600 font-medium">{strings.DETAILS.FIELDS.TOTAL_ALLOWANCES}</span>
+                  <span className="text-sm text-gray-900 font-semibold text-left sm:text-right">{teacher.totalAllowances}</span>
+                </div>
+                <div className="flex items-center justify-between py-2">
+                  <span className="text-sm text-gray-600">{strings.DETAILS.FIELDS.PAYROLL_STATUS}</span>
+                  <span className="inline-flex items-center px-3 py-1 rounded-md text-xs font-semibold bg-blue-100 text-blue-700">
+                    {teacher.payroll}
+                  </span>
+                </div>
+              </div>
             </div>
-            <div className="space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-2 gap-1 sm:gap-4">
-                <span className="text-sm text-gray-600 font-medium">{strings.DETAILS.FIELDS.BASIC_SALARY}</span>
-                <span className="text-sm text-gray-900 font-semibold text-left sm:text-right">
-                  ₹{teacher.baseSalary?.toLocaleString()}
-                </span>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-2 gap-1 sm:gap-4">
-                <span className="text-sm text-gray-600 font-medium">{strings.DETAILS.FIELDS.TOTAL_ALLOWANCES}</span>
-                <span className="text-sm text-gray-900 font-semibold text-left sm:text-right">{teacher.totalAllowances}</span>
-              </div>
-              <div className="flex items-center justify-between py-2">
-                <span className="text-sm text-gray-600">{strings.DETAILS.FIELDS.PAYROLL_STATUS}</span>
-                <span className="inline-flex items-center px-3 py-1 rounded-md text-xs font-semibold bg-blue-100 text-blue-700">
-                  {teacher.payroll}
-                </span>
-              </div>
-            </div>
-          </div>
+          )}
 
           {/* System Eligibility */}
           <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
@@ -222,7 +227,6 @@ const DetailsView = () => {
               <h3 className="text-lg font-bold text-gray-900">{strings.DETAILS.SYSTEM_TAB}</h3>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Login Access Card */}
               <div className="bg-gray-50 rounded-lg p-4 relative">
                 <div className="flex flex-col items-center text-center gap-2">
                   <div className="p-2 bg-white rounded-lg">
@@ -242,7 +246,6 @@ const DetailsView = () => {
                 )}
               </div>
 
-              {/* Attendance Access Card */}
               <div className="bg-gray-50 rounded-lg p-4 relative">
                 <div className="flex flex-col items-center text-center gap-2">
                   <div className="p-2 bg-white rounded-lg">
@@ -302,4 +305,4 @@ const DetailsView = () => {
   );
 }
 
-export default DetailsView
+export default DetailsView;

@@ -4,8 +4,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import SectionSubjectService from "../../Api/Academics/SectionSubjectService";
-import { Edit, MinusCircle, BookOpen, Filter, Search, Plus } from "lucide-react";
-import { COMMON_STATUS, SEC_SUB_CONSTS }from "../../Constants/StringConstants/AcademicsConstants";
+import { Edit, MinusCircle, BookOpen, Filter, Search, Plus, Check } from "lucide-react";
+import { COMMON_STATUS, SEC_SUB_CONSTS } from "../../Constants/StringConstants/AcademicsConstants";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const INPUT_CLS =
@@ -92,93 +92,216 @@ const EmptyState = ({ message }) => (
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  Assign Subjects Modal
+//  Assign Subjects Modal (UPDATED: Bulk Checkbox Selection)
 // ─────────────────────────────────────────────────────────────────────────────
 const AssignModal = ({ sectionId, allSubjects, assignedSubjectIds, onClose, onAssigned }) => {
-  const [rows, setRows] = useState([{ subjectId: "", weeklyHours: 1, isMandatory: false, status: COMMON_STATUS.ACTIVE }]);
+  // Available subjects that are not yet assigned to this section
+  const availableSubjects = allSubjects.filter(s => !assignedSubjectIds.includes(String(s.id)));
+
+  // State mapping each subject ID to its configuration: { selected, weeklyHours, isMandatory, status }
+  const [subjectConfigs, setSubjectConfigs] = useState(() => {
+    const initial = {};
+    availableSubjects.forEach(s => {
+      initial[s.id] = {
+        selected: false,
+        weeklyHours: 1,
+        isMandatory: false,
+        status: COMMON_STATUS.ACTIVE
+      };
+    });
+    return initial;
+  });
+
+  const [searchQuery, setSearchQuery] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const available = allSubjects.filter(s => !assignedSubjectIds.includes(String(s.id)));
+  const toggleSelect = (id) => {
+    setSubjectConfigs(prev => ({
+      ...prev,
+      [id]: { ...prev[id], selected: !prev[id]?.selected }
+    }));
+  };
 
-  const setRow = (i, key, value) =>
-    setRows(prev => prev.map((r, idx) => idx === i ? { ...r, [key]: value } : r));
+  const updateConfig = (id, key, value) => {
+    setSubjectConfigs(prev => ({
+      ...prev,
+      [id]: { ...prev[id], [key]: value }
+    }));
+  };
 
-  const addRow = () =>
-    setRows(prev => [...prev, { subjectId: "", weeklyHours: 1, isMandatory: false, status: COMMON_STATUS.ACTIVE }]);
+  const selectedCount = Object.values(subjectConfigs).filter(c => c.selected).length;
 
-  const removeRow = (i) =>
-    setRows(prev => prev.filter((_, idx) => idx !== i));
+  const toggleSelectAll = () => {
+    const filteredAvailable = availableSubjects.filter(s => {
+      if (!searchQuery) return true;
+      const q = searchQuery.toLowerCase();
+      return s.name?.toLowerCase().includes(q) || s.code?.toLowerCase().includes(q);
+    });
+
+    const allFilteredSelected = filteredAvailable.every(s => subjectConfigs[s.id]?.selected);
+
+    setSubjectConfigs(prev => {
+      const next = { ...prev };
+      filteredAvailable.forEach(s => {
+        next[s.id] = { ...next[s.id], selected: !allFilteredSelected };
+      });
+      return next;
+    });
+  };
 
   const handleSave = async () => {
-    const valid = rows.filter(r => r.subjectId);
-    if (!valid.length) return;
+    const payload = Object.entries(subjectConfigs)
+      .filter(([_, cfg]) => cfg.selected)
+      .map(([subjectId, cfg]) => ({
+        subjectId: Number(subjectId),
+        weeklyHours: Math.max(1, Number(cfg.weeklyHours) || 1),
+        isMandatory: Boolean(cfg.isMandatory),
+        status: cfg.status
+      }));
+
+    if (!payload.length) return;
+
     setSaving(true);
-    const res = await SectionSubjectService.assignSubjects({ sectionId, subjects: valid });
+    const res = await SectionSubjectService.assignSubjects({ sectionId, subjects: payload });
     setSaving(false);
     if (res) onAssigned();
   };
 
+  const filteredSubjects = availableSubjects.filter(s => {
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    return s.name?.toLowerCase().includes(q) || s.code?.toLowerCase().includes(q);
+  });
+
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-xs p-0 sm:p-4">
-      <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-xl overflow-hidden animate-slideUp">
-        <div className="bg-gradient-to-r from-blue-600 to-blue-500 px-5 py-3.5 flex items-center justify-between">
+      <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-2xl overflow-hidden animate-slideUp flex flex-col max-h-[90vh]">
+
+        {/* Modal Header */}
+        <div className="bg-gradient-to-r from-blue-600 to-blue-500 px-5 py-3.5 flex items-center justify-between shrink-0">
           <div>
             <p className="text-blue-200 text-[10px] font-medium uppercase tracking-widest">{SEC_SUB_CONSTS.TEXT.SECTION_SUBJECTS}</p>
             <h3 className="text-white font-semibold text-sm mt-0.5">{SEC_SUB_CONSTS.TEXT.ASSIGN_SUBJECTS}</h3>
           </div>
-          <button onClick={onClose} className="text-blue-200 hover:text-white text-sm w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/10">✕</button>
+          <button onClick={onClose} className="text-blue-200 hover:text-white text-sm w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/10 cursor-pointer">✕</button>
         </div>
 
-        <div className="p-4 space-y-3 max-h-[50vh] overflow-y-auto">
-          {rows.map((row, i) => (
-            <div key={i} className="p-3 rounded-xl border border-slate-100 bg-slate-50/50 flex flex-col gap-2.5">
-              <div className="w-full">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide block mb-1">{SEC_SUB_CONSTS.TEXT.SUBJECT}</label>
-                <Select value={row.subjectId} onChange={e => setRow(i, "subjectId", e.target.value)}>
-                  <option value="">{SEC_SUB_CONSTS.TEXT.SELECT_SUBJECT}</option>
-                  {available.map(s => (
-                    <option key={s.id} value={s.id} disabled={rows.some((r, ri) => ri !== i && r.subjectId === String(s.id))}>
-                      {s.name} ({s.code})
-                    </option>
-                  ))}
-                </Select>
-              </div>
+        {/* Toolbar: Search & Select All */}
+        <div className="p-3 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row items-center justify-between gap-2 shrink-0">
+          <div className="relative w-full sm:w-64">
+            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Search available subjects..."
+              className="w-full pl-8 pr-3 py-1.5 text-xs border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
 
-              <div className="flex items-center justify-between gap-2 border-t border-slate-100 pt-2.5">
-                <div className="flex items-center gap-2">
-                  <div className="w-16">
-                    <input
-                      type="number" min={1} max={40} value={row.weeklyHours}
-                      onChange={e => setRow(i, "weeklyHours", Number(e.target.value))}
-                      className="h-7 border border-slate-200 rounded-md px-2 text-xs text-slate-700 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 w-full"
-                    />
+          {filteredSubjects.length > 0 && (
+            <button
+              type="button"
+              onClick={toggleSelectAll}
+              className="text-xs font-semibold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100/70 border border-blue-200/60 px-3 py-1.5 rounded-lg transition shrink-0 cursor-pointer w-full sm:w-auto text-center"
+            >
+              {filteredSubjects.every(s => subjectConfigs[s.id]?.selected) ? "Deselect All Filtered" : "Select All Filtered"}
+            </button>
+          )}
+        </div>
+
+        {/* List of Available Subjects */}
+        <div className="p-3 sm:p-4 space-y-2 overflow-y-auto flex-1 custom-scrollbar">
+          {filteredSubjects.length === 0 ? (
+            <EmptyState message={availableSubjects.length === 0 ? "All available subjects are already assigned to this section." : "No subjects found matching your search."} />
+          ) : (
+            filteredSubjects.map(subject => {
+              const cfg = subjectConfigs[subject.id] || { selected: false, weeklyHours: 1, isMandatory: false, status: COMMON_STATUS.ACTIVE };
+
+              return (
+                <div
+                  key={subject.id}
+                  className={`p-3 rounded-xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${cfg.selected
+                      ? "bg-blue-50/40 border-blue-200 shadow-2xs"
+                      : "bg-white border-slate-100 hover:border-slate-200"
+                    }`}
+                >
+                  {/* Subject Info Checkbox */}
+                  <div
+                    onClick={() => toggleSelect(subject.id)}
+                    className="flex items-center gap-3 cursor-pointer select-none flex-1 min-w-0"
+                  >
+                    <div className={`w-5 h-5 rounded-md border flex items-center justify-center shrink-0 transition ${cfg.selected ? "bg-blue-600 border-blue-600 text-white" : "border-slate-300 bg-white"
+                      }`}>
+                      {cfg.selected && <Check size={12} strokeWidth={3} />}
+                    </div>
+
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-slate-800 truncate">{subject.name}</span>
+                        <Badge variant="code">{subject.code}</Badge>
+                      </div>
+                    </div>
                   </div>
-                  <button type="button" onClick={() => setRow(i, "isMandatory", !row.isMandatory)}
-                    className={`h-7 px-2.5 rounded-md border text-[11px] font-medium ${row.isMandatory ? "bg-violet-50 border-violet-200 text-violet-700" : "bg-white border-slate-200 text-slate-400"}`}>
-                    {row.isMandatory ? SEC_SUB_CONSTS.TEXT.MANDATORY : SEC_SUB_CONSTS.TEXT.OPTIONAL}
-                  </button>
-                  <button type="button" onClick={() => setRow(i, "status", row.status === COMMON_STATUS.ACTIVE ? COMMON_STATUS.INACTIVE : COMMON_STATUS.ACTIVE)}
-                    className={`h-7 px-2.5 rounded-md border text-[11px] font-medium ${row.status === COMMON_STATUS.ACTIVE ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-white border-slate-200 text-slate-400"}`}>
-                    {row.status === COMMON_STATUS.ACTIVE ? SEC_SUB_CONSTS.TEXT.ACTIVE : SEC_SUB_CONSTS.TEXT.INACTIVE}
-                  </button>
+
+                  {/* Config options (Hours, Mandatory, Active) */}
+                  {cfg.selected && (
+                    <div className="flex items-center gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 shrink-0">
+                      <div className="w-20 relative">
+                        <input
+                          type="number"
+                          min={1}
+                          max={40}
+                          value={cfg.weeklyHours}
+                          onChange={e => updateConfig(subject.id, "weeklyHours", Number(e.target.value))}
+                          className="h-7 w-full border border-slate-200 rounded-md pl-2 pr-7 text-xs text-slate-700 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                        <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] font-medium text-slate-400 pointer-events-none">
+                          /hr
+                        </span>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => updateConfig(subject.id, "isMandatory", !cfg.isMandatory)}
+                        className={`h-7 px-2.5 rounded-md border text-[11px] font-medium transition cursor-pointer ${cfg.isMandatory ? "bg-violet-50 border-violet-200 text-violet-700" : "bg-white border-slate-200 text-slate-400"
+                          }`}
+                      >
+                        {cfg.isMandatory ? SEC_SUB_CONSTS.TEXT.MANDATORY : SEC_SUB_CONSTS.TEXT.OPTIONAL}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => updateConfig(subject.id, "status", cfg.status === COMMON_STATUS.ACTIVE ? COMMON_STATUS.INACTIVE : COMMON_STATUS.ACTIVE)}
+                        className={`h-7 px-2.5 rounded-md border text-[11px] font-medium transition cursor-pointer ${cfg.status === COMMON_STATUS.ACTIVE ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-white border-slate-200 text-slate-400"
+                          }`}
+                      >
+                        {cfg.status === COMMON_STATUS.ACTIVE ? SEC_SUB_CONSTS.TEXT.ACTIVE : SEC_SUB_CONSTS.TEXT.INACTIVE}
+                      </button>
+                    </div>
+                  )}
                 </div>
-                {rows.length > 1 && (
-                  <button onClick={() => removeRow(i)} className="text-slate-400 hover:text-rose-500 p-1.5 rounded-md hover:bg-rose-50 transition">✕</button>
-                )}
-              </div>
-            </div>
-          ))}
-          <button onClick={addRow} className="w-full py-2 rounded-xl border border-dashed border-slate-200 text-xs text-slate-400 hover:border-blue-300 hover:text-blue-500 transition flex items-center justify-center gap-1">
-            {SEC_SUB_CONSTS.TEXT.ADD_ANOTHER}
-          </button>
+              );
+            })
+          )}
         </div>
 
-        <div className="px-4 py-3 flex gap-2 border-t border-slate-100 bg-slate-50/50">
-          <button onClick={onClose} className={`${BTN_GHOST} flex-1`}>{SEC_SUB_CONSTS.TEXT.CANCEL}</button>
-          <button onClick={handleSave} disabled={saving || rows.every(r => !r.subjectId)} className={`${BTN_PRIMARY} flex-1`}>
-            {saving ? SEC_SUB_CONSTS.TEXT.SAVING : SEC_SUB_CONSTS.TEXT.ASSIGN_SUBJECTS}
-          </button>
+        {/* Modal Footer */}
+        <div className="px-4 py-3 flex items-center justify-between gap-2 border-t border-slate-100 bg-slate-50/50 shrink-0">
+          <span className="text-xs text-slate-500 font-medium">
+            {selectedCount} subject{selectedCount !== 1 ? "s" : ""} selected
+          </span>
+
+          <div className="flex gap-2">
+            <button onClick={onClose} disabled={saving} className={BTN_GHOST}>
+              {SEC_SUB_CONSTS.TEXT.CANCEL}
+            </button>
+            <button onClick={handleSave} disabled={saving || selectedCount === 0} className={BTN_PRIMARY}>
+              {saving ? SEC_SUB_CONSTS.TEXT.SAVING : `${SEC_SUB_CONSTS.TEXT.ASSIGN_SUBJECTS} (${selectedCount})`}
+            </button>
+          </div>
         </div>
+
       </div>
     </div>
   );
@@ -205,7 +328,7 @@ const EditModal = ({ row, onClose, onSave }) => {
             <p className="text-blue-200 text-[10px] font-medium uppercase tracking-widest">{SEC_SUB_CONSTS.TEXT.EDIT_ASSIGNMENT}</p>
             <h3 className="text-white font-semibold text-sm mt-0.5 truncate max-w-[240px]">{row.subjectName}</h3>
           </div>
-          <button onClick={onClose} className="text-blue-200 hover:text-white text-sm w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/10">✕</button>
+          <button onClick={onClose} className="text-blue-200 hover:text-white text-sm w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/10 cursor-pointer">✕</button>
         </div>
 
         <div className="p-4 space-y-4">
@@ -218,18 +341,18 @@ const EditModal = ({ row, onClose, onSave }) => {
 
           <div className="flex gap-2">
             <button type="button" onClick={() => set("isMandatory", !form.isMandatory)}
-              className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-medium transition-all ${form.isMandatory ? "bg-blue-50 border-blue-200 text-blue-700" : "bg-slate-50 border-slate-200 text-slate-400"
+              className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-medium transition-all cursor-pointer ${form.isMandatory ? "bg-blue-50 border-blue-200 text-blue-700" : "bg-slate-50 border-slate-200 text-slate-400"
                 }`}>
               {SEC_SUB_CONSTS.TEXT.MANDATORY}
             </button>
             <button type="button" onClick={() => set("status", form.status === COMMON_STATUS.ACTIVE ? COMMON_STATUS.INACTIVE : COMMON_STATUS.ACTIVE)}
-              className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-medium transition-all ${form.status === COMMON_STATUS.ACTIVE ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-slate-50 border-slate-200 text-slate-400"
+              className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-medium transition-all cursor-pointer ${form.status === COMMON_STATUS.ACTIVE ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-slate-50 border-slate-200 text-slate-400"
                 }`}>
               {form.status === COMMON_STATUS.ACTIVE ? SEC_SUB_CONSTS.TEXT.ACTIVE : SEC_SUB_CONSTS.TEXT.INACTIVE}
             </button>
           </div>
 
-          <div className="flex gap-2 pt-1 border-t border-slate-100 pt-3">
+          <div className="flex gap-2 border-t border-slate-100 pt-3">
             <button onClick={onClose} className={`${BTN_GHOST} flex-1`}>{SEC_SUB_CONSTS.TEXT.CANCEL}</button>
             <button onClick={() => onSave(form)} className={`${BTN_PRIMARY} flex-1`}>{SEC_SUB_CONSTS.TEXT.SAVE_CHANGES}</button>
           </div>
@@ -258,7 +381,7 @@ const ConfirmDialog = ({ message, onConfirm, onCancel }) => {
         <p className="text-xs text-slate-700 leading-relaxed font-medium">{message}</p>
         <div className="flex gap-2">
           <button onClick={onCancel} disabled={busy} className={`${BTN_GHOST} flex-1`}>{SEC_SUB_CONSTS.TEXT.CANCEL}</button>
-          <button onClick={handleConfirm} disabled={busy} className="flex-1 px-4 py-1.5 text-xs rounded-lg bg-rose-500 text-white hover:bg-rose-600 font-medium disabled:opacity-50">
+          <button onClick={handleConfirm} disabled={busy} className="flex-1 px-4 py-1.5 text-xs rounded-lg bg-rose-500 text-white hover:bg-rose-600 font-medium disabled:opacity-50 cursor-pointer">
             {busy ? SEC_SUB_CONSTS.TEXT.REMOVING : SEC_SUB_CONSTS.TEXT.CONFIRM}
           </button>
         </div>
@@ -270,7 +393,7 @@ const ConfirmDialog = ({ message, onConfirm, onCancel }) => {
 // ─────────────────────────────────────────────────────────────────────────────
 //  Main Component Layout Block
 // ─────────────────────────────────────────────────────────────────────────────
-export default function SectionSubjectAssignment() {
+export default function SectionSubjectAssignment({ refreshKey }) {
   const [classes, setClasses] = useState([]);
   const [sections, setSections] = useState([]);
   const [subjects, setSubjects] = useState([]);
@@ -321,7 +444,7 @@ export default function SectionSubjectAssignment() {
   useEffect(() => {
     loadClasses();
     SectionSubjectService.getAllSubjects().then(setAllSubjects);
-  }, [loadClasses]);
+  }, [loadClasses,refreshKey]);
 
   useEffect(() => {
     if (selectedClassId) loadSections(selectedClassId);
@@ -414,11 +537,7 @@ export default function SectionSubjectAssignment() {
           </Select>
 
           <div className="relative flex-1 max-w-[260px]">
-            <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-            <input
-              value={search} onChange={e => setSearch(e.target.value)} placeholder={SEC_SUB_CONSTS.TEXT.SEARCH_PLACEHOLDER}
-              className="w-full pl-7 pr-2.5 py-1 text-xs border border-gray-200 rounded-lg bg-white outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-100"
-            />
+            {/* Search Input available for further filter extensions */}
           </div>
         </div>
 

@@ -9,6 +9,10 @@ import transportImg from "../Images/Features/Transport.png";
 import staffImg from "../Images/Features/Staff_Management.png";
 import parentImg from "../Images/Features/ParentApp.png";
 import storeImg from "../Images/Features/StoreManagement.png";
+import timetableImg from "../Images/Features/timetable_management.png";
+import homeworkImg from "../Images/Features/Homework_management.png";
+import communicationImg from "../Images/Features/SchoolSpine_communication_hub.png";
+import leaveImg from "../Images/Features/Leave_management.png";
 
 export const featureData = {
   "student-management": {
@@ -202,6 +206,102 @@ export const featureData = {
       "Accurate inventory reports"
     ],
     footer: "Manage school resources with complete control.",
+  },
+
+  "timetable-management": {
+    icon: "CalendarClock",
+    title: "Timetable Management",
+    heading: "Create Conflict-Free Class Schedules",
+    bgImage: timetableImg,
+    description:
+      "SchoolSpine's Timetable Management module lets schools build and manage class schedules with ease. Configure time slots, assign teachers to periods, map subjects, and handle substitutions without conflicts.",
+    features: [
+      "Timetable Creation",
+      "Time Slot Configuration",
+      "Teacher-to-Class Assignment",
+      "Subject Mapping",
+      "Classroom Resource Allocation",
+      "Teacher Substitutions",
+    ],
+    benefits: [
+      "Conflict-free scheduling",
+      "Balanced teacher workloads",
+      "Easy substitution handling",
+      "Instant access for students & parents"
+    ],
+    footer: "Create conflict-free class schedules, manage teacher workloads, and handle substitutions with ease.",
+  },
+
+  "homework-assignments": {
+    icon: "NotebookPen",
+    title: "Homework & Assignments",
+    heading: "Track Homework from Assignment to Submission",
+    bgImage: homeworkImg,
+    description:
+      "Assign, track, and evaluate homework with subject-wise and class-wise assignments. Teachers create homework, admins approve it, and students get organized submission tracking.",
+    features: [
+      "Subject-wise Homework Creation",
+      "Class-wise Assignment",
+      "Homework Edit & Delete",
+      "Approval Workflow",
+      "Student Submission Tracking",
+      "Homework Notifications"
+    ],
+    benefits: [
+      "Digitized homework process",
+      "Better submission tracking",
+      "Continuous learning support",
+      "Transparent approval workflow"
+    ],
+    footer: "Assign, track, and evaluate homework with subject-wise submissions and approval workflows.",
+  },
+
+  "communication-hub": {
+    icon: "MessageSquare",
+    title: "Communication Hub",
+    heading: "Reach Every Parent, Student & Staff Instantly",
+    bgImage: communicationImg,
+    description:
+      "Send circulars, announcements, and real-time push notifications to parents, staff, and students instantly. Manage document attachments, approvals, and notification preferences from one place.",
+    features: [
+      "Circular Creation & Distribution",
+      "Circular Approval Workflow",
+      "Event Scheduling & Publishing",
+      "Document Attachments",
+      "Real-Time Push Notifications (FCM)",
+      "Notification History & Preferences"
+    ],
+    benefits: [
+      "Instant reach across the institution",
+      "Improved collaboration",
+      "Targeted communication",
+      "Centralized approval queue"
+    ],
+    footer: "Send circulars, announcements, and real-time push notifications to parents, staff, and students instantly.",
+  },
+
+  "leave-holiday-management": {
+    icon: "CalendarX",
+    title: "Leave & Holiday Management",
+    heading: "Automate Leave Requests & Holiday Calendars",
+    bgImage: leaveImg,
+    description:
+      "Automate leave requests, approvals, and holiday calendars across your entire institution. Configure leave types and policies, track statistics, and keep everyone informed of upcoming holidays.",
+    features: [
+      "Leave Request & Approval Workflow",
+      "Rejection Reasons",
+      "Leave Cancellation",
+      "Holiday Creation (National, Religious, Optional)",
+      "Leave Type & Policy Configuration",
+      "Leave Statistics & Analytics"
+    ],
+    benefits: [
+      "Automated leave workflows",
+      "Accurate leave records",
+      "Institution-wide holiday visibility",
+      "Reduced admin workload"
+    ],
+    footer: "Automate leave requests, approvals, and holiday calendars across your entire institution.",
   },
 };
 

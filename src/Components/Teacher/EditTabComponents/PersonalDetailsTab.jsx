@@ -155,7 +155,7 @@ const PersonalDetailsTab = ({ formData, setFormData, handleInputChange, onSave, 
                 {/* Address */}
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Residential Address
+                       Current  Address <span className="text-red-600">*</span>
                     </label>
                     <div className="relative">
                         <div className="absolute top-3 left-0 pl-3 pointer-events-none">
@@ -244,6 +244,8 @@ const PersonalDetailsTab = ({ formData, setFormData, handleInputChange, onSave, 
                                 name="joiningDate"
                                 value={formData.joiningDate}
                                 onChange={handleInputChange}
+                                max={new Date().toISOString().split("T")[0]}
+                                
                                 className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                             />
                         </div>

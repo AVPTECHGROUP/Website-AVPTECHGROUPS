@@ -19,6 +19,16 @@ function AddNewTeacher() {
     const fileInputRef = useRef(null);
     const salarySectionRef = useRef(null);
 
+    // Feature Flag Check for Payroll
+    const isPayrollEnabled = (() => {
+        try {
+            const school = JSON.parse(localStorage.getItem('school'));
+            return school?.features?.payrollEnabled ?? true;
+        } catch {
+            return true;
+        }
+    })();
+
     const [formData, setFormData] = useState({
         name: "",
         gender: "",
@@ -33,7 +43,6 @@ function AddNewTeacher() {
         joiningDate: "",
         payrollStatus: "ACTIVE",
         accountStatus: false,
-        // Salary fields
         salaryType: 'MONTHLY',
         baseSalary: '',
         leaveDeductionPerDay: '',
@@ -47,7 +56,6 @@ function AddNewTeacher() {
         professionalTax: '',
         incomeTax: '',
         otherDeductions: '',
-        // Class assignment fields
         assignedClass: '',
         section: '',
         primarySubject: '',
@@ -60,7 +68,6 @@ function AddNewTeacher() {
     const handleInputChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
-        // Clear error on change
         setErrors(prev => ({ ...prev, [name]: '' }));
         setSalaryErrors(prev => ({ ...prev, [name]: '' }));
     };
@@ -89,37 +96,31 @@ function AddNewTeacher() {
         if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
-    // ─── Personal Details Validation ─────────────────────────────────────────────
     const validatePersonalDetails = () => {
         const newErrors = {};
 
-        // Name
         if (!formData.name.trim()) {
             newErrors.name = strings.ADD_TEACHER.VALIDATION.FULL_NAME_REQUIRED;
         } else if (formData.name.trim().length < 2) {
             newErrors.name = strings.ADD_TEACHER.VALIDATION.NAME_MIN_LENGTH;
         }
 
-        // Gender
         if (!formData.gender) {
             newErrors.gender = strings.ADD_TEACHER.VALIDATION.GENDER_REQUIRED;
         }
 
-        // Mobile
         if (!formData.mobile) {
             newErrors.mobile = strings.ADD_TEACHER.VALIDATION.MOBILE_REQUIRED;
         } else if (!/^\d{10}$/.test(formData.mobile)) {
             newErrors.mobile = strings.ADD_TEACHER.VALIDATION.MOBILE_INVALID;
         }
 
-        // Email
         if (!formData.email) {
             newErrors.email = strings.ADD_TEACHER.VALIDATION.EMAIL_REQUIRED;
         } else if (!EMAIL_REGEX.test(formData.email)) {
             newErrors.email = strings.ADD_TEACHER.VALIDATION.EMAIL_INVALID;
         }
 
-        // Date of Birth
         if (!formData.dob) {
             newErrors.dob = strings.ADD_TEACHER.VALIDATION.DOB_REQUIRED;
         } else {
@@ -131,19 +132,26 @@ function AddNewTeacher() {
             }
         }
 
-        // Joining Date
         if (!formData.joiningDate) {
             newErrors.joiningDate = strings.ADD_TEACHER.VALIDATION.JOINING_REQUIRED;
+        } else {
+            const joiningDate = new Date(formData.joiningDate);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            if (joiningDate > today) {
+                newErrors.joiningDate =
+                    strings.ADD_TEACHER.VALIDATION.JOINING_DATE_INVALID ||
+                    "Joining date cannot be in the future.";
+            }
         }
 
-        // Login Email
         if (!formData.loginEmail) {
             newErrors.loginEmail = strings.ADD_TEACHER.VALIDATION.LOGIN_EMAIL_REQUIRED;
         } else if (!EMAIL_REGEX.test(formData.loginEmail)) {
             newErrors.loginEmail = strings.ADD_TEACHER.VALIDATION.LOGIN_EMAIL_INVALID;
         }
 
-        // Account Status
         if (!formData.accountStatus) {
             newErrors.accountStatus = strings.ADD_TEACHER.VALIDATION.ACCOUNT_STATUS_REQUIRED;
         }
@@ -152,7 +160,6 @@ function AddNewTeacher() {
         return Object.keys(newErrors).length === 0;
     };
 
-    // ─── Salary Details Validation ────────────────────────────────────────────────
     const validateSalaryDetails = () => {
         const newErrors = {};
 
@@ -168,7 +175,6 @@ function AddNewTeacher() {
         return Object.keys(newErrors).length === 0;
     };
 
-    // ─── Next (Personal → Salary) ─────────────────────────────────────────────────
     const handleNext = () => {
         const isValid = validatePersonalDetails();
         if (!isValid) {
@@ -181,11 +187,9 @@ function AddNewTeacher() {
         }, 100);
     };
 
-    // ─── Submit ───────────────────────────────────────────────────────────────────
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        // Re-validate personal details in case user navigated back and changed something
         const isPersonalValid = validatePersonalDetails();
         if (!isPersonalValid) {
             toast.error(strings.ADD_TEACHER.ERRORS.PERSONAL_INCOMPLETE);
@@ -193,11 +197,12 @@ function AddNewTeacher() {
             return;
         }
 
-        // Validate salary details
-        const isSalaryValid = validateSalaryDetails();
-        if (!isSalaryValid) {
-            toast.error(strings.ADD_TEACHER.ERRORS.SALARY_INCOMPLETE);
-            return;
+        if (isPayrollEnabled) {
+            const isSalaryValid = validateSalaryDetails();
+            if (!isSalaryValid) {
+                toast.error(strings.ADD_TEACHER.ERRORS.SALARY_INCOMPLETE);
+                return;
+            }
         }
 
         setIsSubmitting(true);
@@ -225,14 +230,11 @@ function AddNewTeacher() {
             };
 
             const response = await createTeachers(apiPayload, profileImage);
-            console.log("Create Teacher Response:", response);
 
-            if (response && formData.salaryType && formData.baseSalary) {
+            if (isPayrollEnabled && response && formData.salaryType && formData.baseSalary) {
                 const teacherId = response.data?.id || response.id;
 
-                if (!teacherId) {
-                    toast.warn("Teacher created but salary update skipped - no teacher ID");
-                } else {
+                if (teacherId) {
                     const baseSalary = Number(formData.baseSalary) || 0;
                     const hra = Number(formData.houseRentAllowance) || 0;
                     const ta = Number(formData.travelAllowance) || 0;
@@ -275,11 +277,9 @@ function AddNewTeacher() {
                     };
 
                     try {
-                        const salaryResponse = await upsertTeacherSalary(teacherId, salaryPayload);
-                        console.log("Salary Update Response:", salaryResponse);
+                        await upsertTeacherSalary(teacherId, salaryPayload);
                     } catch (salaryError) {
-                        console.error("Salary update failed:", salaryError);
-                        toast.warn("Teacher created but salary update failed");
+                        console.error("Salary update catch block:", salaryError);
                     }
                 }
             }
@@ -305,7 +305,6 @@ function AddNewTeacher() {
     return (
         <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-4">
             <div className="mx-auto">
-                {/* Back Button */}
                 <button
                     onClick={() => navigate(-1)}
                     className="flex items-center cursor-pointer bg-gray-600 p-2 rounded-xl text-white gap-2 hover:bg-gray-900 transition-colors mb-4"
@@ -314,7 +313,6 @@ function AddNewTeacher() {
                     <span className="hidden sm:inline">{strings.COMMON.BACK_TO_LIST}</span>
                 </button>
 
-                {/* Header */}
                 <div className="mb-6">
                     <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">{strings.ADD_TEACHER.PAGE_TITLE}</h1>
                     <p className="text-sm sm:text-base text-gray-500">
@@ -324,7 +322,6 @@ function AddNewTeacher() {
 
                 <form onSubmit={handleSubmit}>
                     <div className="bg-white rounded-lg shadow">
-                        {/* Tabs */}
                         <div className="border-b border-gray-200">
                             <nav className="flex flex-wrap -mb-px">
                                 <button
@@ -339,34 +336,33 @@ function AddNewTeacher() {
                                     <span className="hidden sm:inline">{strings.ADD_TEACHER.TABS.PERSONAL}</span>
                                     <span className="sm:hidden">Personal</span>
                                 </button>
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        // Validate before allowing tab switch to salary
-                                        const isValid = validatePersonalDetails();
-                                        if (!isValid) {
-                                            toast.error(strings.ADD_TEACHER.COMPLETE_PERSONAL);
-                                            return;
-                                        }
-                                        setActiveTab('salary');
-                                    }}
-                                    className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'salary'
-                                        ? 'border-blue-600 text-blue-600'
-                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                                        }`}
-                                >
-                                    <IndianRupee size={18} />
-                                    <span className="hidden sm:inline">{strings.ADD_TEACHER.TABS.SALARY}</span>
-                                    <span className="sm:hidden">Salary</span>
-                                </button>
+                                {isPayrollEnabled && (
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            const isValid = validatePersonalDetails();
+                                            if (!isValid) {
+                                                toast.error(strings.ADD_TEACHER.COMPLETE_PERSONAL);
+                                                return;
+                                            }
+                                            setActiveTab('salary');
+                                        }}
+                                        className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'salary'
+                                            ? 'border-blue-600 text-blue-600'
+                                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                            }`}
+                                    >
+                                        <IndianRupee size={18} />
+                                        <span className="hidden sm:inline">{strings.ADD_TEACHER.TABS.SALARY}</span>
+                                        <span className="sm:hidden">Salary</span>
+                                    </button>
+                                )}
                             </nav>
                         </div>
 
-                        {/* Content */}
                         <div className="p-4 sm:p-6 lg:p-8">
                             {activeTab === 'personal' && (
                                 <>
-                                    {/* Profile Photo Upload */}
                                     <div className="mb-6">
                                         <label className="block font-semibold text-gray-600 text-sm mb-3">
                                             {strings.ADD_TEACHER.UPLOAD.LABEL}{' '}
@@ -448,7 +444,7 @@ function AddNewTeacher() {
                                 </>
                             )}
 
-                            {activeTab === 'salary' && (
+                            {activeTab === 'salary' && isPayrollEnabled && (
                                 <div ref={salarySectionRef}>
                                     <SalaryDetailsTab
                                         formData={formData}
@@ -461,7 +457,6 @@ function AddNewTeacher() {
                             )}
                         </div>
 
-                        {/* Footer Buttons */}
                         <div className="border-t border-gray-200 px-4 sm:px-6 lg:px-8 py-4 bg-gray-50 rounded-b-lg">
                             <div className="flex flex-col sm:flex-row justify-end gap-3">
                                 <button
@@ -473,16 +468,36 @@ function AddNewTeacher() {
                                 </button>
 
                                 {activeTab === 'personal' && (
-                                    <button
-                                        type="button"
-                                        onClick={handleNext}
-                                        className="px-6 py-2.5 text-sm font-medium rounded-lg bg-blue-500 hover:bg-blue-600 text-white transition-colors"
-                                    >
-                                        {strings.COMMON.NEXT}
-                                    </button>
+                                    isPayrollEnabled ? (
+                                        <button
+                                            type="button"
+                                            onClick={handleNext}
+                                            className="px-6 py-2.5 text-sm font-medium rounded-lg bg-blue-500 hover:bg-blue-600 text-white transition-colors"
+                                        >
+                                            {strings.COMMON.NEXT}
+                                        </button>
+                                    ) : (
+                                        <button
+                                            disabled={isSubmitting}
+                                            type="submit"
+                                            className={`px-6 py-2.5 text-sm font-medium rounded-lg transition-all ${isSubmitting
+                                                ? 'bg-blue-300 cursor-not-allowed text-white'
+                                                : 'bg-blue-500 hover:bg-blue-600 cursor-pointer text-white'
+                                                }`}
+                                        >
+                                            {isSubmitting ? (
+                                                <span className="flex items-center justify-center gap-2">
+                                                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                                                    {strings.ADD_TEACHER.SUBMIT_LOADING}
+                                                </span>
+                                            ) : (
+                                                strings.COMMON.SAVE_DETAILS
+                                            )}
+                                        </button>
+                                    )
                                 )}
 
-                                {activeTab === 'salary' && (
+                                {activeTab === 'salary' && isPayrollEnabled && (
                                     <button
                                         disabled={isSubmitting}
                                         type="submit"

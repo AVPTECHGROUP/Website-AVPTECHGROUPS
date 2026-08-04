@@ -24,6 +24,7 @@ import SubjectManagementRoutes from './Academics/SubjectManagement/SubjectManage
 import { superAdminSchoolPickerRoute, superAdminManageUsersRoutes } from './SuperAdmin/SuperAdminRoutes';
 import TeachersRoutes from './Teachers/TeachersRoutes';
 import TransportRoutes from './Transport/TransportRoutes';
+import TemplatesRoutes from './Templates/TemplatesRoutes';
 
 import { ROLE_GROUPS, ROUTE_PATHS, ROUTES_UI_STRINGS } from '../Constants/RoutesConstants/RoutesConst';
 // ─── Lazy-loaded standalone pages ─────────────────────────────────────────────
@@ -195,6 +196,7 @@ const MainRoutes = () => {
             {superAdminManageUsersRoutes()}
             {TeachersRoutes()}
             {TransportRoutes()}
+            {TemplatesRoutes()}
 
             {/* Fallback */}
             <Route path="*" element={<RootRedirect />} />

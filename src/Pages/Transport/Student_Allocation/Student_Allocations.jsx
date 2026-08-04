@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
     GraduationCap, Search, Plus,
     SlidersHorizontal, RefreshCw,
@@ -52,7 +52,7 @@ function ToastContainer() {
     );
 }
 
-// ─── Standard Pagination Helper (1, 2, 3 ... 6 Format) ────────────────────────
+// ─── Standard Pagination Helper ────────────────────────────────────────
 function pageNumbers(current, total) {
     const siblingCount = 1;
 
@@ -91,8 +91,8 @@ function pageNumbers(current, total) {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function Student_Allocations() {
-    const [allocations, setAllocations] = useState([]);
-    const [pagination, setPagination] = useState(null);
+    // Holds the FULL dataset fetched once from backend (no server-side search/page)
+    const [allAllocations, setAllAllocations] = useState([]);
     const [loading, setLoading] = useState(true);
     const [togglingId, setTogglingId] = useState(null);
 
@@ -104,45 +104,66 @@ export default function Student_Allocations() {
     const [showCreate, setShowCreate] = useState(false);
     const [editAlloc, setEditAlloc] = useState(null);
 
-    // Debounce search
+    // Debounce search - resets page to 0 when user types
     useEffect(() => {
-        const t = setTimeout(() => { setSearch(searchInput); setPage(0); }, 400);
+        const t = setTimeout(() => {
+            setSearch(searchInput.trim());
+            setPage(0);
+        }, 400);
         return () => clearTimeout(t);
     }, [searchInput]);
 
-    // Fetch
+    // Fetch the FULL list ONCE (no page/search sent to backend) so that
+    // search & pagination can both work correctly on the complete dataset.
     const fetchAllocations = useCallback(async () => {
         setLoading(true);
         try {
-            const result = await getTransportAllocations({ page, size: pageSize });
-            setAllocations(result.allocations || []);
-            setPagination(result.pagination);
-        } catch {
+            const result = await getTransportAllocations({
+                page: 0,
+                size: 100000, // large enough to grab everything in one shot
+            });
+
+            const fetchedData = result.allocations || result.data || [];
+            setAllAllocations(fetchedData);
+        } catch (err) {
+            console.error("Fetch allocations error:", err);
             toast.error(TOAST_MESSAGES.ALLOCATION_LOAD_FAIL);
         } finally {
             setLoading(false);
         }
-    }, [page, pageSize]);
+    }, []);
 
-    useEffect(() => { fetchAllocations(); }, [fetchAllocations]);
+    useEffect(() => {
+        fetchAllocations();
+    }, [fetchAllocations]);
 
-    // Client-side search filter
-    const filtered = allocations.filter((a) => {
+    // ── Client-side search across ALL records ──────────────────────────────
+    const filteredAllocations = useMemo(() => {
+        if (!search) return allAllocations;
         const q = search.toLowerCase();
-        return (
-            a.studentName?.toLowerCase().includes(q) ||
-            String(a.admissionNumber ?? "").toLowerCase().includes(q) ||
-            String(a.rollNumber ?? "").toLowerCase().includes(q)
+        return allAllocations.filter((a) =>
+            JSON.stringify(a).toLowerCase().includes(q)
         );
-    });
+    }, [allAllocations, search]);
 
-    const totalElements = pagination?.totalElements ?? allocations.length;
-    const totalPages = pagination?.totalPages ?? 1;
-    const currentPage = pagination?.currentPage ?? 0;
-    const isFirst = pagination?.isFirst ?? currentPage === 0;
-    const isLast = pagination?.isLast ?? currentPage >= totalPages - 1;
+    // ── Client-side pagination over the filtered list ───────────────────────
+    const totalElements = filteredAllocations.length;
+    const totalPages = Math.max(1, Math.ceil(totalElements / pageSize));
+    const currentPage = Math.min(page, totalPages - 1);
+    const isFirst = currentPage === 0;
+    const isLast = currentPage >= totalPages - 1;
     const startItem = totalElements === 0 ? 0 : currentPage * pageSize + 1;
     const endItem = Math.min((currentPage + 1) * pageSize, totalElements);
+
+    const paginatedAllocations = useMemo(() => {
+        const start = currentPage * pageSize;
+        return filteredAllocations.slice(start, start + pageSize);
+    }, [filteredAllocations, currentPage, pageSize]);
+
+    // If page becomes out of range (e.g. after filtering shrinks the list), snap back
+    useEffect(() => {
+        if (page !== currentPage) setPage(currentPage);
+    }, [currentPage]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const handleAction = async (alloc, value) => {
         if (value === "edit") { setEditAlloc(alloc); return; }
@@ -192,11 +213,9 @@ export default function Student_Allocations() {
                     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm w-full min-w-0">
 
                         {/* Card header */}
-                        <div className="px-4 sm:px-6 py-4 flex flex-wrap items-center
-                                        justify-between gap-3 border-b border-gray-100">
+                        <div className="px-4 sm:px-6 py-4 flex flex-wrap items-center justify-between gap-3 border-b border-gray-100">
                             <div className="min-w-0">
-                                <h2 className="text-base sm:text-lg font-bold text-gray-900
-                                               flex items-center gap-2">
+                                <h2 className="text-base sm:text-lg font-bold text-gray-900 flex items-center gap-2">
                                     <SlidersHorizontal className="w-4 h-4 text-purple-500 shrink-0" />
                                     {ALLOCATION_UI_TEXT.SECTION_TITLE}
                                 </h2>
@@ -204,48 +223,49 @@ export default function Student_Allocations() {
                                     {totalElements} {totalElements !== 1 ? ALLOCATION_UI_TEXT.ALLOCATION_PLURAL : ALLOCATION_UI_TEXT.ALLOCATION_SINGULAR} {ALLOCATION_UI_TEXT.TOTAL}
                                 </p>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <button
-                                    onClick={fetchAllocations}
-                                    disabled={loading}
-                                    title="Refresh"
-                                    className="w-9 h-9 inline-flex items-center justify-center
-                                               text-gray-500 border border-gray-200 hover:bg-gray-50
-                                               rounded-xl transition-colors disabled:opacity-40"
-                                >
-                                    <RefreshCw className={`w-4 cursor-pointer h-4 ${loading ? "animate-spin" : ""}`} />
-                                </button>
-                                <button
-                                    onClick={() => setShowCreate(true)}
-                                    className="inline-flex items-center cursor-pointer gap-2 bg-blue-600 hover:bg-blue-700
-                                               text-white text-sm font-semibold px-4 py-2 rounded-xl
-                                               transition-colors shadow-sm whitespace-nowrap"
-                                >
-                                    <Plus className="w-4 h-4" /> {ALLOCATION_UI_TEXT.BTN_ALLOCATE}
-                                </button>
-                            </div>
                         </div>
 
-                        {/* Search */}
-                        <div className="px-4 sm:px-6 py-3 border-b border-gray-100">
-                            <div className="relative w-full sm:max-w-sm">
-                                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2
-                                                   w-4 h-4 text-gray-400 pointer-events-none" />
+                        {/* Search & Actions Bar */}
+                        <div className="px-4 sm:px-6 py-3 border-b border-gray-100 flex flex-col md:flex-row md:items-center gap-3">
+                            {/* Search Input Box */}
+                            <div className="relative w-full md:flex-1 md:max-w-md">
+                                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                                 <input
                                     type="text"
                                     placeholder={ALLOCATION_UI_TEXT.SEARCH_PLACEHOLDER}
                                     value={searchInput}
                                     onChange={(e) => setSearchInput(e.target.value)}
                                     className="w-full pl-10 pr-4 py-2.5 text-sm border border-gray-200
-                                               rounded-xl focus:outline-none focus:ring-2
-                                               focus:ring-blue-200 bg-gray-50 placeholder-gray-400"
+                       rounded-xl focus:outline-none focus:ring-2
+                       focus:ring-blue-200 bg-gray-50 placeholder-gray-400"
                                 />
                             </div>
-                        </div>
 
-                        {/* Table */}
+                            {/* Buttons Container */}
+                            <div className="flex items-center gap-2.5 w-full md:w-auto shrink-0">
+                                <button
+                                    onClick={fetchAllocations}
+                                    disabled={loading}
+                                    title="Refresh"
+                                    className="w-10 h-10 sm:w-9 sm:h-9 inline-flex items-center justify-center
+                       text-gray-500 border border-gray-200 hover:bg-gray-50
+                       rounded-xl transition-colors disabled:opacity-40 shrink-0"
+                                >
+                                    <RefreshCw className={`w-4 h-4 cursor-pointer ${loading ? "animate-spin" : ""}`} />
+                                </button>
+                                <button
+                                    onClick={() => setShowCreate(true)}
+                                    className="flex-1 md:flex-none inline-flex items-center justify-center cursor-pointer gap-2 bg-blue-600 hover:bg-blue-700
+                       text-white text-sm font-semibold px-4 py-2.5 sm:py-2 rounded-xl
+                       transition-colors shadow-sm whitespace-nowrap"
+                                >
+                                    <Plus className="w-4 h-4" /> {ALLOCATION_UI_TEXT.BTN_ALLOCATE}
+                                </button>
+                            </div>
+                        </div>
+                        {/* Allocation Table (client-side filtered + paginated data) */}
                         <AllocationTable
-                            data={filtered}
+                            data={paginatedAllocations}
                             loading={loading}
                             pageSize={pageSize}
                             onAction={handleAction}
@@ -277,7 +297,7 @@ export default function Student_Allocations() {
                                     </div>
                                 </div>
 
-                                {/* Dynamic Standard Page Buttons (Condition removed so it always shows) */}
+                                {/* Dynamic Standard Page Buttons */}
                                 <div className="flex items-center gap-1 flex-wrap">
                                     <button
                                         onClick={() => setPage((p) => Math.max(0, p - 1))}

@@ -136,9 +136,9 @@ const AddPersonalInfo = ({ formData, setFormData, handleInputChange, errors, set
                     </div>
 
                     {/* Address */}
-                    <div className="lg:col-span-2">
-                        <label className="block font-semibold text-gray-600 text-sm mb-2">
-                            Current Address
+                    <div className="lg:col-span-2" >
+                        <label className="block font-semibold text-gray-600 text-sm mb-2" >
+                            Current Address <span className="text-red-600">*</span>
                         </label>
                         <textarea
                             rows={4}
@@ -221,6 +221,7 @@ const AddPersonalInfo = ({ formData, setFormData, handleInputChange, errors, set
                             value={formData.joiningDate}
                             onChange={handleInputChange}
                             className={inputCls(errors?.joiningDate)}
+                            max={new Date().toISOString().split("T")[0]}
                         />
                         <ErrorText msg={errors?.joiningDate} />
                     </div>

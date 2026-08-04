@@ -122,7 +122,7 @@ const GradeConfigTab = () => {
   const fetchGrades = useCallback(async () => {
     setLoading(true);
     try { setGrades(await getGradeConfigs()); }
-    catch { toast.error(EXAM_CONSTS.CONFIG.ERR_LOAD_GRADES); }
+    catch (err) { toast.error(err?.message || EXAM_CONSTS.CONFIG.ERR_LOAD_GRADES); }
     finally { setLoading(false); }
   }, []);
 
@@ -156,15 +156,26 @@ const GradeConfigTab = () => {
       );
       closeModal();
       fetchGrades();
-    } catch { toast.error(EXAM_CONSTS.CONFIG.ERR_OP_FAIL); }
-    finally { setSaving(false); }
+    } catch (err) {
+      // ✅ Shows the exact backend error message if available
+      toast.error(err?.message || EXAM_CONSTS.CONFIG.ERR_OP_FAIL);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleDelete = async () => {
     setDeleting(true);
-    try { await deleteGradeConfig(deleteTarget.id); toast.success(EXAM_CONSTS.CONFIG.SUCC_GRADE_DEL); setDeleteTarget(null); fetchGrades(); }
-    catch { toast.error(EXAM_CONSTS.CONFIG.ERR_DEL_FAIL); }
-    finally { setDeleting(false); }
+    try {
+      await deleteGradeConfig(deleteTarget.id);
+      toast.success(EXAM_CONSTS.CONFIG.SUCC_GRADE_DEL);
+      setDeleteTarget(null);
+      fetchGrades();
+    } catch (err) {
+      toast.error(err?.message || EXAM_CONSTS.CONFIG.ERR_DEL_FAIL);
+    } finally {
+      setDeleting(false);
+    }
   };
 
   return (
@@ -309,7 +320,7 @@ const ExamTypeTab = () => {
   const fetchTypes = useCallback(async () => {
     setLoading(true);
     try { setExamTypes(await getExamTypes()); }
-    catch { toast.error(EXAM_CONSTS.CONFIG.ERR_LOAD_TYPES); }
+    catch (err) { toast.error(err?.message || EXAM_CONSTS.CONFIG.ERR_LOAD_TYPES); }
     finally { setLoading(false); }
   }, []);
 
@@ -340,8 +351,11 @@ const ExamTypeTab = () => {
       );
       closeModal();
       fetchTypes();
-    } catch { toast.error(EXAM_CONSTS.CONFIG.ERR_OP_FAIL); }
-    finally { setSaving(false); }
+    } catch (err) {
+      toast.error(err?.message || EXAM_CONSTS.CONFIG.ERR_OP_FAIL);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleToggle = async (t) => {
@@ -353,8 +367,11 @@ const ExamTypeTab = () => {
         EXAM_CONSTS.CONFIG.SUCC_TYPE_STAT(!t.isActive)
       );
       fetchTypes();
-    } catch { toast.error(EXAM_CONSTS.CONFIG.ERR_STAT_UPD); }
-    finally { setToggling(null); }
+    } catch (err) {
+      toast.error(err?.message || EXAM_CONSTS.CONFIG.ERR_STAT_UPD);
+    } finally {
+      setToggling(null);
+    }
   };
 
   return (

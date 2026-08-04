@@ -53,6 +53,16 @@ const TeachersTable = ({
   const { hasPermission } = useAuth();
   const [hoveredId, setHoveredId] = useState(null);
 
+  // Feature Flag Check for Payroll
+  const isPayrollEnabled = (() => {
+    try {
+      const school = JSON.parse(localStorage.getItem('school'));
+      return school?.features?.payrollEnabled ?? true;
+    } catch {
+      return true;
+    }
+  })();
+
   const getAvatarColor = (name) => {
     const colors = [
       'bg-blue-500',
@@ -75,7 +85,10 @@ const TeachersTable = ({
     teacher.avatar || (resolveTeacherName(teacher)[0] || 'U').toUpperCase();
 
   const handleToggleStatus = async (teacher) => {
-    // 1. Optimistic row flip
+    if (teacher.id === selectedTeacherId && onRowSelect) {
+      onRowSelect(teacher);
+    }
+
     setTeachers((prev) =>
       prev.map((t) =>
         t.id === teacher.id
@@ -83,7 +96,6 @@ const TeachersTable = ({
           : t
       )
     );
-    // 2. Optimistic stat card update
     if (onStatusToggle) onStatusToggle(teacher.status);
 
     try {
@@ -96,7 +108,6 @@ const TeachersTable = ({
       }
     } catch (error) {
       toast.error('Status update failed');
-      // 3. Rollback on failure
       fetchTeachers();
       if (onStatusToggle) {
         onStatusToggle(teacher.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE');
@@ -152,6 +163,8 @@ const TeachersTable = ({
     return options;
   };
 
+  const tableColSpan = isUserTable ? 4 : (isPayrollEnabled ? 9 : 8);
+
   return (
     <>
       {/* ── MOBILE CARDS (< 1024px) ──────────────────────────────────────── */}
@@ -187,22 +200,24 @@ const TeachersTable = ({
           />
         ) : (
           teachers.map((teacher) => {
-            const isSelected = selectedTeacherId === teacher.id;
+            const isActive = teacher.status === 'ACTIVE';
+            const isSelected = isActive && selectedTeacherId === teacher.id;
+
             return (
               <div
                 key={teacher.id}
                 onClick={() => {
-                  if (!isUserTable && onRowSelect) onRowSelect(teacher);
+                  if (!isUserTable && isActive && onRowSelect) onRowSelect(teacher);
                 }}
-                className={`bg-white rounded-xl border p-4 shadow-sm transition-all cursor-pointer ${isSelected
-                  ? 'border-blue-400 ring-1 ring-blue-300 bg-blue-50/40'
-                  : 'border-gray-200 hover:shadow-md'
+                className={`bg-white rounded-xl border p-4 shadow-sm transition-all ${isActive ? 'cursor-pointer hover:shadow-md' : 'cursor-default'
+                  } ${isSelected
+                    ? 'border-blue-400 ring-1 ring-blue-300 bg-blue-50/40'
+                    : 'border-gray-200'
                   }`}
               >
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
-                    {/* Checkbox indicator on mobile */}
-                    {!isUserTable && (
+                    {!isUserTable && isActive && (
                       <div
                         className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-all ${isSelected
                           ? 'bg-blue-600 border-blue-600'
@@ -292,7 +307,7 @@ const TeachersTable = ({
                       </div>
                     </div>
                   )}
-                  {!isUserTable && teacher.salaryType && (
+                  {!isUserTable && teacher.salaryType && isPayrollEnabled && (
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-500">
                         Salary Type:
@@ -320,7 +335,7 @@ const TeachersTable = ({
                       </span>
                     </div>
                   )}
-                  {!isUserTable && teacher.payroll && (
+                  {!isUserTable && teacher.payroll && isPayrollEnabled && (
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-500">Payroll:</span>
                       <span
@@ -345,7 +360,6 @@ const TeachersTable = ({
                   )}
                 </div>
 
-                {/* Stop card click when interacting with the action dropdown */}
                 <div
                   className="flex items-center gap-2 pt-3 border-t border-gray-100"
                   onClick={(e) => e.stopPropagation()}
@@ -376,7 +390,7 @@ const TeachersTable = ({
                 <th className="px-2 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Mobile Number
                 </th>
-                {!isUserTable && (
+                {!isUserTable && isPayrollEnabled && (
                   <th className="px-2 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Salary Type
                   </th>
@@ -389,9 +403,11 @@ const TeachersTable = ({
                     <th className="px-2 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Attendance
                     </th>
-                    <th className="px-2 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Payroll
-                    </th>
+                    {isPayrollEnabled && (
+                      <th className="px-2 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Payroll
+                      </th>
+                    )}
                     <th className="px-2 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Joining Date
                     </th>
@@ -405,13 +421,11 @@ const TeachersTable = ({
 
             <tbody className="bg-white divide-y divide-gray-200">
               {loading ? (
-
                 <ListLoader rows={7} />
-
               ) : error ? (
                 <tr>
                   <td
-                    colSpan={isUserTable ? 4 : 9}
+                    colSpan={tableColSpan}
                     className="px-6 py-8 text-center"
                   >
                     <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -431,7 +445,7 @@ const TeachersTable = ({
                 </tr>
               ) : !teachers?.length ? (
                 <tr>
-                  <td colSpan={isUserTable ? 4 : 9}>
+                  <td colSpan={tableColSpan}>
                     <NoDataFound
                       message={`No ${isUserTable ? 'users' : 'teachers'} found`}
                     />
@@ -439,58 +453,60 @@ const TeachersTable = ({
                 </tr>
               ) : (
                 teachers.map((teacher) => {
-                  const isSelected = selectedTeacherId === teacher.id;
+                  const isActive = teacher.status === 'ACTIVE';
+                  const isSelected = isActive && selectedTeacherId === teacher.id;
                   const isVisibleCheckbox =
-                    isSelected || hoveredId === teacher.id;
+                    isActive && (isSelected || hoveredId === teacher.id);
 
                   return (
                     <tr
                       key={teacher.id}
                       onMouseEnter={() =>
-                        !isUserTable && setHoveredId(teacher.id)
+                        !isUserTable && isActive && setHoveredId(teacher.id)
                       }
                       onMouseLeave={() => !isUserTable && setHoveredId(null)}
                       onClick={() => {
-                        if (!isUserTable && onRowSelect) onRowSelect(teacher);
+                        if (!isUserTable && isActive && onRowSelect) onRowSelect(teacher);
                       }}
-                      className={`transition-colors duration-100 py-0 cursor-pointer ${isSelected
-                        ? 'bg-blue-50'
-                        : hoveredId === teacher.id
-                          ? 'bg-gray-50'
-                          : 'bg-white'
+                      className={`transition-colors duration-100 py-0 ${isActive ? 'cursor-pointer' : 'cursor-default'
+                        } ${isSelected
+                          ? 'bg-blue-50'
+                          : hoveredId === teacher.id && isActive
+                            ? 'bg-gray-50'
+                            : 'bg-white'
                         }`}
                     >
-                      {/* ── Checkbox cell ── */}
                       {!isUserTable && (
                         <td className="pl-4 pr-1 py-2 w-10">
-                          <div
-                            className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-all duration-100 select-none ${isSelected
-                              ? 'bg-blue-600 border-blue-600'
-                              : isVisibleCheckbox
-                                ? 'border-gray-400 bg-white hover:border-blue-400'
-                                : 'border-transparent bg-transparent'
-                              }`}
-                          >
-                            {isSelected && (
-                              <svg
-                                className="w-2.5 h-2.5 text-white"
-                                viewBox="0 0 12 12"
-                                fill="none"
-                              >
-                                <path
-                                  d="M2 6l3 3 5-5"
-                                  stroke="currentColor"
-                                  strokeWidth="2"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                />
-                              </svg>
-                            )}
-                          </div>
+                          {isActive && (
+                            <div
+                              className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-all duration-100 select-none ${isSelected
+                                ? 'bg-blue-600 border-blue-600'
+                                : isVisibleCheckbox
+                                  ? 'border-gray-400 bg-white hover:border-blue-400'
+                                  : 'border-transparent bg-transparent'
+                                }`}
+                            >
+                              {isSelected && (
+                                <svg
+                                  className="w-2.5 h-2.5 text-white"
+                                  viewBox="0 0 12 12"
+                                  fill="none"
+                                >
+                                  <path
+                                    d="M2 6l3 3 5-5"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  />
+                                </svg>
+                              )}
+                            </div>
+                          )}
                         </td>
                       )}
 
-                      {/* ── Full Name ── */}
                       <td className="px-6 py-2 whitespace-nowrap">
                         <div className="flex items-center gap-3 border border-transparent rounded transition-colors">
                           {resolveTeacherImage(teacher) ? (
@@ -523,7 +539,7 @@ const TeachersTable = ({
                         {teacher.mobile}
                       </td>
 
-                      {!isUserTable && (
+                      {!isUserTable && isPayrollEnabled && (
                         <td className="px-3 py-2 whitespace-nowrap">
                           <span
                             className={`inline-block px-3 py-1 text-xs rounded-full ${teacher.salaryType === 'MONTHLY'
@@ -565,23 +581,24 @@ const TeachersTable = ({
                               {teacher.attendance}
                             </span>
                           </td>
-                          <td className="px-3 py-2 whitespace-nowrap">
-                            <span
-                              className={`inline-block px-3 py-1 text-xs rounded ${teacher.payroll === 'INCLUDED'
-                                ? 'bg-teal-50 text-teal-700'
-                                : 'bg-gray-100 text-gray-700'
-                                }`}
-                            >
-                              {teacher.payroll}
-                            </span>
-                          </td>
+                          {isPayrollEnabled && (
+                            <td className="px-3 py-2 whitespace-nowrap">
+                              <span
+                                className={`inline-block px-3 py-1 text-xs rounded ${teacher.payroll === 'INCLUDED'
+                                  ? 'bg-teal-50 text-teal-700'
+                                  : 'bg-gray-100 text-gray-700'
+                                  }`}
+                              >
+                                {teacher.payroll}
+                              </span>
+                            </td>
+                          )}
                           <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">
                             {teacher.joiningDate}
                           </td>
                         </>
                       )}
 
-                      {/* ── Actions ── */}
                       <td
                         className="px-3 py-2 whitespace-nowrap text-center"
                         onClick={(e) => e.stopPropagation()}
@@ -651,8 +668,7 @@ const TeachersTable = ({
                 <button
                   key={num}
                   onClick={() => setPage(num)}
-                  className={`${base} ${page === num ? active : inactive
-                    }`}
+                  className={`${base} ${page === num ? active : inactive}`}
                 >
                   {num}
                 </button>

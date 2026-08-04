@@ -21,6 +21,20 @@ export const API_ENDPOINTS = {
   circularApprove: (id) => `${BASE_URL_V1}/circulars/${id}/approve`,
   circularReject: (id) => `${BASE_URL_V1}/circulars/${id}/reject`,
 
+  //Templates-->
+
+  // ─── Print Templates ───────────────────────────────────────────────────────
+  PRINT_TEMPLATES: `${BASE_URL_V1}/print-templates`,
+
+  printTemplateById: (id) =>
+    `${BASE_URL_V1}/print-templates/${id}`,
+
+  printTemplateSetDefault: (id) =>
+    `${BASE_URL_V1}/print-templates/${id}/set-default`,
+
+  printTemplateDefault: (type) =>
+    `${BASE_URL_V1}/print-templates/default?type=${encodeURIComponent(type)}`,
+
   // ─── School Events 
   SCHOOL_EVENTS: `${BASE_URL_V1}/school-events`,
   EVENTS_PENDING: `${BASE_URL_V1}/school-events/pending-approval`,
@@ -149,6 +163,8 @@ export const API_ENDPOINTS = {
   FEE_PERIODS: `${BASE_URL_V1}/fee/periods`,
   FEE_PERIODS_ACADEMIC_YEARS: `${BASE_URL_V1}/fee/periods/academic-years`,
   feePeriodById: (id) => `${BASE_URL_V1}/fee/periods/${id}`,
+  feePeriodClose: (id) => `${BASE_URL_V1}/fee/periods/${id}/close`,
+  feePeriodreopen: (id) => `${BASE_URL_V1}/fee/periods/${id}/reopen`,
 
   // ─── Fee Structures ───
   FEE_STRUCTURES: `${BASE_URL_V1}/fee/structures`,
@@ -216,7 +232,7 @@ export const API_ENDPOINTS = {
   schoolDeactivate: (id) => `${BASE_URL_DOUBLE_V1}/schools/${id}/deactivate`,
   schoolAttendanceConfig: (id) => `${BASE_URL_DOUBLE_V1}/schools/${id}/attendance-config`,
   schoolLogo: (id) => `${BASE_URL_DOUBLE_V1}/schools/${id}/logo`,
-
+  schoolFeatures: (id) => `${BASE_URL_DOUBLE_V1}/schools/${id}/features`,
   // ─── Section Subjects ───
   SECTION_SUBJECTS_ASSIGN: `${BASE_URL_V1}/section-subjects/assign`,
   sectionSubjectsBySection: (sectionId) => `${BASE_URL_V1}/section-subjects/section/${sectionId}`,
@@ -269,6 +285,15 @@ export const API_ENDPOINTS = {
   studentById: (id) => `${BASE_URL_DOUBLE_V1}/students/${id}`,
   studentByClass: (id) => `${BASE_URL_DOUBLE_V1}/students/class/${id}`,
   studentBySection: (sectionId) => `${BASE_URL_DOUBLE_V1}/students/section/${sectionId}`,
+
+  // ─── Student Documents ───
+  STUDENT_DOCUMENTS: (id) => `${BASE_URL_DOUBLE_V1}/students/${id}/documents`,
+  UPLOAD_STUDENT_DOCUMENT: (id, docType) =>
+    `${BASE_URL_DOUBLE_V1}/students/${id}/documents/${docType}`,
+
+  // ─── Parent / Guardian Photos ───
+  UPLOAD_PARENT_PHOTO: (id, photoType) =>
+    `${BASE_URL_DOUBLE_V1}/students/${id}/photos/${photoType}`,
 
   // ─── Student Store (Class Item Configs) ───
   CLASS_ITEM_CONFIGS: `${BASE_URL_DOUBLE_V1}/stock/class-item-configs`,
