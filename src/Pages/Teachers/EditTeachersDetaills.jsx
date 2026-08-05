@@ -6,6 +6,7 @@ import PersonalDetailsTab from '../../Components/Teacher/EditTabComponents/Perso
 import SalaryStructureTab from '../../Components/Teacher/EditTabComponents/SalaryStructureTab';
 import { toast } from 'react-toastify';
 import TEACHER_MODULE_STRINGS from '../../Constants/StringConstants/TeacherConstants';
+import {getListOfValues} from "../../Api/Lov/ListOfValues.js";
 
 function EditTeachersDetails() {
     const strings = TEACHER_MODULE_STRINGS;
@@ -19,6 +20,7 @@ function EditTeachersDetails() {
     const [imagePreview, setImagePreview] = useState(null);
     const [existingImageUrl, setExistingImageUrl] = useState(null);
     const fileInputRef = useRef(null);
+    const [designationList, setDesignationList] = useState([]);
 
     // Feature Flag Check for Payroll
     const isPayrollEnabled = (() => {
@@ -29,6 +31,18 @@ function EditTeachersDetails() {
             return true;
         }
     })();
+    useEffect(() => {
+        const fetchDesignation = async () => {
+            try {
+                const data = await getListOfValues("DESIGNATION");
+                setDesignationList(data);
+            } catch (err) {
+                console.error(err);
+            }
+        };
+
+        fetchDesignation();
+    }, []);
 
     const [formData, setFormData] = useState({
         name: '',
@@ -61,9 +75,20 @@ function EditTeachersDetails() {
     });
 
     function formatToInputDate(dateStr) {
-        if (!dateStr) return '';
+        if (!dateStr) return "";
+
+        // If backend already sends yyyy-mm-dd
+        if (dateStr.includes("-") && dateStr.length === 10) {
+            return dateStr;
+        }
+
         const date = new Date(dateStr);
-        return date.toISOString().split('T')[0];
+
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+
+        return `${year}-${month}-${day}`;
     }
 
     const handleInputChange = (e) => {
@@ -122,13 +147,18 @@ function EditTeachersDetails() {
     });
 
     const handleSavePersonal = async () => {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
+        const today = (() => {
+            const d = new Date();
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, "0");
+            const day = String(d.getDate()).padStart(2, "0");
+            return `${year}-${month}-${day}`;
+        })();
 
-        if (new Date(formData.joiningDate) > today) {
-            toast.error("Joining date cannot be in the future.");
-            return;
-        }
+        // if (formData.joiningDate > today) {
+        //     toast.error("Joining date cannot be in the future.");
+        //     return;
+        // }
         setIsSaving(true);
         const loadingToast = toast.loading('Saving personal details...');
         try {
@@ -451,11 +481,11 @@ function EditTeachersDetails() {
                                         className="hidden"
                                     />
                                 </div>
-
                                 <PersonalDetailsTab
                                     formData={formData}
                                     setFormData={setFormData}
                                     handleInputChange={handleInputChange}
+                                    designationList={designationList}
                                     onSave={handleSavePersonal}
                                     onSaveAndNext={handleSaveAndNextPersonal}
                                     isSaving={isSaving}
