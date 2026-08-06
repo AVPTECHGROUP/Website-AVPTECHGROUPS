@@ -1,7 +1,15 @@
-import { FileText, CreditCard, Ticket, Award, Receipt, IndianRupee } from 'lucide-react'
+import {
+  FileText, CreditCard, Ticket, Award, Receipt, IndianRupee,
+  FileOutput, ShieldCheck, ArrowRightLeft, ClipboardCheck,
+} from 'lucide-react'
 
 // Keys must match backend `templateType` enum values used by
 // /v1/print-templates (see Constants/Endpoints.js -> PRINT_TEMPLATES).
+//
+// NOTE: TRANSFER_CERTIFICATE, CHARACTER_CERTIFICATE, MIGRATION_CERTIFICATE
+// and ELIGIBILITY_CERTIFICATE are NEW keys — the backend `templateType`
+// enum + validation on POST/PUT /v1/print-templates must be updated to
+// accept these 4 values, same as it already accepts CERTIFICATE.
 export const TEMPLATE_TYPES = {
   REPORT_CARD: {
     key: 'REPORT_CARD',
@@ -219,10 +227,16 @@ export const TEMPLATE_TYPES = {
   </table>
 </div>`,
   },
+
+  // ─────────────────────────────────────────────────────────────────────
+  // Certificate family — all 5 of these live under one sidebar entry
+  // ("Certificate Templates") and are switched via a dropdown on the
+  // CertificateTemplates.jsx page. See CERTIFICATE_SUB_TYPES below.
+  // ─────────────────────────────────────────────────────────────────────
   CERTIFICATE: {
     key: 'CERTIFICATE',
     label: 'Certificate Templates',
-    shortLabel: 'Certificate',
+    shortLabel: 'Common Certificate',
     icon: Award,
     stub: `<div style="font-family:Georgia,serif;padding:30px;border:4px solid #f59e0b;max-width:640px;margin:auto;text-align:center;background:#fffbeb;">
   <div style="font-size:11px;letter-spacing:3px;color:#b45309;">CERTIFICATE</div>
@@ -231,23 +245,389 @@ export const TEMPLATE_TYPES = {
   <div style="margin-top:24px;font-size:11px;">Date: {{issueDate}}</div>
 </div>`,
   },
+  TRANSFER_CERTIFICATE: {
+    key: 'TRANSFER_CERTIFICATE',
+    label: 'Transfer Certificate Templates',
+    shortLabel: 'Transfer Certificate (TC)',
+    icon: FileOutput,
+    stub: `<div style="font-family:Georgia,serif;max-width:650px;margin:auto;border:2px solid #1e3a8a;background:#fff;">
+  <div style="background:#1e3a8a;color:#fff;text-align:center;padding:16px;">
+    <div style="font-size:11px;letter-spacing:2px;opacity:.85;">SCHOOL LEAVING / TRANSFER CERTIFICATE</div>
+    <h2 style="margin:6px 0 0;font-size:18px;">{{schoolName}}</h2>
+    <div style="font-size:11px;opacity:.8;margin-top:2px;">{{schoolAddress}}</div>
+  </div>
+  <div style="padding:20px 24px;">
+    <table style="width:100%;border-collapse:collapse;font-size:12.5px;">
+      <tr><td style="padding:6px 0;width:55%;"><b>TC No.</b></td><td>{{tcNumber}}</td></tr>
+      <tr><td style="padding:6px 0;"><b>Admission No.</b></td><td>{{admissionNumber}}</td></tr>
+      <tr><td style="padding:6px 0;"><b>Student Name</b></td><td>{{studentName}}</td></tr>
+      <tr><td style="padding:6px 0;"><b>Father's / Mother's Name</b></td><td>{{parentName}}</td></tr>
+      <tr><td style="padding:6px 0;"><b>Nationality</b></td><td>{{nationality}}</td></tr>
+      <tr><td style="padding:6px 0;"><b>Date of Birth</b></td><td>{{dateOfBirth}}</td></tr>
+      <tr><td style="padding:6px 0;"><b>Class admitted in</b></td><td>{{admissionClass}}</td></tr>
+      <tr><td style="padding:6px 0;"><b>Class currently studying in</b></td><td>{{className}}</td></tr>
+      <tr><td style="padding:6px 0;"><b>Qualified for promotion to</b></td><td>{{promotedToClass}}</td></tr>
+      <tr><td style="padding:6px 0;"><b>Date of Leaving</b></td><td>{{leavingDate}}</td></tr>
+      <tr><td style="padding:6px 0;"><b>Reason for Leaving</b></td><td>{{leavingReason}}</td></tr>
+      <tr><td style="padding:6px 0;"><b>Conduct</b></td><td>{{conduct}}</td></tr>
+    </table>
+    <div style="margin-top:26px;display:flex;justify-content:space-between;font-size:11.5px;">
+      <div>Date of Issue: {{issueDate}}</div>
+      <div>Principal Signature</div>
+    </div>
+  </div>
+</div>`,
+  },
+  CHARACTER_CERTIFICATE: {
+    key: 'CHARACTER_CERTIFICATE',
+    label: 'Character Certificate Templates',
+    shortLabel: 'Character Certificate',
+    icon: ShieldCheck,
+    stub: `<div style="font-family:Georgia,serif;padding:30px;border:4px solid #16a34a;max-width:640px;margin:auto;text-align:center;background:#f0fdf4;">
+  <div style="font-size:11px;letter-spacing:3px;color:#166534;">CHARACTER CERTIFICATE</div>
+  <h2 style="margin:10px 0;color:#111827;">{{studentName}}</h2>
+  <p style="font-size:12.5px;color:#444;line-height:1.7;">
+    S/o &amp; D/o {{parentName}}, was a student of {{className}} in {{schoolName}} during the academic
+    session {{academicSession}}. His/her conduct and character during this period, to the best of our
+    knowledge, have been {{conductRemarks}}.
+  </p>
+  <div style="margin-top:26px;font-size:11px;display:flex;justify-content:space-between;text-align:left;">
+    <div>Date: {{issueDate}}</div>
+    <div>Principal Signature</div>
+  </div>
+</div>`,
+  },
+  MIGRATION_CERTIFICATE: {
+    key: 'MIGRATION_CERTIFICATE',
+    label: 'Migration Certificate Templates',
+    shortLabel: 'Migration Certificate',
+    icon: ArrowRightLeft,
+    stub: `<div style="font-family:Georgia,serif;max-width:650px;margin:auto;border:2px solid #7c3aed;background:#fff;">
+  <div style="background:#7c3aed;color:#fff;text-align:center;padding:16px;">
+    <div style="font-size:11px;letter-spacing:2px;opacity:.85;">MIGRATION CERTIFICATE</div>
+    <h2 style="margin:6px 0 0;font-size:18px;">{{schoolName}}</h2>
+    <div style="font-size:11px;opacity:.8;margin-top:2px;">{{schoolBoard}} · {{schoolAddress}}</div>
+  </div>
+  <div style="padding:20px 24px;">
+    <table style="width:100%;border-collapse:collapse;font-size:12.5px;">
+      <tr><td style="padding:6px 0;width:55%;"><b>Migration No.</b></td><td>{{migrationNumber}}</td></tr>
+      <tr><td style="padding:6px 0;"><b>Student Name</b></td><td>{{studentName}}</td></tr>
+      <tr><td style="padding:6px 0;"><b>Father's / Mother's Name</b></td><td>{{parentName}}</td></tr>
+      <tr><td style="padding:6px 0;"><b>Roll No.</b></td><td>{{rollNo}}</td></tr>
+      <tr><td style="padding:6px 0;"><b>Examination Passed</b></td><td>{{examName}}</td></tr>
+      <tr><td style="padding:6px 0;"><b>Year of Passing</b></td><td>{{passingYear}}</td></tr>
+      <tr><td style="padding:6px 0;"><b>Eligible to join</b></td><td>{{eligibleFor}}</td></tr>
+    </table>
+    <p style="font-size:11.5px;color:#555;margin-top:16px;">
+      This is to certify that the above-named student is eligible to migrate to another recognized institution/board.
+    </p>
+    <div style="margin-top:22px;display:flex;justify-content:space-between;font-size:11.5px;">
+      <div>Date of Issue: {{issueDate}}</div>
+      <div>Principal Signature</div>
+    </div>
+  </div>
+</div>`,
+  },
+  ELIGIBILITY_CERTIFICATE: {
+    key: 'ELIGIBILITY_CERTIFICATE',
+    label: 'Eligibility / Provisional Certificate Templates',
+    shortLabel: 'Eligibility Certificate',
+    icon: ClipboardCheck,
+    // This is the "admission requirement" doc — e.g. a student who passed
+    // Class 10 and wants admission to Class 11 while original marksheet is
+    // still pending. {{requiredDocumentsNote}} is where the admin types the
+    // specific pending-document text for that case (e.g. "Original Class
+    // 10 marksheet to be submitted within 15 days of admission.").
+    stub: `<div style="font-family:Georgia,serif;max-width:650px;margin:auto;border:2px solid #b45309;background:#fff;">
+  <div style="background:#b45309;color:#fff;text-align:center;padding:16px;">
+    <div style="font-size:11px;letter-spacing:2px;opacity:.85;">PROVISIONAL ELIGIBILITY CERTIFICATE</div>
+    <h2 style="margin:6px 0 0;font-size:18px;">{{schoolName}}</h2>
+    <div style="font-size:11px;opacity:.8;margin-top:2px;">{{schoolAddress}}</div>
+  </div>
+  <div style="padding:20px 24px;">
+    <p style="font-size:12.5px;line-height:1.8;color:#333;">
+      This is to certify that <b>{{studentName}}</b>, S/o &amp; D/o {{parentName}}, has passed the
+      <b>{{examName}}</b> examination held in {{passingYear}} from {{schoolName}}, securing
+      <b>{{percentage}}%</b> marks, and is provisionally eligible for admission to
+      <b>{{nextClassName}}</b>.
+    </p>
+    <div style="background:#fffbeb;border:1px dashed #f59e0b;border-radius:8px;padding:10px 14px;font-size:11.5px;color:#92400e;margin-top:14px;">
+      <b>Note:</b> {{requiredDocumentsNote}}
+    </div>
+    <div style="margin-top:24px;display:flex;justify-content:space-between;font-size:11.5px;">
+      <div>Date of Issue: {{issueDate}}</div>
+      <div>Principal Signature</div>
+    </div>
+  </div>
+</div>`,
+  },
+
   FEE_RECEIPT: {
     key: 'FEE_RECEIPT',
     label: 'Fee Receipt Templates',
     shortLabel: 'Fee Receipt',
     icon: IndianRupee,
-    stub: `<div style="font-family:Arial;padding:20px;max-width:600px;margin:auto;border:1px solid #ddd;">
-  <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #16a34a;padding-bottom:10px;">
-    <h3 style="margin:0;color:#16a34a;">Fee Payment Receipt</h3>
-    <div style="font-size:11.5px;">Receipt No: {{receiptNo}}</div>
+    // Fully data-driven, same pattern as REPORT_CARD above — every value
+    // below is a {{mergeField}} resolved from the actual collect-fee API
+    // response via buildFeeReceiptMergeData() in Templateengine.js. Prints
+    // TWO copies side by side (Office + Student/Parent) from a SINGLE
+    // render pass, since renderTemplate() only runs once per print — the
+    // copy label text ("OFFICE COPY" / "STUDENT / PARENT COPY") is the
+    // only thing hardcoded per block, everything else comes from data.
+    //
+    // Repeating section: {{#components}}...{{/components}} — one row per
+    // fee component returned by the API (components[]).
+    //
+    // Conditional blocks (engine has no {{#if}}, so these are arrays with
+    // 0 or 1 item — present only when the relevant amount/value is set):
+    //   {{#transportRows}}  → shown only if transportAmount > 0
+    //   {{#discountRows}}   → shown only if discount > 0
+    //   {{#lateFineRows}}   → shown only if lateFine > 0
+    //   {{#referenceRows}}  → shown only if referenceNo is present
+    //   {{#remarksRows}}    → shown only if remarks is present
+    stub: `<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>Fee Receipt</title></head>
+<body style="margin:0;padding:14px;background:#eef2f7;">
+<div class="fr2-wrap">
+<style>
+  .fr2-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; max-width: 980px; margin: 0 auto; }
+  .fr2-copy { font-family: 'Segoe UI', Arial, Helvetica, sans-serif; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 26px rgba(15,23,42,0.10); color: #1f2937; border: 1px solid #e5e7eb; page-break-inside: avoid; }
+
+  .fr2-copy-tag { text-align: right; background: #f3f4f6; border-bottom: 1px solid #e5e7eb; padding: 4px 12px; font-size: 9px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: #6b7280; }
+
+  .fr2-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: linear-gradient(135deg,#1e3a8a,#2563eb); color: #fff; padding: 12px 14px; }
+  .fr2-header-left { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .fr2-logo { width: 38px; height: 38px; border-radius: 8px; background: rgba(255,255,255,.22); flex-shrink: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; font-weight: 800; font-size: 13px; border: 1.5px solid rgba(255,255,255,.55); }
+  .fr2-logo img { width: 100%; height: 100%; object-fit: cover; }
+  .fr2-school-name { margin: 0; font-size: 13.5px; font-weight: 800; letter-spacing: -.1px; }
+  .fr2-school-meta { margin: 1px 0 0; font-size: 9px; opacity: .88; line-height: 1.5; }
+  .fr2-badge { flex-shrink: 0; font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+
+  .fr2-info-grid { display: grid; grid-template-columns: 1fr 1fr; border-bottom: 1px solid #e5e7eb; }
+  .fr2-info-col { padding: 10px 12px; }
+  .fr2-info-col:first-child { border-right: 1px solid #e5e7eb; }
+  .fr2-info-title { background: #dbeafe; color: #1e3a8a; font-weight: 800; font-size: 9px; text-transform: uppercase; letter-spacing: .06em; padding: 3px 7px; border-radius: 4px; margin-bottom: 6px; display: inline-block; }
+  .fr2-kv-row { display: flex; gap: 6px; font-size: 10.5px; margin-bottom: 3px; }
+  .fr2-kv-row .fr2-k { font-weight: 700; min-width: 62px; color: #4b5563; flex-shrink: 0; }
+  .fr2-kv-row .fr2-v { color: #111827; }
+
+  .fr2-table-title { background: #dbeafe; padding: 4px 10px; font-weight: 800; font-size: 9px; text-transform: uppercase; letter-spacing: .06em; color: #1e3a8a; }
+  .fr2-table-title.fr2-transport { background: #fef3c7; color: #92400e; }
+  table.fr2-items { width: 100%; border-collapse: collapse; font-size: 10.5px; }
+  table.fr2-items td { padding: 4px 12px; border-bottom: 1px solid #f1f2f6; }
+  table.fr2-items td:last-child { text-align: right; }
+
+  .fr2-summary-box { padding: 2px 12px 8px; }
+  .fr2-summary-row { display: flex; justify-content: flex-end; padding: 2px 0; font-size: 10.5px; }
+  .fr2-summary-row .fr2-sum-inner { min-width: 220px; display: flex; justify-content: space-between; }
+  .fr2-summary-row.fr2-discount .fr2-sum-inner { color: #16a34a; }
+  .fr2-summary-row.fr2-latefine .fr2-sum-inner { color: #b45309; }
+  .fr2-summary-row.fr2-collected .fr2-sum-inner { font-weight: 800; }
+
+  .fr2-grand-total { border-top: 2px solid #111827; padding: 8px 14px; }
+  .fr2-grand-total-inner { display: flex; justify-content: space-between; font-weight: 800; font-size: 13px; }
+
+  .fr2-remarks { border-top: 1px solid #e5e7eb; padding: 8px 12px; }
+  .fr2-remarks-title { font-weight: 800; font-size: 9.5px; margin-bottom: 3px; color: #374151; }
+  .fr2-remarks-box { border: 1px solid #e5e7eb; background: #fafafa; border-radius: 4px; padding: 5px 7px; font-size: 10px; color: #4b5563; }
+
+  .fr2-footer { border-top: 1px solid #e5e7eb; padding: 10px 12px; display: flex; justify-content: space-between; align-items: flex-end; gap: 10px; }
+  .fr2-footer-left { font-size: 10px; color: #4b5563; line-height: 1.8; }
+  .fr2-footer-left b { color: #111827; }
+  .fr2-sign { text-align: center; font-size: 9.5px; color: #4b5563; }
+  .fr2-sign-line { border-top: 1px solid #4b5563; padding-top: 3px; width: 110px; }
+
+  .fr2-note { text-align: center; font-size: 8.5px; color: #9ca3af; background: #fafafa; border-top: 1px solid #f1f2f6; padding: 6px 12px; }
+
+  @media print {
+    body { background: #fff; padding: 0; }
+    .fr2-wrap { max-width: 100%; gap: 8mm; }
+    .fr2-copy { box-shadow: none; border: 1px solid #ccc; }
+  }
+</style>
+
+  <!-- ══════════════ COPY 1 — OFFICE COPY ══════════════ -->
+  <div class="fr2-copy">
+    <div class="fr2-copy-tag">Office Copy</div>
+    <div class="fr2-header">
+      <div class="fr2-header-left">
+        <div class="fr2-logo"><img src="{{schoolLogo}}" alt="{{schoolInitials}}" onerror="this.onerror=null;this.src='{{schoolLogoFallback}}'"></div>
+        <div>
+          <h1 class="fr2-school-name">{{schoolName}}</h1>
+          <div class="fr2-school-meta">{{schoolAddress}}</div>
+          <div class="fr2-school-meta">{{schoolPhone}} &middot; {{schoolEmail}}</div>
+        </div>
+      </div>
+      <div class="fr2-badge">Fee Receipt</div>
+    </div>
+
+    <div class="fr2-info-grid">
+      <div class="fr2-info-col">
+        <span class="fr2-info-title">Student Details</span>
+        <div class="fr2-kv-row"><span class="fr2-k">Admission No.</span><span class="fr2-v">{{admissionNumber}}</span></div>
+        <div class="fr2-kv-row"><span class="fr2-k">Roll No.</span><span class="fr2-v">{{rollNo}}</span></div>
+        <div class="fr2-kv-row"><span class="fr2-k">Name</span><span class="fr2-v">{{studentName}}</span></div>
+        <div class="fr2-kv-row"><span class="fr2-k">Class</span><span class="fr2-v">{{className}}</span></div>
+        <div class="fr2-kv-row"><span class="fr2-k">Section</span><span class="fr2-v">{{sectionName}}</span></div>
+        <div class="fr2-kv-row"><span class="fr2-k">Parent</span><span class="fr2-v">{{parentName}}</span></div>
+        <div class="fr2-kv-row"><span class="fr2-k">Mobile</span><span class="fr2-v">{{parentMobile}}</span></div>
+      </div>
+      <div class="fr2-info-col">
+        <span class="fr2-info-title">Receipt Info</span>
+        <div class="fr2-kv-row"><span class="fr2-k">Receipt No.</span><span class="fr2-v">{{receiptNo}}</span></div>
+        <div class="fr2-kv-row"><span class="fr2-k">School</span><span class="fr2-v">{{schoolName}}</span></div>
+        <div class="fr2-kv-row"><span class="fr2-k">Fee Period</span><span class="fr2-v">{{feePeriodName}}</span></div>
+        <div class="fr2-kv-row"><span class="fr2-k">Date</span><span class="fr2-v">{{paymentDateLine}}</span></div>
+        <div class="fr2-kv-row"><span class="fr2-k">Mode</span><span class="fr2-v">{{paymentMode}}</span></div>
+        {{#referenceRows}}
+        <div class="fr2-kv-row"><span class="fr2-k">{{referenceLabel}}</span><span class="fr2-v">{{referenceNo}}</span></div>
+        {{/referenceRows}}
+      </div>
+    </div>
+
+    <div class="fr2-table-title">Fee Details</div>
+    <table class="fr2-items">
+      {{#components}}
+      <tr><td>{{label}}</td><td>{{amountFormatted}}</td></tr>
+      {{/components}}
+    </table>
+    <div class="fr2-summary-box">
+      {{#discountRows}}
+      <div class="fr2-summary-row fr2-discount"><div class="fr2-sum-inner"><span>Discount{{discountReasonSuffix}}</span><span>&minus; {{discountFormatted}}</span></div></div>
+      {{/discountRows}}
+      {{#lateFineRows}}
+      <div class="fr2-summary-row fr2-latefine"><div class="fr2-sum-inner"><span>Late Fine</span><span>+ {{lateFineFormatted}}</span></div></div>
+      {{/lateFineRows}}
+    </div>
+
+    {{#transportRows}}
+    <div class="fr2-table-title fr2-transport">Transport Fee</div>
+    <table class="fr2-items">
+      <tr><td>Transport Fee</td><td>{{transportAmountFormatted}}</td></tr>
+    </table>
+    {{/transportRows}}
+
+    <div class="fr2-grand-total">
+      <div class="fr2-grand-total-inner"><span>Total Amount Collected</span><span>{{amountPaidFormatted}}</span></div>
+    </div>
+
+    {{#remarksRows}}
+    <div class="fr2-remarks">
+      <div class="fr2-remarks-title">Note / Remarks</div>
+      <div class="fr2-remarks-box">{{remarks}}</div>
+    </div>
+    {{/remarksRows}}
+
+    <div class="fr2-footer">
+      <div class="fr2-footer-left">
+        Recorded by: <b>{{collectedBy}}</b><br>
+        Remaining Balance: <b>{{balanceAfterFormatted}}</b>
+      </div>
+      <div class="fr2-sign"><div class="fr2-sign-line">Authorised Signature</div></div>
+    </div>
+    <div class="fr2-note">This is a computer-generated receipt and does not require a signature.</div>
   </div>
-  <table style="width:100%;font-size:12.5px;margin:10px 0;">
-    <tr><td><b>Student:</b> {{studentName}}</td><td><b>Class:</b> {{className}}</td></tr>
-    <tr><td><b>Date:</b> {{paymentDate}}</td><td><b>Amount:</b> {{amount}}</td></tr>
-  </table>
-</div>`,
+
+  <!-- ══════════════ COPY 2 — STUDENT / PARENT COPY ══════════════ -->
+  <div class="fr2-copy">
+    <div class="fr2-copy-tag">Student / Parent Copy</div>
+    <div class="fr2-header">
+      <div class="fr2-header-left">
+        <div class="fr2-logo"><img src="{{schoolLogo}}" alt="{{schoolInitials}}" onerror="this.onerror=null;this.src='{{schoolLogoFallback}}'"></div>
+        <div>
+          <h1 class="fr2-school-name">{{schoolName}}</h1>
+          <div class="fr2-school-meta">{{schoolAddress}}</div>
+          <div class="fr2-school-meta">{{schoolPhone}} &middot; {{schoolEmail}}</div>
+        </div>
+      </div>
+      <div class="fr2-badge">Fee Receipt</div>
+    </div>
+
+    <div class="fr2-info-grid">
+      <div class="fr2-info-col">
+        <span class="fr2-info-title">Student Details</span>
+        <div class="fr2-kv-row"><span class="fr2-k">Admission No.</span><span class="fr2-v">{{admissionNumber}}</span></div>
+        <div class="fr2-kv-row"><span class="fr2-k">Roll No.</span><span class="fr2-v">{{rollNo}}</span></div>
+        <div class="fr2-kv-row"><span class="fr2-k">Name</span><span class="fr2-v">{{studentName}}</span></div>
+        <div class="fr2-kv-row"><span class="fr2-k">Class</span><span class="fr2-v">{{className}}</span></div>
+        <div class="fr2-kv-row"><span class="fr2-k">Section</span><span class="fr2-v">{{sectionName}}</span></div>
+        <div class="fr2-kv-row"><span class="fr2-k">Parent</span><span class="fr2-v">{{parentName}}</span></div>
+        <div class="fr2-kv-row"><span class="fr2-k">Mobile</span><span class="fr2-v">{{parentMobile}}</span></div>
+      </div>
+      <div class="fr2-info-col">
+        <span class="fr2-info-title">Receipt Info</span>
+        <div class="fr2-kv-row"><span class="fr2-k">Receipt No.</span><span class="fr2-v">{{receiptNo}}</span></div>
+        <div class="fr2-kv-row"><span class="fr2-k">School</span><span class="fr2-v">{{schoolName}}</span></div>
+        <div class="fr2-kv-row"><span class="fr2-k">Fee Period</span><span class="fr2-v">{{feePeriodName}}</span></div>
+        <div class="fr2-kv-row"><span class="fr2-k">Date</span><span class="fr2-v">{{paymentDateLine}}</span></div>
+        <div class="fr2-kv-row"><span class="fr2-k">Mode</span><span class="fr2-v">{{paymentMode}}</span></div>
+        {{#referenceRows}}
+        <div class="fr2-kv-row"><span class="fr2-k">{{referenceLabel}}</span><span class="fr2-v">{{referenceNo}}</span></div>
+        {{/referenceRows}}
+      </div>
+    </div>
+
+    <div class="fr2-table-title">Fee Details</div>
+    <table class="fr2-items">
+      {{#components}}
+      <tr><td>{{label}}</td><td>{{amountFormatted}}</td></tr>
+      {{/components}}
+    </table>
+    <div class="fr2-summary-box">
+      {{#discountRows}}
+      <div class="fr2-summary-row fr2-discount"><div class="fr2-sum-inner"><span>Discount{{discountReasonSuffix}}</span><span>&minus; {{discountFormatted}}</span></div></div>
+      {{/discountRows}}
+      {{#lateFineRows}}
+      <div class="fr2-summary-row fr2-latefine"><div class="fr2-sum-inner"><span>Late Fine</span><span>+ {{lateFineFormatted}}</span></div></div>
+      {{/lateFineRows}}
+    </div>
+
+    {{#transportRows}}
+    <div class="fr2-table-title fr2-transport">Transport Fee</div>
+    <table class="fr2-items">
+      <tr><td>Transport Fee</td><td>{{transportAmountFormatted}}</td></tr>
+    </table>
+    {{/transportRows}}
+
+    <div class="fr2-grand-total">
+      <div class="fr2-grand-total-inner"><span>Total Amount Collected</span><span>{{amountPaidFormatted}}</span></div>
+    </div>
+
+    {{#remarksRows}}
+    <div class="fr2-remarks">
+      <div class="fr2-remarks-title">Note / Remarks</div>
+      <div class="fr2-remarks-box">{{remarks}}</div>
+    </div>
+    {{/remarksRows}}
+
+    <div class="fr2-footer">
+      <div class="fr2-footer-left">
+        Recorded by: <b>{{collectedBy}}</b><br>
+        Remaining Balance: <b>{{balanceAfterFormatted}}</b>
+      </div>
+      <div class="fr2-sign"><div class="fr2-sign-line">Authorised Signature</div></div>
+    </div>
+    <div class="fr2-note">This is a computer-generated receipt and does not require a signature.</div>
+  </div>
+
+</div>
+</body>
+</html>`,
   },
 }
+
+// Options shown in the "Certificate Type" dropdown on CertificateTemplates.jsx.
+// Order here = order in the dropdown. Add a new certificate sub-type by:
+//   1. adding a new entry to TEMPLATE_TYPES above (with its own stub), and
+//   2. adding its key + dropdownLabel here.
+export const CERTIFICATE_SUB_TYPES = [
+  { key: 'CERTIFICATE', dropdownLabel: 'Common Certificate' },
+  { key: 'TRANSFER_CERTIFICATE', dropdownLabel: 'Transfer Certificate (TC)' },
+  { key: 'CHARACTER_CERTIFICATE', dropdownLabel: 'Character Certificate' },
+  { key: 'MIGRATION_CERTIFICATE', dropdownLabel: 'Migration Certificate' },
+  { key: 'ELIGIBILITY_CERTIFICATE', dropdownLabel: 'Eligibility / Provisional Certificate' },
+]
 
 export const defaultHtmlStub = (typeKey) => {
   const t = TEMPLATE_TYPES[typeKey]
