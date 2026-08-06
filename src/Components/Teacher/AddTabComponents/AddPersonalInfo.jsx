@@ -14,7 +14,7 @@ const ErrorText = ({ msg }) =>
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-const AddPersonalInfo = ({ formData, setFormData, handleInputChange, errors, setErrors }) => {
+const AddPersonalInfo = ({ formData, setFormData, handleInputChange, errors, setErrors, designationList }) => {
     const today = new Date().toISOString().split('T')[0];
 
     // Restrict mobile input to digits only, max 10
@@ -226,6 +226,31 @@ const AddPersonalInfo = ({ formData, setFormData, handleInputChange, errors, set
                         <ErrorText msg={errors?.joiningDate} />
                     </div>
                 </div>
+            </div>
+            {/*designation*/}
+            <div>
+                <label className="block font-semibold text-gray-600 text-sm mb-2">
+                    Designation
+                </label>
+
+                <select
+                    name="designation"
+                    value={formData.designation}
+                    onChange={handleInputChange}
+                    className="bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                    <option value="">Select Designation</option>
+
+                    {designationList.map((item) => (
+                        <option
+                            key={item.id || item.value}
+                            value={item.value || item.code || item.name}
+                        >
+                            {item.label || item.name || item.value}
+                        </option>
+                    ))}
+                </select>
+                <ErrorText msg={errors?.designation} />
             </div>
 
             {/* ── System Access ─────────────────────────────────────────────────── */}

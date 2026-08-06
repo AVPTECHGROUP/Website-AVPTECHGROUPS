@@ -1,8 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef,useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, IndianRupee, User, Camera, X, Image as ImageIcon, RefreshCcw } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { createTeachers, upsertTeacherSalary } from '../../Api/Teachers/TeachersAPI';
+import {getListOfValues} from "../../Api/Lov/ListOfValues.js";
 import PersonalDetailsTab from '../../Components/Teacher/AddTabComponents/AddPersonalInfo';
 import SalaryDetailsTab from '../../Components/Teacher/AddTabComponents/AddSalaryDetails';
 import TEACHER_MODULE_STRINGS from '../../Constants/StringConstants/TeacherConstants';
@@ -18,7 +19,21 @@ function AddNewTeacher() {
     const [salaryErrors, setSalaryErrors] = useState({});
     const fileInputRef = useRef(null);
     const salarySectionRef = useRef(null);
+    const [designationList, setDesignationList] = useState([]);
 
+    useEffect(() => {
+        const fetchDesignation = async () => {
+            try {
+                const data = await getListOfValues("DESIGNATION");
+                setDesignationList(data);
+            } catch (err) {
+                console.error("Failed to load designation", err);
+            }
+        };
+
+        fetchDesignation();
+    }, []);
+    // Feature Flag Check for Payroll
     // --- CAMERA & POPUP STATE ---
     const [showPhotoMenu, setShowPhotoMenu] = useState(false);
     const [showCamera, setShowCamera] = useState(false);
@@ -105,13 +120,38 @@ function AddNewTeacher() {
     })();
 
     const [formData, setFormData] = useState({
-        name: "", gender: "", email: "", loginEmail: "", mobile: "", address: "", dob: "",
-        employeeCode: "", highestQualification: "", experience: 0, joiningDate: "",
-        payrollStatus: "ACTIVE", accountStatus: false, salaryType: 'MONTHLY', baseSalary: '',
-        leaveDeductionPerDay: '', lateArrivalPenalty: '', houseRentAllowance: '', travelAllowance: '',
-        dearnessAllowance: '', specialAllowance: '', otherAllowances: '', providentFund: '',
-        professionalTax: '', incomeTax: '', otherDeductions: '', assignedClass: '', section: '',
-        primarySubject: '', additionalSubjects: '', isClassTeacher: false
+        name: "",
+        gender: "",
+        email: "",
+        loginEmail: "",
+        mobile: "",
+        address: "",
+        dob: "",
+        employeeCode: "",
+        highestQualification: "",
+        experience: 0,
+        joiningDate: "",
+        designation: "",
+        payrollStatus: "ACTIVE",
+        accountStatus: false,
+        salaryType: 'MONTHLY',
+        baseSalary: '',
+        leaveDeductionPerDay: '',
+        lateArrivalPenalty: '',
+        houseRentAllowance: '',
+        travelAllowance: '',
+        dearnessAllowance: '',
+        specialAllowance: '',
+        otherAllowances: '',
+        providentFund: '',
+        professionalTax: '',
+        incomeTax: '',
+        otherDeductions: '',
+        assignedClass: '',
+        section: '',
+        primarySubject: '',
+        additionalSubjects: '',
+        isClassTeacher: false
     });
 
     const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -163,16 +203,34 @@ function AddNewTeacher() {
             today.setHours(0, 0, 0, 0);
             if (dobDate >= today) newErrors.dob = strings.ADD_TEACHER.VALIDATION.DOB_INVALID;
         }
-        if (!formData.joiningDate) newErrors.joiningDate = strings.ADD_TEACHER.VALIDATION.JOINING_REQUIRED;
-        else {
-            const joiningDate = new Date(formData.joiningDate);
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            if (joiningDate > today) newErrors.joiningDate = strings.ADD_TEACHER.VALIDATION.JOINING_DATE_INVALID || "Joining date cannot be in the future.";
+
+        if (!formData.joiningDate) {
+            newErrors.joiningDate = strings.ADD_TEACHER.VALIDATION.JOINING_REQUIRED;
+        } else {
+            const today = new Date().toISOString().split("T")[0];
+
+            if (formData.joiningDate > today) {
+                newErrors.joiningDate = "Joining date cannot be in the future.";
+            }
+
+
         }
-        if (!formData.loginEmail) newErrors.loginEmail = strings.ADD_TEACHER.VALIDATION.LOGIN_EMAIL_REQUIRED;
-        else if (!EMAIL_REGEX.test(formData.loginEmail)) newErrors.loginEmail = strings.ADD_TEACHER.VALIDATION.LOGIN_EMAIL_INVALID;
-        if (!formData.accountStatus) newErrors.accountStatus = strings.ADD_TEACHER.VALIDATION.ACCOUNT_STATUS_REQUIRED;
+
+        if (!formData.designation) {
+            newErrors.designation = "Designation is required";
+        }
+
+
+        if (!formData.loginEmail) {
+            newErrors.loginEmail = strings.ADD_TEACHER.VALIDATION.LOGIN_EMAIL_REQUIRED;
+        } else if (!EMAIL_REGEX.test(formData.loginEmail)) {
+            newErrors.loginEmail = strings.ADD_TEACHER.VALIDATION.LOGIN_EMAIL_INVALID;
+        }
+
+        if (!formData.accountStatus) {
+            newErrors.accountStatus = strings.ADD_TEACHER.VALIDATION.ACCOUNT_STATUS_REQUIRED;
+        }
+
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
@@ -222,8 +280,11 @@ function AddNewTeacher() {
                     gender: formData.gender.toUpperCase(), dateOfBirth: formData.dob, address: formData.address || "NA",
                 },
                 professionalDetails: {
-                    employeeCode: formData.employeeCode || generateEmployeeCode(), qualification: formData.highestQualification || "NA",
-                    experienceYears: Number(formData.experience || 1), joiningDate: formData.joiningDate,
+                    employeeCode: formData.employeeCode || generateEmployeeCode(),
+                    qualification: formData.highestQualification || "NA",
+                    experienceYears: Number(formData.experience || 1),
+                    joiningDate: formData.joiningDate,
+                    designation: formData.designation
                 },
                 accountStatus: "ACTIVE",
             };
@@ -365,7 +426,14 @@ function AddNewTeacher() {
                                         <input ref={fileInputRef} type="file" accept="image/jpeg,image/jpg,image/png" onChange={handleImageChange} className="hidden" />
                                     </div>
 
-                                    <PersonalDetailsTab formData={formData} setFormData={setFormData} handleInputChange={handleInputChange} errors={errors} setErrors={setErrors} />
+                                    <PersonalDetailsTab
+                                        formData={formData}
+                                        setFormData={setFormData}
+                                        handleInputChange={handleInputChange}
+                                        errors={errors}
+                                        setErrors={setErrors}
+                                        designationList={designationList}
+                                    />
                                 </>
                             )}
 
