@@ -14,7 +14,7 @@ import {
     executeStudentPromotion,
 } from '../../Api/Academics/StudentPromotion';
 
-import PromotionHistoryModal from './PromotionHistoryModal';
+import PromotionHistoryModal from './Promotionhistorymodal';
 
 // ─── Static config ──────────────────────────────────────────────────────────
 const STEPS = [
