@@ -10,6 +10,7 @@ import {
 import { useState, useEffect, useContext, useRef, useMemo } from 'react'
 import { UserContext } from '../ContextAPI/UserContext'
 import { PERMISSIONS as P, SYSTEM_ROLES } from '../Constants/Permission'
+import OverdueFeeNotifications from "../Pages/FeeManagement/Overduefeenotification.jsx";
 
 const SCHOOL_SWITCHER_ROLES = SYSTEM_ROLES.SCHOOL_SWITCHER;
 
@@ -177,6 +178,7 @@ const menuSections = [
         subItems: [
           { label: 'Fee Config', route: '/feeManagement/config', permission: P.FEE_STRUCTURE_MANAGE },
           { label: 'Collection and History', route: '/feeManagement/collections', permission: P.FEE_COLLECT },
+          {label: 'Overdue Fee Notifications', route: 'overduefeenotifications', permission: P.FEE_COLLECT}
         ]
       }
     ]
