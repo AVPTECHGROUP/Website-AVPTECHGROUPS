@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { toast } from "react-toastify"; // imported react-toastify utility
+import { toast } from "react-toastify";
 import {
     ClipboardList, CheckSquare, Clock, School,
     Plus, BookOpen, ChevronDown, ChevronRight, Edit2, FileText,
@@ -481,16 +481,202 @@ function RemoveClassModal({ exam, onConfirm, onCancel, loading }) {
     );
 }
 
-function EditEventModal({ event, onSave, onCancel, loading }) {
+// ── Editable subject-config table used inside EditEventModal ──────────────
+function SubjectEditTable({ rows, onChange }) {
+    if (rows.length === 0) {
+        return <p className="text-sm text-gray-400 text-center py-6">No subjects configured for this class yet.</p>;
+    }
+
+    return (
+        <div className="overflow-x-auto border border-gray-100 rounded-lg">
+            <table className="w-full text-sm">
+                <thead>
+                    <tr className="text-left text-xs font-semibold text-gray-400 uppercase bg-gray-50">
+                        <th className="px-3 py-2">Subject</th>
+                        <th className="px-2 py-2 w-24">Max</th>
+                        <th className="px-2 py-2 w-24">Pass</th>
+                        <th className="px-2 py-2 w-40">Theory + Practical</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {rows.map(r => (
+                        <tr key={r.key} className="border-t border-gray-50 align-top">
+                            <td className="px-3 py-2">
+                                <p className="font-medium text-gray-700">{r.subjectName}</p>
+                                {r.sectionName && <p className="text-[11px] text-gray-400">{r.sectionName}</p>}
+                            </td>
+                            <td className="px-2 py-2">
+                                <input
+                                    type="number"
+                                    value={r.maxMarks}
+                                    onChange={e => onChange(r.key, { maxMarks: e.target.value })}
+                                    className="w-20 border border-gray-200 rounded-lg px-2 py-1 text-sm"
+                                />
+                            </td>
+                            <td className="px-2 py-2">
+                                <input
+                                    type="number"
+                                    value={r.passingMarks}
+                                    onChange={e => onChange(r.key, { passingMarks: e.target.value })}
+                                    className="w-20 border border-gray-200 rounded-lg px-2 py-1 text-sm"
+                                />
+                            </td>
+                            <td className="px-2 py-2">
+                                <label className="flex items-center gap-2 cursor-pointer mb-1.5">
+                                    <input
+                                        type="checkbox"
+                                        checked={!!r.hasTheoryPractical}
+                                        onChange={e => onChange(r.key, { hasTheoryPractical: e.target.checked })}
+                                        className="w-3.5 h-3.5 accent-indigo-600"
+                                    />
+                                    <span className={`text-xs font-medium ${r.hasTheoryPractical ? "text-indigo-700" : "text-gray-400"}`}>
+                                        {r.hasTheoryPractical ? "Enabled" : "Theory only"}
+                                    </span>
+                                </label>
+                                {r.hasTheoryPractical && (
+                                    <div className="grid grid-cols-2 gap-1.5">
+                                        <input type="number" placeholder="Max Theory" value={r.maxTheoryMarks}
+                                            onChange={e => onChange(r.key, { maxTheoryMarks: e.target.value })}
+                                            className="w-full border border-gray-200 rounded-lg px-2 py-1 text-xs" />
+                                        <input type="number" placeholder="Max Practical" value={r.maxPracticalMarks}
+                                            onChange={e => onChange(r.key, { maxPracticalMarks: e.target.value })}
+                                            className="w-full border border-gray-200 rounded-lg px-2 py-1 text-xs" />
+                                        <input type="number" placeholder="Pass Theory" value={r.passingTheoryMarks}
+                                            onChange={e => onChange(r.key, { passingTheoryMarks: e.target.value })}
+                                            className="w-full border border-gray-200 rounded-lg px-2 py-1 text-xs" />
+                                        <input type="number" placeholder="Pass Practical" value={r.passingPracticalMarks}
+                                            onChange={e => onChange(r.key, { passingPracticalMarks: e.target.value })}
+                                            className="w-full border border-gray-200 rounded-lg px-2 py-1 text-xs" />
+                                    </div>
+                                )}
+                            </td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </div>
+    );
+}
+
+function EditEventModal({ event, examTypes, academicYears, onSave, onCancel, loading }) {
     const [form, setForm] = useState({
+        examTypeId: event.examTypeId || "",
+        academicYearId: event.academicYearId || "",
         name: event.name || "",
         startDate: event.startDate || "",
         endDate: event.endDate || "",
         description: event.description || "",
     });
+
+    // ── subject-config editing state ───────────────────────────
+    const classTabs = event.exams || [];
+    const [rows, setRows] = useState([]);
+    const [loadingSubjects, setLoadingSubjects] = useState(true);
+    const [subError, setSubError] = useState(null);
+    const [activeClassId, setActiveClassId] = useState(classTabs[0]?.schoolClassId ?? null);
+
+    useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            setLoadingSubjects(true);
+            setSubError(null);
+            try {
+                const entries = await Promise.all(
+                    classTabs.map(async (exam) => {
+                        const subs = await getEventClassSubjects(event.eventId, exam.schoolClassId);
+                        return { classId: exam.schoolClassId, subs: Array.isArray(subs) ? subs : [] };
+                    })
+                );
+                if (cancelled) return;
+
+                const draftRows = [];
+                entries.forEach(({ classId, subs }) => {
+                    subs.forEach(s => {
+                        const sectionSubjectId = s.sectionSubjectId ?? s.id;
+                        draftRows.push({
+                            key: `${classId}-${sectionSubjectId}`,
+                            sectionSubjectId,
+                            classId,
+                            sectionId: s.sectionId,
+                            sectionName: s.sectionName,
+                            subjectId: s.subjectId,
+                            subjectName: s.subjectName,
+                            maxMarks: s.maxMarks ?? 0,
+                            passingMarks: s.passingMarks ?? 0,
+                            hasTheoryPractical: !!s.hasTheoryPractical,
+                            maxTheoryMarks: s.maxTheoryMarks ?? 0,
+                            maxPracticalMarks: s.maxPracticalMarks ?? 0,
+                            passingTheoryMarks: s.passingTheoryMarks ?? 0,
+                            passingPracticalMarks: s.passingPracticalMarks ?? 0,
+                        });
+                    });
+                });
+                setRows(draftRows);
+            } catch (err) {
+                if (!cancelled) {
+                    setSubError(err?.message || "Failed to load subject configs");
+                    toast.error("Failed to load subject configs");
+                }
+            } finally {
+                if (!cancelled) setLoadingSubjects(false);
+            }
+        })();
+        return () => { cancelled = true; };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [event.eventId]);
+
+    const updateRow = (key, patch) =>
+        setRows(prev => prev.map(r => (r.key === key ? { ...r, ...patch } : r)));
+
+    const visibleRows = rows.filter(r => r.classId === activeClassId);
+
+    const buildSubjectConfigs = () =>
+        rows.map(r => ({
+            sectionSubjectId: r.sectionSubjectId,
+            maxMarks: Number(r.maxMarks) || 0,
+            passingMarks: Number(r.passingMarks) || 0,
+            hasTheoryPractical: !!r.hasTheoryPractical,
+            ...(r.hasTheoryPractical ? {
+                maxTheoryMarks: Number(r.maxTheoryMarks) || 0,
+                maxPracticalMarks: Number(r.maxPracticalMarks) || 0,
+                passingTheoryMarks: Number(r.passingTheoryMarks) || 0,
+                passingPracticalMarks: Number(r.passingPracticalMarks) || 0,
+            } : {}),
+        }));
+
+    const handleSave = () => onSave({ ...form, subjectConfigs: buildSubjectConfigs() });
+
     return (
-        <ModalShell title={EXAM_CONSTS.EXAMS.MODALS.EDIT_TITLE} icon={Edit2} onClose={onCancel}>
+        <ModalShell title={EXAM_CONSTS.EXAMS.MODALS.EDIT_TITLE} icon={Edit2} onClose={onCancel} maxW="max-w-3xl">
             <div className="space-y-3">
+                {/* Exam Type & Academic Year (Read-only as they are immutable) */}
+                <div className="grid grid-cols-2 gap-3">
+                    <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                            {EXAM_CONSTS.EXAMS.MODALS.EXAM_TYPE} <span className="text-[10px] text-gray-400">(Immutable)</span>
+                        </label>
+                        <select
+                            disabled
+                            value={form.examTypeId}
+                            className="w-full border border-gray-200 bg-gray-50 text-gray-500 rounded-lg px-3 py-2 text-sm focus:outline-none cursor-not-allowed"
+                        >
+                            {examTypes?.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                            {EXAM_CONSTS.EXAMS.MODALS.ACADEMIC_YEAR} <span className="text-[10px] text-gray-400">(Immutable)</span>
+                        </label>
+                        <select
+                            disabled
+                            value={form.academicYearId}
+                            className="w-full border border-gray-200 bg-gray-50 text-gray-500 rounded-lg px-3 py-2 text-sm focus:outline-none cursor-not-allowed"
+                        >
+                            {academicYears?.map(y => <option key={y.id} value={y.id}>{y.label ?? y.name}</option>)}
+                        </select>
+                    </div>
+                </div>
+
                 <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">{EXAM_CONSTS.EXAMS.MODALS.EVENT_NAME}</label>
                     <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
@@ -513,10 +699,40 @@ function EditEventModal({ event, onSave, onCancel, loading }) {
                     <textarea rows={3} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
                         className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
+
+                {/* Subject configs — marks, passing marks, theory/practical per class */}
+                <div className="pt-2 border-t border-gray-100">
+                    <p className="text-xs font-semibold text-gray-700 mb-2 mt-2">Subjects & Marks</p>
+
+                    {classTabs.length > 1 && (
+                        <div className="flex items-center gap-1 mb-2 overflow-x-auto">
+                            {classTabs.map(exam => (
+                                <button
+                                    key={exam.schoolClassId}
+                                    onClick={() => setActiveClassId(exam.schoolClassId)}
+                                    className={`px-3 py-1.5 text-xs font-semibold rounded-lg whitespace-nowrap cursor-pointer
+                                        ${activeClassId === exam.schoolClassId
+                                            ? "bg-indigo-600 text-white"
+                                            : "bg-gray-100 text-gray-500 hover:text-gray-700"}`}
+                                >
+                                    {exam.schoolClassName}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+
+                    {loadingSubjects ? (
+                        <div className="py-6 flex justify-center"><Loader2 className="w-5 h-5 animate-spin text-blue-500" /></div>
+                    ) : subError ? (
+                        <div className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{subError}</div>
+                    ) : (
+                        <SubjectEditTable rows={visibleRows} onChange={updateRow} />
+                    )}
+                </div>
             </div>
             <div className="flex gap-3 justify-end mt-5">
                 <button onClick={onCancel} disabled={loading} className="px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-60 cursor-pointer">{EXAM_CONSTS.EXAMS.MODALS.CANCEL}</button>
-                <button onClick={() => onSave(form)} disabled={loading} className="px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-60 flex items-center gap-2 cursor-pointer">
+                <button onClick={handleSave} disabled={loading || loadingSubjects} className="px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-60 flex items-center gap-2 cursor-pointer">
                     {loading && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
                     {loading ? EXAM_CONSTS.EXAMS.MODALS.BTN_SAVING : EXAM_CONSTS.EXAMS.MODALS.BTN_SAVE}
                 </button>
@@ -854,7 +1070,11 @@ export default function ExamEvents() {
                 examTypeId: editTarget.examTypeId,
                 academicYearId: editTarget.academicYearId,
                 classIds: (editTarget.exams || []).map(e => e.schoolClassId),
-                ...form,
+                name: form.name,
+                startDate: form.startDate,
+                endDate: form.endDate,
+                description: form.description,
+                subjectConfigs: form.subjectConfigs || []
             });
             toast.success("Exam event updated successfully!");
             await fetchEvents();
@@ -1037,7 +1257,14 @@ export default function ExamEvents() {
             )}
 
             {editTarget && (
-                <EditEventModal event={editTarget} onSave={handleEditSave} onCancel={() => setEditTarget(null)} loading={editSaving} />
+                <EditEventModal
+                    event={editTarget}
+                    examTypes={examTypes}
+                    academicYears={academicYears}
+                    onSave={handleEditSave}
+                    onCancel={() => setEditTarget(null)}
+                    loading={editSaving}
+                />
             )}
 
             {copyTarget && (

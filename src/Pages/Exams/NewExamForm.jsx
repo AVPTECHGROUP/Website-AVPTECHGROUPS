@@ -253,6 +253,12 @@ export default function CreateExamEventWizard({
         ...r,
         maximumMarks: Number(quickApply.maximumMarks),
         passingMarks: Number(quickApply.passingMarks),
+        ...(r.hasTheoryPractical ? {
+          maximumTheoryMarks: Math.round(Number(quickApply.maximumMarks) * 0.7),
+          maximumPracticalMarks: Math.round(Number(quickApply.maximumMarks) * 0.3),
+          passingTheoryMarks: Math.round(Number(quickApply.passingMarks) * 0.7),
+          passingPracticalMarks: Math.round(Number(quickApply.passingMarks) * 0.3),
+        } : {})
       }))
     );
 
@@ -853,8 +859,8 @@ function SubjectTable({ rows, onToggle, onChange, useRowKey }) {
           <tr className="text-left text-xs font-semibold text-gray-400 uppercase">
             <th className="px-4 py-2 w-8"></th>
             <th className="px-2 py-2">{NX.TH_SUBJECT}</th>
-            <th className="px-2 py-2 w-28">{NX.TH_MAX}</th>
-            <th className="px-2 py-2 w-28">{NX.TH_PASS}</th>
+            <th className="px-2 py-2 w-32">{NX.TH_MAX}</th>
+            <th className="px-2 py-2 w-32">{NX.TH_PASS}</th>
             <th className="px-2 py-2 w-44">{NX.TH_ASSESSMENT_TYPE}</th>
           </tr>
         </thead>
@@ -879,24 +885,86 @@ function SubjectTable({ rows, onToggle, onChange, useRowKey }) {
 
               {/* Maximum Marks */}
               <td className="px-2 py-2">
-                <input
-                  type="number"
-                  value={r.maximumMarks}
-                  disabled={!r.included}
-                  onChange={e => onChange(r.subjectId, { maximumMarks: Number(e.target.value) }, r.key)}
-                  className="w-20 border border-gray-200 rounded-lg px-2 py-1 text-sm disabled:bg-gray-50 disabled:cursor-not-allowed"
-                />
+                {!r.hasTheoryPractical ? (
+                  <input
+                    type="number"
+                    value={r.maximumMarks}
+                    disabled={!r.included}
+                    onChange={e => onChange(r.subjectId, { maximumMarks: Number(e.target.value) }, r.key)}
+                    className="w-20 border border-gray-200 rounded-lg px-2 py-1 text-sm disabled:bg-gray-50 disabled:cursor-not-allowed"
+                  />
+                ) : (
+                  <div className="flex flex-col gap-1.5 py-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] font-semibold text-gray-400 w-4 uppercase">Th</span>
+                      <input
+                        type="number"
+                        value={r.maximumTheoryMarks}
+                        disabled={!r.included}
+                        onChange={e => onChange(r.subjectId, {
+                          maximumTheoryMarks: Number(e.target.value),
+                          maximumMarks: Number(e.target.value) + Number(r.maximumPracticalMarks)
+                        }, r.key)}
+                        className="w-16 border border-gray-200 rounded-lg px-2 py-1 text-sm disabled:bg-gray-50"
+                      />
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] font-semibold text-gray-400 w-4 uppercase">Pr</span>
+                      <input
+                        type="number"
+                        value={r.maximumPracticalMarks}
+                        disabled={!r.included}
+                        onChange={e => onChange(r.subjectId, {
+                          maximumPracticalMarks: Number(e.target.value),
+                          maximumMarks: Number(r.maximumTheoryMarks) + Number(e.target.value)
+                        }, r.key)}
+                        className="w-16 border border-gray-200 rounded-lg px-2 py-1 text-sm disabled:bg-gray-50"
+                      />
+                    </div>
+                  </div>
+                )}
               </td>
 
               {/* Passing Marks */}
               <td className="px-2 py-2">
-                <input
-                  type="number"
-                  value={r.passingMarks}
-                  disabled={!r.included}
-                  onChange={e => onChange(r.subjectId, { passingMarks: Number(e.target.value) }, r.key)}
-                  className="w-20 border border-gray-200 rounded-lg px-2 py-1 text-sm disabled:bg-gray-50 disabled:cursor-not-allowed"
-                />
+                {!r.hasTheoryPractical ? (
+                  <input
+                    type="number"
+                    value={r.passingMarks}
+                    disabled={!r.included}
+                    onChange={e => onChange(r.subjectId, { passingMarks: Number(e.target.value) }, r.key)}
+                    className="w-20 border border-gray-200 rounded-lg px-2 py-1 text-sm disabled:bg-gray-50 disabled:cursor-not-allowed"
+                  />
+                ) : (
+                  <div className="flex flex-col gap-1.5 py-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] font-semibold text-gray-400 w-4 uppercase">Th</span>
+                      <input
+                        type="number"
+                        value={r.passingTheoryMarks}
+                        disabled={!r.included}
+                        onChange={e => onChange(r.subjectId, {
+                          passingTheoryMarks: Number(e.target.value),
+                          passingMarks: Number(e.target.value) + Number(r.passingPracticalMarks)
+                        }, r.key)}
+                        className="w-16 border border-gray-200 rounded-lg px-2 py-1 text-sm disabled:bg-gray-50"
+                      />
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] font-semibold text-gray-400 w-4 uppercase">Pr</span>
+                      <input
+                        type="number"
+                        value={r.passingPracticalMarks}
+                        disabled={!r.included}
+                        onChange={e => onChange(r.subjectId, {
+                          passingPracticalMarks: Number(e.target.value),
+                          passingMarks: Number(r.passingTheoryMarks) + Number(e.target.value)
+                        }, r.key)}
+                        className="w-16 border border-gray-200 rounded-lg px-2 py-1 text-sm disabled:bg-gray-50"
+                      />
+                    </div>
+                  </div>
+                )}
               </td>
 
               {/* Assessment type — checkbox: Theory + Practical */}
@@ -906,7 +974,19 @@ function SubjectTable({ rows, onToggle, onChange, useRowKey }) {
                     type="checkbox"
                     checked={!!r.hasTheoryPractical}
                     disabled={!r.included}
-                    onChange={e => onChange(r.subjectId, { hasTheoryPractical: e.target.checked }, r.key)}
+                    onChange={e => {
+                      const isChecked = e.target.checked;
+                      onChange(r.subjectId, {
+                        hasTheoryPractical: isChecked,
+                        // Instantly auto-calculate the 70/30 split to prevent '0' fields when toggling ON
+                        ...(isChecked ? {
+                          maximumTheoryMarks: Math.round(r.maximumMarks * 0.7),
+                          maximumPracticalMarks: Math.round(r.maximumMarks * 0.3),
+                          passingTheoryMarks: Math.round(r.passingMarks * 0.7),
+                          passingPracticalMarks: Math.round(r.passingMarks * 0.3),
+                        } : {})
+                      }, r.key);
+                    }}
                     className="w-3.5 h-3.5 accent-indigo-600"
                   />
                   <span className={`text-xs whitespace-nowrap font-medium

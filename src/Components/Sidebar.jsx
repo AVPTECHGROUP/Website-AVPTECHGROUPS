@@ -49,7 +49,8 @@ const menuSections = [
         subItems: [
           { label: 'Subjects', route: '/subjectMaster', permission: P.ACADEMIC_VIEW },
           { label: 'Class & Sections', route: '/academics/classSections', permission: P.ACADEMIC_YEAR_MANAGE },
-          { label: 'HomeWork', route: '/homework', permission: P.HOMEWORK_VIEW, featureFlag: 'homeworkEnabled' },
+          { label: 'Student Promotion', route: '/academics/studentPromotion', permission: P.STUDENT_PROMOTE },
+          { label: 'Homework', route: '/homework', permission: P.HOMEWORK_VIEW, featureFlag: 'homeworkEnabled' },
           { label: 'Time Table', route: '/schedule', permission: P.TIMETABLE_VIEW, featureFlag: 'timetableEnabled' },
           {
             id: 'exams',
