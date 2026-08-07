@@ -38,6 +38,8 @@ const WarningVerificationFailed = lazy(() => import('../Components/UserAttendanc
 const ManualAttendance = lazy(() => import('../Components/UserAttendance/ManualAttendanceRequest'));
 const ExamConfiguration = lazy(() => import('../Pages/Exams/ExamConfiguration'));
 const ClassSectionConfig = lazy(() => import('../Pages/Academics/ClassSectionConfig'));
+// Student Promotion (bulk end-of-year class promotion wizard)
+const StudentPromotion = lazy(() => import('../Pages/Students/StudentPromotion'));
 const StudentAttendance = lazy(() => import('../Pages/Attendance/StudentAttendance/StudentAttendance'));
 const StaffAttendanceRegistration = lazy(() => import('../Pages/Attendance/StaffAttendanceRegistration'));
 const StudentAttendanceRegistration = lazy(() => import('../Pages/Attendance/StudentAttendanceRegistration'));
@@ -182,6 +184,11 @@ const MainRoutes = () => {
 
             {AttendanceRoutes()}
             {AcademicsRoutes()}
+            {/* Student Promotion — bulk end-of-year class promotion wizard.
+                Kept as an explicit route here since AcademicsRoutes.jsx wasn't
+                available at edit time. Safe to move into AcademicsRoutes.jsx
+                later — just drop this <Route> in there and remove it from here. */}
+            <Route path="/academics/studentPromotion" element={<StudentPromotion />} />
             {CommunicationRoutes()}
             {ExamsRoutes()}
             {FeeManagementRoutes()}
