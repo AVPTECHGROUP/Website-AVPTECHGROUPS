@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-const PersonalDetailsTab = ({ formData, setFormData, handleInputChange, onSave, onSaveAndNext, isSaving }) => {
+const PersonalDetailsTab = ({ formData, setFormData, handleInputChange, designationList, onSave, onSaveAndNext, isSaving }) => {
     const [enabled, setEnabled] = useState(formData.accountStatus);
 
     return (
@@ -261,14 +261,33 @@ const PersonalDetailsTab = ({ formData, setFormData, handleInputChange, onSave, 
                                     <path fillRule="evenodd" d="M6 6V5a3 3 0 013-3h2a3 3 0 013 3v1h2a2 2 0 012 2v3.57A22.952 22.952 0 0110 13a22.95 22.95 0 01-8-1.43V8a2 2 0 012-2h2zm2-1a1 1 0 011-1h2a1 1 0 011 1v1H8V5zm1 5a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1z" clipRule="evenodd" />
                                 </svg>
                             </div>
-                            <input
-                                type="text"
+                            <select
                                 name="role"
                                 value={formData.role}
                                 onChange={handleInputChange}
-                                placeholder="Teacher"
-                                className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                            />
+                                className="block w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm appearance-none bg-white"
+                            >
+                                <option value="">Select Designation</option>
+
+                                {designationList?.map((item) => (
+                                    <option
+                                        key={item.id || item.value || item.code}
+                                        value={item.value || item.code || item.name}
+                                    >
+                                        {item.label || item.name || item.value}
+                                    </option>
+                                ))}
+                            </select>
+
+                            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                <svg className="h-5 w-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                                    <path
+                                        fillRule="evenodd"
+                                        d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                                        clipRule="evenodd"
+                                    />
+                                </svg>
+                            </div>
                         </div>
                     </div>
                 </div>

@@ -6,6 +6,30 @@ import PersonalDetailsTab from '../../Components/Teacher/EditTabComponents/Perso
 import SalaryStructureTab from '../../Components/Teacher/EditTabComponents/SalaryStructureTab';
 import { toast } from 'react-toastify';
 import TEACHER_MODULE_STRINGS from '../../Constants/StringConstants/TeacherConstants';
+import {getListOfValues} from "../../Api/Lov/ListOfValues.js";
+
+// ── Local-date helpers ───────────────────────────────────────────────────
+// `new Date().toISOString()` converts the current instant to UTC, which
+// shifts the calendar date backwards for anyone in a UTC+ timezone (e.g.
+// IST, UTC+5:30) during the first ~5.5 hours of their local day. That was
+// causing today's own joining date to be flagged as "in the future".
+// These helpers stay entirely in local-date-string space instead.
+function getTodayLocalISO() {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+// `dateStr` is already a "YYYY-MM-DD" string coming from <input type="date">,
+// so a plain string comparison against today's local date is safe here and
+// avoids re-parsing through the Date constructor (which reintroduces the
+// same UTC/local mismatch).
+function isFutureDate(dateStr) {
+    if (!dateStr) return false;
+    return dateStr > getTodayLocalISO();
+}
 
 function EditTeachersDetails() {
     const strings = TEACHER_MODULE_STRINGS;
@@ -19,6 +43,7 @@ function EditTeachersDetails() {
     const [imagePreview, setImagePreview] = useState(null);
     const [existingImageUrl, setExistingImageUrl] = useState(null);
     const fileInputRef = useRef(null);
+    const [designationList, setDesignationList] = useState([]);
 
     // Feature Flag Check for Payroll
     const isPayrollEnabled = (() => {
@@ -29,6 +54,24 @@ function EditTeachersDetails() {
             return true;
         }
     })();
+
+    // Designation dropdown is sourced from TEACHER_CATEGORY (Pre-Primary /
+    // Primary / Secondary / Senior Secondary / Special Education), matching
+    // AddNewTeacher.jsx exactly — this used to fetch the separate
+    // "DESIGNATION" LOV type here, which was inconsistent with the Add flow
+    // and returned different values.
+    useEffect(() => {
+        const fetchTeacherCategory = async () => {
+            try {
+                const data = await getListOfValues("TEACHER_CATEGORY");
+                setDesignationList(data);
+            } catch (err) {
+                console.error(err);
+            }
+        };
+
+        fetchTeacherCategory();
+    }, []);
 
     const [formData, setFormData] = useState({
         name: '',
@@ -43,6 +86,7 @@ function EditTeachersDetails() {
         joiningDate: '',
         loginEmail: '',
         role: 'Teacher',
+        category: '',
         accountStatus: false,
         salaryType: '',
         baseSalary: '',
@@ -61,9 +105,20 @@ function EditTeachersDetails() {
     });
 
     function formatToInputDate(dateStr) {
-        if (!dateStr) return '';
+        if (!dateStr) return "";
+
+        // If backend already sends yyyy-mm-dd
+        if (dateStr.includes("-") && dateStr.length === 10) {
+            return dateStr;
+        }
+
         const date = new Date(dateStr);
-        return date.toISOString().split('T')[0];
+
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+
+        return `${year}-${month}-${day}`;
     }
 
     const handleInputChange = (e) => {
@@ -95,6 +150,7 @@ function EditTeachersDetails() {
             joiningDate: formatToInputDate(teacher.joiningDate),
             loginEmail: teacher.email || '',
             role: teacher.designation || 'Teacher',
+            category: teacher.category || '',
             accountStatus: teacher.accountAccessStatus === 'ALLOWED',
         }));
         if (teacher.profileImageUrl) {
@@ -117,15 +173,15 @@ function EditTeachersDetails() {
             experienceYears: Number(formData.experience),
             joiningDate: formData.joiningDate,
             designation: formData.role,
+            category: formData.category,
         },
         accountAccessStatus: formData.accountStatus ? 'ALLOWED' : 'BLOCKED',
     });
 
     const handleSavePersonal = async () => {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
-        if (new Date(formData.joiningDate) > today) {
+        // Guard kept consistent with handleSaveAndNextPersonal below —
+        // string comparison against local "today", no Date object involved.
+        if (isFutureDate(formData.joiningDate)) {
             toast.error("Joining date cannot be in the future.");
             return;
         }
@@ -151,10 +207,11 @@ function EditTeachersDetails() {
     };
 
     const handleSaveAndNextPersonal = async () => {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
-        if (new Date(formData.joiningDate) > today) {
+        // Fixed: was comparing `new Date(formData.joiningDate)` (parsed as UTC
+        // midnight) against a local-midnight Date object, which incorrectly
+        // flagged today's own date as "in the future" for users in
+        // UTC+ timezones (e.g. IST) during the early hours of the day.
+        if (isFutureDate(formData.joiningDate)) {
             toast.error("Joining date cannot be in the future.");
             return;
         }
@@ -203,7 +260,7 @@ function EditTeachersDetails() {
             const totalDeductions = profTax + incomeTax + otherDed + leaveDeduction;
             const netSalary = grossSalary - totalDeductions;
 
-            const today = new Date().toISOString().split('T')[0];
+            const today = getTodayLocalISO();
             const effectiveTo = `${new Date().getFullYear()}-12-31`;
 
             const salaryPayload = {
@@ -341,7 +398,7 @@ function EditTeachersDetails() {
                                 className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'personal'
                                     ? 'border-blue-600 text-blue-600'
                                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                                    }`}
+                                }`}
                             >
                                 <User size={20} />
                                 <span className="hidden sm:inline">{strings.ADD_TEACHER.TABS.PERSONAL}</span>
@@ -354,7 +411,7 @@ function EditTeachersDetails() {
                                     className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'salary'
                                         ? 'border-blue-600 text-blue-600'
                                         : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                                        }`}
+                                    }`}
                                 >
                                     <IndianRupee size={18} />
                                     <span className="hidden sm:inline">{strings.ADD_TEACHER.TABS.SALARY}</span>
@@ -451,11 +508,11 @@ function EditTeachersDetails() {
                                         className="hidden"
                                     />
                                 </div>
-
                                 <PersonalDetailsTab
                                     formData={formData}
                                     setFormData={setFormData}
                                     handleInputChange={handleInputChange}
+                                    designationList={designationList}
                                     onSave={handleSavePersonal}
                                     onSaveAndNext={handleSaveAndNextPersonal}
                                     isSaving={isSaving}
@@ -490,7 +547,7 @@ function EditTeachersDetails() {
                                     className={`px-6 py-2.5 text-sm font-semibold rounded-lg transition-all flex items-center justify-center gap-2 ${isLoading
                                         ? 'bg-blue-300 cursor-not-allowed text-white'
                                         : 'bg-blue-500 hover:bg-blue-600 cursor-pointer text-white'
-                                        }`}
+                                    }`}
                                 >
                                     {isLoading ? (
                                         <>

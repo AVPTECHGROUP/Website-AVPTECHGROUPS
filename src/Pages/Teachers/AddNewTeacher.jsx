@@ -3,9 +3,34 @@ import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, IndianRupee, User, Camera, X, Image as ImageIcon, RefreshCcw } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { createTeachers, upsertTeacherSalary } from '../../Api/Teachers/TeachersAPI';
+import { getListOfValues } from "../../Api/Lov/ListOfValues.js";
 import PersonalDetailsTab from '../../Components/Teacher/AddTabComponents/AddPersonalInfo';
 import SalaryDetailsTab from '../../Components/Teacher/AddTabComponents/AddSalaryDetails';
 import TEACHER_MODULE_STRINGS from '../../Constants/StringConstants/TeacherConstants';
+
+// ── Local-date helpers ───────────────────────────────────────────────────
+// `new Date().toISOString()` converts the current instant to UTC, which
+// shifts the calendar date backwards for anyone in a UTC+ timezone (e.g.
+// IST, UTC+5:30) during the first ~5.5 hours of their local day. That was
+// causing today's own joining date (and DOB) to be flagged as "in the
+// future" / invalid. These helpers stay entirely in local-date-string
+// space instead — same approach as EditTeachersDetails.jsx.
+function getTodayLocalISO() {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+// `dateStr` is already a "YYYY-MM-DD" string coming from <input type="date">,
+// so a plain string comparison against today's local date is safe here and
+// avoids re-parsing through the Date constructor (which reintroduces the
+// same UTC/local mismatch).
+function isFutureDate(dateStr) {
+    if (!dateStr) return false;
+    return dateStr > getTodayLocalISO();
+}
 
 function AddNewTeacher() {
     const navigate = useNavigate();
@@ -18,7 +43,21 @@ function AddNewTeacher() {
     const [salaryErrors, setSalaryErrors] = useState({});
     const fileInputRef = useRef(null);
     const salarySectionRef = useRef(null);
+    const [designationList, setDesignationList] = useState([]);
 
+    useEffect(() => {
+        const fetchDesignation = async () => {
+            try {
+                const data = await getListOfValues("TEACHER_CATEGORY");
+                setDesignationList(data);
+            } catch (err) {
+                console.error("Failed to load designation", err);
+            }
+        };
+
+        fetchDesignation();
+    }, []);
+    // Feature Flag Check for Payroll
     // --- CAMERA & POPUP STATE ---
     const [showPhotoMenu, setShowPhotoMenu] = useState(false);
     const [showCamera, setShowCamera] = useState(false);
@@ -105,13 +144,38 @@ function AddNewTeacher() {
     })();
 
     const [formData, setFormData] = useState({
-        name: "", gender: "", email: "", loginEmail: "", mobile: "", address: "", dob: "",
-        employeeCode: "", highestQualification: "", experience: 0, joiningDate: "",
-        payrollStatus: "ACTIVE", accountStatus: false, salaryType: 'MONTHLY', baseSalary: '',
-        leaveDeductionPerDay: '', lateArrivalPenalty: '', houseRentAllowance: '', travelAllowance: '',
-        dearnessAllowance: '', specialAllowance: '', otherAllowances: '', providentFund: '',
-        professionalTax: '', incomeTax: '', otherDeductions: '', assignedClass: '', section: '',
-        primarySubject: '', additionalSubjects: '', isClassTeacher: false
+        name: "",
+        gender: "",
+        email: "",
+        loginEmail: "",
+        mobile: "",
+        address: "",
+        dob: "",
+        employeeCode: "",
+        highestQualification: "",
+        experience: 0,
+        joiningDate: "",
+        designation: "",
+        payrollStatus: "ACTIVE",
+        accountStatus: false,
+        salaryType: 'MONTHLY',
+        baseSalary: '',
+        leaveDeductionPerDay: '',
+        lateArrivalPenalty: '',
+        houseRentAllowance: '',
+        travelAllowance: '',
+        dearnessAllowance: '',
+        specialAllowance: '',
+        otherAllowances: '',
+        providentFund: '',
+        professionalTax: '',
+        incomeTax: '',
+        otherDeductions: '',
+        assignedClass: '',
+        section: '',
+        primarySubject: '',
+        additionalSubjects: '',
+        isClassTeacher: false
     });
 
     const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -156,23 +220,41 @@ function AddNewTeacher() {
         else if (!/^\d{10}$/.test(formData.mobile)) newErrors.mobile = strings.ADD_TEACHER.VALIDATION.MOBILE_INVALID;
         if (!formData.email) newErrors.email = strings.ADD_TEACHER.VALIDATION.EMAIL_REQUIRED;
         else if (!EMAIL_REGEX.test(formData.email)) newErrors.email = strings.ADD_TEACHER.VALIDATION.EMAIL_INVALID;
+
+        // Fixed: was `new Date(formData.dob) >= new Date().setHours(0,0,0,0)`,
+        // which parses the dob string as UTC midnight and compares it against
+        // a local-midnight Date object — the same UTC/local mismatch as the
+        // joining-date bug below. formData.dob is already a "YYYY-MM-DD"
+        // string from <input type="date">, so a plain string comparison
+        // against today's local date is safe and unambiguous.
         if (!formData.dob) newErrors.dob = strings.ADD_TEACHER.VALIDATION.DOB_REQUIRED;
-        else {
-            const dobDate = new Date(formData.dob);
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            if (dobDate >= today) newErrors.dob = strings.ADD_TEACHER.VALIDATION.DOB_INVALID;
+        else if (formData.dob >= getTodayLocalISO()) newErrors.dob = strings.ADD_TEACHER.VALIDATION.DOB_INVALID;
+
+        // Fixed: was comparing against `new Date().toISOString().split("T")[0]`,
+        // which is UTC's calendar date, not the user's local date. For anyone
+        // in a UTC+ timezone (e.g. IST) this flagged today's own joining date
+        // as "in the future" during the first ~5.5 hours of the local day.
+        if (!formData.joiningDate) {
+            newErrors.joiningDate = strings.ADD_TEACHER.VALIDATION.JOINING_REQUIRED;
+        } else if (isFutureDate(formData.joiningDate)) {
+            newErrors.joiningDate = "Joining date cannot be in the future.";
         }
-        if (!formData.joiningDate) newErrors.joiningDate = strings.ADD_TEACHER.VALIDATION.JOINING_REQUIRED;
-        else {
-            const joiningDate = new Date(formData.joiningDate);
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            if (joiningDate > today) newErrors.joiningDate = strings.ADD_TEACHER.VALIDATION.JOINING_DATE_INVALID || "Joining date cannot be in the future.";
+
+        if (!formData.designation) {
+            newErrors.designation = "Designation is required";
         }
-        if (!formData.loginEmail) newErrors.loginEmail = strings.ADD_TEACHER.VALIDATION.LOGIN_EMAIL_REQUIRED;
-        else if (!EMAIL_REGEX.test(formData.loginEmail)) newErrors.loginEmail = strings.ADD_TEACHER.VALIDATION.LOGIN_EMAIL_INVALID;
-        if (!formData.accountStatus) newErrors.accountStatus = strings.ADD_TEACHER.VALIDATION.ACCOUNT_STATUS_REQUIRED;
+
+
+        if (!formData.loginEmail) {
+            newErrors.loginEmail = strings.ADD_TEACHER.VALIDATION.LOGIN_EMAIL_REQUIRED;
+        } else if (!EMAIL_REGEX.test(formData.loginEmail)) {
+            newErrors.loginEmail = strings.ADD_TEACHER.VALIDATION.LOGIN_EMAIL_INVALID;
+        }
+
+        if (!formData.accountStatus) {
+            newErrors.accountStatus = strings.ADD_TEACHER.VALIDATION.ACCOUNT_STATUS_REQUIRED;
+        }
+
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
@@ -222,8 +304,11 @@ function AddNewTeacher() {
                     gender: formData.gender.toUpperCase(), dateOfBirth: formData.dob, address: formData.address || "NA",
                 },
                 professionalDetails: {
-                    employeeCode: formData.employeeCode || generateEmployeeCode(), qualification: formData.highestQualification || "NA",
-                    experienceYears: Number(formData.experience || 1), joiningDate: formData.joiningDate,
+                    employeeCode: formData.employeeCode || generateEmployeeCode(),
+                    qualification: formData.highestQualification || "NA",
+                    experienceYears: Number(formData.experience || 1),
+                    joiningDate: formData.joiningDate,
+                    designation: formData.designation
                 },
                 accountStatus: "ACTIVE",
             };
@@ -248,7 +333,11 @@ function AddNewTeacher() {
                     const grossSalary = baseSalary + hra + ta + da + sa + oa + pf;
                     const totalDeductions = profTax + incomeTax + otherDed + leaveDeduction;
                     const netSalary = grossSalary - totalDeductions;
-                    const today = new Date().toISOString().split('T')[0];
+                    // Fixed: was `new Date().toISOString().split('T')[0]` (UTC
+                    // calendar date). Now uses the same local-date helper as
+                    // EditTeachersDetails.jsx so effectiveFrom lines up with
+                    // the user's actual local "today".
+                    const today = getTodayLocalISO();
                     const effectiveTo = `${new Date().getFullYear()}-12-31`;
 
                     const salaryPayload = {
@@ -293,7 +382,7 @@ function AddNewTeacher() {
                         <div className="border-b border-gray-200">
                             <nav className="flex flex-wrap -mb-px">
                                 <button type="button" onClick={() => setActiveTab('personal')}
-                                    className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'personal' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
+                                        className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'personal' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
                                     <User size={20} />
                                     <span className="hidden sm:inline">{strings.ADD_TEACHER.TABS.PERSONAL}</span>
                                     <span className="sm:hidden">Personal</span>
@@ -329,7 +418,7 @@ function AddNewTeacher() {
                                                     )}
                                                 </div>
                                                 <button type="button" onClick={() => setShowPhotoMenu(true)}
-                                                    className="absolute bottom-0 right-0 w-6 h-6 bg-blue-500 hover:bg-blue-600 rounded-full flex items-center justify-center shadow transition-colors">
+                                                        className="absolute bottom-0 right-0 w-6 h-6 bg-blue-500 hover:bg-blue-600 rounded-full flex items-center justify-center shadow transition-colors">
                                                     <Camera className="w-3.5 h-3.5 text-white" />
                                                 </button>
                                             </div>
@@ -337,7 +426,7 @@ function AddNewTeacher() {
                                             <div className="flex-1">
                                                 {!imagePreview ? (
                                                     <button type="button" onClick={() => setShowPhotoMenu(true)}
-                                                        className="w-full border-2 border-dashed border-blue-300 hover:border-blue-500 bg-blue-50 hover:bg-blue-100 rounded-lg p-4 text-center transition-colors cursor-pointer">
+                                                            className="w-full border-2 border-dashed border-blue-300 hover:border-blue-500 bg-blue-50 hover:bg-blue-100 rounded-lg p-4 text-center transition-colors cursor-pointer">
                                                         <Camera className="w-5 h-5 text-blue-400 mx-auto mb-1" />
                                                         <p className="text-sm font-medium text-blue-600">{strings.ADD_TEACHER.UPLOAD.CTA}</p>
                                                         <p className="text-xs text-gray-400 mt-0.5">{strings.ADD_TEACHER.UPLOAD.FORMAT_HELP}</p>
@@ -350,11 +439,11 @@ function AddNewTeacher() {
                                                         </div>
                                                         <div className="flex gap-2 shrink-0">
                                                             <button type="button" onClick={() => setShowPhotoMenu(true)}
-                                                                className="text-xs px-2.5 py-1 bg-white border border-green-300 text-green-700 rounded-md hover:bg-green-50 transition-colors">
+                                                                    className="text-xs px-2.5 py-1 bg-white border border-green-300 text-green-700 rounded-md hover:bg-green-50 transition-colors">
                                                                 {strings.COMMON.CHANGE}
                                                             </button>
                                                             <button type="button" onClick={handleRemoveImage}
-                                                                className="w-7 h-7 flex items-center justify-center bg-white border border-red-200 text-red-500 rounded-md hover:bg-red-50 transition-colors">
+                                                                    className="w-7 h-7 flex items-center justify-center bg-white border border-red-200 text-red-500 rounded-md hover:bg-red-50 transition-colors">
                                                                 <X className="w-3.5 h-3.5" />
                                                             </button>
                                                         </div>
@@ -365,7 +454,14 @@ function AddNewTeacher() {
                                         <input ref={fileInputRef} type="file" accept="image/jpeg,image/jpg,image/png" onChange={handleImageChange} className="hidden" />
                                     </div>
 
-                                    <PersonalDetailsTab formData={formData} setFormData={setFormData} handleInputChange={handleInputChange} errors={errors} setErrors={setErrors} />
+                                    <PersonalDetailsTab
+                                        formData={formData}
+                                        setFormData={setFormData}
+                                        handleInputChange={handleInputChange}
+                                        errors={errors}
+                                        setErrors={setErrors}
+                                        designationList={designationList}
+                                    />
                                 </>
                             )}
 
